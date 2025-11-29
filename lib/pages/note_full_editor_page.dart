@@ -1406,7 +1406,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                       child: Row(
                         children: [
                           Text(
-                            '编辑元数据',
+                            AppLocalizations.of(context).editMetadata,
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -1416,7 +1416,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                           const Spacer(),
                           TextButton.icon(
                             icon: const Icon(Icons.check),
-                            label: const Text('完成'),
+                            label: Text(AppLocalizations.of(context).done),
                             onPressed: () => Navigator.of(context).pop(),
                           ),
                         ],
@@ -1503,7 +1503,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                               ),
                             ),
                             child: ExpansionTile(
-                              title: const Text('选择标签'),
+                              title: Text(AppLocalizations.of(context).selectTags),
                               leading: const Icon(Icons.sell_outlined),
                               shape: const RoundedRectangleBorder(
                                 borderRadius: BorderRadius.all(
@@ -1557,10 +1557,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                         }).toList();
 
                                         if (filteredTags.isEmpty) {
-                                          return const Center(
+                                          return Center(
                                             child: Padding(
-                                              padding: EdgeInsets.all(16.0),
-                                              child: Text('没有找到匹配的标签'),
+                                              padding: const EdgeInsets.all(16.0),
+                                              child: Text(AppLocalizations.of(context).noMatchingTags),
                                             ),
                                           );
                                         }
@@ -1929,8 +1929,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                   Divider(height: 1, color: theme.colorScheme.outline),
                   ListTile(
                     leading: const Icon(Icons.text_fields),
-                    title: const Text('智能分析来源'),
-                    subtitle: const Text('分析文本中可能的作者和作品'),
+                    title: Text(AppLocalizations.of(context).smartAnalyzeSource),
+                    subtitle: Text(AppLocalizations.of(context).smartAnalyzeSourceDesc),
                     onTap: () {
                       Navigator.pop(context);
                       _analyzeSource();
@@ -1938,8 +1938,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                   ),
                   ListTile(
                     leading: const Icon(Icons.brush),
-                    title: const Text('润色文本'),
-                    subtitle: const Text('优化文本表达，使其更加流畅、优美'),
+                    title: Text(AppLocalizations.of(context).polishText),
+                    subtitle: Text(AppLocalizations.of(context).polishTextDesc),
                     onTap: () {
                       Navigator.pop(context);
                       _polishText();
@@ -1947,8 +1947,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                   ),
                   ListTile(
                     leading: const Icon(Icons.add_circle_outline),
-                    title: const Text('续写内容'),
-                    subtitle: const Text('以相同的风格和语调延伸当前内容'),
+                    title: Text(AppLocalizations.of(context).continueWriting),
+                    subtitle: Text(AppLocalizations.of(context).continueWritingDesc),
                     onTap: () {
                       Navigator.pop(context);
                       _continueText();
@@ -1956,8 +1956,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                   ),
                   ListTile(
                     leading: const Icon(Icons.analytics),
-                    title: const Text('深度分析'),
-                    subtitle: const Text('对笔记内容进行深入分析和解读'),
+                    title: Text(AppLocalizations.of(context).deepAnalysis),
+                    subtitle: Text(AppLocalizations.of(context).deepAnalysisDesc),
                     onTap: () {
                       Navigator.pop(context);
                       _analyzeContent();
@@ -1965,8 +1965,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                   ),
                   ListTile(
                     leading: const Icon(Icons.chat),
-                    title: const Text('问笔记'),
-                    subtitle: const Text('与AI助手对话，深入探讨笔记内容'),
+                    title: Text(AppLocalizations.of(context).askNote),
+                    subtitle: Text(AppLocalizations.of(context).askNoteDesc),
                     onTap: () {
                       Navigator.pop(context);
                       _askNoteQuestion();
@@ -1987,8 +1987,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     if (plainText.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(
-        content: Text('请先输入内容'),
+      ).showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context).pleaseEnterContent),
         duration: AppConstants.snackBarDurationError,
       ));
       return;
@@ -2002,13 +2002,13 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) {
-          return const AlertDialog(
+          return AlertDialog(
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('正在分析来源...'),
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(AppLocalizations.of(context).analyzing),
               ],
             ),
           );

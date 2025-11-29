@@ -267,14 +267,6 @@
       }
     }
   },
-  "generateCardFailed": "Failed to generate card: {error}",
-  "@generateCardFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   
   "generatingShareImage": "Generating share image...",
   "cardSharedSuccessfully": "Card shared successfully",
@@ -403,6 +395,33 @@
   "customColor": "Custom Color",
   "select": "Select",
   "editMetadata": "Edit Metadata",
+  
+  "done": "Done",
+  "selectTags": "Select Tags",
+  "noMatchingTags": "No matching tags found",
+  "smartAnalyzeSource": "Smart Analyze Source",
+  "smartAnalyzeSourceDesc": "Analyze potential author and work in the text",
+  "polishText": "Polish Text",
+  "polishTextDesc": "Optimize text expression to make it more fluent and elegant",
+  "continueWriting": "Continue Writing",
+  "continueWritingDesc": "Extend current content with the same style and tone",
+  "deepAnalysis": "Deep Analysis",
+  "deepAnalysisDesc": "Perform in-depth analysis and interpretation of note content",
+  "askNote": "Ask Note",
+  "askNoteDesc": "Chat with AI assistant to explore note content in depth",
+  "pleaseEnterContent": "Please enter content first",
+  "analyzing": "Analyzing...",
+  "analysisResults": "Analysis Results",
+  "confidence": "Confidence",
+  "noAuthorOrWorkIdentified": "Could not identify a clear author or work",
+  "applyAnalysisResults": "Apply Analysis Results",
+  "parseResultsFailed": "Failed to parse results",
+  "analysisFailed": "Analysis failed",
+  "analysisResultsCopied": "Analysis results copied to clipboard",
+  "noteInfo": "Note Info",
+  "source": "Source",
+  "createdAt": "Created At",
+  "content": "Content",
   
   "periodicReport": "Periodic Report",
   "aiInsightsTab": "AI Insights",
@@ -941,6 +960,13 @@
     }
   },
   "protocolVersion": "Protocol Version: {version}",
+  "@protocolVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
   "analysisTypeComprehensive": "Comprehensive Analysis",
   "analysisTypeComprehensiveDesc": "Analyze all your notes to explore themes, emotions and thinking patterns",
   "analysisTypeEmotional": "Emotional Insights",
@@ -962,16 +988,54 @@
   "analysisSaved": "Analysis results have been saved",
   "viewHistory": "View History",
   "saveAnalysisError": "Failed to save analysis: {error}",
+  "@saveAnalysisError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "analysisNoteTitle": "# {title}\n\n{content}",
+  "@analysisNoteTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "content": {
+        "type": "String"
+      }
+    }
+  },
   "aiAnalysisSource": "AI Analysis",
   "thoughtechoAI": "ThoughtEcho AI",
   "savedAsNote": "Saved as a new note",
   "saveAsNoteError": "Failed to save as note: {error}",
+  "@saveAsNoteError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "analysisCopied": "Analysis results have been copied to the clipboard and can be pasted to share",
   "shareError": "Failed to share: {error}",
+  "@shareError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "configureApiKey": "Please configure the API Key in the settings first",
   "noNotesFound": "No notes found, please add some notes first",
   "generateInsightsError": "Failed to generate insights: {error}",
+  "@generateInsightsError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "serverInternalError": "Server internal error, may be a model configuration issue",
   "checkSettings": "Check Settings",
   "invalidApiKey": "Invalid API key, please check the settings",
@@ -980,6 +1044,13 @@
   "tryLater": "Try Again Later",
   "networkError": "Network connection issue, please check your network",
   "generateInsightsSetupError": "Failed to generate insights (setup): {error}",
+  "@generateInsightsSetupError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "serverInternalErrorConfig": "Server internal error, please check if the AI model configuration is correct",
   "invalidApiKeyUpdate": "Invalid API key, please update the API key in the settings",
   "configureValidApiKey": "Please configure a valid API key in the settings first",
@@ -1005,6 +1076,13 @@
   "saveAnalysisButton": "Save Analysis",
   "shareInsightsButton": "Share Insights",
   "generateInsightsErrorSnapshot": "Error generating insights: {error}",
+  "@generateInsightsErrorSnapshot": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "insightsPageEmpty": "Select an analysis type and click \"Start Analysis\"\nInsights will help you discover thinking patterns and regularities in your notes",
   "customAnalysis": "Custom Analysis",
   "siliconflow": "SiliconFlow",
@@ -1012,45 +1090,178 @@
   "verifyingApiKey": "Verifying API Key...",
   "noProviderSelected": "No provider selected",
   "apiKeyValid": "API Key valid ({length} characters)",
+  "@apiKeyValid": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
   "apiKeyInvalid": "No valid API Key configured",
   "noAiProviderSelected": "❌ No AI provider selected",
   "providerDisabled": "⚠️ Provider disabled",
   "apiKeyVerified": "✅ API Key valid (verified)",
   "apiKeyStatusCheck": "API Key status check: {status}",
+  "@apiKeyStatusCheck": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
   "checkFailed": "Check failed: {error}",
+  "@checkFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "loadAiSettingsError": "Failed to load AI settings: {error}",
+  "@loadAiSettingsError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "loadAiSettingsErrorUser": "Failed to load AI settings, please check your network connection or restart the app",
   "retry": "Retry",
   "fixFormErrors": "Please fix the errors in the form before saving",
   "presetCreated": "New preset created and saved successfully",
   "saveSettingsError": "Failed to save settings: {error}",
+  "@saveSettingsError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "customConfig": "Custom Configuration",
   "customConfigHost": "Custom-{host}",
+  "@customConfigHost": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
   "customConfigTimestamp": "Custom-{timestamp}",
+  "@customConfigTimestamp": {
+    "placeholders": {
+      "timestamp": {
+        "type": "String"
+      }
+    }
+  },
   "testingConnection": "Testing connection...",
   "connectionTestSuccess": "AI connection test successful!",
   "connectionTestFailed": "Connection test failed: {error}",
+  "@connectionTestFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "apiKeyRequired": "API Key is required for {providerName}",
+  "@apiKeyRequired": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
   "connectionSuccess": "Connection successful",
   "responseFormatError": "Response format error",
   "connectionFailed": "Connection failed: {statusCode}",
+  "@connectionFailed": {
+    "placeholders": {
+      "statusCode": {
+        "type": "int"
+      }
+    }
+  },
   "switchedTo": "Switched to {providerName}",
+  "@switchedTo": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
   "renamePreset": "Rename Preset",
   "presetName": "Preset Name",
   "confirm": "Confirm",
   "presetRenamed": "Preset has been renamed to \"{result}\"",
+  "@presetRenamed": {
+    "placeholders": {
+      "result": {
+        "type": "String"
+      }
+    }
+  },
   "deletePreset": "Delete Preset",
   "deletePresetConfirm": "Are you sure you want to delete the preset \"{providerName}\"? This action cannot be undone.",
+  "@deletePresetConfirm": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
   "delete": "Delete",
   "presetDeleted": "Preset \"{providerName}\" has been deleted",
+  "@presetDeleted": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
   "aiProviderSelection": "AI Provider Selection",
   "currentProvider": "Current: {providerName}",
+  "@currentProvider": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
   "apiUrlLabel": "API: {url}",
+  "@apiUrlLabel": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
   "modelLabel": "Model: {model}",
+  "@modelLabel": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
   "apiKeyLabel": "API Key: {status}",
+  "@apiKeyLabel": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
   "modelNotConfigured": "Not configured",
   "checkApiKeyStatus": "Check API Key Status",
   "savedPresets": "Saved Presets ({length}):",
+  "@savedPresets": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
   "noPresetsSaved": "No saved presets yet. Configure the API information and click \"Save Settings\" to create the first preset.",
   "rename": "Rename",
   "testConnectionButton": "Test Connection",
@@ -1061,6 +1272,13 @@
   "selectPreset": "Select a provider preset",
   "selectPresetHint": "Or manually configure the connection parameters below",
   "connectionConfig": "Connection Configuration ({providerName})",
+  "@connectionConfig": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
   "custom": "Custom",
   "apiUrlField": "API URL",
   "apiUrlHint": "e.g., https://api.xxx.com/v1/chat/completions",
@@ -1087,8 +1305,32 @@
   "invalidUrl": "Please enter a valid HTTP/HTTPS URL",
   "mediaManagementTitle": "Media File Management",
   "loadStatsError": "Failed to load statistics: {error}",
+  "@loadStatsError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "operationCompleted": "{operation} completed",
+  "@operationCompleted": {
+    "placeholders": {
+      "operation": {
+        "type": "String"
+      }
+    }
+  },
   "operationFailed": "{operation} failed: {error}",
+  "@operationFailed": {
+    "placeholders": {
+      "operation": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "loadStatsFailed": "Failed to load statistics",
   "mediaFileStats": "Media File Statistics",
   "totalFiles": "Total Files",
@@ -1115,6 +1357,13 @@
   "verifyFileIntegrity": "Verify File Integrity",
   "verifyFileIntegrityDesc": "Check the integrity of media file references",
   "operationResult": "{operation} Result",
+  "@operationResult": {
+    "placeholders": {
+      "operation": {
+        "type": "String"
+      }
+    }
+  },
   "cleanedFilesCount": "Cleaned Files Count",
   "spaceSavedMbLabel": "Space Saved (MB)",
   "migratedQuotesCount": "Migrated Quotes Count",
@@ -1150,11 +1399,35 @@
   "tagAnalysis": "Tag Analysis",
   "mostUsedTags": "Most Used Tags",
   "usedXTimes": "Used {count} times ({percentage}%)",
+  "@usedXTimes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "percentage": {
+        "type": "String"
+      }
+    }
+  },
   "noTagsUsed": "No tags have been used yet",
   "timeline": "Timeline",
   "noRecordsInPeriod": "No records in this period",
   "monthX": "Month {month}",
+  "@monthX": {
+    "placeholders": {
+      "month": {
+        "type": "int"
+      }
+    }
+  },
   "notesCount": "{count} notes",
+  "@notesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "deepInsights": "Deep Insights",
   "thinkingDensity": "Thinking Density",
   "deepThinker": "You enjoy deep thinking, and each note is very detailed. This habit helps you organize your thoughts better.",
@@ -1168,6 +1441,13 @@
   "beginningOfYear": "This year is the beginning of recording, looking forward to seeing more thought tracks.",
   "writingRhythm": "Writing Rhythm",
   "goodRhythm": "You have a good writing rhythm, with the longest continuous recording of {longestStreak} days! Persistence is power.",
+  "@goodRhythm": {
+    "placeholders": {
+      "longestStreak": {
+        "type": "int"
+      }
+    }
+  },
   "decentRhythm": "You have established a good recording habit, keep up this rhythm.",
   "startRhythm": "Recording more is a habit, you can try to record some small ideas every day.",
   "generatingInsights": "Generating insights for this period...",
@@ -1175,6 +1455,13 @@
   "thankYou": "Thank you for your persistence",
   "everyThoughtCounts": "Every thought is worth recording\nEvery record is a footprint of growth",
   "continueRecording": "Continue recording in {year}",
+  "@continueRecording": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
   "reportCopied": "Annual report has been copied to the clipboard",
   "shareFailed": "Failed to share, please try again later",
   "monday": "Monday",
