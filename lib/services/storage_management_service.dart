@@ -76,6 +76,19 @@ class MediaFilesBreakdown {
   });
 }
 
+/// 存储统计参数（用于传递给 compute isolate）
+class _StorageStatsParams {
+  final String appDirPath;
+  final String tempDirPath;
+  final String? mainDbPath;
+
+  _StorageStatsParams({
+    required this.appDirPath,
+    required this.tempDirPath,
+    this.mainDbPath,
+  });
+}
+
 /// 存储管理服务
 /// 负责统计应用存储占用、清理缓存等功能
 class StorageManagementService {
@@ -85,28 +98,49 @@ class StorageManagementService {
   static const String _audiosFolder = 'audios';
 
   /// 获取存储统计信息
+  /// 使用 compute isolate 在后台线程执行，避免阻塞 UI
   static Future<StorageStats> getStorageStats() async {
     try {
       logDebug('开始统计存储占用...');
 
-      // 并行获取各项统计
-      final results = await Future.wait([
-        _getMainDatabaseSize(),
-        _getLogDatabaseSize(),
-        _getAIDatabaseSize(),
-        _getMediaFilesSize(),
-        _getCacheSize(),
-      ]);
+      if (kIsWeb) {
+        // Web 平台直接返回空统计
+        return StorageStats(
+          mainDatabaseSize: 0,
+          logDatabaseSize: 0,
+          aiDatabaseSize: 0,
+          mediaFilesSize: 0,
+          cacheSize: 0,
+          mediaBreakdown: MediaFilesBreakdown(
+            imagesSize: 0,
+            videosSize: 0,
+            audiosSize: 0,
+            imagesCount: 0,
+            videosCount: 0,
+            audiosCount: 0,
+          ),
+        );
+      }
 
-      final stats = StorageStats(
-        mainDatabaseSize: results[0] as int,
-        logDatabaseSize: results[1] as int,
-        aiDatabaseSize: results[2] as int,
-        mediaFilesSize: (results[3] as Map<String, dynamic>)['total'] as int,
-        cacheSize: results[4] as int,
-        mediaBreakdown: (results[3] as Map<String, dynamic>)['breakdown']
-            as MediaFilesBreakdown,
-      );
+      // 预先获取所有需要的路径（这些调用很快）
+      final appDir = await getApplicationDocumentsDirectory();
+      final tempDir = await getTemporaryDirectory();
+
+      // 获取数据库路径
+      String? mainDbPath;
+      try {
+        final dbService = DatabaseService();
+        mainDbPath = dbService.database.path;
+      } catch (e) {
+        logDebug('获取主数据库路径失败: $e');
+      }
+
+      // 在后台 isolate 中执行耗时的文件统计
+      final stats = await compute(_computeStorageStats, _StorageStatsParams(
+        appDirPath: appDir.path,
+        tempDirPath: tempDir.path,
+        mainDbPath: mainDbPath,
+      ));
 
       logDebug('存储统计完成: 总占用 ${StorageStats.formatBytes(stats.totalSize)}');
       return stats;
@@ -116,106 +150,70 @@ class StorageManagementService {
     }
   }
 
-  /// 获取主数据库大小
-  static Future<int> _getMainDatabaseSize() async {
+  /// 在后台 isolate 中计算存储统计的入口函数
+  static Future<StorageStats> _computeStorageStats(_StorageStatsParams params) async {
+    // 并行获取各项统计
+    final results = await Future.wait([
+      _getMainDatabaseSizeIsolate(params.mainDbPath),
+      _getLogDatabaseSizeIsolate(params.appDirPath),
+      _getAIDatabaseSizeIsolate(params.appDirPath),
+      _getMediaFilesSizeIsolate(params.appDirPath),
+      _getCacheSizeIsolate(params.tempDirPath),
+    ]);
+
+    return StorageStats(
+      mainDatabaseSize: results[0] as int,
+      logDatabaseSize: results[1] as int,
+      aiDatabaseSize: results[2] as int,
+      mediaFilesSize: (results[3] as Map<String, dynamic>)['total'] as int,
+      cacheSize: results[4] as int,
+      mediaBreakdown: (results[3] as Map<String, dynamic>)['breakdown']
+          as MediaFilesBreakdown,
+    );
+  }
+
+  /// Isolate 版本：获取主数据库大小
+  static Future<int> _getMainDatabaseSizeIsolate(String? dbPath) async {
     try {
-      if (kIsWeb) return 0; // Web 平台使用内存存储
-
-      final dbService = DatabaseService();
-      final db = dbService.database;
-
-      // 获取数据库文件路径
-      final dbPath = db.path;
-      if (dbPath.isEmpty) {
-        logDebug('主数据库路径为空');
-        return 0;
-      }
-
+      if (dbPath == null || dbPath.isEmpty) return 0;
       final dbFile = File(dbPath);
-      if (!await dbFile.exists()) {
-        logDebug('主数据库文件不存在: $dbPath');
-        return 0;
-      }
-
-      final size = await dbFile.length();
-      logDebug('主数据库大小: ${StorageStats.formatBytes(size)}');
-      return size;
+      if (!await dbFile.exists()) return 0;
+      return await dbFile.length();
     } catch (e) {
-      logDebug('获取主数据库大小失败: $e');
       return 0;
     }
   }
 
-  /// 获取日志数据库大小
-  static Future<int> _getLogDatabaseSize() async {
+  /// Isolate 版本：获取日志数据库大小
+  static Future<int> _getLogDatabaseSizeIsolate(String appDirPath) async {
     try {
-      if (kIsWeb) return 0; // Web 平台使用 SharedPreferences
-
-      // 日志数据库路径
-      final appDir = await getApplicationDocumentsDirectory();
-      final logDbPath = path.join(appDir.path, 'databases', 'logs.db');
-
+      final logDbPath = path.join(appDirPath, 'databases', 'logs.db');
       final logDbFile = File(logDbPath);
-      if (!await logDbFile.exists()) {
-        logDebug('日志数据库文件不存在: $logDbPath');
-        return 0;
-      }
-
-      final size = await logDbFile.length();
-      logDebug('日志数据库大小: ${StorageStats.formatBytes(size)}');
-      return size;
+      if (!await logDbFile.exists()) return 0;
+      return await logDbFile.length();
     } catch (e) {
-      logDebug('获取日志数据库大小失败: $e');
       return 0;
     }
   }
 
-  /// 获取AI分析数据库大小
-  static Future<int> _getAIDatabaseSize() async {
+  /// Isolate 版本：获取AI分析数据库大小
+  static Future<int> _getAIDatabaseSizeIsolate(String appDirPath) async {
     try {
-      if (kIsWeb) return 0; // Web 平台使用内存存储
-
-      // AI分析数据库路径
-      final appDir = await getApplicationDocumentsDirectory();
-      final aiDbPath = path.join(appDir.path, 'ai_analyses.db');
-
+      final aiDbPath = path.join(appDirPath, 'ai_analyses.db');
       final aiDbFile = File(aiDbPath);
-      if (!await aiDbFile.exists()) {
-        logDebug('AI分析数据库文件不存在: $aiDbPath');
-        return 0;
-      }
-
-      final size = await aiDbFile.length();
-      logDebug('AI分析数据库大小: ${StorageStats.formatBytes(size)}');
-      return size;
+      if (!await aiDbFile.exists()) return 0;
+      return await aiDbFile.length();
     } catch (e) {
-      logDebug('获取AI分析数据库大小失败: $e');
       return 0;
     }
   }
 
-  /// 获取媒体文件大小（包含详细分类）
-  static Future<Map<String, dynamic>> _getMediaFilesSize() async {
+  /// Isolate 版本：获取媒体文件大小
+  static Future<Map<String, dynamic>> _getMediaFilesSizeIsolate(String appDirPath) async {
     try {
-      if (kIsWeb) {
-        return {
-          'total': 0,
-          'breakdown': MediaFilesBreakdown(
-            imagesSize: 0,
-            videosSize: 0,
-            audiosSize: 0,
-            imagesCount: 0,
-            videosCount: 0,
-            audiosCount: 0,
-          ),
-        };
-      }
-
-      final appDir = await getApplicationDocumentsDirectory();
-      final mediaDir = Directory(path.join(appDir.path, _mediaFolder));
+      final mediaDir = Directory(path.join(appDirPath, _mediaFolder));
 
       if (!await mediaDir.exists()) {
-        logDebug('媒体文件夹不存在');
         return {
           'total': 0,
           'breakdown': MediaFilesBreakdown(
@@ -230,13 +228,13 @@ class StorageManagementService {
       }
 
       // 分别统计各类媒体文件
-      final imagesStats = await _getDirectorySize(
+      final imagesStats = await _getDirectorySizeIsolate(
         path.join(mediaDir.path, _imagesFolder),
       );
-      final videosStats = await _getDirectorySize(
+      final videosStats = await _getDirectorySizeIsolate(
         path.join(mediaDir.path, _videosFolder),
       );
-      final audiosStats = await _getDirectorySize(
+      final audiosStats = await _getDirectorySizeIsolate(
         path.join(mediaDir.path, _audiosFolder),
       );
 
@@ -252,19 +250,11 @@ class StorageManagementService {
       final totalSize =
           breakdown.imagesSize + breakdown.videosSize + breakdown.audiosSize;
 
-      logDebug('媒体文件统计: 图片 ${StorageStats.formatBytes(breakdown.imagesSize)} '
-          '(${breakdown.imagesCount}个), '
-          '视频 ${StorageStats.formatBytes(breakdown.videosSize)} '
-          '(${breakdown.videosCount}个), '
-          '音频 ${StorageStats.formatBytes(breakdown.audiosSize)} '
-          '(${breakdown.audiosCount}个)');
-
       return {
         'total': totalSize,
         'breakdown': breakdown,
       };
     } catch (e) {
-      logDebug('获取媒体文件大小失败: $e');
       return {
         'total': 0,
         'breakdown': MediaFilesBreakdown(
@@ -279,7 +269,45 @@ class StorageManagementService {
     }
   }
 
-  /// 获取目录大小和文件数量（优化版：分批处理，避免阻塞）
+  /// Isolate 版本：获取目录大小（无需 yield，因为在独立 isolate 中）
+  static Future<Map<String, int>> _getDirectorySizeIsolate(String dirPath) async {
+    try {
+      final dir = Directory(dirPath);
+      if (!await dir.exists()) {
+        return {'size': 0, 'count': 0};
+      }
+
+      int totalSize = 0;
+      int fileCount = 0;
+
+      await for (final entity in dir.list(recursive: true)) {
+        if (entity is File) {
+          try {
+            totalSize += await entity.length();
+            fileCount++;
+          } catch (e) {
+            // 忽略单个文件的错误
+          }
+        }
+      }
+
+      return {'size': totalSize, 'count': fileCount};
+    } catch (e) {
+      return {'size': 0, 'count': 0};
+    }
+  }
+
+  /// Isolate 版本：获取缓存大小
+  static Future<int> _getCacheSizeIsolate(String tempDirPath) async {
+    try {
+      final tempStats = await _getDirectorySizeIsolate(tempDirPath);
+      return tempStats['size'] as int;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  /// 获取目录大小和文件数量（用于清理缓存时计算大小变化）
   static Future<Map<String, int>> _getDirectorySize(String dirPath) async {
     try {
       final dir = Directory(dirPath);
@@ -289,60 +317,21 @@ class StorageManagementService {
 
       int totalSize = 0;
       int fileCount = 0;
-      int batchCount = 0;
-      const batchSize = 50; // 每处理50个文件就让出控制权
 
       await for (final entity in dir.list(recursive: true)) {
         if (entity is File) {
           try {
             totalSize += await entity.length();
             fileCount++;
-            batchCount++;
-
-            // 每批次处理后让出控制权，避免阻塞UI
-            if (batchCount >= batchSize) {
-              await Future.delayed(const Duration(milliseconds: 1));
-              batchCount = 0;
-            }
           } catch (e) {
-            logDebug('获取文件大小失败: ${entity.path}, 错误: $e');
+            // 忽略单个文件错误
           }
         }
       }
 
       return {'size': totalSize, 'count': fileCount};
     } catch (e) {
-      logDebug('获取目录大小失败: $dirPath, 错误: $e');
       return {'size': 0, 'count': 0};
-    }
-  }
-
-  /// 获取缓存大小（包含临时文件和各种缓存）
-  static Future<int> _getCacheSize() async {
-    try {
-      if (kIsWeb) return 0;
-
-      int totalSize = 0;
-
-      // 1. 临时目录
-      try {
-        final tempDir = await getTemporaryDirectory();
-        final tempStats = await _getDirectorySize(tempDir.path);
-        totalSize += tempStats['size'] as int;
-        logDebug(
-            '临时目录大小: ${StorageStats.formatBytes(tempStats['size'] as int)}');
-      } catch (e) {
-        logDebug('获取临时目录大小失败: $e');
-      }
-
-      // 2. 图片缓存（内存缓存无法准确统计，这里暂不计入）
-      // ImageCacheService 是内存缓存，不占用磁盘空间
-
-      logDebug('缓存总大小: ${StorageStats.formatBytes(totalSize)}');
-      return totalSize;
-    } catch (e) {
-      logDebug('获取缓存大小失败: $e');
-      return 0;
     }
   }
 
