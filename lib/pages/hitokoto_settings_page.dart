@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/settings_service.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
+import '../gen_l10n/app_localizations.dart';
 
 class HitokotoSettingsPage extends StatefulWidget {
   const HitokotoSettingsPage({super.key});
@@ -53,6 +54,7 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
     }
     _selectedType = _selectedTypes.join(',');
     context.read<SettingsService>().updateHitokotoType(_selectedType);
+    final l10n = AppLocalizations.of(context);
 
     ScaffoldMessenger.of(context).showSnackBar(
       // ignore: prefer_const_constructors
@@ -65,7 +67,7 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
               size: 20,
             ),
             const SizedBox(width: 12),
-            const Text('设置已保存'),
+            Text(l10n.settingsSaved),
           ],
         ),
         backgroundColor: Theme.of(context).colorScheme.inverseSurface,
@@ -83,13 +85,14 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context);
 
     return FadeTransition(
       opacity: _fadeAnimation,
       child: Scaffold(
         backgroundColor: colorScheme.surface,
         appBar: AppBar(
-          title: const Text('每日一言设置'),
+          title: Text(l10n.hitokotoSettings),
           centerTitle: true,
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -143,7 +146,7 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '每日一言类型设置',
+                                l10n.hitokotoTypeSettings,
                                 style: theme.textTheme.titleLarge?.copyWith(
                                   color: colorScheme.onPrimaryContainer,
                                   fontWeight: FontWeight.bold,
@@ -151,7 +154,7 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                '已选择 ${_selectedTypes.length} 种类型',
+                                l10n.selectedCount(_selectedTypes.length),
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   color: colorScheme.onPrimaryContainer
                                       .withAlpha(180),
@@ -164,7 +167,7 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      '您可以选择一个或多个"每日一言"类型，程序将从您选择的类型中随机抽取内容展示。不同类型代表不同的内容来源和风格。',
+                      l10n.hitokotoTypeDesc,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: colorScheme.onPrimaryContainer.withAlpha(180),
                         height: 1.5,
@@ -183,7 +186,7 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                     child: _buildActionButton(
                       context: context,
                       icon: Icons.select_all_rounded,
-                      label: '全选',
+                      label: l10n.selectAll,
                       onPressed: () {
                         setState(() {
                           _selectedTypes.clear();
@@ -201,7 +204,7 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                     child: _buildActionButton(
                       context: context,
                       icon: Icons.deselect_rounded,
-                      label: '清除全部',
+                      label: l10n.clearAll,
                       onPressed: () {
                         setState(() {
                           _selectedTypes.clear();
@@ -233,7 +236,7 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '类型选择',
+                      l10n.typeSelection,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: colorScheme.onSurface,
@@ -241,7 +244,7 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '点击选择您喜欢的句子类型',
+                      l10n.typeSelectionHint,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurface.withAlpha(150),
                       ),
@@ -308,7 +311,7 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          '使用说明',
+                          l10n.usageInstructions,
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: colorScheme.onSurface,
@@ -317,7 +320,7 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                       ],
                     ),
                     const SizedBox(height: 12),
-                    ..._buildHelpItems(context),
+                    ..._buildHelpItems(context, l10n),
                   ],
                 ),
               ),
@@ -346,7 +349,7 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        '一言服务由 Hitokoto 提供',
+                        l10n.hitokotoServiceProvider,
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: colorScheme.onSurface.withAlpha(150),
                         ),
@@ -451,14 +454,14 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
     );
   }
 
-  List<Widget> _buildHelpItems(BuildContext context) {
+  List<Widget> _buildHelpItems(BuildContext context, AppLocalizations l10n) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
     final helpItems = [
-      '至少需要选择一种类型，程序会随机展示选中类型的内容',
-      '选择多种类型可以获得更丰富多样的内容体验',
-      '不同类型代表不同的内容风格和来源平台',
+      l10n.hitokotoHelpItem1,
+      l10n.hitokotoHelpItem2,
+      l10n.hitokotoHelpItem3,
     ];
 
     return helpItems.map((item) {

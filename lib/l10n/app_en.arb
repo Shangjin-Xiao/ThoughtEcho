@@ -431,5 +431,114 @@
         "type": "String"
       }
     }
-  }
+  },
+  
+  "themeSettings": "Theme Settings",
+  "themeMode": "Theme Mode",
+  "themeModeLight": "Light",
+  "themeModeDark": "Dark",
+  "useCustomThemeColor": "Use Custom Theme Color",
+  "selectThemeColor": "Select Theme Color",
+  "dynamicColor": "Dynamic Color",
+  "dynamicColorDesc": "Extract theme color from system",
+  "customColorEnabledHint": "Custom theme color enabled, dynamic color is temporarily disabled",
+  "dynamicColorDisabledHint": "Dynamic color disabled, using default blue theme",
+  "themeTools": "Theme Tools",
+  "themeToolsDesc": "If theme colors appear abnormal, try refreshing the theme",
+  "themeRefreshed": "Theme refreshed",
+  "refreshTheme": "Refresh Theme",
+  
+  "hitokotoSettings": "Daily Quote Settings",
+  "hitokotoTypeSettings": "Daily Quote Type Settings",
+  "hitokotoTypeDesc": "You can select one or more daily quote types. The app will randomly display content from your selected types. Different types represent different content sources and styles.",
+  "selectAll": "Select All",
+  "clearAll": "Clear All",
+  "typeSelection": "Type Selection",
+  "typeSelectionHint": "Tap to select your preferred quote types",
+  "usageInstructions": "Instructions",
+  "hitokotoServiceProvider": "Quote service provided by Hitokoto",
+  "hitokotoHelpItem1": "At least one type must be selected. The app will randomly display content from selected types",
+  "hitokotoHelpItem2": "Selecting multiple types provides a richer variety of content",
+  "hitokotoHelpItem3": "Different types represent different content styles and sources",
+  "settingsSaved": "Settings saved",
+  "selectedCount": "{count, plural, =1{1 type selected} other{{count} types selected}}",
+  "@selectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  
+  "tagManagement": "Tag Management",
+  "newTagName": "New Tag Name",
+  "enterTagNameHint": "Enter tag name (max 50 characters)",
+  "selectIcon": "Select Icon",
+  "adding": "Adding",
+  "add": "Add",
+  "pleaseEnterTagName": "Please enter a tag name",
+  "tagAddedSuccess": "Tag added successfully",
+  "addTagFailed": "Failed to add tag: {error}",
+  "@addTagFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "iconSelectionHint": "Choose an icon or enter an emoji as the tag icon",
+  "iconSelected": "Selected icon: {icon}",
+  "@iconSelected": {
+    "placeholders": {
+      "icon": {
+        "type": "String"
+      }
+    }
+  },
+  "clear": "Clear",
+  "loadTagsFailed": "Failed to load tags: {error}",
+  "@loadTagsFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noTags": "No tags yet",
+  "editTag": "Edit Tag",
+  "tagName": "Tag Name",
+  "icon": "Icon",
+  "confirmDelete": "Confirm Delete",
+  "deleteTagConfirmation": "Are you sure you want to delete the tag \"{name}\"? Associated notes will be kept but will no longer be linked to this tag.",
+  "@deleteTagConfirmation": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tagDeletedSuccess": "Tag deleted successfully",
+  "deleteTagFailed": "Failed to delete tag: {error}",
+  "@deleteTagFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "defaultTag": "Default",
+  "systemDefaultTag": "System default tag",
+  "tapToEditLongPressToDelete": "Tap to edit, long press to delete",
+  "edit": "Edit",
+  "select": "Select",
+  "enterEmojiHint": "Enter an emoji...",
+  "useAsIcon": "Use \"{emoji}\" as icon",
+  "@useAsIcon": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "systemIcons": "System Icons"
 }

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import '../utils/color_utils.dart'; // 导入颜色工具
+import '../gen_l10n/app_localizations.dart';
 
 class ThemeSettingsPage extends StatefulWidget {
   const ThemeSettingsPage({super.key});
@@ -28,9 +29,10 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
   @override
   Widget build(BuildContext context) {
     final appTheme = Provider.of<AppTheme>(context);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('主题设置')),
+      appBar: AppBar(title: Text(l10n.themeSettings)),
       body: ListView(
         children: [
           Card(
@@ -48,9 +50,9 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    '主题模式',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  Text(
+                    l10n.themeMode,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -60,21 +62,21 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                         context,
                         appTheme,
                         ThemeMode.light,
-                        '浅色',
+                        l10n.themeModeLight,
                         Icons.light_mode,
                       ),
                       _buildThemeModeOption(
                         context,
                         appTheme,
                         ThemeMode.dark,
-                        '深色',
+                        l10n.themeModeDark,
                         Icons.dark_mode,
                       ),
                       _buildThemeModeOption(
                         context,
                         appTheme,
                         ThemeMode.system,
-                        '跟随系统',
+                        l10n.followSystem,
                         Icons.brightness_auto,
                       ),
                     ],
@@ -101,9 +103,9 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        '使用自定义主题色',
-                        style: TextStyle(
+                      Text(
+                        l10n.useCustomThemeColor,
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -116,7 +118,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                   ),
                   if (appTheme.useCustomColor) ...[
                     const SizedBox(height: 16),
-                    const Text('选择主题色'),
+                    Text(l10n.selectThemeColor),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 12,
@@ -153,16 +155,16 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            '动态取色',
-                            style: TextStyle(
+                          Text(
+                            l10n.dynamicColor,
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '从系统提取主题颜色',
+                            l10n.dynamicColorDesc,
                             style: TextStyle(
                               fontSize: 12,
                               color: Theme.of(
@@ -211,7 +213,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              '已启用自定义主题色，动态取色功能已暂时禁用',
+                              l10n.customColorEnabledHint,
                               style: TextStyle(
                                 fontSize: 12,
                                 color: Theme.of(
@@ -241,10 +243,10 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                                 Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                           const SizedBox(width: 8),
-                          const Expanded(
+                          Expanded(
                             child: Text(
-                              '未启用动态取色，将使用默认蓝色主题',
-                              style: TextStyle(fontSize: 12),
+                              l10n.dynamicColorDisabledHint,
+                              style: const TextStyle(fontSize: 12),
                             ),
                           ),
                         ],
@@ -269,14 +271,14 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    '主题工具',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  Text(
+                    l10n.themeTools,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    '如果主题颜色显示异常，可以尝试刷新主题',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  Text(
+                    l10n.themeToolsDesc,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                   const SizedBox(height: 12),
                   SizedBox(
@@ -285,14 +287,14 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                       onPressed: () {
                         appTheme.forceRefreshTheme();
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('主题已刷新'),
-                            duration: Duration(seconds: 2),
+                          SnackBar(
+                            content: Text(l10n.themeRefreshed),
+                            duration: const Duration(seconds: 2),
                           ),
                         );
                       },
                       icon: const Icon(Icons.refresh),
-                      label: const Text('刷新主题'),
+                      label: Text(l10n.refreshTheme),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                       ),
