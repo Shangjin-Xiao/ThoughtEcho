@@ -456,6 +456,11 @@ class AppTheme with ChangeNotifier {
         radioSchemeColor: SchemeColor.primary,
         // 滑块使用主题色
         sliderBaseSchemeColor: SchemeColor.primary,
+        // SegmentedButton 使用主题色
+        segmentedButtonSchemeColor: SchemeColor.primary,
+        // FilterChip 使用主题色
+        chipSchemeColor: SchemeColor.primary,
+        chipSelectedSchemeColor: SchemeColor.primaryContainer,
         // 圆角配置
         cardRadius: cardRadius,
         inputDecoratorRadius: inputRadius,
@@ -466,11 +471,12 @@ class AppTheme with ChangeNotifier {
         textButtonRadius: buttonRadius,
         fabRadius: buttonRadius,
       ),
-      keyColors: const FlexKeyColors(
-        useSecondary: true,
-        useTertiary: true,
-      ),
-      tones: FlexTones.material(Brightness.dark),
+      // 禁用 keyColors 以防止重新生成颜色方案覆盖我们的自定义颜色
+      // keyColors: const FlexKeyColors(
+      //   useSecondary: true,
+      //   useTertiary: true,
+      // ),
+      // tones: FlexTones.material(Brightness.dark),
       visualDensity: FlexColorScheme.comfortablePlatformDensity,
     );
 
@@ -523,10 +529,126 @@ class AppTheme with ChangeNotifier {
         thumbColor: colorScheme.primary,
         inactiveTrackColor: colorScheme.primary.withValues(alpha: 0.3),
       ),
+      // 显式配置 SegmentedButton 主题
+      segmentedButtonTheme: SegmentedButtonThemeData(
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return colorScheme.secondaryContainer;
+            }
+            return Colors.transparent;
+          }),
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.selected)) {
+              return colorScheme.onSecondaryContainer;
+            }
+            return colorScheme.onSurface;
+          }),
+          side: WidgetStateProperty.all(
+            BorderSide(color: colorScheme.outline),
+          ),
+        ),
+      ),
+      // 显式配置 FilterChip/Chip 主题
+      chipTheme: ChipThemeData(
+        backgroundColor: colorScheme.surfaceContainerHighest,
+        selectedColor: colorScheme.secondaryContainer,
+        labelStyle: TextStyle(color: colorScheme.onSurface),
+        secondaryLabelStyle: TextStyle(color: colorScheme.onSecondaryContainer),
+        checkmarkColor: colorScheme.onSecondaryContainer,
+        side: BorderSide(color: colorScheme.outline),
+      ),
+      // 显式配置 IconButton 主题
+      iconButtonTheme: IconButtonThemeData(
+        style: ButtonStyle(
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return colorScheme.onSurface.withValues(alpha: 0.38);
+            }
+            return colorScheme.onSurfaceVariant;
+          }),
+        ),
+      ),
+      // 显式配置 TextButton 主题
+      textButtonTheme: TextButtonThemeData(
+        style: ButtonStyle(
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return colorScheme.onSurface.withValues(alpha: 0.38);
+            }
+            return colorScheme.primary;
+          }),
+        ),
+      ),
+      // 显式配置 ElevatedButton 主题
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return colorScheme.onSurface.withValues(alpha: 0.12);
+            }
+            return colorScheme.primary;
+          }),
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return colorScheme.onSurface.withValues(alpha: 0.38);
+            }
+            return colorScheme.onPrimary;
+          }),
+        ),
+      ),
+      // 显式配置 FilledButton 主题
+      filledButtonTheme: FilledButtonThemeData(
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return colorScheme.onSurface.withValues(alpha: 0.12);
+            }
+            return colorScheme.primary;
+          }),
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return colorScheme.onSurface.withValues(alpha: 0.38);
+            }
+            return colorScheme.onPrimary;
+          }),
+        ),
+      ),
+      // 显式配置 OutlinedButton 主题
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: ButtonStyle(
+          foregroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return colorScheme.onSurface.withValues(alpha: 0.38);
+            }
+            return colorScheme.primary;
+          }),
+          side: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return BorderSide(color: colorScheme.onSurface.withValues(alpha: 0.12));
+            }
+            return BorderSide(color: colorScheme.outline);
+          }),
+        ),
+      ),
       // 浮动操作按钮使用主题色系
       floatingActionButtonTheme: baseTheme.floatingActionButtonTheme.copyWith(
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
+      ),
+      // 配置输入框装饰主题
+      inputDecorationTheme: baseTheme.inputDecorationTheme.copyWith(
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(inputRadius),
+          borderSide: BorderSide(color: colorScheme.primary, width: 2),
+        ),
+        floatingLabelStyle: TextStyle(color: colorScheme.primary),
+      ),
+      // 配置进度指示器颜色
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: colorScheme.primary,
+        circularTrackColor: colorScheme.primary.withValues(alpha: 0.2),
+        linearTrackColor: colorScheme.primary.withValues(alpha: 0.2),
       ),
     );
   }
