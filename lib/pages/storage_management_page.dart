@@ -380,10 +380,11 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('存储管理'),
+        title: Text(l10n.storageManagement),
       ),
       body: _isLoading && _stats == null
           ? const Center(child: CircularProgressIndicator())
@@ -391,29 +392,29 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
               padding: const EdgeInsets.all(16),
               children: [
                 // 总占用空间卡片
-                _buildTotalStorageCard(colorScheme),
+                _buildTotalStorageCard(colorScheme, l10n),
                 const SizedBox(height: 16),
 
                 // 数据库占用详情
-                _buildSectionTitle('数据库占用'),
+                _buildSectionTitle(l10n.databaseUsage),
                 const SizedBox(height: 8),
-                _buildDatabaseStorageCard(colorScheme),
+                _buildDatabaseStorageCard(colorScheme, l10n),
                 const SizedBox(height: 16),
 
                 // 媒体文件占用详情
-                _buildSectionTitle('媒体文件占用'),
+                _buildSectionTitle(l10n.mediaFilesUsage),
                 const SizedBox(height: 8),
-                _buildMediaStorageCard(colorScheme),
+                _buildMediaStorageCard(colorScheme, l10n),
                 const SizedBox(height: 16),
 
                 // 缓存占用
-                _buildSectionTitle('缓存占用'),
+                _buildSectionTitle(l10n.cacheUsage),
                 const SizedBox(height: 8),
-                _buildCacheStorageCard(colorScheme),
+                _buildCacheStorageCard(colorScheme, l10n),
                 const SizedBox(height: 24),
 
                 // 操作按钮
-                _buildActionButtons(colorScheme),
+                _buildActionButtons(colorScheme, l10n),
                 const SizedBox(height: 24),
 
                 // 数据目录信息（仅桌面端）
@@ -421,14 +422,14 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                     (Platform.isWindows ||
                         Platform.isLinux ||
                         Platform.isMacOS))
-                  _buildDataDirectorySection(colorScheme),
+                  _buildDataDirectorySection(colorScheme, l10n),
               ],
             ),
     );
   }
 
   /// 构建总存储空间卡片
-  Widget _buildTotalStorageCard(ColorScheme colorScheme) {
+  Widget _buildTotalStorageCard(ColorScheme colorScheme, AppLocalizations l10n) {
     final totalSize = _stats?.totalSize ?? 0;
     final mainDbSize = _stats?.mainDatabaseSize ?? 0;
     final logDbSize = _stats?.logDatabaseSize ?? 0;
@@ -456,7 +457,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '总占用空间',
+                        l10n.totalStorageUsage,
                         style: TextStyle(
                           fontSize: 16,
                           color: colorScheme.onSurface.withValues(alpha: 0.7),
@@ -521,15 +522,15 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                 runSpacing: 8,
                 children: [
                   if (mainDbSize > 0)
-                    _buildLegendItem('笔记数据库', Colors.blue, mainDbSize),
+                    _buildLegendItem(l10n.notesDatabase, Colors.blue, mainDbSize),
                   if (aiDbSize > 0)
-                    _buildLegendItem('AI数据库', Colors.purple, aiDbSize),
+                    _buildLegendItem(l10n.aiDatabase, Colors.purple, aiDbSize),
                   if (logDbSize > 0)
-                    _buildLegendItem('日志数据库', Colors.orange, logDbSize),
+                    _buildLegendItem(l10n.logDatabase, Colors.orange, logDbSize),
                   if (mediaSize > 0)
-                    _buildLegendItem('媒体文件', Colors.green, mediaSize),
+                    _buildLegendItem(l10n.mediaFilesUsage, Colors.green, mediaSize),
                   if (cacheSize > 0)
-                    _buildLegendItem('缓存', Colors.grey, cacheSize),
+                    _buildLegendItem(l10n.cacheUsage, Colors.grey, cacheSize),
                 ],
               ),
             ],
@@ -562,27 +563,27 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
   }
 
   /// 构建数据库存储卡片
-  Widget _buildDatabaseStorageCard(ColorScheme colorScheme) {
+  Widget _buildDatabaseStorageCard(ColorScheme colorScheme, AppLocalizations l10n) {
     return Card(
       child: Column(
         children: [
           _buildStorageItem(
             icon: Icons.sticky_note_2_outlined,
-            label: '笔记数据库',
+            label: l10n.notesDatabase,
             size: _stats?.mainDatabaseSize ?? 0,
             color: Colors.blue,
           ),
           const Divider(height: 1),
           _buildStorageItem(
             icon: Icons.analytics_outlined,
-            label: 'AI分析数据库',
+            label: l10n.aiDatabase,
             size: _stats?.aiDatabaseSize ?? 0,
             color: Colors.purple,
           ),
           const Divider(height: 1),
           _buildStorageItem(
             icon: Icons.description_outlined,
-            label: '日志数据库',
+            label: l10n.logDatabase,
             size: _stats?.logDatabaseSize ?? 0,
             color: Colors.orange,
           ),
@@ -592,7 +593,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
   }
 
   /// 构建媒体存储卡片
-  Widget _buildMediaStorageCard(ColorScheme colorScheme) {
+  Widget _buildMediaStorageCard(ColorScheme colorScheme, AppLocalizations l10n) {
     final breakdown = _stats?.mediaBreakdown;
 
     return Card(
@@ -600,7 +601,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
         children: [
           _buildStorageItem(
             icon: Icons.image_outlined,
-            label: '图片',
+            label: l10n.images,
             size: breakdown?.imagesSize ?? 0,
             count: breakdown?.imagesCount ?? 0,
             color: Colors.green,
@@ -608,7 +609,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
           const Divider(height: 1),
           _buildStorageItem(
             icon: Icons.videocam_outlined,
-            label: '视频',
+            label: l10n.videos,
             size: breakdown?.videosSize ?? 0,
             count: breakdown?.videosCount ?? 0,
             color: Colors.red,
@@ -616,7 +617,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
           const Divider(height: 1),
           _buildStorageItem(
             icon: Icons.audiotrack_outlined,
-            label: '音频',
+            label: l10n.audios,
             size: breakdown?.audiosSize ?? 0,
             count: breakdown?.audiosCount ?? 0,
             color: Colors.teal,
@@ -627,11 +628,11 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
   }
 
   /// 构建缓存存储卡片
-  Widget _buildCacheStorageCard(ColorScheme colorScheme) {
+  Widget _buildCacheStorageCard(ColorScheme colorScheme, AppLocalizations l10n) {
     return Card(
       child: _buildStorageItem(
         icon: Icons.cleaning_services_outlined,
-        label: '临时文件和缓存',
+        label: l10n.tempFilesAndCache,
         size: _stats?.cacheSize ?? 0,
         color: Colors.grey,
       ),
@@ -661,7 +662,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
   }
 
   /// 构建操作按钮
-  Widget _buildActionButtons(ColorScheme colorScheme) {
+  Widget _buildActionButtons(ColorScheme colorScheme, AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -674,19 +675,19 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.cleaning_services),
-          label: const Text('清理缓存'),
+          label: Text(l10n.clearCache),
         ),
         const SizedBox(height: 12),
         OutlinedButton.icon(
           onPressed: _isClearing ? null : _cleanupOrphanFiles,
           icon: const Icon(Icons.delete_sweep),
-          label: const Text('清理无用媒体文件'),
+          label: Text(l10n.cleanOrphanMedia),
         ),
         const SizedBox(height: 12),
         OutlinedButton.icon(
           onPressed: _isClearing ? null : _performDatabaseMaintenance,
           icon: const Icon(Icons.build_circle_outlined),
-          label: const Text('数据库维护优化'),
+          label: Text(l10n.databaseMaintenance),
         ),
       ],
     );
@@ -694,9 +695,10 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
 
   /// 选择新的数据目录
   Future<void> _selectNewDataDirectory() async {
+    final l10n = AppLocalizations.of(context);
     try {
       final result = await FilePicker.platform.getDirectoryPath(
-        dialogTitle: '选择新的数据存储目录',
+        dialogTitle: l10n.selectNewDataDirectory,
       );
 
       if (result == null || !mounted) return;
@@ -906,11 +908,11 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
   }
 
   /// 构建数据目录部分
-  Widget _buildDataDirectorySection(ColorScheme colorScheme) {
+  Widget _buildDataDirectorySection(ColorScheme colorScheme, AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('数据存储位置'),
+        _buildSectionTitle(l10n.dataStorageLocation),
         const SizedBox(height: 8),
         Card(
           child: Padding(
@@ -929,7 +931,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                           Row(
                             children: [
                               Text(
-                                '当前数据目录',
+                                l10n.currentDataDirectory,
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: colorScheme.onSurface
@@ -948,7 +950,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Text(
-                                    '自定义',
+                                    l10n.custom,
                                     style: TextStyle(
                                       fontSize: 11,
                                       color: colorScheme.onPrimaryContainer,
@@ -960,7 +962,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            _appDataPath ?? '加载中...',
+                            _appDataPath ?? l10n.loading,
                             style: const TextStyle(
                               fontSize: 13,
                               fontFamily: 'monospace',
@@ -976,7 +978,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                   const Divider(height: 1),
                   const SizedBox(height: 16),
                   Text(
-                    'Windows端数据目录迁移',
+                    l10n.windowsDataMigration,
                     style: TextStyle(
                       fontSize: 13,
                       color: colorScheme.onSurface.withValues(alpha: 0.6),
@@ -984,7 +986,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    '将应用数据迁移到其他位置（如D盘），释放系统盘空间',
+                    l10n.windowsDataMigrationDesc,
                     style: TextStyle(
                       fontSize: 12,
                       color: colorScheme.onSurface.withValues(alpha: 0.5),
@@ -1004,7 +1006,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.drive_file_move_outlined),
-                      label: Text(_isMigrating ? '迁移中...' : '更改数据目录'),
+                      label: Text(_isMigrating ? l10n.migrating : l10n.changeDataDirectory),
                     ),
                   ),
                 ],

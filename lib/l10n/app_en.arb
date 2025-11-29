@@ -540,5 +540,151 @@
       }
     }
   },
-  "systemIcons": "System Icons"
+  "systemIcons": "System Icons",
+  
+  "storageManagement": "Storage Management",
+  "clearCache": "Clear Cache",
+  "clearCacheConfirmTitle": "Clear Cache",
+  "clearCacheConfirmContent": "Are you sure you want to clear the app cache?\n\nThis will remove temporary files and image cache, but will not delete your notes.",
+  "confirm": "Confirm",
+  "cleanOrphanMedia": "Clean Unused Media",
+  "cleanOrphanMediaConfirmTitle": "Clean Unused Media Files",
+  "cleanOrphanMediaConfirmContent": "This will delete media files (images, videos, audio) that are not referenced by any notes.\n\nAre you sure you want to continue?",
+  "databaseMaintenance": "Database Maintenance",
+  "databaseMaintenanceConfirmTitle": "Database Maintenance",
+  "databaseMaintenanceConfirmContent": "This operation will optimize the database:\n\n• Defragment storage space\n• Update statistics\n• Rebuild indexes\n\nThe process may take from a few seconds to several minutes depending on data size.\n\nAre you sure you want to continue?",
+  "startMaintenance": "Start Maintenance",
+  "maintenanceInProgress": "Database maintenance in progress...",
+  "preparingProgress": "Preparing...",
+  "maintenanceComplete": "Maintenance Complete",
+  "maintenanceDuration": "Duration: {duration} seconds",
+  "@maintenanceDuration": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "databaseSizeChange": "Database size: {before} MB → {after} MB",
+  "@databaseSizeChange": {
+    "placeholders": {
+      "before": {
+        "type": "String"
+      },
+      "after": {
+        "type": "String"
+      }
+    }
+  },
+  "spaceSavedMb": "Space saved: {size} MB",
+  "@spaceSavedMb": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "noSpaceSaved": "No space saved (database is already compact)",
+  "maintenanceFailed": "Maintenance failed: {error}",
+  "@maintenanceFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadStorageInfoFailed": "Failed to load storage info: {error}",
+  "@loadStorageInfoFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cacheCleanedResult": "Cache cleared, freed {size}",
+  "@cacheCleanedResult": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "clearCacheFailed": "Failed to clear cache: {error}",
+  "@clearCacheFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "orphanFilesCleanedResult": "{count, plural, =0{No unused files found} =1{Cleanup complete, deleted 1 unused file} other{Cleanup complete, deleted {count} unused files}}",
+  "@orphanFilesCleanedResult": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noOrphanFilesFound": "No unused files found",
+  "cleanupFailed": "Cleanup failed: {error}",
+  "@cleanupFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "totalStorageUsage": "Total Storage Usage",
+  "databaseUsage": "Database Usage",
+  "mediaFilesUsage": "Media Files Usage",
+  "cacheUsage": "Cache Usage",
+  "notesDatabase": "Notes Database",
+  "aiDatabase": "AI Database",
+  "logDatabase": "Log Database",
+  "images": "Images",
+  "videos": "Videos",
+  "audios": "Audio",
+  "tempFilesAndCache": "Temporary files and cache",
+  "fileCount": "{count, plural, =1{1 file} other{{count} files}}",
+  "@fileCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dataStorageLocation": "Data Storage Location",
+  "currentDataDirectory": "Current Data Directory",
+  "custom": "Custom",
+  "loading": "Loading...",
+  "windowsDataMigration": "Windows Data Directory Migration",
+  "windowsDataMigrationDesc": "Migrate app data to another location (e.g., D: drive) to free up system disk space",
+  "changeDataDirectory": "Change Data Directory",
+  "migrating": "Migrating...",
+  "confirmDataMigration": "Confirm Data Migration",
+  "migrationTargetPath": "About to migrate all app data to:",
+  "migrationWarning": "⚠️ Migration may take several minutes. Please do not close the app during this process.\n⚠️ You will need to restart the app after migration is complete.",
+  "startMigration": "Start Migration",
+  "migratingData": "Migrating Data",
+  "migrationComplete": "Migration Complete",
+  "migrationCompleteMessage": "Data has been successfully migrated to the new directory!\n\nPlease restart the app for changes to take effect.",
+  "migrationFailed": "Data migration failed. Please check the logs for details.",
+  "migrationFailedWithError": "Migration failed: {error}",
+  "@migrationFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "selectNewDataDirectory": "Select New Data Storage Directory",
+  "directoryNotAvailable": "Selected directory is not available or lacks write permission",
+  "selectDirectoryFailed": "Failed to select directory: {error}",
+  "@selectDirectoryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  }
 }
