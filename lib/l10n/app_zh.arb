@@ -410,7 +410,6 @@
   "askNote": "问笔记",
   "askNoteDesc": "与AI助手对话，深入探讨笔记内容",
   "pleaseEnterContent": "请先输入内容",
-  "analyzing": "正在分析...",
   "analysisResults": "分析结果",
   "confidence": "可信度",
   "noAuthorOrWorkIdentified": "未能识别出明确的作者或作品",
@@ -900,7 +899,6 @@
     }
   },
   "logClearAllFilters": "清除全部",
-  "logDetailsTitle": "{level} 日志 {source}",
   "logCopyAll": "复制全部信息",
   "logTimestamp": "时间: {time}",
   "@logTimestamp": {
@@ -914,7 +912,6 @@
   "logError": "错误:",
   "logStackTrace": "堆栈跟踪:",
   "logCopied": "日志详情已复制到剪贴板",
-  "logFilterOptions": "日志过滤选项",
   "logFilterReset": "重置",
   "logFilterByLevel": "按日志级别过滤",
   "logFilterBySource": "按来源过滤",
@@ -967,25 +964,8 @@
       }
     }
   },
-  "analysisTypeComprehensive": "全面分析",
-  "analysisTypeComprehensiveDesc": "综合分析您所有笔记，探索主题、情感和思维模式",
-  "analysisTypeEmotional": "情感洞察",
-  "analysisTypeEmotionalDesc": "分析您的情绪状态和变化趋势",
-  "analysisTypeMindmap": "思维导图",
-  "analysisTypeMindmapDesc": "构建您思考的结构和思维习惯分析",
-  "analysisTypeGrowth": "成长建议",
-  "analysisTypeGrowthDesc": "根据您的笔记提供个性化成长和进步建议",
-  "analysisStyleProfessional": "专业分析",
-  "analysisStyleProfessionalDesc": "以专业、客观的方式分析您的笔记",
-  "analysisStyleFriendly": "友好导师",
-  "analysisStyleFriendlyDesc": "像一位友好的导师给予温和的建议",
-  "analysisStyleHumorous": "风趣幽默",
-  "analysisStyleHumorousDesc": "以幽默风趣的方式解读您的思考",
-  "analysisStyleLiterary": "文学风格",
-  "analysisStyleLiteraryDesc": "以优美的文学语言描述您的思考旅程",
   "testAnalysis": "测试分析",
   "testAnalysisDesc": "这是一个测试分析，用于验证保存功能是否正常工作。",
-  "analysisSaved": "分析结果已保存",
   "viewHistory": "查看历史",
   "saveAnalysisError": "保存分析失败: {error}",
   "@saveAnalysisError": {
@@ -1017,7 +997,6 @@
       }
     }
   },
-  "analysisCopied": "分析结果已复制到剪贴板，可以粘贴分享",
   "shareError": "分享失败: {error}",
   "@shareError": {
     "placeholders": {
@@ -1042,7 +1021,6 @@
   "checkApiKey": "检查API密钥",
   "rateLimitExceeded": "请求频率过高，请稍后重试",
   "tryLater": "稍后重试",
-  "networkError": "网络连接问题，请检查网络",
   "generateInsightsSetupError": "生成洞察失败 (setup): {error}",
   "@generateInsightsSetupError": {
     "placeholders": {
@@ -1054,15 +1032,9 @@
   "serverInternalErrorConfig": "服务器内部错误，请检查AI模型配置是否正确",
   "invalidApiKeyUpdate": "API密钥无效，请在设置中更新API密钥",
   "configureValidApiKey": "请先在设置中配置有效的API密钥",
-  "goToSettings": "去设置",
-  "analyzing": "分析中...",
-  "startAnalysis": "开始分析",
-  "analysisHistory": "分析历史",
   "regenerate": "重新生成",
   "selectAnalysisMethod": "选择分析方式",
-  "selectAnalysisStyle": "选择分析风格",
   "advancedOptions": "高级选项",
-  "customPrompt": "自定义分析提示词",
   "customPromptHint": "例如：分析我的笔记中提到的人物和地点",
   "analysisHistoryRecord": "分析历史记录",
   "viewPreviousAnalysis": "查看之前的AI分析结果",
@@ -1126,7 +1098,6 @@
     }
   },
   "loadAiSettingsErrorUser": "加载AI设置失败，请检查网络连接或重新启动应用",
-  "retry": "重试",
   "fixFormErrors": "请修正表单中的错误后再保存",
   "presetCreated": "新预设已创建并保存成功",
   "saveSettingsError": "保存设置失败: {error}",
@@ -1192,7 +1163,6 @@
   },
   "renamePreset": "重命名预设",
   "presetName": "预设名称",
-  "confirm": "确定",
   "presetRenamed": "预设已重命名为 \"{result}\"",
   "@presetRenamed": {
     "placeholders": {
@@ -1210,7 +1180,6 @@
       }
     }
   },
-  "delete": "删除",
   "presetDeleted": "预设 \"{providerName}\" 已删除",
   "@presetDeleted": {
     "placeholders": {
@@ -1279,7 +1248,6 @@
       }
     }
   },
-  "custom": "自定义",
   "apiUrlField": "API URL",
   "apiUrlHint": "例如 https://api.xxx.com/v1/chat/completions",
   "apiUrlHelper": "必须为 http/https 地址",
@@ -1463,7 +1431,6 @@
     }
   },
   "reportCopied": "年度报告已复制到剪贴板",
-  "shareFailed": "分享失败，请稍后重试",
   "monday": "星期一",
   "tuesday": "星期二",
   "wednesday": "星期三",
@@ -1471,7 +1438,6 @@
   "friday": "星期五",
   "saturday": "星期六",
   "sunday": "星期日",
-  "defaultTag": "默认",
   "dayOfMonth": "{day}日",
   "@dayOfMonth": {
     "placeholders": {
@@ -1594,37 +1560,9 @@
     }
   },
   "generateCards": "生成卡片",
-  "regenerate": "重新生成",
   "noFeaturedCards": "暂无精选卡片",
   "featuredCardGenerationTip": "可根据笔记内容生成精美分享卡片：开启AI=智能设计，关闭AI=使用内置模板",
-  "generatingShareImage": "正在生成分享图片...",
   "cardFromReport": "来自心迹周期报告的精美卡片",
-  "cardSharedSuccessfully": "卡片分享成功",
-  "shareFailed": "分享失败: {error}",
-  "@shareFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "savingCardToGallery": "正在保存卡片到相册...",
-  "cardSavedToGallery": "卡片已保存到相册: {path}",
-  "@cardSavedToGallery": {
-    "placeholders": {
-      "path": {
-        "type": "String"
-      }
-    }
-  },
-  "saveFailed": "保存失败: {error}",
-  "@saveFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "loadDataFailed": "加载数据失败: {error}",
   "@loadDataFailed": {
     "placeholders": {
@@ -1745,72 +1683,18 @@
       }
     }
   },
-  "fileCount": "{count} 个文件",
-  "@fileCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
 
-  "cannotOpenLink": "无法打开链接: {url}",
-  "@cannotOpenLink": {
-    "placeholders": {
-      "url": {
-        "type": "String"
-      }
-    }
-  },
-  "checkUpdateFailed": "检查更新失败: {error}",
-  "@checkUpdateFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "getDebugInfoFailed": "获取调试信息失败: {error}",
-  "@getDebugInfoFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "generatingAiReport": "正在生成AI年度报告...",
-  "contentLength": "内容长度：{length}字符",
-  "@contentLength": {
-    "placeholders": {
-      "length": {
-        "type": "int"
-      }
-    }
-  },
-  "containsHtmlTags": "包含HTML标签：{status}",
-  "@containsHtmlTags": {
-    "placeholders": {
-      "status": {
-        "type": "String"
-      }
-    }
-  },
-  "first100Chars": "前100字符：",
   "testFailedEmptyContent": "测试失败：AI返回了空内容",
   
   "includeMediaFilesHint": "勾选后将备份图片、音频等媒体文件（文件更大但更完整）",
-  "selectImportMode": "选择导入模式",
   "overwriteImport": "覆盖导入 (清空现有数据)",
   "overwriteImportDesc": "删除当前所有数据，以备份内容替换",
   "mergeImport": "合并导入 (LWW策略)",
   "mergeImportDesc": "保留现有数据，与备份数据按更新时间合并",
-  "continueAction": "继续",
   "restoreSuccess": "数据还原成功！所有数据已更新。",
-  "confirmRestore": "确认还原数据",
-  "confirmMergeImport": "确认合并导入",
   "mergeImportHint": "此操作将保留当前数据，并与备份数据进行合并：",
   "mergeImportReversible": "此操作可逆：可再次导入覆盖备份或继续合并。",
-  "startMerge": "开始合并",
   "confirmRestoreBtn": "确认还原",
   
   "favoriteCountWithNum": "已珍藏 ({count})",
@@ -1821,25 +1705,8 @@
       }
     }
   },
-  "shareFailed": "分享失败: {error}",
-  "@shareFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "saveFailed": "保存失败: {error}",
-  "@saveFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   
   "analysisRecordDeleted": "分析记录已删除",
-  "deleteFailed": "删除失败: {error}",
   "@deleteFailed": {
     "placeholders": {
       "error": {
@@ -1857,8 +1724,6 @@
   },
   "deleteConfirmTitle": "删除确认",
   "deleteRecordConfirm": "确定要删除这条分析记录吗？",
-  "close": "关闭",
-  "serviceNotInitialized": "服务未初始化，删除失败",
   "confirmDeleteAll": "确认删除",
   "deleteAllRecordsConfirm": "确定要删除所有分析记录吗？此操作不可恢复。",
   "allRecordsDeleted": "所有记录已删除",
@@ -1871,10 +1736,8 @@
   "afternoon": "下午",
   "evening": "傍晚",
   "night": "夜晚",
-  "growth": "成长",
   "learning": "学习",
   "progress": "进步",
-  "success": "成功",
   "happiness": "快乐",
   "gratitude": "感谢",
   "harvest": "收获",
