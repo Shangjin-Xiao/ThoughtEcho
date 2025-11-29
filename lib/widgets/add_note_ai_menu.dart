@@ -185,12 +185,16 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
             context: context,
             builder: (dialogContext) {
               return AlertDialog(
-                title: Text(l10n.confidenceLevel(confidence)),
+                title: Text(l10n.analysisResult),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (explanation.isNotEmpty) Text(explanation),
+                    Text(l10n.confidenceLevel(confidence)),
+                    if (explanation.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(explanation),
+                    ],
                     const SizedBox(height: 8),
                     if (author != null && author.isNotEmpty)
                       Text(l10n.authorLabel(author)),
