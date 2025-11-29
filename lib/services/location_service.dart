@@ -368,31 +368,70 @@ class LocationService extends ChangeNotifier {
   // 带超时的城市搜索
   Future<List<CityInfo>> _searchCityWithTimeout(String query) async {
     try {
-      // 首先尝试使用OpenMeteo API
-      final results = await _searchCityWithOpenMeteo(
-        query,
-      ).timeout(const Duration(seconds: 8), onTimeout: () => <CityInfo>[]);
+      final bool isChinese = _containsChinese(query);
+      
+      if (isChinese) {
+        // 中文搜索：优先使用Nominatim API（对中文支持更好）
+        logDebug('检测到中文输入，优先使用Nominatim API');
+        
+        final nominatimResults = await _searchCityWithNominatim(
+          query,
+        ).timeout(const Duration(seconds: 8), onTimeout: () => <CityInfo>[]);
 
-      if (results.isNotEmpty) {
-        return results;
+        if (nominatimResults.isNotEmpty) {
+          return nominatimResults;
+        }
+        
+        // 如果Nominatim没有结果，回退到OpenMeteo
+        logDebug('Nominatim无结果，尝试OpenMeteo');
+        return await _searchCityWithOpenMeteo(
+          query,
+        ).timeout(const Duration(seconds: 8), onTimeout: () => <CityInfo>[]);
+      } else {
+        // 英文/拼音搜索：优先使用OpenMeteo API
+        logDebug('检测到非中文输入，优先使用OpenMeteo API');
+        
+        final results = await _searchCityWithOpenMeteo(
+          query,
+        ).timeout(const Duration(seconds: 8), onTimeout: () => <CityInfo>[]);
+
+        if (results.isNotEmpty) {
+          return results;
+        }
+
+        // 如果OpenMeteo没有结果，尝试使用Nominatim API
+        return await _searchCityWithNominatim(
+          query,
+        ).timeout(const Duration(seconds: 8), onTimeout: () => <CityInfo>[]);
       }
-
-      // 如果OpenMeteo没有结果，尝试使用OpenStreetMap API
-      return await _searchCityOnline(
-        query,
-      ).timeout(const Duration(seconds: 8), onTimeout: () => <CityInfo>[]);
     } catch (e) {
       logDebug('城市搜索异常: $e');
       return <CityInfo>[];
     }
   }
 
+  // 检测字符串是否主要包含中文字符
+  bool _containsChinese(String text) {
+    // Unicode范围：CJK统一汉字 0x4E00-0x9FFF
+    final chineseRegex = RegExp(r'[\u4e00-\u9fff]');
+    return chineseRegex.hasMatch(text);
+  }
+
   // 使用OpenMeteo的地理编码API搜索城市
   Future<List<CityInfo>> _searchCityWithOpenMeteo(String query) async {
     try {
-      // OpenMeteo地理编码API
+      // 对查询字符串进行URL编码
+      final encodedQuery = Uri.encodeComponent(query.trim());
+
+      // 根据输入语言选择合适的语言参数
+      // 如果包含中文字符，使用中文结果；否则根据用户语言偏好
+      final String languageParam = _containsChinese(query) ? 'zh' : 'en';
+
+      // OpenMeteo地理编码API - 使用URL编码的查询参数
       final url =
-          'https://geocoding-api.open-meteo.com/v1/search?name=$query&count=10&language=zh&format=json';
+          'https://geocoding-api.open-meteo.com/v1/search?name=$encodedQuery&count=15&language=$languageParam&format=json';
+
+      logDebug('OpenMeteo搜索URL: $url');
 
       final response = await NetworkService.instance.get(
         url,
@@ -441,30 +480,22 @@ class LocationService extends ChangeNotifier {
     }
   }
 
-  // 在线搜索城市
-  Future<List<CityInfo>> _searchCityOnline(String query) async {
-    _isSearching = true;
-    notifyListeners();
-
+  // 使用OpenStreetMap Nominatim API搜索城市
+  Future<List<CityInfo>> _searchCityWithNominatim(String query) async {
     try {
-      // 首先尝试使用OpenMeteo的地理编码API搜索城市
-      final results = await _searchCityWithOpenMeteo(query);
-
-      // 如果OpenMeteo返回了结果，直接使用
-      if (results.isNotEmpty) {
-        _searchResults = results;
-        return _searchResults;
-      }
-
-      // 如果OpenMeteo没有返回结果，回退到OpenStreetMap的Nominatim API
-      logDebug('OpenMeteo没有返回结果，尝试使用OpenStreetMap API');
+      // 对查询字符串进行URL编码
+      final encodedQuery = Uri.encodeComponent(query.trim());
+      
+      // 使用Nominatim API - 对中文搜索支持更好
       final url =
-          'https://nominatim.openstreetmap.org/search?q=$query&format=json&addressdetails=1&limit=10';
+          'https://nominatim.openstreetmap.org/search?q=$encodedQuery&format=json&addressdetails=1&limit=15';
+      
+      logDebug('Nominatim搜索URL: $url');
 
       final response = await NetworkService.instance.get(
         url,
         headers: {
-          'Accept-Language': 'zh-CN,zh;q=0.9',
+          'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
           'User-Agent': 'ThoughtEcho App',
         },
         timeoutSeconds: 15,
@@ -472,11 +503,39 @@ class LocationService extends ChangeNotifier {
 
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body);
-        _searchResults = data.map((item) {
+        
+        // 过滤并解析结果
+        final results = <CityInfo>[];
+        final seenLocations = <String>{};
+        
+        for (final item in data) {
           // 提取地址信息
           final address = item['address'] ?? {};
+          final String type = item['type'] ?? '';
+          final String classType = item['class'] ?? '';
+          
+          // 过滤掉非地点类型的结果（如道路、建筑等）
+          // 只保留城市、城镇、村庄、行政区等地点类型
+          final validTypes = {
+            'city', 'town', 'village', 'municipality', 'hamlet',
+            'suburb', 'county', 'state', 'province', 'country',
+            'administrative', 'locality', 'place', 'district'
+          };
+          final validClasses = {'place', 'boundary', 'administrative'};
+          
+          // 如果类型和class都不匹配，跳过此结果
+          if (!validTypes.contains(type) && !validClasses.contains(classType)) {
+            // 但如果address中有城市信息，仍然保留
+            if (address['city'] == null && 
+                address['town'] == null && 
+                address['village'] == null &&
+                address['municipality'] == null) {
+              logDebug('跳过非地点类型结果: type=$type, class=$classType');
+              continue;
+            }
+          }
 
-          // 更灵活地处理地点名称，支持城市、地区、国家等各种类型的地点
+          // 更灵活地处理地点名称
           String placeName = item['name'] ?? '';
           String cityName = address['city'] ??
               address['town'] ??
@@ -489,10 +548,20 @@ class LocationService extends ChangeNotifier {
               address['county'] ??
               '';
 
-          // 对于一些大城市，可能直接作为顶级地点返回，没有详细的address信息
+          // 对于一些大城市，可能直接作为顶级地点返回
           if (address.isEmpty && placeName.isNotEmpty) {
             cityName = placeName;
           }
+          
+          // 跳过空的城市名
+          if (cityName.isEmpty) continue;
+
+          // 构建唯一标识符来去重
+          final locationKey = '$country|$state|$cityName';
+          if (seenLocations.contains(locationKey)) {
+            continue;
+          }
+          seenLocations.add(locationKey);
 
           // 构建完整地址 - 国家, 省/州, 城市
           final String fullName = [
@@ -502,33 +571,28 @@ class LocationService extends ChangeNotifier {
           ].where((part) => part.isNotEmpty).join(', ');
 
           logDebug(
-            '搜索结果: $placeName, $cityName, $country, $state, 完整: $fullName',
+            'Nominatim结果: $placeName -> $cityName, $country, $state',
           );
 
-          return CityInfo(
+          results.add(CityInfo(
             name: cityName,
             fullName: fullName,
-            lat: double.parse(item['lat']),
-            lon: double.parse(item['lon']),
+            lat: double.parse(item['lat'].toString()),
+            lon: double.parse(item['lon'].toString()),
             country: country,
             province: state,
-          );
-        }).toList();
+          ));
+        }
+        
+        return results;
       } else {
-        _searchResults = [];
-        logDebug('搜索城市失败: ${response.statusCode}, ${response.body}');
+        logDebug('Nominatim搜索失败: ${response.statusCode}');
+        return [];
       }
     } catch (e) {
-      _searchResults = [];
-      logDebug('搜索城市发生错误: $e');
-      // 重新抛出异常以便外部处理
-      rethrow;
-    } finally {
-      _isSearching = false;
-      notifyListeners();
+      logDebug('Nominatim搜索发生错误: $e');
+      return [];
     }
-
-    return _searchResults;
   }
 
   // 清空搜索结果
