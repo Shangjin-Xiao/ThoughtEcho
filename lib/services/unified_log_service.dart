@@ -203,6 +203,7 @@ class LogEntry {
 /// 统一日志服务 - 整合 logging_flutter 和现有日志系统
 class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
   static const String _logLevelKey = 'log_level';
+  static const String _logLevelUserSetKey = 'log_level_user_set'; // 标记用户是否手动设置过
   static const int _maxInMemoryLogs = 300;
   static const int _maxStoredLogs = 500;
   static const Duration _batchSaveInterval = Duration(seconds: 2);
@@ -291,18 +292,22 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
       // 从 MMKV 加载日志级别
       final levelIndex = mmkv.getInt(_logLevelKey);
+      // 检查用户是否手动设置过日志级别
+      final userHasSetLevel = mmkv.getBool(_logLevelUserSetKey) ?? false;
+
       if (levelIndex != null &&
           levelIndex >= 0 &&
           levelIndex < UnifiedLogLevel.values.length) {
         _currentLevel = UnifiedLogLevel.values[levelIndex];
 
-        // 安全检查：如果加载的级别是verbose或debug，重置为info
-        // 这是为了防止意外设置导致性能问题和日志泛滥
-        if (_currentLevel == UnifiedLogLevel.verbose ||
-            _currentLevel == UnifiedLogLevel.debug) {
+        // 只有当用户没有手动设置过日志级别时，才自动重置为 info
+        // 如果用户手动设置了 verbose/debug，则尊重用户的选择
+        if (!userHasSetLevel &&
+            (_currentLevel == UnifiedLogLevel.verbose ||
+                _currentLevel == UnifiedLogLevel.debug)) {
           if (kDebugMode) {
             print(
-                'UnifiedLogService: 检测到日志级别为${_currentLevel.name}，为避免性能问题，重置为info');
+                'UnifiedLogService: 检测到日志级别为${_currentLevel.name}，用户未手动设置，重置为info');
           }
           _currentLevel = UnifiedLogLevel.info;
           await mmkv.setInt(_logLevelKey, _currentLevel.index);
@@ -628,6 +633,8 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
       try {
         final mmkv = SafeMMKV();
         await mmkv.setInt(_logLevelKey, newLevel.index);
+        // 标记用户已手动设置过日志级别，后续启动不会自动重置
+        await mmkv.setBool(_logLevelUserSetKey, true);
 
         // 更新 logging_flutter 的级别
         _updateLoggingFlutterLevel();
