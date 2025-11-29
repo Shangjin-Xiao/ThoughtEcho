@@ -12,7 +12,22 @@ class Request {
 class ApiService {
   static const String baseUrl = 'https://v1.hitokoto.cn/';
 
-  // 一言类型常量
+  // 一言类型键常量 - 用于不需要本地化的场景（如静态配置）
+  static const Map<String, String> hitokotoTypeKeys = {
+    'a': 'Animation',
+    'b': 'Comic',
+    'c': 'Game',
+    'd': 'Literature',
+    'e': 'Original',
+    'f': 'Internet',
+    'g': 'Other',
+    'h': 'Film',
+    'i': 'Poetry',
+    'j': 'NetEase',
+    'k': 'Philosophy',
+  };
+
+  // 一言类型常量 - 返回本地化的标签
   static Map<String, String> getHitokotoTypes(AppLocalizations l10n) {
     return {
     'a': l10n.hitokotoTypeA,

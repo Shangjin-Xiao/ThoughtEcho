@@ -190,7 +190,7 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                       onPressed: () {
                         setState(() {
                           _selectedTypes.clear();
-                          for (final key in ApiService.hitokotoTypes.keys) {
+                          for (final key in ApiService.getHitokotoTypes(l10n).keys) {
                             _selectedTypes.add(key);
                           }
                         });

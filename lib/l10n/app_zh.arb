@@ -848,13 +848,41 @@
   "transport": "交通",
   "otherCategory": "其他",
   "logLoadMoreError": "加载更多日志失败: {error}",
+  "@logLoadMoreError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "logLoadError": "加载日志失败",
   "logSourceFilter": "来源: {source}",
+  "@logSourceFilter": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
   "logSearchFilter": "搜索: {query}",
+  "@logSearchFilter": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
   "logClearAllFilters": "清除全部",
   "logDetailsTitle": "{level} 日志 {source}",
   "logCopyAll": "复制全部信息",
   "logTimestamp": "时间: {time}",
+  "@logTimestamp": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
   "logMessage": "消息:",
   "logError": "错误:",
   "logStackTrace": "堆栈跟踪:",
@@ -872,10 +900,38 @@
   "logClearAll": "清除全部日志",
   "logClearAllSuccess": "所有日志记录已清除",
   "logClearError": "清除日志失败: {error}",
+  "@logClearError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "logContainsError": "包含错误信息",
   "httpServerPort": "HTTP 服务端口: {port}",
+  "@httpServerPort": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
   "multicastDiscoveryPort": "多播发现端口: {port}",
+  "@multicastDiscoveryPort": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
   "multicastAddress": "多播地址: {address}",
+  "@multicastAddress": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
   "protocolVersion": "协议版本: {version}",
   "analysisTypeComprehensive": "全面分析",
   "analysisTypeComprehensiveDesc": "综合分析您所有笔记，探索主题、情感和思维模式",

@@ -600,6 +600,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       children: [
         // 现代化标签栏
@@ -740,6 +741,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
   /// 构建折叠状态的时间选择器
   Widget _buildCollapsedTimeSelector() {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -776,6 +778,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
   /// 构建展开状态的时间选择器
   Widget _buildExpandedTimeSelector() {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1341,6 +1344,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
   // 洞察小灯泡组件 - 支持流式显示
   Widget _buildInsightBulbBar() {
+    final l10n = AppLocalizations.of(context);
     return Card(
       elevation: 1,
       child: Padding(
@@ -1388,7 +1392,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '正在生成本${_getPeriodName()}洞察…',
+                            l10n.generatingInsightsForPeriod(_getPeriodName(l10n)),
                             style: Theme.of(context)
                                 .textTheme
                                 .bodyMedium
@@ -1441,7 +1445,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                                       ),
                                       const SizedBox(width: 6),
                                       Text(
-                                        '暂无洞察',
+                                        l10n.noInsights,
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodySmall
@@ -1665,6 +1669,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   }
 
   Widget _buildEmptyState() {
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: Container(
         padding: const EdgeInsets.all(32),
@@ -1851,6 +1856,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
   /// 构建精选卡片
   Widget _buildFeaturedCards() {
+    final l10n = AppLocalizations.of(context);
     if (_isLoadingData) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -2031,6 +2037,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
   /// 构建精选卡片空状态
   Widget _buildFeaturedCardsEmptyState() {
+    final l10n = AppLocalizations.of(context);
     return SingleChildScrollView(
       child: Center(
         child: Padding(
@@ -2179,6 +2186,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
   /// 分享卡片
   void _shareCard(GeneratedCard card) async {
+    final l10n = AppLocalizations.of(context);
     Navigator.of(context).pop(); // 关闭对话框
 
     try {
@@ -2265,6 +2273,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
   /// 保存卡片
   void _saveCard(GeneratedCard card) async {
+    final l10n = AppLocalizations.of(context);
     // 关键修复：在关闭对话框之前，先获取外层scaffold的context
     final scaffoldContext = context;
 
@@ -2312,7 +2321,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
               children: [
                 const Icon(Icons.check_circle, color: Colors.white),
                 const SizedBox(width: 8),
-                Expanded(child: Text(l10n.cardSavedToGallery(filePath ?? ''))),
+                Expanded(child: Text(l10n.cardSavedToGallery(filePath))),
               ],
             ),
             backgroundColor: Colors.green,

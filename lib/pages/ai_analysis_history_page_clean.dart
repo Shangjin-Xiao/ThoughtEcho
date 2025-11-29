@@ -149,7 +149,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(
-            content: Text(AppLocalizations.of(context).deleteFailed),
+            content: Text(AppLocalizations.of(context).deleteFailed(e.toString())),
             duration: AppConstants.snackBarDurationError,
           ));
         }
