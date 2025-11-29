@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../gen_l10n/app_localizations.dart';
 import '../services/clipboard_service.dart';
 import '../services/settings_service.dart';
 import 'ai_settings_page.dart';
@@ -15,11 +16,12 @@ class PreferencesDetailPage extends StatelessWidget {
     final colorScheme = theme.colorScheme;
     final settings = context.watch<SettingsService>();
     final clipboard = context.watch<ClipboardService>();
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: const Text('偏好设置'),
+        title: Text(l10n.prefSettingsTitle),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -76,7 +78,7 @@ class PreferencesDetailPage extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '个性化设置',
+                          l10n.personalizationSettings,
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: colorScheme.onPrimaryContainer,
@@ -84,7 +86,7 @@ class PreferencesDetailPage extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '根据您的使用习惯调整应用行为',
+                          l10n.personalizationSettingsDesc,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: colorScheme.onPrimaryContainer
                                 .withValues(alpha: 0.8),
@@ -100,15 +102,15 @@ class PreferencesDetailPage extends StatelessWidget {
             const SizedBox(height: 24),
 
             // 常用偏好
-            _buildSectionHeader(context, '常用偏好', Icons.settings_outlined),
+            _buildSectionHeader(context, l10n.commonPreferences, Icons.settings_outlined),
             const SizedBox(height: 12),
             _buildPreferenceCard(
               context,
               children: [
                 _buildSwitchTile(
                   context: context,
-                  title: '剪贴板监控',
-                  subtitle: '自动检测剪贴板内容并提示添加笔记',
+                  title: l10n.clipboardMonitoring,
+                  subtitle: l10n.clipboardMonitoringDesc,
                   icon: Icons.content_paste_outlined,
                   value: clipboard.enableClipboardMonitoring,
                   onChanged: (v) => clipboard.setEnableClipboardMonitoring(v),
@@ -116,8 +118,8 @@ class PreferencesDetailPage extends StatelessWidget {
                 _buildDivider(),
                 _buildSwitchTile(
                   context: context,
-                  title: '显示喜爱按钮',
-                  subtitle: '在笔记卡片上显示心形按钮',
+                  title: l10n.showFavoriteButton,
+                  subtitle: l10n.showFavoriteButtonDesc,
                   icon: Icons.favorite_outline,
                   value: settings.showFavoriteButton,
                   onChanged: (v) => settings.setShowFavoriteButton(v),
@@ -125,8 +127,8 @@ class PreferencesDetailPage extends StatelessWidget {
                 _buildDivider(),
                 _buildSwitchTile(
                   context: context,
-                  title: '优先显示加粗内容',
-                  subtitle: '折叠时优先显示加粗文字',
+                  title: l10n.prioritizeBoldContent,
+                  subtitle: l10n.prioritizeBoldContentDesc,
                   icon: Icons.format_bold,
                   value: settings.prioritizeBoldContentInCollapse,
                   onChanged: (v) =>
@@ -135,8 +137,8 @@ class PreferencesDetailPage extends StatelessWidget {
                 _buildDivider(),
                 _buildSwitchTile(
                   context: context,
-                  title: '仅使用本地笔记',
-                  subtitle: '关闭后，无网络时自动使用本地记录',
+                  title: l10n.useLocalNotesOnly,
+                  subtitle: l10n.useLocalNotesOnlyDesc,
                   icon: Icons.offline_bolt_outlined,
                   value: settings.useLocalQuotesOnly,
                   onChanged: (v) => settings.setUseLocalQuotesOnly(v),
@@ -148,15 +150,15 @@ class PreferencesDetailPage extends StatelessWidget {
 
             // AI 快捷开关
             _buildSectionHeader(
-                context, 'AI 智能功能', Icons.auto_awesome_outlined),
+                context, l10n.aiSmartFeatures, Icons.auto_awesome_outlined),
             const SizedBox(height: 12),
             _buildPreferenceCard(
               context,
               children: [
                 _buildSwitchTile(
                   context: context,
-                  title: 'AI生成每日提示',
-                  subtitle: '主页每日提示使用AI生成',
+                  title: l10n.aiGenerateDailyPrompt,
+                  subtitle: l10n.aiGenerateDailyPromptDesc,
                   icon: Icons.lightbulb_outline,
                   value: settings.todayThoughtsUseAI,
                   onChanged: (v) async => settings.setTodayThoughtsUseAI(v),
@@ -164,8 +166,8 @@ class PreferencesDetailPage extends StatelessWidget {
                 _buildDivider(),
                 _buildSwitchTile(
                   context: context,
-                  title: '周期报告AI洞察',
-                  subtitle: '每周/月报告生成时启用AI洞察',
+                  title: l10n.periodicReportAiInsights,
+                  subtitle: l10n.periodicReportAiInsightsDesc,
                   icon: Icons.insights_outlined,
                   value: settings.reportInsightsUseAI,
                   onChanged: (v) async => settings.setReportInsightsUseAI(v),
@@ -173,8 +175,8 @@ class PreferencesDetailPage extends StatelessWidget {
                 _buildDivider(),
                 _buildSwitchTile(
                   context: context,
-                  title: 'AI卡片生成',
-                  subtitle: '为笔记生成可视化SVG卡片',
+                  title: l10n.aiCardGenerationLabel,
+                  subtitle: l10n.aiCardGenerationLabelDesc,
                   icon: Icons.image_outlined,
                   value: settings.aiCardGenerationEnabled,
                   onChanged: (v) async =>
@@ -194,8 +196,8 @@ class PreferencesDetailPage extends StatelessWidget {
                       size: 20,
                     ),
                   ),
-                  title: const Text('更多AI设置'),
-                  subtitle: const Text('配置AI服务商、模型等'),
+                  title: Text(l10n.moreAiSettings),
+                  subtitle: Text(l10n.moreAiSettingsDesc),
                   trailing: Icon(
                     Icons.chevron_right,
                     color: theme.colorScheme.onSurface.withValues(alpha: 0.5),

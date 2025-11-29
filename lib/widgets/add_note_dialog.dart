@@ -873,11 +873,11 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
               children: [
                 TextField(
                   controller: _contentController,
-                  decoration: const InputDecoration(
-                    hintText: '写下你的感悟...',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.edit),
-                    contentPadding: EdgeInsets.fromLTRB(16, 16, 48, 16),
+                  decoration: InputDecoration(
+                    hintText: AppLocalizations.of(context).writeYourThoughts,
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.edit),
+                    contentPadding: const EdgeInsets.fromLTRB(16, 16, 48, 16),
                   ),
                   maxLines: 3,
                   autofocus: true,
@@ -1056,10 +1056,10 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                 Expanded(
                   child: TextField(
                     controller: _authorController,
-                    decoration: const InputDecoration(
-                      hintText: '作者/人物',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.person),
+                    decoration: InputDecoration(
+                      hintText: AppLocalizations.of(context).authorPerson,
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.person),
                     ),
                     maxLines: 1,
                     onChanged: (value) => setState(() {}),
@@ -1069,10 +1069,10 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                 Expanded(
                   child: TextField(
                     controller: _workController,
-                    decoration: const InputDecoration(
-                      hintText: '作品名称',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.book),
+                    decoration: InputDecoration(
+                      hintText: AppLocalizations.of(context).workName,
+                      border: const OutlineInputBorder(),
+                      prefixIcon: const Icon(Icons.book),
                     ),
                     maxLines: 1,
                     onChanged: (value) => setState(() {}),

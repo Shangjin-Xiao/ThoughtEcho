@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
+import '../gen_l10n/app_localizations.dart';
 import '../models/quote_model.dart';
 import '../models/note_category.dart';
 import '../services/database_service.dart';
@@ -1302,7 +1303,7 @@ class NoteListViewState extends State<NoteListView> {
                         onChanged: _onSearchChanged,
                         textInputAction: TextInputAction.search,
                         decoration: InputDecoration(
-                          hintText: '搜索笔记...',
+                          hintText: AppLocalizations.of(context).searchNotes,
                           isDense: true,
                           filled: true,
                           fillColor: ColorUtils.getSearchBoxBackgroundColor(
