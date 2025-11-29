@@ -505,8 +505,14 @@ $contentSection
   }) {
     final time = mostTimePeriod ?? '本期时段分布较均衡';
     final weather = mostWeather ?? '天气因素不明显';
-    final tag =
-        (topTag != null && topTag.trim().isNotEmpty) ? '#$topTag' : '主题尚未收敛';
+    // 处理标签：移除已有的#前缀，然后统一添加#
+    String tag;
+    if (topTag != null && topTag.trim().isNotEmpty) {
+      final cleanTag = topTag.trim().replaceAll(RegExp(r'^#+'), ''); // 移除开头的所有#
+      tag = cleanTag.isNotEmpty ? '#$cleanTag' : '主题尚未收敛';
+    } else {
+      tag = '主题尚未收敛';
+    }
 
     // 3种风格模板（除了简约数据型和极简禅意型），随机挑选
     final rng = math.Random();

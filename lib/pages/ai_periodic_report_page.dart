@@ -66,9 +66,6 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   bool _insightLoading = false;
   StreamSubscription<String>? _insightSub;
 
-  // 新增：流式显示动画控制器
-  AnimationController? _animatedTextController;
-
   // 新增：控制动画是否应该执行的标志
   bool _shouldAnimateOverview = true;
   bool _shouldAnimateCards = true;
@@ -82,12 +79,6 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_onTabChanged);
-
-    // 初始化流式文本动画控制器
-    _animatedTextController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
     _loadPeriodData();
   }
 
@@ -120,7 +111,6 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     _insightSub?.cancel();
-    _animatedTextController?.dispose();
     super.dispose();
   }
 
@@ -349,13 +339,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           .listen(
         (chunk) {
           if (!mounted) return;
+          // 直接更新文本，UI会立即显示新内容（真正的流式显示）
           setState(() {
             _insightText += chunk;
           });
-
-          // 触发文字动画，让新内容渐进显示
-          _animatedTextController?.reset();
-          _animatedTextController?.forward();
         },
         onError: (_) {
           if (!mounted) return;
@@ -372,10 +359,6 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
             _insightText = local;
             _insightLoading = false;
           });
-
-          // 本地洞察也需要动画
-          _animatedTextController?.reset();
-          _animatedTextController?.forward();
         },
         onDone: () {
           if (!mounted) return;
@@ -414,10 +397,6 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         _insightText = local;
         _insightLoading = false;
       });
-
-      // 本地洞察也需要动画
-      _animatedTextController?.reset();
-      _animatedTextController?.forward();
 
       // 保存洞察到历史记录
       if (_insightText.isNotEmpty) {
@@ -1342,9 +1321,12 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     );
   }
 
-  // 洞察小灯泡组件 - 支持流式显示
+  // 洞察小灯泡组件 - 真正的流式显示（AI生成一个字就立即显示）
   Widget _buildInsightBulbBar() {
     final l10n = AppLocalizations.of(context);
+    // 判断是否正在等待首个响应（加载中但还没有文本）
+    final isWaitingFirstResponse = _insightLoading && _insightText.isEmpty;
+    
     return Card(
       elevation: 1,
       child: Padding(
@@ -1352,6 +1334,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // 灯泡图标：流式接收中闪烁，完成后稳定
             AnimatedContainer(
               duration: const Duration(milliseconds: 300),
               child: TweenAnimationBuilder<double>(
@@ -1372,112 +1355,79 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
             ),
             const SizedBox(width: 8),
             Expanded(
-              child: AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                transitionBuilder: (Widget child, Animation<double> animation) {
-                  return FadeTransition(
-                    opacity: animation,
-                    child: SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0.0, 0.3),
-                        end: Offset.zero,
-                      ).animate(animation),
-                      child: child,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 等待首个响应时显示加载提示
+                  if (isWaitingFirstResponse) ...[
+                    Text(
+                      l10n.generatingInsightsForPeriod(_getPeriodName(l10n)),
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant),
                     ),
-                  );
-                },
-                child: _insightLoading
-                    ? Column(
-                        key: const ValueKey('loading'),
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    const SizedBox(height: 8),
+                    LinearProgressIndicator(
+                      backgroundColor: Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ]
+                  // 有文本时直接显示（流式接收中或已完成）
+                  else if (_insightText.isNotEmpty)
+                    // 直接显示实时文本，不使用打字机动画，流式接收时也不显示加载指示器
+                    Text(
+                      _insightText,
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyMedium
+                          ?.copyWith(height: 1.5),
+                    )
+                  // 没有洞察内容且加载完成时显示空状态
+                  else
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .surfaceContainerHigh,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
+                          Icon(
+                            Icons.auto_awesome,
+                            size: 16,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 6),
                           Text(
-                            l10n.generatingInsightsForPeriod(_getPeriodName(l10n)),
+                            l10n.noInsights,
                             style: Theme.of(context)
                                 .textTheme
-                                .bodyMedium
+                                .bodySmall
                                 ?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant),
-                          ),
-                          const SizedBox(height: 8),
-                          TweenAnimationBuilder<double>(
-                            duration: const Duration(milliseconds: 2000),
-                            tween: Tween(begin: 0.0, end: 1.0),
-                            builder: (context, value, child) {
-                              return LinearProgressIndicator(
-                                value: _insightLoading ? null : 1.0,
-                                backgroundColor: Theme.of(context)
-                                    .colorScheme
-                                    .surfaceContainerHighest,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Theme.of(context).colorScheme.primary,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                  height: 1.4,
                                 ),
-                              );
-                            },
                           ),
                         ],
-                      )
-                    : Container(
-                        key: ValueKey('content-${_insightText.length}'),
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 300),
-                          child: _insightText.isEmpty
-                              ? Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 8),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .surfaceContainerHigh,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.auto_awesome,
-                                        size: 16,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurfaceVariant,
-                                      ),
-                                      const SizedBox(width: 6),
-                                      Text(
-                                        l10n.noInsights,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall
-                                            ?.copyWith(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurfaceVariant,
-                                              height: 1.4,
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                              : AnimatedBuilder(
-                                  animation: _animatedTextController!,
-                                  builder: (context, child) {
-                                    final animatedText = _insightText.substring(
-                                        0,
-                                        (_insightText.length *
-                                                _animatedTextController!.value)
-                                            .round());
-                                    return Text(
-                                      animatedText,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium
-                                          ?.copyWith(height: 1.5),
-                                    );
-                                  },
-                                ),
-                        ),
                       ),
+                    ),
+                ],
               ),
             ),
           ],
