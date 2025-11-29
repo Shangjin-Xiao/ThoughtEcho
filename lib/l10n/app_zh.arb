@@ -461,14 +461,6 @@
   "hitokotoHelpItem2": "选择多种类型可以获得更丰富多样的内容体验",
   "hitokotoHelpItem3": "不同类型代表不同的内容风格和来源平台",
   "settingsSaved": "设置已保存",
-  "selectedCount": "已选择 {count} 种类型",
-  "@selectedCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   
   "tagManagement": "标签管理",
   "newTagName": "新标签名称",
@@ -508,7 +500,6 @@
   "editTag": "编辑标签",
   "tagName": "标签名称",
   "icon": "图标",
-  "confirmDelete": "确认删除",
   "deleteTagConfirmation": "确定要删除标签\"{name}\"吗？相关联的笔记将保留，但不再关联此标签。",
   "@deleteTagConfirmation": {
     "placeholders": {
@@ -529,8 +520,6 @@
   "defaultTag": "默认",
   "systemDefaultTag": "系统默认标签",
   "tapToEditLongPressToDelete": "点击编辑，长按删除",
-  "edit": "编辑",
-  "select": "选择",
   "enterEmojiHint": "直接输入表情符号...",
   "useAsIcon": "使用 \"{emoji}\" 作为图标",
   "@useAsIcon": {
@@ -546,7 +535,6 @@
   "clearCache": "清理缓存",
   "clearCacheConfirmTitle": "清理缓存",
   "clearCacheConfirmContent": "确定要清理应用缓存吗？\n\n这将清除临时文件、图片缓存等，不会删除您的笔记数据。",
-  "confirm": "确定",
   "cleanOrphanMedia": "清理无用媒体文件",
   "cleanOrphanMediaConfirmTitle": "清理无用媒体文件",
   "cleanOrphanMediaConfirmContent": "这将删除没有被任何笔记引用的媒体文件（图片、视频、音频）。\n\n确定继续吗？",
@@ -617,7 +605,7 @@
       }
     }
   },
-  "orphanFilesCleanedResult": "清理完成，删除了 {count} 个无用文件",
+  "orphanFilesCleanedResult": "{count, plural, =0{没有发现无用文件} other{清理完成，删除了 {count} 个无用文件}}",
   "@orphanFilesCleanedResult": {
     "placeholders": {
       "count": {
@@ -656,7 +644,6 @@
   "dataStorageLocation": "数据存储位置",
   "currentDataDirectory": "当前数据目录",
   "custom": "自定义",
-  "loading": "加载中...",
   "windowsDataMigration": "Windows端数据目录迁移",
   "windowsDataMigrationDesc": "将应用数据迁移到其他位置（如D盘），释放系统盘空间",
   "changeDataDirectory": "更改数据目录",
