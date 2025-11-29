@@ -853,6 +853,8 @@
   "life": "Life",
   "growth": "Growth",
   "reward": "Reward",
+  "transport": "Transport",
+  "otherCategory": "Other",
   "logLoadMoreError": "Failed to load more logs: {error}",
   "logLoadError": "Failed to load logs",
   "logSourceFilter": "Source: {source}",
@@ -1572,7 +1574,6 @@
   "mergeConfirmDialogItem3": "• Settings and AI analysis data will be merged",
   "mergeConfirmDialogReversible": "This operation is reversible: you can import overwrite backup or continue merging again.",
   
-  "tagSettingsTitle": "Tag Management",
   "tagSettingsDescription": "Create and manage your personal tag system",
   "addNewTag": "Add New Tag",
   "tagNameHint": "Please enter a tag name",

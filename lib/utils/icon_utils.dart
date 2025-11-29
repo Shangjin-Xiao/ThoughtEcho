@@ -179,6 +179,8 @@ class IconUtils {
     '生活',
     '成长',
     '奖励',
+    '交通',
+    '其他',
   ];
 
   // Get localized category name
@@ -198,6 +200,10 @@ class IconUtils {
         return l10n.growth;
       case '奖励':
         return l10n.reward;
+      case '交通':
+        return l10n.transport;
+      case '其他':
+        return l10n.otherCategory;
       default:
         return chineseKey;
     }
