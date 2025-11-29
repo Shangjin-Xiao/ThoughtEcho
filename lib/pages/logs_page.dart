@@ -369,7 +369,7 @@ class _LogsPageState extends State<LogsPage> {
     final l10n = AppLocalizations.of(context);
     final buffer = StringBuffer();
     buffer.write('${l10n.logTimestamp(log.timestamp.toLocal().toString())}\n');
-    buffer.write('级别: ${log.level.name.toUpperCase()}\n');
+    buffer.write('${l10n.logLevel(log.level.name.toUpperCase())}\n');
 
     if (log.source != null && log.source!.isNotEmpty) {
       buffer.write('${l10n.logSourceFilter(log.source!)}\n');

@@ -1707,13 +1707,6 @@
   },
   
   "analysisRecordDeleted": "Analysis record deleted",
-  "@deleteFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "loadFailed": "Load failed: {error}",
   "@loadFailed": {
     "placeholders": {
@@ -2008,5 +2001,102 @@
   "weatherUnknown": "Unknown",
   "weatherError": "Failed to fetch",
   "weatherDataFetchFailed": "Failed to fetch weather data",
-  "unknownWeather": "Unknown weather"
+  "unknownWeather": "Unknown weather",
+  
+  "noAiAnalysisRecords": "No AI analysis records",
+  "aiAssistant": "AI Assistant",
+  "analyzingSource": "Analyzing source...",
+  "analysisResult": "Analysis Result",
+  "confidenceLevel": "Confidence: {confidence}",
+  "@confidenceLevel": {
+    "placeholders": {
+      "confidence": {
+        "type": "String"
+      }
+    }
+  },
+  "author": "Author",
+  "authorLabel": "Author: {author}",
+  "@authorLabel": {
+    "placeholders": {
+      "author": {
+        "type": "String"
+      }
+    }
+  },
+  "workLabel": "Work: {work}",
+  "@workLabel": {
+    "placeholders": {
+      "work": {
+        "type": "String"
+      }
+    }
+  },
+  "applyResult": "Apply Result",
+  "parseResultFailedWithError": "Failed to parse result: {error}",
+  "@parseResultFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "analysisFailedWithError": "Analysis failed: {error}",
+  "@analysisFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "polishResult": "Polish Result",
+  "applyChanges": "Apply Changes",
+  "polishFailedWithError": "Polish failed: {error}",
+  "@polishFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "continueResult": "Continue Result",
+  "appendToNote": "Append to Note",
+  "continueFailedWithError": "Continue failed: {error}",
+  "@continueFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noteAnalysis": "Note Analysis",
+  "applyToNote": "Apply to Note",
+  "analysisComplete": "Analysis complete",
+  
+  "filterAndSort": "Filter & Sort",
+  "resetFilter": "Reset",
+  "tagFilter": "Tag Filter",
+  "weatherFilter": "Weather Filter",
+  "timePeriodFilter": "Time Period Filter",
+  "sortMethod": "Sort Method",
+  "sortByTime": "Sort by time",
+  "sortByName": "Sort by name",
+  "sortByFavorite": "Sort by favorite",
+  "ascending": "Ascending",
+  "applyFilter": "Apply",
+  
+  "editNoteMenu": "Edit Note",
+  "askAIMenu": "Ask AI",
+  "generateCardShareMenu": "Generate Card",
+  "deleteNoteMenu": "Delete Note",
+  "doubleTapToViewFull": "Double tap to view full",
+  
+  "logLevel": "Level: {level}",
+  "@logLevel": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  }
 }
