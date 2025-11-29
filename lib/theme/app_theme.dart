@@ -349,6 +349,13 @@ class AppTheme with ChangeNotifier {
         tintedDisabledControls: true,
         elevatedButtonSchemeColor: SchemeColor.primary,
         elevatedButtonSecondarySchemeColor: SchemeColor.onPrimary,
+        // 开关、复选框、单选按钮使用主题色
+        switchSchemeColor: SchemeColor.primary,
+        switchThumbSchemeColor: SchemeColor.onPrimary,
+        checkboxSchemeColor: SchemeColor.primary,
+        radioSchemeColor: SchemeColor.primary,
+        // 滑块使用主题色
+        sliderBaseSchemeColor: SchemeColor.primary,
         cardRadius: cardRadius,
         inputDecoratorRadius: inputRadius,
         dialogRadius: dialogRadius,
@@ -423,8 +430,10 @@ class AppTheme with ChangeNotifier {
 
   // 创建暗色主题数据
   ThemeData createDarkThemeData() {
+    final colorScheme = darkColorScheme;
+    
     final baseTheme = FlexThemeData.dark(
-      colorScheme: darkColorScheme,
+      colorScheme: colorScheme,
       useMaterial3: true,
       surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
       blendLevel: 0, // 设置为0，避免混合修改自定义颜色
@@ -435,8 +444,19 @@ class AppTheme with ChangeNotifier {
         useM2StyleDividerInM3: false,
         alignedDropdown: true,
         useInputDecoratorThemeInDialogs: true,
+        interactionEffects: true, // 启用交互效果，确保控件使用主题色
+        tintedDisabledControls: true, // 禁用状态也使用主题色调
+        // 按钮颜色配置
         elevatedButtonSchemeColor: SchemeColor.primary,
         elevatedButtonSecondarySchemeColor: SchemeColor.onPrimary,
+        // 开关、复选框、单选按钮使用主题色
+        switchSchemeColor: SchemeColor.primary,
+        switchThumbSchemeColor: SchemeColor.onPrimary,
+        checkboxSchemeColor: SchemeColor.primary,
+        radioSchemeColor: SchemeColor.primary,
+        // 滑块使用主题色
+        sliderBaseSchemeColor: SchemeColor.primary,
+        // 圆角配置
         cardRadius: cardRadius,
         inputDecoratorRadius: inputRadius,
         dialogRadius: dialogRadius,
@@ -454,9 +474,60 @@ class AppTheme with ChangeNotifier {
       visualDensity: FlexColorScheme.comfortablePlatformDensity,
     );
 
-    // 返回主题，确保使用原始的colorScheme
+    // 返回主题，确保使用原始的colorScheme，并额外配置控件主题
     return baseTheme.copyWith(
-      colorScheme: darkColorScheme, // 重新应用原始colorScheme，确保自定义颜色不被修改
+      colorScheme: colorScheme, // 重新应用原始colorScheme，确保自定义颜色不被修改
+      // 显式配置 Switch 主题，确保使用自定义主题色
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return colorScheme.onPrimary;
+          }
+          return colorScheme.outline;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return colorScheme.primary;
+          }
+          return colorScheme.surfaceContainerHighest;
+        }),
+        trackOutlineColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.transparent;
+          }
+          return colorScheme.outline;
+        }),
+      ),
+      // 显式配置 Checkbox 主题
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return colorScheme.primary;
+          }
+          return Colors.transparent;
+        }),
+        checkColor: WidgetStateProperty.all(colorScheme.onPrimary),
+      ),
+      // 显式配置 Radio 主题
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return colorScheme.primary;
+          }
+          return colorScheme.onSurfaceVariant;
+        }),
+      ),
+      // 显式配置 Slider 主题
+      sliderTheme: SliderThemeData(
+        activeTrackColor: colorScheme.primary,
+        thumbColor: colorScheme.primary,
+        inactiveTrackColor: colorScheme.primary.withValues(alpha: 0.3),
+      ),
+      // 浮动操作按钮使用主题色系
+      floatingActionButtonTheme: baseTheme.floatingActionButtonTheme.copyWith(
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
+      ),
     );
   }
 }
