@@ -412,7 +412,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
         providerName = l10n.customConfigHost(uri.host);
       } else {
         providerName =
-            l10n.customConfigTimestamp(DateTime.now().millisecondsSinceEpoch);
+            l10n.customConfigTimestamp(DateTime.now().millisecondsSinceEpoch.toString());
       }
     }
 
@@ -594,7 +594,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
       } else {
         setState(() {
           _testResults[provider.id] =
-              l10n.connectionFailed(response.statusCode.toString());
+              l10n.connectionFailed(response.statusCode ?? 0);
         });
       }
     } catch (e) {
