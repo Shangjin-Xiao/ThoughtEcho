@@ -1562,5 +1562,236 @@
   "mergeConfirmDialogItem1": "• 相同ID的笔记按「最后写入 wins」保留较新版本",
   "mergeConfirmDialogItem2": "• 不同ID的笔记全部保留",
   "mergeConfirmDialogItem3": "• 设置与AI分析数据合并追加",
-  "mergeConfirmDialogReversible": "此操作可逆：可再次导入覆盖备份或继续合并。"
+  "mergeConfirmDialogReversible": "此操作可逆：可再次导入覆盖备份或继续合并。",
+  
+  "tagSettingsTitle": "标签管理",
+  "tagSettingsDescription": "创建和管理您的个人标签体系",
+  "addNewTag": "添加新标签",
+  "tagNameHint": "请输入标签名称",
+  "loadingTags": "加载标签中...",
+  "loadTagsError": "加载标签失败",
+  "noTagsHint": "创建您的第一个标签来开始整理思想",
+  "myTags": "我的标签",
+  "confirmDeleteTag": "确认删除",
+  "deleteTagDialogContent": "确定要删除标签\"{name}\"吗？\n\n删除后，使用此标签的笔记将不再显示该标签。",
+  "@deleteTagDialogContent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "enterEmojiDirectly": "直接输入表情符号...",
+  "useAsTagIcon": "使用 \"{emoji}\" 作为图标",
+  "@useAsTagIcon": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  
+  "noteSync": "笔记同步",
+  "refreshDeviceList": "刷新设备列表",
+  "initializingService": "正在启动...",
+  "startFailed": "启动失败: {error}",
+  "@startFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "scanningDevices": "搜索中... {count} 台",
+  "@scanningDevices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "scanningDevicesWithTime": "搜索中... {count} 台 ({seconds}s)",
+  "@scanningDevicesWithTime": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "foundDevicesCount": "发现 {count} 台设备",
+  "@foundDevicesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "localDeviceLoading": "本机标识获取中...",
+  "localDeviceId": "本机 #{fingerprint}",
+  "@localDeviceId": {
+    "placeholders": {
+      "fingerprint": {
+        "type": "String"
+      }
+    }
+  },
+  "noNearbyDevices": "未发现附近设备",
+  "ensureDeviceOnSameNetwork": "确保目标设备也打开了ThoughtEcho\n并且在同一网络中",
+  "networkInfoUnknown": "网络信息未知",
+  "portNumber": "端口 {port}",
+  "@portNumber": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "send": "发送",
+  "sendConfirmTitle": "发送确认",
+  "sendConfirmContent": "将向设备 \"{alias}\" 发送全部笔记数据。",
+  "@sendConfirmContent": {
+    "placeholders": {
+      "alias": {
+        "type": "String"
+      }
+    }
+  },
+  "includeMediaFilesOption": "包含媒体文件",
+  "includeMediaFilesHintSync": "图片/音频/视频等，可能增加体积和耗时",
+  "startSend": "开始发送",
+  "sendTextOnlyHint": "将仅发送笔记文本（不含媒体文件）",
+  "sendStarted": "笔记发送启动，会话ID: {sessionId}",
+  "@sendStarted": {
+    "placeholders": {
+      "sessionId": {
+        "type": "String"
+      }
+    }
+  },
+  "sendFailedWithError": "发送失败: {error}",
+  "@sendFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "confirmLeave": "确认离开",
+  "leaveWhileSyncing": "当前正在进行同步操作（{status}），离开将中断过程并停止服务器，确认要返回吗？",
+  "@leaveWhileSyncing": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "leaveWhileScanning": "当前正在发现设备，离开将停止发现并关闭服务器，确认返回吗？",
+  "leaveWhileSending": "当前正在发送数据，离开将中断发送并关闭服务器，确认返回吗？",
+  "syncServiceNotReady": "同步服务未就绪，请重新初始化",
+  "syncServiceInitializing": "同步服务正在初始化，请稍后再试",
+  "searchingNearbyDevices": "正在搜索附近设备...",
+  "initializingSyncService": "正在初始化同步服务...",
+  "syncServiceStartFailed": "同步服务启动失败: {error}",
+  "@syncServiceStartFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceDiscoveryCancelled": "设备发现已取消",
+  "deviceDiscoveryFailed": "设备发现失败: {error}",
+  "@deviceDiscoveryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceAliasAndModel": "{model}\n别名：{alias}",
+  "@deviceAliasAndModel": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      },
+      "alias": {
+        "type": "String"
+      }
+    }
+  },
+  "copiedText": "已复制: {text}",
+  "@copiedText": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "copiedFingerprint": "已复制本机指纹: {fingerprint}",
+  "@copiedFingerprint": {
+    "placeholders": {
+      "fingerprint": {
+        "type": "String"
+      }
+    }
+  },
+  "usageInstructionsTitle": "使用说明",
+  "syncUsageInstruction1": "点击设备右侧的发送按钮来分享你的笔记",
+  "syncUsageInstruction2": "接收到的笔记会自动与现有笔记合并",
+  "syncUsageInstruction3": "重复的笔记会保留最新版本",
+  "syncUsageInstruction4": "确保两台设备都连接到同一WiFi网络",
+  "initializing": "初始化中",
+  "cancelDiscovery": "取消发现",
+  "discoverDevices": "发现设备",
+  "cancelDiscoveryTooltip": "取消本次设备发现",
+  "startDiscoveryTooltip": "开始发现附近设备",
+  
+  "receiveSyncRequest": "接收同步请求",
+  "waitingPeerApproval": "等待对方确认",
+  "deviceWantsToSync": "设备 \"{alias}\" 想同步笔记",
+  "@deviceWantsToSync": {
+    "placeholders": {
+      "alias": {
+        "type": "String"
+      }
+    }
+  },
+  "doNotAskAgain": "以后不再提示",
+  "autoAcceptSyncRequests": "将自动接受来自其他设备的同步请求",
+  "waitingLabel": "等待",
+  "syncRequestSent": "已向目标设备发送同步请求，请在对方确认后继续。",
+  "reject": "拒绝",
+  "accept": "接受",
+  "cancelReceive": "取消接收",
+  "cancelSend": "取消发送",
+  "syncCompleted": "同步完成",
+  
+  "syncStatusIdle": "空闲",
+  "syncStatusPackaging": "正在打包数据",
+  "syncStatusSending": "正在发送",
+  "syncStatusReceiving": "正在接收",
+  "syncStatusMerging": "正在合并",
+  "syncStatusCompleted": "同步完成",
+  "syncStatusFailed": "同步失败",
+  
+  "weatherClear": "晴",
+  "weatherPartlyCloudy": "少云",
+  "weatherCloudy": "多云",
+  "weatherFog": "雾",
+  "weatherDrizzle": "毛毛雨",
+  "weatherFreezingRain": "冻雨",
+  "weatherRain": "雨",
+  "weatherSnow": "雪",
+  "weatherSnowGrains": "雪粒",
+  "weatherRainShower": "阵雨",
+  "weatherSnowShower": "阵雪",
+  "weatherThunderstorm": "雷雨",
+  "weatherThunderstormHeavy": "雷暴雨",
+  "weatherUnknown": "未知",
+  "weatherError": "获取失败",
+  "weatherDataFetchFailed": "天气数据获取失败",
+  "unknownWeather": "未知天气"
 }

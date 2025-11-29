@@ -1570,5 +1570,236 @@
   "mergeConfirmDialogItem1": "• Notes with same ID will keep the newer version (Last-Write-Wins)",
   "mergeConfirmDialogItem2": "• Notes with different IDs will all be kept",
   "mergeConfirmDialogItem3": "• Settings and AI analysis data will be merged",
-  "mergeConfirmDialogReversible": "This operation is reversible: you can import overwrite backup or continue merging again."
+  "mergeConfirmDialogReversible": "This operation is reversible: you can import overwrite backup or continue merging again.",
+  
+  "tagSettingsTitle": "Tag Management",
+  "tagSettingsDescription": "Create and manage your personal tag system",
+  "addNewTag": "Add New Tag",
+  "tagNameHint": "Please enter a tag name",
+  "loadingTags": "Loading tags...",
+  "loadTagsError": "Failed to load tags",
+  "noTagsHint": "Create your first tag to start organizing your thoughts",
+  "myTags": "My Tags",
+  "confirmDeleteTag": "Confirm Delete",
+  "deleteTagDialogContent": "Are you sure you want to delete the tag \"{name}\"?\n\nNotes using this tag will no longer show this tag.",
+  "@deleteTagDialogContent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "enterEmojiDirectly": "Enter an emoji directly...",
+  "useAsTagIcon": "Use \"{emoji}\" as icon",
+  "@useAsTagIcon": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  
+  "noteSync": "Note Sync",
+  "refreshDeviceList": "Refresh device list",
+  "initializingService": "Starting...",
+  "startFailed": "Start failed: {error}",
+  "@startFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "scanningDevices": "Scanning... {count} devices",
+  "@scanningDevices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "scanningDevicesWithTime": "Scanning... {count} devices ({seconds}s)",
+  "@scanningDevicesWithTime": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "foundDevicesCount": "Found {count} devices",
+  "@foundDevicesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "localDeviceLoading": "Loading local device ID...",
+  "localDeviceId": "Local #{fingerprint}",
+  "@localDeviceId": {
+    "placeholders": {
+      "fingerprint": {
+        "type": "String"
+      }
+    }
+  },
+  "noNearbyDevices": "No nearby devices found",
+  "ensureDeviceOnSameNetwork": "Make sure the target device also has ThoughtEcho open\nand is on the same network",
+  "networkInfoUnknown": "Network info unknown",
+  "portNumber": "Port {port}",
+  "@portNumber": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "send": "Send",
+  "sendConfirmTitle": "Send Confirmation",
+  "sendConfirmContent": "You are about to send all notes to device \"{alias}\".",
+  "@sendConfirmContent": {
+    "placeholders": {
+      "alias": {
+        "type": "String"
+      }
+    }
+  },
+  "includeMediaFilesOption": "Include media files",
+  "includeMediaFilesHintSync": "Images/audio/videos, may increase size and time",
+  "startSend": "Start Send",
+  "sendTextOnlyHint": "Will send only note text (no media files)",
+  "sendStarted": "Note sync started, session ID: {sessionId}",
+  "@sendStarted": {
+    "placeholders": {
+      "sessionId": {
+        "type": "String"
+      }
+    }
+  },
+  "sendFailedWithError": "Send failed: {error}",
+  "@sendFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "confirmLeave": "Confirm Leave",
+  "leaveWhileSyncing": "Currently syncing ({status}). Leaving will interrupt the process and stop the server. Are you sure you want to leave?",
+  "@leaveWhileSyncing": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "leaveWhileScanning": "Currently discovering devices. Leaving will stop discovery and close the server. Are you sure you want to leave?",
+  "leaveWhileSending": "Currently sending data. Leaving will interrupt the send and close the server. Are you sure you want to leave?",
+  "syncServiceNotReady": "Sync service not ready, please reinitialize",
+  "syncServiceInitializing": "Sync service is initializing, please wait",
+  "searchingNearbyDevices": "Searching for nearby devices...",
+  "initializingSyncService": "Initializing sync service...",
+  "syncServiceStartFailed": "Sync service failed to start: {error}",
+  "@syncServiceStartFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceDiscoveryCancelled": "Device discovery cancelled",
+  "deviceDiscoveryFailed": "Device discovery failed: {error}",
+  "@deviceDiscoveryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceAliasAndModel": "{model}\nAlias: {alias}",
+  "@deviceAliasAndModel": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      },
+      "alias": {
+        "type": "String"
+      }
+    }
+  },
+  "copiedText": "Copied: {text}",
+  "@copiedText": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "copiedFingerprint": "Copied local fingerprint: {fingerprint}",
+  "@copiedFingerprint": {
+    "placeholders": {
+      "fingerprint": {
+        "type": "String"
+      }
+    }
+  },
+  "usageInstructionsTitle": "Usage Instructions",
+  "syncUsageInstruction1": "Tap the send button on the right side of a device to share your notes",
+  "syncUsageInstruction2": "Received notes will automatically merge with existing notes",
+  "syncUsageInstruction3": "Duplicate notes will keep the latest version",
+  "syncUsageInstruction4": "Make sure both devices are connected to the same WiFi network",
+  "initializing": "Initializing",
+  "cancelDiscovery": "Cancel Discovery",
+  "discoverDevices": "Discover Devices",
+  "cancelDiscoveryTooltip": "Cancel current device discovery",
+  "startDiscoveryTooltip": "Start discovering nearby devices",
+  
+  "receiveSyncRequest": "Receive Sync Request",
+  "waitingPeerApproval": "Waiting for peer approval",
+  "deviceWantsToSync": "Device \"{alias}\" wants to sync notes",
+  "@deviceWantsToSync": {
+    "placeholders": {
+      "alias": {
+        "type": "String"
+      }
+    }
+  },
+  "doNotAskAgain": "Don't ask again",
+  "autoAcceptSyncRequests": "Will automatically accept sync requests from other devices",
+  "waitingLabel": "Waiting",
+  "syncRequestSent": "Sync request sent to target device. Please wait for confirmation.",
+  "reject": "Reject",
+  "accept": "Accept",
+  "cancelReceive": "Cancel Receive",
+  "cancelSend": "Cancel Send",
+  "syncCompleted": "Sync completed",
+  
+  "syncStatusIdle": "Idle",
+  "syncStatusPackaging": "Packaging data",
+  "syncStatusSending": "Sending",
+  "syncStatusReceiving": "Receiving",
+  "syncStatusMerging": "Merging",
+  "syncStatusCompleted": "Sync completed",
+  "syncStatusFailed": "Sync failed",
+  
+  "weatherClear": "Clear",
+  "weatherPartlyCloudy": "Partly cloudy",
+  "weatherCloudy": "Cloudy",
+  "weatherFog": "Fog",
+  "weatherDrizzle": "Drizzle",
+  "weatherFreezingRain": "Freezing rain",
+  "weatherRain": "Rain",
+  "weatherSnow": "Snow",
+  "weatherSnowGrains": "Snow grains",
+  "weatherRainShower": "Rain shower",
+  "weatherSnowShower": "Snow shower",
+  "weatherThunderstorm": "Thunderstorm",
+  "weatherThunderstormHeavy": "Heavy thunderstorm",
+  "weatherUnknown": "Unknown",
+  "weatherError": "Failed to fetch",
+  "weatherDataFetchFailed": "Failed to fetch weather data",
+  "unknownWeather": "Unknown weather"
 }
