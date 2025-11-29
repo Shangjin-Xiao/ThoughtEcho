@@ -7,6 +7,7 @@ import 'package:thoughtecho/services/localsend/models/device.dart';
 // 网络测速入口已根据用户需求隐藏，相关 import 注释保留以便未来恢复
 // import 'package:thoughtecho/utils/sync_network_tester.dart';
 import 'package:thoughtecho/services/device_identity_manager.dart';
+import '../gen_l10n/app_localizations.dart';
 
 class _AutoScrollText extends StatefulWidget {
   final String text;
@@ -164,10 +165,11 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     // 检查服务状态并提供视觉反馈
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_syncService != null && _isInitializing) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('正在初始化同步服务...'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text(l10n.initializingSyncService),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -210,6 +212,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     } catch (e) {
       debugPrint('启动同步服务失败: $e');
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         setState(() {
           _isInitializing = false;
           _initializationError = e.toString();
@@ -217,11 +220,11 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('同步服务启动失败: $e'),
+            content: Text(l10n.syncServiceStartFailed(e.toString())),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 5),
             action: SnackBarAction(
-              label: '重试',
+              label: l10n.retry,
               onPressed: _initializeSyncService,
             ),
           ),
@@ -267,25 +270,27 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     final busy = _isScanning || _isSending || busySync;
     if (!busy) return true; // 空闲直接返回
 
+    final l10n = AppLocalizations.of(context);
+
     // 弹出确认对话框
     final shouldLeave = await showDialog<bool>(
           context: context,
           builder: (ctx) {
             return AlertDialog(
-              title: const Text('确认离开'),
+              title: Text(l10n.confirmLeave),
               content: Text(busySync
-                  ? '当前正在进行同步操作（${_getSyncStatusText(syncService.syncStatus)}），离开将中断过程并停止服务器，确认要返回吗？'
+                  ? l10n.leaveWhileSyncing(_getSyncStatusText(syncService.syncStatus, l10n))
                   : _isScanning
-                      ? '当前正在发现设备，离开将停止发现并关闭服务器，确认返回吗？'
-                      : '当前正在发送数据，离开将中断发送并关闭服务器，确认返回吗？'),
+                      ? l10n.leaveWhileScanning
+                      : l10n.leaveWhileSending),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(ctx).pop(false),
-                  child: const Text('取消'),
+                  child: Text(l10n.cancel),
                 ),
                 TextButton(
                   onPressed: () => Navigator.of(ctx).pop(true),
-                  child: const Text('确定'),
+                  child: Text(l10n.confirm),
                 ),
               ],
             );
@@ -331,6 +336,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   Future<void> _startDeviceDiscovery() async {
     if (_isScanning || !mounted) return;
 
+    final l10n = AppLocalizations.of(context);
+
     setState(() {
       _isScanning = true;
       _nearbyDevices.clear(); // 清空旧的设备列表
@@ -346,10 +353,10 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         debugPrint('获取NoteSyncService失败: $e');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('同步服务未就绪，请重新初始化'),
+            SnackBar(
+              content: Text(l10n.syncServiceNotReady),
               backgroundColor: Colors.red,
-              duration: Duration(seconds: 3),
+              duration: const Duration(seconds: 3),
             ),
           );
         }
@@ -363,10 +370,10 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
       if (_isInitializing) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('同步服务正在初始化，请稍后再试'),
+            SnackBar(
+              content: Text(l10n.syncServiceInitializing),
               backgroundColor: Colors.orange,
-              duration: Duration(seconds: 3),
+              duration: const Duration(seconds: 3),
             ),
           );
         }
@@ -379,9 +386,9 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
       // 显示扫描开始提示
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('正在搜索附近设备...'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text(l10n.searchingNearbyDevices),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -397,11 +404,12 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         });
       }, onDone: () {
         if (!mounted) return;
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(_nearbyDevices.isEmpty
-                ? '未发现附近设备'
-                : '发现 ${_nearbyDevices.length} 台设备'),
+                ? l10n.noNearbyDevices
+                : l10n.foundDevicesCount(_nearbyDevices.length)),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -428,9 +436,10 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     } catch (e) {
       debugPrint('设备发现失败: $e');
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('设备发现失败: $e'),
+            content: Text(l10n.deviceDiscoveryFailed(e.toString())),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 3),
           ),
@@ -451,19 +460,21 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     _discoveryCountdownTimer?.cancel();
     _discoveryCountdownTimer = null;
     if (mounted) {
+      final l10n = AppLocalizations.of(context);
       setState(() {
         _isScanning = false;
         _discoveryRemainingMs = 0;
       });
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('设备发现已取消'),
-        duration: Duration(seconds: 2),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(l10n.deviceDiscoveryCancelled),
+        duration: const Duration(seconds: 2),
       ));
     }
   }
 
   Future<void> _sendNotesToDevice(Device device) async {
     if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
 
     // 先弹出确认对话框（是否包含媒体文件）
     bool includeMedia = _sendIncludeMedia;
@@ -473,7 +484,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
             bool localInclude = includeMedia;
             return StatefulBuilder(builder: (ctx, setLocal) {
               return AlertDialog(
-                title: const Text('发送确认'),
+                title: Text(l10n.sendConfirmTitle),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -482,8 +493,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                     const SizedBox(height: 12),
                     CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('包含媒体文件'),
-                      subtitle: const Text('图片/音频/视频等，可能增加体积和耗时'),
+                      title: Text(l10n.includeMediaFilesOption),
+                      subtitle: Text(l10n.includeMediaFilesHintSync),
                       value: localInclude,
                       onChanged: (v) =>
                           setLocal(() => localInclude = v ?? true),
@@ -493,7 +504,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.of(ctx).pop(false),
-                    child: const Text('取消'),
+                    child: Text(l10n.cancel),
                   ),
                   FilledButton(
                     onPressed: () {
@@ -501,7 +512,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                       includeMedia = localInclude;
                       Navigator.of(ctx).pop(true);
                     },
-                    child: const Text('开始发送'),
+                    child: Text(l10n.startSend),
                   ),
                 ],
               );
@@ -526,9 +537,9 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     try {
       if (!includeMedia && mounted) {
         messenger.showSnackBar(
-          const SnackBar(
-            content: Text('将仅发送笔记文本（不含媒体文件）'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text(l10n.sendTextOnlyHint),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -541,7 +552,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           sessionId.length <= 8 ? sessionId : '${sessionId.substring(0, 8)}...';
       messenger.showSnackBar(
         SnackBar(
-            content: Text('笔记发送启动，会话ID: $displayId'),
+            content: Text(l10n.sendStarted(displayId)),
             duration: const Duration(seconds: 3)),
       );
     } catch (e) {
@@ -549,7 +560,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
       if (mounted) {
         messenger.showSnackBar(
           SnackBar(
-            content: Text('发送失败: $e'),
+            content: Text(l10n.sendFailedWithError(e.toString())),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 3),
           ),
@@ -573,6 +584,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return PopScope(
       canPop: true,
       onPopInvokedWithResult: (didPop, result) async {
@@ -584,13 +596,13 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('笔记同步'),
+          title: Text(l10n.noteSync),
           actions: [
             // 用户需求：隐藏网络测速/诊断入口
             IconButton(
               icon: const Icon(Icons.refresh),
               onPressed: _isScanning ? null : _startDeviceDiscovery,
-              tooltip: '刷新设备列表',
+              tooltip: l10n.refreshDeviceList,
             ),
           ],
         ),
@@ -611,12 +623,12 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                             height: 16,
                             child: CircularProgressIndicator(strokeWidth: 2)),
                         const SizedBox(width: 8),
-                        const Text('正在启动...'),
+                        Text(l10n.initializingService),
                       ] else if (_initializationError.isNotEmpty) ...[
                         const Icon(Icons.error, color: Colors.red, size: 18),
                         const SizedBox(width: 6),
                         Expanded(
-                            child: Text('启动失败: $_initializationError',
+                            child: Text(l10n.startFailed(_initializationError),
                                 style: const TextStyle(
                                     color: Colors.red, fontSize: 12))),
                       ] else if (_isScanning) ...[
@@ -629,8 +641,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                         Expanded(
                           child: Text(
                             _discoveryRemainingMs > 0
-                                ? '搜索中... ${_nearbyDevices.length} 台 (${(_discoveryRemainingMs / 1000).ceil()}s)'
-                                : '搜索中... ${_nearbyDevices.length} 台',
+                                ? l10n.scanningDevicesWithTime(_nearbyDevices.length, (_discoveryRemainingMs / 1000).ceil())
+                                : l10n.scanningDevices(_nearbyDevices.length),
                           ),
                         ),
                       ] else ...[
@@ -643,7 +655,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                               _nearbyDevices.isNotEmpty ? Colors.green : null,
                         ),
                         const SizedBox(width: 6),
-                        Text('发现 ${_nearbyDevices.length} 台设备'),
+                        Text(l10n.foundDevicesCount(_nearbyDevices.length)),
                       ],
                     ],
                   ),
@@ -655,15 +667,15 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                             ClipboardData(text: _localFingerprint!));
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                              content: Text('已复制本机指纹: $_localFingerprint'),
+                              content: Text(l10n.copiedFingerprint(_localFingerprint!)),
                               duration: const Duration(seconds: 2)),
                         );
                       }
                     },
                     child: Text(
                       _localShortFingerprint == null
-                          ? '本机标识获取中...'
-                          : '本机 #$_localShortFingerprint',
+                          ? l10n.localDeviceLoading
+                          : l10n.localDeviceId(_localShortFingerprint!),
                       style: TextStyle(
                           fontSize: 11,
                           color: Theme.of(context)
@@ -689,26 +701,26 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                 switchInCurve: Curves.easeOutCubic,
                 switchOutCurve: Curves.easeInCubic,
                 child: _nearbyDevices.isEmpty
-                    ? const Center(
-                        key: ValueKey('sync-empty'),
+                    ? Center(
+                        key: const ValueKey('sync-empty'),
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.devices_other,
+                            const Icon(Icons.devices_other,
                                 size: 64, color: Colors.grey),
-                            SizedBox(height: 16),
+                            const SizedBox(height: 16),
                             Text(
-                              '未发现附近设备',
-                              style: TextStyle(
+                              l10n.noNearbyDevices,
+                              style: const TextStyle(
                                 fontSize: 18,
                                 color: Colors.grey,
                               ),
                             ),
-                            SizedBox(height: 8),
+                            const SizedBox(height: 8),
                             Text(
-                              '确保目标设备也打开了ThoughtEcho\n并且在同一网络中',
+                              l10n.ensureDeviceOnSameNetwork,
                               textAlign: TextAlign.center,
-                              style: TextStyle(color: Colors.grey),
+                              style: const TextStyle(color: Colors.grey),
                             ),
                           ],
                         ),
@@ -725,7 +737,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                           final displayIp = _resolveDeviceIp(device);
                           final ipLine = displayIp != null
                               ? '${device.https ? 'https' : 'http'}://$displayIp:${device.port}'
-                              : '网络信息未知${device.port > 0 ? ' · 端口 ${device.port}' : ''}';
+                              : '${l10n.networkInfoUnknown}${device.port > 0 ? ' · ${l10n.portNumber(device.port)}' : ''}';
                           final isSendingToThis =
                               _sendingFingerprint == device.fingerprint;
 
@@ -807,7 +819,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                     )
                                   : FilledButton.tonalIcon(
                                       icon: const Icon(Icons.send, size: 18),
-                                      label: const Text('发送'),
+                                      label: Text(l10n.send),
                                       style: FilledButton.styleFrom(
                                         padding: const EdgeInsets.symmetric(
                                           horizontal: 12,
@@ -846,19 +858,19 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                             color: Theme.of(context).colorScheme.primary,
                           ),
                           const SizedBox(width: 8),
-                          const Text(
-                            '使用说明',
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                          Text(
+                            l10n.usageInstructionsTitle,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         ],
                       ),
                       const SizedBox(height: 8),
-                      const Text(
-                        '• 点击设备右侧的发送按钮来分享你的笔记\n'
-                        '• 接收到的笔记会自动与现有笔记合并\n'
-                        '• 重复的笔记会保留最新版本\n'
-                        '• 确保两台设备都连接到同一WiFi网络',
-                        style: TextStyle(fontSize: 12),
+                      Text(
+                        '• ${l10n.syncUsageInstruction1}\n'
+                        '• ${l10n.syncUsageInstruction2}\n'
+                        '• ${l10n.syncUsageInstruction3}\n'
+                        '• ${l10n.syncUsageInstruction4}',
+                        style: const TextStyle(fontSize: 12),
                       ),
                     ],
                   ),
@@ -877,8 +889,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                   ? const Icon(Icons.close)
                   : const Icon(Icons.search),
           label:
-              Text(_isInitializing ? '初始化中' : (_isScanning ? '取消发现' : '发现设备')),
-          tooltip: _isScanning ? '取消本次设备发现' : '开始发现附近设备',
+              Text(_isInitializing ? l10n.initializing : (_isScanning ? l10n.cancelDiscovery : l10n.discoverDevices)),
+          tooltip: _isScanning ? l10n.cancelDiscoveryTooltip : l10n.startDiscoveryTooltip,
         ),
       ),
     );
@@ -890,6 +902,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     _syncDialogVisible = true;
     _dialogWasTerminal = false;
     final dialogContext = context;
+    final l10n = AppLocalizations.of(context);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -916,34 +929,34 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                 Color? titleColor;
 
                 if (waitingUser) {
-                  titleText = '接收同步请求';
+                  titleText = l10n.receiveSyncRequest;
                   titleIcon = Icons.handshake;
                   titleColor = Theme.of(context).colorScheme.primary;
                 } else if (waitingPeer) {
-                  titleText = '等待对方确认';
+                  titleText = l10n.waitingPeerApproval;
                   titleIcon = Icons.handshake_outlined;
                   titleColor = Theme.of(context).colorScheme.primary;
                 } else if (isFailure) {
-                  titleText = _getSyncStatusText(s.syncStatus);
+                  titleText = _getSyncStatusText(s.syncStatus, l10n);
                   titleIcon = Icons.error_outline;
                   titleColor = Colors.red;
                 } else if (isSuccess) {
-                  titleText = _getSyncStatusText(s.syncStatus);
+                  titleText = _getSyncStatusText(s.syncStatus, l10n);
                   titleIcon = Icons.check_circle_outline;
                   titleColor = Colors.green;
                 } else {
-                  titleText = _getSyncStatusText(s.syncStatus);
+                  titleText = _getSyncStatusText(s.syncStatus, l10n);
                   titleIcon = Icons.sync;
                   titleColor = Theme.of(context).colorScheme.primary;
                 }
 
                 final String percentLabel = waitingPeer || waitingUser
-                    ? '等待'
+                    ? l10n.waitingLabel
                     : '${(s.syncProgress * 100).clamp(0, 100).toStringAsFixed(0)}%';
                 final double? progressValue =
                     waitingPeer || waitingUser ? null : progress;
                 final String progressMessage = waitingPeer
-                    ? '已向目标设备发送同步请求，请在对方确认后继续。'
+                    ? l10n.syncRequestSent
                     : s.syncStatusMessage;
 
                 return AlertDialog(
@@ -1022,7 +1035,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                     const SizedBox(width: 10),
                                     Expanded(
                                       child: Text(
-                                        '设备 "${s.receiveSenderAlias ?? '对方'}" 想同步笔记',
+                                        l10n.deviceWantsToSync(s.receiveSenderAlias ?? l10n.unknown),
                                         style: TextStyle(
                                           fontSize: 14,
                                           height: 1.4,
@@ -1044,11 +1057,11 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                 },
                                 dense: true,
                                 contentPadding: const EdgeInsets.only(left: 0),
-                                title: const Text('以后不再提示',
-                                    style: TextStyle(fontSize: 13)),
-                                subtitle: const Text(
-                                  '将自动接受来自其他设备的同步请求',
-                                  style: TextStyle(fontSize: 11),
+                                title: Text(l10n.doNotAskAgain,
+                                    style: const TextStyle(fontSize: 13)),
+                                subtitle: Text(
+                                  l10n.autoAcceptSyncRequests,
+                                  style: const TextStyle(fontSize: 11),
                                 ),
                               ),
                             ],
@@ -1080,13 +1093,13 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                           s.rejectIncoming();
                           _dismissSyncDialog();
                         },
-                        child: const Text('拒绝'),
+                        child: Text(l10n.reject),
                       ),
                       FilledButton(
                         onPressed: () {
                           s.approveIncoming();
                         },
-                        child: const Text('接受'),
+                        child: Text(l10n.accept),
                       ),
                     ] else if (inProgress &&
                         (s.syncStatus == SyncStatus.sending ||
@@ -1101,14 +1114,14 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                         },
                         child: Text(
                           s.syncStatus == SyncStatus.receiving
-                              ? '取消接收'
-                              : '取消发送',
+                              ? l10n.cancelReceive
+                              : l10n.cancelSend,
                         ),
                       ),
                     ] else if (!inProgress && !waitingPeer) ...[
                       TextButton(
                         onPressed: _dismissSyncDialog,
-                        child: const Text('关闭'),
+                        child: Text(l10n.close),
                       ),
                     ],
                   ],
@@ -1181,9 +1194,10 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
       }
     } else if (terminal && _syncDialogVisible) {
       _dialogWasTerminal = true;
+      final l10n = AppLocalizations.of(context);
       if (service.syncStatus == SyncStatus.completed) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('同步完成'), duration: Duration(seconds: 2)),
+          SnackBar(content: Text(l10n.syncCompleted), duration: const Duration(seconds: 2)),
         );
       } else if (service.syncStatus == SyncStatus.failed) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1200,22 +1214,22 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   // 已移除顶部状态条颜色逻辑，保留方法则会未使用，故删除
 
   /// 获取同步状态文本
-  String _getSyncStatusText(SyncStatus status) {
+  String _getSyncStatusText(SyncStatus status, AppLocalizations l10n) {
     switch (status) {
       case SyncStatus.idle:
-        return '空闲';
+        return l10n.syncStatusIdle;
       case SyncStatus.packaging:
-        return '正在打包数据';
+        return l10n.syncStatusPackaging;
       case SyncStatus.sending:
-        return '正在发送';
+        return l10n.syncStatusSending;
       case SyncStatus.receiving:
-        return '正在接收';
+        return l10n.syncStatusReceiving;
       case SyncStatus.merging:
-        return '正在合并';
+        return l10n.syncStatusMerging;
       case SyncStatus.completed:
-        return '同步完成';
+        return l10n.syncStatusCompleted;
       case SyncStatus.failed:
-        return '同步失败';
+        return l10n.syncStatusFailed;
     }
   }
 
@@ -1250,9 +1264,10 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     try {
       await Clipboard.setData(ClipboardData(text: text));
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('已复制: $text'),
+            content: Text(l10n.copiedText(text)),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -1290,6 +1305,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   /// 构建设备名称组件，优先展示设备型号，过长时横向滚动显示
   Widget _buildDeviceName(Device device) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final alias = device.alias.trim();
     final model = device.deviceModel?.trim() ?? '';
     final displayName = model.isNotEmpty ? model : alias;
@@ -1297,7 +1313,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         alias.isNotEmpty &&
         alias.toLowerCase() != displayName.toLowerCase();
 
-    final tooltipMessage = showAlias ? '$displayName\n别名：$alias' : displayName;
+    final tooltipMessage = showAlias ? l10n.deviceAliasAndModel(displayName, alias) : displayName;
 
     final titleStyle = theme.textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.w600,

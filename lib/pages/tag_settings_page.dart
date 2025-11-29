@@ -5,6 +5,7 @@ import '../models/note_category.dart'; // 替换 import NoteTag 为 NoteCategory
 import '../utils/icon_utils.dart';
 import '../theme/app_theme.dart';
 import '../constants/app_constants.dart';
+import '../gen_l10n/app_localizations.dart';
 
 class TagSettingsPage extends StatefulWidget {
   const TagSettingsPage({super.key});
@@ -28,11 +29,12 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: const Text('标签管理'),
+        title: Text(l10n.tagManagement),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -92,7 +94,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              '标签管理',
+                              l10n.tagManagement,
                               style: theme.textTheme.titleLarge?.copyWith(
                                 color: colorScheme.onPrimaryContainer,
                                 fontWeight: FontWeight.bold,
@@ -100,7 +102,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              '创建和管理您的个人标签体系',
+                              l10n.tagSettingsDescription,
                               style: theme.textTheme.bodyMedium?.copyWith(
                                 color: colorScheme.onPrimaryContainer
                                     .withAlpha(180),
@@ -133,7 +135,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '添加新标签',
+                    l10n.addNewTag,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: colorScheme.onSurface,
@@ -146,8 +148,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                         child: TextField(
                           controller: _tagController,
                           decoration: InputDecoration(
-                            labelText: '标签名称',
-                            hintText: '请输入标签名称',
+                            labelText: l10n.tagName,
+                            hintText: l10n.tagNameHint,
                             prefixIcon: const Icon(Icons.edit_rounded),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
@@ -172,7 +174,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                           ),
                         ),
                         child: IconButton(
-                          onPressed: () => _showIconSelector(context),
+                          onPressed: () => _showIconSelector(context, l10n),
                           icon: _selectedIconName != null
                               ? (IconUtils.isEmoji(_selectedIconName!)
                                   ? Text(
@@ -188,7 +190,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                   Icons.add_photo_alternate_outlined,
                                   color: colorScheme.onSurfaceVariant,
                                 ),
-                          tooltip: '选择图标',
+                          tooltip: l10n.selectIcon,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -226,8 +228,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
 
                                     if (!mounted) return;
                                     scaffoldMessenger.showSnackBar(
-                                      const SnackBar(
-                                        content: Text('标签添加成功'),
+                                      SnackBar(
+                                        content: Text(l10n.tagAddedSuccess),
                                         duration: AppConstants
                                             .snackBarDurationImportant,
                                       ),
@@ -240,7 +242,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                     if (!mounted) return;
                                     scaffoldMessenger.showSnackBar(
                                       SnackBar(
-                                        content: Text('添加标签失败：$e'),
+                                        content: Text(l10n.addTagFailed(e.toString())),
                                         duration:
                                             AppConstants.snackBarDurationError,
                                       ),
@@ -269,7 +271,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                   ),
                                 )
                               : Text(
-                                  '添加',
+                                  l10n.add,
                                   style: TextStyle(
                                     color: colorScheme.onPrimary,
                                     fontWeight: FontWeight.w600,
@@ -302,7 +304,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                   Padding(
                     padding: const EdgeInsets.all(20),
                     child: Text(
-                      '我的标签',
+                      l10n.myTags,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: colorScheme.onSurface,
@@ -326,7 +328,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  '加载标签中...',
+                                  l10n.loadingTags,
                                   style: theme.textTheme.bodyMedium?.copyWith(
                                     color: colorScheme.onSurfaceVariant,
                                   ),
@@ -350,7 +352,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  '加载标签失败',
+                                  l10n.loadTagsError,
                                   style: theme.textTheme.titleMedium?.copyWith(
                                     color: colorScheme.error,
                                   ),
@@ -382,14 +384,14 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
-                                  '暂无标签',
+                                  l10n.noTags,
                                   style: theme.textTheme.titleMedium?.copyWith(
                                     color: colorScheme.onSurfaceVariant,
                                   ),
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  '创建您的第一个标签来开始整理思想',
+                                  l10n.noTagsHint,
                                   style: theme.textTheme.bodySmall?.copyWith(
                                     color: colorScheme.onSurfaceVariant,
                                   ),
@@ -474,7 +476,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                               ),
                               subtitle: tag.isDefault
                                   ? Text(
-                                      '系统默认标签',
+                                      l10n.systemDefaultTag,
                                       style:
                                           theme.textTheme.bodySmall?.copyWith(
                                         color:
@@ -498,7 +500,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                         ),
                                       ),
                                       child: Text(
-                                        '默认',
+                                        l10n.defaultTag,
                                         style: theme.textTheme.labelSmall
                                             ?.copyWith(
                                           color: colorScheme.primary,
@@ -533,11 +535,11 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                                   color: colorScheme.error,
                                                 ),
                                                 const SizedBox(width: 8),
-                                                const Text('确认删除'),
+                                                Text(l10n.confirmDeleteTag),
                                               ],
                                             ),
                                             content: Text(
-                                              '确定要删除标签"${tag.name}"吗？\n\n删除后，使用此标签的笔记将不再显示该标签。',
+                                              l10n.deleteTagDialogContent(tag.name),
                                             ),
                                             actions: [
                                               TextButton(
@@ -546,7 +548,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                                   false,
                                                 ),
                                                 child: Text(
-                                                  '取消',
+                                                  l10n.cancel,
                                                   style: TextStyle(
                                                     color: colorScheme
                                                         .onSurfaceVariant,
@@ -562,7 +564,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                                   backgroundColor:
                                                       colorScheme.error,
                                                 ),
-                                                child: const Text('删除'),
+                                                child: Text(l10n.delete),
                                               ),
                                             ],
                                           ),
@@ -585,7 +587,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                                           .onInverseSurface,
                                                     ),
                                                     const SizedBox(width: 8),
-                                                    const Text('标签删除成功'),
+                                                    Text(l10n.tagDeletedSuccess),
                                                   ],
                                                 ),
                                                 behavior:
@@ -611,7 +613,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                                           .onErrorContainer,
                                                     ),
                                                     const SizedBox(width: 8),
-                                                    Text('删除标签失败：$e'),
+                                                    Text(l10n.deleteTagFailed(e.toString())),
                                                   ],
                                                 ),
                                                 backgroundColor:
@@ -645,18 +647,18 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
     );
   }
 
-  void _showIconSelector(BuildContext context) {
+  void _showIconSelector(BuildContext context, AppLocalizations l10n) {
     final TextEditingController emojiSearchController = TextEditingController();
     String searchQuery = '';
     Map<String, bool> expandedCategories = {
-      '情感': true,
-      '思考': false,
-      '自然': false,
-      '心情': false,
-      '生活': false,
-      '成长': false,
-      '奖励': false,
-      '系统图标': false,
+      l10n.emotion: true,
+      l10n.thinking: false,
+      l10n.nature: false,
+      l10n.mood: false,
+      l10n.life: false,
+      l10n.growth: false,
+      l10n.reward: false,
+      l10n.systemIcons: false,
     };
 
     showDialog(
@@ -681,7 +683,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
           final materialIcons = IconUtils.categoryIcons.entries.toList();
 
           return AlertDialog(
-            title: const Text('选择图标'),
+            title: Text(l10n.selectIcon),
             content: SizedBox(
               width: MediaQuery.of(context).size.width * 0.8,
               height: MediaQuery.of(context).size.height * 0.6,
@@ -691,7 +693,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                   TextField(
                     controller: emojiSearchController,
                     decoration: InputDecoration(
-                      hintText: '直接输入表情符号...',
+                      hintText: l10n.enterEmojiDirectly,
                       prefixIcon: const Icon(Icons.search),
                       suffixIcon: emojiSearchController.text.isNotEmpty
                           ? IconButton(
@@ -718,12 +720,12 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                       child: Row(
                         children: [
                           Text(
-                            '使用 "${emojiSearchController.text}" 作为图标',
+                            l10n.useAsTagIcon(emojiSearchController.text),
                             style: const TextStyle(color: Colors.blue),
                           ),
                           const Spacer(),
                           ElevatedButton(
-                            child: const Text('选择'),
+                            child: Text(l10n.select),
                             onPressed: () {
                               setState(
                                 () => _selectedIconName =
@@ -841,24 +843,25 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
 
                           // 系统图标部分
                           ListTile(
-                            title: const Text(
-                              '系统图标',
-                              style: TextStyle(fontWeight: FontWeight.bold),
+                            title: Text(
+                              l10n.systemIcons,
+                              style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                             trailing: Icon(
-                              expandedCategories['系统图标'] ?? false
+                              expandedCategories[l10n.systemIcons] ?? false
                                   ? Icons.expand_less
                                   : Icons.expand_more,
                             ),
                             onTap: () {
                               setState(() {
-                                expandedCategories['系统图标'] =
-                                    !(expandedCategories['系统图标'] ?? false);
+                                expandedCategories[l10n.systemIcons] =
+                                    !(expandedCategories[l10n.systemIcons] ??
+                                        false);
                               });
                             },
                           ),
 
-                          if (expandedCategories['系统图标'] ?? false)
+                          if (expandedCategories[l10n.systemIcons] ?? false)
                             Padding(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 8.0,
@@ -939,7 +942,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('取消'),
+                child: Text(l10n.cancel),
               ),
             ],
           );
