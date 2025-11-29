@@ -124,12 +124,12 @@ class _LogsPageState extends State<LogsPage> {
       }
     } catch (e) {
       if (!mounted) return;
-
+      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(
         SnackBar(
-          content: Text('加载更多日志失败: $e'),
+          content: Text(l10n.logLoadMoreError(e.toString())),
           duration: AppConstants.snackBarDurationError,
         ),
       );
@@ -138,7 +138,7 @@ class _LogsPageState extends State<LogsPage> {
       });
       showDialog(
         context: context,
-        builder: (context) => const AppErrorView(text: '加载日志失败'),
+        builder: (context) => AppErrorView(text: l10n.logLoadError),
       );
     }
   }
@@ -253,13 +253,16 @@ class _LogsPageState extends State<LogsPage> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          '${log.level.name.toUpperCase()} 日志 ${log.source != null ? "[${log.source}]" : ""}',
+                          AppLocalizations.of(context).logDetailsTitle(
+                            log.level.name.toUpperCase(),
+                            log.source ?? '',
+                          ),
                           style: theme.textTheme.titleMedium,
                         ),
                         const Spacer(),
                         IconButton(
                           icon: const Icon(Icons.copy),
-                          tooltip: '复制全部信息',
+                          tooltip: AppLocalizations.of(context).logCopyAll,
                           onPressed: () => _copyLogToClipboard(log),
                         ),
                         IconButton(
@@ -270,7 +273,8 @@ class _LogsPageState extends State<LogsPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '时间: ${log.timestamp.toLocal().toString()}',
+                      AppLocalizations.of(context)
+                          .logTimestamp(log.timestamp.toLocal().toString()),
                       style: theme.textTheme.bodySmall,
                     ),
                   ],
@@ -284,7 +288,8 @@ class _LogsPageState extends State<LogsPage> {
                   padding: const EdgeInsets.all(16),
                   children: [
                     // 消息
-                    Text('消息:', style: theme.textTheme.labelLarge),
+                    Text(AppLocalizations.of(context).logMessage,
+                        style: theme.textTheme.labelLarge),
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -304,7 +309,7 @@ class _LogsPageState extends State<LogsPage> {
                     if (log.error != null && log.error!.isNotEmpty) ...[
                       const SizedBox(height: 16),
                       Text(
-                        '错误:',
+                        AppLocalizations.of(context).logError,
                         style: theme.textTheme.labelLarge?.copyWith(
                           color: theme.colorScheme.error,
                         ),
@@ -332,7 +337,8 @@ class _LogsPageState extends State<LogsPage> {
                     if (log.stackTrace != null &&
                         log.stackTrace!.isNotEmpty) ...[
                       const SizedBox(height: 16),
-                      Text('堆栈跟踪:', style: theme.textTheme.labelLarge),
+                      Text(AppLocalizations.of(context).logStackTrace,
+                          style: theme.textTheme.labelLarge),
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -360,30 +366,31 @@ class _LogsPageState extends State<LogsPage> {
 
   // 复制日志内容到剪贴板
   void _copyLogToClipboard(LogEntry log) {
+    final l10n = AppLocalizations.of(context);
     final buffer = StringBuffer();
-    buffer.write('时间: ${log.timestamp.toLocal().toString()}\n');
+    buffer.write('${l10n.logTimestamp(log.timestamp.toLocal().toString())}\n');
     buffer.write('级别: ${log.level.name.toUpperCase()}\n');
 
     if (log.source != null && log.source!.isNotEmpty) {
-      buffer.write('来源: ${log.source}\n');
+      buffer.write('${l10n.logSourceFilter(log.source!)}\n');
     }
 
-    buffer.write('消息: ${log.message}\n');
+    buffer.write('${l10n.logMessage} ${log.message}\n');
 
     if (log.error != null && log.error!.isNotEmpty) {
-      buffer.write('错误: ${log.error}\n');
+      buffer.write('${l10n.logError} ${log.error}\n');
     }
 
     if (log.stackTrace != null && log.stackTrace!.isNotEmpty) {
-      buffer.write('堆栈跟踪: ${log.stackTrace}\n');
+      buffer.write('${l10n.logStackTrace} ${log.stackTrace}\n');
     }
 
     Clipboard.setData(ClipboardData(text: buffer.toString()));
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(
-      const SnackBar(
-        content: Text('日志详情已复制到剪贴板'),
+      SnackBar(
+        content: Text(l10n.logCopied),
         duration: AppConstants.snackBarDurationImportant,
       ),
     );
@@ -458,11 +465,12 @@ class _LogsPageState extends State<LogsPage> {
       );
     }
 
+    final l10n = AppLocalizations.of(context);
     // 源过滤器
     if (_filterSource != null && _filterSource!.isNotEmpty) {
       filterChips.add(
         Chip(
-          label: Text('来源: $_filterSource'),
+          label: Text(l10n.logSourceFilter(_filterSource!)),
           avatar: const Icon(Icons.source_outlined, size: 18),
           onDeleted: () {
             setState(() {
@@ -480,7 +488,7 @@ class _LogsPageState extends State<LogsPage> {
     if (_searchQuery != null && _searchQuery!.isNotEmpty) {
       filterChips.add(
         Chip(
-          label: Text('搜索: $_searchQuery'),
+          label: Text(l10n.logSearchFilter(_searchQuery!)),
           avatar: const Icon(Icons.search, size: 18),
           onDeleted: () {
             setState(() {
@@ -525,7 +533,7 @@ class _LogsPageState extends State<LogsPage> {
               });
               _refreshLogs();
             },
-            child: const Text('清除全部'),
+            child: Text(l10n.logClearAllFilters),
           ),
         ],
       ),
@@ -787,7 +795,8 @@ class _LogsPageState extends State<LogsPage> {
                   children: [
                     const Icon(Icons.filter_list),
                     const SizedBox(width: 8),
-                    Text('日志过滤选项', style: theme.textTheme.titleMedium),
+                    Text(AppLocalizations.of(context).logFilterOptions,
+                        style: theme.textTheme.titleMedium),
                     const Spacer(),
                     TextButton(
                       onPressed: () {
@@ -797,7 +806,7 @@ class _LogsPageState extends State<LogsPage> {
                           sourceController.text = '';
                         });
                       },
-                      child: const Text('重置'),
+                      child: Text(AppLocalizations.of(context).logFilterReset),
                     ),
                   ],
                 ),
@@ -809,7 +818,8 @@ class _LogsPageState extends State<LogsPage> {
                   padding: const EdgeInsets.all(16),
                   children: [
                     // 日志级别过滤
-                    Text('按日志级别过滤', style: theme.textTheme.titleSmall),
+                    Text(AppLocalizations.of(context).logFilterByLevel,
+                        style: theme.textTheme.titleSmall),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8.0,
@@ -844,14 +854,16 @@ class _LogsPageState extends State<LogsPage> {
                     const SizedBox(height: 24),
 
                     // 源过滤
-                    Text('按来源过滤', style: theme.textTheme.titleSmall),
+                    Text(AppLocalizations.of(context).logFilterBySource,
+                        style: theme.textTheme.titleSmall),
                     const SizedBox(height: 8),
                     TextField(
                       controller: sourceController,
-                      decoration: const InputDecoration(
-                        hintText: '输入日志来源名称...',
-                        prefixIcon: Icon(Icons.source_outlined),
-                        border: OutlineInputBorder(),
+                      decoration: InputDecoration(
+                        hintText:
+                            AppLocalizations.of(context).logFilterSourceHint,
+                        prefixIcon: const Icon(Icons.source_outlined),
+                        border: const OutlineInputBorder(),
                       ),
                       onChanged: (value) {
                         setState(() {
@@ -879,7 +891,7 @@ class _LogsPageState extends State<LogsPage> {
                   children: [
                     TextButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      child: const Text('取消'),
+                      child: Text(AppLocalizations.of(context).cancel),
                     ),
                     const SizedBox(width: 8),
                     FilledButton(
@@ -894,7 +906,7 @@ class _LogsPageState extends State<LogsPage> {
                         Navigator.of(context).pop();
                         _refreshLogs();
                       },
-                      child: const Text('应用'),
+                      child: Text(AppLocalizations.of(context).logFilterApply),
                     ),
                   ],
                 ),
@@ -908,15 +920,16 @@ class _LogsPageState extends State<LogsPage> {
 
   // 显示清除日志对话框
   void _showClearLogsDialog() {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('清除日志'),
-        content: const Text('您想清除哪些日志？'),
+        title: Text(l10n.logClearTitle),
+        content: Text(l10n.logClearQuestion),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () {
@@ -930,13 +943,13 @@ class _LogsPageState extends State<LogsPage> {
               ScaffoldMessenger.of(
                 context,
               ).showSnackBar(
-                const SnackBar(
-                  content: Text('内存中的日志已清除'),
+                SnackBar(
+                  content: Text(l10n.logClearMemorySuccess),
                   duration: AppConstants.snackBarDurationNormal,
                 ),
               );
             },
-            child: const Text('仅清除内存日志'),
+            child: Text(l10n.logClearMemory),
           ),
           FilledButton(
             onPressed: () async {
@@ -963,8 +976,8 @@ class _LogsPageState extends State<LogsPage> {
                 if (!mounted) return;
                 navigator.pop(); // 关闭加载指示器
                 scaffoldMessenger.showSnackBar(
-                  const SnackBar(
-                    content: Text('所有日志记录已清除'),
+                  SnackBar(
+                    content: Text(l10n.logClearAllSuccess),
                     duration: AppConstants.snackBarDurationNormal,
                   ),
                 );
@@ -979,13 +992,13 @@ class _LogsPageState extends State<LogsPage> {
                 navigator.pop(); // 关闭加载指示器
                 scaffoldMessenger.showSnackBar(
                   SnackBar(
-                    content: Text('清除日志失败: $e'),
+                    content: Text(l10n.logClearError(e.toString())),
                     duration: AppConstants.snackBarDurationError,
                   ),
                 );
               }
             },
-            child: const Text('清除全部日志'),
+            child: Text(l10n.logClearAll),
           ),
         ],
       ),
@@ -1075,7 +1088,7 @@ class _LogEntryItem extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.only(top: 4.0, left: 20.0),
                 child: Text(
-                  '包含错误信息',
+                  AppLocalizations.of(context).logContainsError,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.error,
                     fontStyle: FontStyle.italic,

@@ -260,14 +260,14 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
     String searchQuery = '';
     final l10n = AppLocalizations.of(context);
     Map<String, bool> expandedCategories = {
-      '情感': true,
-      '思考': false,
-      '自然': false,
-      '心情': false,
-      '生活': false,
-      '成长': false,
-      '奖励': false,
-      '系统图标': false,
+      l10n.emotion: true,
+      l10n.thinking: false,
+      l10n.nature: false,
+      l10n.mood: false,
+      l10n.life: false,
+      l10n.growth: false,
+      l10n.reward: false,
+      l10n.systemIcons: false,
     };
 
     showDialog(
@@ -455,19 +455,19 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                               style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                             trailing: Icon(
-                              expandedCategories['系统图标'] ?? false
+                              expandedCategories[l10n.systemIcons] ?? false
                                   ? Icons.expand_less
                                   : Icons.expand_more,
                             ),
                             onTap: () {
                               setState(() {
-                                expandedCategories['系统图标'] =
-                                    !(expandedCategories['系统图标'] ?? false);
+                                expandedCategories[l10n.systemIcons] =
+                                    !(expandedCategories[l10n.systemIcons] ?? false);
                               });
                             },
                           ),
 
-                          if (expandedCategories['系统图标'] ?? false)
+                          if (expandedCategories[l10n.systemIcons] ?? false)
                             Padding(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 8.0,
@@ -560,24 +560,25 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
   void _editCategory(BuildContext context, NoteCategory category) {
     final nameController = TextEditingController(text: category.name);
     String? selectedIcon = category.iconName;
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
           // 修正：此处应为“编辑分类”而非“编辑标签”
-          title: const Text('编辑标签'),
+          title: Text(l10n.editTagTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: nameController,
                 // 改为“标签名称”以匹配统一用语
-                decoration: const InputDecoration(labelText: '标签名称'),
+                decoration: InputDecoration(labelText: l10n.tagNameLabel),
               ),
               const SizedBox(height: 12),
               Row(
                 children: [
-                  const Text('图标：'),
+                  Text(l10n.iconLabel),
                   IconButton(
                     icon: IconUtils.getCategoryIcon(selectedIcon),
                     onPressed: () async {
@@ -600,7 +601,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('取消'),
+              child: Text(l10n.cancel),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -624,7 +625,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                   Navigator.pop(dialogContext);
                 }
               },
-              child: const Text('保存'),
+              child: Text(l10n.save),
             ),
           ],
         );
@@ -787,16 +788,23 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
   late String? _selectedIcon;
   final TextEditingController _emojiSearchController = TextEditingController();
   String _searchQuery = '';
-  Map<String, bool> expandedCategories = {
-    '情感': true,
-    '思考': false,
-    '自然': false,
-    '心情': false,
-    '生活': false,
-    '成长': false,
-    '奖励': false,
-    '系统图标': false,
-  };
+  late Map<String, bool> expandedCategories;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final l10n = AppLocalizations.of(context);
+    expandedCategories = {
+      l10n.emotion: true,
+      l10n.thinking: false,
+      l10n.nature: false,
+      l10n.mood: false,
+      l10n.life: false,
+      l10n.growth: false,
+      l10n.reward: false,
+      l10n.systemIcons: false,
+    };
+  }
 
   @override
   void initState() {
@@ -950,18 +958,18 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       trailing: Icon(
-                        expandedCategories['系统图标'] ?? false
+                        expandedCategories[l10n.systemIcons] ?? false
                             ? Icons.expand_less
                             : Icons.expand_more,
                       ),
                       onTap: () {
                         setState(() {
-                          expandedCategories['系统图标'] =
-                              !(expandedCategories['系统图标'] ?? false);
+                          expandedCategories[l10n.systemIcons] =
+                              !(expandedCategories[l10n.systemIcons] ?? false);
                         });
                       },
                     ),
-                    if (expandedCategories['系统图标'] ?? false)
+                    if (expandedCategories[l10n.systemIcons] ?? false)
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 8.0),
                         child: Wrap(
