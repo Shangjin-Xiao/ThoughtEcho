@@ -431,5 +431,392 @@
         "type": "String"
       }
     }
+  },
+  
+  "themeSettings": "Theme Settings",
+  "themeMode": "Theme Mode",
+  "themeModeLight": "Light",
+  "themeModeDark": "Dark",
+  "useCustomThemeColor": "Use Custom Theme Color",
+  "selectThemeColor": "Select Theme Color",
+  "dynamicColor": "Dynamic Color",
+  "dynamicColorDesc": "Extract theme color from system",
+  "customColorEnabledHint": "Custom theme color enabled, dynamic color is temporarily disabled",
+  "dynamicColorDisabledHint": "Dynamic color disabled, using default blue theme",
+  "themeTools": "Theme Tools",
+  "themeToolsDesc": "If theme colors appear abnormal, try refreshing the theme",
+  "themeRefreshed": "Theme refreshed",
+  "refreshTheme": "Refresh Theme",
+  
+  "hitokotoSettings": "Daily Quote Settings",
+  "hitokotoTypeSettings": "Daily Quote Type Settings",
+  "hitokotoTypeDesc": "You can select one or more daily quote types. The app will randomly display content from your selected types. Different types represent different content sources and styles.",
+  "selectAll": "Select All",
+  "clearAll": "Clear All",
+  "typeSelection": "Type Selection",
+  "typeSelectionHint": "Tap to select your preferred quote types",
+  "usageInstructions": "Instructions",
+  "hitokotoServiceProvider": "Quote service provided by Hitokoto",
+  "hitokotoHelpItem1": "At least one type must be selected. The app will randomly display content from selected types",
+  "hitokotoHelpItem2": "Selecting multiple types provides a richer variety of content",
+  "hitokotoHelpItem3": "Different types represent different content styles and sources",
+  "settingsSaved": "Settings saved",
+  
+  "tagManagement": "Tag Management",
+  "newTagName": "New Tag Name",
+  "enterTagNameHint": "Enter tag name (max 50 characters)",
+  "selectIcon": "Select Icon",
+  "adding": "Adding",
+  "add": "Add",
+  "pleaseEnterTagName": "Please enter a tag name",
+  "tagAddedSuccess": "Tag added successfully",
+  "addTagFailed": "Failed to add tag: {error}",
+  "@addTagFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "iconSelectionHint": "Choose an icon or enter an emoji as the tag icon",
+  "iconSelected": "Selected icon: {icon}",
+  "@iconSelected": {
+    "placeholders": {
+      "icon": {
+        "type": "String"
+      }
+    }
+  },
+  "clear": "Clear",
+  "loadTagsFailed": "Failed to load tags: {error}",
+  "@loadTagsFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noTags": "No tags yet",
+  "editTag": "Edit Tag",
+  "tagName": "Tag Name",
+  "icon": "Icon",
+  "deleteTagConfirmation": "Are you sure you want to delete the tag \"{name}\"? Associated notes will be kept but will no longer be linked to this tag.",
+  "@deleteTagConfirmation": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tagDeletedSuccess": "Tag deleted successfully",
+  "deleteTagFailed": "Failed to delete tag: {error}",
+  "@deleteTagFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "defaultTag": "Default",
+  "systemDefaultTag": "System default tag",
+  "tapToEditLongPressToDelete": "Tap to edit, long press to delete",
+  "enterEmojiHint": "Enter an emoji...",
+  "useAsIcon": "Use \"{emoji}\" as icon",
+  "@useAsIcon": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "systemIcons": "System Icons",
+  
+  "storageManagement": "Storage Management",
+  "clearCache": "Clear Cache",
+  "clearCacheConfirmTitle": "Clear Cache",
+  "clearCacheConfirmContent": "Are you sure you want to clear the app cache?\n\nThis will remove temporary files and image cache, but will not delete your notes.",
+  "cleanOrphanMedia": "Clean Unused Media",
+  "cleanOrphanMediaConfirmTitle": "Clean Unused Media Files",
+  "cleanOrphanMediaConfirmContent": "This will delete media files (images, videos, audio) that are not referenced by any notes.\n\nAre you sure you want to continue?",
+  "databaseMaintenance": "Database Maintenance",
+  "databaseMaintenanceConfirmTitle": "Database Maintenance",
+  "databaseMaintenanceConfirmContent": "This operation will optimize the database:\n\n• Defragment storage space\n• Update statistics\n• Rebuild indexes\n\nThe process may take from a few seconds to several minutes depending on data size.\n\nAre you sure you want to continue?",
+  "startMaintenance": "Start Maintenance",
+  "maintenanceInProgress": "Database maintenance in progress...",
+  "preparingProgress": "Preparing...",
+  "maintenanceComplete": "Maintenance Complete",
+  "maintenanceDuration": "Duration: {duration} seconds",
+  "@maintenanceDuration": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "databaseSizeChange": "Database size: {before} MB → {after} MB",
+  "@databaseSizeChange": {
+    "placeholders": {
+      "before": {
+        "type": "String"
+      },
+      "after": {
+        "type": "String"
+      }
+    }
+  },
+  "spaceSavedMb": "Space saved: {size} MB",
+  "@spaceSavedMb": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "noSpaceSaved": "No space saved (database is already compact)",
+  "maintenanceFailed": "Maintenance failed: {error}",
+  "@maintenanceFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadStorageInfoFailed": "Failed to load storage info: {error}",
+  "@loadStorageInfoFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cacheCleanedResult": "Cache cleared, freed {size}",
+  "@cacheCleanedResult": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "clearCacheFailed": "Failed to clear cache: {error}",
+  "@clearCacheFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "orphanFilesCleanedResult": "{count, plural, =0{No unused files found} =1{Cleanup complete, deleted 1 unused file} other{Cleanup complete, deleted {count} unused files}}",
+  "@orphanFilesCleanedResult": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noOrphanFilesFound": "No unused files found",
+  "cleanupFailed": "Cleanup failed: {error}",
+  "@cleanupFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "totalStorageUsage": "Total Storage Usage",
+  "databaseUsage": "Database Usage",
+  "mediaFilesUsage": "Media Files Usage",
+  "cacheUsage": "Cache Usage",
+  "notesDatabase": "Notes Database",
+  "aiDatabase": "AI Database",
+  "logDatabase": "Log Database",
+  "images": "Images",
+  "videos": "Videos",
+  "audios": "Audio",
+  "tempFilesAndCache": "Temporary files and cache",
+  "fileCount": "{count, plural, =1{1 file} other{{count} files}}",
+  "@fileCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dataStorageLocation": "Data Storage Location",
+  "currentDataDirectory": "Current Data Directory",
+  "custom": "Custom",
+  "windowsDataMigration": "Windows Data Directory Migration",
+  "windowsDataMigrationDesc": "Migrate app data to another location (e.g., D: drive) to free up system disk space",
+  "changeDataDirectory": "Change Data Directory",
+  "migrating": "Migrating...",
+  "confirmDataMigration": "Confirm Data Migration",
+  "migrationTargetPath": "About to migrate all app data to:",
+  "migrationWarning": "⚠️ Migration may take several minutes. Please do not close the app during this process.\n⚠️ You will need to restart the app after migration is complete.",
+  "startMigration": "Start Migration",
+  "migratingData": "Migrating Data",
+  "migrationComplete": "Migration Complete",
+  "migrationCompleteMessage": "Data has been successfully migrated to the new directory!\n\nPlease restart the app for changes to take effect.",
+  "migrationFailed": "Data migration failed. Please check the logs for details.",
+  "migrationFailedWithError": "Migration failed: {error}",
+  "@migrationFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "selectNewDataDirectory": "Select New Data Storage Directory",
+  "directoryNotAvailable": "Selected directory is not available or lacks write permission",
+  "selectDirectoryFailed": "Failed to select directory: {error}",
+  "@selectDirectoryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  
+  "logsViewer": "Log Viewer",
+  "logFilter": "Log Filter",
+  "clearLogs": "Clear Logs",
+  "searchLogs": "Search logs...",
+  "noLogs": "No logs yet",
+  "loadMoreLogs": "Load more logs",
+  "loadMoreLogsFailed": "Failed to load more logs: {error}",
+  "@loadMoreLogsFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logDetailsTitle": "{level} Log {source}",
+  "@logDetailsTitle": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      },
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "copyAll": "Copy All",
+  "timestamp": "Time: {time}",
+  "@timestamp": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "message": "Message:",
+  "errorLabel": "Error:",
+  "stackTrace": "Stack Trace:",
+  "logCopiedToClipboard": "Log details copied to clipboard",
+  "containsError": "Contains error information",
+  "sourceFilter": "Source: {source}",
+  "@sourceFilter": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "searchFilter": "Search: {query}",
+  "@searchFilter": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "clearAllFilters": "Clear All",
+  "logFilterOptions": "Log Filter Options",
+  "reset": "Reset",
+  "filterByLogLevel": "Filter by Log Level",
+  "filterBySource": "Filter by Source",
+  "enterSourceName": "Enter log source name...",
+  "apply": "Apply",
+  "clearLogsTitle": "Clear Logs",
+  "clearLogsQuestion": "Which logs would you like to clear?",
+  "clearMemoryLogsOnly": "Clear Memory Logs Only",
+  "clearAllLogs": "Clear All Logs",
+  "memoryLogsCleared": "Memory logs cleared",
+  "allLogsCleared": "All logs cleared",
+  "logsCount": "{count, plural, =1{Showing 1 log} other{Showing {count} logs}} • Long press to copy • Tap for details",
+  "@logsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logPageError": "Log page rendering error:",
+  
+  "networkDiagnostic": "Network Diagnostic",
+  "networkConfig": "Network Configuration",
+  "networkDiagnosticSection": "Network Diagnostic",
+  "diagnosing": "Diagnosing...",
+  "runNetworkDiagnostic": "Run Network Diagnostic",
+  "diagnosticResult": "Diagnostic result: {passed}/{total} passed",
+  "@diagnosticResult": {
+    "placeholders": {
+      "passed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "diagnosticFailed": "Diagnostic failed: {error}",
+  "@diagnosticFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceDiscovery": "Device Discovery",
+  "startDiscovery": "Start Discovery",
+  "stopDiscovery": "Stop Discovery",
+  "sendAnnouncement": "Send Announcement",
+  "deviceAnnouncementSent": "Device announcement sent",
+  "startDiscoveryFailed": "Failed to start device discovery: {error}",
+  "@startDiscoveryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "sendAnnouncementFailed": "Failed to send device announcement: {error}",
+  "@sendAnnouncementFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "statusRunning": "Status: Running",
+  "statusStopped": "Status: Stopped",
+  "discoveredDevices": "Discovered Devices",
+  "discoveredDevicesCount": "Discovered Devices ({count})",
+  "@discoveredDevicesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noDevicesFound": "No devices found",
+  "unknownModel": "Unknown model",
+  "fingerprint": "Fingerprint: {fingerprint}",
+  "@fingerprint": {
+    "placeholders": {
+      "fingerprint": {
+        "type": "String"
+      }
+    }
   }
 }
