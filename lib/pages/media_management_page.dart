@@ -364,7 +364,7 @@ class _MediaManagementPageState extends State<MediaManagementPage> {
       case 'cleanedFiles':
         return l10n.cleanedFilesCount;
       case 'spaceSavedMB':
-        return l10n.spaceSavedMb;
+        return l10n.spaceSavedMbLabel;
       case 'migratedQuotes':
         return l10n.migratedQuotesCount;
       case 'orphanFilesDetected':

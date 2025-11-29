@@ -590,7 +590,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     // 优化：使用缓存的服务或延迟获取
     final locationService =

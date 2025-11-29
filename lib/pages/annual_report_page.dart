@@ -1424,7 +1424,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(l10n.shareFailed),
+          content: Text(l10n.shareFailed(e.toString())),
           duration: const Duration(seconds: 2),
         ),
       );
