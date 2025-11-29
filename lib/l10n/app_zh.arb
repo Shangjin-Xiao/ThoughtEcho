@@ -320,5 +320,116 @@
         "type": "String"
       }
     }
+  },
+  
+  "backupAndRestore": "数据备份与还原",
+  "dataBackup": "数据备份",
+  "dataRestore": "数据还原",
+  "includeMediaFiles": "包含媒体文件",
+  "creatingBackup": "正在备份...",
+  "createBackup": "创建备份",
+  "selectBackupFileToRestore": "选择备份文件还原",
+  "importantNotes": "重要提示",
+  "dataSecurity": "数据安全",
+  "dataSafetyDesc": "还原数据将覆盖当前所有数据，请在还原前确保当前数据已备份",
+  "backupAdvice": "备份建议",
+  "backupAdviceDesc": "建议定期备份数据到多个位置（本地、云存储等）",
+  "formatInfo": "格式说明",
+  "formatInfoDesc": "新版ZIP格式包含完整数据和媒体文件，旧版JSON格式仅包含文本数据",
+  "compatibility": "兼容性",
+  "compatibilityDesc": "支持导入新版ZIP格式和旧版JSON格式的备份文件",
+  "confirmRestore": "确认还原",
+  "confirmMergeImport": "确认合并导入",
+  "startMerge": "开始合并",
+  "selectImportMode": "选择导入模式",
+  "continueAction": "继续",
+  "backupFailed": "备份失败",
+  "restoreFailed": "还原失败",
+  "selectFileFailed": "选择文件失败",
+  "cannotGetFilePath": "无法获取文件路径，请重新选择",
+  "invalidBackupFile": "无效的备份文件",
+  "invalidBackupFileDesc": "所选文件不是有效的心迹备份文件。\n\n请选择正确的备份文件。",
+  "backupCanceled": "备份已取消",
+  "restoreCanceled": "还原已取消",
+  "unknownField": "未知字段",
+  "confirmRestoreData": "确认还原数据",
+  
+  "insightsTitle": "AI 洞察",
+  "analysisTypeComprehensive": "全面分析",
+  "analysisTypeComprehensiveDesc": "综合分析您所有笔记，探索主题、情感和思维模式",
+  "analysisTypeEmotional": "情感洞察",
+  "analysisTypeEmotionalDesc": "分析您的情绪状态和变化趋势",
+  "analysisTypeMindmap": "思维导图",
+  "analysisTypeMindmapDesc": "构建您思考的结构和思维习惯分析",
+  "analysisTypeGrowth": "成长建议",
+  "analysisTypeGrowthDesc": "根据您的笔记提供个性化成长和进步建议",
+  "analysisStyleProfessional": "专业分析",
+  "analysisStyleProfessionalDesc": "客观专业的分析视角",
+  "analysisStyleFriendly": "友好导师",
+  "analysisStyleFriendlyDesc": "像一位友好的导师给予温和的建议",
+  "analysisStyleHumorous": "风趣幽默",
+  "analysisStyleHumorousDesc": "以幽默风趣的方式解读您的思考",
+  "analysisStyleLiterary": "文学风格",
+  "analysisStyleLiteraryDesc": "以优美的文学语言描述您的思考旅程",
+  "selectAnalysisType": "选择分析类型",
+  "selectAnalysisStyle": "选择分析风格",
+  "customPrompt": "自定义提示",
+  "startAnalysis": "开始分析",
+  "stopAnalysis": "停止",
+  "shareAnalysis": "分享",
+  "copyAnalysis": "复制",
+  "saveAnalysis": "保存",
+  "noNotesToAnalyze": "暂无笔记可分析",
+  "noNotesToAnalyzeDesc": "请先添加一些笔记，AI 才能为您提供洞察",
+  "aiServiceNotConfigured": "AI服务未配置",
+  "configureAIService": "配置AI服务",
+  "analysisHistory": "历史记录",
+  "newAnalysis": "新分析",
+  "analyzing": "正在分析...",
+  "analysisSaved": "分析已保存",
+  "analysisCopied": "分析已复制到剪贴板",
+  
+  "noteSaved": "笔记已保存",
+  "selectCardColor": "选择卡片颜色",
+  "presetColors": "预设颜色",
+  "customColor": "自定义颜色",
+  "select": "选择",
+  "editMetadata": "编辑元数据",
+  
+  "periodicReport": "周期报告",
+  "aiInsightsTab": "智能洞察",
+  
+  "locationServiceNotEnabled": "位置服务未启用",
+  "pleaseEnableLocationInSettings": "请在系统设置中启用位置服务",
+  "locationServiceEnabledMsg": "位置服务已启用",
+  
+  "quickTips": "快速提示",
+  "coreFeature": "核心",
+  
+  "confirmDelete": "确认删除",
+  "confirmDeleteAnalysis": "确定要删除这条分析记录吗？",
+  "deleteSuccess": "删除成功",
+  "deleteFailed": "删除失败",
+  "serviceNotInitialized": "服务未初始化",
+  
+  "location": "位置",
+  "weather": "天气",
+  "color": "颜色",
+  "noteUpdated": "笔记已更新",
+  "openFullEditorFailed": "打开全屏编辑器失败: {error}",
+  "@openFullEditorFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "saveFailedWithError": "保存失败: {error}",
+  "@saveFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   }
 }

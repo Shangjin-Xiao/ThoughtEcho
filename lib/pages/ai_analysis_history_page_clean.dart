@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import '../gen_l10n/app_localizations.dart';
 import '../constants/app_constants.dart';
 import '../models/ai_analysis_model.dart';
 import '../services/ai_analysis_database_service.dart';
@@ -103,16 +104,16 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('确认删除'),
-        content: const Text('确定要删除这条分析记录吗？'),
+        title: Text(AppLocalizations.of(context).confirmDelete),
+        content: Text(AppLocalizations.of(context).confirmDeleteAnalysis),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(AppLocalizations.of(context).cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('删除'),
+            child: Text(AppLocalizations.of(context).delete),
           ),
         ],
       ),
@@ -137,8 +138,8 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(
-            content: Text('删除成功'),
+          ).showSnackBar(SnackBar(
+            content: Text(AppLocalizations.of(context).deleteSuccess),
             duration: AppConstants.snackBarDurationImportant,
           ));
         }
@@ -147,8 +148,8 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
         if (mounted) {
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(
-            content: Text('删除失败'),
+          ).showSnackBar(SnackBar(
+            content: Text(AppLocalizations.of(context).deleteFailed),
             duration: AppConstants.snackBarDurationError,
           ));
         }

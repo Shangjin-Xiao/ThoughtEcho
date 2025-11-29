@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
+import '../../gen_l10n/app_localizations.dart';
 import '../../models/onboarding_models.dart';
 import '../../config/onboarding_config.dart';
 import '../../services/location_service.dart';
@@ -218,19 +219,19 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
                 showDialog(
                   context: context,
                   builder: (context) => AlertDialog(
-                    title: const Text('位置服务未启用'),
-                    content: const Text('请在系统设置中启用位置服务'),
+                    title: Text(AppLocalizations.of(context).locationServiceNotEnabled),
+                    content: Text(AppLocalizations.of(context).pleaseEnableLocationInSettings),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),
-                        child: const Text('取消'),
+                        child: Text(AppLocalizations.of(context).cancel),
                       ),
                       TextButton(
                         onPressed: () async {
                           Navigator.pop(context);
                           await Geolocator.openLocationSettings();
                         },
-                        child: const Text('去设置'),
+                        child: Text(AppLocalizations.of(context).goToSettings),
                       ),
                     ],
                   ),
@@ -243,9 +244,9 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
             final position = await locationService.getCurrentLocation();
             if (position != null && mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('位置服务已启用'),
-                  duration: Duration(seconds: 2),
+                SnackBar(
+                  content: Text(AppLocalizations.of(context).locationServiceEnabledMsg),
+                  duration: const Duration(seconds: 2),
                 ),
               );
             }
@@ -457,7 +458,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
                       widget.onPreferenceChanged(preference.key, allValues);
                     },
                     icon: const Icon(Icons.select_all, size: 16),
-                    label: const Text('全选'),
+                    label: Text(AppLocalizations.of(context).prefSelectAll),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                     ),
@@ -474,7 +475,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
                       widget.onPreferenceChanged(preference.key, firstValue);
                     },
                     icon: const Icon(Icons.clear_all, size: 16),
-                    label: const Text('清空'),
+                    label: Text(AppLocalizations.of(context).prefClearAll),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 8),
                     ),
@@ -567,7 +568,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
               ),
               const SizedBox(width: 8),
               Text(
-                '关于设置',
+                AppLocalizations.of(context).prefAboutSettings,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: theme.colorScheme.primary,
@@ -577,7 +578,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
           ),
           const SizedBox(height: 12),
           Text(
-            '• 所有设置都可以随时在应用的设置页面中修改\n• 我们重视您的隐私，所有数据都存储在您的设备上\n• 权限将在您需要使用相关功能时请求',
+            AppLocalizations.of(context).prefAboutSettingsInfo,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onSurface.withValues(alpha: 0.8),
             ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../gen_l10n/app_localizations.dart';
 import '../../models/onboarding_models.dart';
 import '../../config/onboarding_config.dart';
 
@@ -383,7 +384,7 @@ class _FeaturesPageViewState extends State<FeaturesPageView>
               ),
               const SizedBox(width: 8),
               Text(
-                '快速提示',
+                AppLocalizations.of(context).quickTips,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: theme.colorScheme.primary,
@@ -503,7 +504,7 @@ class _FeatureCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    '核心',
+                    AppLocalizations.of(context).coreFeature,
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: theme.colorScheme.onPrimary,
                       fontWeight: FontWeight.bold,

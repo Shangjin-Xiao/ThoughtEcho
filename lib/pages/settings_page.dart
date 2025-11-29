@@ -586,8 +586,8 @@ class SettingsPageState extends State<SettingsPage> {
                 // 添加日志调试信息显示（仅在Debug模式下显示）
                 if (kDebugMode) ...[
                   ListTile(
-                    title: const Text('日志调试信息'),
-                    subtitle: const Text('显示日志数据库状态和路径信息'),
+                    title: Text(l10n.logDebugInfo),
+                    subtitle: Text(l10n.logDebugInfoDesc),
                     leading: const Icon(Icons.bug_report),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () async {
@@ -606,20 +606,20 @@ class SettingsPageState extends State<SettingsPage> {
                         showDialog(
                           context: currentContext,
                           builder: (context) => AlertDialog(
-                            title: const Text('日志调试信息'),
+                            title: Text(l10n.logDebugInfo),
                             content: SingleChildScrollView(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Text('数据库状态:',
-                                      style: TextStyle(
+                                  Text(l10n.databaseStatus,
+                                      style: const TextStyle(
                                           fontWeight: FontWeight.bold)),
                                   ...dbStatus.entries
                                       .map((e) => Text('${e.key}: ${e.value}')),
                                   const SizedBox(height: 16),
-                                  const Text('日志统计:',
-                                      style: TextStyle(
+                                  Text(l10n.logStatistics,
+                                      style: const TextStyle(
                                           fontWeight: FontWeight.bold)),
                                   ...logSummary.entries
                                       .map((e) => Text('${e.key}: ${e.value}')),
@@ -1032,10 +1032,11 @@ class SettingsPageState extends State<SettingsPage> {
     } catch (e) {
       AppLogger.e('显示原生年度报告失败', error: e);
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(
-          content: Text('生成年度报告失败'),
+        ).showSnackBar(SnackBar(
+          content: Text(l10n.generateReportFailed),
           duration: AppConstants.snackBarDurationError,
         ));
       }
@@ -1280,10 +1281,11 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
     } catch (e) {
       AppLogger.e('显示AI年度报告失败', error: e);
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(
-          content: Text('获取数据失败'),
+        ).showSnackBar(SnackBar(
+          content: Text(l10n.getDataFailed),
           duration: AppConstants.snackBarDurationError,
         ));
       }
@@ -1293,6 +1295,7 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
   /// 测试AI年度报告功能
   // ignore: unused_element
   Future<void> _testAIAnnualReport() async {
+    final l10n = AppLocalizations.of(context);
     try {
       AppLogger.i('开始测试AI年度报告功能');
 
@@ -1300,12 +1303,12 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const AlertDialog(
+        builder: (context) => AlertDialog(
           content: Row(
             children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 16),
-              Text('正在测试AI年度报告...'),
+              const CircularProgressIndicator(),
+              const SizedBox(width: 16),
+              Text(l10n.testingAIReport),
             ],
           ),
         ),
@@ -1393,7 +1396,7 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
           showDialog(
             context: context,
             builder: (context) => AlertDialog(
-              title: const Text('测试结果'),
+              title: Text(l10n.testResult),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1425,7 +1428,7 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('关闭'),
+                  child: Text(l10n.close),
                 ),
                 TextButton(
                   onPressed: () {
@@ -1440,7 +1443,7 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
                       ),
                     );
                   },
-                  child: const Text('查看报告'),
+                  child: Text(l10n.viewReport),
                 ),
               ],
             ),
@@ -1483,8 +1486,8 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(
-          content: Text('测试初始化失败'),
+        ).showSnackBar(SnackBar(
+          content: Text(l10n.testInitFailed),
           duration: AppConstants.snackBarDurationError,
         ));
       }
