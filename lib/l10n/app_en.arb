@@ -267,14 +267,6 @@
       }
     }
   },
-  "generateCardFailed": "Failed to generate card: {error}",
-  "@generateCardFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   
   "generatingShareImage": "Generating share image...",
   "cardSharedSuccessfully": "Card shared successfully",
@@ -403,6 +395,33 @@
   "customColor": "Custom Color",
   "select": "Select",
   "editMetadata": "Edit Metadata",
+  
+  "done": "Done",
+  "selectTags": "Select Tags",
+  "noMatchingTags": "No matching tags found",
+  "smartAnalyzeSource": "Smart Analyze Source",
+  "smartAnalyzeSourceDesc": "Analyze potential author and work in the text",
+  "polishText": "Polish Text",
+  "polishTextDesc": "Optimize text expression to make it more fluent and elegant",
+  "continueWriting": "Continue Writing",
+  "continueWritingDesc": "Extend current content with the same style and tone",
+  "deepAnalysis": "Deep Analysis",
+  "deepAnalysisDesc": "Perform in-depth analysis and interpretation of note content",
+  "askNote": "Ask Note",
+  "askNoteDesc": "Chat with AI assistant to explore note content in depth",
+  "pleaseEnterContent": "Please enter content first",
+  "analyzing": "Analyzing...",
+  "analysisResults": "Analysis Results",
+  "confidence": "Confidence",
+  "noAuthorOrWorkIdentified": "Could not identify a clear author or work",
+  "applyAnalysisResults": "Apply Analysis Results",
+  "parseResultsFailed": "Failed to parse results",
+  "analysisFailed": "Analysis failed",
+  "analysisResultsCopied": "Analysis results copied to clipboard",
+  "noteInfo": "Note Info",
+  "source": "Source",
+  "createdAt": "Created At",
+  "content": "Content",
   
   "periodicReport": "Periodic Report",
   "aiInsightsTab": "AI Insights",
