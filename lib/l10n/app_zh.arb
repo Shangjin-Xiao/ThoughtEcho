@@ -845,6 +845,8 @@
   "life": "生活",
   "growth": "成长",
   "reward": "奖励",
+  "transport": "交通",
+  "otherCategory": "其他",
   "logLoadMoreError": "加载更多日志失败: {error}",
   "logLoadError": "加载日志失败",
   "logSourceFilter": "来源: {source}",
@@ -1564,7 +1566,6 @@
   "mergeConfirmDialogItem3": "• 设置与AI分析数据合并追加",
   "mergeConfirmDialogReversible": "此操作可逆：可再次导入覆盖备份或继续合并。",
   
-  "tagSettingsTitle": "标签管理",
   "tagSettingsDescription": "创建和管理您的个人标签体系",
   "addNewTag": "添加新标签",
   "tagNameHint": "请输入标签名称",
