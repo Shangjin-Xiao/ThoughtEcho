@@ -263,7 +263,9 @@ class _NetworkDiagnosticPageState extends State<NetworkDiagnosticPage> {
               children: [
                 ElevatedButton(
                   onPressed: _toggleDiscovery,
-                  child: Text(_isDiscoveryRunning ? l10n.stopDiscovery : l10n.startDiscovery),
+                  child: Text(_isDiscoveryRunning
+                      ? l10n.stopDiscovery
+                      : l10n.startDiscovery),
                 ),
                 const SizedBox(width: 10),
                 ElevatedButton(

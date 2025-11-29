@@ -53,10 +53,10 @@ class OnboardingController extends ChangeNotifier {
       );
 
       _initializePreferences();
-      
+
       logDebug('OnboardingController初始化完成', source: 'OnboardingController');
     } catch (e, stackTrace) {
-      logError('OnboardingController初始化失败', 
+      logError('OnboardingController初始化失败',
           error: e, stackTrace: stackTrace, source: 'OnboardingController');
       rethrow;
     }
@@ -218,8 +218,8 @@ class OnboardingController extends ChangeNotifier {
 
       // 获取语言设置（空字符串转换为 null 表示跟随系统）
       final localeCodeValue = _state.getPreference<String>('localeCode');
-      final localeCode = (localeCodeValue == null || localeCodeValue.isEmpty) 
-          ? null 
+      final localeCode = (localeCodeValue == null || localeCodeValue.isEmpty)
+          ? null
           : localeCodeValue;
 
       // 构建新的设置对象

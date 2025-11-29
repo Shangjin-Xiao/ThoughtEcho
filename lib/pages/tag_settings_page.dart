@@ -242,7 +242,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                     if (!mounted) return;
                                     scaffoldMessenger.showSnackBar(
                                       SnackBar(
-                                        content: Text(l10n.addTagFailed(e.toString())),
+                                        content: Text(
+                                            l10n.addTagFailed(e.toString())),
                                         duration:
                                             AppConstants.snackBarDurationError,
                                       ),
@@ -539,7 +540,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                               ],
                                             ),
                                             content: Text(
-                                              l10n.deleteTagDialogContent(tag.name),
+                                              l10n.deleteTagDialogContent(
+                                                  tag.name),
                                             ),
                                             actions: [
                                               TextButton(
@@ -587,7 +589,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                                           .onInverseSurface,
                                                     ),
                                                     const SizedBox(width: 8),
-                                                    Text(l10n.tagDeletedSuccess),
+                                                    Text(
+                                                        l10n.tagDeletedSuccess),
                                                   ],
                                                 ),
                                                 behavior:
@@ -613,7 +616,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                                           .onErrorContainer,
                                                     ),
                                                     const SizedBox(width: 8),
-                                                    Text(l10n.deleteTagFailed(e.toString())),
+                                                    Text(l10n.deleteTagFailed(
+                                                        e.toString())),
                                                   ],
                                                 ),
                                                 backgroundColor:
@@ -845,7 +849,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                           ListTile(
                             title: Text(
                               l10n.systemIcons,
-                              style: const TextStyle(fontWeight: FontWeight.bold),
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold),
                             ),
                             trailing: Icon(
                               expandedCategories[l10n.systemIcons] ?? false

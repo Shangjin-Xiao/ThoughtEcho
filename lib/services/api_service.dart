@@ -30,17 +30,17 @@ class ApiService {
   // 一言类型常量 - 返回本地化的标签
   static Map<String, String> getHitokotoTypes(AppLocalizations l10n) {
     return {
-    'a': l10n.hitokotoTypeA,
-    'b': l10n.hitokotoTypeB,
-    'c': l10n.hitokotoTypeC,
-    'd': l10n.hitokotoTypeD,
-    'e': l10n.hitokotoTypeE,
-    'f': l10n.hitokotoTypeF,
-    'g': l10n.hitokotoTypeG,
-    'h': l10n.hitokotoTypeH,
-    'i': l10n.hitokotoTypeI,
-    'j': l10n.hitokotoTypeJ,
-    'k': l10n.hitokotoTypeK,
+      'a': l10n.hitokotoTypeA,
+      'b': l10n.hitokotoTypeB,
+      'c': l10n.hitokotoTypeC,
+      'd': l10n.hitokotoTypeD,
+      'e': l10n.hitokotoTypeE,
+      'f': l10n.hitokotoTypeF,
+      'g': l10n.hitokotoTypeG,
+      'h': l10n.hitokotoTypeH,
+      'i': l10n.hitokotoTypeI,
+      'j': l10n.hitokotoTypeJ,
+      'k': l10n.hitokotoTypeK,
     };
   }
 
@@ -66,7 +66,8 @@ class ApiService {
 
       if (!isConnected) {
         logDebug('网络未连接，使用本地笔记');
-        return await _getLocalQuoteOrDefault(l10n, databaseService, isOffline: true);
+        return await _getLocalQuoteOrDefault(l10n, databaseService,
+            isOffline: true);
       }
 
       // 处理多类型选择的情况

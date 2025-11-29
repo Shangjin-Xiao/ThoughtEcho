@@ -194,7 +194,7 @@ class DatabaseService extends ChangeNotifier {
       // Web平台没有真实数据库，抛出一个标记异常或返回mock
       throw UnsupportedError('Web平台使用内存存储，不支持数据库访问');
     }
-    
+
     // 如果正在初始化，等待初始化完成
     if (_isInitializing && _initCompleter != null) {
       await _initCompleter!.future;
@@ -960,28 +960,29 @@ class DatabaseService extends ChangeNotifier {
       );
       try {
         final columns = await txn.rawQuery('PRAGMA table_info(quotes)');
-        
+
         // 检查并添加 latitude 字段
         final hasLatitude = columns.any((col) => col['name'] == 'latitude');
         if (!hasLatitude) {
           await txn.execute('ALTER TABLE quotes ADD COLUMN latitude REAL');
           logDebug('数据库升级：latitude 字段添加完成');
         }
-        
+
         // 检查并添加 longitude 字段
         final hasLongitude = columns.any((col) => col['name'] == 'longitude');
         if (!hasLongitude) {
           await txn.execute('ALTER TABLE quotes ADD COLUMN longitude REAL');
           logDebug('数据库升级：longitude 字段添加完成');
         }
-        
+
         // 为经纬度创建复合索引，便于地理位置查询
         await txn.execute(
           'CREATE INDEX IF NOT EXISTS idx_quotes_coordinates ON quotes(latitude, longitude)',
         );
         logDebug('数据库升级：coordinates 索引创建完成');
       } catch (e) {
-        logError('latitude/longitude 字段升级失败: $e', error: e, source: 'DatabaseUpgrade');
+        logError('latitude/longitude 字段升级失败: $e',
+            error: e, source: 'DatabaseUpgrade');
       }
     }
   }
@@ -2617,7 +2618,8 @@ class DatabaseService extends ChangeNotifier {
       try {
         final db = await safeDatabase;
         final newQuoteId = quote.id ?? _uuid.v4();
-        final quoteWithId = quote.id == null ? quote.copyWith(id: newQuoteId) : quote;
+        final quoteWithId =
+            quote.id == null ? quote.copyWith(id: newQuoteId) : quote;
 
         await db.transaction((txn) async {
           final quoteMap = quoteWithId.toJson();
@@ -3561,7 +3563,9 @@ class DatabaseService extends ChangeNotifier {
             } catch (_) {}
 
             // 使用轻量级检查（仅查引用表计数）
-            final deleted = await MediaReferenceService.quickCheckAndDeleteIfOrphan(absolutePath);
+            final deleted =
+                await MediaReferenceService.quickCheckAndDeleteIfOrphan(
+                    absolutePath);
             if (deleted) {
               logDebug('已清理孤儿媒体文件: $absolutePath (原始记录: $storedPath)');
             }
@@ -3695,7 +3699,9 @@ class DatabaseService extends ChangeNotifier {
             } catch (_) {}
 
             // 使用轻量级检查（仅查引用表计数）
-            final deleted = await MediaReferenceService.quickCheckAndDeleteIfOrphan(absolutePath);
+            final deleted =
+                await MediaReferenceService.quickCheckAndDeleteIfOrphan(
+                    absolutePath);
             if (deleted) {
               logDebug('已清理无引用媒体文件: $absolutePath (原始记录: $storedPath)');
             }
@@ -3737,8 +3743,10 @@ class DatabaseService extends ChangeNotifier {
         _memoryStore[index] = _memoryStore[index].copyWith(
           favoriteCount: oldCount + 1,
         );
-        logDebug('Web平台收藏操作: quoteId=$quoteId, 旧值=$oldCount, 新值=${oldCount + 1}', source: 'IncrementFavorite');
-        
+        logDebug(
+            'Web平台收藏操作: quoteId=$quoteId, 旧值=$oldCount, 新值=${oldCount + 1}',
+            source: 'IncrementFavorite');
+
         // 同步更新当前流缓存并推送
         final curIndex = _currentQuotes.indexWhere((q) => q.id == quoteId);
         if (curIndex != -1) {
@@ -3751,7 +3759,8 @@ class DatabaseService extends ChangeNotifier {
         }
         notifyListeners();
       } else {
-        logWarning('Web平台收藏操作失败: 未找到quoteId=$quoteId', source: 'IncrementFavorite');
+        logWarning('Web平台收藏操作失败: 未找到quoteId=$quoteId',
+            source: 'IncrementFavorite');
       }
       return;
     }
@@ -3760,9 +3769,11 @@ class DatabaseService extends ChangeNotifier {
       try {
         // 记录操作前的状态
         final index = _currentQuotes.indexWhere((q) => q.id == quoteId);
-        final oldCount = index != -1 ? _currentQuotes[index].favoriteCount : null;
-        logDebug('收藏操作开始: quoteId=$quoteId, 内存旧值=$oldCount', source: 'IncrementFavorite');
-        
+        final oldCount =
+            index != -1 ? _currentQuotes[index].favoriteCount : null;
+        logDebug('收藏操作开始: quoteId=$quoteId, 内存旧值=$oldCount',
+            source: 'IncrementFavorite');
+
         final db = await safeDatabase;
         await db.transaction((txn) async {
           // 原子性地增加计数
@@ -3770,17 +3781,21 @@ class DatabaseService extends ChangeNotifier {
             'UPDATE quotes SET favorite_count = favorite_count + 1, last_modified = ? WHERE id = ?',
             [DateTime.now().toUtc().toIso8601String(), quoteId],
           );
-          
+
           if (updateCount == 0) {
-            logWarning('收藏操作失败: 数据库中未找到quoteId=$quoteId', source: 'IncrementFavorite');
+            logWarning('收藏操作失败: 数据库中未找到quoteId=$quoteId',
+                source: 'IncrementFavorite');
           } else {
             // 查询更新后的值进行验证
             final result = await txn.rawQuery(
               'SELECT favorite_count FROM quotes WHERE id = ?',
               [quoteId],
             );
-            final newCount = result.isNotEmpty ? (result.first['favorite_count'] as int?) ?? 0 : 0;
-            logInfo('收藏操作成功: quoteId=$quoteId, 旧值=$oldCount, 数据库新值=$newCount', source: 'IncrementFavorite');
+            final newCount = result.isNotEmpty
+                ? (result.first['favorite_count'] as int?) ?? 0
+                : 0;
+            logInfo('收藏操作成功: quoteId=$quoteId, 旧值=$oldCount, 数据库新值=$newCount',
+                source: 'IncrementFavorite');
           }
         });
 
@@ -3789,14 +3804,16 @@ class DatabaseService extends ChangeNotifier {
           _currentQuotes[index] = _currentQuotes[index].copyWith(
             favoriteCount: _currentQuotes[index].favoriteCount + 1,
           );
-          logDebug('内存缓存已更新: 新值=${_currentQuotes[index].favoriteCount}', source: 'IncrementFavorite');
+          logDebug('内存缓存已更新: 新值=${_currentQuotes[index].favoriteCount}',
+              source: 'IncrementFavorite');
         }
         if (_quotesController != null && !_quotesController!.isClosed) {
           _quotesController!.add(List.from(_currentQuotes));
         }
         notifyListeners();
       } catch (e) {
-        logError('增加心形点击次数时出错: quoteId=$quoteId, error=$e', error: e, source: 'IncrementFavorite');
+        logError('增加心形点击次数时出错: quoteId=$quoteId, error=$e',
+            error: e, source: 'IncrementFavorite');
         rethrow;
       }
     });

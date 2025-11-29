@@ -1128,7 +1128,7 @@ class NoteListViewState extends State<NoteListView> {
           theme.colorScheme.surface,
           theme.brightness,
         );
-        
+
         return Container(
             color: backgroundColor,
             child: Center(

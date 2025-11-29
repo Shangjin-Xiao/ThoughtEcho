@@ -53,7 +53,7 @@ class NoteSyncService extends ChangeNotifier {
   DateTime _lastUiNotify = DateTime.fromMillisecondsSinceEpoch(0);
   // 调整：进一步缩短 UI 通知节流时间以实现更实时的进度更新（用户期望更"实时"）
   static const int _minUiNotifyIntervalMs = 50; // ~20fps
-  
+
   // 速度计算相关（滑动窗口）
   final List<_SpeedSample> _speedSamples = [];
   static const int _maxSpeedSamples = 10; // 保留最近10个样本
@@ -345,15 +345,17 @@ class NoteSyncService extends ChangeNotifier {
           final now = DateTime.now();
           _addSpeedSample(sent, now);
           final speed = _calculateAverageSpeed(); // bytes/s
-          
+
           String extra = '';
-          if (speed > 1024 * 100) { // 速度 > 100KB/s 时才显示
+          if (speed > 1024 * 100) {
+            // 速度 > 100KB/s 时才显示
             final speedMBps = speed / 1024 / 1024;
             final remaining = (total - sent).clamp(0, total);
             final etaSec = remaining / speed;
-            extra = ' | ${speedMBps.toStringAsFixed(2)}MB/s | 剩余${etaSec < 1 ? '<1' : etaSec.toStringAsFixed(0)}s';
+            extra =
+                ' | ${speedMBps.toStringAsFixed(2)}MB/s | 剩余${etaSec < 1 ? '<1' : etaSec.toStringAsFixed(0)}s';
           }
-          
+
           final progress = 0.5 + ratio * 0.4; // 线性映射
           _updateSyncStatus(
               SyncStatus.sending,
@@ -455,7 +457,7 @@ class NoteSyncService extends ChangeNotifier {
       // 临时方案：直接访问（需要添加 getter）
       // 由于无法直接访问私有字段，改为通过 DeviceInfoPlugin 直接获取
       if (kIsWeb) return 'Web';
-      
+
       final plugin = DeviceInfoPlugin();
       if (Platform.isAndroid) {
         final info = await plugin.androidInfo;
@@ -772,22 +774,22 @@ class NoteSyncService extends ChangeNotifier {
   /// 计算滑动窗口平均速度 (bytes/second)
   double _calculateAverageSpeed() {
     if (_speedSamples.isEmpty) return 0.0;
-    
+
     // 移除过期样本（超过5秒的）
     final now = DateTime.now();
-    _speedSamples.removeWhere((s) => 
-      now.difference(s.timestamp).inMilliseconds > 5000);
-    
+    _speedSamples
+        .removeWhere((s) => now.difference(s.timestamp).inMilliseconds > 5000);
+
     if (_speedSamples.isEmpty) return 0.0;
-    
+
     // 计算总字节数和总时间
     final totalBytes = _speedSamples.fold<int>(0, (sum, s) => sum + s.bytes);
     final earliest = _speedSamples.first.timestamp;
     final latest = _speedSamples.last.timestamp;
     final duration = latest.difference(earliest).inMilliseconds / 1000.0;
-    
+
     if (duration < 0.1) return 0.0; // 避免除以很小的数
-    
+
     return totalBytes / duration;
   }
 
@@ -800,14 +802,14 @@ class NoteSyncService extends ChangeNotifier {
           bytes: deltaBytes,
           timestamp: timestamp,
         ));
-        
+
         // 限制样本数量
         while (_speedSamples.length > _maxSpeedSamples) {
           _speedSamples.removeAt(0);
         }
       }
     }
-    
+
     _lastProgressBytes = currentBytes;
     _lastProgressTime = timestamp;
   }
