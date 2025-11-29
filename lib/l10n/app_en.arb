@@ -1707,13 +1707,6 @@
   },
   
   "analysisRecordDeleted": "Analysis record deleted",
-  "@deleteFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "loadFailed": "Load failed: {error}",
   "@loadFailed": {
     "placeholders": {

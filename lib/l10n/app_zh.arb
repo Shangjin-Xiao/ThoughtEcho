@@ -1707,13 +1707,6 @@
   },
   
   "analysisRecordDeleted": "分析记录已删除",
-  "@deleteFailed": {
-    "placeholders": {
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "loadFailed": "加载失败: {error}",
   "@loadFailed": {
     "placeholders": {
