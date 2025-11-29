@@ -1116,7 +1116,7 @@
   "verifyFileIntegrityDesc": "Check the integrity of media file references",
   "operationResult": "{operation} Result",
   "cleanedFilesCount": "Cleaned Files Count",
-  "spaceSavedMb": "Space Saved (MB)",
+  "spaceSavedMbLabel": "Space Saved (MB)",
   "migratedQuotesCount": "Migrated Quotes Count",
   "orphanFilesDetected": "Orphan Files Detected",
   "checkedReferencesCount": "Checked References Count",
