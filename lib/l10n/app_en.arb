@@ -22,7 +22,7 @@
   "selectLanguage": "Select Language",
   
   "onboardingWelcome": "Welcome to ThoughtEcho",
-  "onboardingSubtitle": "Your Personal Inspiration Notebook",
+  "onboardingSubtitle": "Your Personal Inspiration Notebook with AI Power",
   "onboardingDescription": "Let's record together",
   "onboardingCoreFeatures": "Core Features",
   "onboardingDiscoverFeatures": "Discover the power of ThoughtEcho",
@@ -114,7 +114,7 @@
   "settingsSyncDesc": "Sync notes with nearby devices",
   
   "settingsAbout": "About ThoughtEcho",
-  "settingsAboutSlogan": "Your Personal Inspiration Notebook",
+  "settingsAboutSlogan": "Your Personal Inspiration Notebook with AI Power",
   "settingsViewSource": "View Source Code (GitHub)",
   "settingsVisitWebsite": "Visit Website",
   "settingsViewLicenses": "View Licenses",
