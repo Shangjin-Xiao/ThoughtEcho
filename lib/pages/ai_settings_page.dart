@@ -11,6 +11,7 @@ import '../services/api_key_manager.dart';
 import '../utils/ai_network_manager.dart';
 import '../utils/api_key_debugger.dart';
 import '../constants/app_constants.dart';
+import '../gen_l10n/app_localizations.dart';
 
 class AISettingsPage extends StatefulWidget {
   const AISettingsPage({super.key});
@@ -41,48 +42,50 @@ class _AISettingsPageState extends State<AISettingsPage> {
   bool _obscureApiKey = true; // API Key显示切换
 
   // Updated presets list based on verification
-  final List<Map<String, String>> aiPresets = [
-    {
-      'name': 'OpenAI',
-      'apiUrl': 'https://api.openai.com/v1/chat/completions',
-      'model': 'gpt-4o',
-    },
-    {
-      'name': 'OpenRouter',
-      'apiUrl': 'https://openrouter.ai/api/v1/chat/completions',
-      'model': 'openai/gpt-4o',
-    },
-    {
-      'name': '硅基流动',
-      'apiUrl': 'https://api.siliconflow.cn/v1/chat/completions',
-      'model': '',
-    },
-    {
-      'name': 'DeepSeek',
-      'apiUrl': 'https://api.deepseek.com/v1/chat/completions',
-      'model': 'deepseek-chat',
-    },
-    {
-      'name': 'Anthropic (Claude)',
-      'apiUrl': 'https://api.anthropic.com/v1/messages',
-      'model': 'claude-3.7-sonnet-latest',
-    },
-    {
-      'name': 'Ollama',
-      'apiUrl': 'http://localhost:11434/v1/chat/completions',
-      'model': '',
-    },
-    {
-      'name': 'LMStudio',
-      'apiUrl': 'http://localhost:1234/v1/chat/completions',
-      'model': '',
-    },
-    {
-      'name': 'OpenAPI兼容',
-      'apiUrl': 'http://your-openapi-server/v1/chat/completions',
-      'model': '',
-    },
-  ];
+  List<Map<String, String>> _getAiPresets(AppLocalizations l10n) {
+    return [
+      {
+        'name': l10n.aiProviderOpenAI,
+        'apiUrl': 'https://api.openai.com/v1/chat/completions',
+        'model': 'gpt-4o',
+      },
+      {
+        'name': l10n.aiProviderOpenRouter,
+        'apiUrl': 'https://openrouter.ai/api/v1/chat/completions',
+        'model': 'openai/gpt-4o',
+      },
+      {
+        'name': l10n.siliconflow,
+        'apiUrl': 'https://api.siliconflow.cn/v1/chat/completions',
+        'model': '',
+      },
+      {
+        'name': l10n.aiProviderDeepSeek,
+        'apiUrl': 'https://api.deepseek.com/v1/chat/completions',
+        'model': 'deepseek-chat',
+      },
+      {
+        'name': l10n.aiProviderAnthropic,
+        'apiUrl': 'https://api.anthropic.com/v1/messages',
+        'model': 'claude-3.7-sonnet-latest',
+      },
+      {
+        'name': l10n.aiProviderOllama,
+        'apiUrl': 'http://localhost:11434/v1/chat/completions',
+        'model': '',
+      },
+      {
+        'name': l10n.aiProviderLMStudio,
+        'apiUrl': 'http://localhost:1234/v1/chat/completions',
+        'model': '',
+      },
+      {
+        'name': l10n.openapiCompatible,
+        'apiUrl': 'http://your-openapi-server/v1/chat/completions',
+        'model': '',
+      },
+    ];
+  }
   String? _selectedPreset;
 
   @override
@@ -103,37 +106,40 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
   /// 异步加载当前provider的API Key
   Future<void> _loadApiKeyAsync() async {
+    final l10n = AppLocalizations.of(context);
     if (_currentProvider != null) {
       final apiKeyManager = APIKeyManager();
-      logDebug('开始加载API Key - Provider ID: ${_currentProvider!.id}');
+      logDebug('Loading API key for provider: ${_currentProvider!.id}');
 
       final apiKey = await apiKeyManager.getProviderApiKey(
         _currentProvider!.id,
       );
 
       logDebug(
-        '从加密存储读取的API Key: ${apiKey.isNotEmpty ? "${apiKey.length}字符" : "空"}',
-      );
+          'API key read from storage: ${apiKey.isNotEmpty ? 'not empty (${apiKey.length} chars)' : 'empty'}');
 
       if (mounted) {
         setState(() {
           _apiKeyController.text = apiKey;
         });
-        logDebug('已更新API Key输入框: ${_apiKeyController.text.length}字符');
+        logDebug(
+            'API key text controller updated, length: ${_apiKeyController.text.length}');
       }
     } else {
-      logDebug('加载API Key失败: 当前provider为空');
+      logDebug('Cannot load API key, current provider is null.');
     }
   }
 
   void _loadMultiSettings() {
+    final l10n = AppLocalizations.of(context);
     final settingsService = Provider.of<SettingsService>(
       context,
       listen: false,
     );
     _multiSettings = settingsService.multiAISettings;
     _currentProvider = _multiSettings.currentProvider;
-    logDebug('当前provider: ${_currentProvider?.name ?? "无"}');
+    logDebug(
+        'Current provider from multi-settings: ${_currentProvider?.name ?? "none"}');
     _updateApiKeyStatus();
 
     // 异步更新API Key状态
@@ -141,39 +147,41 @@ class _AISettingsPageState extends State<AISettingsPage> {
   }
 
   void _updateApiKeyStatus() {
+    final l10n = AppLocalizations.of(context);
     if (_currentProvider != null) {
       // 显示临时状态，等待异步验证
-      _apiKeyStatus = '正在验证API Key...';
+      _apiKeyStatus = l10n.verifyingApiKey;
     } else {
-      _apiKeyStatus = '未选择服务商';
+      _apiKeyStatus = l10n.noProviderSelected;
     }
   }
 
   /// 异步更新API Key状态（从安全存储验证）
   Future<void> _updateApiKeyStatusAsync() async {
-    logDebug('开始异步更新API Key状态...');
+    final l10n = AppLocalizations.of(context);
+    logDebug('Updating API key status asynchronously...');
     if (_currentProvider != null) {
       final apiKeyManager = APIKeyManager();
-      logDebug('当前Provider ID: ${_currentProvider!.id}');
+      logDebug('Current provider ID: ${_currentProvider!.id}');
 
       final hasValidKey = await apiKeyManager.hasValidProviderApiKey(
         _currentProvider!.id,
       );
-      logDebug('API Key有效性检查结果: $hasValidKey');
+      logDebug('API key validation result from secure storage: $hasValidKey');
 
       if (hasValidKey) {
         final secureApiKey = await apiKeyManager.getProviderApiKey(
           _currentProvider!.id,
         );
-        _apiKeyStatus = 'API Key有效 (${secureApiKey.length}字符)';
-        logDebug('API Key状态更新: $_apiKeyStatus');
+        _apiKeyStatus = l10n.apiKeyValid(secureApiKey.length);
+        logDebug('API key status updated: $_apiKeyStatus');
       } else {
-        _apiKeyStatus = '未配置有效的API Key';
-        logDebug('API Key状态更新: $_apiKeyStatus');
+        _apiKeyStatus = l10n.apiKeyInvalid;
+        logDebug('API key status updated: $_apiKeyStatus');
       }
     } else {
-      _apiKeyStatus = '未选择服务商';
-      logDebug('API Key状态更新: $_apiKeyStatus');
+      _apiKeyStatus = l10n.noProviderSelected;
+      logDebug('API key status updated: $_apiKeyStatus');
     }
 
     if (mounted) {
@@ -183,6 +191,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
   /// 检查当前API Key状态
   Future<void> _checkApiKeyStatus() async {
+    final l10n = AppLocalizations.of(context);
     setState(() {
       _isCheckingApiKey = true;
     });
@@ -198,12 +207,12 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
       String statusMessage;
       if (multiSettings.currentProvider == null) {
-        statusMessage = '❌ 未选择AI服务商';
+        statusMessage = l10n.noAiProviderSelected;
       } else {
         final provider = multiSettings.currentProvider!;
 
         if (!provider.isEnabled) {
-          statusMessage = '⚠️ 服务商已禁用';
+          statusMessage = l10n.providerDisabled;
         } else {
           // 使用简化的API Key检测方法
           final apiKeyManager = APIKeyManager();
@@ -212,9 +221,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
           );
 
           if (hasValidKey) {
-            statusMessage = '✅ API Key有效 (已验证)';
+            statusMessage = l10n.apiKeyVerified;
           } else {
-            statusMessage = '❌ 未配置有效的API Key';
+            statusMessage = l10n.apiKeyInvalid;
           }
         }
       }
@@ -222,7 +231,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('API Key状态检查: $statusMessage'),
+          content: Text(l10n.apiKeyStatusCheck(statusMessage)),
           duration: const Duration(seconds: 3),
         ),
       );
@@ -230,7 +239,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text('检查失败: $e'),
+            content: Text(l10n.checkFailed(e.toString())),
             backgroundColor: Colors.red,
             duration: AppConstants.snackBarDurationError),
       );
@@ -244,6 +253,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
   }
 
   Future<void> _loadSettings() async {
+    final l10n = AppLocalizations.of(context);
     try {
       // 首先加载多provider设置
       _loadMultiSettings();
@@ -266,7 +276,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
           // 尝试匹配预设
           try {
-            _selectedPreset = aiPresets.firstWhere(
+            _selectedPreset = _getAiPresets(l10n).firstWhere(
               (p) => p['apiUrl'] == _apiUrlController.text,
             )['name'];
           } catch (_) {
@@ -287,7 +297,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
       // 预加载一次reportInsightsUseAI状态，确保UI响应
       // 使用SettingsService提供的getter
     } catch (e) {
-      logError('加载AI设置失败: $e',
+      logError(l10n.loadAiSettingsError(e.toString()),
           error: e, source: 'AISettingsPage._loadSettings');
       // 在异步操作后检查 mounted 状态
       if (!mounted) return;
@@ -295,19 +305,19 @@ class _AISettingsPageState extends State<AISettingsPage> {
       // 显示用户友好的错误信息
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Row(
+          content: Row(
             children: [
-              Icon(Icons.error, color: Colors.white, size: 20),
-              SizedBox(width: 8),
+              const Icon(Icons.error, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
               Expanded(
-                child: Text('加载AI设置失败，请检查网络连接或重新启动应用'),
+                child: Text(l10n.loadAiSettingsErrorUser),
               ),
             ],
           ),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 4),
           action: SnackBarAction(
-            label: '重试',
+            label: l10n.retry,
             textColor: Colors.white,
             onPressed: () => _loadSettings(),
           ),
@@ -317,15 +327,16 @@ class _AISettingsPageState extends State<AISettingsPage> {
   }
 
   Future<void> _saveSettings() async {
+    final l10n = AppLocalizations.of(context);
     // 首先验证表单
     if (!_formKey.currentState!.validate()) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Row(
             children: [
-              Icon(Icons.error, color: Colors.white, size: 20),
-              SizedBox(width: 8),
-              Expanded(child: Text('请修正表单中的错误后再保存')),
+              const Icon(Icons.error, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Expanded(child: Text(l10n.fixFormErrors)),
             ],
           ),
           backgroundColor: Colors.red,
@@ -355,12 +366,12 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
       if (!mounted) return;
       scaffoldMessenger.showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Row(
             children: [
-              Icon(Icons.check_circle, color: Colors.white, size: 20),
-              SizedBox(width: 8),
-              Expanded(child: Text('新预设已创建并保存成功')),
+              const Icon(Icons.check_circle, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Expanded(child: Text(l10n.presetCreated)),
             ],
           ),
           backgroundColor: Colors.green,
@@ -376,7 +387,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
             children: [
               const Icon(Icons.error, color: Colors.white, size: 20),
               const SizedBox(width: 8),
-              Expanded(child: Text('保存设置失败: $e')),
+              Expanded(child: Text(l10n.saveSettingsError(e.toString()))),
             ],
           ),
           backgroundColor: Colors.red,
@@ -392,21 +403,23 @@ class _AISettingsPageState extends State<AISettingsPage> {
     String hostOverride,
     SettingsService settingsService,
   ) async {
+    final l10n = AppLocalizations.of(context);
     // 确定provider名称（基于预设或自定义）
-    String providerName = _selectedPreset ?? '自定义配置';
+    String providerName = _selectedPreset ?? l10n.customConfig;
 
     // 为自定义配置生成唯一名称
-    if (providerName == '自定义配置') {
+    if (providerName == l10n.customConfig) {
       final uri = Uri.tryParse(_apiUrlController.text);
       if (uri != null && uri.host.isNotEmpty) {
-        providerName = '自定义-${uri.host}';
+        providerName = l10n.customConfigHost(uri.host);
       } else {
-        providerName = '自定义-${DateTime.now().millisecondsSinceEpoch}';
+        providerName =
+            l10n.customConfigTimestamp(DateTime.now().millisecondsSinceEpoch);
       }
     }
 
     // 始终创建新的provider，不更新现有的
-    logDebug('创建新provider: $providerName');
+    logDebug('Creating new provider: $providerName');
 
     final newProvider = AIProviderSettings(
       id: 'provider_${DateTime.now().millisecondsSinceEpoch}',
@@ -423,11 +436,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
     // 先保存API密钥到安全存储（确保成功）
     final apiKeyManager = APIKeyManager();
     logDebug(
-      '准备保存API Key: ${_apiKeyController.text.isEmpty ? "空" : "${_apiKeyController.text.length}字符"}',
-    );
+        'Preparing to save API key, length: ${_apiKeyController.text.length}');
     logDebug(
-      'API Key内容: ${_apiKeyController.text.isEmpty ? "空" : _apiKeyController.text.substring(0, math.min(20, _apiKeyController.text.length))}...',
-    );
+        'API key content prefix: ${_apiKeyController.text.substring(0, math.min(20, _apiKeyController.text.length))}...');
 
     // 调试保存过程
     await ApiKeyDebugger.debugApiKeySave(
@@ -439,13 +450,13 @@ class _AISettingsPageState extends State<AISettingsPage> {
       newProvider.id,
       _apiKeyController.text,
     );
-    logDebug('已保存新provider的API密钥到安全存储: ${_apiKeyController.text.length}字符');
+    logDebug(
+        'API key saved to secure storage for provider ${newProvider.id}, length: ${_apiKeyController.text.length}');
 
     // 立即验证保存是否成功
     final savedKey = await apiKeyManager.getProviderApiKey(newProvider.id);
     logDebug(
-      '验证保存结果: ${savedKey.isEmpty ? "保存失败，读取为空" : "保存成功，读取到${savedKey.length}字符"}',
-    );
+        'Verified saved API key, read back length: ${savedKey.length}. Save successful: ${savedKey == _apiKeyController.text}');
 
     // 再添加到provider列表
     final updatedProviders = [..._multiSettings.providers, newProvider];
@@ -469,7 +480,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
     // 进行完整的生命周期调试
     await ApiKeyDebugger.debugApiKeyLifecycle(settingsService);
 
-    logDebug('新provider已创建并设置为当前provider');
+    logDebug('New provider created and saved: ${newProvider.name}');
 
     // 同时保存到传统AI设置作为后备
     await settingsService.updateAISettings(
@@ -481,10 +492,11 @@ class _AISettingsPageState extends State<AISettingsPage> {
         hostOverride: hostOverride.isEmpty ? null : hostOverride,
       ),
     );
-    logDebug('传统AI设置已更新');
+    logDebug('Legacy AI settings updated as a fallback.');
   }
 
   Future<void> _testConnection() async {
+    final l10n = AppLocalizations.of(context);
     // 先保存当前设置
     await _saveSettings();
 
@@ -497,13 +509,13 @@ class _AISettingsPageState extends State<AISettingsPage> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder: (context) => const AlertDialog(
+        builder: (context) => AlertDialog(
           content: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircularProgressIndicator(),
-              SizedBox(width: 16),
-              Text('正在测试连接...'),
+              const CircularProgressIndicator(),
+              const SizedBox(width: 16),
+              Text(l10n.testingConnection),
             ],
           ),
         ),
@@ -523,10 +535,10 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
       // 显示成功消息
       scaffoldMessenger.showSnackBar(
-        const SnackBar(
-          content: Text('AI连接测试成功！'),
+        SnackBar(
+          content: Text(l10n.connectionTestSuccess),
           backgroundColor: Colors.green,
-          duration: Duration(seconds: 3),
+          duration: const Duration(seconds: 3),
         ),
       );
     } catch (e) {
@@ -536,7 +548,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
       // 显示错误消息
       scaffoldMessenger.showSnackBar(
         SnackBar(
-          content: Text('连接测试失败：${e.toString()}'),
+          content: Text(l10n.connectionTestFailed(e.toString())),
           backgroundColor: Colors.red,
           duration: const Duration(seconds: 5),
         ),
@@ -545,8 +557,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
   }
 
   Future<void> _testProvider(AIProviderSettings provider) async {
+    final l10n = AppLocalizations.of(context);
     if (provider.apiKey.isEmpty) {
-      throw Exception('${provider.name} 需要配置API密钥');
+      throw Exception(l10n.apiKeyRequired(provider.name));
     }
 
     setState(() {
@@ -557,8 +570,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
     try {
       // 创建测试消息
       final testMessages = [
-        {'role': 'system', 'content': '你是一个AI助手。请简单回复"连接测试成功"。'},
-        {'role': 'user', 'content': '测试连接'},
+        {'role': 'system', 'content': l10n.connectionTestSystemMessage},
+        {'role': 'user', 'content': l10n.connectionTestUserMessage},
       ]; // 使用指定provider测试连接
       final response = await AINetworkManager.makeRequest(
         url: '',
@@ -573,21 +586,22 @@ class _AISettingsPageState extends State<AISettingsPage> {
             data['choices'].isNotEmpty &&
             data['choices'][0]['message'] != null) {
           setState(() {
-            _testResults[provider.id] = '连接成功';
+            _testResults[provider.id] = l10n.connectionSuccess;
           });
         } else {
           setState(() {
-            _testResults[provider.id] = '响应格式异常';
+            _testResults[provider.id] = l10n.responseFormatError;
           });
         }
       } else {
         setState(() {
-          _testResults[provider.id] = '连接失败：${response.statusCode}';
+          _testResults[provider.id] =
+              l10n.connectionFailed(response.statusCode.toString());
         });
       }
     } catch (e) {
       setState(() {
-        _testResults[provider.id] = '连接失败：${e.toString()}';
+        _testResults[provider.id] = l10n.connectionTestFailed(e.toString());
       });
       rethrow; // 重新抛出异常供上层处理
     } finally {
@@ -598,6 +612,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
   }
 
   void _setCurrentProvider(AIProviderSettings provider) async {
+    final l10n = AppLocalizations.of(context);
     setState(() {
       _multiSettings = _multiSettings.copyWith(currentProviderId: provider.id);
       _currentProvider = provider;
@@ -614,7 +629,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
     if (provider.apiKey.isNotEmpty) {
       final apiKeyManager = APIKeyManager();
       await apiKeyManager.saveProviderApiKey(provider.id, provider.apiKey);
-      logDebug('已保存 ${provider.name} 的API密钥到安全存储');
+      logDebug(l10n.apiKeySavedForProvider(provider.name));
     }
 
     // 更新表单字段为新provider的设置
@@ -633,12 +648,13 @@ class _AISettingsPageState extends State<AISettingsPage> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(
-        content: Text('已切换到 ${provider.name}'),
+        content: Text(l10n.switchedTo(provider.name)),
         duration: AppConstants.snackBarDurationNormal));
   }
 
   // 重命名provider
   Future<void> _renameProvider(AIProviderSettings provider) async {
+    final l10n = AppLocalizations.of(context);
     final settingsService = Provider.of<SettingsService>(
       context,
       listen: false,
@@ -651,23 +667,23 @@ class _AISettingsPageState extends State<AISettingsPage> {
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('重命名预设'),
+        title: Text(l10n.renamePreset),
         content: TextField(
           controller: nameController,
-          decoration: const InputDecoration(
-            labelText: '预设名称',
-            border: OutlineInputBorder(),
+          decoration: InputDecoration(
+            labelText: l10n.presetName,
+            border: const OutlineInputBorder(),
           ),
           autofocus: true,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, nameController.text.trim()),
-            child: const Text('确定'),
+            child: Text(l10n.confirm),
           ),
         ],
       ),
@@ -699,7 +715,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
       scaffoldMessenger.showSnackBar(
         SnackBar(
-            content: Text('预设已重命名为 "$result"'),
+            content: Text(l10n.presetRenamed(result)),
             duration: AppConstants.snackBarDurationNormal),
       );
     }
@@ -709,6 +725,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
   // 删除provider
   Future<void> _deleteProvider(AIProviderSettings provider) async {
+    final l10n = AppLocalizations.of(context);
     final settingsService = Provider.of<SettingsService>(
       context,
       listen: false,
@@ -718,17 +735,17 @@ class _AISettingsPageState extends State<AISettingsPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('删除预设'),
-        content: Text('确定要删除预设 "${provider.name}" 吗？此操作无法撤销。'),
+        title: Text(l10n.deletePreset),
+        content: Text(l10n.deletePresetConfirm(provider.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('删除'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -779,13 +796,14 @@ class _AISettingsPageState extends State<AISettingsPage> {
       if (!mounted) return;
       scaffoldMessenger.showSnackBar(
         SnackBar(
-            content: Text('预设 "${provider.name}" 已删除'),
+            content: Text(l10n.presetDeleted(provider.name)),
             duration: AppConstants.snackBarDurationNormal),
       );
     }
   }
 
   Widget _buildProviderSelector() {
+    final l10n = AppLocalizations.of(context);
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       child: Padding(
@@ -801,7 +819,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'AI 服务商选择',
+                  l10n.aiProviderSelection,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
@@ -835,29 +853,33 @@ class _AISettingsPageState extends State<AISettingsPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '当前: ${_currentProvider!.name}',
+                            l10n.currentProvider(_currentProvider!.name),
                             style: Theme.of(context)
                                 .textTheme
                                 .titleSmall
                                 ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                           Text(
-                            'API: ${_currentProvider!.apiUrl}',
+                            l10n.apiUrlLabel(_currentProvider!.apiUrl),
                             style: Theme.of(context).textTheme.bodySmall,
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
-                            '模型: ${_currentProvider!.model.isEmpty ? "未配置" : _currentProvider!.model}',
+                            l10n.modelLabel(_currentProvider!.model.isEmpty
+                                ? l10n.modelNotConfigured
+                                : _currentProvider!.model),
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                           Text(
-                            'API Key: $_apiKeyStatus',
+                            l10n.apiKeyLabel(_apiKeyStatus),
                             style: Theme.of(
                               context,
                             ).textTheme.bodySmall?.copyWith(
-                                  color: _apiKeyStatus.contains('有效')
+                                  color: _apiKeyStatus.contains('有效') ||
+                                          _apiKeyStatus.contains('valid')
                                       ? Colors.green
-                                      : _apiKeyStatus.contains('无效')
+                                      : _apiKeyStatus.contains('无效') ||
+                                              _apiKeyStatus.contains('invalid')
                                           ? Colors.red
                                           : Colors.orange,
                                 ),
@@ -877,7 +899,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
                               ),
                             )
                           : const Icon(Icons.refresh),
-                      tooltip: '检查API Key状态',
+                      tooltip: l10n.checkApiKeyStatus,
                     ),
                   ],
                 ),
@@ -886,7 +908,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
             const SizedBox(height: 16),
             // Provider列表
             Text(
-              '已保存的预设 (${_multiSettings.providers.length}):',
+              l10n.savedPresets(_multiSettings.providers.length),
               style: Theme.of(context).textTheme.titleSmall,
             ),
             const SizedBox(height: 8),
@@ -906,7 +928,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        '还没有保存的预设。配置完API信息后点击"保存设置"来创建第一个预设。',
+                        l10n.noPresetsSaved,
                         style: TextStyle(color: Colors.grey[600]),
                       ),
                     ),
@@ -936,13 +958,16 @@ class _AISettingsPageState extends State<AISettingsPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '模型：${provider.model.isEmpty ? "未配置" : provider.model}',
+                          l10n.modelLabel(provider.model.isEmpty
+                              ? l10n.modelNotConfigured
+                              : provider.model),
                         ),
                         if (_testResults[provider.id] != null)
                           Text(
                             _testResults[provider.id]!,
                             style: TextStyle(
-                              color: _testResults[provider.id]!.contains('成功')
+                              color: _testResults[provider.id]!
+                                      .contains(l10n.connectionSuccess)
                                   ? Colors.green
                                   : Colors.red,
                             ),
@@ -956,14 +981,14 @@ class _AISettingsPageState extends State<AISettingsPage> {
                         IconButton(
                           icon: const Icon(Icons.edit),
                           onPressed: () => _renameProvider(provider),
-                          tooltip: '重命名',
+                          tooltip: l10n.rename,
                           iconSize: 20,
                         ),
                         // 删除按钮
                         IconButton(
                           icon: const Icon(Icons.delete),
                           onPressed: () => _deleteProvider(provider),
-                          tooltip: '删除',
+                          tooltip: l10n.delete,
                           iconSize: 20,
                           color: Colors.red,
                         ),
@@ -978,7 +1003,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
                           IconButton(
                             icon: const Icon(Icons.network_check),
                             onPressed: () => _testProvider(provider),
-                            tooltip: '测试连接',
+                            tooltip: l10n.testConnectionButton,
                             iconSize: 20,
                           ),
                       ],
@@ -995,13 +1020,14 @@ class _AISettingsPageState extends State<AISettingsPage> {
   }
 
   Widget _buildReportInsightSwitch() {
+    final l10n = AppLocalizations.of(context);
     final settingsService = Provider.of<SettingsService>(context);
     final enabled = settingsService.reportInsightsUseAI;
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       child: SwitchListTile(
-        title: const Text('周期报告洞察使用AI'),
-        subtitle: const Text('打开后进入报告页自动生成“诗意洞察”，关闭则使用本地生成'),
+        title: Text(l10n.reportInsightsUseAi),
+        subtitle: Text(l10n.reportInsightsUseAiDesc),
         value: enabled,
         onChanged: (val) async {
           await settingsService.setReportInsightsUseAI(val);
@@ -1013,9 +1039,10 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI 设置'),
+        title: Text(l10n.aiSettingsTitle),
         actions: const [
           // 隐藏年度报告功能
           // IconButton(
@@ -1050,7 +1077,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
                               color: Theme.of(context).colorScheme.primary),
                           const SizedBox(width: 8),
                           Text(
-                            '快速预设',
+                            l10n.quickPresets,
                             style: Theme.of(context)
                                 .textTheme
                                 .titleMedium
@@ -1062,7 +1089,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
                       DropdownButtonFormField<String>(
                         initialValue: _selectedPreset,
                         isExpanded: true,
-                        items: aiPresets.map((preset) {
+                        items: _getAiPresets(l10n).map((preset) {
                           return DropdownMenuItem(
                             value: preset['name'],
                             child: Text(
@@ -1075,7 +1102,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
                           if (value == null) return;
                           setState(() {
                             _selectedPreset = value;
-                            final preset = aiPresets.firstWhere(
+                            final preset = _getAiPresets(l10n).firstWhere(
                               (p) => p['name'] == value,
                             );
                             _apiUrlController.text = preset['apiUrl']!;
@@ -1084,10 +1111,10 @@ class _AISettingsPageState extends State<AISettingsPage> {
                           });
                           logDebug('切换预设到: $value, 保留现有API Key');
                         },
-                        decoration: const InputDecoration(
-                          labelText: '选择服务商预设',
-                          hintText: '或手动配置下方连接参数',
-                          border: OutlineInputBorder(),
+                        decoration: InputDecoration(
+                          labelText: l10n.selectPreset,
+                          hintText: l10n.selectPresetHint,
+                          border: const OutlineInputBorder(),
                         ),
                       ),
                     ],
@@ -1109,7 +1136,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
                               color: Theme.of(context).colorScheme.primary),
                           const SizedBox(width: 8),
                           Text(
-                            '连接配置 (${_currentProvider?.name ?? _selectedPreset ?? '自定义'})',
+                            l10n.connectionConfig(_currentProvider?.name ??
+                                _selectedPreset ??
+                                l10n.custom),
                             style: Theme.of(context)
                                 .textTheme
                                 .titleMedium
@@ -1120,13 +1149,12 @@ class _AISettingsPageState extends State<AISettingsPage> {
                       const SizedBox(height: 12),
                       TextFormField(
                         controller: _apiUrlController,
-                        decoration: const InputDecoration(
-                          labelText: 'API URL',
-                          hintText:
-                              '例如 https://api.xxx.com/v1/chat/completions',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.link),
-                          helperText: '必须为 http/https 地址',
+                        decoration: InputDecoration(
+                          labelText: l10n.apiUrlField,
+                          hintText: l10n.apiUrlHint,
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.link),
+                          helperText: l10n.apiUrlHelper,
                         ),
                         keyboardType: TextInputType.url,
                         onChanged: (_) => setState(() {
@@ -1138,12 +1166,12 @@ class _AISettingsPageState extends State<AISettingsPage> {
                       TextFormField(
                         controller: _apiKeyController,
                         decoration: InputDecoration(
-                          labelText: 'API Key',
-                          hintText: '服务所需的密钥（可留空）',
+                          labelText: l10n.apiKeyField,
+                          hintText: l10n.apiKeyHint,
                           border: const OutlineInputBorder(),
                           prefixIcon: const Icon(Icons.key),
                           suffixIcon: IconButton(
-                            tooltip: _obscureApiKey ? '显示' : '隐藏',
+                            tooltip: _obscureApiKey ? l10n.show : l10n.hide,
                             icon: Icon(
                               _obscureApiKey
                                   ? Icons.visibility_off
@@ -1175,7 +1203,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
                               color: Theme.of(context).colorScheme.primary),
                           const SizedBox(width: 8),
                           Text(
-                            '模型与高级',
+                            l10n.modelAndAdvanced,
                             style: Theme.of(context)
                                 .textTheme
                                 .titleMedium
@@ -1187,15 +1215,15 @@ class _AISettingsPageState extends State<AISettingsPage> {
                       TextFormField(
                         controller: _modelController,
                         decoration: InputDecoration(
-                          labelText: '模型名称',
+                          labelText: l10n.modelNameField,
                           hintText: _selectedPreset != null &&
-                                  aiPresets
+                                  _getAiPresets(l10n)
                                       .firstWhere(
                                         (p) => p['name'] == _selectedPreset,
                                       )['model']!
                                       .isEmpty
-                              ? '请输入模型名称'
-                              : '使用默认模型或自定义',
+                              ? l10n.modelNameHint
+                              : l10n.modelNameHintDefault,
                           border: const OutlineInputBorder(),
                           prefixIcon: const Icon(Icons.psychology),
                         ),
@@ -1203,11 +1231,11 @@ class _AISettingsPageState extends State<AISettingsPage> {
                       const SizedBox(height: 12),
                       TextField(
                         controller: _hostOverrideController,
-                        decoration: const InputDecoration(
-                          labelText: '主机覆盖 (Host Override)',
-                          hintText: '可选，用于代理/反向代理场景',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.dns),
+                        decoration: InputDecoration(
+                          labelText: l10n.hostOverrideField,
+                          hintText: l10n.hostOverrideHint,
+                          border: const OutlineInputBorder(),
+                          prefixIcon: const Icon(Icons.dns),
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -1223,13 +1251,13 @@ class _AISettingsPageState extends State<AISettingsPage> {
                     ElevatedButton.icon(
                       onPressed: _saveSettings,
                       icon: const Icon(Icons.add),
-                      label: const Text('创建新预设'),
+                      label: Text(l10n.createNewPreset),
                     ),
                     const SizedBox(width: 12),
                     OutlinedButton.icon(
                       onPressed: _testConnection,
                       icon: const Icon(Icons.network_check),
-                      label: const Text('测试连接'),
+                      label: Text(l10n.testConnectionButton),
                     ),
                   ],
                 ),
@@ -1250,7 +1278,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
                               color: Theme.of(context).colorScheme.primary),
                           const SizedBox(width: 8),
                           Text(
-                            'AI 卡片生成',
+                            l10n.aiCardGeneration,
                             style: Theme.of(context)
                                 .textTheme
                                 .titleMedium
@@ -1260,7 +1288,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        '为笔记生成 SVG 分享卡片：开启=使用 AI 智能设计，关闭=使用内置模板（功能仍可用）',
+                        l10n.aiCardGenerationDesc,
                         style: Theme.of(context)
                             .textTheme
                             .bodySmall
@@ -1268,7 +1296,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        '提示：建议使用支持 ≥4K tokens、具备良好指令遵循与文本→SVG 生成能力的中大型模型。',
+                        l10n.aiCardGenerationTip,
                         style: Theme.of(context)
                             .textTheme
                             .bodySmall
@@ -1278,8 +1306,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
                       Consumer<SettingsService>(
                         builder: (context, settingsService, child) {
                           return SwitchListTile(
-                            title: const Text('AI 增强生成'),
-                            subtitle: const Text('关闭后改用本地模板，不再调用模型'),
+                            title: Text(l10n.aiEnhancedGeneration),
+                            subtitle: Text(l10n.aiEnhancedGenerationDesc),
                             value: settingsService.aiCardGenerationEnabled,
                             onChanged: (value) {
                               settingsService.setAICardGenerationEnabled(value);
@@ -1300,8 +1328,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
                 builder: (context, settingsService, child) {
                   return Card(
                     child: SwitchListTile(
-                      title: const Text('今日思考使用AI'),
-                      subtitle: const Text('打开后将使用AI生成今日思考提示，关闭则使用本地生成'),
+                      title: Text(l10n.todayThoughtsUseAi),
+                      subtitle: Text(l10n.todayThoughtsUseAiDesc),
                       value: settingsService.todayThoughtsUseAI,
                       onChanged: (val) async {
                         await settingsService.setTodayThoughtsUseAI(val);
@@ -1322,14 +1350,15 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
   // 验证URL格式
   String? _validateUrl(String? value) {
+    final l10n = AppLocalizations.of(context);
     if (value == null || value.isEmpty) {
-      return 'API URL不能为空';
+      return l10n.apiUrlRequired;
     }
 
     // 基本URL格式验证
     final uri = Uri.tryParse(value);
     if (uri == null || !uri.hasScheme || (!uri.scheme.startsWith('http'))) {
-      return '请输入有效的HTTP/HTTPS URL';
+      return l10n.invalidUrl;
     }
 
     return null;

@@ -255,7 +255,7 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                     Wrap(
                       spacing: 12,
                       runSpacing: 12,
-                      children: ApiService.hitokotoTypes.entries.map((entry) {
+                      children: ApiService.getHitokotoTypes(l10n).entries.map((entry) {
                         final isSelected = _selectedTypes.contains(
                           entry.key,
                         );

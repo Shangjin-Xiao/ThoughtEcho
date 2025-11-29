@@ -3,6 +3,7 @@ import '../services/network_service.dart';
 import '../services/connectivity_service.dart';
 import '../services/database_service.dart';
 import '../utils/app_logger.dart';
+import '../gen_l10n/app_localizations.dart';
 
 class Request {
   const Request();
@@ -12,26 +13,28 @@ class ApiService {
   static const String baseUrl = 'https://v1.hitokoto.cn/';
 
   // 一言类型常量
-  static const Map<String, String> hitokotoTypes = {
-    'a': '动画',
-    'b': '漫画',
-    'c': '游戏',
-    'd': '文学',
-    'e': '原创',
-    'f': '来自网络',
-    'g': '其他',
-    'h': '影视',
-    'i': '诗词',
-    'j': '网易云',
-    'k': '哲学',
-    // 移除抖机灵类型
-  };
+  static Map<String, String> getHitokotoTypes(AppLocalizations l10n) {
+    return {
+    'a': l10n.hitokotoTypeA,
+    'b': l10n.hitokotoTypeB,
+    'c': l10n.hitokotoTypeC,
+    'd': l10n.hitokotoTypeD,
+    'e': l10n.hitokotoTypeE,
+    'f': l10n.hitokotoTypeF,
+    'g': l10n.hitokotoTypeG,
+    'h': l10n.hitokotoTypeH,
+    'i': l10n.hitokotoTypeI,
+    'j': l10n.hitokotoTypeJ,
+    'k': l10n.hitokotoTypeK,
+    };
+  }
 
   // 添加一个常量定义请求超时时间
   static const int _timeoutSeconds = 10;
 
   // 获取一言API数据，支持本地笔记回退
   static Future<Map<String, dynamic>> getDailyQuote(
+    AppLocalizations l10n,
     String type, {
     bool useLocalOnly = false,
     DatabaseService? databaseService,
@@ -39,7 +42,7 @@ class ApiService {
     try {
       // 如果设置了仅使用本地笔记，直接返回本地一言
       if (useLocalOnly) {
-        return await _getLocalQuoteOrDefault(databaseService);
+        return await _getLocalQuoteOrDefault(l10n, databaseService);
       }
 
       // 检查网络连接状态
@@ -48,7 +51,7 @@ class ApiService {
 
       if (!isConnected) {
         logDebug('网络未连接，使用本地笔记');
-        return await _getLocalQuoteOrDefault(databaseService, isOffline: true);
+        return await _getLocalQuoteOrDefault(l10n, databaseService, isOffline: true);
       }
 
       // 处理多类型选择的情况
@@ -89,24 +92,25 @@ class ApiService {
             };
           } else {
             logDebug('一言API返回数据格式错误: $data');
-            return await _getLocalQuoteOrDefault(databaseService);
+            return await _getLocalQuoteOrDefault(l10n, databaseService);
           }
         } catch (e) {
           logDebug('一言API JSON解析失败: $e, 响应体: ${response.body}');
-          return await _getLocalQuoteOrDefault(databaseService);
+          return await _getLocalQuoteOrDefault(l10n, databaseService);
         }
       } else {
         logDebug('一言API请求失败: ${response.statusCode}, 响应体: ${response.body}');
-        return await _getLocalQuoteOrDefault(databaseService);
+        return await _getLocalQuoteOrDefault(l10n, databaseService);
       }
     } catch (e) {
       logDebug('获取一言异常: $e');
-      return await _getLocalQuoteOrDefault(databaseService);
+      return await _getLocalQuoteOrDefault(l10n, databaseService);
     }
   }
 
   // 获取本地一言或默认一言
   static Future<Map<String, dynamic>> _getLocalQuoteOrDefault(
+    AppLocalizations l10n,
     DatabaseService? databaseService, {
     bool isOffline = false,
   }) async {
@@ -125,7 +129,7 @@ class ApiService {
     // 如果是离线状态且没有本地笔记，返回网络错误提示
     if (isOffline) {
       return {
-        'content': '无网络连接',
+        'content': l10n.noNetworkConnection,
         'source': '',
         'author': '',
         'type': 'offline',
@@ -136,36 +140,36 @@ class ApiService {
 
     // 如果不是离线状态但本地笔记获取失败，使用默认一言
     logDebug('使用默认一言');
-    return _getDefaultQuote();
+    return _getDefaultQuote(l10n);
   }
 
   // 提供默认引言，在网络请求失败时使用
-  static Map<String, dynamic> _getDefaultQuote() {
+  static Map<String, dynamic> _getDefaultQuote(AppLocalizations l10n) {
     // 预设的引言列表
     final quotes = [
       {
-        'content': '生活不止眼前的苟且，还有诗和远方。',
-        'source': '未知',
-        'author': '未知',
+        'content': l10n.defaultQuote1,
+        'source': l10n.unknown,
+        'author': l10n.unknown,
         'type': 'a',
-        'from_who': '未知',
-        'from': '未知',
+        'from_who': l10n.unknown,
+        'from': l10n.unknown,
       },
       {
-        'content': '人生就像一场旅行，不必在乎目的地，在乎的是沿途的风景。',
-        'source': '未知',
-        'author': '未知',
+        'content': l10n.defaultQuote2,
+        'source': l10n.unknown,
+        'author': l10n.unknown,
         'type': 'a',
-        'from_who': '未知',
-        'from': '未知',
+        'from_who': l10n.unknown,
+        'from': l10n.unknown,
       },
       {
-        'content': '不要等待机会，而要创造机会。',
-        'source': '未知',
-        'author': '未知',
+        'content': l10n.defaultQuote3,
+        'source': l10n.unknown,
+        'author': l10n.unknown,
         'type': 'a',
-        'from_who': '未知',
-        'from': '未知',
+        'from_who': l10n.unknown,
+        'from': l10n.unknown,
       },
     ];
 

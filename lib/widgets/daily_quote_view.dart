@@ -9,6 +9,7 @@ import '../widgets/sliding_card.dart';
 import 'dart:async'; // Import async for StreamController and StreamSubscription
 import 'package:thoughtecho/utils/app_logger.dart';
 import '../constants/app_constants.dart';
+import '../gen_l10n/app_localizations.dart';
 
 class DailyQuoteView extends StatefulWidget {
   // 修改接口，增加hitokotoData参数，以便传递完整的一言数据
@@ -78,7 +79,9 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
         }
       });
 
+      final l10n = AppLocalizations.of(context);
       final quote = await ApiService.getDailyQuote(
+        l10n,
         hitokotoType,
         useLocalOnly: useLocalOnly,
         databaseService: databaseService,

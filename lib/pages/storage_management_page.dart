@@ -640,10 +640,11 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
     int? count,
     required Color color,
   }) {
+    final l10n = AppLocalizations.of(context);
     return ListTile(
       leading: Icon(icon, color: color),
       title: Text(label),
-      subtitle: count != null && count > 0 ? Text('$count 个文件') : null,
+      subtitle: count != null && count > 0 ? Text(l10n.fileCount(count)) : null,
       trailing: Text(
         StorageStats.formatBytes(size),
         style: const TextStyle(

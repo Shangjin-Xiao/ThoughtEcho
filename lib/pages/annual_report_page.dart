@@ -8,6 +8,7 @@ import '../services/database_service.dart';
 import '../utils/color_utils.dart';
 import '../services/ai_service.dart';
 import '../services/settings_service.dart';
+import '../gen_l10n/app_localizations.dart';
 
 /// ⚠️ 暂时弃用 - 防止 AI 工具识别错误
 /// 此页面已暂停使用，如需年度报告功能请使用 AI 周期报告页面
@@ -44,6 +45,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
   String _insightText = '';
   bool _insightLoading = false;
   StreamSubscription<String>? _insightSub;
+  bool _statsCalculated = false;
 
   @override
   void initState() {
@@ -58,11 +60,17 @@ class _AnnualReportPageState extends State<AnnualReportPage>
     );
     _pageController = PageController();
 
-    // 计算年度统计数据
-    _calculateStats();
-
     // 开始动画
     _startAnimations();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_statsCalculated) {
+      _calculateStats();
+      _statsCalculated = true;
+    }
   }
 
   @override
@@ -75,12 +83,13 @@ class _AnnualReportPageState extends State<AnnualReportPage>
   }
 
   void _calculateStats() async {
+    final l10n = AppLocalizations.of(context);
     final yearQuotes = widget.quotes.where((quote) {
       final quoteDate = DateTime.parse(quote.date);
       return quoteDate.year == widget.year;
     }).toList();
 
-    final stats = AnnualStats.fromQuotes(yearQuotes, widget.year);
+    final stats = AnnualStats.fromQuotes(l10n, yearQuotes, widget.year);
 
     // 解析标签名称
     final resolvedStats = await _resolveTagNames(stats);
@@ -192,7 +201,8 @@ class _AnnualReportPageState extends State<AnnualReportPage>
 
   void _maybeStartInsight() {
     if (_stats == null) return;
-    final periodLabel = '${widget.year}年度';
+    final l10n = AppLocalizations.of(context);
+    final periodLabel = l10n.annualReportForYear(widget.year);
     final useAI = context.read<SettingsService>().reportInsightsUseAI;
 
     _insightSub?.cancel();
@@ -206,19 +216,20 @@ class _AnnualReportPageState extends State<AnnualReportPage>
       // 准备完整的笔记内容用于AI分析
       final fullNotesContent = widget.quotes.map((quote) {
         final date = DateTime.parse(quote.date);
-        final dateStr = '${date.month}月${date.day}日';
+        final dateStr =
+            l10n.noteDate(l10n.monthX(date.month), l10n.dayOfMonth(date.day));
         var content = quote.content.trim();
 
         // 添加位置信息
         if (quote.location != null && quote.location!.isNotEmpty) {
-          content = '【$dateStr·${quote.location}】$content';
+          content = '[$dateStr·${quote.location}]$content';
         } else {
-          content = '【$dateStr】$content';
+          content = '[$dateStr]$content';
         }
 
         // 添加天气信息
         if (quote.weather != null && quote.weather!.isNotEmpty) {
-          content += ' （天气：${quote.weather}）';
+          content += l10n.noteWeather(quote.weather!);
         }
 
         return content;
@@ -432,6 +443,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
   }
 
   Widget _buildCoverPage() {
+    final l10n = AppLocalizations.of(context);
     return GestureDetector(
       onTap: _nextPage,
       child: Container(
@@ -478,9 +490,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                     curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
                   ),
                 ),
-                child: const Text(
-                  '你的思想轨迹',
-                  style: TextStyle(
+                child: Text(
+                  l10n.yourThoughtTrack,
+                  style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.w600,
                     height: 1.2,
@@ -505,7 +517,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                   ),
                 ),
                 child: Text(
-                  'ThoughtEcho Annual Report',
+                  l10n.annualReportTitle,
                   style: TextStyle(
                     fontSize: 16,
                     color: ColorUtils.withOpacitySafe(
@@ -531,7 +543,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    '点击屏幕开始探索',
+                    l10n.tapToExplore,
                     style: TextStyle(
                       fontSize: 14,
                       color: Theme.of(context).colorScheme.primary,
@@ -548,6 +560,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
   }
 
   Widget _buildOverviewPage() {
+    final l10n = AppLocalizations.of(context);
     return GestureDetector(
       onTap: _nextPage,
       child: Container(
@@ -555,9 +568,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '年度概览',
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+            Text(
+              l10n.annualOverview,
+              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 40),
@@ -577,7 +590,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            '这个时段还没有笔记',
+                            l10n.noNotesInPeriod,
                             style: TextStyle(
                               fontSize: 18,
                               color: ColorUtils.withOpacitySafe(
@@ -586,7 +599,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            '开始记录你的想法吧',
+                            l10n.startRecording,
                             style: TextStyle(
                               fontSize: 14,
                               color: ColorUtils.withOpacitySafe(
@@ -600,36 +613,36 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                       children: [
                         _buildStatCard(
                           icon: Icons.edit_note,
-                          title: '总共记录',
+                          title: l10n.totalRecorded,
                           value: '${_stats!.totalNotes}',
-                          subtitle: '篇笔记',
+                          subtitle: l10n.notesUnit,
                           color: const Color(0xFF6366F1),
                           delay: 0.0,
                         ),
                         const SizedBox(height: 20),
                         _buildStatCard(
                           icon: Icons.sentiment_satisfied_alt,
-                          title: '写作天数',
+                          title: l10n.writingDays,
                           value: '${_stats!.activeDays}',
-                          subtitle: '天',
+                          subtitle: l10n.daysUnit,
                           color: const Color(0xFF10B981),
                           delay: 0.1,
                         ),
                         const SizedBox(height: 20),
                         _buildStatCard(
                           icon: Icons.trending_up,
-                          title: '最长连续',
+                          title: l10n.longestStreak,
                           value: '${_stats!.longestStreak}',
-                          subtitle: '天',
+                          subtitle: l10n.daysUnit,
                           color: const Color(0xFFF59E0B),
                           delay: 0.2,
                         ),
                         const SizedBox(height: 20),
                         _buildStatCard(
                           icon: Icons.local_offer,
-                          title: '使用标签',
+                          title: l10n.tagsUsed,
                           value: '${_stats!.totalTags}',
-                          subtitle: '个',
+                          subtitle: l10n.tagsUnit,
                           color: const Color(0xFFEF4444),
                           delay: 0.3,
                         ),
@@ -643,6 +656,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
   }
 
   Widget _buildWritingHabitsPage() {
+    final l10n = AppLocalizations.of(context);
     return GestureDetector(
       onTap: _nextPage,
       child: Container(
@@ -650,9 +664,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '写作习惯',
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+            Text(
+              l10n.writingHabits,
+              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
             ),
 
             const SizedBox(height: 40),
@@ -672,7 +686,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            '暂无写作习惯数据',
+                            l10n.noWritingHabits,
                             style: TextStyle(
                               fontSize: 18,
                               color: ColorUtils.withOpacitySafe(
@@ -686,58 +700,59 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                       children: [
                         // 最活跃时间段
                         _buildHabitCard(
-                          title: '最活跃时间',
+                          title: l10n.mostActiveTime,
                           content: _stats!.mostActiveHour != null
                               ? '${_stats!.mostActiveHour}:00 - ${_stats!.mostActiveHour! + 1}:00'
-                              : '暂无数据',
+                              : l10n.noData,
                           icon: Icons.schedule,
                           color: const Color(0xFF8B5CF6),
                         ),
                         const SizedBox(height: 20),
                         // 最喜欢的日子
                         _buildHabitCard(
-                          title: '最喜欢的日子',
-                          content: _stats!.mostActiveWeekday ?? '暂无数据',
+                          title: l10n.favoriteDay,
+                          content: _stats!.mostActiveWeekday ?? l10n.noData,
                           icon: Icons.today,
                           color: const Color(0xFF06B6D4),
                         ),
                         const SizedBox(height: 20),
                         // 平均字数
                         _buildHabitCard(
-                          title: '平均每篇字数',
-                          content: '${_stats!.averageWordsPerNote.toInt()} 字',
+                          title: l10n.avgWordsPerNote,
+                          content:
+                              '${_stats!.averageWordsPerNote.toInt()}${l10n.wordsUnit}',
                           icon: Icons.text_fields,
                           color: const Color(0xFFEC4899),
                         ),
                         const SizedBox(height: 20),
                         // 最长笔记
                         _buildHabitCard(
-                          title: '最长的一篇',
-                          content: '${_stats!.longestNoteWords} 字',
+                          title: l10n.longestNote,
+                          content: '${_stats!.longestNoteWords}${l10n.wordsUnit}',
                           icon: Icons.article,
                           color: const Color(0xFF84CC16),
                         ),
                         const SizedBox(height: 20),
                         // 新增：最常见时间段
                         _buildHabitCard(
-                          title: '最常见时间段',
-                          content: _mostDayPeriod ?? '暂无数据',
+                          title: l10n.mostCommonPeriod,
+                          content: _mostDayPeriod ?? l10n.noData,
                           icon: Icons.timelapse,
                           color: const Color(0xFF8B5CF6),
                         ),
                         const SizedBox(height: 20),
                         // 新增：最常见天气
                         _buildHabitCard(
-                          title: '最常见天气',
-                          content: _mostWeather ?? '暂无数据',
+                          title: l10n.mostCommonWeather,
+                          content: _mostWeather ?? l10n.noData,
                           icon: Icons.cloud_queue,
                           color: const Color(0xFF06B6D4),
                         ),
                         const SizedBox(height: 20),
                         // 新增：最常用标签
                         _buildHabitCard(
-                          title: '最常用标签',
-                          content: _mostTopTag ?? '暂无数据',
+                          title: l10n.mostUsedTag,
+                          content: _mostTopTag ?? l10n.noData,
                           icon: Icons.local_offer_outlined,
                           color: const Color(0xFFEF4444),
                         ),
@@ -751,6 +766,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
   }
 
   Widget _buildTagAnalysisPage() {
+    final l10n = AppLocalizations.of(context);
     return GestureDetector(
       onTap: _nextPage,
       child: Container(
@@ -758,15 +774,16 @@ class _AnnualReportPageState extends State<AnnualReportPage>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '标签分析',
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+            Text(
+              l10n.tagAnalysis,
+              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 40),
             if (_stats!.topTags.isNotEmpty) ...[
-              const Text(
-                '最常用的标签',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              Text(
+                l10n.mostUsedTags,
+                style:
+                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 20),
             ],
@@ -825,7 +842,10 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      '使用了 ${tag.count} 次 (${percentage.toStringAsFixed(1)}%)',
+                                      l10n.usedXTimes(
+                                        tag.count,
+                                        percentage.toStringAsFixed(1),
+                                      ),
                                       style: TextStyle(
                                         fontSize: 14,
                                         color: ColorUtils.withOpacitySafe(
@@ -855,7 +875,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            '还没有使用过标签',
+                            l10n.noTagsUsed,
                             style: TextStyle(
                               fontSize: 18,
                               color: ColorUtils.withOpacitySafe(
@@ -873,6 +893,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
   }
 
   Widget _buildTimelinePage() {
+    final l10n = AppLocalizations.of(context);
     return GestureDetector(
       onTap: _nextPage,
       child: Container(
@@ -880,9 +901,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '时间轴',
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+            Text(
+              l10n.timeline,
+              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 40),
             Expanded(
@@ -899,7 +920,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            '这个时段还没有记录',
+                            l10n.noRecordsInPeriod,
                             style: TextStyle(
                               fontSize: 18,
                               color: ColorUtils.withOpacitySafe(
@@ -933,7 +954,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                               SizedBox(
                                 width: 60,
                                 child: Text(
-                                  '${month.month}月',
+                                  l10n.monthX(month.month),
                                   style: const TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
@@ -979,7 +1000,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                                         ),
                                         const SizedBox(width: 12),
                                         Text(
-                                          '${month.count}篇',
+                                          l10n.notesCount(month.count),
                                           style: const TextStyle(
                                             fontSize: 14,
                                             fontWeight: FontWeight.w500,
@@ -1003,6 +1024,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
   }
 
   Widget _buildInsightsPage() {
+    final l10n = AppLocalizations.of(context);
     return GestureDetector(
       onTap: _nextPage,
       child: Container(
@@ -1010,9 +1032,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '深度洞察',
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+            Text(
+              l10n.deepInsights,
+              style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 40),
             _buildInsightBulbBar(),
@@ -1022,21 +1044,21 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                 children: [
                   _buildInsightCard(
                     icon: Icons.psychology,
-                    title: '思考密度',
+                    title: l10n.thinkingDensity,
                     content: _getThinkingDensityText(),
                     color: const Color(0xFF7C3AED),
                   ),
                   const SizedBox(height: 20),
                   _buildInsightCard(
                     icon: Icons.auto_awesome,
-                    title: '成长轨迹',
+                    title: l10n.growthTrack,
                     content: _getGrowthText(),
                     color: const Color(0xFFF97316),
                   ),
                   const SizedBox(height: 20),
                   _buildInsightCard(
                     icon: Icons.timeline,
-                    title: '写作节奏',
+                    title: l10n.writingRhythm,
                     content: _getWritingRhythmText(),
                     color: const Color(0xFF059669),
                   ),
@@ -1051,6 +1073,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
 
   Widget _buildInsightBulbBar() {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1069,14 +1092,14 @@ class _AnnualReportPageState extends State<AnnualReportPage>
           Expanded(
             child: _insightLoading
                 ? Text(
-                    '正在生成本期洞察…',
+                    l10n.generatingInsights,
                     style: TextStyle(
                       color: ColorUtils.withOpacitySafe(
                           theme.colorScheme.onSurface, 0.7),
                     ),
                   )
                 : Text(
-                    _insightText.isEmpty ? '暂无洞察' : _insightText,
+                    _insightText.isEmpty ? l10n.noInsights : _insightText,
                     style: const TextStyle(fontSize: 15, height: 1.5),
                   ),
           ),
@@ -1086,6 +1109,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
   }
 
   Widget _buildEndingPage() {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 80),
       child: Column(
@@ -1097,14 +1121,14 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             color: Theme.of(context).colorScheme.primary,
           ),
           const SizedBox(height: 32),
-          const Text(
-            '感谢你的坚持',
-            style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+          Text(
+            l10n.thankYou,
+            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
           Text(
-            '每一个想法都值得被记录\n每一次记录都是成长的足迹',
+            l10n.everyThoughtCounts,
             style: TextStyle(
               fontSize: 16,
               color: ColorUtils.withOpacitySafe(
@@ -1122,9 +1146,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                 borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
               ),
             ),
-            child: const Text(
-              '继续记录 2025',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            child: Text(
+              l10n.continueRecording(2025),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -1335,46 +1359,50 @@ class _AnnualReportPageState extends State<AnnualReportPage>
   }
 
   String _getThinkingDensityText() {
+    final l10n = AppLocalizations.of(context);
     if (_stats!.averageWordsPerNote > 200) {
-      return '你喜欢深度思考，每篇笔记都很详细。这样的习惯帮助你更好地整理思路。';
+      return l10n.deepThinker;
     } else if (_stats!.averageWordsPerNote > 100) {
-      return '你的思考简洁而有力，善于抓住要点。这是很好的总结能力。';
+      return l10n.conciseThinker;
     } else {
-      return '你习惯记录简短的想法，这样能快速捕捉灵感，是很好的记录习惯。';
+      return l10n.quickThinker;
     }
   }
 
   String _getGrowthText() {
+    final l10n = AppLocalizations.of(context);
     final months = _stats!.monthlyStats;
     if (months.isEmpty) {
-      return '还没有开始记录,现在就是最好的时机。';
+      return l10n.notStarted;
     }
     if (months.length >= 2) {
       final lastMonth = months.last.count;
       final firstMonth = months.first.count;
       if (lastMonth > firstMonth * 1.5) {
-        return '你的记录频率越来越高了！从年初到年末，思考和记录的习惯越来越好。';
+        return l10n.increasingFrequency;
       } else if (lastMonth < firstMonth * 0.5) {
-        return '年初的记录很活跃，也许可以重新找回那时的写作热情。';
+        return l10n.decreasingFrequency;
       } else {
-        return '你保持了稳定的记录节奏，这种坚持很难得！';
+        return l10n.stableRhythm;
       }
     } else {
-      return '今年是记录的开始，期待看到更多的思考轨迹。';
+      return l10n.beginningOfYear;
     }
   }
 
   String _getWritingRhythmText() {
+    final l10n = AppLocalizations.of(context);
     if (_stats!.longestStreak >= 7) {
-      return '你有很好的写作节奏，最长连续记录了${_stats!.longestStreak}天！坚持就是力量。';
+      return l10n.goodRhythm(_stats!.longestStreak);
     } else if (_stats!.longestStreak >= 3) {
-      return '你已经建立了不错的记录习惯，继续保持这个节奏。';
+      return l10n.decentRhythm;
     } else {
-      return '记录更多是一个习惯，可以尝试每天记录一些小想法。';
+      return l10n.startRhythm;
     }
   }
 
   void _shareReport() {
+    final l10n = AppLocalizations.of(context);
     // TODO: 实现分享功能
     HapticFeedback.mediumImpact();
 
@@ -1382,28 +1410,22 @@ class _AnnualReportPageState extends State<AnnualReportPage>
       // 生成分享文本
       final year = widget.year.toString();
       final totalQuotes = widget.quotes.length;
-      final shareText = '''我的$year年心迹回顾
-
-📝 记录了 $totalQuotes 条心迹
-💭 见证了一年的成长与思考
-
-在ThoughtEcho中记录生活的点点滴滴
-#心迹 #年度回顾 #ThoughtEcho''';
+      final shareText = l10n.shareAnnualReportContent(year, totalQuotes);
 
       // 复制到剪贴板
       Clipboard.setData(ClipboardData(text: shareText));
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('年度报告已复制到剪贴板'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text(l10n.reportCopied),
+          duration: const Duration(seconds: 2),
         ),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('分享失败，请稍后重试'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text(l10n.shareFailed),
+          duration: const Duration(seconds: 2),
         ),
       );
     }
@@ -1437,7 +1459,8 @@ class AnnualStats {
     required this.monthlyStats,
   });
 
-  factory AnnualStats.fromQuotes(List<Quote> quotes, int year) {
+  factory AnnualStats.fromQuotes(
+      AppLocalizations l10n, List<Quote> quotes, int year) {
     if (quotes.isEmpty) {
       return AnnualStats(
         year: year,
@@ -1515,7 +1538,16 @@ class AnnualStats {
         ? hourCounts.entries.reduce((a, b) => a.value > b.value ? a : b).key
         : null;
 
-    final weekdayNames = ['', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六', '星期日'];
+    final weekdayNames = [
+      '',
+      l10n.monday,
+      l10n.tuesday,
+      l10n.wednesday,
+      l10n.thursday,
+      l10n.friday,
+      l10n.saturday,
+      l10n.sunday
+    ];
     final mostActiveWeekday = weekdayCounts.entries.isNotEmpty
         ? weekdayNames[weekdayCounts.entries
             .reduce((a, b) => a.value > b.value ? a : b)
