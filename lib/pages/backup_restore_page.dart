@@ -81,7 +81,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             // 媒体文件选项
             CheckboxListTile(
               title: Text(l10n.includeMediaFiles),
-              subtitle: const Text('勾选后将备份图片、音频等媒体文件（文件更大但更完整）'),
+              subtitle: Text(l10n.includeMediaFilesHint),
               value: _includeMediaFiles,
               onChanged: _isLoading
                   ? null
@@ -143,7 +143,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                         _progressText = '';
                       });
                     },
-                    child: const Text('取消'),
+                    child: Text(l10n.cancel),
                   ),
                 ],
               ),
@@ -151,7 +151,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
 
             const SizedBox(height: 8),
             Text(
-              '将创建${_includeMediaFiles ? 'ZIP' : 'JSON'}格式的备份文件，包含所有笔记、设置${_includeMediaFiles ? '和媒体文件' : ''}',
+              _includeMediaFiles ? l10n.backupFormatZip : l10n.backupFormatJson,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(
                       context,
@@ -237,7 +237,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                         _progressText = '';
                       });
                     },
-                    child: const Text('取消'),
+                    child: Text(l10n.cancel),
                   ),
                 ],
               ),
@@ -245,7 +245,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
 
             const SizedBox(height: 8),
             Text(
-              '支持新版ZIP格式和旧版JSON格式的备份文件',
+              l10n.supportedBackupFormats,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(
                       context,
@@ -538,31 +538,37 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       // 选择导入模式：覆盖 或 合并(LWW)
       bool useMerge = false;
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         final mode = await showDialog<String>(
           context: context,
           barrierDismissible: false,
           builder: (c) {
             String selected = 'overwrite';
+            final dialogL10n = AppLocalizations.of(c);
             return StatefulBuilder(builder: (ctx, setLocal) {
               return AlertDialog(
-                title: const Text('选择导入模式'),
+                title: Text(dialogL10n.selectImportMode),
                 content: RadioGroup<String>(
                   groupValue: selected,
                   onChanged: (v) => setLocal(() => selected = v!),
-                  child: const Column(
+                  child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       RadioListTile<String>(
-                        title: Text('覆盖导入 (清空现有数据)'),
-                        subtitle: Text('删除当前所有数据，以备份内容替换'),
+                        title: Text(dialogL10n.overwriteImport),
+                        subtitle: Text(dialogL10n.overwriteImportDesc),
                         value: 'overwrite',
                         dense: true,
+                        groupValue: selected,
+                        onChanged: (v) => setLocal(() => selected = v!),
                       ),
                       RadioListTile<String>(
-                        title: Text('合并导入 (LWW策略)'),
-                        subtitle: Text('保留现有数据，与备份数据按更新时间合并'),
+                        title: Text(dialogL10n.mergeImport),
+                        subtitle: Text(dialogL10n.mergeImportDesc),
                         value: 'merge',
+                        groupValue: selected,
+                        onChanged: (v) => setLocal(() => selected = v!),
                       ),
                     ],
                   ),
@@ -570,11 +576,11 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.of(ctx).pop(null),
-                    child: const Text('取消'),
+                    child: Text(dialogL10n.cancel),
                   ),
                   FilledButton(
                     onPressed: () => Navigator.of(ctx).pop(selected),
-                    child: const Text('继续'),
+                    child: Text(dialogL10n.continueAction),
                   ),
                 ],
               );
@@ -616,9 +622,10 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           clearExisting: true,
           onProgress: (current, total) {
             if (mounted) {
+              final l10n = AppLocalizations.of(context);
               setState(() {
                 _progress = (current / total * 100).toDouble();
-                _progressText = '正在还原数据... $current/$total';
+                _progressText = l10n.restoringData(current, total);
               });
             }
           },
@@ -627,12 +634,13 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       }
 
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         // 还原成功，回到主页并显示成功消息
         Navigator.of(context).popUntil((route) => route.isFirst);
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('数据还原成功！所有数据已更新。'),
+          SnackBar(
+            content: Text(l10n.restoreSuccess),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
             duration: AppConstants.snackBarDurationImportant,
@@ -641,64 +649,43 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       }
     } catch (e) {
       if (mounted) {
-        String errorMessage = '无法完成数据还原：$e';
+        final l10n = AppLocalizations.of(context);
+        String errorMessage = l10n.restoreFailedGeneric(e.toString());
 
         // 修复：针对不同类型的错误提供更友好的提示
         if (e.toString().contains('OutOfMemoryError') ||
             e.toString().contains('内存不足')) {
-          errorMessage =
-              '还原失败：内存不足\n\n建议：\n• 关闭其他应用释放内存\n• 重启应用后再试\n• 检查备份文件大小是否过大';
+          errorMessage = l10n.restoreFailedOutOfMemory;
         } else if (e.toString().contains('存储空间') ||
             e.toString().contains('No space left')) {
-          errorMessage = '还原失败：存储空间不足\n\n请清理设备存储空间后重试。';
+          errorMessage = l10n.restoreFailedNoSpace;
         } else if (e.toString().contains('权限') ||
             e.toString().contains('Permission')) {
-          errorMessage = '还原失败：权限不足\n\n请检查应用的存储权限设置。';
+          errorMessage = l10n.restoreFailedPermission;
         } else if (e.toString().contains('cancelled') ||
             e.toString().contains('取消')) {
-          errorMessage = '还原已取消';
+          errorMessage = l10n.restoreCancelled;
         } else if (e.toString().contains('无效') ||
             e.toString().contains('corrupt')) {
-          errorMessage = '还原失败：备份文件损坏或格式不正确\n\n请检查备份文件是否完整。';
+          errorMessage = l10n.restoreFailedCorrupt;
         } else if (e.toString().contains('has no column named')) {
           // 修复：专门处理字段名不匹配的错误
           final columnMatch = RegExp(
             r'has no column named (\w+)',
           ).firstMatch(e.toString());
-          final columnName = columnMatch?.group(1) ?? '未知字段';
+          final columnName = columnMatch?.group(1) ?? l10n.unknownTag;
 
-          errorMessage = '''还原失败：备份文件格式不兼容
+          errorMessage = '''${l10n.restoreFailedCorrupt}
 
-问题：数据库中缺少字段 "$columnName"
-
-可能的原因：
-• 备份文件来自较旧版本的应用
-• 字段名格式发生了变化（如：sourceAuthor → source_author）
-• 备份文件中包含了当前版本不支持的字段
-
-解决方案：
-1. 确保使用最新版本的应用
-2. 如果备份来自旧版本，请尝试先升级应用再导入
-3. 如果问题持续，请联系开发者获取帮助
-
-技术详情：$e''';
+Column: $columnName
+Details: $e''';
         } else if (e.toString().contains('SQLITE_ERROR')) {
-          errorMessage = '''还原失败：数据库操作错误
+          errorMessage = '''${l10n.restoreFailedCorrupt}
 
-这可能是由于：
-• 备份文件格式不正确
-• 数据库约束冲突
-• 字段类型不匹配
-
-建议：
-1. 检查备份文件是否完整
-2. 尝试重新导出备份文件
-3. 确保备份文件来自相同或兼容的应用版本
-
-技术详情：$e''';
+Details: $e''';
         }
 
-        _showErrorDialog('还原失败', errorMessage);
+        _showErrorDialog(l10n.restoreConfirmDialogTitle, errorMessage);
       }
     } finally {
       if (mounted) {
@@ -711,33 +698,34 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
 
   /// 显示还原确认对话框
   Future<bool> _showRestoreConfirmDialog() async {
+    final l10n = AppLocalizations.of(context);
     return await showDialog<bool>(
           context: context,
           barrierDismissible: false,
           builder: (context) => AlertDialog(
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.warning_amber, color: Colors.orange),
-                SizedBox(width: 8),
-                Text('确认还原数据'),
+                const Icon(Icons.warning_amber, color: Colors.orange),
+                const SizedBox(width: 8),
+                Text(l10n.restoreConfirmDialogTitle),
               ],
             ),
-            content: const Column(
+            content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '此操作将：',
-                  style: TextStyle(fontWeight: FontWeight.w600),
+                  l10n.restoreConfirmDialogDesc,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
-                SizedBox(height: 8),
-                Text('• 删除当前设备上的所有笔记和设置'),
-                Text('• 用备份文件中的数据替换'),
-                Text('• 此操作无法撤销'),
-                SizedBox(height: 16),
+                const SizedBox(height: 8),
+                Text(l10n.restoreConfirmDialogItem1),
+                Text(l10n.restoreConfirmDialogItem2),
+                Text(l10n.restoreConfirmDialogItem3),
+                const SizedBox(height: 16),
                 Text(
-                  '请确保您已经备份了当前的重要数据。',
-                  style: TextStyle(
+                  l10n.restoreConfirmDialogWarning,
+                  style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     color: Colors.red,
                   ),
@@ -747,7 +735,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('取消'),
+                child: Text(l10n.cancel),
               ),
               ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(true),
@@ -755,7 +743,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                   backgroundColor: Colors.red,
                   foregroundColor: Colors.white,
                 ),
-                child: const Text('确认还原'),
+                child: Text(l10n.confirmRestoreBtn),
               ),
             ],
           ),
@@ -765,38 +753,39 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
 
   /// 显示合并导入确认对话框
   Future<bool> _showMergeConfirmDialog() async {
+    final l10n = AppLocalizations.of(context);
     return await showDialog<bool>(
           context: context,
           barrierDismissible: false,
           builder: (context) => AlertDialog(
-            title: const Row(
+            title: Row(
               children: [
-                Icon(Icons.merge_type, color: Colors.indigo),
-                SizedBox(width: 8),
-                Text('确认合并导入'),
+                const Icon(Icons.merge_type, color: Colors.indigo),
+                const SizedBox(width: 8),
+                Text(l10n.mergeConfirmDialogTitle),
               ],
             ),
-            content: const Column(
+            content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('此操作将保留当前数据，并与备份数据进行合并：'),
-                SizedBox(height: 8),
-                Text('• 相同ID的笔记按“最后写入 wins”保留较新版本'),
-                Text('• 不同ID的笔记全部保留'),
-                Text('• 设置与AI分析数据合并追加'),
-                SizedBox(height: 12),
-                Text('此操作可逆：可再次导入覆盖备份或继续合并。'),
+                Text(l10n.mergeConfirmDialogDesc),
+                const SizedBox(height: 8),
+                Text(l10n.mergeConfirmDialogItem1),
+                Text(l10n.mergeConfirmDialogItem2),
+                Text(l10n.mergeConfirmDialogItem3),
+                const SizedBox(height: 12),
+                Text(l10n.mergeConfirmDialogReversible),
               ],
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
-                child: const Text('取消'),
+                child: Text(l10n.cancel),
               ),
               FilledButton(
                 onPressed: () => Navigator.of(context).pop(true),
-                child: const Text('开始合并'),
+                child: Text(l10n.startMerge),
               ),
             ],
           ),

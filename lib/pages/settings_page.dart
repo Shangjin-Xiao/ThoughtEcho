@@ -129,9 +129,10 @@ class SettingsPageState extends State<SettingsPage> {
     final Uri uri = Uri.parse(url);
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
       final messenger = ScaffoldMessenger.of(context);
       messenger.showSnackBar(SnackBar(
-        content: Text('无法打开链接: $url'),
+        content: Text(l10n.cannotOpenLink(url)),
         duration: AppConstants.snackBarDurationError,
       ));
     }
@@ -170,9 +171,10 @@ class SettingsPageState extends State<SettingsPage> {
       });
 
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('检查更新失败: ${e.toString()}'),
+            content: Text(l10n.checkUpdateFailed(e.toString())),
             backgroundColor: Theme.of(context).colorScheme.error,
             duration: AppConstants.snackBarDurationError,
           ),
@@ -636,9 +638,10 @@ class SettingsPageState extends State<SettingsPage> {
                         );
                       } catch (e) {
                         if (!currentContext.mounted) return;
+                        final l10n = AppLocalizations.of(currentContext);
                         ScaffoldMessenger.of(currentContext).showSnackBar(
                           SnackBar(
-                            content: Text('获取调试信息失败: $e'),
+                            content: Text(l10n.getDebugInfoFailed(e.toString())),
                             duration: const Duration(seconds: 3),
                           ),
                         );
@@ -1060,16 +1063,17 @@ class SettingsPageState extends State<SettingsPage> {
       }).toList();
 
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         // 显示加载对话框
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) => const AlertDialog(
+          builder: (context) => AlertDialog(
             content: Row(
               children: [
-                CircularProgressIndicator(),
-                SizedBox(width: 16),
-                Text('正在生成AI年度报告...'),
+                const CircularProgressIndicator(),
+                const SizedBox(width: 16),
+                Text(l10n.generatingAiReport),
               ],
             ),
           ),

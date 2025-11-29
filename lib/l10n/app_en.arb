@@ -1407,5 +1407,168 @@
         "type": "int"
       }
     }
-  }
+  },
+
+  "cannotOpenLink": "Cannot open link: {url}",
+  "@cannotOpenLink": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "checkUpdateFailed": "Failed to check for updates: {error}",
+  "@checkUpdateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "getDebugInfoFailed": "Failed to get debug info: {error}",
+  "@getDebugInfoFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "generatingAiReport": "Generating AI annual report...",
+  "contentLength": "Content length: {length} characters",
+  "@contentLength": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "containsHtmlTags": "Contains HTML tags: {status}",
+  "@containsHtmlTags": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "first100Chars": "First 100 characters:",
+  "testFailedEmptyContent": "Test failed: AI returned empty content",
+  
+  "includeMediaFilesHint": "Include images, audio and other media files when checked (larger file but more complete)",
+  "selectImportMode": "Select Import Mode",
+  "overwriteImport": "Overwrite Import (Clear existing data)",
+  "overwriteImportDesc": "Delete all current data and replace with backup content",
+  "mergeImport": "Merge Import (LWW strategy)",
+  "mergeImportDesc": "Keep existing data and merge with backup data by update time",
+  "continueAction": "Continue",
+  "restoreSuccess": "Data restored successfully! All data has been updated.",
+  "confirmRestore": "Confirm Restore",
+  "confirmMergeImport": "Confirm Merge Import",
+  "mergeImportHint": "This operation will keep current data and merge with backup data:",
+  "mergeImportReversible": "This operation is reversible: you can import overwrite backup or continue merging again.",
+  "startMerge": "Start Merge",
+  "confirmRestoreBtn": "Confirm Restore",
+  
+  "favoriteCountWithNum": "Favorited ({count})",
+  "@favoriteCountWithNum": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "shareFailed": "Share failed: {error}",
+  "@shareFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "saveFailed": "Save failed: {error}",
+  "@saveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  
+  "analysisRecordDeleted": "Analysis record deleted",
+  "deleteFailed": "Delete failed: {error}",
+  "@deleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadFailed": "Load failed: {error}",
+  "@loadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteConfirmTitle": "Delete Confirmation",
+  "deleteRecordConfirm": "Are you sure you want to delete this analysis record?",
+  "close": "Close",
+  "serviceNotInitialized": "Service not initialized, delete failed",
+  "confirmDeleteAll": "Confirm Delete All",
+  "deleteAllRecordsConfirm": "Are you sure you want to delete all analysis records? This action cannot be undone.",
+  "allRecordsDeleted": "All records deleted",
+  "selectAnnualReportType": "Select Annual Report Type",
+  "selectReportTypeHint": "Please select the type of annual report to generate:",
+  
+  "unknownTag": "Unknown tag",
+  "morning": "Morning",
+  "forenoon": "Forenoon",
+  "afternoon": "Afternoon",
+  "evening": "Evening",
+  "night": "Night",
+  "growth": "Growth",
+  "learning": "Learning",
+  "progress": "Progress",
+  "success": "Success",
+  "happiness": "Happiness",
+  "gratitude": "Gratitude",
+  "harvest": "Harvest",
+  "breakthrough": "Breakthrough",
+  "hope": "Hope",
+  
+  "backupFormatZip": "Will create a ZIP backup file containing all notes, settings and media files",
+  "backupFormatJson": "Will create a JSON backup file containing all notes and settings",
+  "supportedBackupFormats": "Supports new ZIP format and legacy JSON format backup files",
+  "restoringData": "Restoring data... {current}/{total}",
+  "@restoringData": {
+    "placeholders": {
+      "current": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "restoreFailedGeneric": "Failed to restore data: {error}",
+  "@restoreFailedGeneric": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "restoreFailedOutOfMemory": "Restore failed: Out of memory\n\nSuggestions:\n• Close other apps to free memory\n• Restart the app and try again\n• Check if the backup file is too large",
+  "restoreFailedNoSpace": "Restore failed: Insufficient storage space\n\nPlease clear device storage and try again.",
+  "restoreFailedPermission": "Restore failed: Permission denied\n\nPlease check the app's storage permission settings.",
+  "restoreCancelled": "Restore cancelled",
+  "restoreFailedCorrupt": "Restore failed: Backup file is corrupted or in incorrect format\n\nPlease check if the backup file is complete.",
+  
+  "restoreConfirmDialogTitle": "Confirm Restore",
+  "restoreConfirmDialogDesc": "This operation will:",
+  "restoreConfirmDialogItem1": "• Delete all notes and settings on this device",
+  "restoreConfirmDialogItem2": "• Replace with data from backup file",
+  "restoreConfirmDialogItem3": "• This action cannot be undone",
+  "restoreConfirmDialogWarning": "Please make sure you have backed up important data.",
+  
+  "mergeConfirmDialogTitle": "Confirm Merge Import",
+  "mergeConfirmDialogDesc": "This operation will keep current data and merge with backup data:",
+  "mergeConfirmDialogItem1": "• Notes with same ID will keep the newer version (Last-Write-Wins)",
+  "mergeConfirmDialogItem2": "• Notes with different IDs will all be kept",
+  "mergeConfirmDialogItem3": "• Settings and AI analysis data will be merged",
+  "mergeConfirmDialogReversible": "This operation is reversible: you can import overwrite backup or continue merging again."
 }

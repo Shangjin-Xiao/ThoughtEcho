@@ -3,6 +3,7 @@ import '../models/ai_analysis_model.dart';
 import '../widgets/app_loading_view.dart';
 import '../widgets/app_empty_view.dart';
 import '../constants/app_constants.dart';
+import '../gen_l10n/app_localizations.dart';
 
 /// AI分析历史页面（简化版，已移除年度报告功能）
 class AIAnalysisHistoryPage extends StatefulWidget {
@@ -61,19 +62,20 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
       });
 
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(
-            content: Text('分析记录已删除'), duration: Duration(seconds: 2)));
+        ).showSnackBar(SnackBar(
+            content: Text(l10n.analysisRecordDeleted), duration: const Duration(seconds: 2)));
       }
     } catch (e) {
       if (!mounted) return;
-
+      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(
         SnackBar(
-          content: Text('删除失败: $e'),
+          content: Text(l10n.deleteFailed(e.toString())),
           duration: AppConstants.snackBarDurationError,
         ),
       );
@@ -83,16 +85,17 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI分析历史'),
+        title: Text(l10n.analysisHistory),
         actions: [
           if (_analyses.isNotEmpty)
             IconButton(
               icon: const Icon(Icons.refresh),
               onPressed: _loadAnalyses,
-              tooltip: '刷新',
+              tooltip: l10n.retry,
             ),
         ],
       ),
@@ -101,6 +104,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
   }
 
   Widget _buildBody(ThemeData theme) {
+    final l10n = AppLocalizations.of(context);
     if (_isLoading) {
       return const AppLoadingView();
     }
@@ -112,9 +116,9 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
           children: [
             const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: 16),
-            Text('加载失败: $_error'),
+            Text(l10n.loadFailed(_error!)),
             const SizedBox(height: 16),
-            ElevatedButton(onPressed: _loadAnalyses, child: const Text('重试')),
+            ElevatedButton(onPressed: _loadAnalyses, child: Text(l10n.retry)),
           ],
         ),
       );
@@ -170,22 +174,23 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
   }
 
   void _showDeleteDialog(AIAnalysis analysis) {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('删除确认'),
-        content: const Text('确定要删除这条分析记录吗？'),
+        title: Text(l10n.deleteConfirmTitle),
+        content: Text(l10n.deleteRecordConfirm),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
               _deleteAnalysis(analysis);
             },
-            child: const Text('删除'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -193,6 +198,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
   }
 
   void _showAnalysisDetail(AIAnalysis analysis) {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -201,7 +207,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('关闭'),
+            child: Text(l10n.close),
           ),
         ],
       ),
