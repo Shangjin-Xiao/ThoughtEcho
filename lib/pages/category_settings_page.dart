@@ -5,6 +5,7 @@ import '../models/note_category.dart';
 import '../utils/icon_utils.dart';
 import '../theme/app_theme.dart';
 import '../constants/app_constants.dart';
+import '../gen_l10n/app_localizations.dart';
 
 class CategorySettingsPage extends StatefulWidget {
   const CategorySettingsPage({super.key});
@@ -28,16 +29,17 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('标签管理')),
+      appBar: AppBar(title: Text(l10n.tagManagement)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '标签管理',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Text(
+              l10n.tagManagement,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
             // 输入与添加区域卡片化
@@ -59,17 +61,17 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                         child: TextField(
                           controller: _categoryController,
                           maxLength: 50,
-                          decoration: const InputDecoration(
-                            labelText: '新标签名称',
-                            hintText: '输入标签名称（最多50字）',
+                          decoration: InputDecoration(
+                            labelText: l10n.newTagName,
+                            hintText: l10n.enterTagNameHint,
                             counterText: '',
-                            border: OutlineInputBorder(),
+                            border: const OutlineInputBorder(),
                           ),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Tooltip(
-                        message: '选择图标',
+                        message: l10n.selectIcon,
                         child: InkWell(
                           onTap: () => _showIconSelector(context),
                           borderRadius:
@@ -113,15 +115,15 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                     CircularProgressIndicator(strokeWidth: 2),
                               )
                             : const Icon(Icons.check),
-                        label: Text(_isLoading ? '添加中' : '添加'),
+                        label: Text(_isLoading ? l10n.adding : l10n.add),
                         onPressed: _isLoading
                             ? null
                             : () async {
                                 final text = _categoryController.text.trim();
                                 if (text.isEmpty) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                        content: Text('请输入标签名称'),
+                                    SnackBar(
+                                        content: Text(l10n.pleaseEnterTagName),
                                         duration: AppConstants
                                             .snackBarDurationNormal),
                                   );
@@ -137,8 +139,8 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                   );
                                   if (mounted) {
                                     messenger.showSnackBar(
-                                      const SnackBar(
-                                          content: Text('标签添加成功'),
+                                      SnackBar(
+                                          content: Text(l10n.tagAddedSuccess),
                                           duration: AppConstants
                                               .snackBarDurationNormal),
                                     );
@@ -149,7 +151,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                   if (mounted) {
                                     messenger.showSnackBar(
                                       SnackBar(
-                                          content: Text('添加标签失败：$e'),
+                                          content: Text(l10n.addTagFailed(e.toString())),
                                           duration: AppConstants
                                               .snackBarDurationError),
                                     );
@@ -181,8 +183,8 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                         Expanded(
                           child: Text(
                             _selectedIconName == null
-                                ? '可选一个图标或直接输入一个Emoji作为标签图标'
-                                : '已选择图标：${_selectedIconName!}',
+                                ? l10n.iconSelectionHint
+                                : l10n.iconSelected(_selectedIconName!),
                             style: TextStyle(
                               fontSize: 12,
                               color: Theme.of(context)
@@ -195,7 +197,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                           TextButton(
                             onPressed: () =>
                                 setState(() => _selectedIconName = null),
-                            child: const Text('清除'),
+                            child: Text(l10n.clear),
                           ),
                       ],
                     ),
@@ -212,11 +214,11 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                 }
 
                 if (snapshot.hasError) {
-                  return Center(child: Text('加载标签失败: ${snapshot.error}'));
+                  return Center(child: Text(l10n.loadTagsFailed(snapshot.error.toString())));
                 }
 
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return const Center(child: Text('暂无标签'));
+                  return Center(child: Text(l10n.noTags));
                 }
 
                 final categories = snapshot.data!;
@@ -256,6 +258,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
   void _showIconSelector(BuildContext context) {
     final TextEditingController emojiSearchController = TextEditingController();
     String searchQuery = '';
+    final l10n = AppLocalizations.of(context);
     Map<String, bool> expandedCategories = {
       '情感': true,
       '思考': false,
@@ -289,7 +292,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
           final materialIcons = IconUtils.categoryIcons.entries.toList();
 
           return AlertDialog(
-            title: const Text('选择图标'),
+            title: Text(l10n.selectIcon),
             content: SizedBox(
               width: MediaQuery.of(context).size.width * 0.8,
               height: MediaQuery.of(context).size.height * 0.6,
@@ -299,7 +302,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                   TextField(
                     controller: emojiSearchController,
                     decoration: InputDecoration(
-                      hintText: '直接输入表情符号...',
+                      hintText: l10n.enterEmojiHint,
                       prefixIcon: const Icon(Icons.search),
                       suffixIcon: emojiSearchController.text.isNotEmpty
                           ? IconButton(
@@ -326,12 +329,12 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                       child: Row(
                         children: [
                           Text(
-                            '使用 "${emojiSearchController.text}" 作为图标',
+                            l10n.useAsIcon(emojiSearchController.text),
                             style: const TextStyle(color: Colors.blue),
                           ),
                           const Spacer(),
                           ElevatedButton(
-                            child: const Text('选择'),
+                            child: Text(l10n.select),
                             onPressed: () {
                               setState(
                                 () => _selectedIconName =
@@ -447,9 +450,9 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
 
                           // 系统图标部分
                           ListTile(
-                            title: const Text(
-                              '系统图标',
-                              style: TextStyle(fontWeight: FontWeight.bold),
+                            title: Text(
+                              l10n.systemIcons,
+                              style: const TextStyle(fontWeight: FontWeight.bold),
                             ),
                             trailing: Icon(
                               expandedCategories['系统图标'] ?? false
@@ -545,7 +548,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('取消'),
+                child: Text(l10n.cancel),
               ),
             ],
           );
@@ -631,11 +634,12 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
 
   Widget _buildCategoryItem(NoteCategory category, int index, int total) {
     final isDefault = category.isDefault;
+    final l10n = AppLocalizations.of(context);
     return InkWell(
       onTap: () => _editCategory(context, category),
       onLongPress: isDefault
           ? null
-          : () => _deleteCategory(context, category), // 修复：默认标签不能长按删除
+          : () => _deleteCategory(context, category),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(
@@ -680,7 +684,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            '默认',
+                            l10n.defaultTag,
                             style: TextStyle(
                               fontSize: 11,
                               color: Theme.of(context)
@@ -693,7 +697,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    isDefault ? '系统默认标签' : '点击编辑，长按删除',
+                    isDefault ? l10n.systemDefaultTag : l10n.tapToEditLongPressToDelete,
                     style: TextStyle(
                       fontSize: 11,
                       color: isDefault
@@ -707,13 +711,13 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
             const SizedBox(width: 8),
             IconButton(
               icon: const Icon(Icons.edit_outlined, size: 20),
-              tooltip: '编辑',
+              tooltip: l10n.edit,
               onPressed: () => _editCategory(context, category),
             ),
             if (!isDefault)
               IconButton(
                 icon: const Icon(Icons.delete_outline, size: 20),
-                tooltip: '删除',
+                tooltip: l10n.delete,
                 onPressed: () => _deleteCategory(context, category),
               ),
           ],
@@ -723,19 +727,20 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
   }
 
   void _deleteCategory(BuildContext context, NoteCategory category) {
+    final l10n = AppLocalizations.of(context);
     showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('确认删除'),
-        content: Text('确定要删除标签"${category.name}"吗？相关联的笔记将保留，但不再关联此标签。'),
+        title: Text(l10n.confirmDelete),
+        content: Text(l10n.deleteTagConfirmation(category.name)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('删除'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -750,8 +755,8 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
           if (context.mounted) {
             ScaffoldMessenger.of(
               context,
-            ).showSnackBar(const SnackBar(
-                content: Text('标签删除成功'),
+            ).showSnackBar(SnackBar(
+                content: Text(l10n.tagDeletedSuccess),
                 duration: AppConstants.snackBarDurationNormal));
           }
         } catch (e) {
@@ -761,7 +766,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
             ScaffoldMessenger.of(
               context,
             ).showSnackBar(SnackBar(
-                content: Text('删除标签失败：$e'),
+                content: Text(l10n.deleteTagFailed(e.toString())),
                 duration: AppConstants.snackBarDurationError));
           }
         }
@@ -801,6 +806,7 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final emojiCategories = IconUtils.getCategorizedEmojis();
     final materialIcons = IconUtils.categoryIcons.entries.toList();
     Map<String, List<String>> filteredEmojis = {};
@@ -812,7 +818,7 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
       });
     }
     return AlertDialog(
-      title: const Text('选择图标'),
+      title: Text(l10n.selectIcon),
       content: SizedBox(
         width: MediaQuery.of(context).size.width * 0.8,
         height: MediaQuery.of(context).size.height * 0.6,
@@ -821,7 +827,7 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
             TextField(
               controller: _emojiSearchController,
               decoration: InputDecoration(
-                hintText: '直接输入表情符号...',
+                hintText: l10n.enterEmojiHint,
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _emojiSearchController.text.isNotEmpty
                     ? IconButton(
@@ -846,12 +852,12 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
                 child: Row(
                   children: [
                     Text(
-                      '使用 "${_emojiSearchController.text}" 作为图标',
+                      l10n.useAsIcon(_emojiSearchController.text),
                       style: const TextStyle(color: Colors.blue),
                     ),
                     const Spacer(),
                     ElevatedButton(
-                      child: const Text('选择'),
+                      child: Text(l10n.select),
                       onPressed: () {
                         Navigator.of(context).pop(_emojiSearchController.text);
                       },
@@ -939,9 +945,9 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
                       );
                     }),
                     ListTile(
-                      title: const Text(
-                        '系统图标',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                      title: Text(
+                        l10n.systemIcons,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       trailing: Icon(
                         expandedCategories['系统图标'] ?? false
@@ -1016,7 +1022,7 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('取消'),
+          child: Text(l10n.cancel),
         ),
       ],
     );

@@ -431,5 +431,392 @@
         "type": "String"
       }
     }
+  },
+  
+  "themeSettings": "主题设置",
+  "themeMode": "主题模式",
+  "themeModeLight": "浅色",
+  "themeModeDark": "深色",
+  "useCustomThemeColor": "使用自定义主题色",
+  "selectThemeColor": "选择主题色",
+  "dynamicColor": "动态取色",
+  "dynamicColorDesc": "从系统提取主题颜色",
+  "customColorEnabledHint": "已启用自定义主题色，动态取色功能已暂时禁用",
+  "dynamicColorDisabledHint": "未启用动态取色，将使用默认蓝色主题",
+  "themeTools": "主题工具",
+  "themeToolsDesc": "如果主题颜色显示异常，可以尝试刷新主题",
+  "themeRefreshed": "主题已刷新",
+  "refreshTheme": "刷新主题",
+  
+  "hitokotoSettings": "每日一言设置",
+  "hitokotoTypeSettings": "每日一言类型设置",
+  "hitokotoTypeDesc": "您可以选择一个或多个\"每日一言\"类型，程序将从您选择的类型中随机抽取内容展示。不同类型代表不同的内容来源和风格。",
+  "selectAll": "全选",
+  "clearAll": "清除全部",
+  "typeSelection": "类型选择",
+  "typeSelectionHint": "点击选择您喜欢的句子类型",
+  "usageInstructions": "使用说明",
+  "hitokotoServiceProvider": "一言服务由 Hitokoto 提供",
+  "hitokotoHelpItem1": "至少需要选择一种类型，程序会随机展示选中类型的内容",
+  "hitokotoHelpItem2": "选择多种类型可以获得更丰富多样的内容体验",
+  "hitokotoHelpItem3": "不同类型代表不同的内容风格和来源平台",
+  "settingsSaved": "设置已保存",
+  
+  "tagManagement": "标签管理",
+  "newTagName": "新标签名称",
+  "enterTagNameHint": "输入标签名称（最多50字）",
+  "selectIcon": "选择图标",
+  "adding": "添加中",
+  "add": "添加",
+  "pleaseEnterTagName": "请输入标签名称",
+  "tagAddedSuccess": "标签添加成功",
+  "addTagFailed": "添加标签失败：{error}",
+  "@addTagFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "iconSelectionHint": "可选一个图标或直接输入一个Emoji作为标签图标",
+  "iconSelected": "已选择图标：{icon}",
+  "@iconSelected": {
+    "placeholders": {
+      "icon": {
+        "type": "String"
+      }
+    }
+  },
+  "clear": "清除",
+  "loadTagsFailed": "加载标签失败: {error}",
+  "@loadTagsFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noTags": "暂无标签",
+  "editTag": "编辑标签",
+  "tagName": "标签名称",
+  "icon": "图标",
+  "deleteTagConfirmation": "确定要删除标签\"{name}\"吗？相关联的笔记将保留，但不再关联此标签。",
+  "@deleteTagConfirmation": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tagDeletedSuccess": "标签删除成功",
+  "deleteTagFailed": "删除标签失败：{error}",
+  "@deleteTagFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "defaultTag": "默认",
+  "systemDefaultTag": "系统默认标签",
+  "tapToEditLongPressToDelete": "点击编辑，长按删除",
+  "enterEmojiHint": "直接输入表情符号...",
+  "useAsIcon": "使用 \"{emoji}\" 作为图标",
+  "@useAsIcon": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "systemIcons": "系统图标",
+  
+  "storageManagement": "存储管理",
+  "clearCache": "清理缓存",
+  "clearCacheConfirmTitle": "清理缓存",
+  "clearCacheConfirmContent": "确定要清理应用缓存吗？\n\n这将清除临时文件、图片缓存等，不会删除您的笔记数据。",
+  "cleanOrphanMedia": "清理无用媒体文件",
+  "cleanOrphanMediaConfirmTitle": "清理无用媒体文件",
+  "cleanOrphanMediaConfirmContent": "这将删除没有被任何笔记引用的媒体文件（图片、视频、音频）。\n\n确定继续吗？",
+  "databaseMaintenance": "数据库维护优化",
+  "databaseMaintenanceConfirmTitle": "数据库维护优化",
+  "databaseMaintenanceConfirmContent": "此操作将对数据库进行优化维护，包括：\n\n• 整理碎片空间\n• 更新统计信息\n• 重建索引\n\n维护过程可能需要几秒到几分钟，具体取决于数据量大小。\n\n确定继续吗？",
+  "startMaintenance": "开始维护",
+  "maintenanceInProgress": "数据库维护中...",
+  "preparingProgress": "准备中...",
+  "maintenanceComplete": "维护完成",
+  "maintenanceDuration": "耗时: {duration} 秒",
+  "@maintenanceDuration": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "databaseSizeChange": "数据库大小: {before} MB → {after} MB",
+  "@databaseSizeChange": {
+    "placeholders": {
+      "before": {
+        "type": "String"
+      },
+      "after": {
+        "type": "String"
+      }
+    }
+  },
+  "spaceSavedMb": "释放空间: {size} MB",
+  "@spaceSavedMb": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "noSpaceSaved": "未释放空间（数据库已很紧凑）",
+  "maintenanceFailed": "维护失败: {error}",
+  "@maintenanceFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadStorageInfoFailed": "加载存储信息失败: {error}",
+  "@loadStorageInfoFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cacheCleanedResult": "缓存清理完成，释放了 {size}",
+  "@cacheCleanedResult": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "clearCacheFailed": "清理缓存失败: {error}",
+  "@clearCacheFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "orphanFilesCleanedResult": "{count, plural, =0{没有发现无用文件} other{清理完成，删除了 {count} 个无用文件}}",
+  "@orphanFilesCleanedResult": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noOrphanFilesFound": "没有发现无用文件",
+  "cleanupFailed": "清理失败: {error}",
+  "@cleanupFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "totalStorageUsage": "总占用空间",
+  "databaseUsage": "数据库占用",
+  "mediaFilesUsage": "媒体文件占用",
+  "cacheUsage": "缓存占用",
+  "notesDatabase": "笔记数据库",
+  "aiDatabase": "AI数据库",
+  "logDatabase": "日志数据库",
+  "images": "图片",
+  "videos": "视频",
+  "audios": "音频",
+  "tempFilesAndCache": "临时文件和缓存",
+  "fileCount": "{count} 个文件",
+  "@fileCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dataStorageLocation": "数据存储位置",
+  "currentDataDirectory": "当前数据目录",
+  "custom": "自定义",
+  "windowsDataMigration": "Windows端数据目录迁移",
+  "windowsDataMigrationDesc": "将应用数据迁移到其他位置（如D盘），释放系统盘空间",
+  "changeDataDirectory": "更改数据目录",
+  "migrating": "迁移中...",
+  "confirmDataMigration": "确认数据迁移",
+  "migrationTargetPath": "即将迁移所有应用数据到：",
+  "migrationWarning": "⚠️ 迁移过程可能需要几分钟，期间请勿关闭应用。\n⚠️ 迁移完成后需要重启应用才能生效。",
+  "startMigration": "开始迁移",
+  "migratingData": "正在迁移数据",
+  "migrationComplete": "迁移完成",
+  "migrationCompleteMessage": "数据已成功迁移到新目录！\n\n请重启应用以使更改生效。",
+  "migrationFailed": "数据迁移失败，请查看日志了解详情",
+  "migrationFailedWithError": "迁移失败: {error}",
+  "@migrationFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "selectNewDataDirectory": "选择新的数据存储目录",
+  "directoryNotAvailable": "所选目录不可用或没有写权限",
+  "selectDirectoryFailed": "选择目录失败: {error}",
+  "@selectDirectoryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  
+  "logsViewer": "日志查看",
+  "logFilter": "日志过滤",
+  "clearLogs": "清除日志",
+  "searchLogs": "搜索日志...",
+  "noLogs": "暂无日志",
+  "loadMoreLogs": "加载更多日志",
+  "loadMoreLogsFailed": "加载更多日志失败: {error}",
+  "@loadMoreLogsFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logDetailsTitle": "{level} 日志 {source}",
+  "@logDetailsTitle": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      },
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "copyAll": "复制全部信息",
+  "timestamp": "时间: {time}",
+  "@timestamp": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "message": "消息:",
+  "errorLabel": "错误:",
+  "stackTrace": "堆栈跟踪:",
+  "logCopiedToClipboard": "日志详情已复制到剪贴板",
+  "containsError": "包含错误信息",
+  "sourceFilter": "来源: {source}",
+  "@sourceFilter": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "searchFilter": "搜索: {query}",
+  "@searchFilter": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "clearAllFilters": "清除全部",
+  "logFilterOptions": "日志过滤选项",
+  "reset": "重置",
+  "filterByLogLevel": "按日志级别过滤",
+  "filterBySource": "按来源过滤",
+  "enterSourceName": "输入日志来源名称...",
+  "apply": "应用",
+  "clearLogsTitle": "清除日志",
+  "clearLogsQuestion": "您想清除哪些日志？",
+  "clearMemoryLogsOnly": "仅清除内存日志",
+  "clearAllLogs": "清除全部日志",
+  "memoryLogsCleared": "内存中的日志已清除",
+  "allLogsCleared": "所有日志记录已清除",
+  "logsCount": "已显示 {count} 条日志 • 长按日志可复制 • 点击查看详情",
+  "@logsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logPageError": "日志页渲染异常:",
+  
+  "networkDiagnostic": "网络诊断",
+  "networkConfig": "网络配置",
+  "networkDiagnosticSection": "网络诊断",
+  "diagnosing": "诊断中...",
+  "runNetworkDiagnostic": "运行网络诊断",
+  "diagnosticResult": "诊断结果: {passed}/{total} 项通过",
+  "@diagnosticResult": {
+    "placeholders": {
+      "passed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "diagnosticFailed": "诊断失败: {error}",
+  "@diagnosticFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceDiscovery": "设备发现",
+  "startDiscovery": "开始发现",
+  "stopDiscovery": "停止发现",
+  "sendAnnouncement": "发送公告",
+  "deviceAnnouncementSent": "设备公告已发送",
+  "startDiscoveryFailed": "启动设备发现失败: {error}",
+  "@startDiscoveryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "sendAnnouncementFailed": "发送设备公告失败: {error}",
+  "@sendAnnouncementFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "statusRunning": "状态: 运行中",
+  "statusStopped": "状态: 已停止",
+  "discoveredDevices": "发现的设备",
+  "discoveredDevicesCount": "发现的设备 ({count})",
+  "@discoveredDevicesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noDevicesFound": "暂无发现的设备",
+  "unknownModel": "未知型号",
+  "fingerprint": "指纹: {fingerprint}",
+  "@fingerprint": {
+    "placeholders": {
+      "fingerprint": {
+        "type": "String"
+      }
+    }
   }
 }
