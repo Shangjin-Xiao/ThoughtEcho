@@ -860,6 +860,28 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                     label: Text(l10n.location),
                     selected: _includeLocation,
                     onSelected: (value) {
+                      // 编辑模式下的提示逻辑
+                      if (widget.initialQuote != null) {
+                        if (value && _originalLocation == null) {
+                          // 尝试添加但原始没有位置
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('此笔记首次保存时未记录位置，无法补充添加'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                          return;
+                        }
+                        if (!value && _originalLocation != null) {
+                          // 尝试移除已有位置
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('移除后将无法再次添加或更改位置信息'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      }
                       setState(() {
                         _includeLocation = value;
                       });
@@ -886,6 +908,28 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                     label: Text(l10n.weather),
                     selected: _includeWeather,
                     onSelected: (value) {
+                      // 编辑模式下的提示逻辑
+                      if (widget.initialQuote != null) {
+                        if (value && _originalWeather == null) {
+                          // 尝试添加但原始没有天气
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('此笔记首次保存时未记录天气，无法补充添加'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                          return;
+                        }
+                        if (!value && _originalWeather != null) {
+                          // 尝试移除已有天气
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('移除后将无法再次添加或更改天气信息'),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                      }
                       setState(() {
                         _includeWeather = value;
                       });
