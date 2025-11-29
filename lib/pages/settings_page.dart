@@ -641,7 +641,8 @@ class SettingsPageState extends State<SettingsPage> {
                         final l10n = AppLocalizations.of(currentContext);
                         ScaffoldMessenger.of(currentContext).showSnackBar(
                           SnackBar(
-                            content: Text(l10n.getDebugInfoFailed(e.toString())),
+                            content:
+                                Text(l10n.getDebugInfoFailed(e.toString())),
                             duration: const Duration(seconds: 3),
                           ),
                         );
@@ -899,7 +900,7 @@ class SettingsPageState extends State<SettingsPage> {
   Widget _buildLanguageItem(BuildContext context) {
     final settingsService = Provider.of<SettingsService>(context);
     final currentLocale = settingsService.localeCode;
-    
+
     String getLanguageName(String? code) {
       switch (code) {
         case 'zh':
@@ -964,7 +965,9 @@ class SettingsPageState extends State<SettingsPage> {
     return ListTile(
       key: _startupPageGuideKey, // 功能引导 key
       title: Text(l10n.settingsDefaultStartPage),
-      subtitle: Text(currentValue == 0 ? l10n.settingsStartPageHome : l10n.settingsStartPageNotes),
+      subtitle: Text(currentValue == 0
+          ? l10n.settingsStartPageHome
+          : l10n.settingsStartPageNotes),
       leading: const Icon(Icons.home_outlined),
       onTap: () {
         showDialog(

@@ -52,7 +52,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                 children: [
                   Text(
                     l10n.themeMode,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -273,7 +274,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                 children: [
                   Text(
                     l10n.themeTools,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 16),
                   Text(

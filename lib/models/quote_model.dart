@@ -13,7 +13,7 @@ class Quote {
   final String? categoryId;
   final String? colorHex;
   final String? location;
-  final double? latitude;  // 位置纬度，支持离线存储
+  final double? latitude; // 位置纬度，支持离线存储
   final double? longitude; // 位置经度，支持离线存储
   final String? weather;
   final String? temperature;
@@ -337,7 +337,8 @@ class Quote {
   };
 
   /// 修复：添加工具方法
-  bool get hasLocation => (location != null && location!.isNotEmpty) || hasCoordinates;
+  bool get hasLocation =>
+      (location != null && location!.isNotEmpty) || hasCoordinates;
   bool get hasCoordinates => latitude != null && longitude != null;
   bool get hasWeather => weather != null && weather!.isNotEmpty;
   bool get hasAiAnalysis => aiAnalysis != null && aiAnalysis!.isNotEmpty;

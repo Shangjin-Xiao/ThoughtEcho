@@ -435,7 +435,14 @@
   "confirmDelete": "确认删除",
   "confirmDeleteAnalysis": "确定要删除这条分析记录吗？",
   "deleteSuccess": "删除成功",
-  "deleteFailed": "删除失败",
+  "deleteFailed": "删除失败: {error}",
+  "@deleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "serviceNotInitialized": "服务未初始化",
   
   "location": "位置",

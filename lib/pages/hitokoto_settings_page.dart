@@ -190,7 +190,8 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                       onPressed: () {
                         setState(() {
                           _selectedTypes.clear();
-                          for (final key in ApiService.getHitokotoTypes(l10n).keys) {
+                          for (final key
+                              in ApiService.getHitokotoTypes(l10n).keys) {
                             _selectedTypes.add(key);
                           }
                         });
@@ -255,7 +256,9 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                     Wrap(
                       spacing: 12,
                       runSpacing: 12,
-                      children: ApiService.getHitokotoTypes(l10n).entries.map((entry) {
+                      children: ApiService.getHitokotoTypes(l10n)
+                          .entries
+                          .map((entry) {
                         final isSelected = _selectedTypes.contains(
                           entry.key,
                         );

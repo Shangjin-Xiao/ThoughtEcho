@@ -128,7 +128,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       final filteredQuotes = _filterQuotesByPeriod(quotes);
 
       // 更新数据版本key，触发动画
-      final newDataKey = '${_selectedPeriod}_${_selectedDate.millisecondsSinceEpoch}';
+      final newDataKey =
+          '${_selectedPeriod}_${_selectedDate.millisecondsSinceEpoch}';
       final dataChanged = newDataKey != _dataKey;
 
       setState(() {
@@ -307,7 +308,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
         // 添加位置信息
         if (quote.location != null && quote.location!.isNotEmpty) {
-          content = l10n.noteMetaWithLocation(dateStr, quote.location!, content);
+          content =
+              l10n.noteMetaWithLocation(dateStr, quote.location!, content);
         } else {
           content = l10n.noteMeta(dateStr, content);
         }
@@ -947,7 +949,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           // 统计卡片网格 - 根据标志决定是否播放动画
           TweenAnimationBuilder<double>(
             key: ValueKey('stats1_$_dataKey'), // 添加key确保动画只在数据变化时触发
-            duration: _shouldAnimateOverview 
+            duration: _shouldAnimateOverview
                 ? const Duration(milliseconds: 600)
                 : Duration.zero, // 不动画时立即显示
             tween: Tween(begin: _shouldAnimateOverview ? 0.0 : 1.0, end: 1.0),
@@ -963,8 +965,11 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                               l10n.notesUnitPlain, Icons.note_alt_outlined)),
                       const SizedBox(width: 12),
                       Expanded(
-                          child: _buildStatCard(l10n.totalWordCount,
-                              '$totalWords', l10n.wordsUnitPlain, Icons.text_fields)),
+                          child: _buildStatCard(
+                              l10n.totalWordCount,
+                              '$totalWords',
+                              l10n.wordsUnitPlain,
+                              Icons.text_fields)),
                     ],
                   ),
                 ),
@@ -990,8 +995,11 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                               l10n.wordsPerNote, Icons.calculate_outlined)),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: _buildStatCard(l10n.activeDays,
-                            '${_getActiveDays()}', l10n.daysUnitPlain, Icons.calendar_today_outlined),
+                        child: _buildStatCard(
+                            l10n.activeDays,
+                            '${_getActiveDays()}',
+                            l10n.daysUnitPlain,
+                            Icons.calendar_today_outlined),
                       ),
                     ],
                   ),
@@ -1221,7 +1229,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                 duration: _shouldAnimateOverview
                     ? Duration(milliseconds: 600 + (favorited.indexOf(q) * 150))
                     : Duration.zero,
-                tween: Tween(begin: _shouldAnimateOverview ? 0.0 : 1.0, end: 1.0),
+                tween:
+                    Tween(begin: _shouldAnimateOverview ? 0.0 : 1.0, end: 1.0),
                 builder: (context, value, child) {
                   return Transform.translate(
                     offset: Offset(0, 15 * (1 - value)),
@@ -1326,7 +1335,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     final l10n = AppLocalizations.of(context);
     // 判断是否正在等待首个响应（加载中但还没有文本）
     final isWaitingFirstResponse = _insightLoading && _insightText.isEmpty;
-    
+
     return Card(
       elevation: 1,
       child: Padding(
@@ -1362,19 +1371,14 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   if (isWaitingFirstResponse) ...[
                     Text(
                       l10n.generatingInsightsForPeriod(_getPeriodName(l10n)),
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant),
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color:
+                              Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
                     const SizedBox(height: 8),
                     LinearProgressIndicator(
-                      backgroundColor: Theme.of(context)
-                          .colorScheme
-                          .surfaceContainerHighest,
+                      backgroundColor:
+                          Theme.of(context).colorScheme.surfaceContainerHighest,
                       valueColor: AlwaysStoppedAnimation<Color>(
                         Theme.of(context).colorScheme.primary,
                       ),
@@ -1396,9 +1400,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 8),
                       decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHigh,
+                        color:
+                            Theme.of(context).colorScheme.surfaceContainerHigh,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -1407,22 +1410,19 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                           Icon(
                             Icons.auto_awesome,
                             size: 16,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant,
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                           const SizedBox(width: 6),
                           Text(
                             l10n.noInsights,
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                                  height: 1.4,
-                                ),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                      height: 1.4,
+                                    ),
                           ),
                         ],
                       ),
@@ -2012,7 +2012,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
               ),
               const SizedBox(height: 24),
               Text(
-                _featuredCards.isEmpty ? l10n.noFeaturedCards : l10n.featuredCards,
+                _featuredCards.isEmpty
+                    ? l10n.noFeaturedCards
+                    : l10n.featuredCards,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w600,
                     ),
@@ -2257,7 +2259,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         card,
         width: 800,
         height: 1200,
-        customName: 'ThoughtEcho_Report_Card_${DateTime.now().millisecondsSinceEpoch}',
+        customName:
+            'ThoughtEcho_Report_Card_${DateTime.now().millisecondsSinceEpoch}',
         context: scaffoldContext,
       );
 

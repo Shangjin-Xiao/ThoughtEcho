@@ -77,7 +77,7 @@ class _OnboardingPageState extends State<OnboardingPage>
       try {
         servicesInitializedNotifier = context.read<ValueNotifier<bool>>();
       } catch (e) {
-        logError('无法获取servicesInitializedNotifier: $e', 
+        logError('无法获取servicesInitializedNotifier: $e',
             error: e, source: 'OnboardingPage');
         // 创建临时notifier以继续流程
         servicesInitializedNotifier = ValueNotifier<bool>(false);
@@ -87,12 +87,12 @@ class _OnboardingPageState extends State<OnboardingPage>
         servicesInitializedNotifier: servicesInitializedNotifier,
       );
       _controller = controller;
-      
+
       // 尝试初始化控制器，如果失败则记录详细错误
       try {
         controller.initialize(context);
       } catch (e, stackTrace) {
-        logError('OnboardingController初始化失败', 
+        logError('OnboardingController初始化失败',
             error: e, stackTrace: stackTrace, source: 'OnboardingPage');
         throw Exception('控制器初始化失败: $e');
       }
@@ -115,7 +115,7 @@ class _OnboardingPageState extends State<OnboardingPage>
         await _handleUpdateMigration();
       } else {
         // Web平台快速加载，其他平台保持延迟效果
-        final loadDelay = kIsWeb 
+        final loadDelay = kIsWeb
             ? const Duration(milliseconds: 100)
             : const Duration(milliseconds: 500);
         await Future.delayed(loadDelay);
@@ -128,8 +128,8 @@ class _OnboardingPageState extends State<OnboardingPage>
         _loadingAnimationController?.forward();
       }
     } catch (e, stackTrace) {
-      logError('初始化引导失败', error: e, stackTrace: stackTrace, 
-          source: 'OnboardingPage');
+      logError('初始化引导失败',
+          error: e, stackTrace: stackTrace, source: 'OnboardingPage');
       if (mounted) {
         setState(() {
           _errorMessage = '初始化失败，请重试';
@@ -172,8 +172,7 @@ class _OnboardingPageState extends State<OnboardingPage>
         if (!mounted) return;
 
         // 标记服务初始化完成
-        final servicesInitializedNotifier =
-            context.read<ValueNotifier<bool>>();
+        final servicesInitializedNotifier = context.read<ValueNotifier<bool>>();
         servicesInitializedNotifier.value = true;
 
         // 短暂延迟后自动跳转到主页
@@ -266,7 +265,8 @@ class _OnboardingPageState extends State<OnboardingPage>
                 color: theme.colorScheme.error,
               ),
               const SizedBox(height: 20),
-              Text(AppLocalizations.of(context).onboardingError, style: theme.textTheme.headlineSmall),
+              Text(AppLocalizations.of(context).onboardingError,
+                  style: theme.textTheme.headlineSmall),
               const SizedBox(height: 12),
               Text(
                 _errorMessage!,
@@ -276,7 +276,8 @@ class _OnboardingPageState extends State<OnboardingPage>
               const SizedBox(height: 32),
               FilledButton(
                 onPressed: _navigateToHome,
-                child: Text(AppLocalizations.of(context).onboardingContinueUsing),
+                child:
+                    Text(AppLocalizations.of(context).onboardingContinueUsing),
               ),
             ],
           ),
@@ -331,7 +332,8 @@ class _OnboardingPageState extends State<OnboardingPage>
                     else
                       FilledButton(
                         onPressed: _navigateToHome,
-                        child: Text(AppLocalizations.of(context).onboardingEnterApp),
+                        child: Text(
+                            AppLocalizations.of(context).onboardingEnterApp),
                       ),
                   ],
                 ),
@@ -495,10 +497,11 @@ class _OnboardingPageState extends State<OnboardingPage>
                                     .map((o) => o.value as String)
                                     .join(',');
                                 controller.updatePreference(
-                                  'hitokotoTypes', allValues);
+                                    'hitokotoTypes', allValues);
                               },
                               icon: const Icon(Icons.select_all, size: 16),
-                              label: Text(AppLocalizations.of(context).prefSelectAll),
+                              label: Text(
+                                  AppLocalizations.of(context).prefSelectAll),
                               style: OutlinedButton.styleFrom(
                                 padding:
                                     const EdgeInsets.symmetric(vertical: 8),
@@ -514,10 +517,11 @@ class _OnboardingPageState extends State<OnboardingPage>
                                     ? options.first.value as String
                                     : 'a';
                                 controller.updatePreference(
-                                  'hitokotoTypes', firstValue);
+                                    'hitokotoTypes', firstValue);
                               },
                               icon: const Icon(Icons.clear_all, size: 16),
-                              label: Text(AppLocalizations.of(context).prefClearAll),
+                              label: Text(
+                                  AppLocalizations.of(context).prefClearAll),
                               style: OutlinedButton.styleFrom(
                                 padding:
                                     const EdgeInsets.symmetric(vertical: 8),
@@ -552,7 +556,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                                 }
                               }
                               final newValue = newSelectedValues.join(',');
-                                controller.updatePreference(
+                              controller.updatePreference(
                                   'hitokotoTypes', newValue);
                             },
                             backgroundColor: theme.colorScheme.surface,
@@ -705,7 +709,9 @@ class _OnboardingPageState extends State<OnboardingPage>
                         ),
                       )
                     : const Icon(Icons.check),
-                label: Text(state.isCompleting ? AppLocalizations.of(context).pleaseWait : AppLocalizations.of(context).onboardingStart),
+                label: Text(state.isCompleting
+                    ? AppLocalizations.of(context).pleaseWait
+                    : AppLocalizations.of(context).onboardingStart),
               )
             else
               FilledButton.icon(
@@ -784,14 +790,16 @@ class _OnboardingPageState extends State<OnboardingPage>
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(AppLocalizations.of(context).onboardingInitFailed),
+                                content: Text(AppLocalizations.of(context)
+                                    .onboardingInitFailed),
                                 duration: AppConstants.snackBarDurationError,
                               ),
                             );
                           }
                         }
                       },
-                      child: Text(AppLocalizations.of(context).onboardingConfirmSkip),
+                      child: Text(
+                          AppLocalizations.of(context).onboardingConfirmSkip),
                     ),
                   ],
           );

@@ -188,7 +188,8 @@ class MediaReferenceService {
             '检测到 ${plan.missingReferencePairs} 条缺失的引用记录，实际执行时将自动修复',
           );
         } else {
-          final healed = await _healMissingReferences(plan.missingReferenceIndex);
+          final healed =
+              await _healMissingReferences(plan.missingReferenceIndex);
           if (healed > 0) {
             logDebug('已自动修复 $healed 条缺失的媒体引用记录');
           }
@@ -310,8 +311,7 @@ class MediaReferenceService {
       final variantPath = path.normalize(filePath);
       final key = _canonicalComparisonKey(variantPath);
 
-      final variants =
-          index.putIfAbsent(key, () => <String, Set<String>>{});
+      final variants = index.putIfAbsent(key, () => <String, Set<String>>{});
       final quoteSet = variants.putIfAbsent(variantPath, () => <String>{});
       quoteSet.add(quoteId);
     }
@@ -338,8 +338,7 @@ class MediaReferenceService {
         final variantPath = path.normalize(mediaPath);
         final key = _canonicalComparisonKey(variantPath);
 
-        final variants =
-            index.putIfAbsent(key, () => <String, Set<String>>{});
+        final variants = index.putIfAbsent(key, () => <String, Set<String>>{});
         final quoteSet = variants.putIfAbsent(variantPath, () => <String>{});
         quoteSet.add(quoteId);
       }
@@ -393,7 +392,7 @@ class MediaReferenceService {
     try {
       final normalizedPath = await _normalizeFilePath(filePath);
       final refCount = await getReferenceCount(normalizedPath);
-      
+
       if (refCount > 0) {
         return false; // 仍被引用，不删除
       }

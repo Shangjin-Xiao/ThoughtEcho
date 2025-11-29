@@ -279,7 +279,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
             return AlertDialog(
               title: Text(l10n.confirmLeave),
               content: Text(busySync
-                  ? l10n.leaveWhileSyncing(_getSyncStatusText(syncService.syncStatus, l10n))
+                  ? l10n.leaveWhileSyncing(
+                      _getSyncStatusText(syncService.syncStatus, l10n))
                   : _isScanning
                       ? l10n.leaveWhileScanning
                       : l10n.leaveWhileSending),
@@ -641,7 +642,9 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                         Expanded(
                           child: Text(
                             _discoveryRemainingMs > 0
-                                ? l10n.scanningDevicesWithTime(_nearbyDevices.length, (_discoveryRemainingMs / 1000).ceil())
+                                ? l10n.scanningDevicesWithTime(
+                                    _nearbyDevices.length,
+                                    (_discoveryRemainingMs / 1000).ceil())
                                 : l10n.scanningDevices(_nearbyDevices.length),
                           ),
                         ),
@@ -667,7 +670,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                             ClipboardData(text: _localFingerprint!));
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                              content: Text(l10n.copiedFingerprint(_localFingerprint!)),
+                              content: Text(
+                                  l10n.copiedFingerprint(_localFingerprint!)),
                               duration: const Duration(seconds: 2)),
                         );
                       }
@@ -888,9 +892,12 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
               : _isScanning
                   ? const Icon(Icons.close)
                   : const Icon(Icons.search),
-          label:
-              Text(_isInitializing ? l10n.initializing : (_isScanning ? l10n.cancelDiscovery : l10n.discoverDevices)),
-          tooltip: _isScanning ? l10n.cancelDiscoveryTooltip : l10n.startDiscoveryTooltip,
+          label: Text(_isInitializing
+              ? l10n.initializing
+              : (_isScanning ? l10n.cancelDiscovery : l10n.discoverDevices)),
+          tooltip: _isScanning
+              ? l10n.cancelDiscoveryTooltip
+              : l10n.startDiscoveryTooltip,
         ),
       ),
     );
@@ -955,9 +962,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                     : '${(s.syncProgress * 100).clamp(0, 100).toStringAsFixed(0)}%';
                 final double? progressValue =
                     waitingPeer || waitingUser ? null : progress;
-                final String progressMessage = waitingPeer
-                    ? l10n.syncRequestSent
-                    : s.syncStatusMessage;
+                final String progressMessage =
+                    waitingPeer ? l10n.syncRequestSent : s.syncStatusMessage;
 
                 return AlertDialog(
                   shape: RoundedRectangleBorder(
@@ -1028,14 +1034,15 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                                     Icon(
                                       Icons.info_outline,
                                       size: 20,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .primary,
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
                                     ),
                                     const SizedBox(width: 10),
                                     Expanded(
                                       child: Text(
-                                        l10n.deviceWantsToSync(s.receiveSenderAlias ?? l10n.unknown),
+                                        l10n.deviceWantsToSync(
+                                            s.receiveSenderAlias ??
+                                                l10n.unknown),
                                         style: TextStyle(
                                           fontSize: 14,
                                           height: 1.4,
@@ -1197,7 +1204,9 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
       final l10n = AppLocalizations.of(context);
       if (service.syncStatus == SyncStatus.completed) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.syncCompleted), duration: const Duration(seconds: 2)),
+          SnackBar(
+              content: Text(l10n.syncCompleted),
+              duration: const Duration(seconds: 2)),
         );
       } else if (service.syncStatus == SyncStatus.failed) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1313,7 +1322,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         alias.isNotEmpty &&
         alias.toLowerCase() != displayName.toLowerCase();
 
-    final tooltipMessage = showAlias ? l10n.deviceAliasAndModel(displayName, alias) : displayName;
+    final tooltipMessage =
+        showAlias ? l10n.deviceAliasAndModel(displayName, alias) : displayName;
 
     final titleStyle = theme.textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.w600,
@@ -1361,4 +1371,3 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
 
   // 平台标签显示已移除
 }
-

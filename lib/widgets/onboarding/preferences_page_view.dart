@@ -219,8 +219,10 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
                 showDialog(
                   context: context,
                   builder: (context) => AlertDialog(
-                    title: Text(AppLocalizations.of(context).locationServiceNotEnabled),
-                    content: Text(AppLocalizations.of(context).pleaseEnableLocationInSettings),
+                    title: Text(
+                        AppLocalizations.of(context).locationServiceNotEnabled),
+                    content: Text(AppLocalizations.of(context)
+                        .pleaseEnableLocationInSettings),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),
@@ -245,7 +247,8 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
             if (position != null && mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(AppLocalizations.of(context).locationServiceEnabledMsg),
+                  content: Text(
+                      AppLocalizations.of(context).locationServiceEnabledMsg),
                   duration: const Duration(seconds: 2),
                 ),
               );
@@ -280,7 +283,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
     ThemeData theme,
   ) {
     final options = preference.options ?? [];
-    
+
     // 根据默认值类型判断是 int 还是 String
     if (preference.defaultValue is int) {
       final value = widget.state.getPreference<int>(preference.key) ??
