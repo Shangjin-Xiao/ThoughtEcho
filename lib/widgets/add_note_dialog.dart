@@ -322,10 +322,17 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
           _includeLocation = false;
         });
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('无法获取当前位置，请检查定位权限或网络状态'),
-              duration: Duration(seconds: 2),
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('无法获取位置'),
+              content: const Text('无法获取当前位置，请检查定位权限或网络状态。'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('我知道了'),
+                ),
+              ],
             ),
           );
         }
@@ -336,10 +343,17 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         setState(() {
           _includeLocation = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('获取位置失败'),
             content: Text('获取位置失败: $e'),
-            duration: const Duration(seconds: 2),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('我知道了'),
+              ),
+            ],
           ),
         );
       }
@@ -408,7 +422,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
             onPressed: () => Navigator.pop(context, 'remove'),
             child: const Text('移除'),
           ),
-        if (hasCoordinates)
+        if (hasOnlyCoordinates)
           TextButton(
             onPressed: () => Navigator.pop(context, 'update'),
             child: const Text('更新位置'),
