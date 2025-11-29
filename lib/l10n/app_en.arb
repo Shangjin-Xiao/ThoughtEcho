@@ -461,14 +461,6 @@
   "hitokotoHelpItem2": "Selecting multiple types provides a richer variety of content",
   "hitokotoHelpItem3": "Different types represent different content styles and sources",
   "settingsSaved": "Settings saved",
-  "selectedCount": "{count, plural, =1{1 type selected} other{{count} types selected}}",
-  "@selectedCount": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   
   "tagManagement": "Tag Management",
   "newTagName": "New Tag Name",
@@ -508,7 +500,6 @@
   "editTag": "Edit Tag",
   "tagName": "Tag Name",
   "icon": "Icon",
-  "confirmDelete": "Confirm Delete",
   "deleteTagConfirmation": "Are you sure you want to delete the tag \"{name}\"? Associated notes will be kept but will no longer be linked to this tag.",
   "@deleteTagConfirmation": {
     "placeholders": {
@@ -529,8 +520,6 @@
   "defaultTag": "Default",
   "systemDefaultTag": "System default tag",
   "tapToEditLongPressToDelete": "Tap to edit, long press to delete",
-  "edit": "Edit",
-  "select": "Select",
   "enterEmojiHint": "Enter an emoji...",
   "useAsIcon": "Use \"{emoji}\" as icon",
   "@useAsIcon": {
@@ -546,7 +535,6 @@
   "clearCache": "Clear Cache",
   "clearCacheConfirmTitle": "Clear Cache",
   "clearCacheConfirmContent": "Are you sure you want to clear the app cache?\n\nThis will remove temporary files and image cache, but will not delete your notes.",
-  "confirm": "Confirm",
   "cleanOrphanMedia": "Clean Unused Media",
   "cleanOrphanMediaConfirmTitle": "Clean Unused Media Files",
   "cleanOrphanMediaConfirmContent": "This will delete media files (images, videos, audio) that are not referenced by any notes.\n\nAre you sure you want to continue?",
@@ -656,7 +644,6 @@
   "dataStorageLocation": "Data Storage Location",
   "currentDataDirectory": "Current Data Directory",
   "custom": "Custom",
-  "loading": "Loading...",
   "windowsDataMigration": "Windows Data Directory Migration",
   "windowsDataMigrationDesc": "Migrate app data to another location (e.g., D: drive) to free up system disk space",
   "changeDataDirectory": "Change Data Directory",

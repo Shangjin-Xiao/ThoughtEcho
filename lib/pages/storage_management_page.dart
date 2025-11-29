@@ -196,12 +196,9 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
 
       if (!mounted) return;
 
-      final message =
-          orphanCount > 0 ? l10n.orphanFilesCleanedResult(orphanCount) : l10n.noOrphanFilesFound;
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(message),
+          content: Text(l10n.orphanFilesCleanedResult(orphanCount)),
           duration: AppConstants.snackBarDurationImportant,
         ),
       );
