@@ -8,6 +8,7 @@ import '../services/weather_service.dart';
 import '../services/database_service.dart';
 import '../services/data_directory_service.dart';
 import '../constants/app_constants.dart';
+import '../gen_l10n/app_localizations.dart';
 
 /// 存储管理页面
 /// 展示应用存储占用详情，提供缓存清理和数据目录管理功能
