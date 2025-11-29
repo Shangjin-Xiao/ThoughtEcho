@@ -3,6 +3,7 @@ import '../models/note_category.dart';
 import '../utils/icon_utils.dart'; // Import IconUtils
 import '../services/weather_service.dart'; // Import WeatherService
 import '../utils/time_utils.dart'; // Import TimeUtils
+import '../gen_l10n/app_localizations.dart';
 
 class NoteFilterSortSheet extends StatefulWidget {
   final List<NoteCategory> allTags;
@@ -35,11 +36,22 @@ class NoteFilterSortSheet extends StatefulWidget {
 }
 
 class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
-  static const Map<String, String> _sortTypeKeyToLabel = {
-    'time': '按时间排序',
-    'name': '按名称排序',
-    'favorite': '按喜爱度排序', // 新增：按心形次数排序
-  };
+  // 排序类型键名列表
+  static const List<String> _sortTypeKeys = ['time', 'name', 'favorite'];
+
+  /// 获取排序类型的本地化标签
+  String _getSortTypeLabel(String key, AppLocalizations l10n) {
+    switch (key) {
+      case 'time':
+        return l10n.sortByTime;
+      case 'name':
+        return l10n.sortByName;
+      case 'favorite':
+        return l10n.sortByFavorite;
+      default:
+        return key;
+    }
+  }
 
   late List<String> _tempSelectedTagIds;
   late String _tempSortType;
@@ -99,6 +111,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final maxHeight = MediaQuery.of(context).size.height * 0.9;
     return Padding(
       padding: MediaQuery.of(context).viewInsets.add(const EdgeInsets.all(20)),
@@ -114,7 +127,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    '筛选与排序',
+                    l10n.filterAndSort,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -129,7 +142,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
                         _tempSelectedDayPeriods.clear();
                       });
                     },
-                    child: const Text('重置'),
+                    child: Text(l10n.resetFilter),
                   ),
                 ],
               ),
@@ -137,15 +150,15 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
 
               // 筛选条件卡片
               _buildFilterCard(
-                title: '标签筛选',
-                child: _buildTagsFilter(theme),
+                title: l10n.tagFilter,
+                child: _buildTagsFilter(theme, l10n),
                 theme: theme,
                 showScrollHint: widget.allTags.isNotEmpty,
               ),
               const SizedBox(height: 12),
 
               _buildFilterCard(
-                title: '天气筛选',
+                title: l10n.weatherFilter,
                 child: _buildWeatherFilter(theme),
                 theme: theme,
                 showScrollHint: true,
@@ -153,7 +166,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
               const SizedBox(height: 12),
 
               _buildFilterCard(
-                title: '时间段筛选',
+                title: l10n.timePeriodFilter,
                 child: _buildDayPeriodFilter(theme),
                 theme: theme,
                 showScrollHint: true,
@@ -161,8 +174,8 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
               const SizedBox(height: 12),
 
               _buildFilterCard(
-                title: '排序方式',
-                child: _buildSortOptions(theme),
+                title: l10n.sortMethod,
+                child: _buildSortOptions(theme, l10n),
                 theme: theme,
               ),
 
@@ -183,7 +196,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
                             Navigator.pop(context);
                           }
                         : null, // 优化：如果没有变化则禁用按钮
-                    child: const Text('应用'),
+                    child: Text(l10n.applyFilter),
                   ),
                 ],
               ),
@@ -269,10 +282,10 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
   }
 
   /// 构建标签筛选器
-  Widget _buildTagsFilter(ThemeData theme) {
+  Widget _buildTagsFilter(ThemeData theme, AppLocalizations l10n) {
     if (widget.allTags.isEmpty) {
       return Text(
-        '暂无标签',
+        l10n.noTags,
         style: theme.textTheme.bodyMedium?.copyWith(
           color: theme.colorScheme.onSurfaceVariant,
         ),
@@ -416,7 +429,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
   }
 
   /// 构建排序选项
-  Widget _buildSortOptions(ThemeData theme) {
+  Widget _buildSortOptions(ThemeData theme, AppLocalizations l10n) {
     return Column(
       children: [
         RadioGroup<String>(
@@ -427,11 +440,11 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
             });
           },
           child: Column(
-            children: _sortTypeKeyToLabel.entries
+            children: _sortTypeKeys
                 .map(
-                  (entry) => RadioListTile<String>(
-                    title: Text(entry.value),
-                    value: entry.key,
+                  (key) => RadioListTile<String>(
+                    title: Text(_getSortTypeLabel(key, l10n)),
+                    value: key,
                     contentPadding: EdgeInsets.zero,
                   ),
                 )
@@ -439,7 +452,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
           ),
         ),
         SwitchListTile(
-          title: const Text('升序'),
+          title: Text(l10n.ascending),
           value: _tempSortAscending,
           contentPadding: EdgeInsets.zero,
           onChanged: (value) {

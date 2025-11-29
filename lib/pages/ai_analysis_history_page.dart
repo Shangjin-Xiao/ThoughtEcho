@@ -125,9 +125,9 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
     }
 
     if (_analyses.isEmpty) {
-      return const AppEmptyView(
+      return AppEmptyView(
         svgAsset: 'assets/empty/empty_state.svg',
-        text: '暂无AI分析记录',
+        text: l10n.noAiAnalysisRecords,
       );
     }
 

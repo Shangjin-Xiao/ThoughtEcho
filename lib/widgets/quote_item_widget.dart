@@ -8,6 +8,7 @@ import '../services/weather_service.dart';
 import '../services/location_service.dart';
 import '../utils/time_utils.dart';
 import '../utils/icon_utils.dart'; // 添加 IconUtils 导入
+import '../gen_l10n/app_localizations.dart';
 
 /// 优化：使用StatefulWidget以支持双击反馈动画，数据变化通过父组件管理
 class QuoteItemWidget extends StatefulWidget {
@@ -222,6 +223,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final quote = widget.quote;
     final isExpanded = widget.isExpanded;
     // final colorScheme = Theme.of(context).colorScheme; // REMOVED unused variable
@@ -485,7 +487,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                                               12),
                                                     ),
                                                     child: Text(
-                                                      '双击查看全文',
+                                                      l10n.doubleTapToViewFull,
                                                       style: innerTheme
                                                           .textTheme.bodySmall
                                                           ?.copyWith(
@@ -578,7 +580,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                 final tag = widget.tags.firstWhere(
                                   (t) => t.id == tagId,
                                   orElse: () =>
-                                      NoteCategory(id: tagId, name: '未知标签'),
+                                      NoteCategory(id: tagId, name: l10n.unknownTag),
                                 );
 
                                 // 判断是否是筛选条件中的标签
@@ -746,7 +748,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                           children: [
                             Icon(Icons.edit, color: theme.colorScheme.primary),
                             const SizedBox(width: 8),
-                            const Text('编辑笔记'),
+                            Text(l10n.editNoteMenu),
                           ],
                         ),
                       ),
@@ -757,7 +759,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                             Icon(Icons.question_answer,
                                 color: theme.colorScheme.primary),
                             const SizedBox(width: 8),
-                            const Text('向AI提问'),
+                            Text(l10n.askAIMenu),
                           ],
                         ),
                       ),
@@ -769,7 +771,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                               Icon(Icons.auto_awesome,
                                   color: theme.colorScheme.primary),
                               const SizedBox(width: 8),
-                              const Text('生成卡片分享'),
+                              Text(l10n.generateCardShareMenu),
                             ],
                           ),
                         ),
@@ -779,7 +781,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                           children: [
                             const Icon(Icons.delete, color: Colors.red),
                             const SizedBox(width: 8),
-                            Text('删除笔记',
+                            Text(l10n.deleteNoteMenu,
                                 style:
                                     TextStyle(color: theme.colorScheme.error)),
                           ],

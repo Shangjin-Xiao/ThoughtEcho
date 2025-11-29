@@ -7,6 +7,7 @@ import '../theme/app_theme.dart';
 import '../widgets/streaming_text_dialog.dart';
 import '../pages/note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
 import '../constants/app_constants.dart';
+import '../gen_l10n/app_localizations.dart';
 
 class AddNoteAIMenu extends StatefulWidget {
   final TextEditingController contentController;
@@ -30,6 +31,7 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
   // 显示AI选项菜单
   void _showAIOptions(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     showModalBottomSheet(
       context: context,
@@ -58,7 +60,7 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'AI助手',
+                          l10n.aiAssistant,
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -71,8 +73,8 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
                   Divider(height: 1, color: theme.colorScheme.outline),
                   ListTile(
                     leading: const Icon(Icons.text_fields),
-                    title: const Text('智能分析来源'),
-                    subtitle: const Text('分析文本中可能的作者和作品'),
+                    title: Text(l10n.smartAnalyzeSource),
+                    subtitle: Text(l10n.smartAnalyzeSourceDesc),
                     onTap: () {
                       Navigator.pop(context);
                       _analyzeSource();
@@ -80,8 +82,8 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
                   ),
                   ListTile(
                     leading: const Icon(Icons.brush),
-                    title: const Text('润色文本'),
-                    subtitle: const Text('优化文本表达，使其更加流畅、优美'),
+                    title: Text(l10n.polishText),
+                    subtitle: Text(l10n.polishTextDesc),
                     onTap: () {
                       Navigator.pop(context);
                       _polishText();
@@ -89,8 +91,8 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
                   ),
                   ListTile(
                     leading: const Icon(Icons.add_circle_outline),
-                    title: const Text('续写内容'),
-                    subtitle: const Text('以相同的风格和语调延伸当前内容'),
+                    title: Text(l10n.continueWriting),
+                    subtitle: Text(l10n.continueWritingDesc),
                     onTap: () {
                       Navigator.pop(context);
                       _continueText();
@@ -98,8 +100,8 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
                   ),
                   ListTile(
                     leading: const Icon(Icons.analytics),
-                    title: const Text('深度分析'),
-                    subtitle: const Text('对笔记内容进行深入分析和解读'),
+                    title: Text(l10n.deepAnalysis),
+                    subtitle: Text(l10n.deepAnalysisDesc),
                     onTap: () {
                       Navigator.pop(context);
                       _analyzeContent();
@@ -107,8 +109,8 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
                   ),
                   ListTile(
                     leading: const Icon(Icons.chat),
-                    title: const Text('问笔记'),
-                    subtitle: const Text('与AI助手对话，深入探讨笔记内容'),
+                    title: Text(l10n.askNote),
+                    subtitle: Text(l10n.askNoteDesc),
                     onTap: () {
                       Navigator.pop(context);
                       _askNoteQuestion();
@@ -125,11 +127,13 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
 
   // 分析来源
   Future<void> _analyzeSource() async {
+    final l10n = AppLocalizations.of(context);
+    
     if (widget.contentController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(
-        content: Text('请先输入内容'),
+      ).showSnackBar(SnackBar(
+        content: Text(l10n.pleaseEnterContent),
         duration: AppConstants.snackBarDurationNormal,
       ));
       return;
@@ -143,13 +147,13 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
         context: context,
         barrierDismissible: false,
         builder: (dialogContext) {
-          return const AlertDialog(
+          return AlertDialog(
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('正在分析来源...'),
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(l10n.analyzingSource),
               ],
             ),
           );
@@ -172,7 +176,7 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
 
         String? author = sourceData['author'] as String?;
         String? work = sourceData['work'] as String?;
-        String confidence = sourceData['confidence'] as String? ?? '低';
+        String confidence = sourceData['confidence'] as String? ?? l10n.unknown;
         String explanation = sourceData['explanation'] as String? ?? '';
 
         // 显示结果对话框
@@ -181,23 +185,27 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
             context: context,
             builder: (dialogContext) {
               return AlertDialog(
-                title: Text('分析结果 (可信度: $confidence)'),
+                title: Text(l10n.analysisResult),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (explanation.isNotEmpty) Text(explanation),
+                    Text(l10n.confidenceLevel(confidence)),
+                    if (explanation.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(explanation),
+                    ],
                     const SizedBox(height: 8),
                     if (author != null && author.isNotEmpty)
-                      Text('作者: $author'),
-                    if (work != null && work.isNotEmpty) Text('作品: $work'),
+                      Text(l10n.authorLabel(author)),
+                    if (work != null && work.isNotEmpty) Text(l10n.workLabel(work)),
                   ],
                 ),
                 actions: [
                   if ((author != null && author.isNotEmpty) ||
                       (work != null && work.isNotEmpty))
                     TextButton(
-                      child: const Text('应用结果'),
+                      child: Text(l10n.applyResult),
                       onPressed: () {
                         if (author != null && author.isNotEmpty) {
                           widget.authorController.text = author;
@@ -209,7 +217,7 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
                       },
                     ),
                   TextButton(
-                    child: const Text('关闭'),
+                    child: Text(l10n.close),
                     onPressed: () {
                       Navigator.of(dialogContext).pop();
                     },
@@ -224,7 +232,7 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(
-            content: Text('解析结果失败: $e'),
+            content: Text(l10n.parseResultFailedWithError(e.toString())),
             duration: AppConstants.snackBarDurationError,
           ));
         }
@@ -240,7 +248,7 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(
-          content: Text('分析失败: $e'),
+          content: Text(l10n.analysisFailedWithError(e.toString())),
           duration: AppConstants.snackBarDurationError,
         ));
       }
@@ -249,11 +257,13 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
 
   // 润色文本
   Future<void> _polishText() async {
+    final l10n = AppLocalizations.of(context);
+    
     if (widget.contentController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(
-        content: Text('请先输入内容'),
+      ).showSnackBar(SnackBar(
+        content: Text(l10n.pleaseEnterContent),
         duration: AppConstants.snackBarDurationNormal,
       ));
       return;
@@ -268,11 +278,11 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
         barrierDismissible: false,
         builder: (dialogContext) {
           return StreamingTextDialog(
-            title: '润色结果',
+            title: l10n.polishResult,
             textStream: aiService.streamPolishText(
               widget.contentController.text,
             ),
-            applyButtonText: '应用更改',
+            applyButtonText: l10n.applyChanges,
             onApply: (polishedText) {
               widget.contentController.text = polishedText;
             },
@@ -292,7 +302,7 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(
-          content: Text('润色失败: $e'),
+          content: Text(l10n.polishFailedWithError(e.toString())),
           duration: AppConstants.snackBarDurationError,
         ));
       }
@@ -301,11 +311,13 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
 
   // 续写文本
   Future<void> _continueText() async {
+    final l10n = AppLocalizations.of(context);
+    
     if (widget.contentController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(
-        content: Text('请先输入内容'),
+      ).showSnackBar(SnackBar(
+        content: Text(l10n.pleaseEnterContent),
         duration: AppConstants.snackBarDurationNormal,
       ));
       return;
@@ -320,11 +332,11 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
         barrierDismissible: false,
         builder: (dialogContext) {
           return StreamingTextDialog(
-            title: '续写结果',
+            title: l10n.continueResult,
             textStream: aiService.streamContinueText(
               widget.contentController.text,
             ),
-            applyButtonText: '追加到笔记',
+            applyButtonText: l10n.appendToNote,
             onApply: (continuedText) {
               widget.contentController.text += continuedText;
             },
@@ -344,7 +356,7 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(
-          content: Text('续写失败: $e'),
+          content: Text(l10n.continueFailedWithError(e.toString())),
           duration: AppConstants.snackBarDurationError,
         ));
       }
@@ -353,11 +365,13 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
 
   // 深入分析内容
   Future<void> _analyzeContent() async {
+    final l10n = AppLocalizations.of(context);
+    
     if (widget.contentController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(
-        content: Text('请先输入内容'),
+      ).showSnackBar(SnackBar(
+        content: Text(l10n.pleaseEnterContent),
         duration: AppConstants.snackBarDurationNormal,
       ));
       return;
@@ -377,9 +391,9 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
             date: DateTime.now().toIso8601String(),
           );
           return StreamingTextDialog(
-            title: '笔记分析',
+            title: l10n.noteAnalysis,
             textStream: aiService.streamSummarizeNote(quote),
-            applyButtonText: '应用到笔记', // 或者其他合适的文本
+            applyButtonText: l10n.applyToNote,
             onApply: (analysisResult) {
               widget.onAiAnalysisCompleted(analysisResult);
             },
@@ -393,8 +407,8 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(
-          content: Text('分析完成'),
+        ).showSnackBar(SnackBar(
+          content: Text(l10n.analysisComplete),
           duration: AppConstants.snackBarDurationImportant,
         ));
       }
@@ -403,7 +417,7 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(
-          content: Text('分析失败: $e'),
+          content: Text(l10n.analysisFailedWithError(e.toString())),
           duration: AppConstants.snackBarDurationError,
         ));
       }
@@ -412,11 +426,13 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
 
   // 问笔记功能
   Future<void> _askNoteQuestion() async {
+    final l10n = AppLocalizations.of(context);
+    
     if (widget.contentController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(
-        content: Text('请先输入内容'),
+      ).showSnackBar(SnackBar(
+        content: Text(l10n.pleaseEnterContent),
         duration: AppConstants.snackBarDurationNormal,
       ));
       return;
@@ -443,6 +459,7 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     AIService? aiService;
     try {
       aiService = Provider.of<AIService>(context, listen: false);
@@ -458,7 +475,7 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
 
     return IconButton(
       icon: const Icon(Icons.auto_awesome),
-      tooltip: 'AI助手',
+      tooltip: l10n.aiAssistant,
       onPressed: () => _showAIOptions(context),
     );
   }
