@@ -25,7 +25,9 @@ class VersionInfo {
   });
 
   factory VersionInfo.fromJson(
-      Map<String, dynamic> json, String currentVersion) {
+    Map<String, dynamic> json,
+    String currentVersion,
+  ) {
     final latestVersion = json['tag_name'] as String? ?? '';
     final hasUpdate =
         VersionInfo._compareVersions(currentVersion, latestVersion) < 0;
@@ -52,7 +54,8 @@ class VersionInfo {
       downloadUrl: json['html_url'] as String? ?? '',
       apkDownloadUrl: apkDownloadUrl,
       releaseNotes: json['body'] as String? ?? '',
-      publishedAt: DateTime.tryParse(json['published_at'] as String? ?? '') ??
+      publishedAt:
+          DateTime.tryParse(json['published_at'] as String? ?? '') ??
           DateTime.now(),
       hasUpdate: hasUpdate,
     );
@@ -69,8 +72,9 @@ class VersionInfo {
     final v2Parts = v2.split('.').map((e) => int.tryParse(e) ?? 0).toList();
 
     // 确保两个版本号有相同的长度
-    final maxLength =
-        v1Parts.length > v2Parts.length ? v1Parts.length : v2Parts.length;
+    final maxLength = v1Parts.length > v2Parts.length
+        ? v1Parts.length
+        : v2Parts.length;
     while (v1Parts.length < maxLength) {
       v1Parts.add(0);
     }
@@ -88,12 +92,7 @@ class VersionInfo {
 }
 
 /// 版本检查结果
-enum VersionCheckResult {
-  hasUpdate,
-  noUpdate,
-  error,
-  timeout,
-}
+enum VersionCheckResult { hasUpdate, noUpdate, error, timeout }
 
 /// GitHub版本检查服务
 class VersionCheckService {
@@ -177,7 +176,8 @@ class VersionCheckService {
         _lastCheckTime = DateTime.now();
 
         logDebug(
-            '版本检查完成: 当前版本 $currentVersion, 最新版本 ${versionInfo.latestVersion}, 有更新: ${versionInfo.hasUpdate}');
+          '版本检查完成: 当前版本 $currentVersion, 最新版本 ${versionInfo.latestVersion}, 有更新: ${versionInfo.hasUpdate}',
+        );
         return versionInfo;
       } else {
         throw Exception('GitHub API响应异常: ${response.statusCode}');
@@ -188,12 +188,14 @@ class VersionCheckService {
     } on DioException catch (e) {
       logDebug('版本检查网络错误: ${e.message}');
       logDebug(
-          '错误详情: ${e.response?.statusCode} - ${e.response?.statusMessage}');
+        '错误详情: ${e.response?.statusCode} - ${e.response?.statusMessage}',
+      );
 
       if (e.response?.statusCode == 404) {
         // 404错误特殊处理 - 可能是仓库没有releases
         throw VersionCheckException(
-            '暂无可用的版本更新信息。这可能是因为：\n1. 仓库还没有发布任何版本\n2. 网络连接问题\n\n您可以访问项目主页查看最新信息。');
+          '暂无可用的版本更新信息。这可能是因为：\n1. 仓库还没有发布任何版本\n2. 网络连接问题\n\n您可以访问项目主页查看最新信息。',
+        );
       } else {
         throw VersionCheckNetworkException('网络连接失败: ${e.message}');
       }

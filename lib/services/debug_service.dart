@@ -39,7 +39,8 @@ class WindowsStartupDebugService {
       await _writeDebugLog('时间: ${DateTime.now().toIso8601String()}');
       await _writeDebugLog('Flutter版本: ${kDebugMode ? 'Debug' : 'Release'}');
       await _writeDebugLog(
-          '平台: ${Platform.operatingSystem} ${Platform.operatingSystemVersion}');
+        '平台: ${Platform.operatingSystem} ${Platform.operatingSystemVersion}',
+      );
       await _writeDebugLog('进程ID: ${Platform.resolvedExecutable}');
 
       _isInitialized = true;
@@ -50,8 +51,11 @@ class WindowsStartupDebugService {
   }
 
   /// 记录初始化步骤
-  static Future<void> recordInitStep(String step,
-      {String? details, bool success = true}) async {
+  static Future<void> recordInitStep(
+    String step, {
+    String? details,
+    bool success = true,
+  }) async {
     if (!_isInitialized) await initialize();
 
     final timestamp = DateTime.now().toIso8601String();
@@ -75,8 +79,11 @@ class WindowsStartupDebugService {
   }
 
   /// 记录崩溃报告
-  static Future<void> recordCrash(String error, StackTrace? stackTrace,
-      {String? context}) async {
+  static Future<void> recordCrash(
+    String error,
+    StackTrace? stackTrace, {
+    String? context,
+  }) async {
     if (!_isInitialized) await initialize();
 
     final crashReport = {
@@ -90,7 +97,7 @@ class WindowsStartupDebugService {
         'os': Platform.operatingSystem,
         'version': Platform.operatingSystemVersion,
         'locale': Platform.localeName,
-      }
+      },
     };
 
     try {
@@ -111,7 +118,9 @@ class WindowsStartupDebugService {
       await recordDebugInfo('is_windows', Platform.isWindows);
       await recordDebugInfo('executable_path', Platform.resolvedExecutable);
       await recordDebugInfo(
-          'environment_path', Platform.environment['PATH']?.substring(0, 200));
+        'environment_path',
+        Platform.environment['PATH']?.substring(0, 200),
+      );
 
       // 检查DLL文件
       final exeDir = path.dirname(Platform.resolvedExecutable);
@@ -140,7 +149,9 @@ class WindowsStartupDebugService {
         final stat = await dbFile.stat();
         await recordDebugInfo('database_size', stat.size);
         await recordDebugInfo(
-            'database_modified', stat.modified.toIso8601String());
+          'database_modified',
+          stat.modified.toIso8601String(),
+        );
       }
     }
   }
@@ -201,8 +212,9 @@ class WindowsStartupDebugService {
 
       // 创建导出文件夹
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final exportDir =
-          Directory(path.join(desktop.path, 'ThoughtEcho_Debug_$timestamp'));
+      final exportDir = Directory(
+        path.join(desktop.path, 'ThoughtEcho_Debug_$timestamp'),
+      );
       await exportDir.create();
 
       // 复制调试日志
@@ -213,8 +225,9 @@ class WindowsStartupDebugService {
 
       // 生成诊断报告
       final diagnosticReport = await generateDiagnosticReport();
-      final reportFile =
-          File(path.join(exportDir.path, 'diagnostic_report.txt'));
+      final reportFile = File(
+        path.join(exportDir.path, 'diagnostic_report.txt'),
+      );
       await reportFile.writeAsString(diagnosticReport);
 
       // 复制日志数据库文件
@@ -233,12 +246,16 @@ class WindowsStartupDebugService {
       // 复制主数据库文件
       try {
         final appDir = await getApplicationDocumentsDirectory();
-        final mainDbPath =
-            path.join(appDir.path, 'databases', 'app_database.db');
+        final mainDbPath = path.join(
+          appDir.path,
+          'databases',
+          'app_database.db',
+        );
         final mainDbFile = File(mainDbPath);
         if (await mainDbFile.exists()) {
-          final targetMainDb =
-              File(path.join(exportDir.path, 'app_database.db'));
+          final targetMainDb = File(
+            path.join(exportDir.path, 'app_database.db'),
+          );
           await mainDbFile.copy(targetMainDb.path);
         }
       } catch (e) {
@@ -266,11 +283,14 @@ class WindowsStartupDebugService {
 
       for (final key in vcRedistKeys) {
         try {
-          final result = await Process.run(
-              'reg', ['query', 'HKEY_LOCAL_MACHINE\\$key'],
-              runInShell: true);
+          final result = await Process.run('reg', [
+            'query',
+            'HKEY_LOCAL_MACHINE\\$key',
+          ], runInShell: true);
           await recordDebugInfo(
-              'vcredist_$key', result.exitCode == 0 ? 'found' : 'not_found');
+            'vcredist_$key',
+            result.exitCode == 0 ? 'found' : 'not_found',
+          );
         } catch (e) {
           await recordDebugInfo('vcredist_check_error', e.toString());
         }
@@ -278,8 +298,11 @@ class WindowsStartupDebugService {
 
       await recordInitStep('Windows运行时依赖检查完成', success: true);
     } catch (e) {
-      await recordInitStep('Windows运行时依赖检查失败',
-          details: e.toString(), success: false);
+      await recordInitStep(
+        'Windows运行时依赖检查失败',
+        details: e.toString(),
+        success: false,
+      );
     }
   }
 
@@ -288,8 +311,10 @@ class WindowsStartupDebugService {
     try {
       if (_debugLogFile != null) {
         final timestamp = DateTime.now().toIso8601String();
-        await _debugLogFile!
-            .writeAsString('[$timestamp] $message\n', mode: FileMode.append);
+        await _debugLogFile!.writeAsString(
+          '[$timestamp] $message\n',
+          mode: FileMode.append,
+        );
       }
     } catch (e) {
       // 静默处理写入错误，避免递归
@@ -301,8 +326,9 @@ class WindowsStartupDebugService {
     try {
       final appDir = await getApplicationDocumentsDirectory();
       final debugDir = Directory(path.join(appDir.path, 'debug'));
-      final progressFile =
-          File(path.join(debugDir.path, _initProgressFileName));
+      final progressFile = File(
+        path.join(debugDir.path, _initProgressFileName),
+      );
 
       final progressData = {
         'timestamp': DateTime.now().toIso8601String(),
@@ -337,10 +363,12 @@ class WindowsStartupDebugService {
       if (!await desktop.exists()) return;
 
       // 创建启动指南文件
-      final guideFile =
-          File(path.join(desktop.path, 'ThoughtEcho_启动问题解决指南.txt'));
+      final guideFile = File(
+        path.join(desktop.path, 'ThoughtEcho_启动问题解决指南.txt'),
+      );
 
-      final guide = '''
+      final guide =
+          '''
 === ThoughtEcho 启动问题解决指南 ===
 生成时间: ${DateTime.now().toLocal()}
 
@@ -397,8 +425,11 @@ class WindowsStartupDebugService {
       // 1. 刷新当前调试日志
       if (_debugLogFile != null) {
         // 强制刷新文件系统缓存
-        await _debugLogFile!
-            .writeAsString('', mode: FileMode.append, flush: true);
+        await _debugLogFile!.writeAsString(
+          '',
+          mode: FileMode.append,
+          flush: true,
+        );
       }
 
       // 2. 保存最终的初始化进度
@@ -420,8 +451,9 @@ class WindowsStartupDebugService {
         // 保存到应用目录
         final appDir = await getApplicationDocumentsDirectory();
         final debugDir = Directory(path.join(appDir.path, 'debug'));
-        final finalReportFile =
-            File(path.join(debugDir.path, 'final_diagnostic_report.txt'));
+        final finalReportFile = File(
+          path.join(debugDir.path, 'final_diagnostic_report.txt'),
+        );
         await finalReportFile.writeAsString(diagnosticReport);
         await _writeDebugLog('最终诊断报告已保存: ${finalReportFile.path}');
       } catch (e) {
@@ -433,16 +465,22 @@ class WindowsStartupDebugService {
 
       // 6. 最后再次强制刷新调试日志文件
       if (_debugLogFile != null) {
-        await _debugLogFile!
-            .writeAsString('', mode: FileMode.append, flush: true);
+        await _debugLogFile!.writeAsString(
+          '',
+          mode: FileMode.append,
+          flush: true,
+        );
       }
     } catch (e) {
       // 即使刷新失败也要尝试记录
       try {
         await _writeDebugLog('日志刷新过程中发生错误: $e');
         if (_debugLogFile != null) {
-          await _debugLogFile!
-              .writeAsString('', mode: FileMode.append, flush: true);
+          await _debugLogFile!.writeAsString(
+            '',
+            mode: FileMode.append,
+            flush: true,
+          );
         }
       } catch (_) {
         // 静默处理最后的错误

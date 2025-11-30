@@ -25,20 +25,25 @@ class CardTemplates {
     String? temperature,
     String? dayPeriod,
   }) {
-    final textLines =
-        _wrapText(content, _maxContentCharsPerLine, _maxContentLines);
+    final textLines = _wrapText(
+      content,
+      _maxContentCharsPerLine,
+      _maxContentLines,
+    );
     final metaText = _buildMetaText(
-        date: date,
-        location: location,
-        weather: weather,
-        temperature: temperature);
+      date: date,
+      location: location,
+      weather: weather,
+      temperature: temperature,
+    );
     final brandText = _buildBrandText(author: author, source: source);
 
     // 计算内容区域起始Y位置（居中显示）
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
     const contentAreaTop = 180.0;
     const contentAreaHeight = 280.0;
-    final contentStartY = contentAreaTop +
+    final contentStartY =
+        contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize +
         20;
@@ -102,19 +107,24 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#1e293b')
     String? temperature,
     String? dayPeriod,
   }) {
-    final textLines =
-        _wrapText(content, _maxContentCharsPerLine, _maxContentLines);
+    final textLines = _wrapText(
+      content,
+      _maxContentCharsPerLine,
+      _maxContentLines,
+    );
     final metaText = _buildMetaText(
-        date: date,
-        location: location,
-        weather: weather,
-        temperature: temperature);
+      date: date,
+      location: location,
+      weather: weather,
+      temperature: temperature,
+    );
     final authorDisplay = author ?? source ?? '';
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
     const contentAreaTop = 200.0;
     const contentAreaHeight = 240.0;
-    final contentStartY = contentAreaTop +
+    final contentStartY =
+        contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize +
         20;
@@ -176,7 +186,8 @@ ${authorDisplay.isNotEmpty ? '''
     String? dayPeriod,
   }) {
     final displayContent = _processDisplayContent(content, maxLength: 200);
-    final displayDate = date ??
+    final displayDate =
+        date ??
         '${DateTime.now().year}年${DateTime.now().month}月${DateTime.now().day}日';
     final lines = _splitTextIntoAdaptiveLines(displayContent, 26, maxLines: 8);
     final metaLines = _buildMetadataLines(
@@ -277,7 +288,8 @@ ${authorDisplay.isNotEmpty ? '''
     String? dayPeriod,
   }) {
     final displayContent = _processDisplayContent(content, maxLength: 160);
-    final displayDate = date ??
+    final displayDate =
+        date ??
         '${DateTime.now().year}年${DateTime.now().month}月${DateTime.now().day}日';
     final lines = _splitTextIntoAdaptiveLines(displayContent, 22, maxLines: 8);
     final metaLines = _buildMetadataLines(
@@ -404,8 +416,11 @@ ${authorDisplay.isNotEmpty ? '''
   }
 
   /// 将文本分割成多行（改进：更准确的字符宽度计算+强制截断）
-  static List<String> _splitTextIntoAdaptiveLines(String text, int maxLineChars,
-      {int maxLines = 8}) {
+  static List<String> _splitTextIntoAdaptiveLines(
+    String text,
+    int maxLineChars, {
+    int maxLines = 8,
+  }) {
     final lines = <String>[];
     // 先按换行符预分割
     final paragraphs = text.split('\n');
@@ -500,9 +515,16 @@ ${authorDisplay.isNotEmpty ? '''
   }
 
   /// 生成现代化多行文本的SVG元素（改进：防止溢出）
-  static String _generateModernTextLines(List<String> lines, double centerX,
-      double startY, double fontSize, String color, double lineHeight,
-      {bool verticalCenter = true, double areaHeight = 320}) {
+  static String _generateModernTextLines(
+    List<String> lines,
+    double centerX,
+    double startY,
+    double fontSize,
+    String color,
+    double lineHeight, {
+    bool verticalCenter = true,
+    double areaHeight = 320,
+  }) {
     final buffer = StringBuffer();
 
     // 计算实际需要的高度
@@ -532,7 +554,8 @@ ${authorDisplay.isNotEmpty ? '''
       if (y > startY + areaHeight - 10) break;
 
       buffer.writeln(
-          '<text x="$centerX" y="$y" text-anchor="middle" fill="$color" font-family="system-ui, -apple-system, sans-serif" font-size="${adjustedFontSize.toStringAsFixed(1)}" font-weight="400">${_escape(lines[i])}</text>');
+        '<text x="$centerX" y="$y" text-anchor="middle" fill="$color" font-family="system-ui, -apple-system, sans-serif" font-size="${adjustedFontSize.toStringAsFixed(1)}" font-weight="400">${_escape(lines[i])}</text>',
+      );
     }
     return buffer.toString();
   }
@@ -561,7 +584,10 @@ ${authorDisplay.isNotEmpty ? '''
 
   /// 简化的文字换行 - 按字符数量直接截断
   static List<String> _wrapText(
-      String text, int maxCharsPerLine, int maxLines) {
+    String text,
+    int maxCharsPerLine,
+    int maxLines,
+  ) {
     String cleanText = text.trim().replaceAll(RegExp(r'\s+'), ' ');
     if (cleanText.isEmpty) return [''];
 
@@ -602,8 +628,13 @@ ${authorDisplay.isNotEmpty ? '''
   }
 
   /// 生成SVG文字行
-  static String _renderTextLines(List<String> lines, double centerX,
-      double startY, double fontSize, String color) {
+  static String _renderTextLines(
+    List<String> lines,
+    double centerX,
+    double startY,
+    double fontSize,
+    String color,
+  ) {
     final buffer = StringBuffer();
     const lineHeightRatio = 1.7;
     final lineSpacing = fontSize * lineHeightRatio;
@@ -611,15 +642,20 @@ ${authorDisplay.isNotEmpty ? '''
     for (int i = 0; i < lines.length; i++) {
       final y = startY + i * lineSpacing;
       buffer.writeln(
-          '  <text x="$centerX" y="${y.toStringAsFixed(1)}" text-anchor="middle" fill="$color" font-family="system-ui, -apple-system, sans-serif" font-size="${fontSize.toStringAsFixed(0)}" font-weight="400">${_escape(lines[i])}</text>');
+        '  <text x="$centerX" y="${y.toStringAsFixed(1)}" text-anchor="middle" fill="$color" font-family="system-ui, -apple-system, sans-serif" font-size="${fontSize.toStringAsFixed(0)}" font-weight="400">${_escape(lines[i])}</text>',
+      );
     }
 
     return buffer.toString();
   }
 
   /// 构建元数据文本（日期、位置、天气）
-  static String _buildMetaText(
-      {String? date, String? location, String? weather, String? temperature}) {
+  static String _buildMetaText({
+    String? date,
+    String? location,
+    String? weather,
+    String? temperature,
+  }) {
     final parts = <String>[];
 
     if (date != null && date.isNotEmpty) {
@@ -691,17 +727,20 @@ ${authorDisplay.isNotEmpty ? '''
   }
 
   /// 构建元数据文本块（兼容旧代码）
-  static String _buildMetadataTextBlock(List<String> lines,
-      {required double centerX,
-      required double startY,
-      required double lineHeight,
-      required String color}) {
+  static String _buildMetadataTextBlock(
+    List<String> lines, {
+    required double centerX,
+    required double startY,
+    required double lineHeight,
+    required String color,
+  }) {
     final buf = StringBuffer();
     for (int i = 0; i < lines.length; i++) {
       final y = startY + i * lineHeight;
       final opacity = i == 0 ? 0.9 : 0.75;
       buf.writeln(
-          '<text x="$centerX" y="$y" text-anchor="middle" fill="$color" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill-opacity="$opacity">${_escape(lines[i])}</text>');
+        '<text x="$centerX" y="$y" text-anchor="middle" fill="$color" font-family="system-ui, -apple-system, sans-serif" font-size="11" fill-opacity="$opacity">${_escape(lines[i])}</text>',
+      );
     }
     return buf.toString();
   }

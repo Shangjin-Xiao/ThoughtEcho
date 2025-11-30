@@ -102,11 +102,7 @@ class UpdateBottomSheet extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
             child: Row(
               children: [
-                Icon(
-                  Icons.system_update,
-                  color: colorScheme.primary,
-                  size: 28,
-                ),
+                Icon(Icons.system_update, color: colorScheme.primary, size: 28),
                 const SizedBox(width: 12),
                 Text(AppLocalizations.of(context).updateFoundNewVersion),
               ],
@@ -122,9 +118,7 @@ class UpdateBottomSheet extends StatelessWidget {
               decoration: BoxDecoration(
                 color: colorScheme.surfaceContainerHigh,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: colorScheme.outline.withAlpha(50),
-                ),
+                border: Border.all(color: colorScheme.outline.withAlpha(50)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -203,9 +197,7 @@ class UpdateBottomSheet extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: colorScheme.surfaceContainerHigh,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: colorScheme.outline.withAlpha(50),
-                  ),
+                  border: Border.all(color: colorScheme.outline.withAlpha(50)),
                 ),
                 child: SingleChildScrollView(
                   child: MarkdownBody(
@@ -214,8 +206,10 @@ class UpdateBottomSheet extends StatelessWidget {
                     styleSheet: _createUpdateMarkdownStyle(theme),
                     onTapLink: (text, href, title) {
                       if (href != null) {
-                        launchUrl(Uri.parse(href),
-                            mode: LaunchMode.externalApplication);
+                        launchUrl(
+                          Uri.parse(href),
+                          mode: LaunchMode.externalApplication,
+                        );
                       }
                     },
                     shrinkWrap: false,
@@ -237,7 +231,9 @@ class UpdateBottomSheet extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  AppLocalizations.of(context).updateReleaseTime(_formatDate(versionInfo.publishedAt)),
+                  AppLocalizations.of(
+                    context,
+                  ).updateReleaseTime(_formatDate(versionInfo.publishedAt)),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -249,9 +245,7 @@ class UpdateBottomSheet extends StatelessWidget {
           // 按钮区域
           Padding(
             padding: const EdgeInsets.all(24),
-            child: Row(
-              children: _buildButtons(context),
-            ),
+            child: Row(children: _buildButtons(context)),
           ),
         ],
       ),
@@ -292,11 +286,7 @@ class UpdateBottomSheet extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
             child: Row(
               children: [
-                const Icon(
-                  Icons.check_circle,
-                  color: Colors.green,
-                  size: 28,
-                ),
+                const Icon(Icons.check_circle, color: Colors.green, size: 28),
                 const SizedBox(width: 12),
                 Text(AppLocalizations.of(context).updateAlreadyLatest),
               ],
@@ -312,20 +302,16 @@ class UpdateBottomSheet extends StatelessWidget {
               decoration: BoxDecoration(
                 color: colorScheme.surfaceContainerHigh,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: colorScheme.outline.withAlpha(50),
-                ),
+                border: Border.all(color: colorScheme.outline.withAlpha(50)),
               ),
               child: Column(
                 children: [
-                  const Icon(
-                    Icons.verified,
-                    size: 48,
-                    color: Colors.green,
-                  ),
+                  const Icon(Icons.verified, size: 48, color: Colors.green),
                   const SizedBox(height: 16),
                   Text(
-                    AppLocalizations.of(context).updateCurrentVersionLabel(versionInfo.currentVersion),
+                    AppLocalizations.of(
+                      context,
+                    ).updateCurrentVersionLabel(versionInfo.currentVersion),
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
@@ -348,8 +334,10 @@ class UpdateBottomSheet extends StatelessWidget {
             child: FilledButton(
               onPressed: () => Navigator.of(context).pop(),
               style: FilledButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
+                padding: const EdgeInsets.symmetric(
+                  vertical: 12,
+                  horizontal: 24,
+                ),
               ),
               child: Text(AppLocalizations.of(context).confirm),
             ),
@@ -492,8 +480,9 @@ class UpdateBottomSheet extends StatelessWidget {
       // 行内代码样式
       code: TextStyle(
         color: colorScheme.primary,
-        backgroundColor:
-            colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        backgroundColor: colorScheme.surfaceContainerHighest.withValues(
+          alpha: 0.4,
+        ),
         fontFamily: 'JetBrains Mono, Consolas, Monaco, Courier New, monospace',
         fontSize: 13,
         fontWeight: FontWeight.w500,
@@ -576,7 +565,9 @@ class UpdateBottomSheet extends StatelessWidget {
             Navigator.of(context).pop();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(AppLocalizations.of(context).updateVersionIgnored),
+                content: Text(
+                  AppLocalizations.of(context).updateVersionIgnored,
+                ),
                 duration: const Duration(seconds: 2),
               ),
             );
@@ -612,10 +603,8 @@ class UpdateBottomSheet extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => UpdateBottomSheet(
-        versionInfo: versionInfo,
-        buttons: buttons,
-      ),
+      builder: (context) =>
+          UpdateBottomSheet(versionInfo: versionInfo, buttons: buttons),
     );
   }
 
@@ -677,7 +666,9 @@ class UpdateBottomSheet extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context).updateOpenStoreFailed(e.toString())),
+            content: Text(
+              AppLocalizations.of(context).updateOpenStoreFailed(e.toString()),
+            ),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -698,7 +689,9 @@ class UpdateBottomSheet extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context).updateOpenLinkFailed(e.toString())),
+            content: Text(
+              AppLocalizations.of(context).updateOpenLinkFailed(e.toString()),
+            ),
             duration: const Duration(seconds: 2),
           ),
         );

@@ -20,7 +20,8 @@ Future<List<NetworkInterface>> getNetworkInterfaces({
       interface: interface.addresses.map((a) => a.address).toList(),
     )) {
       _logger.info(
-          'Ignore network interface ${interface.name} (${interface.addresses.map((a) => a.address).toList()})');
+        'Ignore network interface ${interface.name} (${interface.addresses.map((a) => a.address).toList()})',
+      );
       continue;
     }
     result.add(interface);

@@ -65,8 +65,9 @@ class LocalGeocodingService {
       }
 
       // 根据精度要求设置参数
-      final accuracy =
-          highAccuracy ? LocationAccuracy.high : LocationAccuracy.reduced;
+      final accuracy = highAccuracy
+          ? LocationAccuracy.high
+          : LocationAccuracy.reduced;
       final timeout = highAccuracy
           ? const Duration(seconds: 10)
           : const Duration(seconds: 5);

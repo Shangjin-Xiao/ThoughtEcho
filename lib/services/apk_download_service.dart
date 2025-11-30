@@ -34,8 +34,9 @@ class ApkDownloadService {
       _notificationsPlugin = FlutterLocalNotificationsPlugin();
 
       // 初始化通知
-      const androidSettings =
-          AndroidInitializationSettings('@mipmap/ic_launcher');
+      const androidSettings = AndroidInitializationSettings(
+        '@mipmap/ic_launcher',
+      );
       const iosSettings = DarwinInitializationSettings();
       const initSettings = InitializationSettings(
         android: androidSettings,
@@ -228,10 +229,7 @@ class ApkDownloadService {
         onReceiveProgress: (received, total) {
           if (total != -1) {
             final progress = (received / total * 100).round();
-            _showDownloadNotification(
-              '下载中... $progress%',
-              progress,
-            );
+            _showDownloadNotification('下载中... $progress%', progress);
           }
         },
       );
@@ -309,13 +307,16 @@ class ApkDownloadService {
 
     await notificationsPlugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(androidChannel);
   }
 
   /// 显示下载通知
   static Future<void> _showDownloadNotification(
-      String message, int progress) async {
+    String message,
+    int progress,
+  ) async {
     final androidDetails = AndroidNotificationDetails(
       _notificationChannelId,
       _notificationChannelName,

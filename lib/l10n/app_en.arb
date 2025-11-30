@@ -49,6 +49,11 @@
   "onboardingUpdateSuccess": "ThoughtEcho has been successfully updated\nYour data has been automatically migrated",
   "onboardingEnterApp": "Enter App",
   
+  "onboardingQuickTip1": "Single tap on Daily Quote to copy content",
+  "onboardingQuickTip2": "Double tap on Daily Quote to quickly add to notes",
+  "onboardingQuickTip3": "Use tags to organize your notes",
+  "onboardingQuickTip4": "Full-text search to quickly find content",
+  
   "featureSmartNotes": "Smart Notes",
   "featureSmartNotesDesc": "Rich text editing with automatic time, location and weather recording",
   "featureDailyQuote": "Daily Quote",

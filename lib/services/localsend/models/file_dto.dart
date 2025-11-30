@@ -6,10 +6,7 @@ class FileMetadata {
   final DateTime? lastModified;
   final DateTime? lastAccessed;
 
-  const FileMetadata({
-    required this.lastModified,
-    required this.lastAccessed,
-  });
+  const FileMetadata({required this.lastModified, required this.lastAccessed});
 
   Map<String, dynamic> toJson() {
     return {
@@ -112,7 +109,7 @@ class FileDto {
       // parse legacy enum to internal internal enum
       fileType =
           FileType.values.firstWhereOrNull((e) => e.name == rawFileType) ??
-              FileType.other;
+          FileType.other;
     }
 
     return FileDto(

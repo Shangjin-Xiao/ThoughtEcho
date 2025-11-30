@@ -94,8 +94,8 @@ class _CustomAudioEmbedBuilder extends quill.EmbedBuilder {
 class _OptimizedImageEmbedBuilder extends quill.EmbedBuilder {
   static const QuillEditorImageEmbedConfig _imageConfig =
       QuillEditorImageEmbedConfig(
-    imageProviderBuilder: _optimizedImageProviderBuilder,
-  );
+        imageProviderBuilder: _optimizedImageProviderBuilder,
+      );
 
   static ImageProvider? _optimizedImageProviderBuilder(
     BuildContext context,
@@ -118,10 +118,12 @@ class _OptimizedImageEmbedBuilder extends quill.EmbedBuilder {
     }
 
     final styleAttributes = embedContext.node.style.attributes;
-    final double? specifiedWidth =
-        _readDimension(styleAttributes[quill.Attribute.width.key]?.value);
-    final double? specifiedHeight =
-        _readDimension(styleAttributes[quill.Attribute.height.key]?.value);
+    final double? specifiedWidth = _readDimension(
+      styleAttributes[quill.Attribute.width.key]?.value,
+    );
+    final double? specifiedHeight = _readDimension(
+      styleAttributes[quill.Attribute.height.key]?.value,
+    );
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -256,10 +258,14 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
 
         final double displayWidth = _resolveWidth(fallbackWidth);
 
-        final double devicePixelRatio =
-            mediaQuery.devicePixelRatio.clamp(1.0, 3.0);
-        final int? targetCacheWidth =
-            _computeCacheSize(displayWidth, devicePixelRatio);
+        final double devicePixelRatio = mediaQuery.devicePixelRatio.clamp(
+          1.0,
+          3.0,
+        );
+        final int? targetCacheWidth = _computeCacheSize(
+          displayWidth,
+          devicePixelRatio,
+        );
 
         return RepaintBoundary(
           child: VisibilityDetector(
@@ -268,9 +274,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
             ),
             onVisibilityChanged: _handleVisibility,
             child: ConstrainedBox(
-              constraints: BoxConstraints(
-                maxWidth: displayWidth,
-              ),
+              constraints: BoxConstraints(maxWidth: displayWidth),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: _buildImageContent(
@@ -309,8 +313,10 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
     );
 
     if (provider == null) {
-      logDebug('图片Provider创建失败: ${widget.source}',
-          source: 'OptimizedImageEmbed');
+      logDebug(
+        '图片Provider创建失败: ${widget.source}',
+        source: 'OptimizedImageEmbed',
+      );
       return _buildErrorPlaceholder(context, width);
     }
 
@@ -369,15 +375,14 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
               children: [
                 child, // 图片本身占据空间
                 Container(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .surfaceContainerHigh
-                      .withValues(alpha: 0.7),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.surfaceContainerHigh.withValues(alpha: 0.7),
                   child: Center(
                     child: CircularProgressIndicator(
                       value: progress.expectedTotalBytes != null
                           ? progress.cumulativeBytesLoaded /
-                              progress.expectedTotalBytes!
+                                progress.expectedTotalBytes!
                           : null,
                       strokeWidth: 2,
                     ),
@@ -429,10 +434,8 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
 
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => ImageTapWrapper(
-          imageUrl: widget.source,
-          config: widget.config,
-        ),
+        builder: (_) =>
+            ImageTapWrapper(imageUrl: widget.source, config: widget.config),
       ),
     );
   }
@@ -451,10 +454,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
     return bounded.round();
   }
 
-  Widget _buildErrorPlaceholder(
-    BuildContext context,
-    double width,
-  ) {
+  Widget _buildErrorPlaceholder(BuildContext context, double width) {
     final theme = Theme.of(context);
     return Container(
       width: width,

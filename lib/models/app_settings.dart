@@ -63,19 +63,19 @@ class AppSettings {
   }
 
   factory AppSettings.defaultSettings() => AppSettings(
-        hitokotoType: 'a,b,c,d,e,f,g,h,i,j,k',
-        clipboardMonitoringEnabled: false,
-        defaultStartPage: 0,
-        hasCompletedOnboarding: false,
-        aiCardGenerationEnabled: true,
-        reportInsightsUseAI: false,
-        todayThoughtsUseAI: true,
-        prioritizeBoldContentInCollapse: false,
-        showFavoriteButton: true,
-        useLocalQuotesOnly: false,
-        localeCode: null, // 默认跟随系统
-        showExactTime: false, // 默认不显示精确时间
-      );
+    hitokotoType: 'a,b,c,d,e,f,g,h,i,j,k',
+    clipboardMonitoringEnabled: false,
+    defaultStartPage: 0,
+    hasCompletedOnboarding: false,
+    aiCardGenerationEnabled: true,
+    reportInsightsUseAI: false,
+    todayThoughtsUseAI: true,
+    prioritizeBoldContentInCollapse: false,
+    showFavoriteButton: true,
+    useLocalQuotesOnly: false,
+    localeCode: null, // 默认跟随系统
+    showExactTime: false, // 默认不显示精确时间
+  );
 
   /// 使用特殊标记来区分"未指定"和"设置为null（跟随系统）"
   AppSettings copyWith({
@@ -104,7 +104,8 @@ class AppSettings {
           aiCardGenerationEnabled ?? this.aiCardGenerationEnabled,
       reportInsightsUseAI: reportInsightsUseAI ?? this.reportInsightsUseAI,
       todayThoughtsUseAI: todayThoughtsUseAI ?? this.todayThoughtsUseAI,
-      prioritizeBoldContentInCollapse: prioritizeBoldContentInCollapse ??
+      prioritizeBoldContentInCollapse:
+          prioritizeBoldContentInCollapse ??
           this.prioritizeBoldContentInCollapse,
       showFavoriteButton: showFavoriteButton ?? this.showFavoriteButton,
       useLocalQuotesOnly: useLocalQuotesOnly ?? this.useLocalQuotesOnly,

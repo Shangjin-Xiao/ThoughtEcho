@@ -41,6 +41,7 @@ class TestConfig {
     ];
 
     return problematicTests.any(
-        (pattern) => testName.toLowerCase().contains(pattern.toLowerCase()));
+      (pattern) => testName.toLowerCase().contains(pattern.toLowerCase()),
+    );
   }
 }

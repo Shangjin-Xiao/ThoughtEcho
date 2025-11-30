@@ -39,8 +39,9 @@ class ConnectivityService extends ChangeNotifier {
         _isConnected = true;
       } else {
         // 通过ping一个可靠的服务器来检查网络连接
-        final result = await InternetAddress.lookup('8.8.8.8')
-            .timeout(const Duration(seconds: 5));
+        final result = await InternetAddress.lookup(
+          '8.8.8.8',
+        ).timeout(const Duration(seconds: 5));
         _isConnected = result.isNotEmpty && result[0].rawAddress.isNotEmpty;
       }
     } catch (e) {
@@ -51,7 +52,8 @@ class ConnectivityService extends ChangeNotifier {
     // 如果连接状态发生变化，通知监听器
     if (wasConnected != _isConnected) {
       logDebug(
-          '网络连接状态变化: ${wasConnected ? '已连接' : '未连接'} -> ${_isConnected ? '已连接' : '未连接'}');
+        '网络连接状态变化: ${wasConnected ? '已连接' : '未连接'} -> ${_isConnected ? '已连接' : '未连接'}',
+      );
       notifyListeners();
     }
   }

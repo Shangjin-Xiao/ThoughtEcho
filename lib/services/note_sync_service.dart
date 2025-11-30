@@ -83,9 +83,9 @@ class NoteSyncService extends ChangeNotifier {
     required DatabaseService databaseService,
     required SettingsService settingsService,
     required AIAnalysisDatabaseService aiAnalysisDbService,
-  })  : _backupService = backupService,
-        _databaseService = databaseService,
-        _settingsService = settingsService {
+  }) : _backupService = backupService,
+       _databaseService = databaseService,
+       _settingsService = settingsService {
     AppLogger.d('NoteSyncService 构造函数完成', source: 'NoteSyncService');
   }
   bool get skipSyncConfirmation => _settingsService.syncSkipConfirm;
@@ -94,7 +94,8 @@ class NoteSyncService extends ChangeNotifier {
   Future<void> initialize() async {
     // 在打开同步页面时才启动服务器
     AppLogger.d(
-        'NoteSyncService initialized, server will start when sync page opens');
+      'NoteSyncService initialized, server will start when sync page opens',
+    );
   }
 
   /// 启动服务器（在打开同步页面时调用）
@@ -107,8 +108,10 @@ class NoteSyncService extends ChangeNotifier {
 
     // Check if we're running on web platform
     if (kIsWeb) {
-      AppLogger.w('Note sync servers not supported on web platform',
-          source: 'NoteSyncService');
+      AppLogger.w(
+        'Note sync servers not supported on web platform',
+        source: 'NoteSyncService',
+      );
       return;
     }
 
@@ -165,8 +168,10 @@ class NoteSyncService extends ChangeNotifier {
         },
       );
       final actualPort = _localSendServer!.port;
-      AppLogger.i('LocalSendServer启动成功，端口: $actualPort',
-          source: 'NoteSyncService');
+      AppLogger.i(
+        'LocalSendServer启动成功，端口: $actualPort',
+        source: 'NoteSyncService',
+      );
       logInfo('sync_server_started port=$actualPort', source: 'LocalSend');
 
       // 设置设备发现服务的实际端口
@@ -176,8 +181,9 @@ class NoteSyncService extends ChangeNotifier {
       await _discoveryService!.startDiscovery();
       AppLogger.i('设备发现服务启动成功', source: 'NoteSyncService');
       AppLogger.i(
-          'ThoughtEcho sync server started on port ${_localSendServer?.port}',
-          source: 'NoteSyncService');
+        'ThoughtEcho sync server started on port ${_localSendServer?.port}',
+        source: 'NoteSyncService',
+      );
     } catch (e) {
       logError('sync_server_start_fail $e', source: 'LocalSend');
       // Clean up on failure
@@ -206,7 +212,10 @@ class NoteSyncService extends ChangeNotifier {
       c?.complete(false);
       _awaitingUserApproval = false;
       _updateSyncStatus(
-          SyncStatus.failed, '已拒绝来自$_receiveSenderAlias 的同步', 0.0);
+        SyncStatus.failed,
+        '已拒绝来自$_receiveSenderAlias 的同步',
+        0.0,
+      );
     }
   }
 
@@ -222,8 +231,11 @@ class NoteSyncService extends ChangeNotifier {
         AppLogger.i('LocalSendServer已停止', source: 'NoteSyncService');
       }
     } catch (e) {
-      AppLogger.e('停止LocalSendServer时出错: $e',
-          error: e, source: 'NoteSyncService');
+      AppLogger.e(
+        '停止LocalSendServer时出错: $e',
+        error: e,
+        source: 'NoteSyncService',
+      );
     }
 
     try {
@@ -244,8 +256,11 @@ class NoteSyncService extends ChangeNotifier {
         AppLogger.i('LocalSend发送服务已清理', source: 'NoteSyncService');
       }
     } catch (e) {
-      AppLogger.e('清理LocalSend发送服务时出错: $e',
-          error: e, source: 'NoteSyncService');
+      AppLogger.e(
+        '清理LocalSend发送服务时出错: $e',
+        error: e,
+        source: 'NoteSyncService',
+      );
     }
 
     // 清空所有引用
@@ -253,8 +268,10 @@ class NoteSyncService extends ChangeNotifier {
     _discoveryService = null;
     _localSendProvider = null;
 
-    AppLogger.i('ThoughtEcho sync servers stopped and cleaned up',
-        source: 'NoteSyncService');
+    AppLogger.i(
+      'ThoughtEcho sync servers stopped and cleaned up',
+      source: 'NoteSyncService',
+    );
   }
 
   /// 发送笔记数据到指定设备（统一使用createSyncPackage）
@@ -265,14 +282,17 @@ class NoteSyncService extends ChangeNotifier {
 
   /// (Deprecated) 旧receiveAndMerge逻辑已废弃，直接调用processSyncPackage
   @Deprecated(
-      'Legacy receive logic replaced by processSyncPackage; will be removed in future release')
+    'Legacy receive logic replaced by processSyncPackage; will be removed in future release',
+  )
   Future<void> receiveAndMergeNotes(String backupFilePath) =>
       processSyncPackage(backupFilePath);
 
   /// 创建同步包并发送到指定设备（若对方需要先审批，先走意向握手，再打包发送）
   /// [includeMediaFiles] 是否包含媒体文件（默认包含）
-  Future<String> createSyncPackage(Device targetDevice,
-      {bool includeMediaFiles = true}) async {
+  Future<String> createSyncPackage(
+    Device targetDevice, {
+    bool includeMediaFiles = true,
+  }) async {
     if (_localSendProvider == null) {
       throw Exception('同步服务未初始化');
     }
@@ -301,8 +321,11 @@ class NoteSyncService extends ChangeNotifier {
         onProgress: (current, total) {
           final ratio = total > 0 ? (current / total).clamp(0.0, 1.0) : 0.0;
           final progress = 0.1 + ratio * 0.4; // 10%-50%
-          _updateSyncStatus(SyncStatus.packaging,
-              '正在打包数据... ${(ratio * 100).toStringAsFixed(0)}%', progress);
+          _updateSyncStatus(
+            SyncStatus.packaging,
+            '正在打包数据... ${(ratio * 100).toStringAsFixed(0)}%',
+            progress,
+          );
         },
       );
       // 额外：打包完成后立即获取文件大小并校验
@@ -322,8 +345,10 @@ class NoteSyncService extends ChangeNotifier {
           }
         } catch (_) {}
       }
-      logInfo('backup_zip_ready path=$backupPath size=$size',
-          source: 'LocalSend');
+      logInfo(
+        'backup_zip_ready path=$backupPath size=$size',
+        source: 'LocalSend',
+      );
       if (size == 0) {
         _updateSyncStatus(SyncStatus.failed, '备份文件大小为0，取消发送', 0.0);
         throw Exception('备份文件大小为0，可能生成失败');
@@ -358,9 +383,10 @@ class NoteSyncService extends ChangeNotifier {
 
           final progress = 0.5 + ratio * 0.4; // 线性映射
           _updateSyncStatus(
-              SyncStatus.sending,
-              '正在发送 ${(sent / 1024 / 1024).toStringAsFixed(1)}MB / ${(total / 1024 / 1024).toStringAsFixed(1)}MB$extra',
-              progress);
+            SyncStatus.sending,
+            '正在发送 ${(sent / 1024 / 1024).toStringAsFixed(1)}MB / ${(total / 1024 / 1024).toStringAsFixed(1)}MB$extra',
+            progress,
+          );
         },
         onSessionCreated: (sid) {
           _currentSendSessionId = sid;
@@ -397,7 +423,8 @@ class NoteSyncService extends ChangeNotifier {
     // 以便接收方知道即将到来的同步，并且接收方可以根据自己的设置决定是否需要审批
     try {
       final uri = Uri.parse(
-          'http://${target.ip}:${target.port}/api/thoughtecho/v1/sync-intent');
+        'http://${target.ip}:${target.port}/api/thoughtecho/v1/sync-intent',
+      );
       final fp = await DeviceIdentityManager.I.getFingerprint();
       // 直接使用 discoveryService 的设备型号，它已经正确地从设备信息中获取
       String alias = 'ThoughtEcho';
@@ -549,11 +576,15 @@ class NoteSyncService extends ChangeNotifier {
         }
       }
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
-        AppLogger.d('Preflight OK: ${resp.statusCode}',
-            source: 'NoteSyncService');
+        AppLogger.d(
+          'Preflight OK: ${resp.statusCode}',
+          source: 'NoteSyncService',
+        );
       } else {
-        AppLogger.w('Preflight warn: ${resp.statusCode}',
-            source: 'NoteSyncService');
+        AppLogger.w(
+          'Preflight warn: ${resp.statusCode}',
+          source: 'NoteSyncService',
+        );
       }
     } finally {
       client.close();
@@ -577,7 +608,10 @@ class NoteSyncService extends ChangeNotifier {
         onProgress: (current, total) {
           final progress = 0.1 + (current / total) * 0.8;
           _updateSyncStatus(
-              SyncStatus.merging, '正在导入数据... ($current/$total)', progress);
+            SyncStatus.merging,
+            '正在导入数据... ($current/$total)',
+            progress,
+          );
         },
       );
       _lastMergeReport = mergeReport; // 保存最近一次报告
@@ -598,8 +632,11 @@ class NoteSyncService extends ChangeNotifier {
       }
     } catch (e) {
       _updateSyncStatus(SyncStatus.failed, '合并失败: $e', 0.0);
-      AppLogger.e('processSyncPackage失败: $e',
-          error: e, source: 'NoteSyncService');
+      AppLogger.e(
+        'processSyncPackage失败: $e',
+        error: e,
+        source: 'NoteSyncService',
+      );
       rethrow;
     }
   }
@@ -629,7 +666,8 @@ class NoteSyncService extends ChangeNotifier {
     // 通知策略：
     // 1. 状态或消息变化立即通知
     // 2. 进度变化累计 >=0.5% 或 距上次>=_minUiNotifyIntervalMs 才通知（更实时）
-    final shouldNotify = statusChanged ||
+    final shouldNotify =
+        statusChanged ||
         messageChanged ||
         progressDelta >= 0.002 || // 0.2% 进度变化就刷新
         timeDeltaMs >= _minUiNotifyIntervalMs ||
@@ -642,8 +680,9 @@ class NoteSyncService extends ChangeNotifier {
     }
     if (shouldNotify || statusChanged) {
       AppLogger.d(
-          '同步状态: $status - $message (${(_syncProgress * 100).toStringAsFixed(1)}%)',
-          source: 'NoteSyncService');
+        '同步状态: $status - $message (${(_syncProgress * 100).toStringAsFixed(1)}%)',
+        source: 'NoteSyncService',
+      );
     }
   }
 
@@ -653,8 +692,10 @@ class NoteSyncService extends ChangeNotifier {
   /// `defaultDiscoveryTimeout`，在较慢或不稳定网络上建议增加该值。
   Future<List<Device>> discoverNearbyDevices({int? timeout}) async {
     if (_discoveryService == null) {
-      AppLogger.w('Discovery service not initialized',
-          source: 'NoteSyncService');
+      AppLogger.w(
+        'Discovery service not initialized',
+        source: 'NoteSyncService',
+      );
       return [];
     }
 
@@ -681,8 +722,9 @@ class NoteSyncService extends ChangeNotifier {
   ///  - stream: 订阅后会立即收到第一次空列表，然后设备变化时推送。
   ///  - cancel: 调用后提前结束等待并完成 stream。
   /// [timeout] 总等待时长毫秒。
-  (Stream<List<Device>>, VoidCallback) discoverNearbyDevicesStream(
-      {int? timeout}) {
+  (Stream<List<Device>>, VoidCallback) discoverNearbyDevicesStream({
+    int? timeout,
+  }) {
     if (_discoveryService == null) {
       final controller = StreamController<List<Device>>();
       // 立即关闭
@@ -777,8 +819,9 @@ class NoteSyncService extends ChangeNotifier {
 
     // 移除过期样本（超过5秒的）
     final now = DateTime.now();
-    _speedSamples
-        .removeWhere((s) => now.difference(s.timestamp).inMilliseconds > 5000);
+    _speedSamples.removeWhere(
+      (s) => now.difference(s.timestamp).inMilliseconds > 5000,
+    );
 
     if (_speedSamples.isEmpty) return 0.0;
 
@@ -798,10 +841,9 @@ class NoteSyncService extends ChangeNotifier {
     if (_lastProgressBytes != null && _lastProgressTime != null) {
       final deltaBytes = currentBytes - _lastProgressBytes!;
       if (deltaBytes > 0) {
-        _speedSamples.add(_SpeedSample(
-          bytes: deltaBytes,
-          timestamp: timestamp,
-        ));
+        _speedSamples.add(
+          _SpeedSample(bytes: deltaBytes, timestamp: timestamp),
+        );
 
         // 限制样本数量
         while (_speedSamples.length > _maxSpeedSamples) {
@@ -840,11 +882,7 @@ class NoteSyncService extends ChangeNotifier {
 
     if (_isReceiveEligibleState()) {
       final displayAlias = senderAlias.isEmpty ? '对方' : senderAlias;
-      _updateSyncStatus(
-        SyncStatus.receiving,
-        '等待 $displayAlias 发送数据...',
-        0.02,
-      );
+      _updateSyncStatus(SyncStatus.receiving, '等待 $displayAlias 发送数据...', 0.02);
     } else {
       // 仍然需要同步 alias 信息供 UI 展示
       notifyListeners();
@@ -882,8 +920,10 @@ class NoteSyncService extends ChangeNotifier {
 
   @visibleForTesting
   void debugHandleReceiveSessionCreated(
-          String sessionId, int totalBytes, String senderAlias) =>
-      _handleReceiveSessionCreated(sessionId, totalBytes, senderAlias);
+    String sessionId,
+    int totalBytes,
+    String senderAlias,
+  ) => _handleReceiveSessionCreated(sessionId, totalBytes, senderAlias);
 
   @visibleForTesting
   void debugHandleReceiveProgress(int received, int total) =>
@@ -895,10 +935,7 @@ class _SpeedSample {
   final int bytes;
   final DateTime timestamp;
 
-  _SpeedSample({
-    required this.bytes,
-    required this.timestamp,
-  });
+  _SpeedSample({required this.bytes, required this.timestamp});
 }
 
 // CrossFile模型（简化版）
@@ -907,11 +944,7 @@ class CrossFile {
   final String name;
   final int size;
 
-  CrossFile({
-    required this.path,
-    required this.name,
-    required this.size,
-  });
+  CrossFile({required this.path, required this.name, required this.size});
 
   factory CrossFile.fromFile(File file) {
     return CrossFile(

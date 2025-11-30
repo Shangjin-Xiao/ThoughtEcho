@@ -146,8 +146,9 @@ void main() {
 
       expect(QuoteItemWidget.needsExpansionFor(quote), isTrue);
 
-      final contentGesture =
-          find.byKey(const ValueKey('quote_item.double_tap_region'));
+      final contentGesture = find.byKey(
+        const ValueKey('quote_item.double_tap_region'),
+      );
 
       await tester.tap(contentGesture);
       await tester.pump(const Duration(milliseconds: 40));
@@ -186,8 +187,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final gestureDetector =
-          find.byKey(const ValueKey('quote_item.double_tap_region'));
+      final gestureDetector = find.byKey(
+        const ValueKey('quote_item.double_tap_region'),
+      );
 
       await tester.tap(gestureDetector);
       await tester.pump(const Duration(milliseconds: 40));
@@ -205,11 +207,11 @@ void main() {
       final delta = jsonEncode([
         {
           'insert': '粗体文本',
-          'attributes': {'bold': true}
+          'attributes': {'bold': true},
         },
         {'insert': '\n正常文本\n'},
         {
-          'insert': {'image': 'https://example.com/img.png'}
+          'insert': {'image': 'https://example.com/img.png'},
         },
       ]);
 

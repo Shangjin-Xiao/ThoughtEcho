@@ -217,7 +217,9 @@ class DatabaseService extends ChangeNotifier {
 
   /// 修复：带锁和超时的数据库操作执行器，防止死锁
   Future<T> _executeWithLock<T>(
-      String operationId, Future<T> Function() action) async {
+    String operationId,
+    Future<T> Function() action,
+  ) async {
     // 如果已有相同操作在执行，等待其完成
     if (_databaseLock.containsKey(operationId)) {
       await _databaseLock[operationId]!.future;
@@ -232,7 +234,9 @@ class DatabaseService extends ChangeNotifier {
         const Duration(seconds: 30),
         onTimeout: () {
           throw TimeoutException(
-              '数据库操作超时: $operationId', const Duration(seconds: 30));
+            '数据库操作超时: $operationId',
+            const Duration(seconds: 30),
+          );
         },
       );
       completer.complete();
@@ -284,7 +288,8 @@ class DatabaseService extends ChangeNotifier {
           );
           _memoryStore.add(quote);
           logDebug(
-              '生成示例数据${i + 1}: id=${quote.id?.substring(0, 8)}, content=${quote.content}');
+            '生成示例数据${i + 1}: id=${quote.id?.substring(0, 8)}, content=${quote.content}',
+          );
         }
         logDebug('Web平台已生成${_memoryStore.length}条示例数据');
       }
@@ -576,8 +581,10 @@ class DatabaseService extends ChangeNotifier {
 
   /// 配置数据库安全和性能PRAGMA参数
   /// [inTransaction] 是否在事务内执行（onCreate/onUpgrade为true，onOpen为false）
-  Future<void> _configureDatabasePragmas(Database db,
-      {bool inTransaction = false}) async {
+  Future<void> _configureDatabasePragmas(
+    Database db, {
+    bool inTransaction = false,
+  }) async {
     try {
       // 启用外键约束（防止数据孤立）
       await db.rawQuery('PRAGMA foreign_keys = ON');
@@ -605,7 +612,8 @@ class DatabaseService extends ChangeNotifier {
       final journalMode = await db.rawQuery('PRAGMA journal_mode');
 
       logDebug(
-          '数据库PRAGMA配置完成 (inTransaction=$inTransaction): foreign_keys=${foreignKeys.first['foreign_keys']}, journal_mode=${journalMode.first['journal_mode']}');
+        '数据库PRAGMA配置完成 (inTransaction=$inTransaction): foreign_keys=${foreignKeys.first['foreign_keys']}, journal_mode=${journalMode.first['journal_mode']}',
+      );
     } catch (e) {
       logError('配置数据库PRAGMA失败: $e', error: e, source: 'DatabaseService');
       // 配置失败不应阻止数据库使用，只记录错误
@@ -725,10 +733,7 @@ class DatabaseService extends ChangeNotifier {
           // 更新记录
           await txn.update(
             'quotes',
-            {
-              'source_author': sourceAuthor,
-              'source_work': sourceWork,
-            },
+            {'source_author': sourceAuthor, 'source_work': sourceWork},
             where: 'id = ?',
             whereArgs: [quote['id']],
           );
@@ -765,35 +770,27 @@ class DatabaseService extends ChangeNotifier {
 
     // 如果数据库版本低于 10，添加 edit_source 字段用于记录编辑来源
     if (oldVersion < 10) {
-      logDebug(
-        '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 edit_source 字段',
-      );
+      logDebug('数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 edit_source 字段');
       await txn.execute('ALTER TABLE quotes ADD COLUMN edit_source TEXT');
       logDebug('数据库升级：edit_source 字段添加完成');
     }
     // 如果数据库版本低于 11，添加 delta_content 字段用于存储富文本Delta JSON
     if (oldVersion < 11) {
-      logDebug(
-        '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 delta_content 字段',
-      );
+      logDebug('数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 delta_content 字段');
       await txn.execute('ALTER TABLE quotes ADD COLUMN delta_content TEXT');
       logDebug('数据库升级：delta_content 字段添加完成');
     }
 
     // 修复：如果数据库版本低于 12，安全地创建 quote_tags 表并迁移数据
     if (oldVersion < 12) {
-      logDebug(
-        '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，创建 quote_tags 表并迁移数据',
-      );
+      logDebug('数据库升级：从版本 $oldVersion 升级到版本 $newVersion，创建 quote_tags 表并迁移数据');
 
       await _upgradeToVersion12SafelyInTransaction(txn);
     }
 
     // 如果数据库版本低于 13，创建媒体文件引用表
     if (oldVersion < 13) {
-      logDebug(
-        '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，创建媒体文件引用表',
-      );
+      logDebug('数据库升级：从版本 $oldVersion 升级到版本 $newVersion，创建媒体文件引用表');
 
       await _initializeMediaReferenceTableInTransaction(txn);
       logDebug('数据库升级：媒体文件引用表创建完成');
@@ -801,9 +798,7 @@ class DatabaseService extends ChangeNotifier {
 
     // 修复：如果数据库版本低于 14，安全地添加 day_period 字段
     if (oldVersion < 14) {
-      logDebug(
-        '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 day_period 字段',
-      );
+      logDebug('数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 day_period 字段');
 
       try {
         // 先检查字段是否已存在
@@ -830,9 +825,7 @@ class DatabaseService extends ChangeNotifier {
 
     // 如果数据库版本低于15，添加 last_modified 字段（用于同步与更新追踪）
     if (oldVersion < 15) {
-      logDebug(
-        '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 last_modified 字段',
-      );
+      logDebug('数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 last_modified 字段');
       try {
         final columns = await txn.rawQuery('PRAGMA table_info(quotes)');
         final hasColumn = columns.any((col) => col['name'] == 'last_modified');
@@ -843,15 +836,21 @@ class DatabaseService extends ChangeNotifier {
           final nowIso = DateTime.now().toIso8601String();
           // 使用COALESCE保证date为空时写入当前时间
           await txn.execute(
-              "UPDATE quotes SET last_modified = COALESCE(date, ?)", [nowIso]);
+            "UPDATE quotes SET last_modified = COALESCE(date, ?)",
+            [nowIso],
+          );
         } else {
           logDebug('数据库升级：last_modified 字段已存在，跳过添加');
         }
         await txn.execute(
-            'CREATE INDEX IF NOT EXISTS idx_quotes_last_modified ON quotes(last_modified)');
+          'CREATE INDEX IF NOT EXISTS idx_quotes_last_modified ON quotes(last_modified)',
+        );
       } catch (e) {
-        logError('last_modified 字段升级失败: $e',
-            error: e, source: 'DatabaseUpgrade');
+        logError(
+          'last_modified 字段升级失败: $e',
+          error: e,
+          source: 'DatabaseUpgrade',
+        );
       }
     }
 
@@ -864,21 +863,27 @@ class DatabaseService extends ChangeNotifier {
         final columns = await txn.rawQuery('PRAGMA table_info(categories)');
         final hasColumn = columns.any((col) => col['name'] == 'last_modified');
         if (!hasColumn) {
-          await txn
-              .execute('ALTER TABLE categories ADD COLUMN last_modified TEXT');
+          await txn.execute(
+            'ALTER TABLE categories ADD COLUMN last_modified TEXT',
+          );
           logDebug('数据库升级：categories表 last_modified 字段添加完成');
           // 回填已有分类数据的last_modified
           final nowIso = DateTime.now().toIso8601String();
-          await txn
-              .execute("UPDATE categories SET last_modified = ?", [nowIso]);
+          await txn.execute("UPDATE categories SET last_modified = ?", [
+            nowIso,
+          ]);
         } else {
           logDebug('数据库升级：categories表 last_modified 字段已存在，跳过添加');
         }
         await txn.execute(
-            'CREATE INDEX IF NOT EXISTS idx_categories_last_modified ON categories(last_modified)');
+          'CREATE INDEX IF NOT EXISTS idx_categories_last_modified ON categories(last_modified)',
+        );
       } catch (e) {
-        logError('categories表 last_modified 字段升级失败: $e',
-            error: e, source: 'DatabaseUpgrade');
+        logError(
+          'categories表 last_modified 字段升级失败: $e',
+          error: e,
+          source: 'DatabaseUpgrade',
+        );
       }
     }
 
@@ -892,24 +897,27 @@ class DatabaseService extends ChangeNotifier {
         final hasColumn = columns.any((col) => col['name'] == 'favorite_count');
         if (!hasColumn) {
           await txn.execute(
-              'ALTER TABLE quotes ADD COLUMN favorite_count INTEGER DEFAULT 0');
+            'ALTER TABLE quotes ADD COLUMN favorite_count INTEGER DEFAULT 0',
+          );
           logDebug('数据库升级：quotes表 favorite_count 字段添加完成');
         } else {
           logDebug('数据库升级：quotes表 favorite_count 字段已存在，跳过添加');
         }
         await txn.execute(
-            'CREATE INDEX IF NOT EXISTS idx_quotes_favorite_count ON quotes(favorite_count)');
+          'CREATE INDEX IF NOT EXISTS idx_quotes_favorite_count ON quotes(favorite_count)',
+        );
       } catch (e) {
-        logError('quotes表 favorite_count 字段升级失败: $e',
-            error: e, source: 'DatabaseUpgrade');
+        logError(
+          'quotes表 favorite_count 字段升级失败: $e',
+          error: e,
+          source: 'DatabaseUpgrade',
+        );
       }
     }
 
     // 版本18：更新默认标签图标为emoji
     if (oldVersion < 18) {
-      logDebug(
-        '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，更新默认标签图标为emoji',
-      );
+      logDebug('数据库升级：从版本 $oldVersion 升级到版本 $newVersion，更新默认标签图标为emoji');
       try {
         // 定义图标映射：旧图标 -> 新emoji
         final Map<String, String> iconMigration = {
@@ -981,8 +989,11 @@ class DatabaseService extends ChangeNotifier {
         );
         logDebug('数据库升级：coordinates 索引创建完成');
       } catch (e) {
-        logError('latitude/longitude 字段升级失败: $e',
-            error: e, source: 'DatabaseUpgrade');
+        logError(
+          'latitude/longitude 字段升级失败: $e',
+          error: e,
+          source: 'DatabaseUpgrade',
+        );
       }
     }
   }
@@ -1105,13 +1116,10 @@ class DatabaseService extends ChangeNotifier {
 
         // 插入有效的标签关联
         for (final tagId in validTagIds) {
-          await txn.insert(
-              'quote_tags',
-              {
-                'quote_id': quoteId,
-                'tag_id': tagId,
-              },
-              conflictAlgorithm: ConflictAlgorithm.ignore);
+          await txn.insert('quote_tags', {
+            'quote_id': quoteId,
+            'tag_id': tagId,
+          }, conflictAlgorithm: ConflictAlgorithm.ignore);
         }
 
         migratedCount++;
@@ -1194,7 +1202,8 @@ class DatabaseService extends ChangeNotifier {
         'CREATE INDEX IF NOT EXISTS idx_quotes_category_id ON quotes(category_id)',
       );
       await txn.execute(
-          'CREATE INDEX IF NOT EXISTS idx_quotes_date ON quotes(date)');
+        'CREATE INDEX IF NOT EXISTS idx_quotes_date ON quotes(date)',
+      );
       await txn.execute(
         'CREATE INDEX IF NOT EXISTS idx_quotes_date_category ON quotes(date DESC, category_id)',
       );
@@ -1293,7 +1302,8 @@ class DatabaseService extends ChangeNotifier {
 
   /// 修复：在事务中初始化媒体引用表
   Future<void> _initializeMediaReferenceTableInTransaction(
-      Transaction txn) async {
+    Transaction txn,
+  ) async {
     await txn.execute('''
       CREATE TABLE IF NOT EXISTS media_references (
         id TEXT PRIMARY KEY,
@@ -1490,7 +1500,8 @@ class DatabaseService extends ChangeNotifier {
     if (tagIds != null && tagIds.isNotEmpty) {
       final tagPlaceholders = tagIds.map((_) => '?').join(',');
       conditions.add(
-          'q.id IN (SELECT quote_id FROM quote_tags WHERE tag_id IN ($tagPlaceholders))');
+        'q.id IN (SELECT quote_id FROM quote_tags WHERE tag_id IN ($tagPlaceholders))',
+      );
       args.addAll(tagIds);
     }
 
@@ -1518,17 +1529,20 @@ class DatabaseService extends ChangeNotifier {
 
     // 时间段筛选
     if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-      final dayPeriodPlaceholders =
-          selectedDayPeriods.map((_) => '?').join(',');
+      final dayPeriodPlaceholders = selectedDayPeriods
+          .map((_) => '?')
+          .join(',');
       conditions.add('q.day_period IN ($dayPeriodPlaceholders)');
       args.addAll(selectedDayPeriods);
     }
 
-    final whereClause =
-        conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
+    final whereClause = conditions.isNotEmpty
+        ? 'WHERE ${conditions.join(' AND ')}'
+        : '';
 
     // 优化：使用JOIN一次性获取所有数据，避免N+1查询问题
-    final query = '''
+    final query =
+        '''
       SELECT 
         q.*,
         GROUP_CONCAT(qt.tag_id) as tag_ids_joined
@@ -1664,8 +1678,9 @@ class DatabaseService extends ChangeNotifier {
     if (kIsWeb) {
       // Web 平台逻辑：检查内存中的 _categoryStore
       final defaultCategories = _getDefaultHitokotoCategories();
-      final existingNamesLower =
-          _categoryStore.map((c) => c.name.toLowerCase()).toSet();
+      final existingNamesLower = _categoryStore
+          .map((c) => c.name.toLowerCase())
+          .toSet();
       for (final category in defaultCategories) {
         if (!existingNamesLower.contains(category.name.toLowerCase())) {
           _categoryStore.add(category);
@@ -1753,15 +1768,12 @@ class DatabaseService extends ChangeNotifier {
         if (idsToUpdate.containsKey(category.id)) {
           continue;
         }
-        batch.insert(
-            'categories',
-            {
-              'id': category.id,
-              'name': category.name,
-              'is_default': category.isDefault ? 1 : 0,
-              'icon_name': category.iconName,
-            },
-            conflictAlgorithm: ConflictAlgorithm.ignore);
+        batch.insert('categories', {
+          'id': category.id,
+          'name': category.name,
+          'is_default': category.isDefault ? 1 : 0,
+          'icon_name': category.iconName,
+        }, conflictAlgorithm: ConflictAlgorithm.ignore);
         logDebug('添加默认一言分类: ${category.name}');
       }
 
@@ -1991,11 +2003,12 @@ class DatabaseService extends ChangeNotifier {
           logError('批量插入分类失败，降级为逐条插入: $e', error: e, source: 'BackupRestore');
           // 降级：逐条插入
           for (final c in categories) {
-            final categoryData =
-                Map<String, dynamic>.from(c as Map<String, dynamic>);
+            final categoryData = Map<String, dynamic>.from(
+              c as Map<String, dynamic>,
+            );
             final categoryFieldMappings = {
               'isDefault': 'is_default',
-              'iconName': 'icon_name'
+              'iconName': 'icon_name',
             };
             for (final mapping in categoryFieldMappings.entries) {
               if (categoryData.containsKey(mapping.key)) {
@@ -2008,8 +2021,11 @@ class DatabaseService extends ChangeNotifier {
             categoryData['is_default'] ??= 0;
 
             try {
-              await txn.insert('categories', categoryData,
-                  conflictAlgorithm: ConflictAlgorithm.replace);
+              await txn.insert(
+                'categories',
+                categoryData,
+                conflictAlgorithm: ConflictAlgorithm.replace,
+              );
             } catch (e2) {
               logDebug('插入单个分类失败: ${categoryData['id']}');
             }
@@ -2071,8 +2087,9 @@ class DatabaseService extends ChangeNotifier {
           // 收集标签信息（稍后批量插入）
           if (tagIdsString != null && tagIdsString.isNotEmpty) {
             final quoteId = quoteData['id'] as String;
-            final tagIds =
-                tagIdsString.split(',').where((id) => id.trim().isNotEmpty);
+            final tagIds = tagIdsString
+                .split(',')
+                .where((id) => id.trim().isNotEmpty);
             for (final tagId in tagIds) {
               tagRelations.add({'quote_id': quoteId, 'tag_id': tagId.trim()});
             }
@@ -2094,8 +2111,9 @@ class DatabaseService extends ChangeNotifier {
           logError('批量插入笔记失败，降级为逐条插入: $e', error: e, source: 'BackupRestore');
           // 降级：逐条插入
           for (final q in quotes) {
-            final quoteData =
-                Map<String, dynamic>.from(q as Map<String, dynamic>);
+            final quoteData = Map<String, dynamic>.from(
+              q as Map<String, dynamic>,
+            );
 
             String? tagIdsString;
             if (quoteData.containsKey('tag_ids')) {
@@ -2130,21 +2148,24 @@ class DatabaseService extends ChangeNotifier {
             quoteData['date'] ??= DateTime.now().toIso8601String();
 
             try {
-              await txn.insert('quotes', quoteData,
-                  conflictAlgorithm: ConflictAlgorithm.replace);
+              await txn.insert(
+                'quotes',
+                quoteData,
+                conflictAlgorithm: ConflictAlgorithm.replace,
+              );
 
               // 插入成功后，处理标签关联
               if (tagIdsString != null && tagIdsString.isNotEmpty) {
                 final quoteId = quoteData['id'] as String;
-                final tagIds =
-                    tagIdsString.split(',').where((id) => id.trim().isNotEmpty);
+                final tagIds = tagIdsString
+                    .split(',')
+                    .where((id) => id.trim().isNotEmpty);
                 for (final tagId in tagIds) {
                   try {
-                    await txn.insert(
-                      'quote_tags',
-                      {'quote_id': quoteId, 'tag_id': tagId.trim()},
-                      conflictAlgorithm: ConflictAlgorithm.ignore,
-                    );
+                    await txn.insert('quote_tags', {
+                      'quote_id': quoteId,
+                      'tag_id': tagId.trim(),
+                    }, conflictAlgorithm: ConflictAlgorithm.ignore);
                   } catch (e3) {
                     logDebug('插入标签关联失败: $e3');
                   }
@@ -2160,8 +2181,11 @@ class DatabaseService extends ChangeNotifier {
         if (tagRelations.isNotEmpty) {
           final tagBatch = txn.batch();
           for (final relation in tagRelations) {
-            tagBatch.insert('quote_tags', relation,
-                conflictAlgorithm: ConflictAlgorithm.ignore);
+            tagBatch.insert(
+              'quote_tags',
+              relation,
+              conflictAlgorithm: ConflictAlgorithm.ignore,
+            );
           }
 
           try {
@@ -2172,8 +2196,11 @@ class DatabaseService extends ChangeNotifier {
             // 降级：逐条插入
             for (final relation in tagRelations) {
               try {
-                await txn.insert('quote_tags', relation,
-                    conflictAlgorithm: ConflictAlgorithm.ignore);
+                await txn.insert(
+                  'quote_tags',
+                  relation,
+                  conflictAlgorithm: ConflictAlgorithm.ignore,
+                );
               } catch (e2) {
                 logDebug('插入单条标签关联失败: ${relation['quote_id']}');
               }
@@ -2365,10 +2392,14 @@ class DatabaseService extends ChangeNotifier {
   }
 
   /// 修复：统一的分类名称唯一性验证
-  Future<void> _validateCategoryNameUnique(Database db, String name,
-      {String? excludeId}) async {
-    final whereClause =
-        excludeId != null ? 'LOWER(name) = ? AND id != ?' : 'LOWER(name) = ?';
+  Future<void> _validateCategoryNameUnique(
+    Database db,
+    String name, {
+    String? excludeId,
+  }) async {
+    final whereClause = excludeId != null
+        ? 'LOWER(name) = ? AND id != ?'
+        : 'LOWER(name) = ?';
     final whereArgs = excludeId != null
         ? [name.toLowerCase(), excludeId]
         : [name.toLowerCase()];
@@ -2618,8 +2649,9 @@ class DatabaseService extends ChangeNotifier {
       try {
         final db = await safeDatabase;
         final newQuoteId = quote.id ?? _uuid.v4();
-        final quoteWithId =
-            quote.id == null ? quote.copyWith(id: newQuoteId) : quote;
+        final quoteWithId = quote.id == null
+            ? quote.copyWith(id: newQuoteId)
+            : quote;
 
         await db.transaction((txn) async {
           final quoteMap = quoteWithId.toJson();
@@ -2665,11 +2697,10 @@ class DatabaseService extends ChangeNotifier {
           // 修复：插入标签关联，避免事务嵌套
           if (quote.tagIds.isNotEmpty) {
             for (final tagId in quote.tagIds) {
-              await txn.insert(
-                'quote_tags',
-                {'quote_id': newQuoteId, 'tag_id': tagId},
-                conflictAlgorithm: ConflictAlgorithm.ignore,
-              );
+              await txn.insert('quote_tags', {
+                'quote_id': newQuoteId,
+                'tag_id': tagId,
+              }, conflictAlgorithm: ConflictAlgorithm.ignore);
             }
           }
         });
@@ -2803,7 +2834,8 @@ class DatabaseService extends ChangeNotifier {
         final end = (offset + limit).clamp(0, filtered.length);
 
         logDebug(
-            'Web分页：总数据${filtered.length}条，offset=$offset，limit=$limit，start=$start，end=$end');
+          'Web分页：总数据${filtered.length}条，offset=$offset，limit=$limit，start=$start，end=$end',
+        );
 
         // 如果起始位置已经超出数据范围，直接返回空列表
         if (start >= filtered.length) {
@@ -2863,22 +2895,24 @@ class DatabaseService extends ChangeNotifier {
         });
 
         // 异步执行查询
-        query().then((result) {
-          timeoutTimer?.cancel();
-          if (!completer.isCompleted) {
-            completer.complete(result);
-          }
-        }).catchError((error) {
-          timeoutTimer?.cancel();
-          if (!completer.isCompleted) {
-            logError(
-              '数据库查询失败: $error',
-              error: error,
-              source: 'DatabaseService',
-            );
-            completer.completeError(error);
-          }
-        });
+        query()
+            .then((result) {
+              timeoutTimer?.cancel();
+              if (!completer.isCompleted) {
+                completer.complete(result);
+              }
+            })
+            .catchError((error) {
+              timeoutTimer?.cancel();
+              if (!completer.isCompleted) {
+                logError(
+                  '数据库查询失败: $error',
+                  error: error,
+                  source: 'DatabaseService',
+                );
+                completer.completeError(error);
+              }
+            });
 
         final result = await completer.future;
         timeoutTimer.cancel();
@@ -2969,8 +3003,9 @@ class DatabaseService extends ChangeNotifier {
 
     // 时间段筛选
     if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-      final dayPeriodPlaceholders =
-          selectedDayPeriods.map((_) => '?').join(',');
+      final dayPeriodPlaceholders = selectedDayPeriods
+          .map((_) => '?')
+          .join(',');
       conditions.add('q.day_period IN ($dayPeriodPlaceholders)');
       args.addAll(selectedDayPeriods);
     }
@@ -3009,15 +3044,17 @@ class DatabaseService extends ChangeNotifier {
     joinClause = 'LEFT JOIN quote_tags qt ON q.id = qt.quote_id';
     groupByClause = 'GROUP BY q.id';
 
-    final where =
-        conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
+    final where = conditions.isNotEmpty
+        ? 'WHERE ${conditions.join(' AND ')}'
+        : '';
 
     final orderByParts = orderBy.split(' ');
     final correctedOrderBy =
         'q.${orderByParts[0]} ${orderByParts.length > 1 ? orderByParts[1] : ''}';
 
     /// 修复：始终使用 qt.tag_id 获取所有标签
-    final query = '''
+    final query =
+        '''
       SELECT q.*, GROUP_CONCAT(qt.tag_id) as tag_ids
       $fromClause
       $joinClause
@@ -3047,8 +3084,8 @@ class DatabaseService extends ChangeNotifier {
       final level = queryTime > 1000
           ? '🔴 严重慢查询'
           : queryTime > 500
-              ? '⚠️ 慢查询警告'
-              : 'ℹ️ 性能提示';
+          ? '⚠️ 慢查询警告'
+          : 'ℹ️ 性能提示';
       logDebug('$level: 查询耗时 ${queryTime}ms');
 
       if (queryTime > 500) {
@@ -3068,9 +3105,7 @@ class DatabaseService extends ChangeNotifier {
       }
     }
 
-    logDebug(
-      '查询完成，耗时: ${queryTime}ms，结果数量: ${maps.length}',
-    );
+    logDebug('查询完成，耗时: ${queryTime}ms，结果数量: ${maps.length}');
 
     // 更新性能统计
     _updateQueryStats('getUserQuotes', queryTime);
@@ -3118,8 +3153,12 @@ class DatabaseService extends ChangeNotifier {
   }
 
   /// 修复：安全地创建索引，检查列是否存在
-  Future<void> _createIndexSafely(Database db, String tableName,
-      String columnName, String indexName) async {
+  Future<void> _createIndexSafely(
+    Database db,
+    String tableName,
+    String columnName,
+    String indexName,
+  ) async {
     try {
       // 检查列是否存在
       final columnExists = await _checkColumnExists(db, tableName, columnName);
@@ -3130,7 +3169,8 @@ class DatabaseService extends ChangeNotifier {
 
       // 创建索引
       await db.execute(
-          'CREATE INDEX IF NOT EXISTS $indexName ON $tableName($columnName)');
+        'CREATE INDEX IF NOT EXISTS $indexName ON $tableName($columnName)',
+      );
       logDebug('索引 $indexName 创建成功');
     } catch (e) {
       logDebug('创建索引 $indexName 失败: $e');
@@ -3139,7 +3179,10 @@ class DatabaseService extends ChangeNotifier {
 
   /// 修复：检查列是否存在
   Future<bool> _checkColumnExists(
-      Database db, String tableName, String columnName) async {
+    Database db,
+    String tableName,
+    String columnName,
+  ) async {
     try {
       final result = await db.rawQuery("PRAGMA table_info($tableName)");
       for (final row in result) {
@@ -3168,23 +3211,27 @@ class DatabaseService extends ChangeNotifier {
 
       // 1. 验证外键约束状态
       final foreignKeysResult = await db.rawQuery('PRAGMA foreign_keys');
-      final foreignKeysEnabled = foreignKeysResult.isNotEmpty &&
+      final foreignKeysEnabled =
+          foreignKeysResult.isNotEmpty &&
           foreignKeysResult.first['foreign_keys'] == 1;
 
       // 2. 获取数据库版本
       final dbVersion = await db.getVersion();
 
       // 3. 获取基本统计
-      final quoteCountResult =
-          await db.rawQuery('SELECT COUNT(*) as count FROM quotes');
+      final quoteCountResult = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM quotes',
+      );
       final quoteCount = quoteCountResult.first['count'] as int;
 
-      final categoryCountResult =
-          await db.rawQuery('SELECT COUNT(*) as count FROM categories');
+      final categoryCountResult = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM categories',
+      );
       final categoryCount = categoryCountResult.first['count'] as int;
 
-      final tagRelationCountResult =
-          await db.rawQuery('SELECT COUNT(*) as count FROM quote_tags');
+      final tagRelationCountResult = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM quote_tags',
+      );
       final tagRelationCount = tagRelationCountResult.first['count'] as int;
 
       // 4. 记录健康状态
@@ -3436,8 +3483,9 @@ class DatabaseService extends ChangeNotifier {
 
       // 时间段筛选
       if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-        final dayPeriodPlaceholders =
-            selectedDayPeriods.map((_) => '?').join(',');
+        final dayPeriodPlaceholders = selectedDayPeriods
+            .map((_) => '?')
+            .join(',');
         conditions.add('q.day_period IN ($dayPeriodPlaceholders)');
         args.addAll(selectedDayPeriods);
       }
@@ -3458,13 +3506,15 @@ class DatabaseService extends ChangeNotifier {
         conditions.add('qt.tag_id IN ($tagPlaceholders)');
         finalArgs.addAll(tagIds);
 
-        final whereClause =
-            conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
+        final whereClause = conditions.isNotEmpty
+            ? 'WHERE ${conditions.join(' AND ')}'
+            : '';
 
         String havingClause = 'HAVING COUNT(DISTINCT qt.tag_id) = ?';
         finalArgs.add(tagIds.length);
 
-        query = '''
+        query =
+            '''
           SELECT COUNT(*) FROM (
             $subQuery
             $whereClause
@@ -3474,8 +3524,9 @@ class DatabaseService extends ChangeNotifier {
         ''';
       } else {
         // 没有标签筛选，使用简单的 COUNT
-        final whereClause =
-            conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
+        final whereClause = conditions.isNotEmpty
+            ? 'WHERE ${conditions.join(' AND ')}'
+            : '';
         query = 'SELECT COUNT(*) as count FROM quotes q $whereClause';
       }
 
@@ -3520,19 +3571,19 @@ class DatabaseService extends ChangeNotifier {
         }
 
         // 先获取笔记引用的媒体文件列表（来自引用表）
-        final referencedFiles =
-            await MediaReferenceService.getReferencedFiles(id);
+        final referencedFiles = await MediaReferenceService.getReferencedFiles(
+          id,
+        );
 
         // 同时从笔记内容本身提取媒体路径，避免引用表不同步导致遗漏
-        final Set<String> mediaPathsToCheck = {
-          ...referencedFiles,
-        };
+        final Set<String> mediaPathsToCheck = {...referencedFiles};
         try {
           final quoteRow = existingQuote.first;
           final quoteFromDb = Quote.fromJson(quoteRow);
           final extracted =
               await MediaReferenceService.extractMediaPathsFromQuote(
-                  quoteFromDb);
+                quoteFromDb,
+              );
           mediaPathsToCheck.addAll(extracted);
         } catch (e) {
           logDebug('从笔记内容提取媒体路径失败，继续使用引用表: $e');
@@ -3565,7 +3616,8 @@ class DatabaseService extends ChangeNotifier {
             // 使用轻量级检查（仅查引用表计数）
             final deleted =
                 await MediaReferenceService.quickCheckAndDeleteIfOrphan(
-                    absolutePath);
+                  absolutePath,
+                );
             if (deleted) {
               logDebug('已清理孤儿媒体文件: $absolutePath (原始记录: $storedPath)');
             }
@@ -3669,14 +3721,10 @@ class DatabaseService extends ChangeNotifier {
           /// 修复：插入新的标签关联，避免事务嵌套
           if (quote.tagIds.isNotEmpty) {
             for (final tagId in quote.tagIds) {
-              await txn.insert(
-                'quote_tags',
-                {
-                  'quote_id': quote.id!,
-                  'tag_id': tagId,
-                },
-                conflictAlgorithm: ConflictAlgorithm.ignore,
-              );
+              await txn.insert('quote_tags', {
+                'quote_id': quote.id!,
+                'tag_id': tagId,
+              }, conflictAlgorithm: ConflictAlgorithm.ignore);
             }
           }
         });
@@ -3701,7 +3749,8 @@ class DatabaseService extends ChangeNotifier {
             // 使用轻量级检查（仅查引用表计数）
             final deleted =
                 await MediaReferenceService.quickCheckAndDeleteIfOrphan(
-                    absolutePath);
+                  absolutePath,
+                );
             if (deleted) {
               logDebug('已清理无引用媒体文件: $absolutePath (原始记录: $storedPath)');
             }
@@ -3744,8 +3793,9 @@ class DatabaseService extends ChangeNotifier {
           favoriteCount: oldCount + 1,
         );
         logDebug(
-            'Web平台收藏操作: quoteId=$quoteId, 旧值=$oldCount, 新值=${oldCount + 1}',
-            source: 'IncrementFavorite');
+          'Web平台收藏操作: quoteId=$quoteId, 旧值=$oldCount, 新值=${oldCount + 1}',
+          source: 'IncrementFavorite',
+        );
 
         // 同步更新当前流缓存并推送
         final curIndex = _currentQuotes.indexWhere((q) => q.id == quoteId);
@@ -3759,8 +3809,10 @@ class DatabaseService extends ChangeNotifier {
         }
         notifyListeners();
       } else {
-        logWarning('Web平台收藏操作失败: 未找到quoteId=$quoteId',
-            source: 'IncrementFavorite');
+        logWarning(
+          'Web平台收藏操作失败: 未找到quoteId=$quoteId',
+          source: 'IncrementFavorite',
+        );
       }
       return;
     }
@@ -3769,10 +3821,13 @@ class DatabaseService extends ChangeNotifier {
       try {
         // 记录操作前的状态
         final index = _currentQuotes.indexWhere((q) => q.id == quoteId);
-        final oldCount =
-            index != -1 ? _currentQuotes[index].favoriteCount : null;
-        logDebug('收藏操作开始: quoteId=$quoteId, 内存旧值=$oldCount',
-            source: 'IncrementFavorite');
+        final oldCount = index != -1
+            ? _currentQuotes[index].favoriteCount
+            : null;
+        logDebug(
+          '收藏操作开始: quoteId=$quoteId, 内存旧值=$oldCount',
+          source: 'IncrementFavorite',
+        );
 
         final db = await safeDatabase;
         await db.transaction((txn) async {
@@ -3783,8 +3838,10 @@ class DatabaseService extends ChangeNotifier {
           );
 
           if (updateCount == 0) {
-            logWarning('收藏操作失败: 数据库中未找到quoteId=$quoteId',
-                source: 'IncrementFavorite');
+            logWarning(
+              '收藏操作失败: 数据库中未找到quoteId=$quoteId',
+              source: 'IncrementFavorite',
+            );
           } else {
             // 查询更新后的值进行验证
             final result = await txn.rawQuery(
@@ -3794,8 +3851,10 @@ class DatabaseService extends ChangeNotifier {
             final newCount = result.isNotEmpty
                 ? (result.first['favorite_count'] as int?) ?? 0
                 : 0;
-            logInfo('收藏操作成功: quoteId=$quoteId, 旧值=$oldCount, 数据库新值=$newCount',
-                source: 'IncrementFavorite');
+            logInfo(
+              '收藏操作成功: quoteId=$quoteId, 旧值=$oldCount, 数据库新值=$newCount',
+              source: 'IncrementFavorite',
+            );
           }
         });
 
@@ -3804,16 +3863,21 @@ class DatabaseService extends ChangeNotifier {
           _currentQuotes[index] = _currentQuotes[index].copyWith(
             favoriteCount: _currentQuotes[index].favoriteCount + 1,
           );
-          logDebug('内存缓存已更新: 新值=${_currentQuotes[index].favoriteCount}',
-              source: 'IncrementFavorite');
+          logDebug(
+            '内存缓存已更新: 新值=${_currentQuotes[index].favoriteCount}',
+            source: 'IncrementFavorite',
+          );
         }
         if (_quotesController != null && !_quotesController!.isClosed) {
           _quotesController!.add(List.from(_currentQuotes));
         }
         notifyListeners();
       } catch (e) {
-        logError('增加心形点击次数时出错: quoteId=$quoteId, error=$e',
-            error: e, source: 'IncrementFavorite');
+        logError(
+          '增加心形点击次数时出错: quoteId=$quoteId, error=$e',
+          error: e,
+          source: 'IncrementFavorite',
+        );
         rethrow;
       }
     });
@@ -3827,8 +3891,10 @@ class DatabaseService extends ChangeNotifier {
       final weekStartString = weekStart.toIso8601String().substring(0, 10);
 
       return _memoryStore
-          .where((q) =>
-              q.date.compareTo(weekStartString) >= 0 && q.favoriteCount > 0)
+          .where(
+            (q) =>
+                q.date.compareTo(weekStartString) >= 0 && q.favoriteCount > 0,
+          )
           .toList()
         ..sort((a, b) => b.favoriteCount.compareTo(a.favoriteCount))
         ..take(limit).toList();
@@ -3962,11 +4028,12 @@ class DatabaseService extends ChangeNotifier {
     // 修复：检查是否是首次调用
     bool isFirstCall =
         (_quotesController == null || _quotesController!.isClosed) ||
-            (_currentQuotes.isEmpty);
+        (_currentQuotes.isEmpty);
 
     logDebug(
-        'watchQuotes调用 - isFirstCall: $isFirstCall, hasController: ${_quotesController != null}, '
-        'currentQuotesCount: ${_currentQuotes.length}, tagIds: $tagIds, categoryId: $categoryId');
+      'watchQuotes调用 - isFirstCall: $isFirstCall, hasController: ${_quotesController != null}, '
+      'currentQuotesCount: ${_currentQuotes.length}, tagIds: $tagIds, categoryId: $categoryId',
+    );
 
     // 检查标签是否变更
     if (_watchTagIds != null && tagIds != null) {
@@ -4152,25 +4219,27 @@ class DatabaseService extends ChangeNotifier {
 
     _isLoading = true;
     logDebug(
-        '开始加载更多笔记，当前已有 ${_currentQuotes.length} 条，offset=${_currentQuotes.length}，limit=$_watchLimit');
+      '开始加载更多笔记，当前已有 ${_currentQuotes.length} 条，offset=${_currentQuotes.length}，limit=$_watchLimit',
+    );
 
     try {
-      final quotes = await getUserQuotes(
-        tagIds: tagIds,
-        categoryId: categoryId,
-        offset: _currentQuotes.length,
-        limit: _watchLimit,
-        orderBy: _watchOrderBy,
-        searchQuery: searchQuery,
-        selectedWeathers: selectedWeathers,
-        selectedDayPeriods: selectedDayPeriods,
-      ).timeout(
-        const Duration(seconds: 5), // 缩短超时时间
-        onTimeout: () {
-          logError('getUserQuotes 查询超时（5秒）', source: 'DatabaseService');
-          throw TimeoutException('数据库查询超时', const Duration(seconds: 5));
-        },
-      );
+      final quotes =
+          await getUserQuotes(
+            tagIds: tagIds,
+            categoryId: categoryId,
+            offset: _currentQuotes.length,
+            limit: _watchLimit,
+            orderBy: _watchOrderBy,
+            searchQuery: searchQuery,
+            selectedWeathers: selectedWeathers,
+            selectedDayPeriods: selectedDayPeriods,
+          ).timeout(
+            const Duration(seconds: 5), // 缩短超时时间
+            onTimeout: () {
+              logError('getUserQuotes 查询超时（5秒）', source: 'DatabaseService');
+              throw TimeoutException('数据库查询超时', const Duration(seconds: 5));
+            },
+          );
 
       if (quotes.isEmpty) {
         // 没有更多数据了
@@ -4179,13 +4248,15 @@ class DatabaseService extends ChangeNotifier {
       } else {
         // 修复：添加去重逻辑，防止重复数据
         final existingIds = _currentQuotes.map((q) => q.id).toSet();
-        final newQuotes =
-            quotes.where((q) => !existingIds.contains(q.id)).toList();
+        final newQuotes = quotes
+            .where((q) => !existingIds.contains(q.id))
+            .toList();
 
         if (newQuotes.isNotEmpty) {
           _currentQuotes.addAll(newQuotes);
           logDebug(
-              '本次加载${quotes.length}条，去重后添加${newQuotes.length}条，总计${_currentQuotes.length}条');
+            '本次加载${quotes.length}条，去重后添加${newQuotes.length}条，总计${_currentQuotes.length}条',
+          );
         } else {
           logDebug('本次加载${quotes.length}条，但全部为重复数据，已过滤');
         }
@@ -4913,17 +4984,18 @@ class DatabaseService extends ChangeNotifier {
     // 预先加载本地分类，建立名称(小写)->行、ID->行映射，便于避免 O(n^2) 查询
     final existingCategoryRows = await txn.query('categories');
     final Map<String, Map<String, dynamic>> idToRow = {
-      for (final row in existingCategoryRows) (row['id'] as String): row
+      for (final row in existingCategoryRows) (row['id'] as String): row,
     };
     final Map<String, Map<String, dynamic>> nameLowerToRow = {
       for (final row in existingCategoryRows)
-        (row['name'] as String).toLowerCase(): row
+        (row['name'] as String).toLowerCase(): row,
     };
 
     for (final c in categories) {
       try {
-        final categoryData =
-            Map<String, dynamic>.from(c as Map<String, dynamic>);
+        final categoryData = Map<String, dynamic>.from(
+          c as Map<String, dynamic>,
+        );
 
         // 标准化字段名
         const categoryFieldMappings = {
@@ -4952,8 +5024,12 @@ class DatabaseService extends ChangeNotifier {
             remoteTimestamp: categoryData['last_modified'] as String?,
           );
           if (decision.shouldUseRemote) {
-            await txn.update('categories', categoryData,
-                where: 'id = ?', whereArgs: [remoteId]);
+            await txn.update(
+              'categories',
+              categoryData,
+              where: 'id = ?',
+              whereArgs: [remoteId],
+            );
             reportBuilder.addUpdatedCategory();
             // 更新缓存
             idToRow[remoteId] = categoryData;
@@ -4982,8 +5058,12 @@ class DatabaseService extends ChangeNotifier {
                 'is_default': categoryData['is_default'],
                 'last_modified': categoryData['last_modified'],
               });
-            await txn.update('categories', updateMap,
-                where: 'id = ?', whereArgs: [existingId]);
+            await txn.update(
+              'categories',
+              updateMap,
+              where: 'id = ?',
+              whereArgs: [existingId],
+            );
             idToRow[existingId] = updateMap;
             nameLowerToRow[nameKey] = updateMap;
             reportBuilder.addUpdatedCategory();
@@ -5014,8 +5094,10 @@ class DatabaseService extends ChangeNotifier {
     Map<String, String> categoryIdRemap,
   ) async {
     // 预加载当前事务中有效的分类ID集合，用于过滤无效的远程标签引用，防止外键错误
-    final existingCategoryIdRows =
-        await txn.query('categories', columns: ['id']);
+    final existingCategoryIdRows = await txn.query(
+      'categories',
+      columns: ['id'],
+    );
     final Set<String> validCategoryIds = existingCategoryIdRows
         .map((r) => r['id'] as String)
         .whereType<String>()
@@ -5115,8 +5197,12 @@ class DatabaseService extends ChangeNotifier {
             checkContentSimilarity: true,
           );
           if (decision.shouldUseRemote) {
-            await txn.update('quotes', quoteData,
-                where: 'id = ?', whereArgs: [quoteId]);
+            await txn.update(
+              'quotes',
+              quoteData,
+              where: 'id = ?',
+              whereArgs: [quoteId],
+            );
             reportBuilder.addUpdatedQuote();
           } else if (decision.hasConflict) {
             reportBuilder.addSameTimestampDiffQuote();
@@ -5129,18 +5215,18 @@ class DatabaseService extends ChangeNotifier {
         if (remappedTagIds.isNotEmpty) {
           // 如果是更新，先清理旧关联
           if (!inserted) {
-            await txn.delete('quote_tags',
-                where: 'quote_id = ?', whereArgs: [quoteId]);
+            await txn.delete(
+              'quote_tags',
+              where: 'quote_id = ?',
+              whereArgs: [quoteId],
+            );
           }
           final batch = txn.batch();
           for (final tagId in remappedTagIds) {
-            batch.insert(
-                'quote_tags',
-                {
-                  'quote_id': quoteId,
-                  'tag_id': tagId,
-                },
-                conflictAlgorithm: ConflictAlgorithm.ignore);
+            batch.insert('quote_tags', {
+              'quote_id': quoteId,
+              'tag_id': tagId,
+            }, conflictAlgorithm: ConflictAlgorithm.ignore);
           }
           await batch.commit(noResult: true);
         }
@@ -5169,14 +5255,17 @@ class DatabaseService extends ChangeNotifier {
       List<Map<String, dynamic>> results = [];
 
       if (dailyQuoteCategory != null) {
-        results = await db.rawQuery('''
+        results = await db.rawQuery(
+          '''
           SELECT DISTINCT q.* FROM quotes q
           INNER JOIN quote_tags qt ON q.id = qt.quote_id
           INNER JOIN categories c ON qt.tag_id = c.id
           WHERE c.id = ? AND length(q.content) <= 100
           ORDER BY RANDOM()
           LIMIT 1
-        ''', [dailyQuoteCategory]);
+        ''',
+          [dailyQuoteCategory],
+        );
       }
 
       // 如果没有找到带"每日一言"标签的笔记，选择较短的其他笔记
@@ -5215,15 +5304,12 @@ class DatabaseService extends ChangeNotifier {
     Function(String)? onProgress,
   }) async {
     if (kIsWeb) {
-      return {
-        'success': true,
-        'message': 'Web平台无需数据库维护',
-        'skipped': true,
-      };
+      return {'success': true, 'message': 'Web平台无需数据库维护', 'skipped': true};
     }
 
-    return _executeWithLock<Map<String, dynamic>>('databaseMaintenance',
-        () async {
+    return _executeWithLock<
+      Map<String, dynamic>
+    >('databaseMaintenance', () async {
       final stopwatch = Stopwatch()..start();
       final result = <String, dynamic>{
         'success': false,
@@ -5320,16 +5406,19 @@ class DatabaseService extends ChangeNotifier {
       }
 
       // 获取记录数量
-      final quoteCountResult =
-          await db.rawQuery('SELECT COUNT(*) as count FROM quotes');
+      final quoteCountResult = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM quotes',
+      );
       final quoteCount = quoteCountResult.first['count'] as int;
 
-      final categoryCountResult =
-          await db.rawQuery('SELECT COUNT(*) as count FROM categories');
+      final categoryCountResult = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM categories',
+      );
       final categoryCount = categoryCountResult.first['count'] as int;
 
-      final tagRelationCountResult =
-          await db.rawQuery('SELECT COUNT(*) as count FROM quote_tags');
+      final tagRelationCountResult = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM quote_tags',
+      );
       final tagRelationCount = tagRelationCountResult.first['count'] as int;
 
       // 检查外键约束状态
@@ -5362,17 +5451,24 @@ class DatabaseService extends ChangeNotifier {
     try {
       // 首先尝试获取带有"每日一言"标签的笔记
       var candidates = _memoryStore
-          .where((quote) =>
-              quote.tagIds.any((tagId) => _categoryStore
-                  .any((cat) => cat.id == tagId && cat.name == '每日一言')) &&
-              quote.content.length <= 100)
+          .where(
+            (quote) =>
+                quote.tagIds.any(
+                  (tagId) => _categoryStore.any(
+                    (cat) => cat.id == tagId && cat.name == '每日一言',
+                  ),
+                ) &&
+                quote.content.length <= 100,
+          )
           .toList();
 
       // 如果没有找到，选择较短的其他笔记
       if (candidates.isEmpty) {
         candidates = _memoryStore
-            .where((quote) =>
-                quote.content.length <= 80 && !quote.content.contains('\n'))
+            .where(
+              (quote) =>
+                  quote.content.length <= 80 && !quote.content.contains('\n'),
+            )
             .toList();
       }
 

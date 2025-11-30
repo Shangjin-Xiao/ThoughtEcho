@@ -33,8 +33,9 @@ void main() {
       await jsonFile.writeAsString(json.encode(testData), encoding: utf8);
 
       // 测试解析
-      final result =
-          await StreamingBackupProcessor.parseJsonBackupStreaming(jsonPath);
+      final result = await StreamingBackupProcessor.parseJsonBackupStreaming(
+        jsonPath,
+      );
 
       // 验证中文内容是否正确
       expect(result['title'], equals('测试笔记'));
@@ -69,10 +70,7 @@ void main() {
             },
           ],
         },
-        'settings': {
-          'theme': '深色主题',
-          'language': '中文',
-        },
+        'settings': {'theme': '深色主题', 'language': '中文'},
         'ai_analysis': [],
       };
 
@@ -91,14 +89,17 @@ void main() {
       await File(zipPath).writeAsBytes(zipData);
 
       // 测试解析
-      final result =
-          await StreamingBackupProcessor.processZipBackupStreaming(zipPath);
+      final result = await StreamingBackupProcessor.processZipBackupStreaming(
+        zipPath,
+      );
 
       // 验证中文内容是否正确
       expect(result['notes']['categories'][0]['name'], equals('日记'));
       expect(result['notes']['categories'][1]['name'], equals('工作笔记'));
       expect(
-          result['notes']['quotes'][0]['content'], equals('这是一个包含中文的测试笔记内容。'));
+        result['notes']['quotes'][0]['content'],
+        equals('这是一个包含中文的测试笔记内容。'),
+      );
       expect(result['notes']['quotes'][0]['title'], equals('测试标题'));
       expect(result['settings']['theme'], equals('深色主题'));
       expect(result['settings']['language'], equals('中文'));
@@ -125,8 +126,9 @@ void main() {
       // Test output: 测试文件大小: ${(fileSize / 1024).toStringAsFixed(1)}KB
 
       // 测试解析
-      final result =
-          await StreamingBackupProcessor.parseJsonBackupStreaming(jsonPath);
+      final result = await StreamingBackupProcessor.parseJsonBackupStreaming(
+        jsonPath,
+      );
 
       // 验证中文内容是否正确
       expect(result['title'], equals('大文件测试'));

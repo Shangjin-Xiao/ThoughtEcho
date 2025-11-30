@@ -25,14 +25,26 @@ void main() {
       };
 
       // 验证关键映射存在
-      expect(fieldMappings.containsKey('favoriteCount'), true,
-          reason: 'favoriteCount字段映射必须存在');
-      expect(fieldMappings['favoriteCount'], 'favorite_count',
-          reason: 'favoriteCount应映射到favorite_count');
-      expect(fieldMappings.containsKey('lastModified'), true,
-          reason: 'lastModified字段映射必须存在');
-      expect(fieldMappings['lastModified'], 'last_modified',
-          reason: 'lastModified应映射到last_modified');
+      expect(
+        fieldMappings.containsKey('favoriteCount'),
+        true,
+        reason: 'favoriteCount字段映射必须存在',
+      );
+      expect(
+        fieldMappings['favoriteCount'],
+        'favorite_count',
+        reason: 'favoriteCount应映射到favorite_count',
+      );
+      expect(
+        fieldMappings.containsKey('lastModified'),
+        true,
+        reason: 'lastModified字段映射必须存在',
+      );
+      expect(
+        fieldMappings['lastModified'],
+        'last_modified',
+        reason: 'lastModified应映射到last_modified',
+      );
     });
 
     test('版本12升级SQL包含favorite_count字段', () {
@@ -62,10 +74,16 @@ void main() {
         )
       ''';
 
-      expect(createTableSql.contains('favorite_count'), true,
-          reason: 'CREATE TABLE必须包含favorite_count字段');
-      expect(createTableSql.contains('INTEGER DEFAULT 0'), true,
-          reason: 'favorite_count必须是INTEGER类型且默认值为0');
+      expect(
+        createTableSql.contains('favorite_count'),
+        true,
+        reason: 'CREATE TABLE必须包含favorite_count字段',
+      );
+      expect(
+        createTableSql.contains('INTEGER DEFAULT 0'),
+        true,
+        reason: 'favorite_count必须是INTEGER类型且默认值为0',
+      );
 
       // 验证INSERT语句
       final insertSql = '''
@@ -77,8 +95,11 @@ void main() {
         )
       ''';
 
-      expect(insertSql.contains('favorite_count'), true,
-          reason: 'INSERT语句必须包含favorite_count字段');
+      expect(
+        insertSql.contains('favorite_count'),
+        true,
+        reason: 'INSERT语句必须包含favorite_count字段',
+      );
 
       // 验证SELECT语句
       final selectSql = '''
@@ -91,18 +112,27 @@ void main() {
         FROM quotes
       ''';
 
-      expect(selectSql.contains('COALESCE(favorite_count, 0)'), true,
-          reason: 'SELECT语句必须使用COALESCE处理favorite_count');
+      expect(
+        selectSql.contains('COALESCE(favorite_count, 0)'),
+        true,
+        reason: 'SELECT语句必须使用COALESCE处理favorite_count',
+      );
     });
 
     test('版本12升级包含favorite_count索引', () {
       final indexSql =
           'CREATE INDEX IF NOT EXISTS idx_quotes_favorite_count ON quotes(favorite_count)';
 
-      expect(indexSql.contains('idx_quotes_favorite_count'), true,
-          reason: '必须为favorite_count创建索引');
-      expect(indexSql.contains('IF NOT EXISTS'), true,
-          reason: '索引创建必须使用IF NOT EXISTS防止冲突');
+      expect(
+        indexSql.contains('idx_quotes_favorite_count'),
+        true,
+        reason: '必须为favorite_count创建索引',
+      );
+      expect(
+        indexSql.contains('IF NOT EXISTS'),
+        true,
+        reason: '索引创建必须使用IF NOT EXISTS防止冲突',
+      );
     });
 
     test('数据导入时正确处理缺失的favorite_count字段', () {
@@ -114,15 +144,21 @@ void main() {
       };
 
       // 验证数据结构
-      expect(oldData.containsKey('favorite_count'), false,
-          reason: '旧数据不应包含favorite_count字段');
+      expect(
+        oldData.containsKey('favorite_count'),
+        false,
+        reason: '旧数据不应包含favorite_count字段',
+      );
 
       // 模拟添加默认值的逻辑
       final processedData = Map<String, dynamic>.from(oldData);
       processedData['favorite_count'] ??= 0;
 
-      expect(processedData['favorite_count'], 0,
-          reason: '缺失的favorite_count应使用默认值0');
+      expect(
+        processedData['favorite_count'],
+        0,
+        reason: '缺失的favorite_count应使用默认值0',
+      );
     });
 
     test('驼峰命名转下划线命名', () {
@@ -143,8 +179,11 @@ void main() {
           'dayPeriod': 'day_period',
         };
 
-        expect(fieldMappings[camelCase], snakeCase,
-            reason: '$camelCase应正确映射到$snakeCase');
+        expect(
+          fieldMappings[camelCase],
+          snakeCase,
+          reason: '$camelCase应正确映射到$snakeCase',
+        );
       });
     });
 
@@ -153,20 +192,35 @@ void main() {
       final updateSql =
           'UPDATE quotes SET favorite_count = favorite_count + 1, last_modified = ? WHERE id = ?';
 
-      expect(updateSql.contains('favorite_count = favorite_count + 1'), true,
-          reason: '必须使用原子操作增加favorite_count');
-      expect(updateSql.contains('last_modified = ?'), true,
-          reason: '必须同时更新last_modified字段');
-      expect(updateSql.contains('WHERE id = ?'), true,
-          reason: '必须使用WHERE子句定位特定笔记');
+      expect(
+        updateSql.contains('favorite_count = favorite_count + 1'),
+        true,
+        reason: '必须使用原子操作增加favorite_count',
+      );
+      expect(
+        updateSql.contains('last_modified = ?'),
+        true,
+        reason: '必须同时更新last_modified字段',
+      );
+      expect(
+        updateSql.contains('WHERE id = ?'),
+        true,
+        reason: '必须使用WHERE子句定位特定笔记',
+      );
 
       // 验证查询语句
       final selectSql = 'SELECT favorite_count FROM quotes WHERE id = ?';
 
-      expect(selectSql.contains('favorite_count'), true,
-          reason: '查询必须包含favorite_count字段');
-      expect(selectSql.contains('WHERE id = ?'), true,
-          reason: '查询必须使用WHERE子句定位特定笔记');
+      expect(
+        selectSql.contains('favorite_count'),
+        true,
+        reason: '查询必须包含favorite_count字段',
+      );
+      expect(
+        selectSql.contains('WHERE id = ?'),
+        true,
+        reason: '查询必须使用WHERE子句定位特定笔记',
+      );
     });
 
     test('COALESCE函数正确处理NULL值', () {

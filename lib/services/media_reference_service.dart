@@ -184,12 +184,11 @@ class MediaReferenceService {
 
       if (plan.missingReferencePairs > 0) {
         if (dryRun) {
-          logDebug(
-            '检测到 ${plan.missingReferencePairs} 条缺失的引用记录，实际执行时将自动修复',
-          );
+          logDebug('检测到 ${plan.missingReferencePairs} 条缺失的引用记录，实际执行时将自动修复');
         } else {
-          final healed =
-              await _healMissingReferences(plan.missingReferenceIndex);
+          final healed = await _healMissingReferences(
+            plan.missingReferenceIndex,
+          );
           if (healed > 0) {
             logDebug('已自动修复 $healed 条缺失的媒体引用记录');
           }
@@ -245,19 +244,18 @@ class MediaReferenceService {
       final storedVariants = snapshot.storedIndex[canonicalKey];
       final quoteVariants = snapshot.quoteIndex[canonicalKey];
 
-      final hasStoredRefs = storedVariants != null &&
+      final hasStoredRefs =
+          storedVariants != null &&
           storedVariants.values.any((refs) => refs.isNotEmpty);
-      final hasQuoteRefs = quoteVariants != null &&
+      final hasQuoteRefs =
+          quoteVariants != null &&
           quoteVariants.values.any((refs) => refs.isNotEmpty);
 
       if (hasQuoteRefs) {
         final variants = quoteVariants;
         if (!hasStoredRefs) {
           missingReferences[canonicalKey] = variants.map(
-            (variantPath, ids) => MapEntry(
-              variantPath,
-              Set<String>.from(ids),
-            ),
+            (variantPath, ids) => MapEntry(variantPath, Set<String>.from(ids)),
           );
         }
         continue;
@@ -285,19 +283,13 @@ class MediaReferenceService {
   static Future<_ReferenceSnapshot> _buildReferenceSnapshot() async {
     final storedIndex = await _fetchStoredReferenceIndex();
     final quoteIndex = await _collectQuoteReferenceIndex();
-    return _ReferenceSnapshot(
-      storedIndex: storedIndex,
-      quoteIndex: quoteIndex,
-    );
+    return _ReferenceSnapshot(storedIndex: storedIndex, quoteIndex: quoteIndex);
   }
 
   static Future<Map<String, Map<String, Set<String>>>>
-      _fetchStoredReferenceIndex() async {
+  _fetchStoredReferenceIndex() async {
     final db = await database;
-    final rows = await db.query(
-      _tableName,
-      columns: ['file_path', 'quote_id'],
-    );
+    final rows = await db.query(_tableName, columns: ['file_path', 'quote_id']);
 
     final index = <String, Map<String, Set<String>>>{};
 
@@ -320,7 +312,7 @@ class MediaReferenceService {
   }
 
   static Future<Map<String, Map<String, Set<String>>>>
-      _collectQuoteReferenceIndex() async {
+  _collectQuoteReferenceIndex() async {
     final databaseService = DatabaseService();
     final quotes = await databaseService.getAllQuotes();
 
@@ -423,9 +415,11 @@ class MediaReferenceService {
       final storedVariants = snapshot.storedIndex[canonicalKey];
       final quoteVariants = snapshot.quoteIndex[canonicalKey];
 
-      final hasStoredRefs = storedVariants != null &&
+      final hasStoredRefs =
+          storedVariants != null &&
           storedVariants.values.any((refs) => refs.isNotEmpty);
-      final hasQuoteRefs = quoteVariants != null &&
+      final hasQuoteRefs =
+          quoteVariants != null &&
           quoteVariants.values.any((refs) => refs.isNotEmpty);
 
       // 如果在笔记内容中找到引用，先尝试修复缺失的引用记录
@@ -502,8 +496,9 @@ class MediaReferenceService {
                   if (custom is Map && custom.containsKey('audio')) {
                     final audioPath = custom['audio'] as String?;
                     if (audioPath != null) {
-                      final normalizedPath =
-                          await _normalizeFilePath(audioPath);
+                      final normalizedPath = await _normalizeFilePath(
+                        audioPath,
+                      );
                       mediaPaths.add(normalizedPath);
                     }
                   }
@@ -609,13 +604,15 @@ class MediaReferenceService {
       final db = await database;
 
       // 总引用数
-      final totalRefsResult =
-          await db.rawQuery('SELECT COUNT(*) as count FROM $_tableName');
+      final totalRefsResult = await db.rawQuery(
+        'SELECT COUNT(*) as count FROM $_tableName',
+      );
       final totalRefs = totalRefsResult.first['count'] as int;
 
       // 被引用的文件数
       final referencedFilesResult = await db.rawQuery(
-          'SELECT COUNT(DISTINCT file_path) as count FROM $_tableName');
+        'SELECT COUNT(DISTINCT file_path) as count FROM $_tableName',
+      );
       final referencedFiles = referencedFilesResult.first['count'] as int;
 
       // 总媒体文件数

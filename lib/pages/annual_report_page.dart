@@ -13,7 +13,8 @@ import '../gen_l10n/app_localizations.dart';
 /// ⚠️ 暂时弃用 - 防止 AI 工具识别错误
 /// 此页面已暂停使用，如需年度报告功能请使用 AI 周期报告页面
 @Deprecated(
-    'AnnualReportPage 已弃用，请使用新版 AnnualReportPageV2 或 AnnualReportWebPage')
+  'AnnualReportPage 已弃用，请使用新版 AnnualReportPageV2 或 AnnualReportWebPage',
+)
 class AnnualReportPage extends StatefulWidget {
   final int year;
   final List<Quote> quotes;
@@ -111,7 +112,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
       final databaseService = context.read<DatabaseService>();
       final allCategories = await databaseService.getCategories();
       final tagIdToName = {
-        for (var category in allCategories) category.id: category.name
+        for (var category in allCategories) category.id: category.name,
       };
 
       final resolvedTopTags = stats.topTags.map((tagStat) {
@@ -173,15 +174,19 @@ class _AnnualReportPageState extends State<AnnualReportPage>
         : null;
 
     // 最常用标签名（topTags 已解析名称）
-    final topTagName =
-        stats.topTags.isNotEmpty ? stats.topTags.first.name : null;
+    final topTagName = stats.topTags.isNotEmpty
+        ? stats.topTags.first.name
+        : null;
 
     // 笔记片段预览（最多5条，每条截断80字）
-    final samples = quotes.take(5).map((q) {
-      var t = q.content.trim().replaceAll('\n', ' ');
-      if (t.length > 80) t = '${t.substring(0, 80)}…';
-      return '- $t';
-    }).join('\n');
+    final samples = quotes
+        .take(5)
+        .map((q) {
+          var t = q.content.trim().replaceAll('\n', ' ');
+          if (t.length > 80) t = '${t.substring(0, 80)}…';
+          return '- $t';
+        })
+        .join('\n');
 
     if (mounted) {
       setState(() {
@@ -215,49 +220,53 @@ class _AnnualReportPageState extends State<AnnualReportPage>
       final ai = context.read<AIService>();
 
       // 准备完整的笔记内容用于AI分析
-      final fullNotesContent = widget.quotes.map((quote) {
-        final date = DateTime.parse(quote.date);
-        final dateStr =
-            l10n.noteDate(l10n.monthX(date.month), l10n.dayOfMonth(date.day));
-        var content = quote.content.trim();
+      final fullNotesContent = widget.quotes
+          .map((quote) {
+            final date = DateTime.parse(quote.date);
+            final dateStr = l10n.noteDate(
+              l10n.monthX(date.month),
+              l10n.dayOfMonth(date.day),
+            );
+            var content = quote.content.trim();
 
-        // 添加位置信息
-        if (quote.location != null && quote.location!.isNotEmpty) {
-          content = '[$dateStr·${quote.location}]$content';
-        } else {
-          content = '[$dateStr]$content';
-        }
+            // 添加位置信息
+            if (quote.location != null && quote.location!.isNotEmpty) {
+              content = '[$dateStr·${quote.location}]$content';
+            } else {
+              content = '[$dateStr]$content';
+            }
 
-        // 添加天气信息
-        if (quote.weather != null && quote.weather!.isNotEmpty) {
-          content += l10n.noteWeather(quote.weather!);
-        }
+            // 添加天气信息
+            if (quote.weather != null && quote.weather!.isNotEmpty) {
+              content += l10n.noteWeather(quote.weather!);
+            }
 
-        return content;
-      }).join('\n\n');
+            return content;
+          })
+          .join('\n\n');
 
       _insightSub = ai
           .streamReportInsight(
-        periodLabel: periodLabel,
-        mostTimePeriod: _mostDayPeriod,
-        mostWeather: _mostWeather,
-        topTag: _mostTopTag,
-        activeDays: _stats!.activeDays,
-        noteCount: _stats!.totalNotes,
-        totalWordCount: _totalWordCount,
-        notesPreview: _notesPreview,
-        fullNotesContent: fullNotesContent, // 传递完整内容
-      )
+            periodLabel: periodLabel,
+            mostTimePeriod: _mostDayPeriod,
+            mostWeather: _mostWeather,
+            topTag: _mostTopTag,
+            activeDays: _stats!.activeDays,
+            noteCount: _stats!.totalNotes,
+            totalWordCount: _totalWordCount,
+            notesPreview: _notesPreview,
+            fullNotesContent: fullNotesContent, // 传递完整内容
+          )
           .listen(
-        (chunk) {
-          if (!mounted) return;
-          setState(() {
-            _insightText += chunk;
-          });
-        },
-        onError: (_) {
-          if (!mounted) return;
-          final local = context.read<AIService>().buildLocalReportInsight(
+            (chunk) {
+              if (!mounted) return;
+              setState(() {
+                _insightText += chunk;
+              });
+            },
+            onError: (_) {
+              if (!mounted) return;
+              final local = context.read<AIService>().buildLocalReportInsight(
                 periodLabel: periodLabel,
                 mostTimePeriod: _mostDayPeriod,
                 mostWeather: _mostWeather,
@@ -266,28 +275,28 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                 noteCount: _stats!.totalNotes,
                 totalWordCount: _totalWordCount,
               );
-          setState(() {
-            _insightText = local;
-            _insightLoading = false;
-          });
-        },
-        onDone: () {
-          if (!mounted) return;
-          setState(() {
-            _insightLoading = false;
-          });
-        },
-      );
+              setState(() {
+                _insightText = local;
+                _insightLoading = false;
+              });
+            },
+            onDone: () {
+              if (!mounted) return;
+              setState(() {
+                _insightLoading = false;
+              });
+            },
+          );
     } else {
       final local = context.read<AIService>().buildLocalReportInsight(
-            periodLabel: periodLabel,
-            mostTimePeriod: _mostDayPeriod,
-            mostWeather: _mostWeather,
-            topTag: _mostTopTag,
-            activeDays: _stats!.activeDays,
-            noteCount: _stats!.totalNotes,
-            totalWordCount: _totalWordCount,
-          );
+        periodLabel: periodLabel,
+        mostTimePeriod: _mostDayPeriod,
+        mostWeather: _mostWeather,
+        topTag: _mostTopTag,
+        activeDays: _stats!.activeDays,
+        noteCount: _stats!.totalNotes,
+        totalWordCount: _totalWordCount,
+      );
       setState(() {
         _insightText = local;
         _insightLoading = false;
@@ -305,14 +314,14 @@ class _AnnualReportPageState extends State<AnnualReportPage>
 
       _pageController
           .nextPage(
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.easeInOutCubic,
-      )
+            duration: const Duration(milliseconds: 600),
+            curve: Curves.easeInOutCubic,
+          )
           .then((_) {
-        setState(() {
-          _isAnimating = false;
-        });
-      });
+            setState(() {
+              _isAnimating = false;
+            });
+          });
     }
   }
 
@@ -324,17 +333,17 @@ class _AnnualReportPageState extends State<AnnualReportPage>
     // 如果统计数据还未加载完成，显示加载界面
     if (_stats == null) {
       return Scaffold(
-        backgroundColor:
-            isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF8F9FA),
-        body: const Center(
-          child: CircularProgressIndicator(),
-        ),
+        backgroundColor: isDark
+            ? const Color(0xFF0A0A0A)
+            : const Color(0xFFF8F9FA),
+        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-      backgroundColor:
-          isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF8F9FA),
+      backgroundColor: isDark
+          ? const Color(0xFF0A0A0A)
+          : const Color(0xFFF8F9FA),
       body: Stack(
         children: [
           // 背景渐变
@@ -431,7 +440,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                       color: _currentPage == index
                           ? theme.colorScheme.primary
                           : ColorUtils.withOpacitySafe(
-                              theme.colorScheme.primary, 0.3),
+                              theme.colorScheme.primary,
+                              0.3,
+                            ),
                     ),
                   );
                 }),
@@ -456,15 +467,20 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             FadeTransition(
               opacity: _controller,
               child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0, 0.5),
-                  end: Offset.zero,
-                ).animate(
-                  CurvedAnimation(
-                    parent: _controller,
-                    curve: const Interval(0.0, 0.6, curve: Curves.easeOutCubic),
-                  ),
-                ),
+                position:
+                    Tween<Offset>(
+                      begin: const Offset(0, 0.5),
+                      end: Offset.zero,
+                    ).animate(
+                      CurvedAnimation(
+                        parent: _controller,
+                        curve: const Interval(
+                          0.0,
+                          0.6,
+                          curve: Curves.easeOutCubic,
+                        ),
+                      ),
+                    ),
                 child: Text(
                   '${widget.year}',
                   style: const TextStyle(
@@ -482,15 +498,20 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             FadeTransition(
               opacity: _controller,
               child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0, 0.3),
-                  end: Offset.zero,
-                ).animate(
-                  CurvedAnimation(
-                    parent: _controller,
-                    curve: const Interval(0.2, 0.8, curve: Curves.easeOutCubic),
-                  ),
-                ),
+                position:
+                    Tween<Offset>(
+                      begin: const Offset(0, 0.3),
+                      end: Offset.zero,
+                    ).animate(
+                      CurvedAnimation(
+                        parent: _controller,
+                        curve: const Interval(
+                          0.2,
+                          0.8,
+                          curve: Curves.easeOutCubic,
+                        ),
+                      ),
+                    ),
                 child: Text(
                   l10n.yourThoughtTrack,
                   style: const TextStyle(
@@ -508,21 +529,28 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             FadeTransition(
               opacity: _controller,
               child: SlideTransition(
-                position: Tween<Offset>(
-                  begin: const Offset(0, 0.2),
-                  end: Offset.zero,
-                ).animate(
-                  CurvedAnimation(
-                    parent: _controller,
-                    curve: const Interval(0.4, 1.0, curve: Curves.easeOutCubic),
-                  ),
-                ),
+                position:
+                    Tween<Offset>(
+                      begin: const Offset(0, 0.2),
+                      end: Offset.zero,
+                    ).animate(
+                      CurvedAnimation(
+                        parent: _controller,
+                        curve: const Interval(
+                          0.4,
+                          1.0,
+                          curve: Curves.easeOutCubic,
+                        ),
+                      ),
+                    ),
                 child: Text(
                   l10n.annualReportTitle,
                   style: TextStyle(
                     fontSize: 16,
                     color: ColorUtils.withOpacitySafe(
-                        Theme.of(context).colorScheme.onSurface, 0.7),
+                      Theme.of(context).colorScheme.onSurface,
+                      0.7,
+                    ),
                     height: 1.4,
                   ),
                 ),
@@ -587,7 +615,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                             Icons.edit_note,
                             size: 80,
                             color: ColorUtils.withOpacitySafe(
-                                Theme.of(context).colorScheme.onSurface, 0.3),
+                              Theme.of(context).colorScheme.onSurface,
+                              0.3,
+                            ),
                           ),
                           const SizedBox(height: 16),
                           Text(
@@ -595,7 +625,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                             style: TextStyle(
                               fontSize: 18,
                               color: ColorUtils.withOpacitySafe(
-                                  Theme.of(context).colorScheme.onSurface, 0.7),
+                                Theme.of(context).colorScheme.onSurface,
+                                0.7,
+                              ),
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -604,7 +636,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                             style: TextStyle(
                               fontSize: 14,
                               color: ColorUtils.withOpacitySafe(
-                                  Theme.of(context).colorScheme.onSurface, 0.5),
+                                Theme.of(context).colorScheme.onSurface,
+                                0.5,
+                              ),
                             ),
                           ),
                         ],
@@ -683,7 +717,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                             Icons.schedule,
                             size: 80,
                             color: ColorUtils.withOpacitySafe(
-                                Theme.of(context).colorScheme.onSurface, 0.3),
+                              Theme.of(context).colorScheme.onSurface,
+                              0.3,
+                            ),
                           ),
                           const SizedBox(height: 16),
                           Text(
@@ -691,7 +727,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                             style: TextStyle(
                               fontSize: 18,
                               color: ColorUtils.withOpacitySafe(
-                                  Theme.of(context).colorScheme.onSurface, 0.7),
+                                Theme.of(context).colorScheme.onSurface,
+                                0.7,
+                              ),
                             ),
                           ),
                         ],
@@ -784,8 +822,10 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             if (_stats!.topTags.isNotEmpty) ...[
               Text(
                 l10n.mostUsedTags,
-                style:
-                    const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 20),
             ],
@@ -851,10 +891,11 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                                       style: TextStyle(
                                         fontSize: 14,
                                         color: ColorUtils.withOpacitySafe(
-                                            Theme.of(context)
-                                                .colorScheme
-                                                .onSurface,
-                                            0.7),
+                                          Theme.of(
+                                            context,
+                                          ).colorScheme.onSurface,
+                                          0.7,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -873,7 +914,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                             Icons.label_outline,
                             size: 80,
                             color: ColorUtils.withOpacitySafe(
-                                Theme.of(context).colorScheme.onSurface, 0.3),
+                              Theme.of(context).colorScheme.onSurface,
+                              0.3,
+                            ),
                           ),
                           const SizedBox(height: 16),
                           Text(
@@ -881,7 +924,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                             style: TextStyle(
                               fontSize: 18,
                               color: ColorUtils.withOpacitySafe(
-                                  Theme.of(context).colorScheme.onSurface, 0.7),
+                                Theme.of(context).colorScheme.onSurface,
+                                0.7,
+                              ),
                             ),
                           ),
                         ],
@@ -918,7 +963,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                             Icons.calendar_today,
                             size: 80,
                             color: ColorUtils.withOpacitySafe(
-                                Theme.of(context).colorScheme.onSurface, 0.3),
+                              Theme.of(context).colorScheme.onSurface,
+                              0.3,
+                            ),
                           ),
                           const SizedBox(height: 16),
                           Text(
@@ -926,7 +973,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                             style: TextStyle(
                               fontSize: 18,
                               color: ColorUtils.withOpacitySafe(
-                                  Theme.of(context).colorScheme.onSurface, 0.7),
+                                Theme.of(context).colorScheme.onSurface,
+                                0.7,
+                              ),
                             ),
                           ),
                         ],
@@ -939,16 +988,18 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                         final maxCount = _stats!.monthlyStats
                             .map((m) => m.count)
                             .reduce((a, b) => a > b ? a : b);
-                        final percentage =
-                            maxCount > 0 ? month.count / maxCount : 0.0;
+                        final percentage = maxCount > 0
+                            ? month.count / maxCount
+                            : 0.0;
 
                         return Container(
                           margin: const EdgeInsets.only(bottom: 16),
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
                             color: Theme.of(context).colorScheme.surface,
-                            borderRadius:
-                                BorderRadius.circular(AppTheme.cardRadius),
+                            borderRadius: BorderRadius.circular(
+                              AppTheme.cardRadius,
+                            ),
                             boxShadow: AppTheme.lightShadow,
                           ),
                           child: Row(
@@ -976,10 +1027,11 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                                             height: 8,
                                             decoration: BoxDecoration(
                                               color: ColorUtils.withOpacitySafe(
-                                                  Theme.of(context)
-                                                      .colorScheme
-                                                      .primary,
-                                                  0.1),
+                                                Theme.of(
+                                                  context,
+                                                ).colorScheme.primary,
+                                                0.1,
+                                              ),
                                               borderRadius:
                                                   BorderRadius.circular(4),
                                             ),
@@ -992,9 +1044,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                                                     context,
                                                   ).colorScheme.primary,
                                                   borderRadius:
-                                                      BorderRadius.circular(
-                                                    4,
-                                                  ),
+                                                      BorderRadius.circular(4),
                                                 ),
                                               ),
                                             ),
@@ -1086,10 +1136,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            Icons.lightbulb,
-            color: theme.colorScheme.primary,
-          ),
+          Icon(Icons.lightbulb, color: theme.colorScheme.primary),
           const SizedBox(width: 12),
           Expanded(
             child: _insightLoading
@@ -1097,7 +1144,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                     l10n.generatingInsights,
                     style: TextStyle(
                       color: ColorUtils.withOpacitySafe(
-                          theme.colorScheme.onSurface, 0.7),
+                        theme.colorScheme.onSurface,
+                        0.7,
+                      ),
                     ),
                   )
                 : Text(
@@ -1134,7 +1183,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             style: TextStyle(
               fontSize: 16,
               color: ColorUtils.withOpacitySafe(
-                  Theme.of(context).colorScheme.onSurface, 0.7),
+                Theme.of(context).colorScheme.onSurface,
+                0.7,
+              ),
               height: 1.5,
             ),
             textAlign: TextAlign.center,
@@ -1167,15 +1218,13 @@ class _AnnualReportPageState extends State<AnnualReportPage>
     required double delay,
   }) {
     return SlideTransition(
-      position: Tween<Offset>(
-        begin: const Offset(1, 0),
-        end: Offset.zero,
-      ).animate(
-        CurvedAnimation(
-          parent: _controller,
-          curve: Interval(delay, delay + 0.5, curve: Curves.easeOutCubic),
-        ),
-      ),
+      position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
+          .animate(
+            CurvedAnimation(
+              parent: _controller,
+              curve: Interval(delay, delay + 0.5, curve: Curves.easeOutCubic),
+            ),
+          ),
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
@@ -1204,7 +1253,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                     style: TextStyle(
                       fontSize: 14,
                       color: ColorUtils.withOpacitySafe(
-                          Theme.of(context).colorScheme.onSurface, 0.7),
+                        Theme.of(context).colorScheme.onSurface,
+                        0.7,
+                      ),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -1227,7 +1278,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                           style: TextStyle(
                             fontSize: 14,
                             color: ColorUtils.withOpacitySafe(
-                                Theme.of(context).colorScheme.onSurface, 0.6),
+                              Theme.of(context).colorScheme.onSurface,
+                              0.6,
+                            ),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -1277,7 +1330,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                   style: TextStyle(
                     fontSize: 14,
                     color: ColorUtils.withOpacitySafe(
-                        Theme.of(context).colorScheme.onSurface, 0.7),
+                      Theme.of(context).colorScheme.onSurface,
+                      0.7,
+                    ),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -1340,7 +1395,9 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             style: TextStyle(
               fontSize: 15,
               color: ColorUtils.withOpacitySafe(
-                  Theme.of(context).colorScheme.onSurface, 0.8),
+                Theme.of(context).colorScheme.onSurface,
+                0.8,
+              ),
               height: 1.5,
             ),
           ),
@@ -1462,7 +1519,10 @@ class AnnualStats {
   });
 
   factory AnnualStats.fromQuotes(
-      AppLocalizations l10n, List<Quote> quotes, int year) {
+    AppLocalizations l10n,
+    List<Quote> quotes,
+    int year,
+  ) {
     if (quotes.isEmpty) {
       return AnnualStats(
         year: year,
@@ -1505,13 +1565,15 @@ class AnnualStats {
       if (diff == 1) {
         currentStreak++;
       } else {
-        longestStreak =
-            longestStreak > currentStreak ? longestStreak : currentStreak;
+        longestStreak = longestStreak > currentStreak
+            ? longestStreak
+            : currentStreak;
         currentStreak = 1;
       }
     }
-    longestStreak =
-        longestStreak > currentStreak ? longestStreak : currentStreak;
+    longestStreak = longestStreak > currentStreak
+        ? longestStreak
+        : currentStreak;
 
     // 计算标签统计
     final Map<String, int> tagCounts = {};
@@ -1521,10 +1583,11 @@ class AnnualStats {
       }
     }
 
-    final topTags = tagCounts.entries
-        .map((e) => TagStat(name: e.key, count: e.value))
-        .toList()
-      ..sort((a, b) => b.count.compareTo(a.count));
+    final topTags =
+        tagCounts.entries
+            .map((e) => TagStat(name: e.key, count: e.value))
+            .toList()
+          ..sort((a, b) => b.count.compareTo(a.count));
 
     // 计算时间统计
     final hourCounts = <int, int>{};
@@ -1548,12 +1611,12 @@ class AnnualStats {
       l10n.thursday,
       l10n.friday,
       l10n.saturday,
-      l10n.sunday
+      l10n.sunday,
     ];
     final mostActiveWeekday = weekdayCounts.entries.isNotEmpty
         ? weekdayNames[weekdayCounts.entries
-            .reduce((a, b) => a.value > b.value ? a : b)
-            .key]
+              .reduce((a, b) => a.value > b.value ? a : b)
+              .key]
         : null;
 
     // 计算月度统计

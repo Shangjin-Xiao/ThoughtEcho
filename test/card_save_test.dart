@@ -129,10 +129,7 @@ void main() {
       );
 
       // 生成高分辨率图片
-      final imageBytes = await card.toImageBytes(
-        width: 800,
-        height: 1200,
-      );
+      final imageBytes = await card.toImageBytes(width: 800, height: 1200);
 
       expect(imageBytes, isNotNull);
       expect(imageBytes.length, greaterThan(0));
@@ -153,14 +150,16 @@ void main() {
           date: '2024年1月15日',
         );
 
-        cards.add(GeneratedCard(
-          id: 'test_card_$i',
-          noteId: 'note_$i',
-          originalContent: '测试内容 $i：这是第${i + 1}张测试卡片的内容。',
-          svgContent: svgContent,
-          type: CardType.knowledge,
-          createdAt: DateTime.now(),
-        ));
+        cards.add(
+          GeneratedCard(
+            id: 'test_card_$i',
+            noteId: 'note_$i',
+            originalContent: '测试内容 $i：这是第${i + 1}张测试卡片的内容。',
+            svgContent: svgContent,
+            type: CardType.knowledge,
+            createdAt: DateTime.now(),
+          ),
+        );
       }
 
       final stopwatch = Stopwatch()..start();

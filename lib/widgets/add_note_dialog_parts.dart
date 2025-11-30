@@ -60,7 +60,8 @@ class _TagSelectionSectionState extends State<TagSelectionSection> {
       } else {
         _filteredTags = widget.tags
             .where(
-                (tag) => tag.name.toLowerCase().contains(query.toLowerCase()))
+              (tag) => tag.name.toLowerCase().contains(query.toLowerCase()),
+            )
             .toList();
       }
     });
@@ -178,9 +179,7 @@ class _TagSelectionContent extends StatelessWidget {
         if (filteredTags.isEmpty)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Center(
-              child: Text(l10n.noMatchingTags),
-            ),
+            child: Center(child: Text(l10n.noMatchingTags)),
           )
         else
           RepaintBoundary(
@@ -239,12 +238,7 @@ class _TagListItem extends StatelessWidget {
         children: [
           leading,
           const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              tag.name,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
+          Flexible(child: Text(tag.name, overflow: TextOverflow.ellipsis)),
         ],
       ),
       value: isSelected,
@@ -309,18 +303,12 @@ class SelectedTagsDisplay extends StatelessWidget {
                             style: const TextStyle(fontSize: 20),
                           ),
                           const SizedBox(width: 4),
-                          Text(
-                            tag.name,
-                            style: const TextStyle(fontSize: 12),
-                          ),
+                          Text(tag.name, style: const TextStyle(fontSize: 12)),
                         ],
                       )
                     : Text(tag.name),
                 avatar: !IconUtils.isEmoji(tag.iconName)
-                    ? Icon(
-                        IconUtils.getIconData(tag.iconName),
-                        size: 18,
-                      )
+                    ? Icon(IconUtils.getIconData(tag.iconName), size: 18)
                     : null,
                 deleteIcon: const Icon(Icons.cancel, size: 18),
                 onDeleted: () => onRemoveTag(tagId),

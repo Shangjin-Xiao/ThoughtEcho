@@ -176,8 +176,12 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
       AppLogger.i('AI分析保存完成: ${newAnalysis.id}', source: 'AIAnalysisDB');
       return newAnalysis;
     } catch (e, stackTrace) {
-      AppLogger.e('保存AI分析失败: $e',
-          error: e, stackTrace: stackTrace, source: 'AIAnalysisDB');
+      AppLogger.e(
+        '保存AI分析失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'AIAnalysisDB',
+      );
       rethrow;
     }
   }
@@ -189,8 +193,10 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
 
       if (kIsWeb) {
         // Web平台使用内存存储
-        AppLogger.i('从内存存储获取，数量: ${_memoryStore.length}',
-            source: 'AIAnalysisDB');
+        AppLogger.i(
+          '从内存存储获取，数量: ${_memoryStore.length}',
+          source: 'AIAnalysisDB',
+        );
         return List.from(_memoryStore);
       } else {
         // 非Web平台使用SQLite
@@ -212,8 +218,12 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
         return analyses;
       }
     } catch (e, stackTrace) {
-      AppLogger.e('获取AI分析列表失败: $e',
-          error: e, stackTrace: stackTrace, source: 'AIAnalysisDB');
+      AppLogger.e(
+        '获取AI分析列表失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'AIAnalysisDB',
+      );
       return [];
     }
   }
@@ -364,8 +374,9 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
   Future<int> restoreFromJson(String jsonStr) async {
     try {
       final List<dynamic> jsonList = json.decode(jsonStr);
-      final analyses =
-          jsonList.map((item) => item as Map<String, dynamic>).toList();
+      final analyses = jsonList
+          .map((item) => item as Map<String, dynamic>)
+          .toList();
       return await importAnalysesFromList(analyses);
     } catch (e) {
       AppLogger.e('从JSON恢复AI分析失败: $e', error: e, source: 'AIAnalysisDB');

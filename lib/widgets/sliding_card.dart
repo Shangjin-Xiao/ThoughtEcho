@@ -5,8 +5,16 @@ import '../utils/color_utils.dart';
 class SlidingCard extends StatefulWidget {
   final Widget child;
   final VoidCallback? onSlideComplete;
+  final VoidCallback? onTap;
+  final VoidCallback? onDoubleTap;
 
-  const SlidingCard({super.key, required this.child, this.onSlideComplete});
+  const SlidingCard({
+    super.key,
+    required this.child,
+    this.onSlideComplete,
+    this.onTap,
+    this.onDoubleTap,
+  });
 
   @override
   State<SlidingCard> createState() => _SlidingCardState();
@@ -140,6 +148,8 @@ class _SlidingCardState extends State<SlidingCard>
                 onTapDown: _onTapDown,
                 onTapUp: _onTapUp,
                 onTapCancel: _onTapCancel,
+                onTap: widget.onTap,
+                onDoubleTap: widget.onDoubleTap,
                 onHorizontalDragEnd: (details) {
                   // 检测左滑动作
                   if (details.primaryVelocity != null &&
@@ -204,8 +214,9 @@ class _SlidingCardState extends State<SlidingCard>
                                 size: 40,
                                 color: _isHovered
                                     ? theme.colorScheme.primary
-                                    : theme.colorScheme.onSurface
-                                        .withValues(alpha: 0.7),
+                                    : theme.colorScheme.onSurface.withValues(
+                                        alpha: 0.7,
+                                      ),
                               ),
                             ),
                             const SizedBox(height: 16),

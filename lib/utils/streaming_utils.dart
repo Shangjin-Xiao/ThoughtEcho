@@ -565,8 +565,9 @@ class StreamingUtils {
             onError: (error) {
               if (hasCompleted) return; // 如果已经完成，不处理错误
               hasError = true;
-              lastError =
-                  error is Exception ? error : Exception(error.toString());
+              lastError = error is Exception
+                  ? error
+                  : Exception(error.toString());
             },
             timeout: timeout,
           );
@@ -624,8 +625,9 @@ class StreamingUtils {
   static Duration _calculateRetryDelay(int retryCount, Duration baseDelay) {
     // 指数退避：第一次重试3秒，第二次重试6秒，第三次重试12秒...
     const multiplier = 1; // 基础倍数
-    final actualMultiplier =
-        (retryCount == 0) ? multiplier : (1 << retryCount); // 2^retryCount
+    final actualMultiplier = (retryCount == 0)
+        ? multiplier
+        : (1 << retryCount); // 2^retryCount
     final delayMs = baseDelay.inMilliseconds * actualMultiplier;
 
     // 最大延迟不超过30秒

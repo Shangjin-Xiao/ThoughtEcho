@@ -63,7 +63,8 @@ class BackupMediaProcessor {
       final hugeFiles = fileStats['hugeFiles'] as int;
 
       logDebug(
-          '媒体文件统计: 总大小 ${totalSizeMB.toStringAsFixed(1)}MB, 大文件 $largeFiles 个, 超大文件 $hugeFiles 个');
+        '媒体文件统计: 总大小 ${totalSizeMB.toStringAsFixed(1)}MB, 大文件 $largeFiles 个, 超大文件 $hugeFiles 个',
+      );
 
       if (hugeFiles > 0) {
         onStatusUpdate?.call('检测到 $hugeFiles 个超大文件，将使用流式处理确保备份完整性');
@@ -195,7 +196,8 @@ class BackupMediaProcessor {
       // 对于超大文件，记录警告但仍然包含在备份中
       if (fileSize > 2 * 1024 * 1024 * 1024) {
         logDebug(
-            '检测到超大文件: $filePath (${(fileSize / 1024 / 1024 / 1024).toStringAsFixed(1)}GB) - 将使用流式处理');
+          '检测到超大文件: $filePath (${(fileSize / 1024 / 1024 / 1024).toStringAsFixed(1)}GB) - 将使用流式处理',
+        );
       }
 
       // 简单的文件访问测试
@@ -335,10 +337,13 @@ class BackupMediaProcessor {
 
   /// 分析媒体文件（快速版本，只检查前100个文件来估算）
   static Future<Map<String, dynamic>> _analyzeMediaFiles(
-      List<String> filePaths) async {
+    List<String> filePaths,
+  ) async {
     const maxSampleSize = 100; // 最多检查100个文件来快速估算
-    return await _analyzeMediaFilesCommon(filePaths,
-        maxSampleSize: maxSampleSize);
+    return await _analyzeMediaFilesCommon(
+      filePaths,
+      maxSampleSize: maxSampleSize,
+    );
   }
 
   /// 根据文件统计计算最优批次大小
@@ -365,7 +370,8 @@ class BackupMediaProcessor {
 
   /// 获取媒体文件统计信息（完整版本）
   static Future<Map<String, dynamic>> getMediaFilesStats(
-      List<String> filePaths) async {
+    List<String> filePaths,
+  ) async {
     try {
       final result = await _analyzeMediaFilesCommon(filePaths);
       // 移除 sampledFiles 字段，因为完整版本不需要这个字段
@@ -399,8 +405,9 @@ class BackupMediaProcessor {
 
       // 检查每个文件的引用计数
       for (final filePath in allMediaFiles) {
-        final refCount =
-            await MediaReferenceService.getReferenceCount(filePath);
+        final refCount = await MediaReferenceService.getReferenceCount(
+          filePath,
+        );
         if (refCount > 0) {
           referencedFiles.add(filePath);
         }

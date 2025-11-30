@@ -46,7 +46,8 @@ class LargeFileManager {
       // 估算数据大小来决定处理策略
       final estimatedSize = _estimateJsonSize(data);
       logDebug(
-          '估算JSON大小: ${(estimatedSize / 1024 / 1024).toStringAsFixed(1)}MB');
+        '估算JSON大小: ${(estimatedSize / 1024 / 1024).toStringAsFixed(1)}MB',
+      );
 
       String jsonString;
 
@@ -74,8 +75,9 @@ class LargeFileManager {
         final totalLength = jsonString.length;
 
         for (int i = 0; i < totalLength; i += chunkSize) {
-          final end =
-              (i + chunkSize < totalLength) ? i + chunkSize : totalLength;
+          final end = (i + chunkSize < totalLength)
+              ? i + chunkSize
+              : totalLength;
           final chunk = jsonString.substring(i, end);
           sink.write(chunk);
 

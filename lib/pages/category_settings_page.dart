@@ -74,15 +74,16 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                         message: l10n.selectIcon,
                         child: InkWell(
                           onTap: () => _showIconSelector(context),
-                          borderRadius:
-                              BorderRadius.circular(AppTheme.cardRadius),
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.cardRadius,
+                          ),
                           child: Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
                               border: Border.all(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .outlineVariant,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.outlineVariant,
                               ),
                               borderRadius: BorderRadius.circular(
                                 AppTheme.cardRadius,
@@ -90,17 +91,17 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                             ),
                             child: _selectedIconName != null
                                 ? (IconUtils.isEmoji(_selectedIconName)
-                                    ? Text(
-                                        IconUtils.getDisplayIcon(
-                                          _selectedIconName!,
-                                        ),
-                                        style: const TextStyle(fontSize: 20),
-                                      )
-                                    : Icon(
-                                        IconUtils.getIconData(
-                                          _selectedIconName,
-                                        ),
-                                      ))
+                                      ? Text(
+                                          IconUtils.getDisplayIcon(
+                                            _selectedIconName!,
+                                          ),
+                                          style: const TextStyle(fontSize: 20),
+                                        )
+                                      : Icon(
+                                          IconUtils.getIconData(
+                                            _selectedIconName,
+                                          ),
+                                        ))
                                 : const Icon(Icons.add_circle_outline),
                           ),
                         ),
@@ -111,8 +112,9 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                             ? const SizedBox(
                                 width: 16,
                                 height: 16,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2),
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
                               )
                             : const Icon(Icons.check),
                         label: Text(_isLoading ? l10n.adding : l10n.add),
@@ -123,9 +125,10 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                 if (text.isEmpty) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                        content: Text(l10n.pleaseEnterTagName),
-                                        duration: AppConstants
-                                            .snackBarDurationNormal),
+                                      content: Text(l10n.pleaseEnterTagName),
+                                      duration:
+                                          AppConstants.snackBarDurationNormal,
+                                    ),
                                   );
                                   return;
                                 }
@@ -140,9 +143,10 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                   if (mounted) {
                                     messenger.showSnackBar(
                                       SnackBar(
-                                          content: Text(l10n.tagAddedSuccess),
-                                          duration: AppConstants
-                                              .snackBarDurationNormal),
+                                        content: Text(l10n.tagAddedSuccess),
+                                        duration:
+                                            AppConstants.snackBarDurationNormal,
+                                      ),
                                     );
                                     _categoryController.clear();
                                     setState(() => _selectedIconName = null);
@@ -151,10 +155,12 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                   if (mounted) {
                                     messenger.showSnackBar(
                                       SnackBar(
-                                          content: Text(
-                                              l10n.addTagFailed(e.toString())),
-                                          duration: AppConstants
-                                              .snackBarDurationError),
+                                        content: Text(
+                                          l10n.addTagFailed(e.toString()),
+                                        ),
+                                        duration:
+                                            AppConstants.snackBarDurationError,
+                                      ),
                                     );
                                   }
                                 } finally {
@@ -188,9 +194,9 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                 : l10n.iconSelected(_selectedIconName!),
                             style: TextStyle(
                               fontSize: 12,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ),
@@ -216,8 +222,8 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
 
                 if (snapshot.hasError) {
                   return Center(
-                      child:
-                          Text(l10n.loadTagsFailed(snapshot.error.toString())));
+                    child: Text(l10n.loadTagsFailed(snapshot.error.toString())),
+                  );
                 }
 
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
@@ -246,7 +252,10 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                     itemBuilder: (context, index) {
                       final category = categories[index];
                       return _buildCategoryItem(
-                          category, index, categories.length);
+                        category,
+                        index,
+                        categories.length,
+                      );
                     },
                   ),
                 );
@@ -411,16 +420,14 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                             height: 48,
                                             decoration: BoxDecoration(
                                               color: isSelected
-                                                  ? Theme.of(
-                                                      context,
-                                                    )
-                                                      .colorScheme
-                                                      .primaryContainer
+                                                  ? Theme.of(context)
+                                                        .colorScheme
+                                                        .primaryContainer
                                                   : Colors.transparent,
                                               borderRadius:
                                                   BorderRadius.circular(
-                                                AppTheme.cardRadius,
-                                              ),
+                                                    AppTheme.cardRadius,
+                                                  ),
                                               border: Border.all(
                                                 color: isSelected
                                                     ? Theme.of(
@@ -455,8 +462,9 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                           ListTile(
                             title: Text(
                               l10n.systemIcons,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             trailing: Icon(
                               expandedCategories[l10n.systemIcons] ?? false
@@ -504,16 +512,14 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                             padding: const EdgeInsets.all(8),
                                             decoration: BoxDecoration(
                                               color: isSelected
-                                                  ? Theme.of(
-                                                      context,
-                                                    )
-                                                      .colorScheme
-                                                      .primaryContainer
+                                                  ? Theme.of(context)
+                                                        .colorScheme
+                                                        .primaryContainer
                                                   : Colors.transparent,
                                               borderRadius:
                                                   BorderRadius.circular(
-                                                AppTheme.cardRadius,
-                                              ),
+                                                    AppTheme.cardRadius,
+                                                  ),
                                               border: Border.all(
                                                 color: isSelected
                                                     ? Theme.of(
@@ -683,17 +689,18 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color:
-                                Theme.of(context).colorScheme.primaryContainer,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primaryContainer,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             l10n.defaultTag,
                             style: TextStyle(
                               fontSize: 11,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onPrimaryContainer,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onPrimaryContainer,
                             ),
                           ),
                         ),
@@ -759,21 +766,23 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
           // 修复内存泄露：在异步操作后检查mounted状态
           if (!mounted) return;
           if (context.mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
                 content: Text(l10n.tagDeletedSuccess),
-                duration: AppConstants.snackBarDurationNormal));
+                duration: AppConstants.snackBarDurationNormal,
+              ),
+            );
           }
         } catch (e) {
           // 修复内存泄露：在异步操作后检查mounted状态
           if (!mounted) return;
           if (context.mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
                 content: Text(l10n.deleteTagFailed(e.toString())),
-                duration: AppConstants.snackBarDurationError));
+                duration: AppConstants.snackBarDurationError,
+              ),
+            );
           }
         }
       }
@@ -926,13 +935,11 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
                                       padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
                                         color: isSelected
-                                            ? Theme.of(context)
-                                                .colorScheme
-                                                .primaryContainer
+                                            ? Theme.of(
+                                                context,
+                                              ).colorScheme.primaryContainer
                                             : Colors.transparent,
-                                        borderRadius: BorderRadius.circular(
-                                          8,
-                                        ),
+                                        borderRadius: BorderRadius.circular(8),
                                         border: Border.all(
                                           color: isSelected
                                               ? Theme.of(
@@ -945,9 +952,7 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
                                       ),
                                       child: Text(
                                         emoji,
-                                        style: const TextStyle(
-                                          fontSize: 24,
-                                        ),
+                                        style: const TextStyle(fontSize: 24),
                                       ),
                                     ),
                                   );
@@ -998,13 +1003,11 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
                                       padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
                                         color: isSelected
-                                            ? Theme.of(context)
-                                                .colorScheme
-                                                .primaryContainer
+                                            ? Theme.of(
+                                                context,
+                                              ).colorScheme.primaryContainer
                                             : Colors.transparent,
-                                        borderRadius: BorderRadius.circular(
-                                          8,
-                                        ),
+                                        borderRadius: BorderRadius.circular(8),
                                         border: Border.all(
                                           color: isSelected
                                               ? Theme.of(

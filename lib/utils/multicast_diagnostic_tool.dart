@@ -39,15 +39,21 @@ class MulticastDiagnosticTool {
 
   /// 检查网络接口
   static Future<void> _checkNetworkInterfaces(
-      MulticastDiagnosticResult result) async {
+    MulticastDiagnosticResult result,
+  ) async {
     try {
       debugPrint('--- 检查网络接口 ---');
-      final interfaces =
-          await getNetworkInterfaces(whitelist: null, blacklist: null);
+      final interfaces = await getNetworkInterfaces(
+        whitelist: null,
+        blacklist: null,
+      );
 
       result.networkInterfaceCount = interfaces.length;
       result.addStep(
-          '网络接口检查', interfaces.isNotEmpty, '发现 ${interfaces.length} 个网络接口');
+        '网络接口检查',
+        interfaces.isNotEmpty,
+        '发现 ${interfaces.length} 个网络接口',
+      );
 
       for (final interface in interfaces) {
         final ipv4Addresses = interface.addresses
@@ -75,7 +81,8 @@ class MulticastDiagnosticTool {
 
   /// 测试UDP套接字绑定
   static Future<void> _testUdpSocketBinding(
-      MulticastDiagnosticResult result) async {
+    MulticastDiagnosticResult result,
+  ) async {
     debugPrint('--- 测试UDP套接字绑定 ---');
 
     // 测试组播端口
@@ -90,10 +97,15 @@ class MulticastDiagnosticTool {
 
   /// 测试特定端口绑定
   static Future<void> _testPortBinding(
-      MulticastDiagnosticResult result, String portName, int port) async {
+    MulticastDiagnosticResult result,
+    String portName,
+    int port,
+  ) async {
     try {
-      final socket =
-          await RawDatagramSocket.bind(InternetAddress.anyIPv4, port);
+      final socket = await RawDatagramSocket.bind(
+        InternetAddress.anyIPv4,
+        port,
+      );
       final actualPort = socket.port;
       socket.close();
 
@@ -107,7 +119,8 @@ class MulticastDiagnosticTool {
 
   /// 测试组播发送
   static Future<void> _testMulticastSending(
-      MulticastDiagnosticResult result) async {
+    MulticastDiagnosticResult result,
+  ) async {
     debugPrint('--- 测试组播发送 ---');
     // Web 平台不支持 RawDatagramSocket，直接跳过
     if (kIsWeb) {
@@ -136,8 +149,11 @@ class MulticastDiagnosticTool {
 
       int bytesSent = 0;
       try {
-        bytesSent =
-            socket.send(testData, multicastAddress, defaultMulticastPort);
+        bytesSent = socket.send(
+          testData,
+          multicastAddress,
+          defaultMulticastPort,
+        );
       } catch (e) {
         result.addStep('组播发送测试', false, '发送调用失败: $e');
         debugPrint('❌ 组播发送调用失败: $e');
@@ -163,7 +179,8 @@ class MulticastDiagnosticTool {
 
   /// 测试组播接收
   static Future<void> _testMulticastReceiving(
-      MulticastDiagnosticResult result) async {
+    MulticastDiagnosticResult result,
+  ) async {
     debugPrint('--- 测试组播接收 ---');
     // Web 平台不支持 UDP 组播
     if (kIsWeb) {
@@ -179,7 +196,9 @@ class MulticastDiagnosticTool {
     try {
       try {
         socket = await RawDatagramSocket.bind(
-            InternetAddress.anyIPv4, defaultMulticastPort);
+          InternetAddress.anyIPv4,
+          defaultMulticastPort,
+        );
       } on SocketException catch (se) {
         result.addStep('组播接收测试', false, '套接字绑定失败(Socket): ${se.message}');
         debugPrint('❌ 组播接收套接字绑定失败(SocketException): ${se.message}');
@@ -195,12 +214,16 @@ class MulticastDiagnosticTool {
 
       // 尝试加入组播组
       try {
-        final interfaces =
-            await getNetworkInterfaces(whitelist: null, blacklist: null);
+        final interfaces = await getNetworkInterfaces(
+          whitelist: null,
+          blacklist: null,
+        );
         for (final interface in interfaces) {
           try {
             socket.joinMulticast(
-                InternetAddress(defaultMulticastGroup), interface);
+              InternetAddress(defaultMulticastGroup),
+              interface,
+            );
             debugPrint('✓ 成功加入组播组 (接口: ${interface.name})');
           } catch (e) {
             debugPrint('❌ 加入组播组失败 (接口: ${interface.name}): $e');
@@ -228,11 +251,15 @@ class MulticastDiagnosticTool {
       });
 
       // 发送测试消息
-      final testData =
-          utf8.encode('$_testMessage-${DateTime.now().millisecondsSinceEpoch}');
+      final testData = utf8.encode(
+        '$_testMessage-${DateTime.now().millisecondsSinceEpoch}',
+      );
       try {
-        socket.send(testData, InternetAddress(defaultMulticastGroup),
-            defaultMulticastPort);
+        socket.send(
+          testData,
+          InternetAddress(defaultMulticastGroup),
+          defaultMulticastPort,
+        );
       } catch (e) {
         debugPrint('❌ 发送测试消息失败: $e');
       }
@@ -266,7 +293,8 @@ class MulticastDiagnosticTool {
 
   /// 测试端口可用性
   static Future<void> _testPortAvailability(
-      MulticastDiagnosticResult result) async {
+    MulticastDiagnosticResult result,
+  ) async {
     debugPrint('--- 测试端口可用性 ---');
 
     final portsToTest = [
@@ -278,8 +306,10 @@ class MulticastDiagnosticTool {
 
     for (final port in portsToTest) {
       try {
-        final socket =
-            await RawDatagramSocket.bind(InternetAddress.anyIPv4, port);
+        final socket = await RawDatagramSocket.bind(
+          InternetAddress.anyIPv4,
+          port,
+        );
         socket.close();
         result.addStep('端口 $port 可用性', true, '端口可用');
         debugPrint('✓ 端口 $port 可用');

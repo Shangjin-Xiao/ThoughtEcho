@@ -63,18 +63,17 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
 
       if (mounted) {
         final l10n = AppLocalizations.of(context);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
             content: Text(l10n.analysisRecordDeleted),
-            duration: const Duration(seconds: 2)));
+            duration: const Duration(seconds: 2),
+          ),
+        );
       }
     } catch (e) {
       if (!mounted) return;
       final l10n = AppLocalizations.of(context);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(l10n.deleteFailed(e.toString())),
           duration: AppConstants.snackBarDurationError,

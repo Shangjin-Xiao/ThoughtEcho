@@ -88,8 +88,9 @@ class PreferencesDetailPage extends StatelessWidget {
                         Text(
                           l10n.personalizationSettingsDesc,
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            color: colorScheme.onPrimaryContainer
-                                .withValues(alpha: 0.8),
+                            color: colorScheme.onPrimaryContainer.withValues(
+                              alpha: 0.8,
+                            ),
                           ),
                         ),
                       ],
@@ -102,7 +103,11 @@ class PreferencesDetailPage extends StatelessWidget {
             const SizedBox(height: 24),
 
             // 常用偏好
-            _buildSectionHeader(context, l10n.commonPreferences, Icons.settings_outlined),
+            _buildSectionHeader(
+              context,
+              l10n.commonPreferences,
+              Icons.settings_outlined,
+            ),
             const SizedBox(height: 12),
             _buildPreferenceCard(
               context,
@@ -159,7 +164,10 @@ class PreferencesDetailPage extends StatelessWidget {
 
             // AI 快捷开关
             _buildSectionHeader(
-                context, l10n.aiSmartFeatures, Icons.auto_awesome_outlined),
+              context,
+              l10n.aiSmartFeatures,
+              Icons.auto_awesome_outlined,
+            ),
             const SizedBox(height: 12),
             _buildPreferenceCard(
               context,
@@ -227,15 +235,14 @@ class PreferencesDetailPage extends StatelessWidget {
   }
 
   Widget _buildSectionHeader(
-      BuildContext context, String title, IconData icon) {
+    BuildContext context,
+    String title,
+    IconData icon,
+  ) {
     final theme = Theme.of(context);
     return Row(
       children: [
-        Icon(
-          icon,
-          size: 20,
-          color: theme.colorScheme.primary,
-        ),
+        Icon(icon, size: 20, color: theme.colorScheme.primary),
         const SizedBox(width: 8),
         Text(
           title,
@@ -248,8 +255,10 @@ class PreferencesDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildPreferenceCard(BuildContext context,
-      {required List<Widget> children}) {
+  Widget _buildPreferenceCard(
+    BuildContext context, {
+    required List<Widget> children,
+  }) {
     final theme = Theme.of(context);
     return Container(
       decoration: BoxDecoration(
@@ -322,10 +331,6 @@ class PreferencesDetailPage extends StatelessWidget {
   }
 
   Widget _buildDivider() {
-    return const Divider(
-      height: 1,
-      indent: 68,
-      endIndent: 20,
-    );
+    return const Divider(height: 1, indent: 68, endIndent: 20);
   }
 }
