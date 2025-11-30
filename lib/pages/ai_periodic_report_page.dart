@@ -251,7 +251,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         weatherIcon = WeatherService.getFilterCategoryIcon(mostWeather);
       } else {
         // 否则按原逻辑处理
-        weatherDisplay = WeatherCodeMapper.getDescription(mostWeather);
+        weatherDisplay = WeatherCodeMapper.getLocalizedDescription(context, mostWeather);
         weatherIcon = WeatherCodeMapper.getIcon(mostWeather);
 
         // 如果返回的是"未知"，说明mostWeather可能已经是中文描述
@@ -317,9 +317,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         // 添加天气信息
         if (quote.weather != null && quote.weather!.isNotEmpty) {
           final w = quote.weather!.trim();
-          // 优先把英文key映射为中文描述
-          final wDesc = WeatherCodeMapper.getDescription(w);
-          final display = wDesc == l10n.unknown ? w : wDesc;
+          // 优先把英文key映射为国际化描述
+          final wDesc = WeatherCodeMapper.getLocalizedDescription(context, w);
+          final display = wDesc == l10n.weatherUnknown ? w : wDesc;
           content += l10n.weatherInfo(display);
         }
 

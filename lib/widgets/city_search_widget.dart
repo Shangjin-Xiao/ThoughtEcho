@@ -4,6 +4,7 @@ import 'dart:async';
 import '../gen_l10n/app_localizations.dart';
 import '../services/location_service.dart';
 import '../services/weather_service.dart';
+import '../services/settings_service.dart';
 import '../controllers/weather_search_controller.dart';
 import '../utils/lottie_animation_manager.dart';
 
@@ -49,6 +50,13 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
       context,
       listen: false,
     );
+    final settingsService = Provider.of<SettingsService>(
+      context,
+      listen: false,
+    );
+    
+    // 同步语言设置到 LocationService
+    locationService.currentLocaleCode = settingsService.localeCode;
 
     // 取消之前的计时器
     _debounce?.cancel();
@@ -146,7 +154,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                             : l10n.cityNotSetHint)
                         : (weatherService.currentWeather == '天气数据获取失败'
                             ? l10n.weatherFetchFailed
-                            : '${WeatherService.getWeatherDescription(weatherService.currentWeather ?? 'unknown')} ${weatherService.temperature ?? ""}'),
+                            : '${WeatherService.getLocalizedWeatherDescription(context, weatherService.currentWeather ?? 'unknown')} ${weatherService.temperature ?? ""}'),
                     style: const TextStyle(fontSize: 12),
                   ),
                   trailing: IconButton(

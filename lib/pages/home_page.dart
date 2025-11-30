@@ -1226,7 +1226,7 @@ class _HomePageState extends State<HomePage>
       // 正常状态
       locationText = locationService.getDisplayLocation();
       weatherText =
-          '${WeatherService.getWeatherDescription(weatherService.currentWeather!)}'
+          '${WeatherService.getLocalizedWeatherDescription(context, weatherService.currentWeather!)}'
           '${weatherService.temperature != null && weatherService.temperature!.isNotEmpty ? ' ${weatherService.temperature}' : ''}';
       weatherIcon = weatherService.getWeatherIconData();
     } else if (hasCoordinates) {

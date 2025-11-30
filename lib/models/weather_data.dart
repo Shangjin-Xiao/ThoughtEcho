@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 
 /// 天气数据模型
 class WeatherData {
@@ -207,9 +208,47 @@ class WeatherCodeMapper {
     return 'unknown';
   }
 
-  /// 根据key获取描述
+  /// 根据key获取描述（中文硬编码，用于非 UI 场景如日志）
   static String getDescription(String key) {
     return _keyToDescription[key] ?? '未知';
+  }
+
+  /// 根据key获取国际化描述（用于 UI 显示）
+  static String getLocalizedDescription(BuildContext context, String key) {
+    final l10n = AppLocalizations.of(context);
+    switch (key) {
+      case 'clear':
+        return l10n.weatherClear;
+      case 'partly_cloudy':
+        return l10n.weatherPartlyCloudy;
+      case 'cloudy':
+        return l10n.weatherCloudy;
+      case 'fog':
+        return l10n.weatherFog;
+      case 'drizzle':
+        return l10n.weatherDrizzle;
+      case 'freezing_rain':
+        return l10n.weatherFreezingRain;
+      case 'rain':
+        return l10n.weatherRain;
+      case 'snow':
+        return l10n.weatherSnow;
+      case 'snow_grains':
+        return l10n.weatherSnowGrains;
+      case 'rain_shower':
+        return l10n.weatherRainShower;
+      case 'snow_shower':
+        return l10n.weatherSnowShower;
+      case 'thunderstorm':
+        return l10n.weatherThunderstorm;
+      case 'thunderstorm_heavy':
+        return l10n.weatherThunderstormHeavy;
+      case 'error':
+        return l10n.weatherError;
+      case 'unknown':
+      default:
+        return l10n.weatherUnknown;
+    }
   }
 
   /// 根据key获取图标代码
