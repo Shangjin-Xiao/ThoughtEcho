@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../gen_l10n/app_localizations.dart';
 import '../../models/onboarding_models.dart';
 import '../../config/onboarding_config.dart';
+import '../../controllers/onboarding_controller.dart';
+import '../../services/settings_service.dart';
 
 /// 欢迎页面组件
 class WelcomePageView extends StatefulWidget {
@@ -19,6 +22,13 @@ class _WelcomePageViewState extends State<WelcomePageView>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
+  
+  // 语言选择
+  late FixedExtentScrollController _languageScrollController;
+  int _selectedLanguageIndex = 0;
+  
+  // 语言选项: 空字符串表示跟随系统
+  static const List<String> _languageCodes = ['', 'zh', 'en'];
 
   @override
   void initState() {
@@ -44,19 +54,65 @@ class _WelcomePageViewState extends State<WelcomePageView>
         curve: const Interval(0.3, 1.0, curve: Curves.easeOutBack),
       ),
     );
+    
+    // 初始化语言选择控制器
+    _languageScrollController = FixedExtentScrollController(initialItem: 0);
 
     _animationController.forward();
+  }
+  
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 从控制器获取当前语言设置
+    final controller = context.read<OnboardingController>();
+    final currentLocale = controller.state.getPreference<String>('localeCode') ?? '';
+    final index = _languageCodes.indexOf(currentLocale);
+    if (index >= 0 && index != _selectedLanguageIndex) {
+      _selectedLanguageIndex = index;
+      if (_languageScrollController.hasClients) {
+        _languageScrollController.jumpToItem(index);
+      }
+    }
   }
 
   @override
   void dispose() {
     _animationController.dispose();
+    _languageScrollController.dispose();
     super.dispose();
+  }
+  
+  String _getLanguageLabel(String code) {
+    switch (code) {
+      case '':
+        return AppLocalizations.of(context).languageFollowSystem;
+      case 'zh':
+        return AppLocalizations.of(context).languageChinese;
+      case 'en':
+        return AppLocalizations.of(context).languageEnglish;
+      default:
+        return code;
+    }
+  }
+  
+  void _onLanguageChanged(int index) {
+    setState(() {
+      _selectedLanguageIndex = index;
+    });
+    final controller = context.read<OnboardingController>();
+    final selectedCode = _languageCodes[index];
+    controller.updatePreference('localeCode', selectedCode);
+    
+    // 立即应用语言设置
+    final settingsService = context.read<SettingsService>();
+    settingsService.setLocale(selectedCode.isEmpty ? null : selectedCode);
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Center(
       child: SingleChildScrollView(
@@ -191,12 +247,85 @@ class _WelcomePageViewState extends State<WelcomePageView>
                         ),
                       ),
                     ],
+                    
+                    // 语言选择器
+                    const SizedBox(height: 40),
+                    _buildLanguageSelector(theme, l10n),
                   ],
                 ),
               ),
             );
           },
         ),
+      ),
+    );
+  }
+  
+  /// 构建语言选择器
+  Widget _buildLanguageSelector(ThemeData theme, AppLocalizations l10n) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: theme.colorScheme.outline.withValues(alpha: 0.15),
+        ),
+      ),
+      child: Column(
+        children: [
+          // 标题行
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.language_rounded,
+                color: theme.colorScheme.primary,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                l10n.onboardingSelectLanguage,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // 语言滚轮选择器
+          SizedBox(
+            height: 120,
+            child: ListWheelScrollView.useDelegate(
+              controller: _languageScrollController,
+              itemExtent: 40,
+              perspective: 0.003,
+              diameterRatio: 1.5,
+              physics: const FixedExtentScrollPhysics(),
+              onSelectedItemChanged: _onLanguageChanged,
+              childDelegate: ListWheelChildBuilderDelegate(
+                childCount: _languageCodes.length,
+                builder: (context, index) {
+                  final isSelected = index == _selectedLanguageIndex;
+                  return Center(
+                    child: AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 200),
+                      style: TextStyle(
+                        fontSize: isSelected ? 18 : 15,
+                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        color: isSelected
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                      ),
+                      child: Text(_getLanguageLabel(_languageCodes[index])),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
