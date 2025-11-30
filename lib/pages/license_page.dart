@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/foundation.dart';
 
+import '../gen_l10n/app_localizations.dart';
+
 /// 许可证页面
 /// 显示应用使用的第三方资源许可信息
 class LicensePage extends StatefulWidget {
@@ -39,7 +41,7 @@ class _LicensePageState extends State<LicensePage> {
       });
     } catch (e) {
       setState(() {
-        _licenseError = '无法加载本程序许可证：$e';
+        _licenseError = e.toString();
         _licenseLoading = false;
       });
     }
@@ -47,35 +49,36 @@ class _LicensePageState extends State<LicensePage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('许可证信息')),
+      appBar: AppBar(title: Text(l10n.licenseInfo)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           _buildSectionCard(
             context,
-            title: '本程序许可证',
+            title: l10n.appLicense,
             icon: Icons.verified_user_outlined,
             content: _buildLicenseFileSection(context),
           ),
           const SizedBox(height: 16),
           _buildSectionCard(
             context,
-            title: '开源库与鸣谢',
+            title: l10n.openSourceAcknowledgements,
             icon: Icons.code_outlined,
             content: _buildAcknowledgementsSection(context),
           ),
           const SizedBox(height: 16),
           _buildSectionCard(
             context,
-            title: 'Lottie 动画许可',
+            title: l10n.lottieAnimationLicense,
             icon: Icons.animation_outlined,
             content: _buildLottieSection(context),
           ),
           const SizedBox(height: 16),
           _buildSectionCard(
             context,
-            title: '系统许可证',
+            title: l10n.systemLicenses,
             icon: Icons.article_outlined,
             content: _buildSystemLicensesSection(context),
           ),
@@ -85,22 +88,24 @@ class _LicensePageState extends State<LicensePage> {
   }
 
   Widget _buildLicenseFileSection(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return ElevatedButton.icon(
       icon: const Icon(Icons.verified_user_outlined),
-      label: const Text('查看本程序 LICENSE'),
+      label: Text(l10n.viewAppLicense),
       style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
       onPressed: () => _showLicenseDialog(context),
     );
   }
 
   Future<void> _showLicenseDialog(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (ctx) {
         if (_licenseLoading) {
-          return const AlertDialog(
-            title: Text('本程序 LICENSE'),
-            content: SizedBox(
+          return AlertDialog(
+            title: Text(l10n.appLicense),
+            content: const SizedBox(
               height: 80,
               child: Center(child: CircularProgressIndicator()),
             ),
@@ -108,31 +113,31 @@ class _LicensePageState extends State<LicensePage> {
         }
         if (_licenseError != null) {
           return AlertDialog(
-            title: const Text('本程序 LICENSE'),
+            title: Text(l10n.appLicense),
             content:
-                Text(_licenseError!, style: const TextStyle(color: Colors.red)),
+                Text(l10n.loadLicenseFailed(_licenseError!), style: const TextStyle(color: Colors.red)),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('关闭'),
+                child: Text(l10n.close),
               ),
             ],
           );
         }
         if (_licenseText == null || _licenseText!.trim().isEmpty) {
           return AlertDialog(
-            title: const Text('本程序 LICENSE'),
-            content: const Text('未找到本程序 LICENSE 文件。'),
+            title: Text(l10n.appLicense),
+            content: Text(l10n.licenseFileNotFound),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(),
-                child: const Text('关闭'),
+                child: Text(l10n.close),
               ),
             ],
           );
         }
         return AlertDialog(
-          title: const Text('本程序 LICENSE'),
+          title: Text(l10n.appLicense),
           content: SizedBox(
             width: 400,
             height: 320,
@@ -149,7 +154,7 @@ class _LicensePageState extends State<LicensePage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('关闭'),
+              child: Text(l10n.close),
             ),
           ],
         );
@@ -193,42 +198,43 @@ class _LicensePageState extends State<LicensePage> {
   }
 
   Widget _buildLottieSection(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          '应用使用了来自 LottieFiles 的动画资源：',
-          style: TextStyle(fontSize: 14),
+        Text(
+          l10n.lottieFilesCredits,
+          style: const TextStyle(fontSize: 14),
         ),
         const SizedBox(height: 12),
         _buildLottieAttribution(
           context: context,
-          title: '搜索加载动画',
+          title: l10n.searchLoadingAnimation,
           creator: 'LottieFiles',
           url: 'https://lottiefiles.com/animations/search-loading',
         ),
         _buildLottieAttribution(
           context: context,
-          title: '天气搜索动画',
+          title: l10n.weatherSearchAnimation,
           creator: 'LottieFiles',
           url: 'https://lottiefiles.com/animations/weather-search',
         ),
         _buildLottieAttribution(
           context: context,
-          title: 'AI思考动画',
+          title: l10n.aiThinkingAnimation,
           creator: 'LottieFiles',
           url: 'https://lottiefiles.com/animations/ai-loading',
         ),
         _buildLottieAttribution(
           context: context,
-          title: '搜索无结果动画',
+          title: l10n.noResultsAnimation,
           creator: 'LottieFiles',
           url: 'https://lottiefiles.com/animations/not-found',
         ),
         const SizedBox(height: 12),
-        const Text(
-          '感谢 LottieFiles 提供优质的动画资源。',
-          style: TextStyle(
+        Text(
+          l10n.thankLottieFiles,
+          style: const TextStyle(
             fontSize: 12,
             fontStyle: FontStyle.italic,
             color: Colors.grey,
@@ -239,77 +245,76 @@ class _LicensePageState extends State<LicensePage> {
   }
 
   Widget _buildAcknowledgementsSection(BuildContext context) {
-    // final theme = Theme.of(context); // 已无用，移除
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          '本应用基于 Flutter 框架构建，使用并感谢下列开源库与服务：',
-          style: TextStyle(fontSize: 14),
+        Text(
+          l10n.openSourceDesc,
+          style: const TextStyle(fontSize: 14),
         ),
         const SizedBox(height: 12),
         // 列出库并附带许可证与链接（以上游仓库/包管理页面为准）
         _buildAttributionRow(
           context: context,
-          title: '框架',
+          title: l10n.framework,
           name: 'Flutter',
           url: 'https://github.com/flutter/flutter',
-          description: '许可证：BSD-3-Clause（以 Flutter 仓库 LICENSE 为准）',
+          description: 'BSD-3-Clause',
         ),
         _buildAttributionRow(
           context: context,
-          title: '状态管理',
+          title: l10n.stateManagement,
           name: 'Provider',
           url: 'https://pub.dev/packages/provider',
-          description: '许可证：MIT（以 pub.dev 为准）',
+          description: 'MIT',
         ),
         _buildAttributionRow(
           context: context,
-          title: '动画支持',
+          title: l10n.animationSupport,
           name: 'Lottie (lottie_flutter / lottie)',
           url: 'https://pub.dev/packages/lottie',
-          description: '许可证：MIT（以 pub.dev 为准）',
+          description: 'MIT',
         ),
         _buildAttributionRow(
           context: context,
-          title: '本地存储',
-          name: 'MMKV (本项目使用 Dart 适配)',
+          title: l10n.localStorage,
+          name: 'MMKV',
           url: 'https://github.com/Tencent/MMKV',
-          description: '许可证：BSD-3-Clause（以腾讯官方仓库 LICENSE 为准），用于高性能键值存储与缓存',
+          description: 'BSD-3-Clause',
         ),
         // 同步功能相关鸣谢
-        const Text(
-          '同步功能集成说明：',
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        Text(
+          l10n.syncIntegrationNote,
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 6),
         _buildAttributionRow(
           context: context,
-          title: '笔记同步',
-          name: 'LocalSend（部分代码集成）',
+          title: l10n.noteSync,
+          name: 'LocalSend',
           url: 'https://github.com/localsend/localsend',
-          description:
-              '同步功能参考并集成了 LocalSend 项目中的部分实现/代码片段。原项目许可证：Apache 2.0，已遵循并保留原始项目的许可证和作者信息，详情见上方链接。',
+          description: 'Apache 2.0',
         ),
         const SizedBox(height: 12),
-        const Text(
-          '服务与 API 鸣谢：',
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+        Text(
+          l10n.serviceApiAcknowledgements,
+          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 8),
         _buildAttributionRow(
           context: context,
-          title: '天气数据',
+          title: l10n.weatherData,
           name: 'Open-Meteo',
           url: 'https://open-meteo.com/',
-          description: '提供气象与温度数据的免费 API，用于应用内天气功能。',
+          description: null,
         ),
         _buildAttributionRow(
           context: context,
-          title: '每日一言 API',
+          title: l10n.dailyQuoteApi,
           name: 'Hitokoto (v1.hitokoto.cn)',
           url: 'https://hitokoto.cn/',
-          description: '提供简短引言/一言数据，用于每日一言与笔记引用功能。',
+          description: null,
         ),
         const SizedBox(height: 12),
         const SizedBox(height: 12),
@@ -318,15 +323,15 @@ class _LicensePageState extends State<LicensePage> {
             'https://flutter.dev/docs/development/packages-and-plugins/using-packages',
           ),
           icon: const Icon(Icons.open_in_new),
-          label: const Text('查看完整依赖列表'),
+          label: Text(l10n.viewFullDependencyList),
           style: ElevatedButton.styleFrom(
             minimumSize: const Size.fromHeight(40),
           ),
         ),
         const SizedBox(height: 8),
-        const Text(
-          '感谢所有开源项目与社区贡献者，正是这些工具和服务让本应用成为可能。具体许可证请以各项目仓库或包管理页面为准。',
-          style: TextStyle(
+        Text(
+          l10n.thankOpenSourceContributors,
+          style: const TextStyle(
             fontSize: 12,
             color: Color(0xB3000000),
           ),
@@ -387,13 +392,14 @@ class _LicensePageState extends State<LicensePage> {
   }
 
   Widget _buildSystemLicensesSection(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     // 改为一个按钮，点击后跳转到单独的系统许可证页面（按需渲染，避免当前页面一次性构建大量条目）
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          '系统许可证包括 Flutter SDK 及依赖包的许可证，点击下方按钮查看完整列表。',
-          style: TextStyle(fontSize: 14),
+        Text(
+          l10n.systemLicensesDesc,
+          style: const TextStyle(fontSize: 14),
         ),
         const SizedBox(height: 12),
         ElevatedButton.icon(
@@ -405,7 +411,7 @@ class _LicensePageState extends State<LicensePage> {
             );
           },
           icon: const Icon(Icons.article_outlined),
-          label: const Text('查看系统许可证'),
+          label: Text(l10n.viewSystemLicenses),
           style:
               ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
         ),
@@ -419,6 +425,7 @@ class _LicensePageState extends State<LicensePage> {
     required String creator,
     required String url,
   }) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4.0),
       child: Row(
@@ -439,7 +446,7 @@ class _LicensePageState extends State<LicensePage> {
                 InkWell(
                   onTap: () => _launchUrl(url),
                   child: Text(
-                    '来源: $creator',
+                    '${l10n.sourceLabel} $creator',
                     style: TextStyle(
                       fontSize: 12,
                       color: Theme.of(context).colorScheme.primary,
@@ -604,6 +611,7 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final visible = _filteredIndexes();
     return Scaffold(
       appBar: AppBar(
@@ -611,15 +619,15 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
         title: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('系统许可证'),
+            Text(l10n.systemLicenses),
             if (!_loading && _error.isEmpty)
-              Text('${visible.length}/${_entries.length} 条',
+              Text(l10n.licenseEntriesCount(visible.length, _entries.length),
                   style: Theme.of(context).textTheme.bodySmall),
           ],
         ),
         actions: [
           IconButton(
-            tooltip: '全部展开/折叠',
+            tooltip: l10n.expandCollapseAll,
             icon: const Icon(Icons.unfold_more),
             onPressed: _loading ? null : () => _toggleExpandAll(visible),
           ),
@@ -636,8 +644,8 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    '本页自动汇总了 Flutter 及所有依赖包的许可证信息，内容由各依赖包声明自动生成，仅供参考。',
-                    style: TextStyle(fontSize: 13, color: Colors.blueGrey),
+                    l10n.licensePageDesc,
+                    style: const TextStyle(fontSize: 13, color: Colors.blueGrey),
                   ),
                 ),
               ],
@@ -648,7 +656,7 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: '搜索包名或许可证内容（只搜索首段）',
+                hintText: l10n.searchPackageOrLicense,
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchController.text.isEmpty
                     ? null
@@ -671,6 +679,7 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
   }
 
   Widget _buildBody(List<int> visible) {
+    final l10n = AppLocalizations.of(context);
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -681,27 +690,27 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
           children: [
             const Icon(Icons.error_outline, color: Colors.red, size: 32),
             const SizedBox(height: 12),
-            Text('加载系统许可证失败：$_error',
+            Text(l10n.loadSystemLicensesFailed(_error),
                 style: const TextStyle(color: Colors.red)),
           ],
         ),
       );
     }
     if (_mergedEntries.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.info_outline, color: Colors.grey, size: 32),
-            SizedBox(height: 12),
-            Text('未找到系统许可证条目', style: TextStyle(color: Colors.grey)),
+            const Icon(Icons.info_outline, color: Colors.grey, size: 32),
+            const SizedBox(height: 12),
+            Text(l10n.noSystemLicensesFound, style: const TextStyle(color: Colors.grey)),
           ],
         ),
       );
     }
     if (visible.isEmpty) {
-      return const Center(
-        child: Text('未找到匹配的许可证条目', style: TextStyle(color: Colors.grey)),
+      return Center(
+        child: Text(l10n.noMatchingLicensesFound, style: const TextStyle(color: Colors.grey)),
       );
     }
     return ListView.builder(
@@ -713,7 +722,7 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
         final packages = entry.packages.join(', ');
         final preview = entry.paragraphs.isNotEmpty
             ? entry.paragraphs.first.text
-            : '(无许可内容)';
+            : l10n.noLicenseContent;
         final initials =
             packages.isNotEmpty ? packages.trim()[0].toUpperCase() : 'P';
         final isExpanded = _expanded.contains(entryIndex);
@@ -728,7 +737,7 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
                   style: const TextStyle(
                       color: Colors.white, fontWeight: FontWeight.w600)),
             ),
-            title: Text(packages.isEmpty ? '未命名' : packages,
+            title: Text(packages.isEmpty ? l10n.unnamed : packages,
                 style: const TextStyle(fontWeight: FontWeight.w600)),
             subtitle: Text(
               preview.length > 120 ? '${preview.substring(0, 120)}…' : preview,
@@ -761,7 +770,7 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
                   children: [
                     IconButton(
                       icon: const Icon(Icons.copy),
-                      tooltip: '复制许可证',
+                      tooltip: l10n.copyLicense,
                       onPressed: () async {
                         final messenger = ScaffoldMessenger.of(context);
                         final paragraphs =
@@ -770,9 +779,9 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
                         if (!mounted) return;
                         await Clipboard.setData(ClipboardData(text: full));
                         if (!mounted) return;
-                        messenger.showSnackBar(const SnackBar(
-                            content: Text('已复制许可证内容'),
-                            duration: Duration(seconds: 2)));
+                        messenger.showSnackBar(SnackBar(
+                            content: Text(l10n.licenseCopied),
+                            duration: const Duration(seconds: 2)));
                       },
                     ),
                   ],
@@ -843,16 +852,18 @@ class _ProgressiveSystemLicensesPageState
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('系统许可证')),
+      appBar: AppBar(title: Text(l10n.systemLicenses)),
       body: _buildBody(context),
     );
   }
 
   Widget _buildBody(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     if (_loading) return const Center(child: CircularProgressIndicator());
-    if (_error != null) return Center(child: Text('加载系统许可证失败：$_error'));
-    if (_entries.isEmpty) return const Center(child: Text('未找到系统许可证条目'));
+    if (_error != null) return Center(child: Text(l10n.loadSystemLicensesFailed(_error!)));
+    if (_entries.isEmpty) return Center(child: Text(l10n.noSystemLicensesFound));
 
     return ListView.separated(
       padding: const EdgeInsets.all(12),
@@ -863,7 +874,7 @@ class _ProgressiveSystemLicensesPageState
         final packages = entry.packages.join(', ');
         final preview = entry.paragraphs.isNotEmpty
             ? entry.paragraphs.first.text
-            : '(无许可内容)';
+            : l10n.noLicenseContent;
         final initials =
             packages.isNotEmpty ? packages.trim()[0].toUpperCase() : 'P';
 
@@ -874,7 +885,7 @@ class _ProgressiveSystemLicensesPageState
               MaterialPageRoute(
                   builder: (_) => LicenseDetailPage(
                       entry: entry,
-                      title: packages.isEmpty ? '未命名' : packages)),
+                      title: packages.isEmpty ? l10n.unnamed : packages)),
             );
           },
           child: Card(
@@ -897,7 +908,7 @@ class _ProgressiveSystemLicensesPageState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(packages.isEmpty ? '未命名' : packages,
+                        Text(packages.isEmpty ? l10n.unnamed : packages,
                             style:
                                 const TextStyle(fontWeight: FontWeight.w600)),
                         const SizedBox(height: 6),
@@ -937,6 +948,7 @@ class LicenseDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(title: Text(title)),
       body: FutureBuilder<String>(
@@ -949,10 +961,10 @@ class LicenseDetailPage extends StatelessWidget {
           if (snapshot.hasError) {
             return Padding(
               padding: const EdgeInsets.all(12.0),
-              child: Text('加载许可证内容失败：${snapshot.error}'),
+              child: Text(l10n.loadLicenseFailed(snapshot.error.toString())),
             );
           }
-          final text = snapshot.data ?? '(无内容)';
+          final text = snapshot.data ?? l10n.noLicenseContent;
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: SelectableText(text, style: const TextStyle(height: 1.4)),
