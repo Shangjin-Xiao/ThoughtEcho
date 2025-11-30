@@ -225,84 +225,89 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
       width: double.infinity,
       margin: EdgeInsets.symmetric(
         horizontal: screenWidth > 600 ? 10.0 : 2.0, // 调整外边距使总间距与今日思考一致
-        vertical:
-            isVerySmallScreen ? 8.0 : (isSmallScreen ? 12.0 : 16.0), // 动态调整垂直边距
+        vertical: isVerySmallScreen
+            ? 8.0
+            : (isSmallScreen ? 12.0 : 16.0), // 动态调整垂直边距
       ),
       child: SlidingCard(
-        // 传递screenHeight给SlidingCard以动态调整内边距
+        // 单击整个卡片区域复制内容
+        onTap: () {
+          final String formattedQuote =
+              '${dailyQuote['content']}\n${dailyQuote['from_who'] != null && dailyQuote['from_who'].isNotEmpty ? '——${dailyQuote['from_who']}' : ''}${dailyQuote['from'] != null && dailyQuote['from'].isNotEmpty ? '《${dailyQuote['from']}》' : ''}';
+
+          // 复制到剪贴板
+          Clipboard.setData(ClipboardData(text: formattedQuote));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('已复制到剪贴板'),
+              duration: AppConstants.snackBarDurationNormal,
+            ),
+          );
+        },
+        // 双击整个卡片区域快速添加到笔记
+        onDoubleTap: () {
+          widget.onAddQuote(
+            dailyQuote['content'],
+            dailyQuote['from_who'],
+            dailyQuote['from'],
+            dailyQuote,
+          );
+        },
         child: Padding(
           padding: EdgeInsets.zero, // 移除内边距，依靠SlidingCard的动态padding提供间距
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              GestureDetector(
-                onTap: () {
-                  // 单击复制内容
-                  final String formattedQuote =
-                      '${dailyQuote['content']}\n${dailyQuote['from_who'] != null && dailyQuote['from_who'].isNotEmpty ? '——${dailyQuote['from_who']}' : ''}${dailyQuote['from'] != null && dailyQuote['from'].isNotEmpty ? '《${dailyQuote['from']}》' : ''}';
-
-                  // 复制到剪贴板
-                  Clipboard.setData(ClipboardData(text: formattedQuote));
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(const SnackBar(
-                    content: Text('已复制到剪贴板'),
-                    duration: AppConstants.snackBarDurationNormal,
-                  ));
-                },
-                onDoubleTap: () {
-                  // 双击添加到笔记，同时传递完整的一言数据以便根据类型添加标签
-                  widget.onAddQuote(
-                    dailyQuote['content'],
-                    dailyQuote['from_who'],
-                    dailyQuote['from'],
-                    dailyQuote,
-                  );
-                },
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Flexible(
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      dailyQuote['content'],
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontSize: _getResponsiveFontSize(
+                          screenWidth,
+                          screenHeight,
+                        ),
+                        height: isVerySmallScreen ? 1.3 : 1.4, // 极小屏幕进一步减少行高
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
+                      maxLines: _getResponsiveMaxLines(
+                        screenWidth,
+                        screenHeight,
+                      ),
+                      overflow: screenWidth > 600
+                          ? TextOverflow.visible
+                          : TextOverflow.ellipsis, // 小屏设备使用省略号
+                    ),
+                  ),
+                  if (dailyQuote['from_who'] != null &&
+                          dailyQuote['from_who'].isNotEmpty ||
+                      dailyQuote['from'] != null &&
+                          dailyQuote['from'].isNotEmpty)
+                    Padding(
+                      padding: EdgeInsets.only(
+                        top: isVerySmallScreen ? 8.0 : 12.0,
+                      ), // 动态调整间距
                       child: Text(
-                        dailyQuote['content'],
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          fontSize:
-                              _getResponsiveFontSize(screenWidth, screenHeight),
-                          height: isVerySmallScreen ? 1.3 : 1.4, // 极小屏幕进一步减少行高
-                          fontWeight: FontWeight.w500,
+                        formatHitokotoSource(
+                          dailyQuote['from_who'],
+                          dailyQuote['from'],
+                        ),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontStyle: FontStyle.italic,
+                          fontSize: _getResponsiveSourceFontSize(
+                            screenWidth,
+                            screenHeight,
+                          ),
                         ),
                         textAlign: TextAlign.center,
-                        maxLines:
-                            _getResponsiveMaxLines(screenWidth, screenHeight),
-                        overflow: screenWidth > 600
-                            ? TextOverflow.visible
-                            : TextOverflow.ellipsis, // 小屏设备使用省略号
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    if (dailyQuote['from_who'] != null &&
-                            dailyQuote['from_who'].isNotEmpty ||
-                        dailyQuote['from'] != null &&
-                            dailyQuote['from'].isNotEmpty)
-                      Padding(
-                        padding: EdgeInsets.only(
-                            top: isVerySmallScreen ? 8.0 : 12.0), // 动态调整间距
-                        child: Text(
-                          formatHitokotoSource(
-                            dailyQuote['from_who'],
-                            dailyQuote['from'],
-                          ),
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontStyle: FontStyle.italic,
-                            fontSize: _getResponsiveSourceFontSize(
-                                screenWidth, screenHeight),
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                  ],
-                ),
+                ],
               ),
             ],
           ),

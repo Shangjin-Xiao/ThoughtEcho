@@ -32,7 +32,9 @@ void main() {
       // 验证洞察已添加
       expect(insightHistoryService.insights.length, 1);
       expect(
-          insightHistoryService.insights.first.insight, '测试洞察：这周的记录显示了积极的成长趋势');
+        insightHistoryService.insights.first.insight,
+        '测试洞察：这周的记录显示了积极的成长趋势',
+      );
       expect(insightHistoryService.insights.first.periodType, 'week');
       expect(insightHistoryService.insights.first.isAiGenerated, true);
     });
@@ -61,8 +63,8 @@ void main() {
       );
 
       // 获取格式化的提示
-      final formattedPrompt =
-          await insightHistoryService.formatRecentInsightsForDailyPrompt();
+      final formattedPrompt = await insightHistoryService
+          .formatRecentInsightsForDailyPrompt();
 
       expect(formattedPrompt.contains('参考洞察'), true);
       expect(formattedPrompt.contains('这周你展现了坚持的力量'), true);

@@ -139,8 +139,10 @@ void main() {
       final deviceFromJson = Device.fromJson(json);
       expect(deviceFromJson.ip, device.ip);
       expect(deviceFromJson.alias, device.alias);
-      expect(deviceFromJson.discoveryMethods.length,
-          device.discoveryMethods.length);
+      expect(
+        deviceFromJson.discoveryMethods.length,
+        device.discoveryMethods.length,
+      );
     });
   });
 }

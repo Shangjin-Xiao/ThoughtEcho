@@ -22,7 +22,7 @@ class AIService extends ChangeNotifier {
   final AIRequestHelper _requestHelper = AIRequestHelper();
 
   AIService({required SettingsService settingsService})
-      : _settingsService = settingsService;
+    : _settingsService = settingsService;
 
   Future<void> _validateSettings({bool testNetwork = false}) async {
     try {
@@ -122,8 +122,9 @@ class AIService extends ChangeNotifier {
       }
 
       // 如果没有当前provider，检查是否有任何可用的provider
-      final availableProviders =
-          multiSettings.providers.where((p) => p.isEnabled).toList();
+      final availableProviders = multiSettings.providers
+          .where((p) => p.isEnabled)
+          .toList();
 
       return availableProviders.isNotEmpty;
     } catch (e) {
@@ -300,8 +301,10 @@ class AIService extends ChangeNotifier {
               await _validateSettings();
               final provider = await _getCurrentProviderWithApiKey();
 
-              final prompt =
-                  _promptManager.getReportInsightSystemPrompt('poetic', languageCode: languageCode);
+              final prompt = _promptManager.getReportInsightSystemPrompt(
+                'poetic',
+                languageCode: languageCode,
+              );
               final user = _promptManager.buildReportInsightUserMessage(
                 periodLabel: periodLabel,
                 mostTimePeriod: mostTimePeriod,
@@ -364,7 +367,7 @@ class AIService extends ChangeNotifier {
   }) {
     // 获取用户设置的语言代码
     final languageCode = _settingsService.localeCode;
-    
+
     return _promptManager.formatLocalReportInsight(
       periodLabel: periodLabel,
       mostTimePeriod: mostTimePeriod,
@@ -386,7 +389,7 @@ class AIService extends ChangeNotifier {
   }) {
     // 获取用户设置的语言代码
     final languageCode = _settingsService.localeCode;
-    
+
     return _requestHelper.executeStreamOperation(
       operation: (controller) async {
         // 异步检查API Key是否有效
@@ -416,14 +419,14 @@ class AIService extends ChangeNotifier {
           logDebug('API Key有效，使用AI生成每日提示');
 
           // 获取包含环境信息的系统提示词
-          final systemPromptWithContext =
-              _promptManager.getDailyPromptSystemPromptWithContext(
-            city: city,
-            weather: weather,
-            temperature: temperature,
-            historicalInsights: historicalInsights, // 传递历史洞察
-            languageCode: languageCode, // 传递语言代码
-          );
+          final systemPromptWithContext = _promptManager
+              .getDailyPromptSystemPromptWithContext(
+                city: city,
+                weather: weather,
+                temperature: temperature,
+                historicalInsights: historicalInsights, // 传递历史洞察
+                languageCode: languageCode, // 传递语言代码
+              );
 
           final userMessage = _promptManager.buildDailyPromptUserMessage(
             city: city,

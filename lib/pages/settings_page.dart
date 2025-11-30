@@ -68,8 +68,8 @@ class SettingsPageState extends State<SettingsPage> {
 
     final allShown =
         FeatureGuideHelper.hasShown(context, 'settings_preferences') &&
-            FeatureGuideHelper.hasShown(context, 'settings_startup') &&
-            FeatureGuideHelper.hasShown(context, 'settings_theme');
+        FeatureGuideHelper.hasShown(context, 'settings_startup') &&
+        FeatureGuideHelper.hasShown(context, 'settings_theme');
 
     if (allShown) {
       _guidesTriggered = true;
@@ -131,10 +131,12 @@ class SettingsPageState extends State<SettingsPage> {
       if (!mounted) return;
       final l10n = AppLocalizations.of(context);
       final messenger = ScaffoldMessenger.of(context);
-      messenger.showSnackBar(SnackBar(
-        content: Text(l10n.cannotOpenLink(url)),
-        duration: AppConstants.snackBarDurationError,
-      ));
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.cannotOpenLink(url)),
+          duration: AppConstants.snackBarDurationError,
+        ),
+      );
     }
   }
   // --- 启动 URL 辅助函数结束 ---
@@ -218,8 +220,8 @@ class SettingsPageState extends State<SettingsPage> {
                 // 刷新设置页面的状态
                 if (mounted) {
                   setState(() {
-                    _locationController.text =
-                        locationService.getFormattedLocation();
+                    _locationController.text = locationService
+                        .getFormattedLocation();
                   });
                 }
               },
@@ -314,23 +316,25 @@ class SettingsPageState extends State<SettingsPage> {
                   subtitle: Text(
                     locationService.hasLocationPermission
                         ? (locationService.isLocationServiceEnabled
-                            ? l10n.settingsLocationEnabled
-                            : l10n.settingsLocationPermissionOnly)
+                              ? l10n.settingsLocationEnabled
+                              : l10n.settingsLocationPermissionOnly)
                         : l10n.settingsLocationNoPermission,
                     style: TextStyle(
                       fontSize: 12,
-                      color: locationService.hasLocationPermission &&
+                      color:
+                          locationService.hasLocationPermission &&
                               locationService.isLocationServiceEnabled
                           ? theme.colorScheme.primary
                           : theme.colorScheme.error,
                     ),
                   ),
-                  value: locationService.hasLocationPermission &&
+                  value:
+                      locationService.hasLocationPermission &&
                       locationService.isLocationServiceEnabled,
                   onChanged: (value) async {
                     if (value) {
-                      bool permissionGranted =
-                          await locationService.requestLocationPermission();
+                      bool permissionGranted = await locationService
+                          .requestLocationPermission();
                       if (!permissionGranted) {
                         if (mounted && context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -387,8 +391,8 @@ class SettingsPageState extends State<SettingsPage> {
                           ),
                         );
                       }
-                      final position =
-                          await locationService.getCurrentLocation();
+                      final position = await locationService
+                          .getCurrentLocation();
                       if (!mounted) return; // Add this check
                       if (position != null) {
                         if (context.mounted) {
@@ -404,8 +408,8 @@ class SettingsPageState extends State<SettingsPage> {
                           );
                         }
                         setState(() {
-                          _locationController.text =
-                              locationService.getFormattedLocation();
+                          _locationController.text = locationService
+                              .getFormattedLocation();
                         });
                       } else {
                         if (!mounted) return;
@@ -614,17 +618,25 @@ class SettingsPageState extends State<SettingsPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(l10n.databaseStatus,
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold)),
-                                  ...dbStatus.entries
-                                      .map((e) => Text('${e.key}: ${e.value}')),
+                                  Text(
+                                    l10n.databaseStatus,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  ...dbStatus.entries.map(
+                                    (e) => Text('${e.key}: ${e.value}'),
+                                  ),
                                   const SizedBox(height: 16),
-                                  Text(l10n.logStatistics,
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.bold)),
-                                  ...logSummary.entries
-                                      .map((e) => Text('${e.key}: ${e.value}')),
+                                  Text(
+                                    l10n.logStatistics,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  ...logSummary.entries.map(
+                                    (e) => Text('${e.key}: ${e.value}'),
+                                  ),
                                 ],
                               ),
                             ),
@@ -641,8 +653,9 @@ class SettingsPageState extends State<SettingsPage> {
                         final l10n = AppLocalizations.of(currentContext);
                         ScaffoldMessenger.of(currentContext).showSnackBar(
                           SnackBar(
-                            content:
-                                Text(l10n.getDebugInfoFailed(e.toString())),
+                            content: Text(
+                              l10n.getDebugInfoFailed(e.toString()),
+                            ),
                             duration: const Duration(seconds: 3),
                           ),
                         );
@@ -761,13 +774,17 @@ class SettingsPageState extends State<SettingsPage> {
                                     width: 64,
                                     height: 64,
                                     decoration: BoxDecoration(
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary,
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: const Center(
-                                      child: Icon(Icons.apps,
-                                          color: Colors.white, size: 36),
+                                      child: Icon(
+                                        Icons.apps,
+                                        color: Colors.white,
+                                        size: 36,
+                                      ),
                                     ),
                                   );
                                 },
@@ -824,9 +841,9 @@ class SettingsPageState extends State<SettingsPage> {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: Divider(
-                    color: Theme.of(context).colorScheme.outline.withAlpha(
-                          (0.2 * 255).round(),
-                        ),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.outline.withAlpha((0.2 * 255).round()),
                   ),
                 ),
 
@@ -834,9 +851,12 @@ class SettingsPageState extends State<SettingsPage> {
                 ListTile(
                   title: Text(l10n.settingsCheckUpdate),
                   subtitle: _updateCheckMessage != null
-                      ? Text(_updateCheckMessage!,
+                      ? Text(
+                          _updateCheckMessage!,
                           style: TextStyle(
-                              color: Theme.of(context).colorScheme.error))
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        )
                       : Text(l10n.settingsCheckUpdateDesc),
                   leading: _isCheckingUpdate
                       ? const SizedBox(
@@ -890,9 +910,8 @@ class SettingsPageState extends State<SettingsPage> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       );
 
-  ButtonStyle _textButtonStyle(BuildContext context) => TextButton.styleFrom(
-        minimumSize: const Size.fromHeight(44),
-      );
+  ButtonStyle _textButtonStyle(BuildContext context) =>
+      TextButton.styleFrom(minimumSize: const Size.fromHeight(44));
 
   // 相关设置已移动到“偏好设置”二级页面
 
@@ -936,10 +955,7 @@ class SettingsPageState extends State<SettingsPage> {
                         title: Text('跟随系统 / Follow System'),
                         value: null,
                       ),
-                      RadioListTile<String?>(
-                        title: Text('简体中文'),
-                        value: 'zh',
-                      ),
+                      RadioListTile<String?>(title: Text('简体中文'), value: 'zh'),
                       RadioListTile<String?>(
                         title: Text('English'),
                         value: 'en',
@@ -965,9 +981,11 @@ class SettingsPageState extends State<SettingsPage> {
     return ListTile(
       key: _startupPageGuideKey, // 功能引导 key
       title: Text(l10n.settingsDefaultStartPage),
-      subtitle: Text(currentValue == 0
-          ? l10n.settingsStartPageHome
-          : l10n.settingsStartPageNotes),
+      subtitle: Text(
+        currentValue == 0
+            ? l10n.settingsStartPageHome
+            : l10n.settingsStartPageNotes,
+      ),
       leading: const Icon(Icons.home_outlined),
       onTap: () {
         showDialog(
@@ -1039,12 +1057,12 @@ class SettingsPageState extends State<SettingsPage> {
       AppLogger.e('显示原生年度报告失败', error: e);
       if (mounted) {
         final l10n = AppLocalizations.of(context);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(
-          content: Text(l10n.generateReportFailed),
-          duration: AppConstants.snackBarDurationError,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.generateReportFailed),
+            duration: AppConstants.snackBarDurationError,
+          ),
+        );
       }
     }
   }
@@ -1091,8 +1109,9 @@ class SettingsPageState extends State<SettingsPage> {
             0,
             (sum, quote) => sum + quote.content.length,
           );
-          final averageWordsPerNote =
-              totalNotes > 0 ? (totalWords / totalNotes).round() : 0;
+          final averageWordsPerNote = totalNotes > 0
+              ? (totalWords / totalNotes).round()
+              : 0;
 
           // 获取标签统计
           final Map<String, int> tagCounts = {};
@@ -1184,7 +1203,8 @@ class SettingsPageState extends State<SettingsPage> {
               .toSet()
               .length;
 
-          final prompt = '''基于以下用户笔记数据，生成一份完整的HTML年度报告。
+          final prompt =
+              '''基于以下用户笔记数据，生成一份完整的HTML年度报告。
 
 用户数据统计：
 - 年份：$currentYear
@@ -1230,7 +1250,7 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
             // 检查返回内容的格式
             final isHtml =
                 result.trim().toLowerCase().startsWith('<!doctype') ||
-                    result.trim().toLowerCase().startsWith('<html');
+                result.trim().toLowerCase().startsWith('<html');
             final isJson =
                 result.trim().startsWith('{') || result.trim().startsWith('[');
 
@@ -1252,12 +1272,12 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
           } else {
             AppLogger.w('AI返回了空内容');
             if (mounted) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(
-                content: Text('AI返回了空内容，请重试'),
-                duration: AppConstants.snackBarDurationError,
-              ));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('AI返回了空内容，请重试'),
+                  duration: AppConstants.snackBarDurationError,
+                ),
+              );
             }
           }
         } catch (e) {
@@ -1289,12 +1309,12 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
       AppLogger.e('显示AI年度报告失败', error: e);
       if (mounted) {
         final l10n = AppLocalizations.of(context);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(
-          content: Text(l10n.getDataFailed),
-          duration: AppConstants.snackBarDurationError,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.getDataFailed),
+            duration: AppConstants.snackBarDurationError,
+          ),
+        );
       }
     }
   }
@@ -1383,10 +1403,12 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
         if (mounted && result.isNotEmpty) {
           // 详细检查返回内容
           final trimmed = result.trim();
-          final isHtml = trimmed.toLowerCase().startsWith('<!doctype') ||
+          final isHtml =
+              trimmed.toLowerCase().startsWith('<!doctype') ||
               trimmed.toLowerCase().startsWith('<html');
           final isJson = trimmed.startsWith('{') || trimmed.startsWith('[');
-          final containsHtmlTags = trimmed.contains('<html') ||
+          final containsHtmlTags =
+              trimmed.contains('<html') ||
               trimmed.contains('<body') ||
               trimmed.contains('<div');
 
@@ -1459,12 +1481,12 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
           AppLogger.w('AI返回了空内容');
           if (mounted) {
             Navigator.pop(context);
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(
-              content: Text('测试失败：AI返回了空内容'),
-              duration: AppConstants.snackBarDurationError,
-            ));
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('测试失败：AI返回了空内容'),
+                duration: AppConstants.snackBarDurationError,
+              ),
+            );
           }
         }
       } catch (e) {
@@ -1491,12 +1513,12 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
     } catch (e) {
       AppLogger.e('测试AI年度报告初始化失败', error: e);
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(
-          content: Text(l10n.testInitFailed),
-          duration: AppConstants.snackBarDurationError,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.testInitFailed),
+            duration: AppConstants.snackBarDurationError,
+          ),
+        );
       }
     }
   }

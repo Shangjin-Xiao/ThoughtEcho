@@ -132,27 +132,36 @@ class ImageCacheService {
 
   /// 获取缓存统计信息
   Map<String, dynamic> getCacheStats() {
-    final totalSize =
-        _memoryCache.values.fold<int>(0, (sum, bytes) => sum + bytes.length);
+    final totalSize = _memoryCache.values.fold<int>(
+      0,
+      (sum, bytes) => sum + bytes.length,
+    );
 
     return {
       'count': _memoryCache.length,
       'totalSize': totalSize,
       'maxSize': maxCacheSize,
-      'averageSize':
-          _memoryCache.isNotEmpty ? totalSize / _memoryCache.length : 0,
+      'averageSize': _memoryCache.isNotEmpty
+          ? totalSize / _memoryCache.length
+          : 0,
     };
   }
 
   /// 预热缓存（可选）
   Future<void> preloadImages(List<String> svgContents) async {
-    AppLogger.i('开始预热图片缓存: ${svgContents.length} 个SVG',
-        source: 'ImageCacheService');
+    AppLogger.i(
+      '开始预热图片缓存: ${svgContents.length} 个SVG',
+      source: 'ImageCacheService',
+    );
 
     for (int i = 0; i < svgContents.length && i < maxCacheSize; i++) {
       try {
-        final key =
-            generateCacheKey(svgContents[i], 400, 600, ui.ImageByteFormat.png);
+        final key = generateCacheKey(
+          svgContents[i],
+          400,
+          600,
+          ui.ImageByteFormat.png,
+        );
 
         // 如果已经缓存，跳过
         if (_memoryCache.containsKey(key)) {
@@ -195,8 +204,10 @@ class ImageCacheService {
         _removeCacheEntry(key);
       }
 
-      AppLogger.i('智能清理缓存: 移除 ${keysToRemove.length} 个条目',
-          source: 'ImageCacheService');
+      AppLogger.i(
+        '智能清理缓存: 移除 ${keysToRemove.length} 个条目',
+        source: 'ImageCacheService',
+      );
     }
   }
 }

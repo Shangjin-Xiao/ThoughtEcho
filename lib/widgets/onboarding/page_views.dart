@@ -22,11 +22,11 @@ class _WelcomePageViewState extends State<WelcomePageView>
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
-  
+
   // 语言选择
   late FixedExtentScrollController _languageScrollController;
   int _selectedLanguageIndex = 0;
-  
+
   // 语言选项: 空字符串表示跟随系统
   static const List<String> _languageCodes = ['', 'zh', 'en'];
 
@@ -45,28 +45,27 @@ class _WelcomePageViewState extends State<WelcomePageView>
       ),
     );
 
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: const Interval(0.3, 1.0, curve: Curves.easeOutBack),
-      ),
-    );
-    
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: const Interval(0.3, 1.0, curve: Curves.easeOutBack),
+          ),
+        );
+
     // 初始化语言选择控制器
     _languageScrollController = FixedExtentScrollController(initialItem: 0);
 
     _animationController.forward();
   }
-  
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     // 从控制器获取当前语言设置
     final controller = context.read<OnboardingController>();
-    final currentLocale = controller.state.getPreference<String>('localeCode') ?? '';
+    final currentLocale =
+        controller.state.getPreference<String>('localeCode') ?? '';
     final index = _languageCodes.indexOf(currentLocale);
     if (index >= 0 && index != _selectedLanguageIndex) {
       _selectedLanguageIndex = index;
@@ -82,7 +81,7 @@ class _WelcomePageViewState extends State<WelcomePageView>
     _languageScrollController.dispose();
     super.dispose();
   }
-  
+
   String _getLanguageLabel(String code) {
     switch (code) {
       case '':
@@ -95,7 +94,7 @@ class _WelcomePageViewState extends State<WelcomePageView>
         return code;
     }
   }
-  
+
   void _onLanguageChanged(int index) {
     setState(() {
       _selectedLanguageIndex = index;
@@ -103,7 +102,7 @@ class _WelcomePageViewState extends State<WelcomePageView>
     final controller = context.read<OnboardingController>();
     final selectedCode = _languageCodes[index];
     controller.updatePreference('localeCode', selectedCode);
-    
+
     // 立即应用语言设置
     final settingsService = context.read<SettingsService>();
     settingsService.setLocale(selectedCode.isEmpty ? null : selectedCode);
@@ -160,10 +159,12 @@ class _WelcomePageViewState extends State<WelcomePageView>
                                   decoration: BoxDecoration(
                                     gradient: LinearGradient(
                                       colors: [
-                                        theme.colorScheme.primary
-                                            .withValues(alpha: 0.18),
-                                        theme.colorScheme.secondary
-                                            .withValues(alpha: 0.13),
+                                        theme.colorScheme.primary.withValues(
+                                          alpha: 0.18,
+                                        ),
+                                        theme.colorScheme.secondary.withValues(
+                                          alpha: 0.13,
+                                        ),
                                       ],
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
@@ -192,8 +193,9 @@ class _WelcomePageViewState extends State<WelcomePageView>
                                 letterSpacing: 1.1,
                                 shadows: [
                                   Shadow(
-                                    color: theme.colorScheme.primary
-                                        .withValues(alpha: 0.18),
+                                    color: theme.colorScheme.primary.withValues(
+                                      alpha: 0.18,
+                                    ),
                                     blurRadius: 8,
                                     offset: const Offset(0, 2),
                                   ),
@@ -211,15 +213,19 @@ class _WelcomePageViewState extends State<WelcomePageView>
                       const SizedBox(height: 18),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 18, vertical: 12),
+                          horizontal: 18,
+                          vertical: 12,
+                        ),
                         decoration: BoxDecoration(
-                          color:
-                              theme.colorScheme.surface.withValues(alpha: 0.82),
+                          color: theme.colorScheme.surface.withValues(
+                            alpha: 0.82,
+                          ),
                           borderRadius: BorderRadius.circular(22),
                           boxShadow: [
                             BoxShadow(
-                              color: theme.colorScheme.primary
-                                  .withValues(alpha: 0.10),
+                              color: theme.colorScheme.primary.withValues(
+                                alpha: 0.10,
+                              ),
                               blurRadius: 22,
                               spreadRadius: 1,
                               offset: const Offset(0, 6),
@@ -236,8 +242,9 @@ class _WelcomePageViewState extends State<WelcomePageView>
                             fontFamily: 'Rounded',
                             shadows: [
                               Shadow(
-                                color: theme.colorScheme.primary
-                                    .withValues(alpha: 0.13),
+                                color: theme.colorScheme.primary.withValues(
+                                  alpha: 0.13,
+                                ),
                                 blurRadius: 10,
                                 offset: const Offset(0, 2),
                               ),
@@ -247,7 +254,7 @@ class _WelcomePageViewState extends State<WelcomePageView>
                         ),
                       ),
                     ],
-                    
+
                     // 语言选择器
                     const SizedBox(height: 40),
                     _buildLanguageSelector(theme, l10n),
@@ -260,7 +267,7 @@ class _WelcomePageViewState extends State<WelcomePageView>
       ),
     );
   }
-  
+
   /// 构建语言选择器
   Widget _buildLanguageSelector(ThemeData theme, AppLocalizations l10n) {
     return Container(
@@ -313,10 +320,14 @@ class _WelcomePageViewState extends State<WelcomePageView>
                       duration: const Duration(milliseconds: 200),
                       style: TextStyle(
                         fontSize: isSelected ? 18 : 15,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
                         color: isSelected
                             ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurface.withValues(alpha: 0.5),
+                            : theme.colorScheme.onSurface.withValues(
+                                alpha: 0.5,
+                              ),
                       ),
                       child: Text(_getLanguageLabel(_languageCodes[index])),
                     ),
@@ -522,7 +533,7 @@ class _FeaturesPageViewState extends State<FeaturesPageView>
             ],
           ),
           const SizedBox(height: 12),
-          ...OnboardingConfig.quickTips.map(
+          ...OnboardingConfig.getQuickTips(context).map(
             (tip) => Padding(
               padding: const EdgeInsets.only(bottom: 6),
               child: Text(
@@ -552,8 +563,9 @@ class _FeatureCard extends StatelessWidget {
 
     return Card(
       elevation: isHighlight ? 8 : 2,
-      shadowColor:
-          isHighlight ? theme.colorScheme.primary.withValues(alpha: 0.3) : null,
+      shadowColor: isHighlight
+          ? theme.colorScheme.primary.withValues(alpha: 0.3)
+          : null,
       child: Container(
         decoration: isHighlight
             ? BoxDecoration(
@@ -610,8 +622,9 @@ class _FeatureCard extends StatelessWidget {
                       feature.description,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: isHighlight
-                            ? theme.colorScheme.onPrimaryContainer
-                                .withValues(alpha: 0.8)
+                            ? theme.colorScheme.onPrimaryContainer.withValues(
+                                alpha: 0.8,
+                              )
                             : theme.colorScheme.onSurface.withValues(
                                 alpha: 0.7,
                               ),

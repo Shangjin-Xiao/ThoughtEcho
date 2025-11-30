@@ -90,8 +90,10 @@ void main() {
 
       test('UDP套接字测试', () async {
         try {
-          final socket =
-              await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
+          final socket = await RawDatagramSocket.bind(
+            InternetAddress.anyIPv4,
+            0,
+          );
           expect(socket.port, greaterThan(0));
           socket.close();
         } catch (e) {

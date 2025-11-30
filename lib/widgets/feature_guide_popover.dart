@@ -46,9 +46,10 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
 
     _controller.forward();
 
@@ -285,7 +286,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
   }
 
   List<({PopoverArrowDirection direction, bool allowClamp})>
-      _buildPlacementAttempts(FeatureGuidePlacement placement) {
+  _buildPlacementAttempts(FeatureGuidePlacement placement) {
     switch (placement) {
       case FeatureGuidePlacement.above:
         return const [
@@ -354,8 +355,10 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
           return null;
         }
 
-        left = (targetCenterX - popoverWidth / 2)
-            .clamp(safeLeft, safeRight - popoverWidth);
+        left = (targetCenterX - popoverWidth / 2).clamp(
+          safeLeft,
+          safeRight - popoverWidth,
+        );
         top = desiredTop.clamp(safeTop, safeBottom - popoverMaxHeight);
         arrowOffset = targetCenterX - left;
         break;
@@ -368,8 +371,10 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
           return null;
         }
 
-        left = (targetCenterX - popoverWidth / 2)
-            .clamp(safeLeft, safeRight - popoverWidth);
+        left = (targetCenterX - popoverWidth / 2).clamp(
+          safeLeft,
+          safeRight - popoverWidth,
+        );
         top = desiredTop.clamp(safeTop, safeBottom - popoverMaxHeight);
         arrowOffset = targetCenterX - left;
         break;
@@ -380,8 +385,10 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
         }
 
         left = desiredLeft.clamp(safeLeft, safeRight - popoverWidth);
-        top = (targetCenterY - popoverMaxHeight / 2)
-            .clamp(safeTop, safeBottom - popoverMaxHeight);
+        top = (targetCenterY - popoverMaxHeight / 2).clamp(
+          safeTop,
+          safeBottom - popoverMaxHeight,
+        );
         arrowOffset = targetCenterY - top;
         break;
       case PopoverArrowDirection.right:
@@ -391,8 +398,10 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
         }
 
         left = desiredLeft.clamp(safeLeft, safeRight - popoverWidth);
-        top = (targetCenterY - popoverMaxHeight / 2)
-            .clamp(safeTop, safeBottom - popoverMaxHeight);
+        top = (targetCenterY - popoverMaxHeight / 2).clamp(
+          safeTop,
+          safeBottom - popoverMaxHeight,
+        );
         arrowOffset = targetCenterY - top;
         break;
     }
@@ -416,10 +425,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
     final cardColor = theme.cardColor;
 
     final popoverContent = Container(
-      constraints: const BoxConstraints(
-        maxWidth: 220,
-        minWidth: 180,
-      ),
+      constraints: const BoxConstraints(maxWidth: 220, minWidth: 180),
       decoration: BoxDecoration(
         color: cardColor,
         borderRadius: BorderRadius.circular(10),
@@ -466,8 +472,9 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
                   child: Icon(
                     Icons.close,
                     size: 14,
-                    color: theme.textTheme.bodySmall?.color
-                        ?.withValues(alpha: 0.7),
+                    color: theme.textTheme.bodySmall?.color?.withValues(
+                      alpha: 0.7,
+                    ),
                   ),
                 ),
               ),
@@ -488,10 +495,12 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
     Widget buildHorizontalArrow(bool isTop) {
       return LayoutBuilder(
         builder: (context, constraints) {
-          final width =
-              constraints.maxWidth.isFinite ? constraints.maxWidth : 220.0;
-          final offset =
-              arrowOffset.clamp(arrowSize, width - arrowSize).toDouble();
+          final width = constraints.maxWidth.isFinite
+              ? constraints.maxWidth
+              : 220.0;
+          final offset = arrowOffset
+              .clamp(arrowSize, width - arrowSize)
+              .toDouble();
           return Padding(
             padding: EdgeInsets.only(left: offset - arrowSize),
             child: CustomPaint(
@@ -511,10 +520,12 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
     Widget buildVerticalArrow(bool isLeft) {
       return LayoutBuilder(
         builder: (context, constraints) {
-          final height =
-              constraints.maxHeight.isFinite ? constraints.maxHeight : 120.0;
-          final offset =
-              arrowOffset.clamp(arrowSize, height - arrowSize).toDouble();
+          final height = constraints.maxHeight.isFinite
+              ? constraints.maxHeight
+              : 120.0;
+          final offset = arrowOffset
+              .clamp(arrowSize, height - arrowSize)
+              .toDouble();
           return Padding(
             padding: EdgeInsets.only(top: offset - arrowSize),
             child: CustomPaint(
@@ -537,10 +548,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              buildHorizontalArrow(true),
-              popoverContent,
-            ],
+            children: [buildHorizontalArrow(true), popoverContent],
           ),
         );
       case PopoverArrowDirection.bottom:
@@ -548,10 +556,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              popoverContent,
-              buildHorizontalArrow(false),
-            ],
+            children: [popoverContent, buildHorizontalArrow(false)],
           ),
         );
       case PopoverArrowDirection.left:
@@ -559,10 +564,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
           child: Row(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              buildVerticalArrow(true),
-              popoverContent,
-            ],
+            children: [buildVerticalArrow(true), popoverContent],
           ),
         );
       case PopoverArrowDirection.right:
@@ -570,10 +572,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
           child: Row(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              popoverContent,
-              buildVerticalArrow(false),
-            ],
+            children: [popoverContent, buildVerticalArrow(false)],
           ),
         );
     }

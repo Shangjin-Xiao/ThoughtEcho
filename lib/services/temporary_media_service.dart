@@ -24,8 +24,9 @@ class TemporaryMediaService {
   /// 获取临时媒体文件目录
   static Future<Directory> _getTempMediaDirectory(String subfolder) async {
     final appDir = await getApplicationDocumentsDirectory();
-    final tempDir =
-        Directory(path.join(appDir.path, _tempMediaFolder, subfolder));
+    final tempDir = Directory(
+      path.join(appDir.path, _tempMediaFolder, subfolder),
+    );
     if (!await tempDir.exists()) {
       await tempDir.create(recursive: true);
     }
@@ -113,7 +114,9 @@ class TemporaryMediaService {
 
       // 检查磁盘空间
       if (!await StreamingFileProcessor.hasEnoughDiskSpace(
-          targetPath, fileSize)) {
+        targetPath,
+        fileSize,
+      )) {
         throw Exception('磁盘空间不足');
       }
 
@@ -138,7 +141,9 @@ class TemporaryMediaService {
 
       // 验证文件完整性
       if (!await StreamingFileProcessor.verifyFileCopy(
-          sourcePath, targetPath)) {
+        sourcePath,
+        targetPath,
+      )) {
         throw Exception('临时文件复制验证失败');
       }
 
@@ -169,21 +174,39 @@ class TemporaryMediaService {
       final extension = path.extension(tempPath).toLowerCase();
       String permanentSubfolder;
 
-      if ({'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'}
-          .contains(extension)) {
+      if ({
+        '.jpg',
+        '.jpeg',
+        '.png',
+        '.gif',
+        '.bmp',
+        '.webp',
+      }.contains(extension)) {
         permanentSubfolder = 'images';
-      } else if ({'.mp4', '.mov', '.avi', '.mkv', '.webm', '.3gp'}
-          .contains(extension)) {
+      } else if ({
+        '.mp4',
+        '.mov',
+        '.avi',
+        '.mkv',
+        '.webm',
+        '.3gp',
+      }.contains(extension)) {
         permanentSubfolder = 'videos';
-      } else if ({'.mp3', '.wav', '.aac', '.flac', '.ogg'}
-          .contains(extension)) {
+      } else if ({
+        '.mp3',
+        '.wav',
+        '.aac',
+        '.flac',
+        '.ogg',
+      }.contains(extension)) {
         permanentSubfolder = 'audios';
       } else {
         throw Exception('不支持的文件类型: $extension');
       }
 
-      final permanentDir =
-          await _getPermanentMediaDirectory(permanentSubfolder);
+      final permanentDir = await _getPermanentMediaDirectory(
+        permanentSubfolder,
+      );
       final fileName = path.basename(tempPath);
       final permanentPath = path.join(permanentDir.path, fileName);
 
@@ -198,7 +221,9 @@ class TemporaryMediaService {
 
       // 检查磁盘空间
       if (!await StreamingFileProcessor.hasEnoughDiskSpace(
-          permanentPath, fileSize)) {
+        permanentPath,
+        fileSize,
+      )) {
         throw Exception('磁盘空间不足');
       }
 
@@ -220,7 +245,9 @@ class TemporaryMediaService {
 
       // 验证文件完整性
       if (!await StreamingFileProcessor.verifyFileCopy(
-          tempPath, permanentPath)) {
+        tempPath,
+        permanentPath,
+      )) {
         throw Exception('文件移动验证失败');
       }
 

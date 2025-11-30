@@ -3,7 +3,8 @@ import 'dart:io';
 import 'package:uuid/uuid.dart';
 // 条件导入：Web平台使用stub实现，其他平台使用gal
 import '../utils/stub_implementations.dart'
-    if (dart.library.io) 'package:gal/gal.dart' as gal;
+    if (dart.library.io) 'package:gal/gal.dart'
+    as gal;
 import '../models/quote_model.dart';
 import '../models/generated_card.dart';
 import '../constants/ai_card_prompts.dart';
@@ -43,8 +44,10 @@ class AICardGenerationService {
           : 'Use the same language as the note for any footer metadata (date, weather, period). Keep language consistent and do not mix Chinese unless original content is Chinese.';
       prompt = '$prompt\n\n### 语言 / Language Constraint\n$langDirective';
 
-      AppLogger.i('开始AI生成SVG卡片，内容长度: ${note.content.length}',
-          source: 'AICardGeneration');
+      AppLogger.i(
+        '开始AI生成SVG卡片，内容长度: ${note.content.length}',
+        source: 'AICardGeneration',
+      );
 
       // 2. 调用AI生成SVG
       final svgContent = await _generateSVGContent(prompt);
@@ -64,8 +67,10 @@ class AICardGenerationService {
         dayPeriod: note.dayPeriod,
       );
 
-      AppLogger.i('AI生成SVG成功，长度: ${cleanedSVG.length}',
-          source: 'AICardGeneration');
+      AppLogger.i(
+        'AI生成SVG成功，长度: ${cleanedSVG.length}',
+        source: 'AICardGeneration',
+      );
 
       // 5. 创建卡片对象（AI生成默认类型：knowledge）
       return GeneratedCard(
@@ -170,8 +175,10 @@ class AICardGenerationService {
       final note = notesToProcess[i];
 
       try {
-        AppLogger.i('正在生成第${i + 1}/${notesToProcess.length}张卡片...',
-            source: 'AICardGeneration');
+        AppLogger.i(
+          '正在生成第${i + 1}/${notesToProcess.length}张卡片...',
+          source: 'AICardGeneration',
+        );
 
         final card = await generateCard(note: note);
         cards.add(card);
@@ -207,8 +214,10 @@ class AICardGenerationService {
       throw AICardGenerationException('批量生成完全失败: ${errors.join('; ')}');
     }
 
-    AppLogger.i('批量生成完成: 成功${cards.length}张，失败${errors.length}张',
-        source: 'AICardGeneration');
+    AppLogger.i(
+      '批量生成完成: 成功${cards.length}张，失败${errors.length}张',
+      source: 'AICardGeneration',
+    );
 
     return cards;
   }
@@ -246,8 +255,10 @@ class AICardGenerationService {
 
   /// 清理SVG内容
   String _cleanSVGContent(String response) {
-    AppLogger.d('开始清理SVG内容，原始长度: ${response.length}',
-        source: 'AICardGeneration');
+    AppLogger.d(
+      '开始清理SVG内容，原始长度: ${response.length}',
+      source: 'AICardGeneration',
+    );
 
     String cleaned = response.trim();
 
@@ -307,8 +318,10 @@ class AICardGenerationService {
         final svgEndIndex = response.lastIndexOf('</svg>');
         if (svgEndIndex > svgStartIndex) {
           cleaned = response.substring(svgStartIndex, svgEndIndex + 6);
-          AppLogger.i('字符串提取成功，SVG长度: ${cleaned.length}',
-              source: 'AICardGeneration');
+          AppLogger.i(
+            '字符串提取成功，SVG长度: ${cleaned.length}',
+            source: 'AICardGeneration',
+          );
         }
       }
     }
@@ -343,8 +356,9 @@ class AICardGenerationService {
   }) async {
     try {
       AppLogger.i(
-          '开始保存卡片图片: ${card.id}, 尺寸: ${width}x$height, 缩放: $scaleFactor',
-          source: 'AICardGeneration');
+        '开始保存卡片图片: ${card.id}, 尺寸: ${width}x$height, 缩放: $scaleFactor',
+        source: 'AICardGeneration',
+      );
 
       // 验证输入参数
       if (width <= 0 || height <= 0) {
@@ -369,8 +383,8 @@ class AICardGenerationService {
       // 先渲染图片（此时尚未出现 async gap，满足 use_build_context_synchronously 规范）
       final safeContext =
           (context != null && context is Element && !context.mounted)
-              ? null
-              : context;
+          ? null
+          : context;
 
       // 创建临时卡片对象用于渲染（使用标准化的SVG）
       final tempCard = GeneratedCard(
@@ -390,14 +404,17 @@ class AICardGenerationService {
       );
 
       final imageBytes = await tempCard.toImageBytes(
-          width: width,
-          height: height,
-          scaleFactor: scaleFactor,
-          renderMode: renderMode,
-          context: safeContext);
+        width: width,
+        height: height,
+        scaleFactor: scaleFactor,
+        renderMode: renderMode,
+        context: safeContext,
+      );
 
-      AppLogger.i('卡片图片渲染完成，大小: ${imageBytes.length} bytes',
-          source: 'AICardGeneration');
+      AppLogger.i(
+        '卡片图片渲染完成，大小: ${imageBytes.length} bytes',
+        source: 'AICardGeneration',
+      );
 
       // 再检查/申请相册权限并保存（与渲染解耦，避免 context 跨 await）
       if (!await _checkGalleryPermission()) {
@@ -485,8 +502,11 @@ class AICardGenerationService {
 
         onProgress?.call(i + 1, cards.length);
       } catch (e) {
-        AppLogger.e('批量保存第${i + 1}张卡片失败: $e',
-            error: e, source: 'AICardGeneration');
+        AppLogger.e(
+          '批量保存第${i + 1}张卡片失败: $e',
+          error: e,
+          source: 'AICardGeneration',
+        );
         // 继续处理其他卡片
         savedFiles.add(''); // 添加空字符串表示失败
       }
@@ -762,9 +782,11 @@ class AICardGenerationService {
     if (date != null) metaParts.add(date); // 已是中文格式化
     if (location != null) metaParts.add(location); // 用户输入不改动
     if (localizedWeather != null) {
-      metaParts.add(temperature != null
-          ? '$localizedWeather $temperature'
-          : localizedWeather);
+      metaParts.add(
+        temperature != null
+            ? '$localizedWeather $temperature'
+            : localizedWeather,
+      );
     }
     if (author != null) metaParts.add(author);
     if (source != null && source != author) metaParts.add(source);
@@ -926,10 +948,12 @@ class AICardGenerationService {
       }
     } else {
       // 尝试从width/height推断viewBox
-      final widthMatch =
-          RegExp(r'width="(\d+(?:\.\d+)?)"').firstMatch(normalized);
-      final heightMatch =
-          RegExp(r'height="(\d+(?:\.\d+)?)"').firstMatch(normalized);
+      final widthMatch = RegExp(
+        r'width="(\d+(?:\.\d+)?)"',
+      ).firstMatch(normalized);
+      final heightMatch = RegExp(
+        r'height="(\d+(?:\.\d+)?)"',
+      ).firstMatch(normalized);
       final w = widthMatch?.group(1) ?? '400';
       final h = heightMatch?.group(1) ?? '600';
       viewBox = '0 0 $w $h';

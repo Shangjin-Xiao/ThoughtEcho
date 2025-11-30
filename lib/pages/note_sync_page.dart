@@ -262,7 +262,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   Future<bool> _onWillPop() async {
     // 如果没有初始化或已经出错，直接允许返回
     final syncService = _syncService;
-    final busySync = syncService != null &&
+    final busySync =
+        syncService != null &&
         (syncService.syncStatus == SyncStatus.packaging ||
             syncService.syncStatus == SyncStatus.sending ||
             syncService.syncStatus == SyncStatus.receiving ||
@@ -273,17 +274,21 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     final l10n = AppLocalizations.of(context);
 
     // 弹出确认对话框
-    final shouldLeave = await showDialog<bool>(
+    final shouldLeave =
+        await showDialog<bool>(
           context: context,
           builder: (ctx) {
             return AlertDialog(
               title: Text(l10n.confirmLeave),
-              content: Text(busySync
-                  ? l10n.leaveWhileSyncing(
-                      _getSyncStatusText(syncService.syncStatus, l10n))
-                  : _isScanning
-                      ? l10n.leaveWhileScanning
-                      : l10n.leaveWhileSending),
+              content: Text(
+                busySync
+                    ? l10n.leaveWhileSyncing(
+                        _getSyncStatusText(syncService.syncStatus, l10n),
+                      )
+                    : _isScanning
+                    ? l10n.leaveWhileScanning
+                    : l10n.leaveWhileSending,
+              ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(ctx).pop(false),
@@ -396,35 +401,42 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
 
       // 使用流式发现
       final (stream, cancel) = syncService.discoverNearbyDevicesStream(
-          timeout: _uiDiscoveryTimeoutMs);
+        timeout: _uiDiscoveryTimeoutMs,
+      );
       _cancelDiscovery = cancel;
-      _discoverySub = stream.listen((devices) {
-        if (!mounted) return;
-        setState(() {
-          _nearbyDevices = List<Device>.from(devices);
-        });
-      }, onDone: () {
-        if (!mounted) return;
-        final l10n = AppLocalizations.of(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(_nearbyDevices.isEmpty
-                ? l10n.noNearbyDevices
-                : l10n.foundDevicesCount(_nearbyDevices.length)),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-        setState(() {
-          _isScanning = false;
-          _cancelDiscovery = null;
-          _discoveryCountdownTimer?.cancel();
-        });
-      });
+      _discoverySub = stream.listen(
+        (devices) {
+          if (!mounted) return;
+          setState(() {
+            _nearbyDevices = List<Device>.from(devices);
+          });
+        },
+        onDone: () {
+          if (!mounted) return;
+          final l10n = AppLocalizations.of(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                _nearbyDevices.isEmpty
+                    ? l10n.noNearbyDevices
+                    : l10n.foundDevicesCount(_nearbyDevices.length),
+              ),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          setState(() {
+            _isScanning = false;
+            _cancelDiscovery = null;
+            _discoveryCountdownTimer?.cancel();
+          });
+        },
+      );
 
       // 启动倒计时
       _discoveryCountdownTimer?.cancel();
-      _discoveryCountdownTimer =
-          Timer.periodic(const Duration(seconds: 1), (t) {
+      _discoveryCountdownTimer = Timer.periodic(const Duration(seconds: 1), (
+        t,
+      ) {
         if (!mounted) return;
         setState(() {
           _discoveryRemainingMs -= 1000;
@@ -466,10 +478,12 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         _isScanning = false;
         _discoveryRemainingMs = 0;
       });
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(l10n.deviceDiscoveryCancelled),
-        duration: const Duration(seconds: 2),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.deviceDiscoveryCancelled),
+          duration: const Duration(seconds: 2),
+        ),
+      );
     }
   }
 
@@ -479,45 +493,48 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
 
     // 先弹出确认对话框（是否包含媒体文件）
     bool includeMedia = _sendIncludeMedia;
-    final confirmed = await showDialog<bool>(
+    final confirmed =
+        await showDialog<bool>(
           context: context,
           builder: (ctx) {
             bool localInclude = includeMedia;
-            return StatefulBuilder(builder: (ctx, setLocal) {
-              return AlertDialog(
-                title: Text(l10n.sendConfirmTitle),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(l10n.sendConfirmContent(device.alias)),
-                    const SizedBox(height: 12),
-                    CheckboxListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(l10n.includeMediaFilesOption),
-                      subtitle: Text(l10n.includeMediaFilesHintSync),
-                      value: localInclude,
-                      onChanged: (v) =>
-                          setLocal(() => localInclude = v ?? true),
+            return StatefulBuilder(
+              builder: (ctx, setLocal) {
+                return AlertDialog(
+                  title: Text(l10n.sendConfirmTitle),
+                  content: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l10n.sendConfirmContent(device.alias)),
+                      const SizedBox(height: 12),
+                      CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(l10n.includeMediaFilesOption),
+                        subtitle: Text(l10n.includeMediaFilesHintSync),
+                        value: localInclude,
+                        onChanged: (v) =>
+                            setLocal(() => localInclude = v ?? true),
+                      ),
+                    ],
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(false),
+                      child: Text(l10n.cancel),
+                    ),
+                    FilledButton(
+                      onPressed: () {
+                        // 关键修复：把对话框中的最新勾选结果写回外层变量
+                        includeMedia = localInclude;
+                        Navigator.of(ctx).pop(true);
+                      },
+                      child: Text(l10n.startSend),
                     ),
                   ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(ctx).pop(false),
-                    child: Text(l10n.cancel),
-                  ),
-                  FilledButton(
-                    onPressed: () {
-                      // 关键修复：把对话框中的最新勾选结果写回外层变量
-                      includeMedia = localInclude;
-                      Navigator.of(ctx).pop(true);
-                    },
-                    child: Text(l10n.startSend),
-                  ),
-                ],
-              );
-            });
+                );
+              },
+            );
           },
         ) ??
         false;
@@ -549,12 +566,14 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         includeMediaFiles: includeMedia,
       );
       if (!mounted) return;
-      final displayId =
-          sessionId.length <= 8 ? sessionId : '${sessionId.substring(0, 8)}...';
+      final displayId = sessionId.length <= 8
+          ? sessionId
+          : '${sessionId.substring(0, 8)}...';
       messenger.showSnackBar(
         SnackBar(
-            content: Text(l10n.sendStarted(displayId)),
-            duration: const Duration(seconds: 3)),
+          content: Text(l10n.sendStarted(displayId)),
+          duration: const Duration(seconds: 3),
+        ),
       );
     } catch (e) {
       debugPrint('发送笔记失败: $e');
@@ -620,18 +639,24 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                     children: [
                       if (_isInitializing) ...[
                         const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2)),
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
                         const SizedBox(width: 8),
                         Text(l10n.initializingService),
                       ] else if (_initializationError.isNotEmpty) ...[
                         const Icon(Icons.error, color: Colors.red, size: 18),
                         const SizedBox(width: 6),
                         Expanded(
-                            child: Text(l10n.startFailed(_initializationError),
-                                style: const TextStyle(
-                                    color: Colors.red, fontSize: 12))),
+                          child: Text(
+                            l10n.startFailed(_initializationError),
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
                       ] else if (_isScanning) ...[
                         const SizedBox(
                           width: 16,
@@ -644,7 +669,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                             _discoveryRemainingMs > 0
                                 ? l10n.scanningDevicesWithTime(
                                     _nearbyDevices.length,
-                                    (_discoveryRemainingMs / 1000).ceil())
+                                    (_discoveryRemainingMs / 1000).ceil(),
+                                  )
                                 : l10n.scanningDevices(_nearbyDevices.length),
                           ),
                         ),
@@ -654,8 +680,9 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                               ? Icons.devices
                               : Icons.search,
                           size: 18,
-                          color:
-                              _nearbyDevices.isNotEmpty ? Colors.green : null,
+                          color: _nearbyDevices.isNotEmpty
+                              ? Colors.green
+                              : null,
                         ),
                         const SizedBox(width: 6),
                         Text(l10n.foundDevicesCount(_nearbyDevices.length)),
@@ -667,12 +694,15 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                     onLongPress: () {
                       if (_localFingerprint != null) {
                         Clipboard.setData(
-                            ClipboardData(text: _localFingerprint!));
+                          ClipboardData(text: _localFingerprint!),
+                        );
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                              content: Text(
-                                  l10n.copiedFingerprint(_localFingerprint!)),
-                              duration: const Duration(seconds: 2)),
+                            content: Text(
+                              l10n.copiedFingerprint(_localFingerprint!),
+                            ),
+                            duration: const Duration(seconds: 2),
+                          ),
                         );
                       }
                     },
@@ -681,19 +711,20 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                           ? l10n.localDeviceLoading
                           : l10n.localDeviceId(_localShortFingerprint!),
                       style: TextStyle(
-                          fontSize: 11,
-                          color: Theme.of(context)
-                              .textTheme
-                              .bodySmall
-                              ?.color
-                              ?.withValues(alpha: 0.75)),
+                        fontSize: 11,
+                        color: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.color?.withValues(alpha: 0.75),
+                      ),
                     ),
                   ),
                   // 触发同步对话框逻辑（隐藏状态条但保留监听）
-                  Consumer<NoteSyncService>(builder: (context, s, _) {
-                    _maybeShowOrHideSyncDialog(s);
-                    return const SizedBox.shrink();
-                  }),
+                  Consumer<NoteSyncService>(
+                    builder: (context, s, _) {
+                      _maybeShowOrHideSyncDialog(s);
+                      return const SizedBox.shrink();
+                    },
+                  ),
                 ],
               ),
             ),
@@ -710,8 +741,11 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.devices_other,
-                                size: 64, color: Colors.grey),
+                            const Icon(
+                              Icons.devices_other,
+                              size: 64,
+                              color: Colors.grey,
+                            ),
                             const SizedBox(height: 16),
                             Text(
                               l10n.noNearbyDevices,
@@ -731,7 +765,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                       )
                     : ListView.separated(
                         key: ValueKey(
-                            'sync-device-list-${_nearbyDevices.length}-${_sendingFingerprint ?? 'idle'}'),
+                          'sync-device-list-${_nearbyDevices.length}-${_sendingFingerprint ?? 'idle'}',
+                        ),
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         itemCount: _nearbyDevices.length,
                         separatorBuilder: (_, __) => const SizedBox(height: 4),
@@ -757,7 +792,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                               borderRadius: BorderRadius.circular(18),
                               color: isSendingToThis
                                   ? theme.colorScheme.primaryContainer
-                                      .withValues(alpha: 0.35)
+                                        .withValues(alpha: 0.35)
                                   : theme.colorScheme.surface,
                               border: Border.all(
                                 color: isSendingToThis
@@ -784,7 +819,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                               leading: CircleAvatar(
                                 radius: 24,
                                 backgroundColor: theme
-                                    .colorScheme.primaryContainer
+                                    .colorScheme
+                                    .primaryContainer
                                     .withValues(alpha: 0.65),
                                 child: Icon(
                                   _getDeviceIcon(device.deviceType),
@@ -795,9 +831,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                               title: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Expanded(
-                                    child: _buildDeviceName(device),
-                                  ),
+                                  Expanded(child: _buildDeviceName(device)),
                                   const SizedBox(width: 8),
                                   _buildShortFingerprint(device.fingerprint),
                                 ],
@@ -890,11 +924,13 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           icon: _isInitializing
               ? const Icon(Icons.hourglass_empty)
               : _isScanning
-                  ? const Icon(Icons.close)
-                  : const Icon(Icons.search),
-          label: Text(_isInitializing
-              ? l10n.initializing
-              : (_isScanning ? l10n.cancelDiscovery : l10n.discoverDevices)),
+              ? const Icon(Icons.close)
+              : const Icon(Icons.search),
+          label: Text(
+            _isInitializing
+                ? l10n.initializing
+                : (_isScanning ? l10n.cancelDiscovery : l10n.discoverDevices),
+          ),
           tooltip: _isScanning
               ? l10n.cancelDiscoveryTooltip
               : l10n.startDiscoveryTooltip,
@@ -917,225 +953,244 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         context: dialogContext,
         barrierDismissible: false,
         builder: (ctx) {
-          return StatefulBuilder(builder: (ctx, setLocal) {
-            return Consumer<NoteSyncService>(
-              builder: (context, s, _) {
-                final progress = s.syncProgress.clamp(0.0, 1.0);
-                final waitingPeer = s.awaitingPeerApproval;
-                final waitingUser = s.awaitingUserApproval;
-                final inProgress = s.syncStatus == SyncStatus.packaging ||
-                    s.syncStatus == SyncStatus.sending ||
-                    s.syncStatus == SyncStatus.receiving ||
-                    s.syncStatus == SyncStatus.merging;
+          return StatefulBuilder(
+            builder: (ctx, setLocal) {
+              return Consumer<NoteSyncService>(
+                builder: (context, s, _) {
+                  final progress = s.syncProgress.clamp(0.0, 1.0);
+                  final waitingPeer = s.awaitingPeerApproval;
+                  final waitingUser = s.awaitingUserApproval;
+                  final inProgress =
+                      s.syncStatus == SyncStatus.packaging ||
+                      s.syncStatus == SyncStatus.sending ||
+                      s.syncStatus == SyncStatus.receiving ||
+                      s.syncStatus == SyncStatus.merging;
 
-                final bool isFailure = s.syncStatus == SyncStatus.failed;
-                final bool isSuccess = s.syncStatus == SyncStatus.completed;
+                  final bool isFailure = s.syncStatus == SyncStatus.failed;
+                  final bool isSuccess = s.syncStatus == SyncStatus.completed;
 
-                String titleText;
-                IconData titleIcon;
-                Color? titleColor;
+                  String titleText;
+                  IconData titleIcon;
+                  Color? titleColor;
 
-                if (waitingUser) {
-                  titleText = l10n.receiveSyncRequest;
-                  titleIcon = Icons.handshake;
-                  titleColor = Theme.of(context).colorScheme.primary;
-                } else if (waitingPeer) {
-                  titleText = l10n.waitingPeerApproval;
-                  titleIcon = Icons.handshake_outlined;
-                  titleColor = Theme.of(context).colorScheme.primary;
-                } else if (isFailure) {
-                  titleText = _getSyncStatusText(s.syncStatus, l10n);
-                  titleIcon = Icons.error_outline;
-                  titleColor = Colors.red;
-                } else if (isSuccess) {
-                  titleText = _getSyncStatusText(s.syncStatus, l10n);
-                  titleIcon = Icons.check_circle_outline;
-                  titleColor = Colors.green;
-                } else {
-                  titleText = _getSyncStatusText(s.syncStatus, l10n);
-                  titleIcon = Icons.sync;
-                  titleColor = Theme.of(context).colorScheme.primary;
-                }
+                  if (waitingUser) {
+                    titleText = l10n.receiveSyncRequest;
+                    titleIcon = Icons.handshake;
+                    titleColor = Theme.of(context).colorScheme.primary;
+                  } else if (waitingPeer) {
+                    titleText = l10n.waitingPeerApproval;
+                    titleIcon = Icons.handshake_outlined;
+                    titleColor = Theme.of(context).colorScheme.primary;
+                  } else if (isFailure) {
+                    titleText = _getSyncStatusText(s.syncStatus, l10n);
+                    titleIcon = Icons.error_outline;
+                    titleColor = Colors.red;
+                  } else if (isSuccess) {
+                    titleText = _getSyncStatusText(s.syncStatus, l10n);
+                    titleIcon = Icons.check_circle_outline;
+                    titleColor = Colors.green;
+                  } else {
+                    titleText = _getSyncStatusText(s.syncStatus, l10n);
+                    titleIcon = Icons.sync;
+                    titleColor = Theme.of(context).colorScheme.primary;
+                  }
 
-                final String percentLabel = waitingPeer || waitingUser
-                    ? l10n.waitingLabel
-                    : '${(s.syncProgress * 100).clamp(0, 100).toStringAsFixed(0)}%';
-                final double? progressValue =
-                    waitingPeer || waitingUser ? null : progress;
-                final String progressMessage =
-                    waitingPeer ? l10n.syncRequestSent : s.syncStatusMessage;
+                  final String percentLabel = waitingPeer || waitingUser
+                      ? l10n.waitingLabel
+                      : '${(s.syncProgress * 100).clamp(0, 100).toStringAsFixed(0)}%';
+                  final double? progressValue = waitingPeer || waitingUser
+                      ? null
+                      : progress;
+                  final String progressMessage = waitingPeer
+                      ? l10n.syncRequestSent
+                      : s.syncStatusMessage;
 
-                return AlertDialog(
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20)),
-                  titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-                  contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
-                  actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  title: Row(
-                    children: [
-                      Icon(titleIcon, color: titleColor, size: 24),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          titleText,
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w600, fontSize: 18),
-                        ),
-                      ),
-                    ],
-                  ),
-                  content: SizedBox(
-                    width: 360,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  return AlertDialog(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    titlePadding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+                    contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 12),
+                    actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                    title: Row(
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: LinearProgressIndicator(
-                                  minHeight: 8,
-                                  value: progressValue,
-                                  backgroundColor: Theme.of(context)
-                                      .colorScheme
-                                      .surfaceContainerHighest,
-                                ),
-                              ),
+                        Icon(titleIcon, color: titleColor, size: 24),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            titleText,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 18,
                             ),
-                            const SizedBox(width: 12),
-                            Text(
-                              percentLabel,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
-                        const SizedBox(height: 16),
-                        if (waitingUser)
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                      ],
+                    ),
+                    content: SizedBox(
+                      width: 360,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .primaryContainer
-                                      .withValues(alpha: 0.3),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.info_outline,
-                                      size: 20,
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        l10n.deviceWantsToSync(
-                                            s.receiveSenderAlias ??
-                                                l10n.unknown),
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          height: 1.4,
-                                          color: Theme.of(context)
-                                              .colorScheme
-                                              .onSurface,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                              Expanded(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: LinearProgressIndicator(
+                                    minHeight: 8,
+                                    value: progressValue,
+                                    backgroundColor: Theme.of(
+                                      context,
+                                    ).colorScheme.surfaceContainerHighest,
+                                  ),
                                 ),
                               ),
-                              const SizedBox(height: 12),
-                              CheckboxListTile(
-                                value: s.skipSyncConfirmation,
-                                onChanged: (v) async {
-                                  await s.setSkipSyncConfirmation(v ?? false);
-                                  setLocal(() {});
-                                },
-                                dense: true,
-                                contentPadding: const EdgeInsets.only(left: 0),
-                                title: Text(l10n.doNotAskAgain,
-                                    style: const TextStyle(fontSize: 13)),
-                                subtitle: Text(
-                                  l10n.autoAcceptSyncRequests,
-                                  style: const TextStyle(fontSize: 11),
+                              const SizedBox(width: 12),
+                              Text(
+                                percentLabel,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).colorScheme.primary,
                                 ),
                               ),
                             ],
-                          )
-                        else
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 10),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest
-                                  .withValues(alpha: 0.5),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              progressMessage,
-                              style: const TextStyle(fontSize: 14, height: 1.3),
-                            ),
                           ),
-                      ],
+                          const SizedBox(height: 16),
+                          if (waitingUser)
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primaryContainer
+                                        .withValues(alpha: 0.3),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Icon(
+                                        Icons.info_outline,
+                                        size: 20,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primary,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          l10n.deviceWantsToSync(
+                                            s.receiveSenderAlias ??
+                                                l10n.unknown,
+                                          ),
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            height: 1.4,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onSurface,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                CheckboxListTile(
+                                  value: s.skipSyncConfirmation,
+                                  onChanged: (v) async {
+                                    await s.setSkipSyncConfirmation(v ?? false);
+                                    setLocal(() {});
+                                  },
+                                  dense: true,
+                                  contentPadding: const EdgeInsets.only(
+                                    left: 0,
+                                  ),
+                                  title: Text(
+                                    l10n.doNotAskAgain,
+                                    style: const TextStyle(fontSize: 13),
+                                  ),
+                                  subtitle: Text(
+                                    l10n.autoAcceptSyncRequests,
+                                    style: const TextStyle(fontSize: 11),
+                                  ),
+                                ),
+                              ],
+                            )
+                          else
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerHighest
+                                    .withValues(alpha: 0.5),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                progressMessage,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  height: 1.3,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
-                  actions: [
-                    if (waitingUser) ...[
-                      TextButton(
-                        onPressed: () {
-                          s.rejectIncoming();
-                          _dismissSyncDialog();
-                        },
-                        child: Text(l10n.reject),
-                      ),
-                      FilledButton(
-                        onPressed: () {
-                          s.approveIncoming();
-                        },
-                        child: Text(l10n.accept),
-                      ),
-                    ] else if (inProgress &&
-                        (s.syncStatus == SyncStatus.sending ||
-                            s.syncStatus == SyncStatus.receiving)) ...[
-                      TextButton(
-                        onPressed: () {
-                          if (s.syncStatus == SyncStatus.sending) {
-                            s.cancelOngoingSend();
-                          } else if (s.syncStatus == SyncStatus.receiving) {
-                            s.cancelReceiving();
-                          }
-                        },
-                        child: Text(
-                          s.syncStatus == SyncStatus.receiving
-                              ? l10n.cancelReceive
-                              : l10n.cancelSend,
+                    actions: [
+                      if (waitingUser) ...[
+                        TextButton(
+                          onPressed: () {
+                            s.rejectIncoming();
+                            _dismissSyncDialog();
+                          },
+                          child: Text(l10n.reject),
                         ),
-                      ),
-                    ] else if (!inProgress && !waitingPeer) ...[
-                      TextButton(
-                        onPressed: _dismissSyncDialog,
-                        child: Text(l10n.close),
-                      ),
+                        FilledButton(
+                          onPressed: () {
+                            s.approveIncoming();
+                          },
+                          child: Text(l10n.accept),
+                        ),
+                      ] else if (inProgress &&
+                          (s.syncStatus == SyncStatus.sending ||
+                              s.syncStatus == SyncStatus.receiving)) ...[
+                        TextButton(
+                          onPressed: () {
+                            if (s.syncStatus == SyncStatus.sending) {
+                              s.cancelOngoingSend();
+                            } else if (s.syncStatus == SyncStatus.receiving) {
+                              s.cancelReceiving();
+                            }
+                          },
+                          child: Text(
+                            s.syncStatus == SyncStatus.receiving
+                                ? l10n.cancelReceive
+                                : l10n.cancelSend,
+                          ),
+                        ),
+                      ] else if (!inProgress && !waitingPeer) ...[
+                        TextButton(
+                          onPressed: _dismissSyncDialog,
+                          child: Text(l10n.close),
+                        ),
+                      ],
                     ],
-                  ],
-                );
-              },
-            );
-          });
+                  );
+                },
+              );
+            },
+          );
         },
       ).then((_) {
         _syncDialogVisible = false;
@@ -1158,14 +1213,16 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
 
   void _maybeShowOrHideSyncDialog(NoteSyncService service) {
     // 统一：审批 + 进度 合并为一个弹窗
-    final active = service.awaitingUserApproval ||
+    final active =
+        service.awaitingUserApproval ||
         service.awaitingPeerApproval ||
         service.syncStatus == SyncStatus.packaging ||
         service.syncStatus == SyncStatus.sending ||
         service.syncStatus == SyncStatus.receiving ||
         service.syncStatus == SyncStatus.merging;
 
-    final terminal = service.syncStatus == SyncStatus.completed ||
+    final terminal =
+        service.syncStatus == SyncStatus.completed ||
         service.syncStatus == SyncStatus.failed ||
         service.syncStatus == SyncStatus.idle;
 
@@ -1181,7 +1238,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                 return;
               }
               final latestService = context.read<NoteSyncService>();
-              final stillActive = latestService.awaitingUserApproval ||
+              final stillActive =
+                  latestService.awaitingUserApproval ||
                   latestService.awaitingPeerApproval ||
                   latestService.syncStatus == SyncStatus.packaging ||
                   latestService.syncStatus == SyncStatus.sending ||
@@ -1205,15 +1263,17 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
       if (service.syncStatus == SyncStatus.completed) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(l10n.syncCompleted),
-              duration: const Duration(seconds: 2)),
+            content: Text(l10n.syncCompleted),
+            duration: const Duration(seconds: 2),
+          ),
         );
       } else if (service.syncStatus == SyncStatus.failed) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(service.syncStatusMessage),
-              backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3)),
+            content: Text(service.syncStatusMessage),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
         );
       }
     }
@@ -1318,14 +1378,17 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     final alias = device.alias.trim();
     final model = device.deviceModel?.trim() ?? '';
     final displayName = model.isNotEmpty ? model : alias;
-    final showAlias = model.isNotEmpty &&
+    final showAlias =
+        model.isNotEmpty &&
         alias.isNotEmpty &&
         alias.toLowerCase() != displayName.toLowerCase();
 
-    final tooltipMessage =
-        showAlias ? l10n.deviceAliasAndModel(displayName, alias) : displayName;
+    final tooltipMessage = showAlias
+        ? l10n.deviceAliasAndModel(displayName, alias)
+        : displayName;
 
-    final titleStyle = theme.textTheme.titleMedium?.copyWith(
+    final titleStyle =
+        theme.textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.w600,
           height: 1.15,
         ) ??
@@ -1335,7 +1398,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           height: 1.15,
         );
 
-    final aliasStyle = theme.textTheme.bodySmall?.copyWith(
+    final aliasStyle =
+        theme.textTheme.bodySmall?.copyWith(
           color: theme.colorScheme.onSurfaceVariant,
           height: 1.2,
         ) ??
@@ -1352,17 +1416,11 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          _AutoScrollText(
-            displayName,
-            style: titleStyle,
-          ),
+          _AutoScrollText(displayName, style: titleStyle),
           if (showAlias)
             Padding(
               padding: const EdgeInsets.only(top: 2),
-              child: _AutoScrollText(
-                alias,
-                style: aliasStyle,
-              ),
+              child: _AutoScrollText(alias, style: aliasStyle),
             ),
         ],
       ),

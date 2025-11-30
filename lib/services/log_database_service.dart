@@ -200,9 +200,8 @@ class WebLogStorage implements LogStorage {
     if (searchText != null && searchText.isNotEmpty) {
       logs = logs
           .where(
-            (log) => log.message.toLowerCase().contains(
-                  searchText.toLowerCase(),
-                ),
+            (log) =>
+                log.message.toLowerCase().contains(searchText.toLowerCase()),
           )
           .toList();
     }
@@ -218,13 +217,15 @@ class WebLogStorage implements LogStorage {
     }
 
     if (startDate != null) {
-      logs =
-          logs.where((log) => log.timestamp.compareTo(startDate) >= 0).toList();
+      logs = logs
+          .where((log) => log.timestamp.compareTo(startDate) >= 0)
+          .toList();
     }
 
     if (endDate != null) {
-      logs =
-          logs.where((log) => log.timestamp.compareTo(endDate) <= 0).toList();
+      logs = logs
+          .where((log) => log.timestamp.compareTo(endDate) <= 0)
+          .toList();
     }
 
     // 排序
@@ -466,10 +467,12 @@ class NativeLogStorage implements LogStorage {
       logDebug('堆栈跟踪: $stackTrace');
 
       // 记录失败日志的详细信息
-      logDebug('失败日志详情: level=${log['level']}, '
-          'message长度=${log['message']?.toString().length ?? 0}, '
-          'timestamp=${log['timestamp']}, '
-          'source=${log['source']}');
+      logDebug(
+        '失败日志详情: level=${log['level']}, '
+        'message长度=${log['message']?.toString().length ?? 0}, '
+        'timestamp=${log['timestamp']}, '
+        'source=${log['source']}',
+      );
 
       return -1;
     }
@@ -521,9 +524,11 @@ class NativeLogStorage implements LogStorage {
 
             // 记录问题日志的详细信息
             final problemLog = logs[i];
-            logDebug('问题日志内容: level=${problemLog['level']}, '
-                'message长度=${problemLog['message']?.toString().length ?? 0}, '
-                'timestamp=${problemLog['timestamp']}');
+            logDebug(
+              '问题日志内容: level=${problemLog['level']}, '
+              'message长度=${problemLog['message']?.toString().length ?? 0}, '
+              'timestamp=${problemLog['timestamp']}',
+            );
           }
         }
 
@@ -577,8 +582,9 @@ class NativeLogStorage implements LogStorage {
         arguments.add(endDate);
       }
 
-      final whereClause =
-          conditions.isNotEmpty ? conditions.join(' AND ') : null;
+      final whereClause = conditions.isNotEmpty
+          ? conditions.join(' AND ')
+          : null;
 
       // 执行查询
       return await db.query(

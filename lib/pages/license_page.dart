@@ -114,8 +114,10 @@ class _LicensePageState extends State<LicensePage> {
         if (_licenseError != null) {
           return AlertDialog(
             title: Text(l10n.appLicense),
-            content:
-                Text(l10n.loadLicenseFailed(_licenseError!), style: const TextStyle(color: Colors.red)),
+            content: Text(
+              l10n.loadLicenseFailed(_licenseError!),
+              style: const TextStyle(color: Colors.red),
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(),
@@ -202,10 +204,7 @@ class _LicensePageState extends State<LicensePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          l10n.lottieFilesCredits,
-          style: const TextStyle(fontSize: 14),
-        ),
+        Text(l10n.lottieFilesCredits, style: const TextStyle(fontSize: 14)),
         const SizedBox(height: 12),
         _buildLottieAttribution(
           context: context,
@@ -249,10 +248,7 @@ class _LicensePageState extends State<LicensePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          l10n.openSourceDesc,
-          style: const TextStyle(fontSize: 14),
-        ),
+        Text(l10n.openSourceDesc, style: const TextStyle(fontSize: 14)),
         const SizedBox(height: 12),
         // 列出库并附带许可证与链接（以上游仓库/包管理页面为准）
         _buildAttributionRow(
@@ -331,10 +327,7 @@ class _LicensePageState extends State<LicensePage> {
         const SizedBox(height: 8),
         Text(
           l10n.thankOpenSourceContributors,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Color(0xB3000000),
-          ),
+          style: const TextStyle(fontSize: 12, color: Color(0xB3000000)),
         ),
       ],
     );
@@ -362,14 +355,13 @@ class _LicensePageState extends State<LicensePage> {
                 Text(
                   '$title: $name',
                   style: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w600),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 if (description != null) ...[
                   const SizedBox(height: 4),
-                  Text(
-                    description,
-                    style: const TextStyle(fontSize: 12),
-                  ),
+                  Text(description, style: const TextStyle(fontSize: 12)),
                 ],
                 const SizedBox(height: 4),
                 InkWell(
@@ -397,23 +389,22 @@ class _LicensePageState extends State<LicensePage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          l10n.systemLicensesDesc,
-          style: const TextStyle(fontSize: 14),
-        ),
+        Text(l10n.systemLicensesDesc, style: const TextStyle(fontSize: 14)),
         const SizedBox(height: 12),
         ElevatedButton.icon(
           onPressed: () {
             Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (_) => const ProgressiveSystemLicensesPage()),
+                builder: (_) => const ProgressiveSystemLicensesPage(),
+              ),
             );
           },
           icon: const Icon(Icons.article_outlined),
           label: Text(l10n.viewSystemLicenses),
-          style:
-              ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(44)),
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size.fromHeight(44),
+          ),
         ),
       ],
     );
@@ -522,51 +513,57 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
     super.initState();
     // 延迟到首帧后再开始订阅许可证流，确保页面能先渲染出加载状态，避免长时间同步事件阻塞首帧
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _licenseSub = LicenseRegistry.licenses.listen((entry) {
-        _buffer.add(entry);
-        // 启动或重置定时器：每 150ms 刷新一次到 UI
-        _flushTimer ??= Timer.periodic(const Duration(milliseconds: 150), (_) {
-          if (_buffer.isEmpty) return;
-          final toAdd = List<LicenseEntry>.from(_buffer);
-          _buffer.clear();
-          // 批量添加并触发一次 setState
-          if (mounted) {
-            setState(() {
-              _entries.addAll(toAdd);
-              _mergeEntries();
-            });
-          } else {
-            // 如果已卸载则丢弃
+      _licenseSub = LicenseRegistry.licenses.listen(
+        (entry) {
+          _buffer.add(entry);
+          // 启动或重置定时器：每 150ms 刷新一次到 UI
+          _flushTimer ??= Timer.periodic(const Duration(milliseconds: 150), (
+            _,
+          ) {
+            if (_buffer.isEmpty) return;
+            final toAdd = List<LicenseEntry>.from(_buffer);
             _buffer.clear();
-          }
-        });
-      }, onError: (e) {
-        if (mounted) {
-          setState(() {
-            _error = e.toString();
-            _loading = false;
+            // 批量添加并触发一次 setState
+            if (mounted) {
+              setState(() {
+                _entries.addAll(toAdd);
+                _mergeEntries();
+              });
+            } else {
+              // 如果已卸载则丢弃
+              _buffer.clear();
+            }
           });
-        }
-      }, onDone: () {
-        // 刷新剩余 buffer 然后停止定时器
-        if (_buffer.isNotEmpty) {
-          final toAdd = List<LicenseEntry>.from(_buffer);
-          _buffer.clear();
+        },
+        onError: (e) {
           if (mounted) {
             setState(() {
-              _entries.addAll(toAdd);
-              _mergeEntries();
+              _error = e.toString();
+              _loading = false;
             });
           }
-        }
-        _flushTimer?.cancel();
-        _flushTimer = null;
-        if (mounted) {
-          setState(() {
-            _loading = false;
-          });
-        }
-      });
+        },
+        onDone: () {
+          // 刷新剩余 buffer 然后停止定时器
+          if (_buffer.isNotEmpty) {
+            final toAdd = List<LicenseEntry>.from(_buffer);
+            _buffer.clear();
+            if (mounted) {
+              setState(() {
+                _entries.addAll(toAdd);
+                _mergeEntries();
+              });
+            }
+          }
+          _flushTimer?.cancel();
+          _flushTimer = null;
+          if (mounted) {
+            setState(() {
+              _loading = false;
+            });
+          }
+        },
+      );
     });
     _searchController.addListener(() => setState(() {}));
   }
@@ -621,8 +618,10 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
           children: [
             Text(l10n.systemLicenses),
             if (!_loading && _error.isEmpty)
-              Text(l10n.licenseEntriesCount(visible.length, _entries.length),
-                  style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                l10n.licenseEntriesCount(visible.length, _entries.length),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
           ],
         ),
         actions: [
@@ -639,13 +638,19 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
             child: Row(
               children: [
-                const Icon(Icons.info_outline,
-                    color: Colors.blueGrey, size: 20),
+                const Icon(
+                  Icons.info_outline,
+                  color: Colors.blueGrey,
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     l10n.licensePageDesc,
-                    style: const TextStyle(fontSize: 13, color: Colors.blueGrey),
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.blueGrey,
+                    ),
                   ),
                 ),
               ],
@@ -664,11 +669,14 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
                         icon: const Icon(Icons.clear),
                         onPressed: () => _searchController.clear(),
                       ),
-                border:
-                    OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 isDense: true,
-                contentPadding:
-                    const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 10,
+                  horizontal: 12,
+                ),
               ),
             ),
           ),
@@ -690,8 +698,10 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
           children: [
             const Icon(Icons.error_outline, color: Colors.red, size: 32),
             const SizedBox(height: 12),
-            Text(l10n.loadSystemLicensesFailed(_error),
-                style: const TextStyle(color: Colors.red)),
+            Text(
+              l10n.loadSystemLicensesFailed(_error),
+              style: const TextStyle(color: Colors.red),
+            ),
           ],
         ),
       );
@@ -703,14 +713,20 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
           children: [
             const Icon(Icons.info_outline, color: Colors.grey, size: 32),
             const SizedBox(height: 12),
-            Text(l10n.noSystemLicensesFound, style: const TextStyle(color: Colors.grey)),
+            Text(
+              l10n.noSystemLicensesFound,
+              style: const TextStyle(color: Colors.grey),
+            ),
           ],
         ),
       );
     }
     if (visible.isEmpty) {
       return Center(
-        child: Text(l10n.noMatchingLicensesFound, style: const TextStyle(color: Colors.grey)),
+        child: Text(
+          l10n.noMatchingLicensesFound,
+          style: const TextStyle(color: Colors.grey),
+        ),
       );
     }
     return ListView.builder(
@@ -723,8 +739,9 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
         final preview = entry.paragraphs.isNotEmpty
             ? entry.paragraphs.first.text
             : l10n.noLicenseContent;
-        final initials =
-            packages.isNotEmpty ? packages.trim()[0].toUpperCase() : 'P';
+        final initials = packages.isNotEmpty
+            ? packages.trim()[0].toUpperCase()
+            : 'P';
         final isExpanded = _expanded.contains(entryIndex);
 
         return Card(
@@ -733,22 +750,26 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
             leading: CircleAvatar(
               backgroundColor: Theme.of(context).colorScheme.primary,
               radius: 18,
-              child: Text(initials,
-                  style: const TextStyle(
-                      color: Colors.white, fontWeight: FontWeight.w600)),
+              child: Text(
+                initials,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
-            title: Text(packages.isEmpty ? l10n.unnamed : packages,
-                style: const TextStyle(fontWeight: FontWeight.w600)),
+            title: Text(
+              packages.isEmpty ? l10n.unnamed : packages,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
             subtitle: Text(
               preview.length > 120 ? '${preview.substring(0, 120)}…' : preview,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                color: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.color
-                    ?.withValues(alpha: 0.9),
+                color: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.color?.withValues(alpha: 0.9),
               ),
             ),
             initiallyExpanded: isExpanded,
@@ -763,8 +784,10 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
             },
             children: [
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12.0,
+                  vertical: 6.0,
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
@@ -773,15 +796,19 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
                       tooltip: l10n.copyLicense,
                       onPressed: () async {
                         final messenger = ScaffoldMessenger.of(context);
-                        final paragraphs =
-                            entry.paragraphs.map((p) => p.text).toList();
+                        final paragraphs = entry.paragraphs
+                            .map((p) => p.text)
+                            .toList();
                         final full = await compute(_joinParagraphs, paragraphs);
                         if (!mounted) return;
                         await Clipboard.setData(ClipboardData(text: full));
                         if (!mounted) return;
-                        messenger.showSnackBar(SnackBar(
+                        messenger.showSnackBar(
+                          SnackBar(
                             content: Text(l10n.licenseCopied),
-                            duration: const Duration(seconds: 2)));
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
                       },
                     ),
                   ],
@@ -790,8 +817,10 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
               Padding(
                 padding: const EdgeInsets.all(12.0),
                 child: FutureBuilder<String>(
-                  future: compute(_joinParagraphs,
-                      entry.paragraphs.map((p) => p.text).toList()),
+                  future: compute(
+                    _joinParagraphs,
+                    entry.paragraphs.map((p) => p.text).toList(),
+                  ),
                   builder: (c, s) {
                     if (!s.hasData) {
                       return const SizedBox(
@@ -836,18 +865,21 @@ class _ProgressiveSystemLicensesPageState
   void initState() {
     super.initState();
     // 一次性读取所有系统许可证条目，但不在列表中渲染完整文本
-    LicenseRegistry.licenses.toList().then((list) {
-      setState(() {
-        _entries = list;
-        _loading = false;
-      });
-    }).catchError((e) {
-      setState(() {
-        _entries = [];
-        _error = e.toString();
-        _loading = false;
-      });
-    });
+    LicenseRegistry.licenses
+        .toList()
+        .then((list) {
+          setState(() {
+            _entries = list;
+            _loading = false;
+          });
+        })
+        .catchError((e) {
+          setState(() {
+            _entries = [];
+            _error = e.toString();
+            _loading = false;
+          });
+        });
   }
 
   @override
@@ -862,8 +894,10 @@ class _ProgressiveSystemLicensesPageState
   Widget _buildBody(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     if (_loading) return const Center(child: CircularProgressIndicator());
-    if (_error != null) return Center(child: Text(l10n.loadSystemLicensesFailed(_error!)));
-    if (_entries.isEmpty) return Center(child: Text(l10n.noSystemLicensesFound));
+    if (_error != null)
+      return Center(child: Text(l10n.loadSystemLicensesFailed(_error!)));
+    if (_entries.isEmpty)
+      return Center(child: Text(l10n.noSystemLicensesFound));
 
     return ListView.separated(
       padding: const EdgeInsets.all(12),
@@ -875,23 +909,27 @@ class _ProgressiveSystemLicensesPageState
         final preview = entry.paragraphs.isNotEmpty
             ? entry.paragraphs.first.text
             : l10n.noLicenseContent;
-        final initials =
-            packages.isNotEmpty ? packages.trim()[0].toUpperCase() : 'P';
+        final initials = packages.isNotEmpty
+            ? packages.trim()[0].toUpperCase()
+            : 'P';
 
         return GestureDetector(
           onTap: () {
             Navigator.push(
               context,
               MaterialPageRoute(
-                  builder: (_) => LicenseDetailPage(
-                      entry: entry,
-                      title: packages.isEmpty ? l10n.unnamed : packages)),
+                builder: (_) => LicenseDetailPage(
+                  entry: entry,
+                  title: packages.isEmpty ? l10n.unnamed : packages,
+                ),
+              ),
             );
           },
           child: Card(
             elevation: 2,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
               child: Row(
@@ -899,18 +937,23 @@ class _ProgressiveSystemLicensesPageState
                   CircleAvatar(
                     backgroundColor: Theme.of(context).colorScheme.primary,
                     radius: 20,
-                    child: Text(initials,
-                        style: const TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.w600)),
+                    child: Text(
+                      initials,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(packages.isEmpty ? l10n.unnamed : packages,
-                            style:
-                                const TextStyle(fontWeight: FontWeight.w600)),
+                        Text(
+                          packages.isEmpty ? l10n.unnamed : packages,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
                         const SizedBox(height: 6),
                         Text(
                           preview.length > 140
@@ -919,11 +962,9 @@ class _ProgressiveSystemLicensesPageState
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                              color: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
-                                  ?.color
-                                  ?.withValues(alpha: 0.85)),
+                            color: Theme.of(context).textTheme.bodySmall?.color
+                                ?.withValues(alpha: 0.85),
+                          ),
                         ),
                       ],
                     ),
@@ -943,8 +984,11 @@ class _ProgressiveSystemLicensesPageState
 class LicenseDetailPage extends StatelessWidget {
   final LicenseEntry entry;
   final String title;
-  const LicenseDetailPage(
-      {super.key, required this.entry, required this.title});
+  const LicenseDetailPage({
+    super.key,
+    required this.entry,
+    required this.title,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -953,7 +997,9 @@ class LicenseDetailPage extends StatelessWidget {
       appBar: AppBar(title: Text(title)),
       body: FutureBuilder<String>(
         future: compute(
-            _joinParagraphs, entry.paragraphs.map((p) => p.text).toList()),
+          _joinParagraphs,
+          entry.paragraphs.map((p) => p.text).toList(),
+        ),
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
             return const Center(child: CircularProgressIndicator());

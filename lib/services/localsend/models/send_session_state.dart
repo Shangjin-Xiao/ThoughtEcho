@@ -72,10 +72,7 @@ class SendingTask {
   final int isolateIndex;
   final String taskId; // Changed to String to match isolate_actions.dart
 
-  SendingTask({
-    required this.isolateIndex,
-    required this.taskId,
-  });
+  SendingTask({required this.isolateIndex, required this.taskId});
 
   @override
   bool operator ==(Object other) {

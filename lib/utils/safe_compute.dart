@@ -28,10 +28,12 @@ class SafeCompute {
       AppLogger.d('开始执行Isolate操作: $operationName', source: 'SafeCompute');
 
       // 使用超时包装compute操作
-      final result =
-          await compute(callback, message).timeout(timeout, onTimeout: () {
-        throw TimeoutException('Isolate操作超时', timeout);
-      });
+      final result = await compute(callback, message).timeout(
+        timeout,
+        onTimeout: () {
+          throw TimeoutException('Isolate操作超时', timeout);
+        },
+      );
 
       AppLogger.d('Isolate操作完成: $operationName', source: 'SafeCompute');
       return result;
@@ -66,8 +68,10 @@ class SafeCompute {
   }) async {
     final concurrency = maxConcurrency ?? (kDebugMode ? 2 : 4); // 调试模式使用较少并发数
 
-    AppLogger.d('开始执行${operations.length}个并发Isolate操作，并发数: $concurrency',
-        source: 'SafeCompute');
+    AppLogger.d(
+      '开始执行${operations.length}个并发Isolate操作，并发数: $concurrency',
+      source: 'SafeCompute',
+    );
 
     final results = <R?>[];
 
@@ -75,13 +79,15 @@ class SafeCompute {
     for (int i = 0; i < operations.length; i += concurrency) {
       final batch = operations.skip(i).take(concurrency).toList();
 
-      final batchFutures = batch.map((op) => run(
-            op.callback,
-            op.message,
-            debugLabel: op.debugLabel,
-            timeout: timeout,
-            fallbackValue: op.fallbackValue,
-          ));
+      final batchFutures = batch.map(
+        (op) => run(
+          op.callback,
+          op.message,
+          debugLabel: op.debugLabel,
+          timeout: timeout,
+          fallbackValue: op.fallbackValue,
+        ),
+      );
 
       final batchResults = await Future.wait(batchFutures);
       results.addAll(batchResults);
@@ -93,8 +99,9 @@ class SafeCompute {
     }
 
     AppLogger.d(
-        '并发Isolate操作完成，成功: ${results.where((r) => r != null).length}/${operations.length}',
-        source: 'SafeCompute');
+      '并发Isolate操作完成，成功: ${results.where((r) => r != null).length}/${operations.length}',
+      source: 'SafeCompute',
+    );
 
     return results;
   }
@@ -115,8 +122,10 @@ class SafeCompute {
         debugName: debugName,
       );
 
-      AppLogger.d('创建Isolate成功: ${debugName ?? 'unnamed'}',
-          source: 'SafeCompute');
+      AppLogger.d(
+        '创建Isolate成功: ${debugName ?? 'unnamed'}',
+        source: 'SafeCompute',
+      );
 
       return SafeIsolate._(isolate, receivePort, debugName);
     } catch (e, s) {

@@ -11,12 +11,11 @@ enum ApiRoute {
   cancel('cancel'),
   show('show'),
   prepareDownload('prepare-download'),
-  download('download'),
-  ;
+  download('download');
 
   const ApiRoute(String path, [String? legacy])
-      : v1 = '$_basePath/v1/${legacy ?? path}',
-        v2 = '$_basePath/v2/$path';
+    : v1 = '$_basePath/v1/${legacy ?? path}',
+      v2 = '$_basePath/v2/$path';
 
   /// The server url for v1
   final String v1;

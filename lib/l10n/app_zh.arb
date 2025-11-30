@@ -49,6 +49,11 @@
   "onboardingUpdateSuccess": "心迹已成功更新到新版本\n数据已自动迁移，无需手动操作",
   "onboardingEnterApp": "进入应用",
   
+  "onboardingQuickTip1": "单击「每日一言」可复制内容",
+  "onboardingQuickTip2": "双击「每日一言」可快速添加到笔记",
+  "onboardingQuickTip3": "使用标签来组织您的笔记",
+  "onboardingQuickTip4": "支持全文搜索，快速找到目标内容",
+  
   "featureSmartNotes": "智能笔记",
   "featureSmartNotesDesc": "支持富文本编辑，自动记录时间、位置和天气",
   "featureDailyQuote": "每日一言",

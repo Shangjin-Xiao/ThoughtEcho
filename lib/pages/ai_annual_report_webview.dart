@@ -37,12 +37,13 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
-    );
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
 
     _animationController.forward();
   }
@@ -451,7 +452,8 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
       // 如果不是HTML格式，包装成HTML
       if (!widget.htmlContent.trim().toLowerCase().startsWith('<!doctype') &&
           !widget.htmlContent.trim().toLowerCase().startsWith('<html')) {
-        contentToWrite = '''
+        contentToWrite =
+            '''
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -514,8 +516,9 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
         if (contentToWrite.length < 8000) {
           // 限制Data URI长度避免问题
           final encodedHtml = Uri.encodeComponent(contentToWrite);
-          final dataUri =
-              Uri.parse('data:text/html;charset=utf-8,$encodedHtml');
+          final dataUri = Uri.parse(
+            'data:text/html;charset=utf-8,$encodedHtml',
+          );
 
           if (await canLaunchUrl(dataUri)) {
             await launchUrl(dataUri, mode: LaunchMode.externalApplication);
@@ -844,7 +847,8 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
       String contentToShare = widget.htmlContent;
       if (!widget.htmlContent.trim().toLowerCase().startsWith('<!doctype') &&
           !widget.htmlContent.trim().toLowerCase().startsWith('<html')) {
-        contentToShare = '''
+        contentToShare =
+            '''
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>

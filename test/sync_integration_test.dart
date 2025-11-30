@@ -68,10 +68,12 @@ void main() {
       );
 
       // Mock备份服务返回
-      when(mockBackupService.exportAllData(
-        includeMediaFiles: true,
-        onProgress: anyNamed('onProgress'),
-      )).thenAnswer((_) async {
+      when(
+        mockBackupService.exportAllData(
+          includeMediaFiles: true,
+          onProgress: anyNamed('onProgress'),
+        ),
+      ).thenAnswer((_) async {
         return '/tmp/test_backup.zip';
       });
 
@@ -84,10 +86,12 @@ void main() {
       }
 
       // 验证备份服务被调用
-      verify(mockBackupService.exportAllData(
-        includeMediaFiles: true,
-        onProgress: anyNamed('onProgress'),
-      )).called(1);
+      verify(
+        mockBackupService.exportAllData(
+          includeMediaFiles: true,
+          onProgress: anyNamed('onProgress'),
+        ),
+      ).called(1);
     });
 
     test('处理同步包流程测试', () async {
@@ -95,32 +99,36 @@ void main() {
       const testBackupPath = '/tmp/test_backup.zip';
 
       // Mock数据库服务
-      when(mockDatabaseService.getAllQuotes()).thenAnswer((_) async => [
-            const Quote(
-              id: 'quote1',
-              content: 'Test quote 1',
-              date: '2024-01-01T00:00:00.000Z',
-              categoryId: 'cat1',
-              tagIds: [],
-            ),
-            const Quote(
-              id: 'quote2',
-              content: 'Test quote 1', // 重复内容
-              // 使用固定时间避免时间依赖 (早于 quote1 的 2024-01-01T00:00:00.000Z)
-              date: '2023-12-31T23:59:59.000Z',
-              categoryId: 'cat1',
-              tagIds: [],
-            ),
-          ]);
+      when(mockDatabaseService.getAllQuotes()).thenAnswer(
+        (_) async => [
+          const Quote(
+            id: 'quote1',
+            content: 'Test quote 1',
+            date: '2024-01-01T00:00:00.000Z',
+            categoryId: 'cat1',
+            tagIds: [],
+          ),
+          const Quote(
+            id: 'quote2',
+            content: 'Test quote 1', // 重复内容
+            // 使用固定时间避免时间依赖 (早于 quote1 的 2024-01-01T00:00:00.000Z)
+            date: '2023-12-31T23:59:59.000Z',
+            categoryId: 'cat1',
+            tagIds: [],
+          ),
+        ],
+      );
 
       when(mockDatabaseService.deleteQuote(any)).thenAnswer((_) async {});
 
       // Mock备份服务
-      when(mockBackupService.importData(
-        testBackupPath,
-        clearExisting: false,
-        onProgress: anyNamed('onProgress'),
-      )).thenAnswer((_) async {
+      when(
+        mockBackupService.importData(
+          testBackupPath,
+          clearExisting: false,
+          onProgress: anyNamed('onProgress'),
+        ),
+      ).thenAnswer((_) async {
         return null;
       });
 
@@ -128,11 +136,13 @@ void main() {
       await syncService.processSyncPackage(testBackupPath);
 
       // 验证导入被调用
-      verify(mockBackupService.importData(
-        testBackupPath,
-        clearExisting: false,
-        onProgress: anyNamed('onProgress'),
-      )).called(1);
+      verify(
+        mockBackupService.importData(
+          testBackupPath,
+          clearExisting: false,
+          onProgress: anyNamed('onProgress'),
+        ),
+      ).called(1);
 
       // 验证重复笔记检测被调用
       verify(mockDatabaseService.getAllQuotes()).called(1);
@@ -143,10 +153,12 @@ void main() {
 
     test('媒体文件同步支持测试', () async {
       // 验证备份时包含媒体文件
-      when(mockBackupService.exportAllData(
-        includeMediaFiles: true,
-        onProgress: anyNamed('onProgress'),
-      )).thenAnswer((_) async => '/tmp/backup_with_media.zip');
+      when(
+        mockBackupService.exportAllData(
+          includeMediaFiles: true,
+          onProgress: anyNamed('onProgress'),
+        ),
+      ).thenAnswer((_) async => '/tmp/backup_with_media.zip');
 
       final testDevice = Device(
         signalingId: null,
@@ -169,18 +181,22 @@ void main() {
       }
 
       // 验证includeMediaFiles参数被正确传递
-      verify(mockBackupService.exportAllData(
-        includeMediaFiles: true,
-        onProgress: anyNamed('onProgress'),
-      )).called(1);
+      verify(
+        mockBackupService.exportAllData(
+          includeMediaFiles: true,
+          onProgress: anyNamed('onProgress'),
+        ),
+      ).called(1);
     });
 
     test('错误处理测试', () async {
       // 测试备份失败的情况
-      when(mockBackupService.exportAllData(
-        includeMediaFiles: true,
-        onProgress: anyNamed('onProgress'),
-      )).thenThrow(Exception('备份失败'));
+      when(
+        mockBackupService.exportAllData(
+          includeMediaFiles: true,
+          onProgress: anyNamed('onProgress'),
+        ),
+      ).thenThrow(Exception('备份失败'));
 
       final testDevice = Device(
         signalingId: null,
@@ -197,10 +213,7 @@ void main() {
       );
 
       // 应该抛出异常
-      expect(
-        () => syncService.createSyncPackage(testDevice),
-        throwsException,
-      );
+      expect(() => syncService.createSyncPackage(testDevice), throwsException);
     });
 
     test('设备类型转换测试', () {

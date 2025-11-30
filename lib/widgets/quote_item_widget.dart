@@ -71,10 +71,7 @@ class QuoteItemWidget extends StatefulWidget {
 
   /// 获取折叠缓存当前状态，便于调试观察命中率。
   static Map<String, int> getCacheStats() {
-    return {
-      'cacheSize': _expansionCache.length,
-      'cacheHits': _cacheHitCount,
-    };
+    return {'cacheSize': _expansionCache.length, 'cacheHits': _cacheHitCount};
   }
 
   /// 测试辅助方法，等价于 [clearExpansionCache]。
@@ -130,26 +127,34 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
 
     _scaleAnimation = TweenSequence<double>([
       TweenSequenceItem<double>(
-        tween: Tween<double>(begin: 1.0, end: 0.99)
-            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        tween: Tween<double>(
+          begin: 1.0,
+          end: 0.99,
+        ).chain(CurveTween(curve: Curves.easeOutCubic)),
         weight: 55,
       ),
       TweenSequenceItem<double>(
-        tween: Tween<double>(begin: 0.99, end: 1.0)
-            .chain(CurveTween(curve: Curves.easeOutBack)),
+        tween: Tween<double>(
+          begin: 0.99,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeOutBack)),
         weight: 45,
       ),
     ]).animate(_doubleTapController);
 
     _highlightProgress = TweenSequence<double>([
       TweenSequenceItem<double>(
-        tween: Tween<double>(begin: 0.0, end: 1.0)
-            .chain(CurveTween(curve: Curves.easeOutCubic)),
+        tween: Tween<double>(
+          begin: 0.0,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeOutCubic)),
         weight: 60,
       ),
       TweenSequenceItem<double>(
-        tween: Tween<double>(begin: 1.0, end: 0.0)
-            .chain(CurveTween(curve: Curves.easeOutQuad)),
+        tween: Tween<double>(
+          begin: 1.0,
+          end: 0.0,
+        ).chain(CurveTween(curve: Curves.easeOutQuad)),
         weight: 40,
       ),
     ]).animate(_doubleTapController);
@@ -165,7 +170,9 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
 
   /// 对标签ID列表进行排序，优先显示匹配筛选条件的标签
   List<String> _getSortedTagIds(
-      List<String> tagIds, List<String> selectedTagIds) {
+    List<String> tagIds,
+    List<String> selectedTagIds,
+  ) {
     if (selectedTagIds.isEmpty) {
       // 没有筛选条件时，按原顺序返回
       return tagIds;
@@ -312,22 +319,22 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         if (quote.hasLocation) ...[
-                          Icon(
-                            Icons.location_on,
-                            size: 14,
-                            color: iconColor,
-                          ),
+                          Icon(Icons.location_on, size: 14, color: iconColor),
                           const SizedBox(width: 2),
                           Text(
                             // 优先显示文字位置，没有文字位置时显示坐标
                             quote.location != null
                                 ? (quote.location!.split(',').length >= 3
-                                    ? (quote.location!.split(',').length >= 4
-                                        ? '${quote.location!.split(',')[2]}·${quote.location!.split(',')[3]}' // 显示 "城市·区县"
-                                        : quote.location!.split(',')[2]) // 只有城市
-                                    : quote.location!)
+                                      ? (quote.location!.split(',').length >= 4
+                                            ? '${quote.location!.split(',')[2]}·${quote.location!.split(',')[3]}' // 显示 "城市·区县"
+                                            : quote.location!.split(
+                                                ',',
+                                              )[2]) // 只有城市
+                                      : quote.location!)
                                 : LocationService.formatCoordinates(
-                                    quote.latitude, quote.longitude),
+                                    quote.latitude,
+                                    quote.longitude,
+                                  ),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: secondaryTextColor,
                               fontSize: 12,
@@ -359,7 +366,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
 
             // 笔记内容 - 支持双击展开/折叠
             GestureDetector(
-              key: widget.foldToggleGuideKey ??
+              key:
+                  widget.foldToggleGuideKey ??
                   const ValueKey('quote_item.double_tap_region'),
               behavior: HitTestBehavior.translucent,
               onDoubleTap: _needsExpansion(quote)
@@ -383,8 +391,9 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                         builder: (context, _) {
                           final highlightOpacity = _highlightProgress.value;
                           final brightness = innerTheme.brightness;
-                          final overlayStrength =
-                              brightness == Brightness.dark ? 0.12 : 0.05;
+                          final overlayStrength = brightness == Brightness.dark
+                              ? 0.12
+                              : 0.05;
                           final overlayColor = Colors.white.withValues(
                             alpha: overlayStrength * highlightOpacity,
                           );
@@ -401,21 +410,22 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                   switchOutCurve: Curves.easeIn,
                                   layoutBuilder:
                                       (currentChild, previousChildren) => Stack(
-                                    clipBehavior: Clip.none,
-                                    children: [
-                                      ...previousChildren,
-                                      if (currentChild != null) currentChild,
-                                    ],
-                                  ),
+                                        clipBehavior: Clip.none,
+                                        children: [
+                                          ...previousChildren,
+                                          if (currentChild != null)
+                                            currentChild,
+                                        ],
+                                      ),
                                   child: KeyedSubtree(
                                     key: ValueKey<bool>(showFullContent),
                                     child: QuoteContent(
                                       quote: quote,
                                       style: innerTheme.textTheme.bodyLarge
                                           ?.copyWith(
-                                        color: primaryTextColor,
-                                        height: 1.5,
-                                      ),
+                                            color: primaryTextColor,
+                                            height: 1.5,
+                                          ),
                                       showFullContent: showFullContent,
                                     ),
                                   ),
@@ -425,7 +435,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                     child: IgnorePointer(
                                       child: DecoratedBox(
                                         key: const ValueKey(
-                                            'quote_item.double_tap_overlay'),
+                                          'quote_item.double_tap_overlay',
+                                        ),
                                         decoration: BoxDecoration(
                                           color: overlayColor,
                                         ),
@@ -458,55 +469,66 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                                           .bottomCenter,
                                                       colors: [
                                                         innerTheme
-                                                            .colorScheme.surface
+                                                            .colorScheme
+                                                            .surface
                                                             .withValues(
-                                                                alpha: 0.0),
+                                                              alpha: 0.0,
+                                                            ),
                                                         innerTheme
-                                                            .colorScheme.surface
+                                                            .colorScheme
+                                                            .surface
                                                             .withValues(
-                                                                alpha: 0.08),
+                                                              alpha: 0.08,
+                                                            ),
                                                         innerTheme
-                                                            .colorScheme.surface
+                                                            .colorScheme
+                                                            .surface
                                                             .withValues(
-                                                                alpha: 0.18),
+                                                              alpha: 0.18,
+                                                            ),
                                                       ],
                                                       stops: const [
                                                         0.0,
                                                         0.4,
-                                                        1.0
+                                                        1.0,
                                                       ],
                                                     ),
                                                   ),
                                                   alignment: Alignment.center,
                                                   child: Container(
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                      horizontal: 8,
-                                                      vertical: 2,
-                                                    ),
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 8,
+                                                          vertical: 2,
+                                                        ),
                                                     decoration: BoxDecoration(
                                                       color: innerTheme
-                                                          .colorScheme.surface
+                                                          .colorScheme
+                                                          .surface
                                                           .withValues(
-                                                              alpha: 0.35),
+                                                            alpha: 0.35,
+                                                          ),
                                                       borderRadius:
                                                           BorderRadius.circular(
-                                                              12),
+                                                            12,
+                                                          ),
                                                     ),
                                                     child: Text(
                                                       l10n.doubleTapToViewFull,
                                                       style: innerTheme
-                                                          .textTheme.bodySmall
+                                                          .textTheme
+                                                          .bodySmall
                                                           ?.copyWith(
-                                                        color: innerTheme
-                                                            .colorScheme
-                                                            .onSurface
-                                                            .withValues(
-                                                                alpha: 0.65),
-                                                        fontSize: 11,
-                                                        fontStyle:
-                                                            FontStyle.italic,
-                                                      ),
+                                                            color: innerTheme
+                                                                .colorScheme
+                                                                .onSurface
+                                                                .withValues(
+                                                                  alpha: 0.65,
+                                                                ),
+                                                            fontSize: 11,
+                                                            fontStyle: FontStyle
+                                                                .italic,
+                                                          ),
                                                     ),
                                                   ),
                                                 ),
@@ -563,11 +585,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
               child: Row(
                 children: [
                   if (quote.tagIds.isNotEmpty) ...[
-                    Icon(
-                      Icons.label_outline,
-                      size: 16,
-                      color: iconColor,
-                    ),
+                    Icon(Icons.label_outline, size: 16, color: iconColor),
                     const SizedBox(width: 6),
                     Expanded(
                       child: SizedBox(
@@ -576,7 +594,9 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                           builder: (context) {
                             // 对标签进行排序：优先显示匹配筛选条件的标签
                             final sortedTagIds = _getSortedTagIds(
-                                quote.tagIds, widget.selectedTagIds);
+                              quote.tagIds,
+                              widget.selectedTagIds,
+                            );
 
                             return ListView.builder(
                               scrollDirection: Axis.horizontal,
@@ -587,37 +607,47 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                 final tag = widget.tags.firstWhere(
                                   (t) => t.id == tagId,
                                   orElse: () => NoteCategory(
-                                      id: tagId, name: l10n.unknownTag),
+                                    id: tagId,
+                                    name: l10n.unknownTag,
+                                  ),
                                 );
 
                                 // 判断是否是筛选条件中的标签
-                                final isFilteredTag =
-                                    widget.selectedTagIds.contains(tagId);
+                                final isFilteredTag = widget.selectedTagIds
+                                    .contains(tagId);
 
                                 return Container(
                                   margin: EdgeInsets.only(
-                                    right:
-                                        index < sortedTagIds.length - 1 ? 8 : 0,
+                                    right: index < sortedTagIds.length - 1
+                                        ? 8
+                                        : 0,
                                   ),
                                   child: widget.tagBuilder != null
                                       ? widget.tagBuilder!(tag)
                                       : Container(
                                           padding: const EdgeInsets.symmetric(
-                                              horizontal: 10, vertical: 4),
+                                            horizontal: 10,
+                                            vertical: 4,
+                                          ),
                                           decoration: BoxDecoration(
                                             color: isFilteredTag
                                                 ? baseContentColor.withValues(
-                                                    alpha: 0.15)
+                                                    alpha: 0.15,
+                                                  )
                                                 : baseContentColor.withValues(
-                                                    alpha: 0.08),
-                                            borderRadius:
-                                                BorderRadius.circular(14),
+                                                    alpha: 0.08,
+                                                  ),
+                                            borderRadius: BorderRadius.circular(
+                                              14,
+                                            ),
                                             border: Border.all(
                                               color: isFilteredTag
                                                   ? baseContentColor.withValues(
-                                                      alpha: 0.4)
+                                                      alpha: 0.4,
+                                                    )
                                                   : baseContentColor.withValues(
-                                                      alpha: 0.15),
+                                                      alpha: 0.15,
+                                                    ),
                                               width: isFilteredTag ? 1.0 : 0.5,
                                             ),
                                           ),
@@ -627,18 +657,22 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                               if (tag.iconName?.isNotEmpty ==
                                                   true) ...[
                                                 if (IconUtils.isEmoji(
-                                                    tag.iconName!)) ...[
+                                                  tag.iconName!,
+                                                )) ...[
                                                   Text(
                                                     IconUtils.getDisplayIcon(
-                                                        tag.iconName!),
+                                                      tag.iconName!,
+                                                    ),
                                                     style: const TextStyle(
-                                                        fontSize: 12),
+                                                      fontSize: 12,
+                                                    ),
                                                   ),
                                                   const SizedBox(width: 3),
                                                 ] else ...[
                                                   Icon(
                                                     IconUtils.getIconData(
-                                                        tag.iconName!),
+                                                      tag.iconName!,
+                                                    ),
                                                     size: 12,
                                                     color: secondaryTextColor,
                                                   ),
@@ -649,12 +683,12 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                                 tag.name,
                                                 style: theme.textTheme.bodySmall
                                                     ?.copyWith(
-                                                  color: secondaryTextColor,
-                                                  fontSize: 11,
-                                                  fontWeight: isFilteredTag
-                                                      ? FontWeight.w600
-                                                      : FontWeight.w500,
-                                                ),
+                                                      color: secondaryTextColor,
+                                                      fontSize: 11,
+                                                      fontWeight: isFilteredTag
+                                                          ? FontWeight.w600
+                                                          : FontWeight.w500,
+                                                    ),
                                               ),
                                             ],
                                           ),
@@ -701,25 +735,30 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                       color: Colors.red.shade600,
                                       borderRadius: BorderRadius.circular(10),
                                       border: Border.all(
-                                        color: (quote.colorHex == null ||
+                                        color:
+                                            (quote.colorHex == null ||
                                                 quote.colorHex!.isEmpty)
-                                            ? theme.colorScheme
-                                                .surfaceContainerLowest
+                                            ? theme
+                                                  .colorScheme
+                                                  .surfaceContainerLowest
                                             : cardColor,
                                         width: 1.5,
                                       ),
                                     ),
                                     constraints: const BoxConstraints(
-                                        minWidth: 16, minHeight: 16),
+                                      minWidth: 16,
+                                      minHeight: 16,
+                                    ),
                                     child: Text(
                                       quote.favoriteCount > 99
                                           ? '99+'
                                           : '${quote.favoriteCount}',
                                       style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.bold,
-                                          height: 1.0),
+                                        color: Colors.white,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.bold,
+                                        height: 1.0,
+                                      ),
                                       textAlign: TextAlign.center,
                                     ),
                                   ),
@@ -734,12 +773,10 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
 
                   // 更多操作按钮
                   PopupMenuButton<String>(
-                    icon: Icon(
-                      Icons.more_vert,
-                      color: iconColor,
-                    ),
+                    icon: Icon(Icons.more_vert, color: iconColor),
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     onSelected: (value) {
                       if (value == 'ask') {
                         widget.onAskAI();
@@ -766,8 +803,10 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                         value: 'ask',
                         child: Row(
                           children: [
-                            Icon(Icons.question_answer,
-                                color: theme.colorScheme.primary),
+                            Icon(
+                              Icons.question_answer,
+                              color: theme.colorScheme.primary,
+                            ),
                             const SizedBox(width: 8),
                             Text(l10n.askAIMenu),
                           ],
@@ -778,8 +817,10 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                           value: 'generate_card',
                           child: Row(
                             children: [
-                              Icon(Icons.auto_awesome,
-                                  color: theme.colorScheme.primary),
+                              Icon(
+                                Icons.auto_awesome,
+                                color: theme.colorScheme.primary,
+                              ),
                               const SizedBox(width: 8),
                               Text(l10n.generateCardShareMenu),
                             ],
@@ -791,9 +832,10 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                           children: [
                             const Icon(Icons.delete, color: Colors.red),
                             const SizedBox(width: 8),
-                            Text(l10n.deleteNoteMenu,
-                                style:
-                                    TextStyle(color: theme.colorScheme.error)),
+                            Text(
+                              l10n.deleteNoteMenu,
+                              style: TextStyle(color: theme.colorScheme.error),
+                            ),
                           ],
                         ),
                       ),

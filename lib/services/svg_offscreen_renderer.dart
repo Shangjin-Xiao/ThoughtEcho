@@ -28,19 +28,24 @@ class SvgOffscreenRenderer {
     // 检查context是否有效
     if (context is Element) {
       if (!context.mounted) {
-        AppLogger.w('BuildContext已失效（Element未mounted）',
-            source: 'SvgOffscreenRenderer');
+        AppLogger.w(
+          'BuildContext已失效（Element未mounted）',
+          source: 'SvgOffscreenRenderer',
+        );
         throw StateError('BuildContext已失效（未mounted），无法执行离屏渲染');
       }
     }
 
     // 使用rootOverlay=false，尝试获取最近的Overlay
-    var overlayState = Overlay.maybeOf(context, rootOverlay: false) ??
+    var overlayState =
+        Overlay.maybeOf(context, rootOverlay: false) ??
         Overlay.maybeOf(context, rootOverlay: true);
 
     if (overlayState == null) {
-      AppLogger.w('未找到Overlay（rootOverlay=false和true都尝试过）',
-          source: 'SvgOffscreenRenderer');
+      AppLogger.w(
+        '未找到Overlay（rootOverlay=false和true都尝试过）',
+        source: 'SvgOffscreenRenderer',
+      );
       throw StateError('未找到 Overlay，无法执行离屏渲染');
     }
 
@@ -59,10 +64,7 @@ class SvgOffscreenRenderer {
 
     final boundaryKey = GlobalKey();
 
-    AppLogger.d(
-      'SVG渲染目标尺寸: ${width}x$height',
-      source: 'SvgOffscreenRenderer',
-    );
+    AppLogger.d('SVG渲染目标尺寸: ${width}x$height', source: 'SvgOffscreenRenderer');
 
     final boxFit = _mapFit(mode);
 
@@ -134,10 +136,7 @@ class SvgOffscreenRenderer {
         );
 
         if (themeData != null) {
-          overlayChild = Theme(
-            data: themeData,
-            child: overlayChild,
-          );
+          overlayChild = Theme(data: themeData, child: overlayChild);
         }
 
         overlayChild = Directionality(
@@ -146,10 +145,7 @@ class SvgOffscreenRenderer {
         );
 
         if (mediaQueryData != null) {
-          overlayChild = MediaQuery(
-            data: mediaQueryData,
-            child: overlayChild,
-          );
+          overlayChild = MediaQuery(data: mediaQueryData, child: overlayChild);
         }
 
         return overlayChild;
@@ -176,8 +172,9 @@ class SvgOffscreenRenderer {
       // 额外延迟确保渲染管线完成
       await Future.delayed(const Duration(milliseconds: 300));
 
-      final boundary = boundaryKey.currentContext?.findRenderObject()
-          as RenderRepaintBoundary?;
+      final boundary =
+          boundaryKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
       if (boundary == null) {
         throw StateError('未获取到 RenderRepaintBoundary，SVG可能未完成渲染');
       }
@@ -185,20 +182,25 @@ class SvgOffscreenRenderer {
       // 验证boundary已经完成布局
       if (!boundary.hasSize || boundary.size.isEmpty) {
         AppLogger.w(
-            'RenderRepaintBoundary尺寸异常: ${boundary.hasSize ? boundary.size : "无尺寸"}',
-            source: 'SvgOffscreenRenderer');
+          'RenderRepaintBoundary尺寸异常: ${boundary.hasSize ? boundary.size : "无尺寸"}',
+          source: 'SvgOffscreenRenderer',
+        );
         throw StateError('RenderRepaintBoundary尺寸异常，SVG可能未完成布局');
       }
 
-      AppLogger.d('RenderRepaintBoundary已就绪: ${boundary.size}',
-          source: 'SvgOffscreenRenderer');
+      AppLogger.d(
+        'RenderRepaintBoundary已就绪: ${boundary.size}',
+        source: 'SvgOffscreenRenderer',
+      );
 
       // 根据设备像素比提升导出清晰度，同时限制最大像素比，防止内存暴涨
       double effectivePixelRatio = scaleFactor * preComputedDevicePixelRatio;
       // 限制最大像素比（4.0 已足够大部分需求，避免OOM）
       if (effectivePixelRatio > 4.0) {
-        AppLogger.w('像素比过高(${effectivePixelRatio.toStringAsFixed(1)})，限制为4.0',
-            source: 'SvgOffscreenRenderer');
+        AppLogger.w(
+          '像素比过高(${effectivePixelRatio.toStringAsFixed(1)})，限制为4.0',
+          source: 'SvgOffscreenRenderer',
+        );
         effectivePixelRatio = 4.0;
       }
 
@@ -222,8 +224,12 @@ class SvgOffscreenRenderer {
       return bytes;
     } catch (e, st) {
       cleanup();
-      AppLogger.e('离屏渲染失败: $e',
-          error: e, stackTrace: st, source: 'SvgOffscreenRenderer');
+      AppLogger.e(
+        '离屏渲染失败: $e',
+        error: e,
+        stackTrace: st,
+        source: 'SvgOffscreenRenderer',
+      );
       rethrow;
     }
   }

@@ -137,12 +137,13 @@ class StorageManagementService {
 
       // 在后台 isolate 中执行耗时的文件统计
       final stats = await compute(
-          _computeStorageStats,
-          _StorageStatsParams(
-            appDirPath: appDir.path,
-            tempDirPath: tempDir.path,
-            mainDbPath: mainDbPath,
-          ));
+        _computeStorageStats,
+        _StorageStatsParams(
+          appDirPath: appDir.path,
+          tempDirPath: tempDir.path,
+          mainDbPath: mainDbPath,
+        ),
+      );
 
       logDebug('存储统计完成: 总占用 ${StorageStats.formatBytes(stats.totalSize)}');
       return stats;
@@ -154,7 +155,8 @@ class StorageManagementService {
 
   /// 在后台 isolate 中计算存储统计的入口函数
   static Future<StorageStats> _computeStorageStats(
-      _StorageStatsParams params) async {
+    _StorageStatsParams params,
+  ) async {
     // 并行获取各项统计
     final results = await Future.wait([
       _getMainDatabaseSizeIsolate(params.mainDbPath),
@@ -170,8 +172,9 @@ class StorageManagementService {
       aiDatabaseSize: results[2] as int,
       mediaFilesSize: (results[3] as Map<String, dynamic>)['total'] as int,
       cacheSize: results[4] as int,
-      mediaBreakdown: (results[3] as Map<String, dynamic>)['breakdown']
-          as MediaFilesBreakdown,
+      mediaBreakdown:
+          (results[3] as Map<String, dynamic>)['breakdown']
+              as MediaFilesBreakdown,
     );
   }
 
@@ -213,7 +216,8 @@ class StorageManagementService {
 
   /// Isolate 版本：获取媒体文件大小
   static Future<Map<String, dynamic>> _getMediaFilesSizeIsolate(
-      String appDirPath) async {
+    String appDirPath,
+  ) async {
     try {
       final mediaDir = Directory(path.join(appDirPath, _mediaFolder));
 
@@ -254,10 +258,7 @@ class StorageManagementService {
       final totalSize =
           breakdown.imagesSize + breakdown.videosSize + breakdown.audiosSize;
 
-      return {
-        'total': totalSize,
-        'breakdown': breakdown,
-      };
+      return {'total': totalSize, 'breakdown': breakdown};
     } catch (e) {
       return {
         'total': 0,
@@ -275,7 +276,8 @@ class StorageManagementService {
 
   /// Isolate 版本：获取目录大小（无需 yield，因为在独立 isolate 中）
   static Future<Map<String, int>> _getDirectorySizeIsolate(
-      String dirPath) async {
+    String dirPath,
+  ) async {
     try {
       final dir = Directory(dirPath);
       if (!await dir.exists()) {
@@ -410,7 +412,8 @@ class StorageManagementService {
               (await _getDirectorySize(tempDir.path))['size'] as int;
           clearedBytes += (beforeSize - afterSize);
           logDebug(
-              '临时文件已清理: ${StorageStats.formatBytes(beforeSize - afterSize)}');
+            '临时文件已清理: ${StorageStats.formatBytes(beforeSize - afterSize)}',
+          );
         } catch (e) {
           logDebug('清理临时文件失败: $e');
         }

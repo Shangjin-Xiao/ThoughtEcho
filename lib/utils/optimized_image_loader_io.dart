@@ -43,14 +43,13 @@ ImageProvider? createOptimizedImageProvider(
 }
 
 ImageProvider _wrapResize(
-    ImageProvider provider, int? cacheWidth, int? cacheHeight) {
+  ImageProvider provider,
+  int? cacheWidth,
+  int? cacheHeight,
+) {
   if (cacheWidth == null && cacheHeight == null) {
     return provider;
   }
 
-  return ResizeImage(
-    provider,
-    width: cacheWidth,
-    height: cacheHeight,
-  );
+  return ResizeImage(provider, width: cacheWidth, height: cacheHeight);
 }

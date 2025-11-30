@@ -75,8 +75,9 @@ class LocalSendProvider {
       // Send prepare upload request with timeout and retry
       final url = ApiRoute.prepareUpload.target(target);
       logInfo(
-          'send_prepare target=${target.ip}:${target.port} url=$url session=$sessionId',
-          source: 'LocalSend');
+        'send_prepare target=${target.ip}:${target.port} url=$url session=$sessionId',
+        source: 'LocalSend',
+      );
 
       final client = http.Client();
       try {
@@ -112,15 +113,19 @@ class LocalSendProvider {
               .timeout(const Duration(seconds: 30));
         }
 
-        logDebug('prepare_resp status=${response.statusCode}',
-            source: 'LocalSend');
-        final previewLen =
-            response.body.length < 200 ? response.body.length : 200;
+        logDebug(
+          'prepare_resp status=${response.statusCode}',
+          source: 'LocalSend',
+        );
+        final previewLen = response.body.length < 200
+            ? response.body.length
+            : 200;
         debugPrint('响应内容: ${response.body.substring(0, previewLen)}...');
 
         if (response.statusCode == 200) {
           final responseDto = PrepareUploadResponseDto.fromJson(
-              jsonDecode(response.body) as Map<String, dynamic>);
+            jsonDecode(response.body) as Map<String, dynamic>,
+          );
 
           // Update session with response
           _sessions[sessionId] = session.copyWith(
@@ -135,7 +140,8 @@ class LocalSendProvider {
           return sessionId;
         } else {
           throw Exception(
-              'Failed to prepare upload: ${response.statusCode} - ${response.body}');
+            'Failed to prepare upload: ${response.statusCode} - ${response.body}',
+          );
         }
       } finally {
         client.close();
@@ -150,8 +156,10 @@ class LocalSendProvider {
   }
 
   /// Upload files for a session with enhanced error handling and progress tracking
-  Future<void> _uploadFiles(String sessionId,
-      {void Function(int, int)? onProgress}) async {
+  Future<void> _uploadFiles(
+    String sessionId, {
+    void Function(int, int)? onProgress,
+  }) async {
     final session = _sessions[sessionId];
     if (session == null) return;
 
@@ -199,9 +207,7 @@ class LocalSendProvider {
       }
 
       // Mark as completed
-      _sessions[sessionId] = session.copyWith(
-        status: SessionStatus.finished,
-      );
+      _sessions[sessionId] = session.copyWith(status: SessionStatus.finished);
       debugPrint('所有文件上传完成: $sessionId');
     } catch (e) {
       debugPrint('文件上传失败: $e');
@@ -215,21 +221,30 @@ class LocalSendProvider {
 
   /// Upload a single file with retry mechanism
   Future<void> _uploadSingleFile(
-      SendSession session, String fileId, String token, File file, int fileSize,
-      {void Function(int chunkBytes)? onChunk}) async {
+    SendSession session,
+    String fileId,
+    String token,
+    File file,
+    int fileSize, {
+    void Function(int chunkBytes)? onChunk,
+  }) async {
     const maxRetries = 3;
     int attempt = 0;
 
     while (attempt < maxRetries) {
       try {
         // 构建带查询参数的URL
-        var url = ApiRoute.upload.target(session.target, query: {
-          'sessionId': session.remoteSessionId!,
-          'fileId': fileId,
-          'token': token,
-        });
+        var url = ApiRoute.upload.target(
+          session.target,
+          query: {
+            'sessionId': session.remoteSessionId!,
+            'fileId': fileId,
+            'token': token,
+          },
+        );
         debugPrint(
-            '上传文件到: $url (文件: ${file.path}, 尝试: ${attempt + 1}/$maxRetries)');
+          '上传文件到: $url (文件: ${file.path}, 尝试: ${attempt + 1}/$maxRetries)',
+        );
 
         final request = http.MultipartRequest('POST', Uri.parse(url));
         request.headers['User-Agent'] = 'ThoughtEcho/1.0';
@@ -237,10 +252,11 @@ class LocalSendProvider {
         // 构建带进度的流
         final stream = file.openRead().transform<List<int>>(
           StreamTransformer.fromHandlers(
-              handleData: (List<int> data, EventSink<List<int>> sink) {
-            sink.add(data);
-            onChunk?.call(data.length);
-          }),
+            handleData: (List<int> data, EventSink<List<int>> sink) {
+              sink.add(data);
+              onChunk?.call(data.length);
+            },
+          ),
         );
         final multipart = http.MultipartFile(
           'file',
@@ -251,52 +267,57 @@ class LocalSendProvider {
         request.files.add(multipart);
 
         // Send request with timeout
-        final response =
-            await request.send().timeout(const Duration(minutes: 5));
+        final response = await request.send().timeout(
+          const Duration(minutes: 5),
+        );
 
-        logDebug('upload_resp status=${response.statusCode} file=${file.path}',
-            source: 'LocalSend');
+        logDebug(
+          'upload_resp status=${response.statusCode} file=${file.path}',
+          source: 'LocalSend',
+        );
 
         if (response.statusCode == 404) {
           // Try legacy v1 route if needed
-          url = '${ApiRoute.upload.targetRaw(
-            session.target.ip ?? '127.0.0.1',
-            session.target.port,
-            session.target.https,
-            '1.0',
-          )}?sessionId=${Uri.encodeQueryComponent(session.remoteSessionId!)}&fileId=$fileId&token=$token';
+          url =
+              '${ApiRoute.upload.targetRaw(session.target.ip ?? '127.0.0.1', session.target.port, session.target.https, '1.0')}?sessionId=${Uri.encodeQueryComponent(session.remoteSessionId!)}&fileId=$fileId&token=$token';
           debugPrint('v2上传返回404，尝试v1路由: $url');
           final legacyReq = http.MultipartRequest('POST', Uri.parse(url));
           legacyReq.headers['User-Agent'] = 'ThoughtEcho/1.0';
           final legacyStream = file.openRead().transform<List<int>>(
             StreamTransformer.fromHandlers(
-                handleData: (List<int> data, EventSink<List<int>> sink) {
-              sink.add(data);
-              onChunk?.call(data.length);
-            }),
+              handleData: (List<int> data, EventSink<List<int>> sink) {
+                sink.add(data);
+                onChunk?.call(data.length);
+              },
+            ),
           );
-          legacyReq.files.add(http.MultipartFile(
-            'file',
-            legacyStream,
-            fileSize,
-            filename: file.path.split('/').last,
-          ));
-          final legacyResp =
-              await legacyReq.send().timeout(const Duration(minutes: 5));
+          legacyReq.files.add(
+            http.MultipartFile(
+              'file',
+              legacyStream,
+              fileSize,
+              filename: file.path.split('/').last,
+            ),
+          );
+          final legacyResp = await legacyReq.send().timeout(
+            const Duration(minutes: 5),
+          );
           if (legacyResp.statusCode == 200) {
             debugPrint('文件上传成功(v1): ${file.path}');
             return;
           } else {
             final respBody = await legacyResp.stream.bytesToString();
             throw Exception(
-                'Legacy upload failed with status ${legacyResp.statusCode}: $respBody');
+              'Legacy upload failed with status ${legacyResp.statusCode}: $respBody',
+            );
           }
         }
 
         if (response.statusCode == 200) {
           logInfo(
-              'upload_success attempt=${attempt + 1} file=${file.path} size=$fileSize',
-              source: 'LocalSend');
+            'upload_success attempt=${attempt + 1} file=${file.path} size=$fileSize',
+            source: 'LocalSend',
+          );
           return; // Success
         }
         final responseBody = await response.stream.bytesToString();
@@ -308,21 +329,28 @@ class LocalSendProvider {
         throw Exception('Retriable status $status: $responseBody');
       } catch (e) {
         attempt++;
-        logWarning('upload_retry attempt=$attempt file=${file.path} error=$e',
-            source: 'LocalSend');
+        logWarning(
+          'upload_retry attempt=$attempt file=${file.path} error=$e',
+          source: 'LocalSend',
+        );
 
         if (attempt >= maxRetries) {
-          logError('upload_give_up file=${file.path} error=$e',
-              source: 'LocalSend');
+          logError(
+            'upload_give_up file=${file.path} error=$e',
+            source: 'LocalSend',
+          );
           throw Exception(
-              'Failed to upload file after $maxRetries attempts: $e');
+            'Failed to upload file after $maxRetries attempts: $e',
+          );
         }
 
         // Exponential backoff (cap 8s)
         final delay = Duration(seconds: 1 << (attempt - 1));
-        await Future.delayed(delay > const Duration(seconds: 8)
-            ? const Duration(seconds: 8)
-            : delay);
+        await Future.delayed(
+          delay > const Duration(seconds: 8)
+              ? const Duration(seconds: 8)
+              : delay,
+        );
       }
     }
   }
@@ -342,14 +370,17 @@ class LocalSendProvider {
       // 通知对端（最佳努力，不影响本地状态）
       final remoteId = session.remoteSessionId;
       if (remoteId != null) {
-        final url =
-            ApiRoute.info.target(session.target).replaceAll('/info', '/cancel');
+        final url = ApiRoute.info
+            .target(session.target)
+            .replaceAll('/info', '/cancel');
         try {
           final client = http.Client();
           client
-              .post(Uri.parse(url),
-                  headers: {'Content-Type': 'application/json'},
-                  body: jsonEncode({'sessionId': remoteId}))
+              .post(
+                Uri.parse(url),
+                headers: {'Content-Type': 'application/json'},
+                body: jsonEncode({'sessionId': remoteId}),
+              )
               .timeout(const Duration(seconds: 2))
               .catchError((_) => http.Response('{}', 499));
         } catch (_) {}

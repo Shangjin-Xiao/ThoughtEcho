@@ -66,8 +66,11 @@ class ApiService {
 
       if (!isConnected) {
         logDebug('网络未连接，使用本地笔记');
-        return await _getLocalQuoteOrDefault(l10n, databaseService,
-            isOffline: true);
+        return await _getLocalQuoteOrDefault(
+          l10n,
+          databaseService,
+          isOffline: true,
+        );
       }
 
       // 处理多类型选择的情况
@@ -89,9 +92,9 @@ class ApiService {
       final response = await NetworkService.instance
           .get(apiUrl, timeoutSeconds: _timeoutSeconds)
           .catchError((error) {
-        logDebug('一言API请求错误: $error');
-        throw error;
-      });
+            logDebug('一言API请求错误: $error');
+            throw error;
+          });
 
       if (response.statusCode == 200) {
         try {

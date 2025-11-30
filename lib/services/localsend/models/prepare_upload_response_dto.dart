@@ -8,10 +8,7 @@ class PrepareUploadResponseDto {
   });
 
   Map<String, dynamic> toJson() {
-    return {
-      'sessionId': sessionId,
-      'files': files,
-    };
+    return {'sessionId': sessionId, 'files': files};
   }
 
   static PrepareUploadResponseDto fromJson(Map<String, dynamic> json) {

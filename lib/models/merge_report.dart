@@ -50,10 +50,7 @@ class MergeReport {
 
   /// 创建空的初始报告
   factory MergeReport.start({String? sourceDevice}) {
-    return MergeReport(
-      startTime: DateTime.now(),
-      sourceDevice: sourceDevice,
-    );
+    return MergeReport(startTime: DateTime.now(), sourceDevice: sourceDevice);
   }
 
   /// 完成处理，设置结束时间
@@ -110,12 +107,14 @@ class MergeReport {
 
   /// 兼容旧API：添加成功应用的笔记（默认视为更新）
   @Deprecated(
-      'Use addInsertedQuote or addUpdatedQuote; this wrapper will be removed')
+    'Use addInsertedQuote or addUpdatedQuote; this wrapper will be removed',
+  )
   MergeReport addAppliedQuote() => addUpdatedQuote();
 
   /// 兼容旧API：添加成功应用的分类（默认视为更新）
   @Deprecated(
-      'Use addInsertedCategory or addUpdatedCategory; this wrapper will be removed')
+    'Use addInsertedCategory or addUpdatedCategory; this wrapper will be removed',
+  )
   MergeReport addAppliedCategory() => addUpdatedCategory();
 
   /// 添加错误信息
@@ -286,8 +285,8 @@ class MergeReportBuilder {
   final String? _sourceDevice;
 
   MergeReportBuilder({String? sourceDevice})
-      : _startTime = DateTime.now(),
-        _sourceDevice = sourceDevice;
+    : _startTime = DateTime.now(),
+      _sourceDevice = sourceDevice;
 
   // 兼容旧方法（默认视为更新）
   void addAppliedQuote() => addUpdatedQuote();

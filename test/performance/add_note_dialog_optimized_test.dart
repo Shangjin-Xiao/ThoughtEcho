@@ -18,12 +18,13 @@ void main() {
     setUp(() {
       // 模拟大量标签数据来测试性能
       mockTags = List.generate(
-          100,
-          (index) => NoteCategory(
-                id: 'tag_$index',
-                name: '标签 $index',
-                iconName: index % 2 == 0 ? '😀' : 'star',
-              ));
+        100,
+        (index) => NoteCategory(
+          id: 'tag_$index',
+          name: '标签 $index',
+          iconName: index % 2 == 0 ? '😀' : 'star',
+        ),
+      );
 
       // 创建模拟服务
       mockDatabaseService = MockDatabaseService();
@@ -48,10 +49,8 @@ void main() {
                     showModalBottomSheet(
                       context: context,
                       isScrollControlled: true,
-                      builder: (context) => AddNoteDialog(
-                        tags: mockTags,
-                        onSave: (_) {},
-                      ),
+                      builder: (context) =>
+                          AddNoteDialog(tags: mockTags, onSave: (_) {}),
                     );
                   },
                   child: const Text('打开对话框'),
@@ -77,8 +76,11 @@ void main() {
       expect(find.byType(AddNoteDialog), findsOneWidget);
 
       // 验证性能：对话框打开应该在300ms内完成（比之前的481ms快）
-      expect(duration.inMilliseconds, lessThan(300),
-          reason: '对话框打开时间仍然过长: ${duration.inMilliseconds}ms');
+      expect(
+        duration.inMilliseconds,
+        lessThan(300),
+        reason: '对话框打开时间仍然过长: ${duration.inMilliseconds}ms',
+      );
 
       // Test output: 优化后对话框打开耗时: ${duration.inMilliseconds}ms
     });
@@ -93,10 +95,7 @@ void main() {
           ],
           child: MaterialApp(
             home: Scaffold(
-              body: AddNoteDialog(
-                tags: mockTags,
-                onSave: (_) {},
-              ),
+              body: AddNoteDialog(tags: mockTags, onSave: (_) {}),
             ),
           ),
         ),
@@ -124,8 +123,11 @@ void main() {
       final duration = endTime.difference(startTime);
 
       // 验证性能：搜索应该在100ms内完成
-      expect(duration.inMilliseconds, lessThan(100),
-          reason: '标签搜索时间过长: ${duration.inMilliseconds}ms');
+      expect(
+        duration.inMilliseconds,
+        lessThan(100),
+        reason: '标签搜索时间过长: ${duration.inMilliseconds}ms',
+      );
 
       // Test output: 标签搜索耗时: ${duration.inMilliseconds}ms
     });

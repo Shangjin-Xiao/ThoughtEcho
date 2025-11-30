@@ -94,8 +94,10 @@ void main() {
         ],
       };
 
-      final report = await db.importDataWithLWWMerge(remoteData,
-          sourceDevice: 'test-device');
+      final report = await db.importDataWithLWWMerge(
+        remoteData,
+        sourceDevice: 'test-device',
+      );
 
       expect(report.insertedQuotes, 1);
       expect(report.updatedQuotes, 1);

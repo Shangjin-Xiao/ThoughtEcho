@@ -22,13 +22,18 @@ class SyncNetworkTester {
 
       for (final testPort in portsToTest) {
         try {
-          socket =
-              await RawDatagramSocket.bind(InternetAddress.anyIPv4, testPort);
+          socket = await RawDatagramSocket.bind(
+            InternetAddress.anyIPv4,
+            testPort,
+          );
           testSockets.add(socket);
 
           final actualPort = socket.port;
-          result.addStep('UDP套接字绑定', true,
-              '成功绑定到端口 ${testPort == 0 ? '随机' : testPort} (实际端口: $actualPort)');
+          result.addStep(
+            'UDP套接字绑定',
+            true,
+            '成功绑定到端口 ${testPort == 0 ? '随机' : testPort} (实际端口: $actualPort)',
+          );
           anyPortBound = true;
 
           // 仅使用一个成功绑定的端口
@@ -62,12 +67,18 @@ class SyncNetworkTester {
       try {
         final interfaces = await NetworkInterface.list();
         final activeInterfaces = interfaces
-            .where((i) => i.addresses.any(
-                (a) => a.type == InternetAddressType.IPv4 && !a.isLoopback))
+            .where(
+              (i) => i.addresses.any(
+                (a) => a.type == InternetAddressType.IPv4 && !a.isLoopback,
+              ),
+            )
             .toList();
 
-        result.addStep('网络接口检查', activeInterfaces.isNotEmpty,
-            '发现 ${activeInterfaces.length} 个活动网络接口，总共 ${interfaces.length} 个接口');
+        result.addStep(
+          '网络接口检查',
+          activeInterfaces.isNotEmpty,
+          '发现 ${activeInterfaces.length} 个活动网络接口，总共 ${interfaces.length} 个接口',
+        );
 
         for (final i in activeInterfaces) {
           final ipv4Addresses = i.addresses
@@ -92,8 +103,11 @@ class SyncNetworkTester {
             try {
               socket.joinMulticast(multicastAddress, interface);
               joinedAny = true;
-              result.addStep('加入组播组 (${interface.name})', true,
-                  '成功加入 ${multicastAddress.address}');
+              result.addStep(
+                '加入组播组 (${interface.name})',
+                true,
+                '成功加入 ${multicastAddress.address}',
+              );
             } catch (e) {
               result.addStep('加入组播组 (${interface.name})', false, '失败: $e');
             }
@@ -123,7 +137,7 @@ class SyncNetworkTester {
           'protocol': 'http',
           'download': true,
           'announcement': true,
-          'announce': true
+          'announce': true,
         });
 
         final messageBytes = utf8.encode(testMessage);
@@ -145,12 +159,18 @@ class SyncNetworkTester {
                 final sent = socket.send(messageBytes, group, port);
                 if (sent > 0) {
                   anyMessageSent = true;
-                  result.addStep('发送测试消息', true,
-                      '发送到 ${group.address}:$port，消息大小: $sent 字节');
+                  result.addStep(
+                    '发送测试消息',
+                    true,
+                    '发送到 ${group.address}:$port，消息大小: $sent 字节',
+                  );
                 }
               } catch (e) {
                 result.addStep(
-                    '发送测试消息 (${group.address}:$port)', false, '发送失败: $e');
+                  '发送测试消息 (${group.address}:$port)',
+                  false,
+                  '发送失败: $e',
+                );
               }
             }
           }
@@ -180,8 +200,11 @@ class SyncNetworkTester {
                       data.contains('ThoughtEcho')) {
                     received = true;
                     final previewLen = data.length < 100 ? data.length : 100;
-                    result.addStep('接收测试消息', true,
-                        '来自 ${datagram.address.address}:${datagram.port} -> ${data.substring(0, previewLen)}...');
+                    result.addStep(
+                      '接收测试消息',
+                      true,
+                      '来自 ${datagram.address.address}:${datagram.port} -> ${data.substring(0, previewLen)}...',
+                    );
                     if (!completer.isCompleted) completer.complete();
                   }
                 } catch (e) {
@@ -201,7 +224,10 @@ class SyncNetworkTester {
 
           if (!received) {
             result.addStep(
-                '接收测试消息', false, '未在2秒内接收到组播包。可能原因：防火墙阻拦/网卡未启用组播/未在同一子网');
+              '接收测试消息',
+              false,
+              '未在2秒内接收到组播包。可能原因：防火墙阻拦/网卡未启用组播/未在同一子网',
+            );
           }
         } else {
           result.addStep('接收测试消息', false, '套接字为null，无法监听接收');
@@ -222,8 +248,11 @@ class SyncNetworkTester {
     final totalSteps = result.steps.length;
     final successRate = (successSteps / totalSteps * 100).toStringAsFixed(1);
 
-    result.addStep('组播测试总结', successSteps == totalSteps,
-        '测试完成: $successSteps/$totalSteps 成功 ($successRate%)');
+    result.addStep(
+      '组播测试总结',
+      successSteps == totalSteps,
+      '测试完成: $successSteps/$totalSteps 成功 ($successRate%)',
+    );
 
     logDebug('UDP组播测试结束: $successRate% 成功率');
 
@@ -249,8 +278,9 @@ class SyncNetworkTester {
           if (request.uri.path == '/test') {
             request.response.statusCode = 200;
             request.response.headers.contentType = ContentType.json;
-            request.response
-                .write('{"status": "ok", "message": "Server is working"}');
+            request.response.write(
+              '{"status": "ok", "message": "Server is working"}',
+            );
             await request.response.close();
           } else {
             request.response.statusCode = 404;
@@ -300,8 +330,11 @@ class SyncNetworkTester {
 
       try {
         final readContent = await testFile.readAsString();
-        result.addStep('文件读取验证', readContent == testContent,
-            readContent == testContent ? '内容匹配' : '内容不匹配');
+        result.addStep(
+          '文件读取验证',
+          readContent == testContent,
+          readContent == testContent ? '内容匹配' : '内容不匹配',
+        );
       } catch (e) {
         result.addStep('文件读取验证', false, '读取失败: $e');
       }
@@ -341,11 +374,17 @@ class SyncNetworkTester {
       try {
         final interfaces = await NetworkInterface.list();
         final active = interfaces
-            .where((i) => i.addresses.any(
-                (a) => a.type == InternetAddressType.IPv4 && !a.isLoopback))
+            .where(
+              (i) => i.addresses.any(
+                (a) => a.type == InternetAddressType.IPv4 && !a.isLoopback,
+              ),
+            )
             .toList();
         result.addStep(
-            '网络接口检查', active.isNotEmpty, '发现 ${active.length} 个活动接口');
+          '网络接口检查',
+          active.isNotEmpty,
+          '发现 ${active.length} 个活动接口',
+        );
         for (final i in active) {
           final ipv4 = i.addresses
               .where((a) => a.type == InternetAddressType.IPv4 && !a.isLoopback)
@@ -359,8 +398,11 @@ class SyncNetworkTester {
 
       // 2. 回环连接（可能失败属正常）
       try {
-        final socket = await Socket.connect('127.0.0.1', 80,
-            timeout: const Duration(seconds: 2));
+        final socket = await Socket.connect(
+          '127.0.0.1',
+          80,
+          timeout: const Duration(seconds: 2),
+        );
         await socket.close();
         result.addStep('本地回环连接', true, '连接成功');
       } catch (e) {
@@ -385,8 +427,10 @@ class SyncNetworkTester {
   }
 
   /// 同步服务健康检查：检测 LocalSendServer 端点
-  static Future<NetworkTestResult> testSyncServiceHealth(
-      {String host = '127.0.0.1', int port = 53318}) async {
+  static Future<NetworkTestResult> testSyncServiceHealth({
+    String host = '127.0.0.1',
+    int port = 53318,
+  }) async {
     final result = NetworkTestResult('同步服务健康检查');
     try {
       logDebug('开始测试同步服务健康...');
@@ -422,16 +466,25 @@ class SyncNetworkTester {
             final fpPreviewLen = (fingerprint ?? '').length < 10
                 ? (fingerprint ?? '').length
                 : 10;
-            result.addStep('INFO端点', true,
-                '状态码: ${resp.statusCode}, 设备名称: ${alias ?? '未知'}, 指纹: ${(fingerprint ?? '').substring(0, fpPreviewLen)}...');
+            result.addStep(
+              'INFO端点',
+              true,
+              '状态码: ${resp.statusCode}, 设备名称: ${alias ?? '未知'}, 指纹: ${(fingerprint ?? '').substring(0, fpPreviewLen)}...',
+            );
           } catch (e) {
             result.addStep(
-                'INFO端点', true, '状态码: ${resp.statusCode}, 响应解析失败: $e');
+              'INFO端点',
+              true,
+              '状态码: ${resp.statusCode}, 响应解析失败: $e',
+            );
           }
         } else {
           final previewLen = body.length < 256 ? body.length : 256;
-          result.addStep('INFO端点', false,
-              '状态码: ${resp.statusCode}, 响应: ${body.substring(0, previewLen)}');
+          result.addStep(
+            'INFO端点',
+            false,
+            '状态码: ${resp.statusCode}, 响应: ${body.substring(0, previewLen)}',
+          );
         }
         client.close();
       } catch (e) {
@@ -442,8 +495,11 @@ class SyncNetworkTester {
       try {
         const backupPort = 53317;
         final client = HttpClient();
-        final req =
-            await client.get(host, backupPort, '/api/localsend/v2/info');
+        final req = await client.get(
+          host,
+          backupPort,
+          '/api/localsend/v2/info',
+        );
         final resp = await req.close().timeout(const Duration(seconds: 2));
         await resp.transform(utf8.decoder).join(); // 读取响应体，确保响应被完全消费
 
@@ -451,7 +507,10 @@ class SyncNetworkTester {
           result.addStep('备用端口检查', true, '备用端口 $backupPort 上服务正常');
         } else {
           result.addStep(
-              '备用端口检查', false, '备用端口 $backupPort 服务返回: ${resp.statusCode}');
+            '备用端口检查',
+            false,
+            '备用端口 $backupPort 服务返回: ${resp.statusCode}',
+          );
         }
         client.close();
       } catch (e) {
@@ -461,8 +520,11 @@ class SyncNetworkTester {
       // 4. 伪造一次 prepare-upload（空数据，检查路由/错误码）
       try {
         final client = HttpClient();
-        final req =
-            await client.post(host, port, '/api/localsend/v2/prepare-upload');
+        final req = await client.post(
+          host,
+          port,
+          '/api/localsend/v2/prepare-upload',
+        );
         req.headers.contentType = ContentType.json;
 
         // 创建有效的请求数据
@@ -475,16 +537,16 @@ class SyncNetworkTester {
             'fingerprint': 'probe-${DateTime.now().millisecondsSinceEpoch}',
             'port': port,
             'protocol': 'http',
-            'download': true
+            'download': true,
           },
           'files': {
             'test1': {
               'id': 'test1',
               'fileName': 'test.txt',
               'size': 100,
-              'fileType': 'text/plain'
-            }
-          }
+              'fileType': 'text/plain',
+            },
+          },
         };
 
         req.write(jsonEncode(requestData));
@@ -495,20 +557,28 @@ class SyncNetworkTester {
           try {
             final jsonResponse = jsonDecode(body) as Map<String, dynamic>;
             final sessionId = jsonResponse['sessionId'] as String?;
-            final sidLen =
-                (sessionId ?? '').length < 8 ? (sessionId ?? '').length : 8;
-            result.addStep('PREPARE端点', true,
-                '状态码: ${resp.statusCode}, 创建会话ID: ${(sessionId ?? '').substring(0, sidLen)}...');
+            final sidLen = (sessionId ?? '').length < 8
+                ? (sessionId ?? '').length
+                : 8;
+            result.addStep(
+              'PREPARE端点',
+              true,
+              '状态码: ${resp.statusCode}, 创建会话ID: ${(sessionId ?? '').substring(0, sidLen)}...',
+            );
           } catch (e) {
             result.addStep(
-                'PREPARE端点', true, '状态码: ${resp.statusCode}, 但JSON解析失败: $e');
+              'PREPARE端点',
+              true,
+              '状态码: ${resp.statusCode}, 但JSON解析失败: $e',
+            );
           }
         } else {
           final previewLen = body.length < 100 ? body.length : 100;
           result.addStep(
-              'PREPARE端点',
-              resp.statusCode >= 200 && resp.statusCode < 500,
-              '状态码: ${resp.statusCode}, 响应: ${body.substring(0, previewLen)}...');
+            'PREPARE端点',
+            resp.statusCode >= 200 && resp.statusCode < 500,
+            '状态码: ${resp.statusCode}, 响应: ${body.substring(0, previewLen)}...',
+          );
         }
         client.close();
       } catch (e) {
@@ -522,8 +592,11 @@ class SyncNetworkTester {
         final resp = await req.close().timeout(const Duration(seconds: 3));
         final body = await resp.transform(utf8.decoder).join();
         final previewLen = body.length < 100 ? body.length : 100;
-        result.addStep('未知路由(404)', resp.statusCode == 404,
-            '状态码: ${resp.statusCode}, 响应: ${body.substring(0, previewLen)}...');
+        result.addStep(
+          '未知路由(404)',
+          resp.statusCode == 404,
+          '状态码: ${resp.statusCode}, 响应: ${body.substring(0, previewLen)}...',
+        );
         client.close();
       } catch (e) {
         result.addStep('未知路由(404)', false, '请求失败: $e');
@@ -534,7 +607,10 @@ class SyncNetworkTester {
           .where((s) => s.name != '未知路由(404)' && s.name != 'UDP端口检查')
           .every((s) => s.success);
       result.addStep(
-          '服务状态总结', allSuccess, allSuccess ? '同步服务工作正常' : '同步服务存在问题，建议重启应用');
+        '服务状态总结',
+        allSuccess,
+        allSuccess ? '同步服务工作正常' : '同步服务存在问题，建议重启应用',
+      );
     } catch (e) {
       result.addStep('同步服务健康检查', false, '异常: $e');
     }
@@ -564,8 +640,11 @@ class SyncNetworkTester {
       passed += r.steps.where((s) => s.success).length;
     }
     final passRate = (passed / total * 100).toStringAsFixed(1);
-    summary.addStep('整体结果', true,
-        '共 ${results.length} 个测试，$passed/$total 步骤通过（$passRate%）');
+    summary.addStep(
+      '整体结果',
+      true,
+      '共 ${results.length} 个测试，$passed/$total 步骤通过（$passRate%）',
+    );
 
     return [...results, summary];
   }
@@ -587,6 +666,9 @@ class NetworkTestStep {
   final bool success;
   final String details;
 
-  NetworkTestStep(
-      {required this.name, required this.success, required this.details});
+  NetworkTestStep({
+    required this.name,
+    required this.success,
+    required this.details,
+  });
 }

@@ -24,20 +24,23 @@ void main() {
       // 验证列表支持修改操作
       expect(() => devices.clear(), returnsNormally);
       expect(
-          () => devices.add(Device(
-                signalingId: null,
-                ip: '192.168.1.101',
-                version: '2.1',
-                port: 53317,
-                https: false,
-                fingerprint: 'test-device2',
-                alias: 'Test Device 2',
-                deviceModel: 'Test Model',
-                deviceType: DeviceType.desktop,
-                download: true,
-                discoveryMethods: <DiscoveryMethod>{const MulticastDiscovery()},
-              )),
-          returnsNormally);
+        () => devices.add(
+          Device(
+            signalingId: null,
+            ip: '192.168.1.101',
+            version: '2.1',
+            port: 53317,
+            https: false,
+            fingerprint: 'test-device2',
+            alias: 'Test Device 2',
+            deviceModel: 'Test Model',
+            deviceType: DeviceType.desktop,
+            download: true,
+            discoveryMethods: <DiscoveryMethod>{const MulticastDiscovery()},
+          ),
+        ),
+        returnsNormally,
+      );
     });
 
     test('从不可修改列表创建可修改副本', () {

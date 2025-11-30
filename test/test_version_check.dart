@@ -23,13 +23,16 @@ void main() async {
       'published_at': '2024-01-01T00:00:00Z',
     };
 
-    final versionInfo =
-        VersionInfo.fromJson(mockJson, testCase['current'] as String);
+    final versionInfo = VersionInfo.fromJson(
+      mockJson,
+      testCase['current'] as String,
+    );
     final result = versionInfo.hasUpdate;
     final expected = testCase['expected'] as bool;
 
     AppLogger.i(
-        '当前: ${testCase['current']}, 最新: ${testCase['latest']}, 有更新: $result, 期望: $expected, ${result == expected ? '✓' : '✗'}');
+      '当前: ${testCase['current']}, 最新: ${testCase['latest']}, 有更新: $result, 期望: $expected, ${result == expected ? '✓' : '✗'}',
+    );
   }
 
   // 测试GitHub API响应解析

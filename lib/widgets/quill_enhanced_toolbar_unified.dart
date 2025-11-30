@@ -13,8 +13,11 @@ class UnifiedQuillToolbar extends StatefulWidget {
   final quill.QuillController controller;
   final void Function(String filePath)? onMediaImported;
 
-  const UnifiedQuillToolbar(
-      {super.key, required this.controller, this.onMediaImported});
+  const UnifiedQuillToolbar({
+    super.key,
+    required this.controller,
+    this.onMediaImported,
+  });
 
   @override
   State<UnifiedQuillToolbar> createState() => _UnifiedQuillToolbarState();
@@ -80,8 +83,8 @@ class _UnifiedQuillToolbarState extends State<UnifiedQuillToolbar> {
             // 第三组：标题
             quill.QuillToolbarSelectHeaderStyleDropdownButton(
               controller: widget.controller,
-              options: const quill
-                  .QuillToolbarSelectHeaderStyleDropdownButtonOptions(),
+              options:
+                  const quill.QuillToolbarSelectHeaderStyleDropdownButtonOptions(),
             ),
             _buildDivider(),
 
