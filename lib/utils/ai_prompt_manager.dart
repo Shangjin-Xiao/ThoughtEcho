@@ -9,6 +9,21 @@ class AIPromptManager {
   factory AIPromptManager() => _instance;
   AIPromptManager._internal();
 
+  /// 根据语言代码生成语言指令
+  /// [languageCode] 语言代码，如 'zh'、'en'，null 表示跟随系统（默认中文）
+  String _getLanguageDirective(String? languageCode) {
+    // null 或 'zh' 视为中文
+    if (languageCode == null || languageCode.startsWith('zh')) {
+      return '【语言要求】请使用中文回复。';
+    }
+    // 英文
+    if (languageCode.startsWith('en')) {
+      return '【Language Requirement】Please respond in English.';
+    }
+    // 其他语言，给出通用指令
+    return '【Language Requirement】Please respond in the language corresponding to locale code: $languageCode.';
+  }
+
   /// 个人成长导师提示词（最常用的基础提示词）
   static const String personalGrowthCoachPrompt =
       '''你是一位资深的个人成长导师和思维教练，拥有卓越的洞察力和分析能力。你的任务是深入分析用户提供的笔记内容，帮助用户更好地理解自己的想法和情感。请像一位富有经验的导师一样，从以下几个方面进行专业、细致且富有启发性的分析：
@@ -302,11 +317,13 @@ $question''';
   }
 
   /// 获取包含环境信息的每日提示系统提示词
+  /// [languageCode] 用户设置的语言代码，如 'zh'、'en'，null 表示跟随系统（默认中文）
   String getDailyPromptSystemPromptWithContext({
     String? city,
     String? weather,
     String? temperature,
     String? historicalInsights, // 新增：历史洞察参考
+    String? languageCode, // 新增：语言代码
   }) {
     final now = DateTime.now();
     final hour = now.hour;
@@ -384,7 +401,9 @@ $question''';
 - 不同时间段应有不同的情感基调：晨曦充满希望，午后温暖平静，黄昏富有诗意，深夜适合内省
 - 天气状况可作为情感隐喻：阳光代表希望，雨天适合内省，雪天象征纯净等
 
-现在，请为用户生成一个符合当前时空背景的思考提示词。直接输出提示词内容，无需额外解释。''';
+现在，请为用户生成一个符合当前时空背景的思考提示词。直接输出提示词内容，无需额外解释。
+
+${_getLanguageDirective(languageCode)}''';
   }
 
   // ========================= 报告洞察（周期看板） =========================
@@ -400,7 +419,8 @@ $question''';
   }
 
   /// 获取报告洞察的系统提示词（根据风格切换语气与表达）
-  String getReportInsightSystemPrompt(String style) {
+  /// [languageCode] 用户设置的语言代码，如 'zh'、'en'，null 表示跟随系统（默认中文）
+  String getReportInsightSystemPrompt(String style, {String? languageCode}) {
     const base = '''你是一位善于捕捉生活细节的文学洞察助手。请仔细阅读用户的统计数据和笔记内容，智能生成个性化的中文洞察。
 
 重要要求：
@@ -439,11 +459,12 @@ $question''';
    - 语言优美自然，具有温度和深度
    - 不暴露具体个人隐私信息''';
 
+    final langDirective = _getLanguageDirective(languageCode);
     switch (style) {
       case 'poetic':
-        return '$base\n\n风格：文学诗意，用古典美学和现代感悟相结合，营造温暖而有深度的表达';
+        return '$base\n\n风格：文学诗意，用古典美学和现代感悟相结合，营造温暖而有深度的表达\n\n$langDirective';
       default:
-        return '$base\n\n风格：文学诗意，用古典美学和现代感悟相结合，营造温暖而有深度的表达';
+        return '$base\n\n风格：文学诗意，用古典美学和现代感悟相结合，营造温暖而有深度的表达\n\n$langDirective';
     }
   }
 
@@ -494,6 +515,7 @@ $contentSection
 
   /// 本地生成报告洞察（不开启AI时使用）。
   /// 会根据缺失项替换为中性描述，确保总长适中（约40-60字）。
+  /// [languageCode] 用户设置的语言代码，如 'zh'、'en'，null 表示跟随系统（默认中文）
   String formatLocalReportInsight({
     required String periodLabel,
     String? mostTimePeriod,
@@ -502,35 +524,58 @@ $contentSection
     required int activeDays,
     required int noteCount,
     required int totalWordCount,
+    String? languageCode, // 新增：语言代码
   }) {
-    final time = mostTimePeriod ?? '本期时段分布较均衡';
-    final weather = mostWeather ?? '天气因素不明显';
+    // 根据语言选择不同的模板
+    final isEnglish = languageCode != null && languageCode.startsWith('en');
+    
+    final time = mostTimePeriod ?? (isEnglish ? 'evenly distributed' : '本期时段分布较均衡');
+    final weather = mostWeather ?? (isEnglish ? 'weather was not a significant factor' : '天气因素不明显');
     // 处理标签：移除已有的#前缀，然后统一添加#
     String tag;
     if (topTag != null && topTag.trim().isNotEmpty) {
       final cleanTag = topTag.trim().replaceAll(RegExp(r'^#+'), ''); // 移除开头的所有#
-      tag = cleanTag.isNotEmpty ? '#$cleanTag' : '主题尚未收敛';
+      tag = cleanTag.isNotEmpty ? '#$cleanTag' : (isEnglish ? 'themes are still emerging' : '主题尚未收敛');
     } else {
-      tag = '主题尚未收敛';
+      tag = isEnglish ? 'themes are still emerging' : '主题尚未收敛';
     }
 
     // 3种风格模板（除了简约数据型和极简禅意型），随机挑选
     final rng = math.Random();
     final styleIndex = rng.nextInt(3);
 
-    switch (styleIndex) {
-      case 0: // 温暖陪伴型
-        return _generateWarmCompanionInsight(periodLabel, time, weather, tag,
-            activeDays, noteCount, totalWordCount);
-      case 1: // 诗意文艺型
-        return _generatePoeticInsight(periodLabel, time, weather, tag,
-            activeDays, noteCount, totalWordCount);
-      case 2: // 成长导师型
-        return _generateGrowthMentorInsight(periodLabel, time, weather, tag,
-            activeDays, noteCount, totalWordCount);
-      default:
-        return _generateWarmCompanionInsight(periodLabel, time, weather, tag,
-            activeDays, noteCount, totalWordCount);
+    if (isEnglish) {
+      // 英文模板
+      switch (styleIndex) {
+        case 0:
+          return _generateWarmCompanionInsightEn(periodLabel, time, weather, tag,
+              activeDays, noteCount, totalWordCount);
+        case 1:
+          return _generatePoeticInsightEn(periodLabel, time, weather, tag,
+              activeDays, noteCount, totalWordCount);
+        case 2:
+          return _generateGrowthMentorInsightEn(periodLabel, time, weather, tag,
+              activeDays, noteCount, totalWordCount);
+        default:
+          return _generateWarmCompanionInsightEn(periodLabel, time, weather, tag,
+              activeDays, noteCount, totalWordCount);
+      }
+    } else {
+      // 中文模板
+      switch (styleIndex) {
+        case 0: // 温暖陪伴型
+          return _generateWarmCompanionInsight(periodLabel, time, weather, tag,
+              activeDays, noteCount, totalWordCount);
+        case 1: // 诗意文艺型
+          return _generatePoeticInsight(periodLabel, time, weather, tag,
+              activeDays, noteCount, totalWordCount);
+        case 2: // 成长导师型
+          return _generateGrowthMentorInsight(periodLabel, time, weather, tag,
+              activeDays, noteCount, totalWordCount);
+        default:
+          return _generateWarmCompanionInsight(periodLabel, time, weather, tag,
+              activeDays, noteCount, totalWordCount);
+      }
     }
   }
 
@@ -577,6 +622,56 @@ $contentSection
       '本$periodLabel你保持了$activeDays天的记录习惯，积累了$totalWordCount字的思考财富。$time的安静最适合你深度思考，$tag值得进一步探索。',
       '这一$periodLabel你在思考的路上走了$activeDays天，留下了$noteCount篇成长足迹。$time激发你的灵感，$tag或许是下一个突破点。',
       '你用$activeDays天的坚持证明了成长的决心，$noteCount篇记录见证着进步。$time是你的黄金思考时段，$tag展现了你的关注焦点。',
+    ];
+    final rng = math.Random();
+    return templates[rng.nextInt(templates.length)];
+  }
+
+  // ========================= 英文本地洞察模板 =========================
+
+  /// Warm companion style insight (English)
+  String _generateWarmCompanionInsightEn(
+      String periodLabel,
+      String time,
+      String weather,
+      String tag,
+      int activeDays,
+      int noteCount,
+      int totalWordCount) {
+    final templates = [
+      'This $periodLabel, you maintained $activeDays days of journaling, writing $noteCount heartfelt entries. You seem to prefer writing during $time, with $weather as your creative companion, and $tag fills your thoughts.',
+      'Over the $periodLabel, you spent $activeDays days recording life\'s moments. You wrote the most during $time, and $weather witnessed the blossoming of $tag.',
+      'During this $periodLabel, you persisted for $activeDays days, leaving behind $noteCount entries with $totalWordCount words of precious memories. $time is your favorite creative time, and $tag flows through your heart.',
+    ];
+    final rng = math.Random();
+    return templates[rng.nextInt(templates.length)];
+  }
+
+  /// Poetic style insight (English)
+  String _generatePoeticInsightEn(String periodLabel, String time, String weather,
+      String tag, int activeDays, int noteCount, int totalWordCount) {
+    final templates = [
+      'Time flows like water, and you wove $noteCount story fragments across $activeDays days and nights. $time was your muse moment, $weather witnessed the blossoming of $tag.',
+      'In the tapestry of this $periodLabel, you planted seeds of words across $activeDays days. $time understands your heart best, and $tag flows from your pen.',
+      'Time never pauses, seasons keep flowing. This $periodLabel, you used $activeDays days as your canvas, writing $noteCount heartfelt pieces. During $time, $tag dances with $weather.',
+    ];
+    final rng = math.Random();
+    return templates[rng.nextInt(templates.length)];
+  }
+
+  /// Growth mentor style insight (English)
+  String _generateGrowthMentorInsightEn(
+      String periodLabel,
+      String time,
+      String weather,
+      String tag,
+      int activeDays,
+      int noteCount,
+      int totalWordCount) {
+    final templates = [
+      'This $periodLabel, you maintained a journaling habit for $activeDays days, accumulating $totalWordCount words of thoughtful reflection. The quiet of $time suits your deep thinking best, and $tag is worth exploring further.',
+      'This $periodLabel, you walked $activeDays days on the path of reflection, leaving $noteCount growth footprints. $time sparks your inspiration, and $tag might be your next breakthrough point.',
+      'Your $activeDays days of persistence demonstrate your commitment to growth, with $noteCount entries witnessing your progress. $time is your golden thinking period, and $tag reveals your focus.',
     ];
     final rng = math.Random();
     return templates[rng.nextInt(templates.length)];
