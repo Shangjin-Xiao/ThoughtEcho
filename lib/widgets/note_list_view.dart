@@ -84,10 +84,13 @@ class NoteListViewState extends State<NoteListView> {
 
   // 分页和懒加载状态
   final List<Quote> _quotes = [];
-  bool _isLoading = true;
+  bool _isLoading = true; // 初始化为 true，避免闪现"无笔记"
   bool _hasMore = true;
   static const int _pageSize = AppConstants.defaultPageSize;
   StreamSubscription<List<Quote>>? _quotesSub;
+  
+  // 修复：添加等待服务初始化的标志
+  bool _waitingForServices = true;
 
   // 修复：用于检测和恢复滚动范围异常的计数器
   int _scrollExtentCheckCounter = 0;
@@ -131,8 +134,9 @@ class NoteListViewState extends State<NoteListView> {
     super.initState();
     _searchController.text = widget.searchQuery;
     _hasMore = true;
-    _isLoading = false; // Changed to false to avoid initial flash
+    _isLoading = true; // 修复：保持为 true，避免闪现"无笔记"
     _isInitializing = true;
+    _waitingForServices = true; // 初始等待服务初始化
 
     // 添加焦点节点监听器，用于Web平台的焦点管理
     _searchFocusNode.addListener(_onFocusChanged);
@@ -142,10 +146,28 @@ class NoteListViewState extends State<NoteListView> {
 
     // 优化：延迟初始化数据流订阅，避免build过程中的副作用
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeDataStream();
+      _checkServicesAndInitialize();
       if (!mounted) return;
       widget.onGuideTargetsReady?.call();
     });
+  }
+  
+  /// 修复：检查服务初始化状态并初始化数据流
+  void _checkServicesAndInitialize() {
+    if (!mounted) return;
+    
+    final db = Provider.of<DatabaseService>(context, listen: false);
+    
+    // 如果数据库已初始化，直接初始化数据流
+    if (db.isInitialized) {
+      _waitingForServices = false;
+      _initializeDataStream();
+      return;
+    }
+    
+    // 否则，等待数据库初始化
+    logDebug('等待数据库初始化...', source: 'NoteListView');
+    db.addListener(_onDatabaseServiceChanged);
   }
 
   /// 焦点变化监听器，用于处理Web平台的焦点管理问题
@@ -298,9 +320,12 @@ class NoteListViewState extends State<NoteListView> {
 
     final db = Provider.of<DatabaseService>(context, listen: false);
     if (db.isInitialized) {
-      logDebug('数据库初始化完成，重新订阅数据流');
+      logDebug('数据库初始化完成，重新订阅数据流', source: 'NoteListView');
       // 移除监听器，避免重复监听
       db.removeListener(_onDatabaseServiceChanged);
+      
+      // 修复：更新等待服务状态
+      _waitingForServices = false;
 
       // 针对安卓平台的特殊处理
       if (!kIsWeb && Platform.isAndroid) {
@@ -954,7 +979,8 @@ class NoteListViewState extends State<NoteListView> {
     final listKey = ValueKey(
         '${widget.selectedTagIds.join(',')}_${widget.selectedWeathers.join(',')}_${widget.selectedDayPeriods.join(',')}_${widget.searchQuery}');
 
-    if (_isLoading && _quotes.isEmpty) {
+    // 修复：等待服务初始化时显示加载动画，避免闪现"无笔记"
+    if (_waitingForServices || (_isLoading && _quotes.isEmpty)) {
       // 搜索时用专属动画
       if (widget.searchQuery.isNotEmpty) {
         return LayoutBuilder(

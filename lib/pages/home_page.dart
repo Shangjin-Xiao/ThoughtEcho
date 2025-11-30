@@ -1302,11 +1302,17 @@ class _HomePageState extends State<HomePage>
         settingsService.aiSettings.apiUrl.isNotEmpty &&
         settingsService.aiSettings.model.isNotEmpty;
 
-    // 使用Provider包装搜索控制器，使其子组件可以访问
-    final scaffoldBackgroundColor = ColorUtils.getPageBackgroundColor(
-      theme.colorScheme.surface,
-      theme.brightness,
-    );
+    // 修复：根据当前页面动态设置背景色，确保底部安全区域颜色正确
+    // 记录页使用专属背景色，其他页面使用通用页面背景色
+    final scaffoldBackgroundColor = _currentIndex == 1
+        ? ColorUtils.getNoteListBackgroundColor(
+            theme.colorScheme.surface,
+            theme.brightness,
+          )
+        : ColorUtils.getPageBackgroundColor(
+            theme.colorScheme.surface,
+            theme.brightness,
+          );
 
     return Scaffold(
       backgroundColor: scaffoldBackgroundColor,
@@ -1408,23 +1414,23 @@ class _HomePageState extends State<HomePage>
                                 : (isVerySmallScreen ? 8.0 : 12.0), // 动态调整边距
                             isVerySmallScreen ? 8.0 : 12.0, // 极小屏幕减少下边距
                           ),
-                          padding: EdgeInsets.all(
-                            screenWidth > 600
-                                ? 18.0
-                                : (isVerySmallScreen ? 10.0 : 14.0), // 动态调整内边距
-                          ),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surface,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: AppTheme.defaultShadow,
-                            border: Border.all(
-                              color: theme.colorScheme.outline.withAlpha(30),
-                              width: 1,
+                            padding: EdgeInsets.all(
+                              screenWidth > 600
+                                  ? 18.0
+                                  : (isVerySmallScreen ? 10.0 : 14.0), // 动态调整内边距
                             ),
-                          ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.center,
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surface,
+                              borderRadius: BorderRadius.circular(16),
+                              boxShadow: AppTheme.defaultShadow,
+                              border: Border.all(
+                                color: theme.colorScheme.outline.withAlpha(30),
+                                width: 1,
+                              ),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
