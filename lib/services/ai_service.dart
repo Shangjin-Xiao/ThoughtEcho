@@ -285,6 +285,9 @@ class AIService extends ChangeNotifier {
   }) {
     final controller = _requestHelper.createStreamController();
 
+    // 获取用户设置的语言代码
+    final languageCode = _settingsService.localeCode;
+
     _requestHelper
         .executeStreamOperation(
           operation: (innerController) async {
@@ -298,7 +301,7 @@ class AIService extends ChangeNotifier {
               final provider = await _getCurrentProviderWithApiKey();
 
               final prompt =
-                  _promptManager.getReportInsightSystemPrompt('poetic');
+                  _promptManager.getReportInsightSystemPrompt('poetic', languageCode: languageCode);
               final user = _promptManager.buildReportInsightUserMessage(
                 periodLabel: periodLabel,
                 mostTimePeriod: mostTimePeriod,
@@ -359,6 +362,9 @@ class AIService extends ChangeNotifier {
     required int noteCount,
     required int totalWordCount,
   }) {
+    // 获取用户设置的语言代码
+    final languageCode = _settingsService.localeCode;
+    
     return _promptManager.formatLocalReportInsight(
       periodLabel: periodLabel,
       mostTimePeriod: mostTimePeriod,
@@ -367,6 +373,7 @@ class AIService extends ChangeNotifier {
       activeDays: activeDays,
       noteCount: noteCount,
       totalWordCount: totalWordCount,
+      languageCode: languageCode,
     );
   }
 
@@ -377,6 +384,9 @@ class AIService extends ChangeNotifier {
     String? temperature,
     String? historicalInsights, // 新增：历史洞察参考
   }) {
+    // 获取用户设置的语言代码
+    final languageCode = _settingsService.localeCode;
+    
     return _requestHelper.executeStreamOperation(
       operation: (controller) async {
         // 异步检查API Key是否有效
@@ -412,6 +422,7 @@ class AIService extends ChangeNotifier {
             weather: weather,
             temperature: temperature,
             historicalInsights: historicalInsights, // 传递历史洞察
+            languageCode: languageCode, // 传递语言代码
           );
 
           final userMessage = _promptManager.buildDailyPromptUserMessage(
