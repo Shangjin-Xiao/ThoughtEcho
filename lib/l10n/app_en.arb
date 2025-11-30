@@ -2439,5 +2439,21 @@
     }
   },
   "editMetadataShort": "Edit Metadata",
-  "startWritingHint": "Start writing your thoughts..."
+  "startWritingHint": "Start writing your thoughts...",
+  
+  "quickTip1": "💡 Tap \"Daily Quote\" to copy content",
+  "quickTip2": "✨ Double-tap \"Daily Quote\" to quickly add to notes",
+  "quickTip3": "🏷️ Use tags to organize your notes",
+  "quickTip4": "🔍 Full-text search to quickly find content",
+  "onboardingPreparingLabel": "Preparing",
+  "selectedTypesCount": "{count} types selected",
+  "@selectedTypesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "locationPermissionDeniedShort": "Location permission denied, cannot enable location service",
+  "prefMoreOptionsHintFull": "More personalization options and AI features available in Settings > Preferences."
 }
