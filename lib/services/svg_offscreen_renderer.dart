@@ -7,59 +7,11 @@ import 'package:flutter/rendering.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'svg_to_image_service.dart';
 
-// 内在尺寸解析结果（顶层私有类）
-class _SvgIntrinsicSize {
-  final double? width;
-  final double? height;
-  const _SvgIntrinsicSize({this.width, this.height});
-}
-
 /// 使用 Overlay + Offstage + RepaintBoundary 进行真实渲染，获取与预览一致的位图。
 /// 需要传入当前应用中的 BuildContext（带 Overlay）。
 class SvgOffscreenRenderer {
   SvgOffscreenRenderer._();
   static final SvgOffscreenRenderer instance = SvgOffscreenRenderer._();
-
-  _SvgIntrinsicSize _parseSvgIntrinsicSize(String svg) {
-    try {
-      // 匹配 <svg ... width="123" height="456" ...>
-      final tagMatch =
-          RegExp(r'<svg[^>]*>', caseSensitive: false).firstMatch(svg);
-      if (tagMatch == null) return const _SvgIntrinsicSize();
-      final tag = tagMatch.group(0)!;
-      double? parseLength(String? v) {
-        if (v == null) return null;
-        v = v.trim();
-        // 去除常见单位 px
-        v = v.replaceAll(RegExp(r'px', caseSensitive: false), '');
-        return double.tryParse(v);
-      }
-
-      String? attr(String name) {
-        final m =
-            RegExp('$name="([^"]+)"', caseSensitive: false).firstMatch(tag);
-        return m?.group(1);
-      }
-
-      final w = parseLength(attr('width'));
-      final h = parseLength(attr('height'));
-      // 如果没有 width/height，尝试 viewBox 推导
-      if (w == null || h == null) {
-        final vb = attr('viewBox');
-        if (vb != null) {
-          final parts = vb.split(RegExp(r'[ ,]+'));
-          if (parts.length == 4) {
-            final vbW = double.tryParse(parts[2]);
-            final vbH = double.tryParse(parts[3]);
-            return _SvgIntrinsicSize(width: w ?? vbW, height: h ?? vbH);
-          }
-        }
-      }
-      return _SvgIntrinsicSize(width: w, height: h);
-    } catch (_) {
-      return const _SvgIntrinsicSize();
-    }
-  }
 
   Future<Uint8List> renderSvgString(
     String svgContent, {
@@ -106,50 +58,36 @@ class SvgOffscreenRenderer {
         : 1.0;
 
     final boundaryKey = GlobalKey();
-    // 解析SVG内在尺寸（若有），用于更精确的缩放与裁剪
-    final intrinsic = _parseSvgIntrinsicSize(svgContent);
-    final intrinsicWidth = intrinsic.width ?? 400.0;
-    final intrinsicHeight = intrinsic.height ?? 600.0;
 
     AppLogger.d(
-      'SVG内在尺寸: ${intrinsicWidth}x$intrinsicHeight, 目标尺寸: ${width}x$height',
+      'SVG渲染目标尺寸: ${width}x$height',
       source: 'SvgOffscreenRenderer',
     );
 
     final boxFit = _mapFit(mode);
 
     // 创建SVG widget，使用与预览完全一致的配置
-    // 注意：不再在SvgPicture.string上设置width/height，让FittedBox处理缩放
+    // 直接设置width和height，让SvgPicture处理缩放，与SvgCardWidget保持一致
     final svgWidget = SvgPicture.string(
       svgContent,
-      allowDrawingOutsideViewBox: false, // 禁用超出绘制，避免意外内容
-      fit: BoxFit.contain, // SVG内部使用contain，外层使用FittedBox控制最终fit
+      width: width.toDouble(),
+      height: height.toDouble(),
+      fit: boxFit,
+      allowDrawingOutsideViewBox: false,
       placeholderBuilder: (context) => Container(
         color: background,
-        width: intrinsicWidth,
-        height: intrinsicHeight,
+        width: width.toDouble(),
+        height: height.toDouble(),
       ),
     );
 
-    // 使用精确的尺寸布局：
-    // 1. 外层Container设置为目标尺寸
-    // 2. FittedBox根据mode进行缩放
-    // 3. SizedBox强制SVG的内在尺寸
+    // 简化布局结构，移除复杂的FittedBox嵌套，直接使用Container包裹
     final captureContent = Container(
       color: background,
       width: width.toDouble(),
       height: height.toDouble(),
       alignment: Alignment.center,
-      child: FittedBox(
-        fit: boxFit,
-        clipBehavior: Clip.hardEdge,
-        alignment: Alignment.center,
-        child: SizedBox(
-          width: intrinsicWidth,
-          height: intrinsicHeight,
-          child: svgWidget,
-        ),
-      ),
+      child: svgWidget,
     );
 
     final mediaQueryData = MediaQuery.maybeOf(context);
@@ -232,11 +170,11 @@ class SvgOffscreenRenderer {
     try {
       // 等待多帧，确保SVG完全解析和渲染
       // SVG解析通常需要2-3帧：布局 -> 解析 -> 绘制
-      // 增加到5帧，并添加额外延迟确保复杂SVG完全渲染
-      await _pumpFrames(count: 5);
+      // 增加到8帧，并添加额外延迟确保复杂SVG完全渲染
+      await _pumpFrames(count: 8);
 
       // 额外延迟确保渲染管线完成
-      await Future.delayed(const Duration(milliseconds: 200));
+      await Future.delayed(const Duration(milliseconds: 300));
 
       final boundary = boundaryKey.currentContext?.findRenderObject()
           as RenderRepaintBoundary?;
