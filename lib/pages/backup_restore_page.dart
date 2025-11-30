@@ -106,8 +106,9 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.save_alt),
-                label:
-                    Text(_isLoading ? l10n.creatingBackup : l10n.createBackup),
+                label: Text(
+                  _isLoading ? l10n.creatingBackup : l10n.createBackup,
+                ),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
@@ -154,10 +155,10 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             Text(
               _includeMediaFiles ? l10n.backupFormatZip : l10n.backupFormatJson,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
             ),
           ],
         ),
@@ -248,10 +249,10 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             Text(
               l10n.supportedBackupFormats,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.onSurface.withValues(alpha: 0.6),
-                  ),
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
             ),
           ],
         ),
@@ -282,8 +283,8 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                 Text(
                   l10n.importantNotes,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -545,42 +546,44 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           builder: (c) {
             String selected = 'overwrite';
             final dialogL10n = AppLocalizations.of(c);
-            return StatefulBuilder(builder: (ctx, setLocal) {
-              return AlertDialog(
-                title: Text(dialogL10n.selectImportMode),
-                content: RadioGroup<String>(
-                  groupValue: selected,
-                  onChanged: (v) => setLocal(() => selected = v!),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      RadioListTile<String>(
-                        title: Text(dialogL10n.overwriteImport),
-                        subtitle: Text(dialogL10n.overwriteImportDesc),
-                        value: 'overwrite',
-                        dense: true,
-                      ),
-                      RadioListTile<String>(
-                        title: Text(dialogL10n.mergeImport),
-                        subtitle: Text(dialogL10n.mergeImportDesc),
-                        value: 'merge',
-                      ),
-                    ],
+            return StatefulBuilder(
+              builder: (ctx, setLocal) {
+                return AlertDialog(
+                  title: Text(dialogL10n.selectImportMode),
+                  content: RadioGroup<String>(
+                    groupValue: selected,
+                    onChanged: (v) => setLocal(() => selected = v!),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        RadioListTile<String>(
+                          title: Text(dialogL10n.overwriteImport),
+                          subtitle: Text(dialogL10n.overwriteImportDesc),
+                          value: 'overwrite',
+                          dense: true,
+                        ),
+                        RadioListTile<String>(
+                          title: Text(dialogL10n.mergeImport),
+                          subtitle: Text(dialogL10n.mergeImportDesc),
+                          value: 'merge',
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(ctx).pop(null),
-                    child: Text(dialogL10n.cancel),
-                  ),
-                  FilledButton(
-                    onPressed: () => Navigator.of(ctx).pop(selected),
-                    child: Text(dialogL10n.continueAction),
-                  ),
-                ],
-              );
-            });
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(null),
+                      child: Text(dialogL10n.cancel),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.of(ctx).pop(selected),
+                      child: Text(dialogL10n.continueAction),
+                    ),
+                  ],
+                );
+              },
+            );
           },
         );
         if (mode == null) return; // 用户取消
@@ -671,7 +674,8 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           ).firstMatch(e.toString());
           final columnName = columnMatch?.group(1) ?? l10n.unknownTag;
 
-          errorMessage = '''${l10n.restoreFailedCorrupt}
+          errorMessage =
+              '''${l10n.restoreFailedCorrupt}
 
 Column: $columnName
 Details: $e''';

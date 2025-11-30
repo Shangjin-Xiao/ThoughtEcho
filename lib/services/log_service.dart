@@ -480,70 +480,65 @@ class LogService with ChangeNotifier {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) =>
-      log(
-        LogLevel.verbose,
-        message,
-        source: source,
-        error: error,
-        stackTrace: stackTrace,
-      );
+  }) => log(
+    LogLevel.verbose,
+    message,
+    source: source,
+    error: error,
+    stackTrace: stackTrace,
+  );
 
   void debug(
     String message, {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) =>
-      log(
-        LogLevel.debug,
-        message,
-        source: source,
-        error: error,
-        stackTrace: stackTrace,
-      );
+  }) => log(
+    LogLevel.debug,
+    message,
+    source: source,
+    error: error,
+    stackTrace: stackTrace,
+  );
 
   void info(
     String message, {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) =>
-      log(
-        LogLevel.info,
-        message,
-        source: source,
-        error: error,
-        stackTrace: stackTrace,
-      );
+  }) => log(
+    LogLevel.info,
+    message,
+    source: source,
+    error: error,
+    stackTrace: stackTrace,
+  );
 
   void warning(
     String message, {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) =>
-      log(
-        LogLevel.warning,
-        message,
-        source: source,
-        error: error,
-        stackTrace: stackTrace,
-      );
+  }) => log(
+    LogLevel.warning,
+    message,
+    source: source,
+    error: error,
+    stackTrace: stackTrace,
+  );
 
   void error(
     String message, {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) =>
-      log(
-        LogLevel.error,
-        message,
-        source: source,
-        error: error,
-        stackTrace: stackTrace,
-      );
+  }) => log(
+    LogLevel.error,
+    message,
+    source: source,
+    error: error,
+    stackTrace: stackTrace,
+  );
 
   /// 处理在日志服务初始化之前缓存的错误
   Future<void> _processDeferredErrors() async {

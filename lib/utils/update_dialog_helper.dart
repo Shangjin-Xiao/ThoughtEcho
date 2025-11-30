@@ -11,7 +11,8 @@ class UpdateDialogHelper {
   ) async {
     // 检查是否已永久忽略此版本
     final shouldIgnore = await VersionCheckService.shouldIgnoreVersion(
-        versionInfo.latestVersion);
+      versionInfo.latestVersion,
+    );
     if (shouldIgnore) {
       return;
     }

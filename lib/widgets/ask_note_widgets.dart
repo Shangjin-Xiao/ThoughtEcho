@@ -25,10 +25,8 @@ class QuickAskNoteButton extends StatelessWidget {
       onPressed: () {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (context) => NoteQAChatPage(
-              quote: quote,
-              initialQuestion: initialQuestion,
-            ),
+            builder: (context) =>
+                NoteQAChatPage(quote: quote, initialQuestion: initialQuestion),
           ),
         );
       },
@@ -53,19 +51,19 @@ class AskNoteFloatingButton extends StatelessWidget {
       onPressed: () {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (context) => NoteQAChatPage(
-              quote: quote,
-              initialQuestion: initialQuestion,
-            ),
+            builder: (context) =>
+                NoteQAChatPage(quote: quote, initialQuestion: initialQuestion),
           ),
         );
       },
       icon: const Icon(Icons.chat),
       label: const Text('问笔记'),
-      backgroundColor:
-          Theme.of(context).colorScheme.secondaryContainer, // 使用浅色系
-      foregroundColor:
-          Theme.of(context).colorScheme.onSecondaryContainer, // 对应的前景色
+      backgroundColor: Theme.of(
+        context,
+      ).colorScheme.secondaryContainer, // 使用浅色系
+      foregroundColor: Theme.of(
+        context,
+      ).colorScheme.onSecondaryContainer, // 对应的前景色
     );
   }
 }
@@ -86,10 +84,8 @@ class AskNoteListTile extends StatelessWidget {
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (context) => NoteQAChatPage(
-              quote: quote,
-              initialQuestion: initialQuestion,
-            ),
+            builder: (context) =>
+                NoteQAChatPage(quote: quote, initialQuestion: initialQuestion),
           ),
         );
       },

@@ -27,7 +27,10 @@ void main() {
       final testData = {'test': 'data'};
       final jsonContent = json.encode(testData);
       final file = ArchiveFile(
-          'backup_data.json', jsonContent.length, jsonContent.codeUnits);
+        'backup_data.json',
+        jsonContent.length,
+        jsonContent.codeUnits,
+      );
       archive.addFile(file);
 
       // 写入ZIP文件
@@ -74,7 +77,10 @@ void main() {
 
       final jsonContent = json.encode(backupData);
       final file = ArchiveFile(
-          'backup_data.json', jsonContent.length, jsonContent.codeUnits);
+        'backup_data.json',
+        jsonContent.length,
+        jsonContent.codeUnits,
+      );
       archive.addFile(file);
 
       // 写入ZIP文件
@@ -82,8 +88,9 @@ void main() {
       await File(zipPath).writeAsBytes(zipData);
 
       // 测试验证
-      final isValid =
-          await StreamingBackupProcessor.validateBackupFile(zipPath);
+      final isValid = await StreamingBackupProcessor.validateBackupFile(
+        zipPath,
+      );
       expect(isValid, isTrue);
     });
 
@@ -110,8 +117,11 @@ void main() {
       };
 
       final jsonContent = json.encode(backupData);
-      final file =
-          ArchiveFile('data.json', jsonContent.length, jsonContent.codeUnits);
+      final file = ArchiveFile(
+        'data.json',
+        jsonContent.length,
+        jsonContent.codeUnits,
+      );
       archive.addFile(file);
 
       // 写入ZIP文件
@@ -119,8 +129,9 @@ void main() {
       await File(zipPath).writeAsBytes(zipData);
 
       // 测试验证
-      final isValid =
-          await StreamingBackupProcessor.validateBackupFile(zipPath);
+      final isValid = await StreamingBackupProcessor.validateBackupFile(
+        zipPath,
+      );
       expect(isValid, isTrue);
     });
 
@@ -138,8 +149,9 @@ void main() {
       await File(zipPath).writeAsBytes(zipData);
 
       // 测试验证
-      final isValid =
-          await StreamingBackupProcessor.validateBackupFile(zipPath);
+      final isValid = await StreamingBackupProcessor.validateBackupFile(
+        zipPath,
+      );
       expect(isValid, isFalse);
     });
 
@@ -169,8 +181,9 @@ void main() {
       await File(zipPath).writeAsBytes(zipData);
 
       // 测试验证
-      final isValid =
-          await StreamingBackupProcessor.validateBackupFile(zipPath);
+      final isValid = await StreamingBackupProcessor.validateBackupFile(
+        zipPath,
+      );
       expect(isValid, isTrue);
     });
   });

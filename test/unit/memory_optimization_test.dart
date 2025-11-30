@@ -47,8 +47,10 @@ void main() {
         // Create a minimal test ZIP file (this would need a real ZIP in practice)
 
         // For this test, we just verify the method can handle non-existent files
-        final result =
-            await ZipStreamProcessor.containsFile(zipPath, 'test.txt');
+        final result = await ZipStreamProcessor.containsFile(
+          zipPath,
+          'test.txt',
+        );
         expect(result, isFalse); // File doesn't exist, so should return false
       } finally {
         tempDir.deleteSync(recursive: true);
@@ -57,23 +59,29 @@ void main() {
 
     test('ZipStreamProcessor getZipInfo should use streaming', () async {
       // Test that getZipInfo handles non-existent files gracefully
-      final result =
-          await ZipStreamProcessor.getZipInfo('/nonexistent/path.zip');
+      final result = await ZipStreamProcessor.getZipInfo(
+        '/nonexistent/path.zip',
+      );
       expect(result, isNull);
     });
 
-    test('ZipStreamProcessor extractFileToMemory should use streaming',
-        () async {
-      // Test that extractFileToMemory handles non-existent files gracefully
-      final result = await ZipStreamProcessor.extractFileToMemory(
-          '/nonexistent/path.zip', 'test.txt');
-      expect(result, isNull);
-    });
+    test(
+      'ZipStreamProcessor extractFileToMemory should use streaming',
+      () async {
+        // Test that extractFileToMemory handles non-existent files gracefully
+        final result = await ZipStreamProcessor.extractFileToMemory(
+          '/nonexistent/path.zip',
+          'test.txt',
+        );
+        expect(result, isNull);
+      },
+    );
 
     test('ZipStreamProcessor validateZipFile should use streaming', () async {
       // Test that validateZipFile handles non-existent files gracefully
-      final result =
-          await ZipStreamProcessor.validateZipFile('/nonexistent/path.zip');
+      final result = await ZipStreamProcessor.validateZipFile(
+        '/nonexistent/path.zip',
+      );
       expect(result, isFalse);
     });
   });

@@ -29,8 +29,10 @@ class SVGCardWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     // 只在debug模式且SVG内容有问题时才打印详细信息
     if (kDebugMode && svgContent.length < 100) {
-      logDebug('SVG渲染 - 内容可能过短: ${svgContent.length}字符',
-          source: 'SVGCardWidget');
+      logDebug(
+        'SVG渲染 - 内容可能过短: ${svgContent.length}字符',
+        source: 'SVGCardWidget',
+      );
     }
 
     return GestureDetector(
@@ -76,29 +78,34 @@ class SVGCardWidget extends StatelessWidget {
         allowDrawingOutsideViewBox: false, // 与offscreen renderer保持一致
         placeholderBuilder: showLoadingIndicator
             ? (context) => Container(
-                  color: Colors.grey[200],
-                  child: const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 8),
-                        Text(
-                          '正在加载SVG...',
-                          style: TextStyle(color: Colors.grey, fontSize: 12),
-                        ),
-                      ],
-                    ),
+                color: Colors.grey[200],
+                child: const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 8),
+                      Text(
+                        '正在加载SVG...',
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
+                    ],
                   ),
-                )
+                ),
+              )
             : null,
         errorBuilder: (context, error, stackTrace) {
-          AppLogger.e('SVG渲染错误: $error',
-              error: error, stackTrace: stackTrace, source: 'SvgCardWidget');
+          AppLogger.e(
+            'SVG渲染错误: $error',
+            error: error,
+            stackTrace: stackTrace,
+            source: 'SvgCardWidget',
+          );
           if (kDebugMode) {
             AppLogger.d(
-                'SVG内容预览: ${svgContent.substring(0, svgContent.length > 200 ? 200 : svgContent.length)}...',
-                source: 'SvgCardWidget');
+              'SVG内容预览: ${svgContent.substring(0, svgContent.length > 200 ? 200 : svgContent.length)}...',
+              source: 'SvgCardWidget',
+            );
           }
           // 使用回退SVG模板而不是错误提示
           return _buildFallbackSVG();
@@ -143,10 +150,7 @@ class SVGCardWidget extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     '正在尝试使用备用模板...',
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
                     textAlign: TextAlign.center,
                   ),
                   if (kDebugMode) ...[
@@ -186,33 +190,38 @@ class SVGCardWidget extends StatelessWidget {
       // 生成回退SVG
       final fallbackSVG = _generateFallbackSVGContent(extractedContent);
 
-      AppLogger.i('使用回退SVG模板，内容长度: ${fallbackSVG.length}',
-          source: 'SvgCardWidget');
+      AppLogger.i(
+        '使用回退SVG模板，内容长度: ${fallbackSVG.length}',
+        source: 'SvgCardWidget',
+      );
 
       return SvgPicture.string(
         fallbackSVG,
         fit: fit,
         placeholderBuilder: showLoadingIndicator
             ? (context) => Container(
-                  color: Colors.grey[100],
-                  child: const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 8),
-                        Text(
-                          '正在加载备用模板...',
-                          style: TextStyle(color: Colors.grey, fontSize: 12),
-                        ),
-                      ],
-                    ),
+                color: Colors.grey[100],
+                child: const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 8),
+                      Text(
+                        '正在加载备用模板...',
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
+                    ],
                   ),
-                )
+                ),
+              )
             : null,
         errorBuilder: (context, error, stackTrace) {
-          AppLogger.e('回退SVG也渲染失败: $error',
-              error: error, source: 'SvgCardWidget');
+          AppLogger.e(
+            '回退SVG也渲染失败: $error',
+            error: error,
+            source: 'SvgCardWidget',
+          );
           return _buildFinalErrorWidget();
         },
       );
@@ -238,11 +247,7 @@ class SVGCardWidget extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.error_outline,
-                size: 48,
-                color: Colors.red[400],
-              ),
+              Icon(Icons.error_outline, size: 48, color: Colors.red[400]),
               const SizedBox(height: 12),
               Text(
                 '卡片渲染失败',
@@ -255,10 +260,7 @@ class SVGCardWidget extends StatelessWidget {
               const SizedBox(height: 8),
               Text(
                 '请尝试重新生成卡片',
-                style: TextStyle(
-                  color: Colors.red[600],
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: Colors.red[600], fontSize: 12),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -303,8 +305,9 @@ class SVGCardWidget extends StatelessWidget {
   /// 生成回退SVG内容
   String _generateFallbackSVGContent(String content) {
     // 限制内容长度
-    final displayContent =
-        content.length > 50 ? '${content.substring(0, 50)}...' : content;
+    final displayContent = content.length > 50
+        ? '${content.substring(0, 50)}...'
+        : content;
 
     return '''
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600">
@@ -478,21 +481,13 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
       vsync: this,
     );
 
-    _scaleAnimation = Tween<double>(
-      begin: 0.8,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutBack,
-    ));
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutBack),
+    );
 
-    _opacityAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOut,
-    ));
+    _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
 
     _animationController.forward();
   }
@@ -515,8 +510,10 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
             child: Opacity(
               opacity: _opacityAnimation.value,
               child: Container(
-                constraints:
-                    const BoxConstraints(maxWidth: 500, maxHeight: 700),
+                constraints: const BoxConstraints(
+                  maxWidth: 500,
+                  maxHeight: 700,
+                ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -530,8 +527,11 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
                         ),
                         child: IconButton(
                           onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(Icons.close,
-                              color: Colors.white, size: 24),
+                          icon: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 24,
+                          ),
                           tooltip: '关闭',
                         ),
                       ),
@@ -559,12 +559,8 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
                               // 标题
                               Text(
                                 '精选卡片',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleLarge
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                style: Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 16),
                               // 卡片

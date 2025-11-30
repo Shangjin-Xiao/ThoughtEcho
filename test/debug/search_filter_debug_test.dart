@@ -121,7 +121,8 @@ void main() {
       } catch (e) {
         stopwatch.stop();
         debugPrintSynchronously(
-            '✗ 搜索查询失败: $e, 耗时: ${stopwatch.elapsedMilliseconds}ms');
+          '✗ 搜索查询失败: $e, 耗时: ${stopwatch.elapsedMilliseconds}ms',
+        );
         rethrow;
       }
     });
@@ -163,7 +164,8 @@ void main() {
       } catch (e) {
         stopwatch.stop();
         debugPrintSynchronously(
-            '✗ 标签筛选查询失败: $e, 耗时: ${stopwatch.elapsedMilliseconds}ms');
+          '✗ 标签筛选查询失败: $e, 耗时: ${stopwatch.elapsedMilliseconds}ms',
+        );
         if (!TestConfig.isCI) rethrow; // Don't fail CI on performance issues
       }
     });
@@ -199,7 +201,8 @@ void main() {
       } catch (e) {
         stopwatch.stop();
         debugPrintSynchronously(
-            '✗ 复合查询失败: $e, 耗时: ${stopwatch.elapsedMilliseconds}ms');
+          '✗ 复合查询失败: $e, 耗时: ${stopwatch.elapsedMilliseconds}ms',
+        );
         rethrow;
       }
     });
@@ -252,11 +255,13 @@ void main() {
       } catch (e) {
         stopwatch.stop();
         debugPrintSynchronously(
-            '查询结果: $e, 耗时: ${stopwatch.elapsedMilliseconds}ms');
+          '查询结果: $e, 耗时: ${stopwatch.elapsedMilliseconds}ms',
+        );
 
         if (e.toString().contains('TimeoutException')) {
           debugPrintSynchronously(
-              '✓ 超时机制正常工作，在 ${stopwatch.elapsedMilliseconds}ms 后抛出超时异常');
+            '✓ 超时机制正常工作，在 ${stopwatch.elapsedMilliseconds}ms 后抛出超时异常',
+          );
           expect(
             stopwatch.elapsedMilliseconds,
             lessThan(6000),
@@ -318,8 +323,9 @@ void main() {
           WHERE type='index' AND tbl_name IN ('quotes', 'quote_tags', 'categories')
         ''');
 
-        final indexDetails =
-            indexes.map((index) => '  - ${index['name']}').join('\n');
+        final indexDetails = indexes
+            .map((index) => '  - ${index['name']}')
+            .join('\n');
         debugPrintSynchronously('数据库索引状态:\n$indexDetails');
 
         // 检查quote_tags表的索引
@@ -360,8 +366,9 @@ void main() {
             [categories.first.id],
           );
 
-          final planDetails =
-              queryPlan.map((plan) => '  ${plan['detail']}').join('\n');
+          final planDetails = queryPlan
+              .map((plan) => '  ${plan['detail']}')
+              .join('\n');
           debugPrintSynchronously('标签查询执行计划:\n$planDetails');
 
           // 检查是否使用了索引

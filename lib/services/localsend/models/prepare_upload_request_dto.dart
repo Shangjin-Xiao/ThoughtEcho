@@ -5,10 +5,7 @@ class PrepareUploadRequestDto {
   final InfoRegisterDto info;
   final Map<String, FileDto> files;
 
-  const PrepareUploadRequestDto({
-    required this.info,
-    required this.files,
-  });
+  const PrepareUploadRequestDto({required this.info, required this.files});
 
   Map<String, dynamic> toJson() {
     return {

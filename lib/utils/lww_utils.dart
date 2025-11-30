@@ -24,7 +24,9 @@ class LWWUtils {
   /// - 负数：local 更新
   /// - 0：时间戳相同
   static int compareTimestamps(
-      String? localTimestamp, String? remoteTimestamp) {
+    String? localTimestamp,
+    String? remoteTimestamp,
+  ) {
     final localTime = parseTimestamp(localTimestamp);
     final remoteTime = parseTimestamp(remoteTimestamp);
 
@@ -144,7 +146,9 @@ class LWWUtils {
 
   /// 计算时间戳之间的差值（秒）
   static int getTimestampDifferenceSeconds(
-      String? timestamp1, String? timestamp2) {
+    String? timestamp1,
+    String? timestamp2,
+  ) {
     final time1 = parseTimestamp(timestamp1);
     final time2 = parseTimestamp(timestamp2);
 
@@ -199,8 +203,10 @@ class LWWDecisionMaker {
     final clockSkew = LWWUtils.detectClockSkew(remoteTimestamp);
 
     // 比较时间戳
-    final comparison =
-        LWWUtils.compareTimestamps(localTimestamp, remoteTimestamp);
+    final comparison = LWWUtils.compareTimestamps(
+      localTimestamp,
+      remoteTimestamp,
+    );
 
     if (comparison > 0) {
       // Remote更新

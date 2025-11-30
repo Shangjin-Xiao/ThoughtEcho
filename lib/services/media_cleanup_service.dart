@@ -78,13 +78,14 @@ class MediaCleanupService {
       // 2. 清理所有临时文件
       final tempFiles = dryRun
           ? (await TemporaryMediaService.getTemporaryFilesStats())['totalFiles']
-              as int
+                as int
           : await TemporaryMediaService.cleanupAllTemporaryFiles();
       results['tempFilesCleared'] = tempFiles;
 
       // 3. 清理孤儿媒体文件
-      final orphanFiles =
-          await MediaReferenceService.cleanupOrphanFiles(dryRun: dryRun);
+      final orphanFiles = await MediaReferenceService.cleanupOrphanFiles(
+        dryRun: dryRun,
+      );
       results['orphanFilesCleared'] = orphanFiles;
 
       // 4. 获取清理后的统计信息
@@ -188,8 +189,10 @@ class MediaCleanupService {
             final fileSize = await entity.length();
             totalSize += fileSize;
 
-            final relativePath =
-                path.relative(entity.path, from: mediaDir.path);
+            final relativePath = path.relative(
+              entity.path,
+              from: mediaDir.path,
+            );
             if (relativePath.startsWith('images')) {
               imagesSize += fileSize;
             } else if (relativePath.startsWith('videos')) {

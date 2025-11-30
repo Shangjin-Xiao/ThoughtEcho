@@ -104,8 +104,9 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                             Text(
                               l10n.tagSettingsDescription,
                               style: theme.textTheme.bodyMedium?.copyWith(
-                                color: colorScheme.onPrimaryContainer
-                                    .withAlpha(180),
+                                color: colorScheme.onPrimaryContainer.withAlpha(
+                                  180,
+                                ),
                               ),
                             ),
                           ],
@@ -177,15 +178,18 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                           onPressed: () => _showIconSelector(context, l10n),
                           icon: _selectedIconName != null
                               ? (IconUtils.isEmoji(_selectedIconName!)
-                                  ? Text(
-                                      IconUtils.getDisplayIcon(
-                                          _selectedIconName!),
-                                      style: const TextStyle(fontSize: 20),
-                                    )
-                                  : Icon(
-                                      IconUtils.getIconData(_selectedIconName!),
-                                      color: colorScheme.primary,
-                                    ))
+                                    ? Text(
+                                        IconUtils.getDisplayIcon(
+                                          _selectedIconName!,
+                                        ),
+                                        style: const TextStyle(fontSize: 20),
+                                      )
+                                    : Icon(
+                                        IconUtils.getIconData(
+                                          _selectedIconName!,
+                                        ),
+                                        color: colorScheme.primary,
+                                      ))
                               : Icon(
                                   Icons.add_photo_alternate_outlined,
                                   color: colorScheme.onSurfaceVariant,
@@ -213,11 +217,9 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
 
                                   // 在异步操作前获取上下文的参数和服务
                                   final scaffoldMessenger =
-                                      ScaffoldMessenger.of(
-                                    context,
-                                  );
-                                  final dbService =
-                                      context.read<DatabaseService>();
+                                      ScaffoldMessenger.of(context);
+                                  final dbService = context
+                                      .read<DatabaseService>();
 
                                   setState(() => _isLoading = true);
                                   try {
@@ -243,7 +245,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                     scaffoldMessenger.showSnackBar(
                                       SnackBar(
                                         content: Text(
-                                            l10n.addTagFailed(e.toString())),
+                                          l10n.addTagFailed(e.toString()),
+                                        ),
                                         duration:
                                             AppConstants.snackBarDurationError,
                                       ),
@@ -453,7 +456,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                   child: IconUtils.isEmoji(tag.iconName)
                                       ? Text(
                                           IconUtils.getDisplayIcon(
-                                              tag.iconName),
+                                            tag.iconName,
+                                          ),
                                           style: const TextStyle(fontSize: 20),
                                         )
                                       : Icon(
@@ -478,11 +482,11 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                               subtitle: tag.isDefault
                                   ? Text(
                                       l10n.systemDefaultTag,
-                                      style:
-                                          theme.textTheme.bodySmall?.copyWith(
-                                        color:
-                                            colorScheme.primary.withAlpha(150),
-                                      ),
+                                      style: theme.textTheme.bodySmall
+                                          ?.copyWith(
+                                            color: colorScheme.primary
+                                                .withAlpha(150),
+                                          ),
                                     )
                                   : null,
                               trailing: tag.isDefault
@@ -492,21 +496,23 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                         vertical: 4,
                                       ),
                                       decoration: BoxDecoration(
-                                        color:
-                                            colorScheme.primary.withAlpha(20),
+                                        color: colorScheme.primary.withAlpha(
+                                          20,
+                                        ),
                                         borderRadius: BorderRadius.circular(6),
                                         border: Border.all(
-                                          color:
-                                              colorScheme.primary.withAlpha(50),
+                                          color: colorScheme.primary.withAlpha(
+                                            50,
+                                          ),
                                         ),
                                       ),
                                       child: Text(
                                         l10n.defaultTag,
                                         style: theme.textTheme.labelSmall
                                             ?.copyWith(
-                                          color: colorScheme.primary,
-                                          fontWeight: FontWeight.w600,
-                                        ),
+                                              color: colorScheme.primary,
+                                              fontWeight: FontWeight.w600,
+                                            ),
                                       ),
                                     )
                                   : IconButton(
@@ -518,11 +524,10 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                         // 在异步操作前获取上下文的参数和服务
                                         final scaffoldMessenger =
                                             ScaffoldMessenger.of(context);
-                                        final dbService =
-                                            context.read<DatabaseService>();
+                                        final dbService = context
+                                            .read<DatabaseService>();
 
-                                        final confirmed =
-                                            await showDialog<bool>(
+                                        final confirmed = await showDialog<bool>(
                                           context: context,
                                           builder: (context) => AlertDialog(
                                             shape: RoundedRectangleBorder(
@@ -541,7 +546,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                             ),
                                             content: Text(
                                               l10n.deleteTagDialogContent(
-                                                  tag.name),
+                                                tag.name,
+                                              ),
                                             ),
                                             actions: [
                                               TextButton(
@@ -574,8 +580,9 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
 
                                         if (confirmed == true) {
                                           try {
-                                            await dbService
-                                                .deleteCategory(tag.id);
+                                            await dbService.deleteCategory(
+                                              tag.id,
+                                            );
 
                                             if (!mounted) return;
                                             scaffoldMessenger.showSnackBar(
@@ -590,7 +597,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                                     ),
                                                     const SizedBox(width: 8),
                                                     Text(
-                                                        l10n.tagDeletedSuccess),
+                                                      l10n.tagDeletedSuccess,
+                                                    ),
                                                   ],
                                                 ),
                                                 behavior:
@@ -616,8 +624,11 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                                           .onErrorContainer,
                                                     ),
                                                     const SizedBox(width: 8),
-                                                    Text(l10n.deleteTagFailed(
-                                                        e.toString())),
+                                                    Text(
+                                                      l10n.deleteTagFailed(
+                                                        e.toString(),
+                                                      ),
+                                                    ),
                                                   ],
                                                 ),
                                                 backgroundColor:
@@ -803,16 +814,14 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                             height: 48,
                                             decoration: BoxDecoration(
                                               color: isSelected
-                                                  ? Theme.of(
-                                                      context,
-                                                    )
-                                                      .colorScheme
-                                                      .primaryContainer
+                                                  ? Theme.of(context)
+                                                        .colorScheme
+                                                        .primaryContainer
                                                   : Colors.transparent,
                                               borderRadius:
                                                   BorderRadius.circular(
-                                                AppTheme.cardRadius,
-                                              ),
+                                                    AppTheme.cardRadius,
+                                                  ),
                                               border: Border.all(
                                                 color: isSelected
                                                     ? Theme.of(
@@ -849,8 +858,9 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                           ListTile(
                             title: Text(
                               l10n.systemIcons,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             trailing: Icon(
                               expandedCategories[l10n.systemIcons] ?? false
@@ -898,16 +908,14 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                             padding: const EdgeInsets.all(8),
                                             decoration: BoxDecoration(
                                               color: isSelected
-                                                  ? Theme.of(
-                                                      context,
-                                                    )
-                                                      .colorScheme
-                                                      .primaryContainer
+                                                  ? Theme.of(context)
+                                                        .colorScheme
+                                                        .primaryContainer
                                                   : Colors.transparent,
                                               borderRadius:
                                                   BorderRadius.circular(
-                                                AppTheme.cardRadius,
-                                              ),
+                                                    AppTheme.cardRadius,
+                                                  ),
                                               border: Border.all(
                                                 color: isSelected
                                                     ? Theme.of(

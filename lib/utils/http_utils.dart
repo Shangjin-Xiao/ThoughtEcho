@@ -95,8 +95,9 @@ class HttpUtils {
         url,
         options: Options(
           headers: headers,
-          receiveTimeout:
-              timeoutSeconds != null ? Duration(seconds: timeoutSeconds) : null,
+          receiveTimeout: timeoutSeconds != null
+              ? Duration(seconds: timeoutSeconds)
+              : null,
           // 对一言API使用JSON响应类型，让Dio自动解析
           responseType: url.contains('hitokoto.cn')
               ? ResponseType.json

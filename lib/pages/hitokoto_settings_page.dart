@@ -190,8 +190,9 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                       onPressed: () {
                         setState(() {
                           _selectedTypes.clear();
-                          for (final key
-                              in ApiService.getHitokotoTypes(l10n).keys) {
+                          for (final key in ApiService.getHitokotoTypes(
+                            l10n,
+                          ).keys) {
                             _selectedTypes.add(key);
                           }
                         });
@@ -256,12 +257,10 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                     Wrap(
                       spacing: 12,
                       runSpacing: 12,
-                      children: ApiService.getHitokotoTypes(l10n)
-                          .entries
-                          .map((entry) {
-                        final isSelected = _selectedTypes.contains(
-                          entry.key,
-                        );
+                      children: ApiService.getHitokotoTypes(l10n).entries.map((
+                        entry,
+                      ) {
+                        final isSelected = _selectedTypes.contains(entry.key);
                         return _buildTypeChip(
                           context: context,
                           type: entry.key,
@@ -430,15 +429,12 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
       selected: isSelected,
       showCheckmark: false,
       avatar: isSelected
-          ? Icon(
-              Icons.check_rounded,
-              size: 16,
-              color: colorScheme.onPrimary,
-            )
+          ? Icon(Icons.check_rounded, size: 16, color: colorScheme.onPrimary)
           : null,
       labelStyle: TextStyle(
-        color:
-            isSelected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
+        color: isSelected
+            ? colorScheme.onPrimary
+            : colorScheme.onSurfaceVariant,
         fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
         fontSize: 13,
       ),

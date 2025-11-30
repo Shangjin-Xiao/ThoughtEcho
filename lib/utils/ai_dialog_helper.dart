@@ -12,7 +12,7 @@ class AiDialogHelper {
   final AIService aiService;
 
   AiDialogHelper(this.context)
-      : aiService = Provider.of<AIService>(context, listen: false);
+    : aiService = Provider.of<AIService>(context, listen: false);
 
   // 显示AI选项菜单
   void showAiOptions({
@@ -333,12 +333,12 @@ class AiDialogHelper {
 
   void _showSnackBar(String message) {
     if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(
-        content: Text(message),
-        duration: AppConstants.snackBarDurationError,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          duration: AppConstants.snackBarDurationError,
+        ),
+      );
     }
   }
 }

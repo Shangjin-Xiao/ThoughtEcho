@@ -116,14 +116,16 @@ class _AISettingsPageState extends State<AISettingsPage> {
       );
 
       logDebug(
-          'API key read from storage: ${apiKey.isNotEmpty ? 'not empty (${apiKey.length} chars)' : 'empty'}');
+        'API key read from storage: ${apiKey.isNotEmpty ? 'not empty (${apiKey.length} chars)' : 'empty'}',
+      );
 
       if (mounted) {
         setState(() {
           _apiKeyController.text = apiKey;
         });
         logDebug(
-            'API key text controller updated, length: ${_apiKeyController.text.length}');
+          'API key text controller updated, length: ${_apiKeyController.text.length}',
+        );
       }
     } else {
       logDebug('Cannot load API key, current provider is null.');
@@ -138,7 +140,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
     _multiSettings = settingsService.multiAISettings;
     _currentProvider = _multiSettings.currentProvider;
     logDebug(
-        'Current provider from multi-settings: ${_currentProvider?.name ?? "none"}');
+      'Current provider from multi-settings: ${_currentProvider?.name ?? "none"}',
+    );
     _updateApiKeyStatus();
 
     // 异步更新API Key状态
@@ -238,9 +241,10 @@ class _AISettingsPageState extends State<AISettingsPage> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text(l10n.checkFailed(e.toString())),
-            backgroundColor: Colors.red,
-            duration: AppConstants.snackBarDurationError),
+          content: Text(l10n.checkFailed(e.toString())),
+          backgroundColor: Colors.red,
+          duration: AppConstants.snackBarDurationError,
+        ),
       );
     } finally {
       if (mounted) {
@@ -275,9 +279,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
           // 尝试匹配预设
           try {
-            _selectedPreset = _getAiPresets(l10n).firstWhere(
-              (p) => p['apiUrl'] == _apiUrlController.text,
-            )['name'];
+            _selectedPreset = _getAiPresets(
+              l10n,
+            ).firstWhere((p) => p['apiUrl'] == _apiUrlController.text)['name'];
           } catch (_) {
             _selectedPreset = null;
           }
@@ -296,8 +300,11 @@ class _AISettingsPageState extends State<AISettingsPage> {
       // 预加载一次reportInsightsUseAI状态，确保UI响应
       // 使用SettingsService提供的getter
     } catch (e) {
-      logError(l10n.loadAiSettingsError(e.toString()),
-          error: e, source: 'AISettingsPage._loadSettings');
+      logError(
+        l10n.loadAiSettingsError(e.toString()),
+        error: e,
+        source: 'AISettingsPage._loadSettings',
+      );
       // 在异步操作后检查 mounted 状态
       if (!mounted) return;
 
@@ -308,9 +315,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
             children: [
               const Icon(Icons.error, color: Colors.white, size: 20),
               const SizedBox(width: 8),
-              Expanded(
-                child: Text(l10n.loadAiSettingsErrorUser),
-              ),
+              Expanded(child: Text(l10n.loadAiSettingsErrorUser)),
             ],
           ),
           backgroundColor: Colors.red,
@@ -413,7 +418,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
         providerName = l10n.customConfigHost(uri.host);
       } else {
         providerName = l10n.customConfigTimestamp(
-            DateTime.now().millisecondsSinceEpoch.toString());
+          DateTime.now().millisecondsSinceEpoch.toString(),
+        );
       }
     }
 
@@ -435,9 +441,11 @@ class _AISettingsPageState extends State<AISettingsPage> {
     // 先保存API密钥到安全存储（确保成功）
     final apiKeyManager = APIKeyManager();
     logDebug(
-        'Preparing to save API key, length: ${_apiKeyController.text.length}');
+      'Preparing to save API key, length: ${_apiKeyController.text.length}',
+    );
     logDebug(
-        'API key content prefix: ${_apiKeyController.text.substring(0, math.min(20, _apiKeyController.text.length))}...');
+      'API key content prefix: ${_apiKeyController.text.substring(0, math.min(20, _apiKeyController.text.length))}...',
+    );
 
     // 调试保存过程
     await ApiKeyDebugger.debugApiKeySave(
@@ -450,12 +458,14 @@ class _AISettingsPageState extends State<AISettingsPage> {
       _apiKeyController.text,
     );
     logDebug(
-        'API key saved to secure storage for provider ${newProvider.id}, length: ${_apiKeyController.text.length}');
+      'API key saved to secure storage for provider ${newProvider.id}, length: ${_apiKeyController.text.length}',
+    );
 
     // 立即验证保存是否成功
     final savedKey = await apiKeyManager.getProviderApiKey(newProvider.id);
     logDebug(
-        'Verified saved API key, read back length: ${savedKey.length}. Save successful: ${savedKey == _apiKeyController.text}');
+      'Verified saved API key, read back length: ${savedKey.length}. Save successful: ${savedKey == _apiKeyController.text}',
+    );
 
     // 再添加到provider列表
     final updatedProviders = [..._multiSettings.providers, newProvider];
@@ -594,8 +604,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
         }
       } else {
         setState(() {
-          _testResults[provider.id] =
-              l10n.connectionFailed(response.statusCode ?? 0);
+          _testResults[provider.id] = l10n.connectionFailed(
+            response.statusCode ?? 0,
+          );
         });
       }
     } catch (e) {
@@ -644,11 +655,12 @@ class _AISettingsPageState extends State<AISettingsPage> {
     await _updateApiKeyStatusAsync();
 
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
         content: Text(l10n.switchedTo(provider.name)),
-        duration: AppConstants.snackBarDurationNormal));
+        duration: AppConstants.snackBarDurationNormal,
+      ),
+    );
   }
 
   // 重命名provider
@@ -714,8 +726,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
       scaffoldMessenger.showSnackBar(
         SnackBar(
-            content: Text(l10n.presetRenamed(result)),
-            duration: AppConstants.snackBarDurationNormal),
+          content: Text(l10n.presetRenamed(result)),
+          duration: AppConstants.snackBarDurationNormal,
+        ),
       );
     }
 
@@ -751,14 +764,16 @@ class _AISettingsPageState extends State<AISettingsPage> {
     );
 
     if (confirmed == true) {
-      final updatedProviders =
-          _multiSettings.providers.where((p) => p.id != provider.id).toList();
+      final updatedProviders = _multiSettings.providers
+          .where((p) => p.id != provider.id)
+          .toList();
 
       // 如果删除的是当前provider，切换到第一个可用的provider或清空
       String? newCurrentProviderId = _multiSettings.currentProviderId;
       if (_currentProvider?.id == provider.id) {
-        newCurrentProviderId =
-            updatedProviders.isNotEmpty ? updatedProviders.first.id : null;
+        newCurrentProviderId = updatedProviders.isNotEmpty
+            ? updatedProviders.first.id
+            : null;
       }
 
       final updatedMultiSettings = _multiSettings.copyWith(
@@ -795,8 +810,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
       if (!mounted) return;
       scaffoldMessenger.showSnackBar(
         SnackBar(
-            content: Text(l10n.presetDeleted(provider.name)),
-            duration: AppConstants.snackBarDurationNormal),
+          content: Text(l10n.presetDeleted(provider.name)),
+          duration: AppConstants.snackBarDurationNormal,
+        ),
       );
     }
   }
@@ -820,8 +836,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
                 Text(
                   l10n.aiProviderSelection,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -853,9 +869,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
                         children: [
                           Text(
                             l10n.currentProvider(_currentProvider!.name),
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleSmall
+                            style: Theme.of(context).textTheme.titleSmall
                                 ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                           Text(
@@ -864,23 +878,25 @@ class _AISettingsPageState extends State<AISettingsPage> {
                             overflow: TextOverflow.ellipsis,
                           ),
                           Text(
-                            l10n.modelLabel(_currentProvider!.model.isEmpty
-                                ? l10n.modelNotConfigured
-                                : _currentProvider!.model),
+                            l10n.modelLabel(
+                              _currentProvider!.model.isEmpty
+                                  ? l10n.modelNotConfigured
+                                  : _currentProvider!.model,
+                            ),
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                           Text(
                             l10n.apiKeyLabel(_apiKeyStatus),
-                            style: Theme.of(
-                              context,
-                            ).textTheme.bodySmall?.copyWith(
-                                  color: _apiKeyStatus.contains('有效') ||
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color:
+                                      _apiKeyStatus.contains('有效') ||
                                           _apiKeyStatus.contains('valid')
                                       ? Colors.green
                                       : _apiKeyStatus.contains('无效') ||
-                                              _apiKeyStatus.contains('invalid')
-                                          ? Colors.red
-                                          : Colors.orange,
+                                            _apiKeyStatus.contains('invalid')
+                                      ? Colors.red
+                                      : Colors.orange,
                                 ),
                           ),
                         ],
@@ -893,9 +909,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
                           ? const SizedBox(
                               width: 16,
                               height: 16,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                              ),
+                              child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.refresh),
                       tooltip: l10n.checkApiKeyStatus,
@@ -957,16 +971,20 @@ class _AISettingsPageState extends State<AISettingsPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          l10n.modelLabel(provider.model.isEmpty
-                              ? l10n.modelNotConfigured
-                              : provider.model),
+                          l10n.modelLabel(
+                            provider.model.isEmpty
+                                ? l10n.modelNotConfigured
+                                : provider.model,
+                          ),
                         ),
                         if (_testResults[provider.id] != null)
                           Text(
                             _testResults[provider.id]!,
                             style: TextStyle(
-                              color: _testResults[provider.id]!
-                                      .contains(l10n.connectionSuccess)
+                              color:
+                                  _testResults[provider.id]!.contains(
+                                    l10n.connectionSuccess,
+                                  )
                                   ? Colors.green
                                   : Colors.red,
                             ),
@@ -1007,8 +1025,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
                           ),
                       ],
                     ),
-                    onTap:
-                        !isCurrent ? () => _setCurrentProvider(provider) : null,
+                    onTap: !isCurrent
+                        ? () => _setCurrentProvider(provider)
+                        : null,
                   ),
                 );
               }),
@@ -1072,14 +1091,14 @@ class _AISettingsPageState extends State<AISettingsPage> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.auto_awesome,
-                              color: Theme.of(context).colorScheme.primary),
+                          Icon(
+                            Icons.auto_awesome,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             l10n.quickPresets,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
+                            style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                         ],
@@ -1101,9 +1120,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
                           if (value == null) return;
                           setState(() {
                             _selectedPreset = value;
-                            final preset = _getAiPresets(l10n).firstWhere(
-                              (p) => p['name'] == value,
-                            );
+                            final preset = _getAiPresets(
+                              l10n,
+                            ).firstWhere((p) => p['name'] == value);
                             _apiUrlController.text = preset['apiUrl']!;
                             _modelController.text = preset['model']!;
                             // 保留当前的API Key，不要清空
@@ -1131,16 +1150,18 @@ class _AISettingsPageState extends State<AISettingsPage> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.cloud_outlined,
-                              color: Theme.of(context).colorScheme.primary),
+                          Icon(
+                            Icons.cloud_outlined,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                           const SizedBox(width: 8),
                           Text(
-                            l10n.connectionConfig(_currentProvider?.name ??
-                                _selectedPreset ??
-                                l10n.custom),
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
+                            l10n.connectionConfig(
+                              _currentProvider?.name ??
+                                  _selectedPreset ??
+                                  l10n.custom,
+                            ),
+                            style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                         ],
@@ -1198,14 +1219,14 @@ class _AISettingsPageState extends State<AISettingsPage> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.tune,
-                              color: Theme.of(context).colorScheme.primary),
+                          Icon(
+                            Icons.tune,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             l10n.modelAndAdvanced,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
+                            style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                         ],
@@ -1215,7 +1236,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
                         controller: _modelController,
                         decoration: InputDecoration(
                           labelText: l10n.modelNameField,
-                          hintText: _selectedPreset != null &&
+                          hintText:
+                              _selectedPreset != null &&
                                   _getAiPresets(l10n)
                                       .firstWhere(
                                         (p) => p['name'] == _selectedPreset,
@@ -1273,14 +1295,14 @@ class _AISettingsPageState extends State<AISettingsPage> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.image_outlined,
-                              color: Theme.of(context).colorScheme.primary),
+                          Icon(
+                            Icons.image_outlined,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                           const SizedBox(width: 8),
                           Text(
                             l10n.aiCardGeneration,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
+                            style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                         ],
@@ -1288,18 +1310,17 @@ class _AISettingsPageState extends State<AISettingsPage> {
                       const SizedBox(height: 8),
                       Text(
                         l10n.aiCardGenerationDesc,
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(color: Colors.grey[600]),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.grey[600],
+                        ),
                       ),
                       const SizedBox(height: 6),
                       Text(
                         l10n.aiCardGenerationTip,
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodySmall
-                            ?.copyWith(color: Colors.orange[600], fontSize: 11),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.orange[600],
+                          fontSize: 11,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       Consumer<SettingsService>(

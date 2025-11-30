@@ -19,23 +19,27 @@ class ReceiveController {
   final Function(String filePath)? onFileReceived;
   final void Function(int received, int total)? onReceiveProgress;
   final void Function(String sessionId, int totalBytes, String senderAlias)?
-      onSessionCreated; // 通知有新的会话（等待审批）
+  onSessionCreated; // 通知有新的会话（等待审批）
   final Future<bool> Function(
-          String sessionId, int totalBytes, String senderAlias)?
-      onApprovalNeeded; // 需要用户审批时回调，true 继续 false 取消
+    String sessionId,
+    int totalBytes,
+    String senderAlias,
+  )?
+  onApprovalNeeded; // 需要用户审批时回调，true 继续 false 取消
   final bool Function(String? fingerprint)?
-      consumePreApproval; // 若返回true表示已存在预批准并已消费
+  consumePreApproval; // 若返回true表示已存在预批准并已消费
   final Map<String, ReceiveSession> _sessions = {};
   final Duration sessionTimeout = const Duration(minutes: 2);
   Timer? _gcTimer;
   String? _cachedFingerprint; // initialized explicitly before serving info
 
-  ReceiveController(
-      {this.onFileReceived,
-      this.onReceiveProgress,
-      this.onSessionCreated,
-      this.onApprovalNeeded,
-      this.consumePreApproval});
+  ReceiveController({
+    this.onFileReceived,
+    this.onReceiveProgress,
+    this.onSessionCreated,
+    this.onApprovalNeeded,
+    this.consumePreApproval,
+  });
 
   void _startGcTimer() {
     _gcTimer ??= Timer.periodic(const Duration(seconds: 30), (_) {
@@ -68,8 +72,10 @@ class ReceiveController {
   Future<void> initializeFingerprint() async {
     try {
       _cachedFingerprint = await DeviceIdentityManager.I.getFingerprint();
-      logDebug('fingerprint_initialized fp=$_cachedFingerprint',
-          source: 'LocalSend');
+      logDebug(
+        'fingerprint_initialized fp=$_cachedFingerprint',
+        source: 'LocalSend',
+      );
     } catch (e) {
       logWarning('fingerprint_init_fail $e', source: 'LocalSend');
     }
@@ -77,7 +83,8 @@ class ReceiveController {
 
   /// Handle prepare upload request
   Future<Map<String, dynamic>> handlePrepareUpload(
-      Map<String, dynamic> requestData) async {
+    Map<String, dynamic> requestData,
+  ) async {
     try {
       // 确保指纹已就绪
       // fingerprint already initialized by server; if null attempt once lazily
@@ -113,14 +120,20 @@ class ReceiveController {
         // 通知 UI 有新会话（等待审批）
         try {
           onSessionCreated?.call(
-              sessionId, totalBytes, prepareRequest.info.alias);
+            sessionId,
+            totalBytes,
+            prepareRequest.info.alias,
+          );
         } catch (_) {}
 
         approved = true; // 默认通过除非显式需要用户确认
         if (onApprovalNeeded != null) {
           try {
             approved = await onApprovalNeeded!(
-                sessionId, totalBytes, prepareRequest.info.alias);
+              sessionId,
+              totalBytes,
+              prepareRequest.info.alias,
+            );
           } catch (_) {
             approved = false;
           }
@@ -150,8 +163,10 @@ class ReceiveController {
       );
       _startGcTimer();
 
-      final response =
-          PrepareUploadResponseDto(sessionId: sessionId, files: fileTokens);
+      final response = PrepareUploadResponseDto(
+        sessionId: sessionId,
+        files: fileTokens,
+      );
       return response.toJson();
     } catch (e) {
       throw Exception('Invalid prepare upload request: $e');
@@ -168,8 +183,10 @@ class ReceiveController {
     File? tempFile;
     RandomAccessFile? raf;
     try {
-      logInfo('recv_upload_start session=$sessionId fileId=$fileId',
-          source: 'LocalSend');
+      logInfo(
+        'recv_upload_start session=$sessionId fileId=$fileId',
+        source: 'LocalSend',
+      );
       final session = _sessions[sessionId];
       if (session == null) {
         throw Exception('Session not found');
@@ -193,8 +210,10 @@ class ReceiveController {
       final tempDir = Directory.systemTemp;
       final sanitizedName = _sanitizeFileName(fileDto.fileName);
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final targetPath =
-          p.join(tempDir.path, 'thoughtecho_${timestamp}_$sanitizedName');
+      final targetPath = p.join(
+        tempDir.path,
+        'thoughtecho_${timestamp}_$sanitizedName',
+      );
       tempFile = File(targetPath);
       raf = await tempFile.open(mode: FileMode.write);
 
@@ -212,8 +231,10 @@ class ReceiveController {
           final currentSession = _sessions[sessionId];
           if (currentSession != null &&
               currentSession.status == SessionStatus.canceledByReceiver) {
-            logWarning('recv_aborted_by_user session=$sessionId',
-                source: 'LocalSend');
+            logWarning(
+              'recv_aborted_by_user session=$sessionId',
+              source: 'LocalSend',
+            );
             throw Exception('接收已取消');
           }
           final headers = part.headers;
@@ -227,8 +248,10 @@ class ReceiveController {
             received += chunk.length;
             await raf.writeFrom(chunk);
             if (received % (64 * 1024) == 0) {
-              logDebug('recv_progress bytes=$received size=${fileDto.size}',
-                  source: 'LocalSend');
+              logDebug(
+                'recv_progress bytes=$received size=${fileDto.size}',
+                source: 'LocalSend',
+              );
               onReceiveProgress?.call(received, fileDto.size);
             }
           }
@@ -239,15 +262,19 @@ class ReceiveController {
           final currentSession = _sessions[sessionId];
           if (currentSession != null &&
               currentSession.status == SessionStatus.canceledByReceiver) {
-            logWarning('recv_aborted_by_user session=$sessionId',
-                source: 'LocalSend');
+            logWarning(
+              'recv_aborted_by_user session=$sessionId',
+              source: 'LocalSend',
+            );
             throw Exception('接收已取消');
           }
           received += chunk.length;
           await raf.writeFrom(chunk);
           if (received % (64 * 1024) == 0) {
-            logDebug('recv_progress bytes=$received size=${fileDto.size}',
-                source: 'LocalSend');
+            logDebug(
+              'recv_progress bytes=$received size=${fileDto.size}',
+              source: 'LocalSend',
+            );
             onReceiveProgress?.call(received, fileDto.size);
           }
         }
@@ -261,8 +288,9 @@ class ReceiveController {
       }
       if (finalSize != fileDto.size) {
         logWarning(
-            'recv_size_mismatch expected=${fileDto.size} actual=$finalSize',
-            source: 'LocalSend');
+          'recv_size_mismatch expected=${fileDto.size} actual=$finalSize',
+          source: 'LocalSend',
+        );
       }
 
       // update session lastActivity
@@ -280,8 +308,9 @@ class ReceiveController {
       }
 
       logInfo(
-          'recv_upload_done session=$sessionId fileId=$fileId size=$finalSize path=${tempFile.path}',
-          source: 'LocalSend');
+        'recv_upload_done session=$sessionId fileId=$fileId size=$finalSize path=${tempFile.path}',
+        source: 'LocalSend',
+      );
       // 最终完成进度
       onReceiveProgress?.call(finalSize, fileDto.size);
       return {
@@ -290,8 +319,12 @@ class ReceiveController {
         'size': finalSize,
       };
     } catch (e, stack) {
-      logError('recv_upload_fail session=$sessionId fileId=$fileId error=$e',
-          error: e, stackTrace: stack, source: 'LocalSend');
+      logError(
+        'recv_upload_fail session=$sessionId fileId=$fileId error=$e',
+        error: e,
+        stackTrace: stack,
+        source: 'LocalSend',
+      );
       try {
         await raf?.close();
       } catch (_) {}
@@ -313,8 +346,9 @@ class ReceiveController {
   void cancelSession(String sessionId) {
     final s = _sessions[sessionId];
     if (s != null) {
-      _sessions[sessionId] =
-          s.copyWith(status: SessionStatus.canceledByReceiver);
+      _sessions[sessionId] = s.copyWith(
+        status: SessionStatus.canceledByReceiver,
+      );
     }
   }
 

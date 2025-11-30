@@ -8,10 +8,7 @@ class IsolateTaskResult<T> {
   final String taskId;
   final Stream<T> progress;
 
-  IsolateTaskResult({
-    required this.taskId,
-    required this.progress,
-  });
+  IsolateTaskResult({required this.taskId, required this.progress});
 }
 
 class IsolateHttpUploadAction {

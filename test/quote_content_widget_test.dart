@@ -12,7 +12,7 @@ class _TestSettingsService extends ChangeNotifier implements SettingsService {
   bool _prioritizeBold;
 
   _TestSettingsService({bool prioritizeBold = false})
-      : _prioritizeBold = prioritizeBold;
+    : _prioritizeBold = prioritizeBold;
 
   @override
   bool get prioritizeBoldContentInCollapse => _prioritizeBold;
@@ -58,9 +58,7 @@ void main() {
   Quote createDeltaQuoteWithImage() {
     final delta = jsonEncode([
       {
-        'insert': {
-          'image': 'https://example.com/image.png',
-        }
+        'insert': {'image': 'https://example.com/image.png'},
       },
       {'insert': '\n'},
       {'insert': '配图说明'},
@@ -102,9 +100,7 @@ void main() {
     final longText = '这是一段超过折叠阈值的文本' * 60;
     final plainQuote = createPlainQuote(longText);
     final deltaText = jsonEncode([
-      {
-        'insert': longText,
-      },
+      {'insert': longText},
     ]);
     final richQuote = Quote(
       id: 'rich_text',

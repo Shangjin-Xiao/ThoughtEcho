@@ -88,7 +88,7 @@ class NoteListViewState extends State<NoteListView> {
   bool _hasMore = true;
   static const int _pageSize = AppConstants.defaultPageSize;
   StreamSubscription<List<Quote>>? _quotesSub;
-  
+
   // 修复：添加等待服务初始化的标志
   bool _waitingForServices = true;
 
@@ -158,13 +158,13 @@ class NoteListViewState extends State<NoteListView> {
       widget.onGuideTargetsReady?.call();
     });
   }
-  
+
   /// 修复：检查服务初始化状态并初始化数据流
   Future<void> _checkServicesAndInitialize() async {
     if (!mounted) return;
-    
+
     final db = Provider.of<DatabaseService>(context, listen: false);
-    
+
     // 如果数据库已初始化，直接初始化数据流
     if (db.isInitialized) {
       _waitingForServices = false;
@@ -173,7 +173,7 @@ class NoteListViewState extends State<NoteListView> {
       _initializeDataStream();
       return;
     }
-    
+
     // 否则，等待数据库初始化
     logDebug('等待数据库初始化...', source: 'NoteListView');
     db.addListener(_onDatabaseServiceChanged);
@@ -189,8 +189,10 @@ class NoteListViewState extends State<NoteListView> {
           setState(() {
             _localTagsCache = categories;
           });
-          logDebug('NoteListView 本地标签缓存加载完成，共 ${categories.length} 个标签',
-              source: 'NoteListView');
+          logDebug(
+            'NoteListView 本地标签缓存加载完成，共 ${categories.length} 个标签',
+            source: 'NoteListView',
+          );
         }
       } catch (e) {
         logDebug('NoteListView 加载本地标签缓存失败: $e', source: 'NoteListView');
@@ -351,7 +353,7 @@ class NoteListViewState extends State<NoteListView> {
       logDebug('数据库初始化完成，重新订阅数据流', source: 'NoteListView');
       // 移除监听器，避免重复监听
       db.removeListener(_onDatabaseServiceChanged);
-      
+
       // 修复：更新等待服务状态
       _waitingForServices = false;
 
@@ -394,148 +396,159 @@ class NoteListViewState extends State<NoteListView> {
 
     _quotesSub = db
         .watchQuotes(
-      tagIds: widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
-      limit: _pageSize,
-      orderBy: widget.sortType == 'time'
-          ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
-          : widget.sortType == 'favorite'
+          tagIds: widget.selectedTagIds.isNotEmpty
+              ? widget.selectedTagIds
+              : null,
+          limit: _pageSize,
+          orderBy: widget.sortType == 'time'
+              ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
+              : widget.sortType == 'favorite'
               ? 'favorite_count ${widget.sortAscending ? 'ASC' : 'DESC'}'
               : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
-      searchQuery: widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
-      selectedWeathers:
-          widget.selectedWeathers.isNotEmpty ? widget.selectedWeathers : null,
-      selectedDayPeriods: widget.selectedDayPeriods.isNotEmpty
-          ? widget.selectedDayPeriods
-          : null,
-    )
+          searchQuery: widget.searchQuery.isNotEmpty
+              ? widget.searchQuery
+              : null,
+          selectedWeathers: widget.selectedWeathers.isNotEmpty
+              ? widget.selectedWeathers
+              : null,
+          selectedDayPeriods: widget.selectedDayPeriods.isNotEmpty
+              ? widget.selectedDayPeriods
+              : null,
+        )
         .listen(
-      (list) {
-        if (mounted) {
-          // 修复：在首次加载期间保存滚动位置，避免数据刷新时滚动到顶部
-          double? savedScrollOffset;
-          if (isFirstLoad &&
-              _scrollController.hasClients &&
-              _quotes.isNotEmpty) {
-            savedScrollOffset = _scrollController.offset;
-            logDebug('首次加载期间保存滚动位置: $savedScrollOffset',
-                source: 'NoteListView');
-          }
-
-          setState(() {
-            if (isFirstLoad) {
-              _quotes.clear();
-            }
-            _quotes
-              ..clear()
-              ..addAll(
-                  list); // Simplified: always replace for consistency, but flag prevents extra sets
-            _hasMore = list.length >= _pageSize;
-            _isLoading = false;
-            _pruneExpansionControllers();
-          });
-
-          if (widget.onGuideTargetsReady != null) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted) return;
-              widget.onGuideTargetsReady!.call();
-            });
-          }
-
-          // 修复：在首次加载期间恢复滚动位置
-          if (savedScrollOffset != null &&
-              savedScrollOffset > 0 &&
-              !_isUserScrolling) {
-            final offset = savedScrollOffset; // 捕获非空值
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted &&
+          (list) {
+            if (mounted) {
+              // 修复：在首次加载期间保存滚动位置，避免数据刷新时滚动到顶部
+              double? savedScrollOffset;
+              if (isFirstLoad &&
                   _scrollController.hasClients &&
-                  offset <= _scrollController.position.maxScrollExtent) {
-                _scrollController.jumpTo(offset);
-                logDebug('首次加载期间恢复滚动位置: $offset', source: 'NoteListView');
+                  _quotes.isNotEmpty) {
+                savedScrollOffset = _scrollController.offset;
+                logDebug(
+                  '首次加载期间保存滚动位置: $savedScrollOffset',
+                  source: 'NoteListView',
+                );
               }
-            });
-          }
 
-          if (isFirstLoad) {
-            _initialDataLoaded = true;
-            // 延迟启用自动滚动，避免冷启动时的滚动冲突
-            Future.delayed(const Duration(milliseconds: 1500), () {
-              if (mounted) {
-                _autoScrollEnabled = true;
-                _isInitializing = false;
-                logDebug('首次加载完成，启用自动滚动', source: 'NoteListView');
+              setState(() {
+                if (isFirstLoad) {
+                  _quotes.clear();
+                }
+                _quotes
+                  ..clear()
+                  ..addAll(
+                    list,
+                  ); // Simplified: always replace for consistency, but flag prevents extra sets
+                _hasMore = list.length >= _pageSize;
+                _isLoading = false;
+                _pruneExpansionControllers();
+              });
+
+              if (widget.onGuideTargetsReady != null) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  widget.onGuideTargetsReady!.call();
+                });
               }
-            });
-            // 冷启动保护期：设置较长的保护期，避免首次进入时的滚动冲突
-            _lastUserScrollTime = DateTime.now();
-            logDebug('首次数据加载完成', source: 'NoteListView');
-          }
 
-          // 修复：同步 _hasMore 状态与数据库服务状态
-          final dbService = Provider.of<DatabaseService>(context, listen: false);
-          if (_hasMore != dbService.hasMoreQuotes) {
-            logDebug(
-              '同步 _hasMore 状态: $_hasMore -> ${dbService.hasMoreQuotes}',
-              source: 'NoteListView',
-            );
-            _hasMore = dbService.hasMoreQuotes;
-          }
-          // 重置滚动范围检查计数器
-          _scrollExtentCheckCounter = 0;
+              // 修复：在首次加载期间恢复滚动位置
+              if (savedScrollOffset != null &&
+                  savedScrollOffset > 0 &&
+                  !_isUserScrolling) {
+                final offset = savedScrollOffset; // 捕获非空值
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted &&
+                      _scrollController.hasClients &&
+                      offset <= _scrollController.position.maxScrollExtent) {
+                    _scrollController.jumpTo(offset);
+                    logDebug('首次加载期间恢复滚动位置: $offset', source: 'NoteListView');
+                  }
+                });
+              }
 
-          // 通知搜索控制器数据加载完成
-          try {
-            final searchController = Provider.of<NoteSearchController>(
-              context,
-              listen: false,
-            );
-            searchController.setSearchState(false);
-          } catch (e) {
-            logDebug('更新搜索控制器状态失败: $e');
-          }
+              if (isFirstLoad) {
+                _initialDataLoaded = true;
+                // 延迟启用自动滚动，避免冷启动时的滚动冲突
+                Future.delayed(const Duration(milliseconds: 1500), () {
+                  if (mounted) {
+                    _autoScrollEnabled = true;
+                    _isInitializing = false;
+                    logDebug('首次加载完成，启用自动滚动', source: 'NoteListView');
+                  }
+                });
+                // 冷启动保护期：设置较长的保护期，避免首次进入时的滚动冲突
+                _lastUserScrollTime = DateTime.now();
+                logDebug('首次数据加载完成', source: 'NoteListView');
+              }
 
-          if (isFirstLoad) {
-            isFirstLoad = false;
-          }
-        }
-      },
-      onError: (error) {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
+              // 修复：同步 _hasMore 状态与数据库服务状态
+              final dbService = Provider.of<DatabaseService>(
+                context,
+                listen: false,
+              );
+              if (_hasMore != dbService.hasMoreQuotes) {
+                logDebug(
+                  '同步 _hasMore 状态: $_hasMore -> ${dbService.hasMoreQuotes}',
+                  source: 'NoteListView',
+                );
+                _hasMore = dbService.hasMoreQuotes;
+              }
+              // 重置滚动范围检查计数器
+              _scrollExtentCheckCounter = 0;
 
-          // 重置搜索控制器状态
-          try {
-            final searchController = Provider.of<NoteSearchController>(
-              context,
-              listen: false,
-            );
-            searchController.resetSearchState();
-          } catch (e) {
-            logDebug('重置搜索控制器状态失败: $e');
-          }
+              // 通知搜索控制器数据加载完成
+              try {
+                final searchController = Provider.of<NoteSearchController>(
+                  context,
+                  listen: false,
+                );
+                searchController.setSearchState(false);
+              } catch (e) {
+                logDebug('更新搜索控制器状态失败: $e');
+              }
 
-          logError('加载笔记失败: $error', error: error, source: 'NoteListView');
+              if (isFirstLoad) {
+                isFirstLoad = false;
+              }
+            }
+          },
+          onError: (error) {
+            if (mounted) {
+              setState(() {
+                _isLoading = false;
+              });
 
-          // 显示错误提示
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                '加载失败: ${error.toString().contains('TimeoutException') ? '查询超时' : error.toString()}',
-              ),
-              duration: AppConstants.snackBarDurationImportant,
-              backgroundColor: Colors.red,
-              action: SnackBarAction(
-                label: '重试',
-                textColor: Colors.white,
-                onPressed: () => _updateStreamSubscription(),
-              ),
-            ),
-          );
-        }
-      },
-    );
+              // 重置搜索控制器状态
+              try {
+                final searchController = Provider.of<NoteSearchController>(
+                  context,
+                  listen: false,
+                );
+                searchController.resetSearchState();
+              } catch (e) {
+                logDebug('重置搜索控制器状态失败: $e');
+              }
+
+              logError('加载笔记失败: $error', error: error, source: 'NoteListView');
+
+              // 显示错误提示
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    '加载失败: ${error.toString().contains('TimeoutException') ? '查询超时' : error.toString()}',
+                  ),
+                  duration: AppConstants.snackBarDurationImportant,
+                  backgroundColor: Colors.red,
+                  action: SnackBarAction(
+                    label: '重试',
+                    textColor: Colors.white,
+                    onPressed: () => _updateStreamSubscription(),
+                  ),
+                ),
+              );
+            }
+          },
+        );
     // 注释掉重复的loadMore调用，因为watchQuotes已经会自动加载数据
     // _loadMore(); // 这行导致双重加载和滚动位置混乱
   }
@@ -569,12 +582,14 @@ class NoteListViewState extends State<NoteListView> {
       }
 
       // 判断是否仅为排序变化（不影响列表内容，只影响顺序）
-      final bool isOnlySortChange = oldWidget.searchQuery ==
-              widget.searchQuery &&
+      final bool isOnlySortChange =
+          oldWidget.searchQuery == widget.searchQuery &&
           _areListsEqual(oldWidget.selectedTagIds, widget.selectedTagIds) &&
           _areListsEqual(oldWidget.selectedWeathers, widget.selectedWeathers) &&
           _areListsEqual(
-              oldWidget.selectedDayPeriods, widget.selectedDayPeriods) &&
+            oldWidget.selectedDayPeriods,
+            widget.selectedDayPeriods,
+          ) &&
           (oldWidget.sortType != widget.sortType ||
               oldWidget.sortAscending != widget.sortAscending);
 
@@ -612,8 +627,10 @@ class NoteListViewState extends State<NoteListView> {
   void _updateStreamSubscription({bool preserveScrollPosition = false}) {
     if (!mounted) return; // 确保组件仍然挂载
 
-    logDebug('更新数据流订阅 (preserveScrollPosition: $preserveScrollPosition)',
-        source: 'NoteListView');
+    logDebug(
+      '更新数据流订阅 (preserveScrollPosition: $preserveScrollPosition)',
+      source: 'NoteListView',
+    );
 
     double? savedScrollOffset;
     // 只有在需要保持滚动位置时才保存（仅排序变化时）
@@ -641,119 +658,129 @@ class NoteListViewState extends State<NoteListView> {
 
     _quotesSub = db
         .watchQuotes(
-      tagIds: widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
-      limit: _pageSize,
-      orderBy: widget.sortType == 'time'
-          ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
-          : widget.sortType == 'favorite'
+          tagIds: widget.selectedTagIds.isNotEmpty
+              ? widget.selectedTagIds
+              : null,
+          limit: _pageSize,
+          orderBy: widget.sortType == 'time'
+              ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
+              : widget.sortType == 'favorite'
               ? 'favorite_count ${widget.sortAscending ? 'ASC' : 'DESC'}'
               : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
-      searchQuery: widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
-      selectedWeathers:
-          widget.selectedWeathers.isNotEmpty ? widget.selectedWeathers : null,
-      selectedDayPeriods: widget.selectedDayPeriods.isNotEmpty
-          ? widget.selectedDayPeriods
-          : null,
-    )
+          searchQuery: widget.searchQuery.isNotEmpty
+              ? widget.searchQuery
+              : null,
+          selectedWeathers: widget.selectedWeathers.isNotEmpty
+              ? widget.selectedWeathers
+              : null,
+          selectedDayPeriods: widget.selectedDayPeriods.isNotEmpty
+              ? widget.selectedDayPeriods
+              : null,
+        )
         .listen(
-      (list) {
-        if (mounted) {
-          setState(() {
-            _quotes.clear();
-            _quotes.addAll(list);
-            _hasMore = list.length >= _pageSize;
-            _isLoading = false;
-            _pruneExpansionControllers();
-          });
+          (list) {
+            if (mounted) {
+              setState(() {
+                _quotes.clear();
+                _quotes.addAll(list);
+                _hasMore = list.length >= _pageSize;
+                _isLoading = false;
+                _pruneExpansionControllers();
+              });
 
-          if (widget.onGuideTargetsReady != null) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted) return;
-              widget.onGuideTargetsReady!.call();
-            });
-          }
+              if (widget.onGuideTargetsReady != null) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  widget.onGuideTargetsReady!.call();
+                });
+              }
 
-          // Restore scroll position smoothly (only if preserveScrollPosition is true)
-          if (savedScrollOffset != null &&
-              _scrollController.hasClients &&
-              _initialDataLoaded) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
+              // Restore scroll position smoothly (only if preserveScrollPosition is true)
               if (savedScrollOffset != null &&
                   _scrollController.hasClients &&
-                  savedScrollOffset <=
-                      _scrollController.position.maxScrollExtent) {
-                _scrollController.animateTo(
-                  savedScrollOffset,
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOut,
-                );
-                logDebug('平滑恢复滚动位置: $savedScrollOffset',
-                    source: 'NoteListView');
-              } else {
-                logDebug('滚动位置超出范围或条件不满足，保持当前位置', source: 'NoteListView');
+                  _initialDataLoaded) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (savedScrollOffset != null &&
+                      _scrollController.hasClients &&
+                      savedScrollOffset <=
+                          _scrollController.position.maxScrollExtent) {
+                    _scrollController.animateTo(
+                      savedScrollOffset,
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeOut,
+                    );
+                    logDebug(
+                      '平滑恢复滚动位置: $savedScrollOffset',
+                      source: 'NoteListView',
+                    );
+                  } else {
+                    logDebug('滚动位置超出范围或条件不满足，保持当前位置', source: 'NoteListView');
+                  }
+                });
               }
-            });
-          }
 
-          // 修复：同步 _hasMore 状态与数据库服务状态
-          final dbServiceForSync = Provider.of<DatabaseService>(context, listen: false);
-          if (_hasMore != dbServiceForSync.hasMoreQuotes) {
-            logDebug(
-              '更新订阅后同步 _hasMore 状态: $_hasMore -> ${dbServiceForSync.hasMoreQuotes}',
-              source: 'NoteListView',
-            );
-            _hasMore = dbServiceForSync.hasMoreQuotes;
-          }
-          // 重置滚动范围检查计数器
-          _scrollExtentCheckCounter = 0;
+              // 修复：同步 _hasMore 状态与数据库服务状态
+              final dbServiceForSync = Provider.of<DatabaseService>(
+                context,
+                listen: false,
+              );
+              if (_hasMore != dbServiceForSync.hasMoreQuotes) {
+                logDebug(
+                  '更新订阅后同步 _hasMore 状态: $_hasMore -> ${dbServiceForSync.hasMoreQuotes}',
+                  source: 'NoteListView',
+                );
+                _hasMore = dbServiceForSync.hasMoreQuotes;
+              }
+              // 重置滚动范围检查计数器
+              _scrollExtentCheckCounter = 0;
 
-          // 通知搜索控制器数据加载完成
-          try {
-            final searchController = Provider.of<NoteSearchController>(
-              context,
-              listen: false,
-            );
-            searchController.setSearchState(false);
-          } catch (e) {
-            logDebug('更新搜索控制器状态失败: $e');
-          }
+              // 通知搜索控制器数据加载完成
+              try {
+                final searchController = Provider.of<NoteSearchController>(
+                  context,
+                  listen: false,
+                );
+                searchController.setSearchState(false);
+              } catch (e) {
+                logDebug('更新搜索控制器状态失败: $e');
+              }
 
-          logDebug(
-            '数据流更新完成，加载了 ${list.length} 条记录',
-            source: 'NoteListView',
-          );
-        }
-      },
-      onError: (error) {
-        if (mounted) {
-          setState(() {
-            _isLoading = false; // 出错时停止加载
-          });
+              logDebug(
+                '数据流更新完成，加载了 ${list.length} 条记录',
+                source: 'NoteListView',
+              );
+            }
+          },
+          onError: (error) {
+            if (mounted) {
+              setState(() {
+                _isLoading = false; // 出错时停止加载
+              });
 
-          // 重置搜索控制器状态
-          try {
-            final searchController = Provider.of<NoteSearchController>(
-              context,
-              listen: false,
-            );
-            searchController.resetSearchState();
-          } catch (e) {
-            logDebug('重置搜索控制器状态失败: $e');
-          }
+              // 重置搜索控制器状态
+              try {
+                final searchController = Provider.of<NoteSearchController>(
+                  context,
+                  listen: false,
+                );
+                searchController.resetSearchState();
+              } catch (e) {
+                logDebug('重置搜索控制器状态失败: $e');
+              }
 
-          logError('数据流加载失败: $error', error: error, source: 'NoteListView');
+              logError('数据流加载失败: $error', error: error, source: 'NoteListView');
 
-          // 优化：更友好的错误提示
-          String errorMessage = '加载笔记失败';
-          if (error.toString().contains('TimeoutException')) {
-            errorMessage = '查询超时，请重试';
-          } else if (error.toString().contains('DatabaseException')) {
-            errorMessage = '数据库查询出错';
-          }
-          _showErrorSnackBar(errorMessage);
-        }
-      },
-    );
+              // 优化：更友好的错误提示
+              String errorMessage = '加载笔记失败';
+              if (error.toString().contains('TimeoutException')) {
+                errorMessage = '查询超时，请重试';
+              } else if (error.toString().contains('DatabaseException')) {
+                errorMessage = '数据库查询出错';
+              }
+              _showErrorSnackBar(errorMessage);
+            }
+          },
+        );
   }
 
   /// 优化：显示错误提示的统一方法
@@ -838,8 +865,10 @@ class NoteListViewState extends State<NoteListView> {
   }
 
   void _pruneExpansionControllers() {
-    final activeIds =
-        _quotes.map((quote) => quote.id).whereType<String>().toSet();
+    final activeIds = _quotes
+        .map((quote) => quote.id)
+        .whereType<String>()
+        .toSet();
 
     final removableIds = _expansionNotifiers.keys
         .where((id) => !activeIds.contains(id))
@@ -915,7 +944,8 @@ class NoteListViewState extends State<NoteListView> {
       final currentOffset = position.pixels;
 
       if (viewportExtent > 0) {
-        final topVisible = targetOffset >= currentOffset &&
+        final topVisible =
+            targetOffset >= currentOffset &&
             targetOffset < currentOffset + viewportExtent;
         if (topVisible) {
           logDebug('笔记顶部已在视口内，跳过自动滚动', source: 'NoteListView');
@@ -926,8 +956,9 @@ class NoteListViewState extends State<NoteListView> {
       final minExtent = position.minScrollExtent;
       final maxExtent = position.maxScrollExtent;
 
-      double desiredOffset =
-          (targetOffset - 12.0).clamp(minExtent, maxExtent).toDouble();
+      double desiredOffset = (targetOffset - 12.0)
+          .clamp(minExtent, maxExtent)
+          .toDouble();
 
       if ((currentOffset - desiredOffset).abs() <= 4) {
         logDebug('目标偏移量变化较小，跳过自动滚动', source: 'NoteListView');
@@ -942,17 +973,19 @@ class NoteListViewState extends State<NoteListView> {
 
       _scrollController
           .animateTo(
-        desiredOffset,
-        duration: QuoteItemWidget.expandCollapseDuration,
-        curve: Curves.easeOutCubic,
-      )
+            desiredOffset,
+            duration: QuoteItemWidget.expandCollapseDuration,
+            curve: Curves.easeOutCubic,
+          )
           .then((_) {
-        logDebug('滚动完成', source: 'NoteListView');
-      }).catchError((e) {
-        logDebug('滚动失败: $e', source: 'NoteListView');
-      }).whenComplete(() {
-        _isAutoScrolling = false;
-      });
+            logDebug('滚动完成', source: 'NoteListView');
+          })
+          .catchError((e) {
+            logDebug('滚动失败: $e', source: 'NoteListView');
+          })
+          .whenComplete(() {
+            _isAutoScrolling = false;
+          });
     } catch (e, st) {
       logDebug('滚动失败: $e\n$st', source: 'NoteListView');
       _isAutoScrolling = false;
@@ -962,8 +995,10 @@ class NoteListViewState extends State<NoteListView> {
   Future<void> _loadMore() async {
     // 防止重复加载
     if (!_hasMore || _isLoading) {
-      logDebug('跳过加载更多：_hasMore=$_hasMore, _isLoading=$_isLoading',
-          source: 'NoteListView');
+      logDebug(
+        '跳过加载更多：_hasMore=$_hasMore, _isLoading=$_isLoading',
+        source: 'NoteListView',
+      );
       return;
     }
 
@@ -1020,13 +1055,17 @@ class NoteListViewState extends State<NoteListView> {
   Widget _buildNoteList(DatabaseService db, ThemeData theme) {
     // 为 AnimatedSwitcher 提供唯一 key，确保筛选变化时能触发动画
     final listKey = ValueKey(
-        '${widget.selectedTagIds.join(',')}_${widget.selectedWeathers.join(',')}_${widget.selectedDayPeriods.join(',')}_${widget.searchQuery}');
+      '${widget.selectedTagIds.join(',')}_${widget.selectedWeathers.join(',')}_${widget.selectedDayPeriods.join(',')}_${widget.searchQuery}',
+    );
 
     // 修复：检查标签是否已加载（外部标签或本地缓存任一不为空即可）
-    final bool tagsLoaded = widget.tags.isNotEmpty || _localTagsCache.isNotEmpty;
+    final bool tagsLoaded =
+        widget.tags.isNotEmpty || _localTagsCache.isNotEmpty;
 
     // 修复：等待服务初始化或标签未加载时显示加载动画，避免闪现"无笔记"或"未知标签"
-    if (_waitingForServices || (_isLoading && _quotes.isEmpty) || (!tagsLoaded && _quotes.isNotEmpty)) {
+    if (_waitingForServices ||
+        (_isLoading && _quotes.isEmpty) ||
+        (!tagsLoaded && _quotes.isNotEmpty)) {
       // 搜索时用专属动画
       if (widget.searchQuery.isNotEmpty) {
         return LayoutBuilder(
@@ -1101,8 +1140,9 @@ class NoteListViewState extends State<NoteListView> {
               !_isLoading &&
               _hasMore) {
             logDebug(
-                '滚动触发加载：pixels=${metrics.pixels.toInt()}, maxExtent=${metrics.maxScrollExtent.toInt()}, threshold=${threshold.toInt()}',
-                source: 'NoteListView');
+              '滚动触发加载：pixels=${metrics.pixels.toInt()}, maxExtent=${metrics.maxScrollExtent.toInt()}, threshold=${threshold.toInt()}',
+              source: 'NoteListView',
+            );
             _loadMore();
           }
         }
@@ -1114,9 +1154,7 @@ class NoteListViewState extends State<NoteListView> {
           if (metrics.pixels >= metrics.maxScrollExtent - 100 &&
               _hasMore &&
               !_isLoading) {
-            logDebug(
-                '滚动结束时检测到接近底部，尝试加载更多',
-                source: 'NoteListView');
+            logDebug('滚动结束时检测到接近底部，尝试加载更多', source: 'NoteListView');
             _loadMore();
           }
         }
@@ -1140,15 +1178,20 @@ class NoteListViewState extends State<NoteListView> {
             final quoteId = quote.id!;
             final String itemKey = 'quote_${quoteId}_$index';
             _itemKeys.putIfAbsent(
-                quoteId, () => GlobalKey(debugLabel: itemKey));
+              quoteId,
+              () => GlobalKey(debugLabel: itemKey),
+            );
 
-            final bool needsExpansion =
-                QuoteItemWidget.needsExpansionFor(quote);
+            final bool needsExpansion = QuoteItemWidget.needsExpansionFor(
+              quote,
+            );
 
-            final attachFavoriteGuideKey = !favoriteGuideAssigned &&
+            final attachFavoriteGuideKey =
+                !favoriteGuideAssigned &&
                 widget.favoriteButtonGuideKey != null &&
                 widget.onFavorite != null;
-            final attachFoldGuideKey = !foldGuideAssigned &&
+            final attachFoldGuideKey =
+                !foldGuideAssigned &&
                 widget.foldToggleGuideKey != null &&
                 needsExpansion;
 
@@ -1183,7 +1226,7 @@ class NoteListViewState extends State<NoteListView> {
                     if (!expanded && requiresAlignment) {
                       final waitDuration =
                           QuoteItemWidget.expandCollapseDuration +
-                              const Duration(milliseconds: 80);
+                          const Duration(milliseconds: 80);
                       Future.delayed(waitDuration, () {
                         if (!mounted) return;
                         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1205,8 +1248,9 @@ class NoteListViewState extends State<NoteListView> {
                   favoriteButtonGuideKey: attachFavoriteGuideKey
                       ? widget.favoriteButtonGuideKey
                       : null,
-                  foldToggleGuideKey:
-                      attachFoldGuideKey ? widget.foldToggleGuideKey : null,
+                  foldToggleGuideKey: attachFoldGuideKey
+                      ? widget.foldToggleGuideKey
+                      : null,
                   // 不使用自定义 tagBuilder，让 QuoteItemWidget 使用内部的标签渲染逻辑
                   // 这样可以支持筛选标签的优先显示和高亮效果
                 ),
@@ -1229,7 +1273,8 @@ class NoteListViewState extends State<NoteListView> {
     _searchDebounceTimer?.cancel();
 
     // 性能优化：只在必要时调用 setState，避免不必要的重建
-    final shouldSetLoading = (value.isEmpty && widget.searchQuery.isNotEmpty) ||
+    final shouldSetLoading =
+        (value.isEmpty && widget.searchQuery.isNotEmpty) ||
         (value.isNotEmpty && value.length >= AppConstants.minSearchLength);
 
     if (shouldSetLoading && !_isLoading) {
@@ -1355,164 +1400,164 @@ class NoteListViewState extends State<NoteListView> {
         );
 
         return Container(
-            color: backgroundColor,
-            child: Center(
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: maxWidth),
-                child: Column(
-                  children: [
-                    // 搜索框 - 现代圆角样式，筛选按钮内嵌到右侧
-                    Container(
-                      padding: EdgeInsets.fromLTRB(
-                        horizontalPadding,
-                        MediaQuery.of(context).padding.top + 8.0,
-                        horizontalPadding,
-                        0,
-                      ),
-                      child: TextField(
-                        controller: _searchController,
-                        focusNode: _searchFocusNode,
-                        onChanged: _onSearchChanged,
-                        textInputAction: TextInputAction.search,
-                        decoration: InputDecoration(
-                          hintText: AppLocalizations.of(context).searchNotes,
-                          isDense: true,
-                          filled: true,
-                          fillColor: ColorUtils.getSearchBoxBackgroundColor(
-                            theme.colorScheme.surface,
-                            theme.brightness,
-                          ),
-                          prefixIcon: searchController.isSearching
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: Padding(
-                                    padding: EdgeInsets.all(12.0),
-                                    child: EnhancedLottieAnimation(
-                                      type: LottieAnimationType.searchLoading,
-                                      width: 16,
-                                      height: 16,
-                                    ),
-                                  ),
-                                )
-                              : const Icon(Icons.search),
-                          suffixIcon: IconButton(
-                            key: widget.filterButtonKey, // 功能引导 key
-                            icon: const Icon(Icons.tune),
-                            tooltip: '筛选/排序',
-                            onPressed: () {
-                              showModalBottomSheet(
-                                context: context,
-                                isScrollControlled: true,
-                                backgroundColor: Theme.of(context)
-                                    .colorScheme
-                                    .surfaceContainerLowest,
-                                shape: const RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.vertical(
-                                    top: Radius.circular(16),
+          color: backgroundColor,
+          child: Center(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              child: Column(
+                children: [
+                  // 搜索框 - 现代圆角样式，筛选按钮内嵌到右侧
+                  Container(
+                    padding: EdgeInsets.fromLTRB(
+                      horizontalPadding,
+                      MediaQuery.of(context).padding.top + 8.0,
+                      horizontalPadding,
+                      0,
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      focusNode: _searchFocusNode,
+                      onChanged: _onSearchChanged,
+                      textInputAction: TextInputAction.search,
+                      decoration: InputDecoration(
+                        hintText: AppLocalizations.of(context).searchNotes,
+                        isDense: true,
+                        filled: true,
+                        fillColor: ColorUtils.getSearchBoxBackgroundColor(
+                          theme.colorScheme.surface,
+                          theme.brightness,
+                        ),
+                        prefixIcon: searchController.isSearching
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: Padding(
+                                  padding: EdgeInsets.all(12.0),
+                                  child: EnhancedLottieAnimation(
+                                    type: LottieAnimationType.searchLoading,
+                                    width: 16,
+                                    height: 16,
                                   ),
                                 ),
-                                builder: (context) => NoteFilterSortSheet(
-                                  allTags: _effectiveTags,
-                                  selectedTagIds: widget.selectedTagIds,
-                                  sortType: widget.sortType,
-                                  sortAscending: widget.sortAscending,
-                                  selectedWeathers: widget.selectedWeathers,
-                                  selectedDayPeriods: widget.selectedDayPeriods,
-                                  onApply: (
-                                    tagIds,
-                                    sortType,
-                                    sortAscending,
-                                    selectedWeathers,
-                                    selectedDayPeriods,
-                                  ) {
-                                    widget.onTagSelectionChanged(tagIds);
-                                    widget.onSortChanged(
+                              )
+                            : const Icon(Icons.search),
+                        suffixIcon: IconButton(
+                          key: widget.filterButtonKey, // 功能引导 key
+                          icon: const Icon(Icons.tune),
+                          tooltip: '筛选/排序',
+                          onPressed: () {
+                            showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerLowest,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(16),
+                                ),
+                              ),
+                              builder: (context) => NoteFilterSortSheet(
+                                allTags: _effectiveTags,
+                                selectedTagIds: widget.selectedTagIds,
+                                sortType: widget.sortType,
+                                sortAscending: widget.sortAscending,
+                                selectedWeathers: widget.selectedWeathers,
+                                selectedDayPeriods: widget.selectedDayPeriods,
+                                onApply:
+                                    (
+                                      tagIds,
                                       sortType,
                                       sortAscending,
-                                    );
-                                    widget.onFilterChanged(
                                       selectedWeathers,
                                       selectedDayPeriods,
-                                    );
-                                    _updateStreamSubscription();
-                                  },
-                                ),
-                              );
-                            },
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(
-                            vertical: 10,
-                            horizontal: 12,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(20),
-                            borderSide: BorderSide(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .outline
-                                  .withValues(alpha: 0.28),
-                              width: 1,
-                            ),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(20),
-                            borderSide: BorderSide(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .outline
-                                  .withValues(alpha: 0.20),
-                              width: 1,
-                            ),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(20),
-                            borderSide: BorderSide(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .primary
-                                  .withValues(alpha: 0.65),
-                              width: 1.5,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    // 筛选条件展示区域
-                    _buildFilterDisplay(theme, horizontalPadding),
-
-                    // 笔记列表 - 添加平滑过渡动画
-                    Expanded(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: horizontalPadding,
-                        ),
-                        child: AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 150),
-                          switchInCurve: Curves.easeOut,
-                          switchOutCurve: Curves.easeOut,
-                          transitionBuilder: (child, animation) {
-                            return FadeTransition(
-                              opacity: animation,
-                              child: child,
+                                    ) {
+                                      widget.onTagSelectionChanged(tagIds);
+                                      widget.onSortChanged(
+                                        sortType,
+                                        sortAscending,
+                                      );
+                                      widget.onFilterChanged(
+                                        selectedWeathers,
+                                        selectedDayPeriods,
+                                      );
+                                      _updateStreamSubscription();
+                                    },
+                              ),
                             );
                           },
-                          child: _buildNoteList(db, theme),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 10,
+                          horizontal: 12,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          borderSide: BorderSide(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.outline.withValues(alpha: 0.28),
+                            width: 1,
+                          ),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          borderSide: BorderSide(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.outline.withValues(alpha: 0.20),
+                            width: 1,
+                          ),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                          borderSide: BorderSide(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primary.withValues(alpha: 0.65),
+                            width: 1.5,
+                          ),
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+
+                  // 筛选条件展示区域
+                  _buildFilterDisplay(theme, horizontalPadding),
+
+                  // 笔记列表 - 添加平滑过渡动画
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: horizontalPadding,
+                      ),
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 150),
+                        switchInCurve: Curves.easeOut,
+                        switchOutCurve: Curves.easeOut,
+                        transitionBuilder: (child, animation) {
+                          return FadeTransition(
+                            opacity: animation,
+                            child: child,
+                          );
+                        },
+                        child: _buildNoteList(db, theme),
+                      ),
+                    ),
+                  ),
+                ],
               ),
-            ));
+            ),
+          ),
+        );
       },
     );
   }
 
   /// 构建现代化的筛选条件展示区域
   Widget _buildFilterDisplay(ThemeData theme, double horizontalPadding) {
-    final hasFilters = widget.selectedTagIds.isNotEmpty ||
+    final hasFilters =
+        widget.selectedTagIds.isNotEmpty ||
         widget.selectedWeathers.isNotEmpty ||
         widget.selectedDayPeriods.isNotEmpty;
 
@@ -1533,42 +1578,43 @@ class NoteListViewState extends State<NoteListView> {
 
     // 添加标签chip (带图标支持) - 添加进出场动画
     if (widget.selectedTagIds.isNotEmpty) {
-      allChips.addAll(widget.selectedTagIds.map((tagId) {
-        final tag = _effectiveTags.firstWhere(
-          (tag) => tag.id == tagId,
-          orElse: () => NoteCategory(id: tagId, name: '未知标签'),
-        );
-        return TweenAnimationBuilder<double>(
-          key: ValueKey('tag_$tagId'),
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOut,
-          tween: Tween(begin: 0.0, end: 1.0),
-          builder: (context, value, child) {
-            return Opacity(
-              opacity: value,
-              child: Transform.scale(
-                scale: 0.8 + (0.2 * value),
-                child: child,
-              ),
-            );
-          },
-          child: _buildModernFilterChip(
-            theme: theme,
-            label: tag.name,
-            icon: IconUtils.isEmoji(tag.iconName)
-                ? IconUtils.getDisplayIcon(tag.iconName)
-                : IconUtils.getIconData(tag.iconName),
-            isIconEmoji: IconUtils.isEmoji(tag.iconName),
-            color: theme.colorScheme.primary,
-            onDeleted: () {
-              final newSelectedTags = List<String>.from(
-                widget.selectedTagIds,
-              )..remove(tagId);
-              widget.onTagSelectionChanged(newSelectedTags);
+      allChips.addAll(
+        widget.selectedTagIds.map((tagId) {
+          final tag = _effectiveTags.firstWhere(
+            (tag) => tag.id == tagId,
+            orElse: () => NoteCategory(id: tagId, name: '未知标签'),
+          );
+          return TweenAnimationBuilder<double>(
+            key: ValueKey('tag_$tagId'),
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
+            tween: Tween(begin: 0.0, end: 1.0),
+            builder: (context, value, child) {
+              return Opacity(
+                opacity: value,
+                child: Transform.scale(
+                  scale: 0.8 + (0.2 * value),
+                  child: child,
+                ),
+              );
             },
-          ),
-        );
-      }));
+            child: _buildModernFilterChip(
+              theme: theme,
+              label: tag.name,
+              icon: IconUtils.isEmoji(tag.iconName)
+                  ? IconUtils.getDisplayIcon(tag.iconName)
+                  : IconUtils.getIconData(tag.iconName),
+              isIconEmoji: IconUtils.isEmoji(tag.iconName),
+              color: theme.colorScheme.primary,
+              onDeleted: () {
+                final newSelectedTags = List<String>.from(widget.selectedTagIds)
+                  ..remove(tagId);
+                widget.onTagSelectionChanged(newSelectedTags);
+              },
+            ),
+          );
+        }),
+      );
     }
 
     // 添加天气chip（按大类显示）
@@ -1579,49 +1625,49 @@ class NoteListViewState extends State<NoteListView> {
         if (cat != null) categorySet.add(cat);
       }
 
-      allChips.addAll(categorySet.map((cat) {
-        final label = WeatherService.filterCategoryToLabel[cat] ?? cat;
-        final icon = WeatherService.getFilterCategoryIcon(cat);
-        return TweenAnimationBuilder<double>(
-          key: ValueKey('weather_cat_$cat'),
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOut,
-          tween: Tween(begin: 0.0, end: 1.0),
-          builder: (context, value, child) {
-            return Opacity(
-              opacity: value,
-              child: Transform.scale(
-                scale: 0.8 + (0.2 * value),
-                child: child,
-              ),
-            );
-          },
-          child: _buildModernFilterChip(
-            theme: theme,
-            label: label,
-            icon: icon,
-            color: theme.colorScheme.secondary,
-            onDeleted: () {
-              final keysToRemove =
-                  WeatherService.getWeatherKeysByFilterCategory(cat);
-              final newWeathers = List<String>.from(widget.selectedWeathers)
-                ..removeWhere((w) => keysToRemove.contains(w));
-              widget.onFilterChanged(
-                newWeathers,
-                widget.selectedDayPeriods,
+      allChips.addAll(
+        categorySet.map((cat) {
+          final label = WeatherService.filterCategoryToLabel[cat] ?? cat;
+          final icon = WeatherService.getFilterCategoryIcon(cat);
+          return TweenAnimationBuilder<double>(
+            key: ValueKey('weather_cat_$cat'),
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
+            tween: Tween(begin: 0.0, end: 1.0),
+            builder: (context, value, child) {
+              return Opacity(
+                opacity: value,
+                child: Transform.scale(
+                  scale: 0.8 + (0.2 * value),
+                  child: child,
+                ),
               );
-              _updateStreamSubscription();
             },
-          ),
-        );
-      }));
+            child: _buildModernFilterChip(
+              theme: theme,
+              label: label,
+              icon: icon,
+              color: theme.colorScheme.secondary,
+              onDeleted: () {
+                final keysToRemove =
+                    WeatherService.getWeatherKeysByFilterCategory(cat);
+                final newWeathers = List<String>.from(widget.selectedWeathers)
+                  ..removeWhere((w) => keysToRemove.contains(w));
+                widget.onFilterChanged(newWeathers, widget.selectedDayPeriods);
+                _updateStreamSubscription();
+              },
+            ),
+          );
+        }),
+      );
 
       // 处理未归类的key
       final Set<String> knownKeys = categorySet
           .expand((cat) => WeatherService.getWeatherKeysByFilterCategory(cat))
           .toSet();
-      final List<String> others =
-          widget.selectedWeathers.where((k) => !knownKeys.contains(k)).toList();
+      final List<String> others = widget.selectedWeathers
+          .where((k) => !knownKeys.contains(k))
+          .toList();
       for (final k in others) {
         final label = WeatherService.weatherKeyToLabel[k] ?? k;
         allChips.add(
@@ -1657,40 +1703,43 @@ class NoteListViewState extends State<NoteListView> {
 
     // 添加时间段chip - 添加进出场动画
     if (widget.selectedDayPeriods.isNotEmpty) {
-      allChips.addAll(widget.selectedDayPeriods.map((periodKey) {
-        final periodLabel = TimeUtils.getLocalizedDayPeriodLabel(context, periodKey);
-        final periodIcon = TimeUtils.getDayPeriodIconByKey(periodKey);
-        return TweenAnimationBuilder<double>(
-          key: ValueKey('period_$periodKey'),
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOut,
-          tween: Tween(begin: 0.0, end: 1.0),
-          builder: (context, value, child) {
-            return Opacity(
-              opacity: value,
-              child: Transform.scale(
-                scale: 0.8 + (0.2 * value),
-                child: child,
-              ),
-            );
-          },
-          child: _buildModernFilterChip(
-            theme: theme,
-            label: periodLabel,
-            icon: periodIcon,
-            color: theme.colorScheme.tertiary,
-            onDeleted: () {
-              final newDayPeriods = List<String>.from(widget.selectedDayPeriods)
-                ..remove(periodKey);
-              widget.onFilterChanged(
-                widget.selectedWeathers,
-                newDayPeriods,
+      allChips.addAll(
+        widget.selectedDayPeriods.map((periodKey) {
+          final periodLabel = TimeUtils.getLocalizedDayPeriodLabel(
+            context,
+            periodKey,
+          );
+          final periodIcon = TimeUtils.getDayPeriodIconByKey(periodKey);
+          return TweenAnimationBuilder<double>(
+            key: ValueKey('period_$periodKey'),
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeOut,
+            tween: Tween(begin: 0.0, end: 1.0),
+            builder: (context, value, child) {
+              return Opacity(
+                opacity: value,
+                child: Transform.scale(
+                  scale: 0.8 + (0.2 * value),
+                  child: child,
+                ),
               );
-              _updateStreamSubscription();
             },
-          ),
-        );
-      }));
+            child: _buildModernFilterChip(
+              theme: theme,
+              label: periodLabel,
+              icon: periodIcon,
+              color: theme.colorScheme.tertiary,
+              onDeleted: () {
+                final newDayPeriods = List<String>.from(
+                  widget.selectedDayPeriods,
+                )..remove(periodKey);
+                widget.onFilterChanged(widget.selectedWeathers, newDayPeriods);
+                _updateStreamSubscription();
+              },
+            ),
+          );
+        }),
+      );
     }
 
     // 创建清除全部按钮
@@ -1813,34 +1862,21 @@ class NoteListViewState extends State<NoteListView> {
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: color.withValues(alpha: 0.2),
-          width: 1,
-        ),
+        border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
-            padding: EdgeInsets.only(
-              left: 10,
-              right: icon != null ? 4 : 8,
-            ),
+            padding: EdgeInsets.only(left: 10, right: icon != null ? 4 : 8),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (icon != null) ...[
                   if (isIconEmoji) ...[
-                    Text(
-                      icon as String,
-                      style: const TextStyle(fontSize: 15),
-                    ),
+                    Text(icon as String, style: const TextStyle(fontSize: 15)),
                   ] else ...[
-                    Icon(
-                      icon as IconData,
-                      size: 15,
-                      color: color,
-                    ),
+                    Icon(icon as IconData, size: 15, color: color),
                   ],
                   const SizedBox(width: 5),
                 ],

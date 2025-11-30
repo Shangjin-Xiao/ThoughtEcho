@@ -22,8 +22,11 @@ class DatabasePlatformInit {
         databaseFactory = databaseFactoryFfi;
         logInfo('Windows平台FFI数据库工厂初始化成功', source: 'DatabasePlatformInit');
       } catch (e) {
-        logError('Windows平台FFI初始化失败: $e',
-            error: e, source: 'DatabasePlatformInit');
+        logError(
+          'Windows平台FFI初始化失败: $e',
+          error: e,
+          source: 'DatabasePlatformInit',
+        );
         rethrow;
       }
     }

@@ -150,19 +150,22 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       AppLogger.e('加载周期数据失败', error: e);
       if (mounted) {
         final l10n = AppLocalizations.of(context);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
             content: Text(l10n.loadDataFailed(e.toString())),
-            duration: AppConstants.snackBarDurationError));
+            duration: AppConstants.snackBarDurationError,
+          ),
+        );
       }
     }
   }
 
   Future<void> _computeExtrasAndInsight() async {
     // 计算总字数
-    final totalWords =
-        _periodQuotes.fold<int>(0, (sum, q) => sum + q.content.length);
+    final totalWords = _periodQuotes.fold<int>(
+      0,
+      (sum, q) => sum + q.content.length,
+    );
 
     // 最常见时间段
     final Map<String, int> periodCounts = {};
@@ -197,8 +200,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     }
     final mostWeather = weatherCategoryCounts.entries.isNotEmpty
         ? weatherCategoryCounts.entries
-            .reduce((a, b) => a.value >= b.value ? a : b)
-            .key
+              .reduce((a, b) => a.value >= b.value ? a : b)
+              .key
         : null;
 
     // 最常用标签（根据tagIds统计，然后映射为名称）
@@ -213,12 +216,15 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         }
       }
       if (tagCounts.isNotEmpty) {
-        topTagId =
-            tagCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+        topTagId = tagCounts.entries
+            .reduce((a, b) => a.value >= b.value ? a : b)
+            .key;
         final db = context.read<DatabaseService>();
         final cats = await db.getCategories();
-        final category =
-            cats.firstWhere((c) => c.id == topTagId, orElse: () => cats.first);
+        final category = cats.firstWhere(
+          (c) => c.id == topTagId,
+          orElse: () => cats.first,
+        );
         topTagName = category.name;
         topTagIcon = IconUtils.getDisplayIcon(category.iconName);
       }
@@ -227,17 +233,23 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     }
 
     // 笔记片段预览（最多5条，每条截断80字）
-    final samples = _periodQuotes.take(5).map((q) {
-      var t = q.content.trim().replaceAll('\n', ' ');
-      if (t.length > 80) t = '${t.substring(0, 80)}…';
-      return '- $t';
-    }).join('\n');
+    final samples = _periodQuotes
+        .take(5)
+        .map((q) {
+          var t = q.content.trim().replaceAll('\n', ' ');
+          if (t.length > 80) t = '${t.substring(0, 80)}…';
+          return '- $t';
+        })
+        .join('\n');
 
     // 处理时段显示：转换为本地化标签
     String? dayPeriodDisplay;
     IconData? dayPeriodIcon;
     if (mostPeriod != null) {
-      dayPeriodDisplay = TimeUtils.getLocalizedDayPeriodLabel(context, mostPeriod);
+      dayPeriodDisplay = TimeUtils.getLocalizedDayPeriodLabel(
+        context,
+        mostPeriod,
+      );
       dayPeriodIcon = TimeUtils.getDayPeriodIconByKey(mostPeriod);
     }
 
@@ -251,7 +263,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         weatherIcon = WeatherService.getFilterCategoryIcon(mostWeather);
       } else {
         // 否则按原逻辑处理
-        weatherDisplay = WeatherCodeMapper.getLocalizedDescription(context, mostWeather);
+        weatherDisplay = WeatherCodeMapper.getLocalizedDescription(
+          context,
+          mostWeather,
+        );
         weatherIcon = WeatherCodeMapper.getIcon(mostWeather);
 
         // 如果返回的是"未知"，说明mostWeather可能已经是中文描述
@@ -259,8 +274,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           weatherDisplay = mostWeather;
           // 反向匹配：根据中文描述找到key以获取更准确的图标
           final key = WeatherCodeMapper.getKeyByDescription(mostWeather);
-          weatherIcon =
-              key != null ? WeatherCodeMapper.getIcon(key) : Icons.cloud_queue;
+          weatherIcon = key != null
+              ? WeatherCodeMapper.getIcon(key)
+              : Icons.cloud_queue;
         }
       }
     }
@@ -301,54 +317,62 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       final ai = context.read<AIService>();
 
       // 准备完整的笔记内容用于AI分析
-      final fullNotesContent = _periodQuotes.map((quote) {
-        final date = DateTime.parse(quote.date);
-        final dateStr = l10n.formattedDate(date.month, date.day);
-        var content = quote.content.trim();
+      final fullNotesContent = _periodQuotes
+          .map((quote) {
+            final date = DateTime.parse(quote.date);
+            final dateStr = l10n.formattedDate(date.month, date.day);
+            var content = quote.content.trim();
 
-        // 添加位置信息
-        if (quote.location != null && quote.location!.isNotEmpty) {
-          content =
-              l10n.noteMetaWithLocation(dateStr, quote.location!, content);
-        } else {
-          content = l10n.noteMeta(dateStr, content);
-        }
+            // 添加位置信息
+            if (quote.location != null && quote.location!.isNotEmpty) {
+              content = l10n.noteMetaWithLocation(
+                dateStr,
+                quote.location!,
+                content,
+              );
+            } else {
+              content = l10n.noteMeta(dateStr, content);
+            }
 
-        // 添加天气信息
-        if (quote.weather != null && quote.weather!.isNotEmpty) {
-          final w = quote.weather!.trim();
-          // 优先把英文key映射为国际化描述
-          final wDesc = WeatherCodeMapper.getLocalizedDescription(context, w);
-          final display = wDesc == l10n.weatherUnknown ? w : wDesc;
-          content += l10n.weatherInfo(display);
-        }
+            // 添加天气信息
+            if (quote.weather != null && quote.weather!.isNotEmpty) {
+              final w = quote.weather!.trim();
+              // 优先把英文key映射为国际化描述
+              final wDesc = WeatherCodeMapper.getLocalizedDescription(
+                context,
+                w,
+              );
+              final display = wDesc == l10n.weatherUnknown ? w : wDesc;
+              content += l10n.weatherInfo(display);
+            }
 
-        return content;
-      }).join('\n\n');
+            return content;
+          })
+          .join('\n\n');
 
       _insightSub = ai
           .streamReportInsight(
-        periodLabel: periodLabel,
-        mostTimePeriod: _mostDayPeriodDisplay ?? _mostDayPeriod,
-        mostWeather: _mostWeatherDisplay ?? _mostWeather,
-        topTag: _mostTopTag,
-        activeDays: activeDays,
-        noteCount: noteCount,
-        totalWordCount: _totalWordCount,
-        notesPreview: _notesPreview,
-        fullNotesContent: fullNotesContent, // 传递完整内容
-      )
+            periodLabel: periodLabel,
+            mostTimePeriod: _mostDayPeriodDisplay ?? _mostDayPeriod,
+            mostWeather: _mostWeatherDisplay ?? _mostWeather,
+            topTag: _mostTopTag,
+            activeDays: activeDays,
+            noteCount: noteCount,
+            totalWordCount: _totalWordCount,
+            notesPreview: _notesPreview,
+            fullNotesContent: fullNotesContent, // 传递完整内容
+          )
           .listen(
-        (chunk) {
-          if (!mounted) return;
-          // 直接更新文本，UI会立即显示新内容（真正的流式显示）
-          setState(() {
-            _insightText += chunk;
-          });
-        },
-        onError: (_) {
-          if (!mounted) return;
-          final local = context.read<AIService>().buildLocalReportInsight(
+            (chunk) {
+              if (!mounted) return;
+              // 直接更新文本，UI会立即显示新内容（真正的流式显示）
+              setState(() {
+                _insightText += chunk;
+              });
+            },
+            onError: (_) {
+              if (!mounted) return;
+              final local = context.read<AIService>().buildLocalReportInsight(
                 periodLabel: periodLabel,
                 mostTimePeriod: _mostDayPeriodDisplay ?? _mostDayPeriod,
                 mostWeather: _mostWeatherDisplay ?? _mostWeather,
@@ -357,43 +381,46 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                 noteCount: noteCount,
                 totalWordCount: _totalWordCount,
               );
-          setState(() {
-            _insightText = local;
-            _insightLoading = false;
-          });
-        },
-        onDone: () {
-          if (!mounted) return;
-          setState(() {
-            _insightLoading = false;
-          });
+              setState(() {
+                _insightText = local;
+                _insightLoading = false;
+              });
+            },
+            onDone: () {
+              if (!mounted) return;
+              setState(() {
+                _insightLoading = false;
+              });
 
-          // 保存洞察到历史记录
-          if (_insightText.isNotEmpty) {
-            _saveInsightToHistory(l10n);
-          }
-        },
-      );
+              // 保存洞察到历史记录
+              if (_insightText.isNotEmpty) {
+                _saveInsightToHistory(l10n);
+              }
+            },
+          );
     } else {
       // 调试：记录本地生成洞察的参数
       AppLogger.d(
-          '开始本地生成洞察 - useAI: $useAI, periodLabel: $periodLabel, activeDays: $activeDays, noteCount: $noteCount, totalWordCount: $_totalWordCount');
+        '开始本地生成洞察 - useAI: $useAI, periodLabel: $periodLabel, activeDays: $activeDays, noteCount: $noteCount, totalWordCount: $_totalWordCount',
+      );
       AppLogger.d(
-          '本地生成洞察参数 - mostTimePeriod: ${_mostDayPeriodDisplay ?? _mostDayPeriod}, mostWeather: ${_mostWeatherDisplay ?? _mostWeather}, topTag: $_mostTopTag');
+        '本地生成洞察参数 - mostTimePeriod: ${_mostDayPeriodDisplay ?? _mostDayPeriod}, mostWeather: ${_mostWeatherDisplay ?? _mostWeather}, topTag: $_mostTopTag',
+      );
 
       final local = context.read<AIService>().buildLocalReportInsight(
-            periodLabel: periodLabel,
-            mostTimePeriod: _mostDayPeriodDisplay ?? _mostDayPeriod,
-            mostWeather: _mostWeatherDisplay ?? _mostWeather,
-            topTag: _mostTopTag,
-            activeDays: activeDays,
-            noteCount: noteCount,
-            totalWordCount: _totalWordCount,
-          );
+        periodLabel: periodLabel,
+        mostTimePeriod: _mostDayPeriodDisplay ?? _mostDayPeriod,
+        mostWeather: _mostWeatherDisplay ?? _mostWeather,
+        topTag: _mostTopTag,
+        activeDays: activeDays,
+        noteCount: noteCount,
+        totalWordCount: _totalWordCount,
+      );
 
       // 调试：记录本地生成的结果
       AppLogger.d(
-          '本地生成洞察结果 - 长度: ${local.length}, 内容: ${local.isNotEmpty ? local.substring(0, local.length > 50 ? 50 : local.length) : "空字符串"}');
+        '本地生成洞察结果 - 长度: ${local.length}, 内容: ${local.isNotEmpty ? local.substring(0, local.length > 50 ? 50 : local.length) : "空字符串"}',
+      );
 
       setState(() {
         _insightText = local;
@@ -470,8 +497,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       );
 
       logDebug(
-          '已保存洞察到历史记录: ${_insightText.substring(0, _insightText.length > 50 ? 50 : _insightText.length)}...',
-          source: 'AIPeriodicReportPage');
+        '已保存洞察到历史记录: ${_insightText.substring(0, _insightText.length > 50 ? 50 : _insightText.length)}...',
+        source: 'AIPeriodicReportPage',
+      );
     } catch (e) {
       logError('保存洞察到历史记录失败: $e', error: e, source: 'AIPeriodicReportPage');
     }
@@ -509,8 +537,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(l10n.generateCardFailed(e.toString())),
-              duration: AppConstants.snackBarDurationError),
+            content: Text(l10n.generateCardFailed(e.toString())),
+            duration: AppConstants.snackBarDurationError,
+          ),
         );
       }
     }
@@ -630,10 +659,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
             },
             child: TabBarView(
               controller: _tabController,
-              children: [
-                _buildDataOverview(),
-                _buildFeaturedCards(),
-              ],
+              children: [_buildDataOverview(), _buildFeaturedCards()],
             ),
           ),
         ),
@@ -660,10 +686,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
             boxShadow: isSelected
                 ? [
                     BoxShadow(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .primary
-                          .withValues(alpha: 0.3),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: 0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
@@ -742,9 +767,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           const SizedBox(width: 8),
           Text(
             '${_getPeriodName(l10n)} - ${_getDateRangeText(l10n)}',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
           ),
           const Spacer(),
           Icon(
@@ -782,9 +807,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
               const SizedBox(width: 8),
               Text(
                 l10n.timeRange,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
               const Spacer(),
               Container(
@@ -927,17 +952,14 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   children: [
                     Text(
                       l10n.dataOverview,
-                      style:
-                          Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                      style: Theme.of(context).textTheme.headlineSmall
+                          ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     Text(
                       _getDateRangeText(l10n),
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -961,15 +983,22 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   child: Row(
                     children: [
                       Expanded(
-                          child: _buildStatCard(l10n.noteCount, '$totalNotes',
-                              l10n.notesUnitPlain, Icons.note_alt_outlined)),
+                        child: _buildStatCard(
+                          l10n.noteCount,
+                          '$totalNotes',
+                          l10n.notesUnitPlain,
+                          Icons.note_alt_outlined,
+                        ),
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
-                          child: _buildStatCard(
-                              l10n.totalWordCount,
-                              '$totalWords',
-                              l10n.wordsUnitPlain,
-                              Icons.text_fields)),
+                        child: _buildStatCard(
+                          l10n.totalWordCount,
+                          '$totalWords',
+                          l10n.wordsUnitPlain,
+                          Icons.text_fields,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -991,15 +1020,21 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   child: Row(
                     children: [
                       Expanded(
-                          child: _buildStatCard(l10n.avgWords, '$avgWords',
-                              l10n.wordsPerNote, Icons.calculate_outlined)),
+                        child: _buildStatCard(
+                          l10n.avgWords,
+                          '$avgWords',
+                          l10n.wordsPerNote,
+                          Icons.calculate_outlined,
+                        ),
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: _buildStatCard(
-                            l10n.activeDays,
-                            '${_getActiveDays()}',
-                            l10n.daysUnitPlain,
-                            Icons.calendar_today_outlined),
+                          l10n.activeDays,
+                          '${_getActiveDays()}',
+                          l10n.daysUnitPlain,
+                          Icons.calendar_today_outlined,
+                        ),
                       ),
                     ],
                   ),
@@ -1025,23 +1060,28 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                     children: [
                       Expanded(
                         child: _buildStatCardWithCustomIcon(
-                            l10n.commonPeriod,
-                            _mostDayPeriodDisplay ?? l10n.noDataYet,
-                            '',
-                            _mostDayPeriodIcon ?? Icons.timelapse),
+                          l10n.commonPeriod,
+                          _mostDayPeriodDisplay ?? l10n.noDataYet,
+                          '',
+                          _mostDayPeriodIcon ?? Icons.timelapse,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: _buildStatCardWithCustomIcon(
-                            l10n.commonWeather,
-                            _mostWeatherDisplay ?? l10n.noDataYet,
-                            '',
-                            _mostWeatherIcon ?? Icons.cloud_queue),
+                          l10n.commonWeather,
+                          _mostWeatherDisplay ?? l10n.noDataYet,
+                          '',
+                          _mostWeatherIcon ?? Icons.cloud_queue,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: _buildStatCardWithTagIcon(
-                            l10n.commonTag, _mostTopTag ?? l10n.noDataYet, ''),
+                          l10n.commonTag,
+                          _mostTopTag ?? l10n.noDataYet,
+                          '',
+                        ),
                       ),
                     ],
                   ),
@@ -1102,21 +1142,21 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                             const SizedBox(width: 8),
                             Text(
                               l10n.recentNotes,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w600),
                             ),
                           ],
                         ),
                         const SizedBox(height: 12),
-                        ..._periodQuotes.take(3).map(
+                        ..._periodQuotes
+                            .take(3)
+                            .map(
                               (quote) => TweenAnimationBuilder<double>(
                                 duration: Duration(
-                                    milliseconds: 600 +
-                                        (_periodQuotes.indexOf(quote) * 200)),
+                                  milliseconds:
+                                      600 +
+                                      (_periodQuotes.indexOf(quote) * 200),
+                                ),
                                 tween: Tween(begin: 0.0, end: 1.0),
                                 builder: (context, animValue, child) {
                                   return Transform.translate(
@@ -1148,10 +1188,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   Widget _buildPeriodTopFavoritesSection() {
     final l10n = AppLocalizations.of(context);
     // 过滤出有心形点击的笔记，并按次数排序
-    final List<Quote> favorited = _periodQuotes
-        .where((q) => q.favoriteCount > 0)
-        .toList()
-      ..sort((a, b) => b.favoriteCount.compareTo(a.favoriteCount));
+    final List<Quote> favorited =
+        _periodQuotes.where((q) => q.favoriteCount > 0).toList()
+          ..sort((a, b) => b.favoriteCount.compareTo(a.favoriteCount));
 
     if (favorited.isEmpty) {
       // 若本周期没有心形点击，显示一个轻量提示
@@ -1204,17 +1243,13 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                 opacity: value,
                 child: Row(
                   children: [
-                    Icon(
-                      Icons.favorite,
-                      size: 20,
-                      color: Colors.red.shade400,
-                    ),
+                    Icon(Icons.favorite, size: 20, color: Colors.red.shade400),
                     const SizedBox(width: 8),
                     Text(
                       l10n.mostFavoritedInPeriod,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
@@ -1223,14 +1258,18 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           },
         ),
         const SizedBox(height: 12),
-        ...favorited.take(3).map(
+        ...favorited
+            .take(3)
+            .map(
               (q) => TweenAnimationBuilder<double>(
                 key: ValueKey('favorite_${q.id}_$_dataKey'),
                 duration: _shouldAnimateOverview
                     ? Duration(milliseconds: 600 + (favorited.indexOf(q) * 150))
                     : Duration.zero,
-                tween:
-                    Tween(begin: _shouldAnimateOverview ? 0.0 : 1.0, end: 1.0),
+                tween: Tween(
+                  begin: _shouldAnimateOverview ? 0.0 : 1.0,
+                  end: 1.0,
+                ),
                 builder: (context, value, child) {
                   return Transform.translate(
                     offset: Offset(0, 15 * (1 - value)),
@@ -1279,7 +1318,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                       scale: value,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 6, vertical: 2),
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.red.shade400,
                           borderRadius: BorderRadius.circular(10),
@@ -1294,8 +1335,11 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.favorite,
-                                color: Colors.white, size: 12),
+                            const Icon(
+                              Icons.favorite,
+                              color: Colors.white,
+                              size: 12,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               '${quote.favoriteCount}',
@@ -1372,13 +1416,14 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                     Text(
                       l10n.generatingInsightsForPeriod(_getPeriodName(l10n)),
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color:
-                              Theme.of(context).colorScheme.onSurfaceVariant),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     LinearProgressIndicator(
-                      backgroundColor:
-                          Theme.of(context).colorScheme.surfaceContainerHighest,
+                      backgroundColor: Theme.of(
+                        context,
+                      ).colorScheme.surfaceContainerHighest,
                       valueColor: AlwaysStoppedAnimation<Color>(
                         Theme.of(context).colorScheme.primary,
                       ),
@@ -1389,19 +1434,21 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                     // 直接显示实时文本，不使用打字机动画，流式接收时也不显示加载指示器
                     Text(
                       _insightText,
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.copyWith(height: 1.5),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(height: 1.5),
                     )
                   // 没有洞察内容且加载完成时显示空状态
                   else
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 8),
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
                       decoration: BoxDecoration(
-                        color:
-                            Theme.of(context).colorScheme.surfaceContainerHigh,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHigh,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -1410,19 +1457,20 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                           Icon(
                             Icons.auto_awesome,
                             size: 16,
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                           ),
                           const SizedBox(width: 6),
                           Text(
                             l10n.noInsights,
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onSurfaceVariant,
-                                      height: 1.4,
-                                    ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                  height: 1.4,
+                                ),
                           ),
                         ],
                       ),
@@ -1437,8 +1485,12 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   }
 
   /// 构建统计卡片
-  Widget _buildStatCard(String title, String value, String unit,
-      [IconData? icon]) {
+  Widget _buildStatCard(
+    String title,
+    String value,
+    String unit, [
+    IconData? icon,
+  ]) {
     return Card(
       elevation: 2,
       child: Padding(
@@ -1460,9 +1512,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   child: Text(
                     title,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],
@@ -1474,16 +1526,16 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                 Text(
                   value,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
                 const SizedBox(width: 4),
                 Text(
                   unit,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -1495,7 +1547,11 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
   /// 构建带自定义图标的统计卡片
   Widget _buildStatCardWithCustomIcon(
-      String title, String value, String unit, IconData icon) {
+    String title,
+    String value,
+    String unit,
+    IconData icon,
+  ) {
     return Card(
       elevation: 2,
       child: Padding(
@@ -1515,9 +1571,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   child: Text(
                     title,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],
@@ -1529,16 +1585,16 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                 Text(
                   value,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
                 const SizedBox(width: 4),
                 Text(
                   unit,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -1585,9 +1641,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   child: Text(
                     title,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],
@@ -1599,16 +1655,16 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                 Text(
                   value,
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
                 ),
                 const SizedBox(width: 4),
                 Text(
                   unit,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -1641,10 +1697,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                     child: Icon(
                       Icons.note_add_outlined,
                       size: 64,
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurfaceVariant
-                          .withValues(alpha: 0.5),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                     ),
                   ),
                 );
@@ -1665,9 +1720,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                     child: Text(
                       l10n.noNotesInPeriodForPeriod(_getPeriodName(l10n)),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -1689,11 +1743,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                     child: Text(
                       l10n.startRecordingThoughts,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant
-                                .withValues(alpha: 0.7),
-                          ),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -1740,10 +1793,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: Theme.of(context)
-                    .colorScheme
-                    .outline
-                    .withValues(alpha: 0.2),
+                color: Theme.of(
+                  context,
+                ).colorScheme.outline.withValues(alpha: 0.2),
                 width: 1,
               ),
             ),
@@ -1754,9 +1806,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   quote.content.length > 120
                       ? '${quote.content.substring(0, 120)}...'
                       : quote.content,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        height: 1.4,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(height: 1.4),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1772,14 +1824,15 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                     Text(
                       formattedDate,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                     const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 2),
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: Theme.of(context).colorScheme.primaryContainer,
                         borderRadius: BorderRadius.circular(10),
@@ -1787,11 +1840,11 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                       child: Text(
                         '${quote.content.length} 字',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onPrimaryContainer,
-                              fontWeight: FontWeight.w500,
-                            ),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ],
@@ -1852,8 +1905,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                     child: Text(
                       l10n.noNotesInPeriodForPeriod(_getPeriodName(l10n)),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: Colors.grey[600],
-                          ),
+                        color: Colors.grey[600],
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -1892,43 +1945,41 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                     Text(
                       l10n.featuredCards,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     if (_featuredCards.isNotEmpty)
                       Row(
                         children: [
                           Text(
                             l10n.totalCards(_featuredCards.length),
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
+                            style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
                                 ),
                           ),
                           if (_selectedCardIndex != null) ...[
                             const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 2),
+                                horizontal: 8,
+                                vertical: 2,
+                              ),
                               decoration: BoxDecoration(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .primaryContainer,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.primaryContainer,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
                                 l10n.cardSelected(_selectedCardIndex! + 1),
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
+                                style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .onPrimaryContainer,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onPrimaryContainer,
                                       fontWeight: FontWeight.w500,
                                     ),
                               ),
@@ -1954,8 +2005,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   icon: const Icon(Icons.auto_awesome, size: 18),
                   label: Text(l10n.generateCards),
                   style: FilledButton.styleFrom(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                   ),
                 )
               else if (_featuredCards.isNotEmpty)
@@ -1969,8 +2022,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   icon: const Icon(Icons.refresh, size: 18),
                   label: Text(l10n.regenerate),
                   style: FilledButton.styleFrom(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                   ),
                 ),
             ],
@@ -2015,29 +2070,32 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                 _featuredCards.isEmpty
                     ? l10n.noFeaturedCards
                     : l10n.featuredCards,
-                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w600),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 12),
               Text(
                 l10n.featuredCardGenerationTip,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
               // 显示生成卡片按钮（无论AI开关，都会在服务内降级到模板）
               FilledButton.icon(
-                onPressed:
-                    _periodQuotes.isNotEmpty ? _generateFeaturedCards : null,
+                onPressed: _periodQuotes.isNotEmpty
+                    ? _generateFeaturedCards
+                    : null,
                 icon: const Icon(Icons.auto_awesome),
                 label: Text(l10n.generateCards),
                 style: FilledButton.styleFrom(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
                 ),
               ),
             ],
@@ -2085,20 +2143,16 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                     boxShadow: [
                       BoxShadow(
                         color: isSelected
-                            ? Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withValues(alpha: 0.3)
+                            ? Theme.of(
+                                context,
+                              ).colorScheme.primary.withValues(alpha: 0.3)
                             : Colors.black.withValues(alpha: 0.1),
                         blurRadius: isSelected ? 12 : 8,
                         offset: const Offset(0, 4),
                       ),
                     ],
                   ),
-                  child: GeneratedCardWidget(
-                    card: card,
-                    showActions: false,
-                  ),
+                  child: GeneratedCardWidget(card: card, showActions: false),
                 ),
               ),
             ),

@@ -1,13 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// 引导提示的预设位置偏好
-enum FeatureGuidePlacement {
-  auto,
-  above,
-  below,
-  left,
-  right,
-}
+enum FeatureGuidePlacement { auto, above, below, left, right }
 
 /// 功能引导模型
 /// 用于定义应用中各个功能的引导信息

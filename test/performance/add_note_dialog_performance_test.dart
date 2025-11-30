@@ -20,12 +20,13 @@ void main() {
     setUp(() {
       // 模拟大量标签数据来测试性能
       mockTags = List.generate(
-          100,
-          (index) => NoteCategory(
-                id: 'tag_$index',
-                name: '标签 $index',
-                iconName: index % 2 == 0 ? '😀' : 'star',
-              ));
+        100,
+        (index) => NoteCategory(
+          id: 'tag_$index',
+          name: '标签 $index',
+          iconName: index % 2 == 0 ? '😀' : 'star',
+        ),
+      );
 
       // 创建模拟的服务 - 使用mock对象而不是真实服务实例
       mockLocationService = MockLocationService();
@@ -38,15 +39,16 @@ void main() {
       return MultiProvider(
         providers: [
           ChangeNotifierProvider<LocationService>.value(
-              value: mockLocationService),
+            value: mockLocationService,
+          ),
           ChangeNotifierProvider<WeatherService>.value(
-              value: mockWeatherService),
+            value: mockWeatherService,
+          ),
           ChangeNotifierProvider<DatabaseService>.value(
-              value: mockDatabaseService),
+            value: mockDatabaseService,
+          ),
         ],
-        child: MaterialApp(
-          home: Scaffold(body: child),
-        ),
+        child: MaterialApp(home: Scaffold(body: child)),
       );
     }
 
@@ -54,9 +56,7 @@ void main() {
       // 简化测试：只验证基本的服务依赖是否满足，不测试复杂的UI交互
       try {
         await tester.pumpWidget(
-          createTestApp(
-            const Center(child: Text('Test App')),
-          ),
+          createTestApp(const Center(child: Text('Test App'))),
         );
 
         await tester.pumpAndSettle();
@@ -82,8 +82,9 @@ void main() {
     testWidgets('搜索功能应该正常工作', (WidgetTester tester) async {
       // 简化测试：验证搜索逻辑
       const searchQuery = '标签 1';
-      final filteredTags =
-          mockTags.where((tag) => tag.name.contains(searchQuery)).toList();
+      final filteredTags = mockTags
+          .where((tag) => tag.name.contains(searchQuery))
+          .toList();
 
       // 应该找到"标签 1", "标签 10", "标签 11"等
       expect(filteredTags.length, greaterThan(0));
@@ -122,10 +123,8 @@ void main() {
                 showModalBottomSheet(
                   context: context,
                   isScrollControlled: true,
-                  builder: (context) => AddNoteDialog(
-                    tags: mockTags,
-                    onSave: (_) {},
-                  ),
+                  builder: (context) =>
+                      AddNoteDialog(tags: mockTags, onSave: (_) {}),
                 );
               },
               child: const Text('打开对话框'),
@@ -146,8 +145,11 @@ void main() {
       expect(find.byType(AddNoteDialog), findsOneWidget);
 
       // 性能断言：对话框渲染应该在500ms内完成
-      expect(renderTime, lessThan(500),
-          reason: 'AddNoteDialog渲染时间过长: ${renderTime}ms，应该在500ms内完成');
+      expect(
+        renderTime,
+        lessThan(500),
+        reason: 'AddNoteDialog渲染时间过长: ${renderTime}ms，应该在500ms内完成',
+      );
 
       // 输出性能信息用于监控
       debugPrint('AddNoteDialog渲染耗时: ${renderTime}ms');

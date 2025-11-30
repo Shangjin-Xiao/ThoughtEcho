@@ -130,12 +130,12 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
     final l10n = AppLocalizations.of(context);
 
     if (widget.contentController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(
-        content: Text(l10n.pleaseEnterContent),
-        duration: AppConstants.snackBarDurationNormal,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.pleaseEnterContent),
+          duration: AppConstants.snackBarDurationNormal,
+        ),
+      );
       return;
     }
 
@@ -171,8 +171,9 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
       // 关闭加载对话框
       Navigator.of(context).pop(); // 解析JSON结果
       try {
-        final Map<String, dynamic> sourceData =
-            result is Map<String, dynamic> ? result : jsonDecode(result);
+        final Map<String, dynamic> sourceData = result is Map<String, dynamic>
+            ? result
+            : jsonDecode(result);
 
         String? author = sourceData['author'] as String?;
         String? work = sourceData['work'] as String?;
@@ -230,12 +231,12 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(
-            content: Text(l10n.parseResultFailedWithError(e.toString())),
-            duration: AppConstants.snackBarDurationError,
-          ));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.parseResultFailedWithError(e.toString())),
+              duration: AppConstants.snackBarDurationError,
+            ),
+          );
         }
       }
     } catch (e) {
@@ -246,12 +247,12 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
       Navigator.of(context).pop();
 
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(
-          content: Text(l10n.analysisFailedWithError(e.toString())),
-          duration: AppConstants.snackBarDurationError,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.analysisFailedWithError(e.toString())),
+            duration: AppConstants.snackBarDurationError,
+          ),
+        );
       }
     }
   }
@@ -261,12 +262,12 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
     final l10n = AppLocalizations.of(context);
 
     if (widget.contentController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(
-        content: Text(l10n.pleaseEnterContent),
-        duration: AppConstants.snackBarDurationNormal,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.pleaseEnterContent),
+          duration: AppConstants.snackBarDurationNormal,
+        ),
+      );
       return;
     }
 
@@ -300,12 +301,12 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
       // Navigator.of(context).pop();
 
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(
-          content: Text(l10n.polishFailedWithError(e.toString())),
-          duration: AppConstants.snackBarDurationError,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.polishFailedWithError(e.toString())),
+            duration: AppConstants.snackBarDurationError,
+          ),
+        );
       }
     }
   }
@@ -315,12 +316,12 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
     final l10n = AppLocalizations.of(context);
 
     if (widget.contentController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(
-        content: Text(l10n.pleaseEnterContent),
-        duration: AppConstants.snackBarDurationNormal,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.pleaseEnterContent),
+          duration: AppConstants.snackBarDurationNormal,
+        ),
+      );
       return;
     }
 
@@ -354,12 +355,12 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
       // Navigator.of(context).pop();
 
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(
-          content: Text(l10n.continueFailedWithError(e.toString())),
-          duration: AppConstants.snackBarDurationError,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.continueFailedWithError(e.toString())),
+            duration: AppConstants.snackBarDurationError,
+          ),
+        );
       }
     }
   }
@@ -369,12 +370,12 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
     final l10n = AppLocalizations.of(context);
 
     if (widget.contentController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(
-        content: Text(l10n.pleaseEnterContent),
-        duration: AppConstants.snackBarDurationNormal,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.pleaseEnterContent),
+          duration: AppConstants.snackBarDurationNormal,
+        ),
+      );
       return;
     }
 
@@ -406,21 +407,21 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
 
       // 显示成功提示
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(
-          content: Text(l10n.analysisComplete),
-          duration: AppConstants.snackBarDurationImportant,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.analysisComplete),
+            duration: AppConstants.snackBarDurationImportant,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(
-          content: Text(l10n.analysisFailedWithError(e.toString())),
-          duration: AppConstants.snackBarDurationError,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.analysisFailedWithError(e.toString())),
+            duration: AppConstants.snackBarDurationError,
+          ),
+        );
       }
     }
   }
@@ -430,12 +431,12 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
     final l10n = AppLocalizations.of(context);
 
     if (widget.contentController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(
-        content: Text(l10n.pleaseEnterContent),
-        duration: AppConstants.snackBarDurationNormal,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.pleaseEnterContent),
+          duration: AppConstants.snackBarDurationNormal,
+        ),
+      );
       return;
     }
 

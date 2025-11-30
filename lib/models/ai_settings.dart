@@ -34,19 +34,20 @@ class AISettings {
       temperature: map['temperature'] != null
           ? (map['temperature'] as num).toDouble()
           : 0.7,
-      maxTokens:
-          map['maxTokens'] != null ? (map['maxTokens'] as num).toInt() : 32000,
+      maxTokens: map['maxTokens'] != null
+          ? (map['maxTokens'] as num).toInt()
+          : 32000,
       hostOverride: map['hostOverride'],
     );
   }
 
   factory AISettings.defaultSettings() => AISettings(
-        apiKey: '',
-        apiUrl: '',
-        model: '',
-        temperature: 0.7,
-        maxTokens: 32000,
-      );
+    apiKey: '',
+    apiUrl: '',
+    model: '',
+    temperature: 0.7,
+    maxTokens: 32000,
+  );
 
   AISettings copyWith({
     String? apiKey,

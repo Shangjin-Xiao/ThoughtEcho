@@ -59,14 +59,18 @@ class StreamFileSelector {
         // - iOS 保持使用 file_picker（更稳定的文件路径获取）
         if (Platform.isAndroid) {
           final picker = ImagePicker();
-          final XFile? file =
-              await picker.pickVideo(source: ImageSource.gallery);
+          final XFile? file = await picker.pickVideo(
+            source: ImageSource.gallery,
+          );
           if (file != null) {
             final f = File(file.path);
             final size = await f.exists() ? await f.length() : 0;
             result = FilePickerResult([
               PlatformFile(
-                  name: p.basename(file.path), path: file.path, size: size),
+                name: p.basename(file.path),
+                path: file.path,
+                size: size,
+              ),
             ]);
           }
         } else {
@@ -79,7 +83,7 @@ class StreamFileSelector {
               'mkv',
               'webm',
               '3gp',
-              'm4v'
+              'm4v',
             ],
             allowMultiple: false,
             withData: false,
@@ -156,14 +160,18 @@ class StreamFileSelector {
         if (Platform.isAndroid) {
           // Android 使用系统媒体选择器（图库）
           final picker = ImagePicker();
-          final XFile? file =
-              await picker.pickImage(source: ImageSource.gallery);
+          final XFile? file = await picker.pickImage(
+            source: ImageSource.gallery,
+          );
           if (file != null) {
             final f = File(file.path);
             final size = await f.exists() ? await f.length() : 0;
             result = FilePickerResult([
               PlatformFile(
-                  name: p.basename(file.path), path: file.path, size: size),
+                name: p.basename(file.path),
+                path: file.path,
+                size: size,
+              ),
             ]);
           }
         } else {
@@ -235,9 +243,7 @@ class StreamFileSelector {
             ),
           );
         } else {
-          typeGroups.add(
-            const desktop_selector.XTypeGroup(label: 'All Files'),
-          );
+          typeGroups.add(const desktop_selector.XTypeGroup(label: 'All Files'));
         }
 
         final file = await desktop_selector.openFile(
@@ -324,13 +330,15 @@ class StreamFileSelector {
     if (!_useNativeSelector) return false;
 
     try {
-      final result = await _channel.invokeMethod('isAvailable').timeout(
-        const Duration(seconds: 2),
-        onTimeout: () {
-          logDebug('原生文件选择器检查超时');
-          return false;
-        },
-      );
+      final result = await _channel
+          .invokeMethod('isAvailable')
+          .timeout(
+            const Duration(seconds: 2),
+            onTimeout: () {
+              logDebug('原生文件选择器检查超时');
+              return false;
+            },
+          );
       return result == true;
     } catch (e) {
       logDebug('检查原生文件选择器可用性失败: $e');

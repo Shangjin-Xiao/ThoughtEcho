@@ -541,7 +541,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       return null;
     } else if (original is Map) {
       return Map<String, dynamic>.from(
-          original.map((key, value) => MapEntry(key, _deepCopy(value))));
+        original.map((key, value) => MapEntry(key, _deepCopy(value))),
+      );
     } else if (original is List) {
       return original.map((item) => _deepCopy(item)).toList();
     } else {
@@ -593,8 +594,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
                 // 确保插入位置在有效范围内
                 final docLength = _controller.document.length;
-                final safeInsertPosition =
-                    currentInsertPosition.clamp(0, docLength - 1);
+                final safeInsertPosition = currentInsertPosition.clamp(
+                  0,
+                  docLength - 1,
+                );
 
                 _controller.document.insert(safeInsertPosition, chunk);
 
@@ -626,9 +629,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
   /// 编辑模式下的位置对话框
   Future<void> _showLocationDialogInEditor(
-      BuildContext context, ThemeData theme) async {
+    BuildContext context,
+    ThemeData theme,
+  ) async {
     final l10n = AppLocalizations.of(context);
-    final hasLocationData = _originalLocation != null ||
+    final hasLocationData =
+        _originalLocation != null ||
         (_originalLatitude != null && _originalLongitude != null);
     final hasCoordinates =
         _originalLatitude != null && _originalLongitude != null;
@@ -652,7 +658,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       // 有位置数据
       title = l10n.locationInfo;
       content = hasOnlyCoordinates
-          ? l10n.locationUpdateHint(LocationService.formatCoordinates(_originalLatitude, _originalLongitude))
+          ? l10n.locationUpdateHint(
+              LocationService.formatCoordinates(
+                _originalLatitude,
+                _originalLongitude,
+              ),
+            )
           : l10n.locationRemoveHint(_originalLocation ?? _location ?? "");
       actions = [
         if (_showLocation)
@@ -686,7 +697,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       try {
         final addressInfo =
             await LocalGeocodingService.getAddressFromCoordinates(
-                _originalLatitude!, _originalLongitude!);
+              _originalLatitude!,
+              _originalLongitude!,
+            );
         if (addressInfo != null && mounted) {
           final formattedAddress = addressInfo['formatted_address'];
           if (formattedAddress != null && formattedAddress.isNotEmpty) {
@@ -696,18 +709,20 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
             });
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(l10n.locationUpdatedTo(formattedAddress))),
+                SnackBar(
+                  content: Text(l10n.locationUpdatedTo(formattedAddress)),
+                ),
               );
             }
           } else if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(l10n.cannotGetAddress)),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(l10n.cannotGetAddress)));
           }
         } else if (mounted && context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.cannotGetAddress)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l10n.cannotGetAddress)));
         }
       } catch (e) {
         if (mounted && context.mounted) {
@@ -725,7 +740,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
   /// 编辑模式下的天气对话框
   Future<void> _showWeatherDialogInEditor(
-      BuildContext context, ThemeData theme) async {
+    BuildContext context,
+    ThemeData theme,
+  ) async {
     final l10n = AppLocalizations.of(context);
     final hasWeatherData = _originalWeather != null;
 
@@ -745,10 +762,14 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       ];
     } else {
       // 有天气数据
-      final weatherDesc =
-          WeatherService.getLocalizedWeatherDescription(context, _originalWeather!);
+      final weatherDesc = WeatherService.getLocalizedWeatherDescription(
+        context,
+        _originalWeather!,
+      );
       title = l10n.weatherInfo2;
-      content = l10n.weatherRemoveHint('$weatherDesc${_temperature != null ? " $_temperature" : ""}');
+      content = l10n.weatherRemoveHint(
+        '$weatherDesc${_temperature != null ? " $_temperature" : ""}',
+      );
       actions = [
         if (_showWeather)
           TextButton(
@@ -787,8 +808,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
     // 检查并请求权限
     if (!locationService.hasLocationPermission) {
-      bool permissionGranted =
-          await locationService.requestLocationPermission();
+      bool permissionGranted = await locationService
+          .requestLocationPermission();
       if (!permissionGranted) {
         if (mounted && context.mounted) {
           final l10n = AppLocalizations.of(context);
@@ -818,7 +839,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
         // 异步获取天气数据，不阻塞UI
         _fetchWeatherAsync(
-            weatherService, position.latitude, position.longitude);
+          weatherService,
+          position.latitude,
+          position.longitude,
+        );
       } catch (e) {
         logError('获取位置天气失败', error: e, source: 'NoteFullEditorPage');
       }
@@ -843,7 +867,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
   // 异步获取天气数据的辅助方法
   Future<void> _fetchWeatherAsync(
-      WeatherService weatherService, double latitude, double longitude) async {
+    WeatherService weatherService,
+    double latitude,
+    double longitude,
+  ) async {
     try {
       await weatherService.getWeatherData(latitude, longitude);
 
@@ -875,19 +902,22 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     // 为了在保存失败时回滚，记录本次从临时目录移动到永久目录的文件
     final List<String> movedToPermanentForThisSave = [];
     try {
-      await _processTemporaryMediaFiles(onProgress: (p, status) {
-        if (mounted) {
-          setState(() {
-            _saveProgress = p.clamp(0.0, 1.0);
-            if (status != null) _saveStatus = status;
-          });
-        }
-      }, onFileMoved: (permanentPath) {
-        // 仅记录位于应用永久媒体目录下的路径
-        if (permanentPath.isNotEmpty) {
-          movedToPermanentForThisSave.add(permanentPath);
-        }
-      });
+      await _processTemporaryMediaFiles(
+        onProgress: (p, status) {
+          if (mounted) {
+            setState(() {
+              _saveProgress = p.clamp(0.0, 1.0);
+              if (status != null) _saveStatus = status;
+            });
+          }
+        },
+        onFileMoved: (permanentPath) {
+          // 仅记录位于应用永久媒体目录下的路径
+          if (permanentPath.isNotEmpty) {
+            movedToPermanentForThisSave.add(permanentPath);
+          }
+        },
+      );
     } catch (e) {
       if (mounted) {
         final l10n = AppLocalizations.of(context);
@@ -993,12 +1023,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         await db.updateQuote(quote);
         _didSaveSuccessfully = true; // 标记保存成功，避免会话级清理
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(
-            content: Text(AppLocalizations.of(context).noteSaved),
-            duration: AppConstants.snackBarDurationImportant,
-          ));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context).noteSaved),
+              duration: AppConstants.snackBarDurationImportant,
+            ),
+          );
           // 成功更新后，关闭页面并返回
           Navigator.of(context).pop(true); // 返回true表示更新成功
         }
@@ -1008,12 +1038,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         await db.addQuote(quote);
         _didSaveSuccessfully = true; // 标记保存成功，避免会话级清理
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(
-            content: Text(AppLocalizations.of(context).noteSaved),
-            duration: AppConstants.snackBarDurationImportant,
-          ));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context).noteSaved),
+              duration: AppConstants.snackBarDurationImportant,
+            ),
+          );
           // 成功添加后，关闭页面并返回
           Navigator.of(context).pop(true); // 返回true表示保存成功
         }
@@ -1190,10 +1220,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                 color: isSelected
                                     ? colorScheme.primary
                                     : color == Colors.transparent
-                                        ? Colors.grey.applyOpacity(
-                                            0.5,
-                                          ) // MODIFIED
-                                        : Colors.transparent,
+                                    ? Colors.grey.applyOpacity(0.5) // MODIFIED
+                                    : Colors.transparent,
                                 width: 2,
                               ),
                               boxShadow: [
@@ -1211,19 +1239,20 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                               child: isSelected
                                   ? Icon(
                                       Icons.check_circle,
-                                      color: color == Colors.transparent ||
+                                      color:
+                                          color == Colors.transparent ||
                                               color.computeLuminance() > 0.7
                                           ? colorScheme.primary
                                           : Colors.white,
                                       size: 24,
                                     )
                                   : color == Colors.transparent
-                                      ? const Icon(
-                                          Icons.block,
-                                          color: Colors.grey,
-                                          size: 18,
-                                        )
-                                      : null,
+                                  ? const Icon(
+                                      Icons.block,
+                                      color: Colors.grey,
+                                      size: 18,
+                                    )
+                                  : null,
                             ),
                           ),
                         );
@@ -1279,9 +1308,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                           child: Text(AppLocalizations.of(context).cancel),
                         ),
                         FilledButton(
-                          onPressed: () => Navigator.of(
-                            context,
-                          ).pop(initialColor),
+                          onPressed: () =>
+                              Navigator.of(context).pop(initialColor),
                           child: Text(AppLocalizations.of(context).select),
                         ),
                       ],
@@ -1307,13 +1335,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
             child: Text(AppLocalizations.of(context).cancel),
           ),
         ],
-        actionsPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 8,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        actionsPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
     );
 
@@ -1385,8 +1408,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                       color: theme.colorScheme.surface,
                       border: Border(
                         bottom: BorderSide(
-                          color: theme.colorScheme.outlineVariant
-                              .applyOpacity(0.1),
+                          color: theme.colorScheme.outlineVariant.applyOpacity(
+                            0.1,
+                          ),
                           width: 1,
                         ),
                       ),
@@ -1400,7 +1424,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                               visualDensity: VisualDensity.compact,
                               materialTapTargetSize:
                                   MaterialTapTargetSize.shrinkWrap,
-                              label: Text(l10n.tagsCount(_selectedTagIds.length)),
+                              label: Text(
+                                l10n.tagsCount(_selectedTagIds.length),
+                              ),
                               avatar: const Icon(Icons.tag, size: 16),
                             ),
                           ),
@@ -1412,19 +1438,23 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                               height: 16,
                               decoration: BoxDecoration(
                                 color: Color(
-                                  int.parse(_selectedColorHex!.substring(1),
-                                          radix: 16) |
+                                  int.parse(
+                                        _selectedColorHex!.substring(1),
+                                        radix: 16,
+                                      ) |
                                       0xFF000000,
                                 ),
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(
-                                  color: theme.colorScheme.outline
-                                      .applyOpacity(0.2),
+                                  color: theme.colorScheme.outline.applyOpacity(
+                                    0.2,
+                                  ),
                                   width: 1,
                                 ),
                               ),
                               key: ValueKey(
-                                  'color-indicator-$_selectedColorHex'),
+                                'color-indicator-$_selectedColorHex',
+                              ),
                             ),
                           ),
                         if (_showLocation &&
@@ -1495,7 +1525,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                       constraints: const BoxConstraints(maxWidth: 300),
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 24),
+                          horizontal: 20,
+                          vertical: 24,
+                        ),
                         decoration: BoxDecoration(
                           color: theme.colorScheme.surface,
                           borderRadius: BorderRadius.circular(16),
@@ -1520,8 +1552,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                     value: _saveProgress >= 0.99
                                         ? 1.0
                                         : (_saveProgress <= 0
-                                            ? null
-                                            : _saveProgress),
+                                              ? null
+                                              : _saveProgress),
                                     strokeWidth: 3,
                                   ),
                                 ),
@@ -1594,11 +1626,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                         width: 40,
                         height: 4,
                         decoration: BoxDecoration(
-                          color:
-                              theme.colorScheme.onSurfaceVariant.applyOpacity(
-                            // MODIFIED
-                            0.4,
-                          ),
+                          color: theme.colorScheme.onSurfaceVariant
+                              .applyOpacity(
+                                // MODIFIED
+                                0.4,
+                              ),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -1644,8 +1676,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                 child: TextField(
                                   controller: _authorController,
                                   decoration: InputDecoration(
-                                    hintText: AppLocalizations.of(context).authorPerson,
-                                    prefixIcon: const Icon(Icons.person_outline),
+                                    hintText: AppLocalizations.of(
+                                      context,
+                                    ).authorPerson,
+                                    prefixIcon: const Icon(
+                                      Icons.person_outline,
+                                    ),
                                     border: const OutlineInputBorder(),
                                     contentPadding: const EdgeInsets.symmetric(
                                       vertical: 10,
@@ -1660,8 +1696,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                 child: TextField(
                                   controller: _workController,
                                   decoration: InputDecoration(
-                                    hintText: AppLocalizations.of(context).workSource,
-                                    prefixIcon: const Icon(Icons.menu_book_outlined),
+                                    hintText: AppLocalizations.of(
+                                      context,
+                                    ).workSource,
+                                    prefixIcon: const Icon(
+                                      Icons.menu_book_outlined,
+                                    ),
                                     border: const OutlineInputBorder(),
                                     contentPadding: const EdgeInsets.symmetric(
                                       vertical: 10,
@@ -1705,8 +1745,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                               ),
                             ),
                             child: ExpansionTile(
-                              title:
-                                  Text(AppLocalizations.of(context).selectTags),
+                              title: Text(
+                                AppLocalizations.of(context).selectTags,
+                              ),
                               leading: const Icon(Icons.sell_outlined),
                               shape: const RoundedRectangleBorder(
                                 borderRadius: BorderRadius.all(
@@ -1728,7 +1769,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                 TextField(
                                   controller: _tagSearchController,
                                   decoration: InputDecoration(
-                                    hintText: AppLocalizations.of(context).searchTags,
+                                    hintText: AppLocalizations.of(
+                                      context,
+                                    ).searchTags,
                                     prefixIcon: const Icon(Icons.search),
                                     border: const OutlineInputBorder(),
                                     contentPadding: const EdgeInsets.symmetric(
@@ -1751,22 +1794,28 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                     child: Builder(
                                       builder: (context) {
                                         // 过滤标签
-                                        final filteredTags =
-                                            widget.allTags!.where((tag) {
-                                          return _tagSearchQuery.isEmpty ||
-                                              tag.name
-                                                  .toLowerCase()
-                                                  .contains(_tagSearchQuery);
-                                        }).toList();
+                                        final filteredTags = widget.allTags!
+                                            .where((tag) {
+                                              return _tagSearchQuery.isEmpty ||
+                                                  tag.name
+                                                      .toLowerCase()
+                                                      .contains(
+                                                        _tagSearchQuery,
+                                                      );
+                                            })
+                                            .toList();
 
                                         if (filteredTags.isEmpty) {
                                           return Center(
                                             child: Padding(
-                                              padding:
-                                                  const EdgeInsets.all(16.0),
+                                              padding: const EdgeInsets.all(
+                                                16.0,
+                                              ),
                                               child: Text(
-                                                  AppLocalizations.of(context)
-                                                      .noMatchingTags),
+                                                AppLocalizations.of(
+                                                  context,
+                                                ).noMatchingTags,
+                                              ),
                                             ),
                                           );
                                         }
@@ -1795,7 +1844,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                                 });
                                               },
                                               selectedColor: theme
-                                                  .colorScheme.primaryContainer,
+                                                  .colorScheme
+                                                  .primaryContainer,
                                               checkmarkColor:
                                                   theme.colorScheme.primary,
                                             );
@@ -1837,8 +1887,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                         (t) => t.id == tagId,
                                         orElse: () => NoteCategory(
                                           id: tagId,
-                                          name:
-                                              l10n.unknownTagWithId(tagId.substring(0, min(4, tagId.length))),
+                                          name: l10n.unknownTagWithId(
+                                            tagId.substring(
+                                              0,
+                                              min(4, tagId.length),
+                                            ),
+                                          ),
                                           iconName: 'help_outline',
                                         ),
                                       );
@@ -1878,7 +1932,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                             child: ListTile(
                               title: Text(l10n.selectCardColorLabel),
                               subtitle: Text(
-                                _selectedColorHex == null ? l10n.noColor : l10n.colorSet,
+                                _selectedColorHex == null
+                                    ? l10n.noColor
+                                    : l10n.colorSet,
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: theme.colorScheme.onSurfaceVariant,
@@ -1891,9 +1947,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                   color: _selectedColorHex != null
                                       ? Color(
                                           int.parse(
-                                                _selectedColorHex!.substring(
-                                                  1,
-                                                ),
+                                                _selectedColorHex!.substring(1),
                                                 radix: 16,
                                               ) |
                                               0xFF000000,
@@ -1995,7 +2049,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                               if (widget.initialQuote?.id !=
                                                   null) {
                                                 await _showLocationDialogInEditor(
-                                                    context, theme);
+                                                  context,
+                                                  theme,
+                                                );
                                                 return;
                                               }
                                               // 新建模式
@@ -2009,7 +2065,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                               });
                                             },
                                             selectedColor: theme
-                                                .colorScheme.primaryContainer,
+                                                .colorScheme
+                                                .primaryContainer,
                                           ),
                                           // 小红点：有坐标但没地址时提示可更新（仅已保存笔记）
                                           if (widget.initialQuote?.id != null &&
@@ -2051,7 +2108,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                           // 编辑模式下统一弹对话框（只有已保存的笔记才是编辑模式）
                                           if (widget.initialQuote?.id != null) {
                                             await _showWeatherDialogInEditor(
-                                                context, theme);
+                                              context,
+                                              theme,
+                                            );
                                             return;
                                           }
                                           // 新建模式
@@ -2069,8 +2128,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                     // 刷新按钮 - 仅新建模式显示（未保存的笔记）
                                     if (widget.initialQuote?.id == null)
                                       IconButton(
-                                        icon:
-                                            const Icon(Icons.refresh, size: 20),
+                                        icon: const Icon(
+                                          Icons.refresh,
+                                          size: 20,
+                                        ),
                                         tooltip: l10n.refreshLocationWeather,
                                         onPressed: () {
                                           _fetchLocationWeather();
@@ -2108,7 +2169,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                                       : l10n.gettingLocationHint),
                                               style: TextStyle(
                                                 fontSize: 14,
-                                                color: theme.colorScheme
+                                                color: theme
+                                                    .colorScheme
                                                     .onSurfaceVariant,
                                               ),
                                             ),
@@ -2127,11 +2189,14 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                         const SizedBox(width: 8),
                                         Text(
                                           WeatherService.getLocalizedWeatherDescription(
-                                              context, _weather!),
+                                            context,
+                                            _weather!,
+                                          ),
                                           style: TextStyle(
                                             fontSize: 14,
                                             color: theme
-                                                .colorScheme.onSurfaceVariant,
+                                                .colorScheme
+                                                .onSurfaceVariant,
                                           ),
                                         ),
                                         if (_temperature != null)
@@ -2140,7 +2205,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                             style: TextStyle(
                                               fontSize: 14,
                                               color: theme
-                                                  .colorScheme.onSurfaceVariant,
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
                                             ),
                                           ),
                                       ],
@@ -2233,10 +2299,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                   Divider(height: 1, color: theme.colorScheme.outline),
                   ListTile(
                     leading: const Icon(Icons.text_fields),
-                    title:
-                        Text(AppLocalizations.of(context).smartAnalyzeSource),
+                    title: Text(
+                      AppLocalizations.of(context).smartAnalyzeSource,
+                    ),
                     subtitle: Text(
-                        AppLocalizations.of(context).smartAnalyzeSourceDesc),
+                      AppLocalizations.of(context).smartAnalyzeSourceDesc,
+                    ),
                     onTap: () {
                       Navigator.pop(context);
                       _analyzeSource();
@@ -2254,8 +2322,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                   ListTile(
                     leading: const Icon(Icons.add_circle_outline),
                     title: Text(AppLocalizations.of(context).continueWriting),
-                    subtitle:
-                        Text(AppLocalizations.of(context).continueWritingDesc),
+                    subtitle: Text(
+                      AppLocalizations.of(context).continueWritingDesc,
+                    ),
                     onTap: () {
                       Navigator.pop(context);
                       _continueText();
@@ -2264,8 +2333,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                   ListTile(
                     leading: const Icon(Icons.analytics),
                     title: Text(AppLocalizations.of(context).deepAnalysis),
-                    subtitle:
-                        Text(AppLocalizations.of(context).deepAnalysisDesc),
+                    subtitle: Text(
+                      AppLocalizations.of(context).deepAnalysisDesc,
+                    ),
                     onTap: () {
                       Navigator.pop(context);
                       _analyzeContent();
@@ -2293,12 +2363,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   Future<void> _analyzeSource() async {
     final plainText = _controller.document.toPlainText().trim();
     if (plainText.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(
-        content: Text(AppLocalizations.of(context).pleaseEnterContent),
-        duration: AppConstants.snackBarDurationError,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).pleaseEnterContent),
+          duration: AppConstants.snackBarDurationError,
+        ),
+      );
       return;
     }
 
@@ -2412,12 +2482,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       } catch (e) {
         if (mounted) {
           final l10n = AppLocalizations.of(context);
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(
-            content: Text(l10n.parseResultFailedWithError(e.toString())),
-            duration: AppConstants.snackBarDurationError,
-          ));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.parseResultFailedWithError(e.toString())),
+              duration: AppConstants.snackBarDurationError,
+            ),
+          );
         }
       }
     } catch (e) {
@@ -2429,12 +2499,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
       if (mounted) {
         final l10n = AppLocalizations.of(context);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(
-          content: Text(l10n.analysisFailedWithError(e.toString())),
-          duration: AppConstants.snackBarDurationError,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.analysisFailedWithError(e.toString())),
+            duration: AppConstants.snackBarDurationError,
+          ),
+        );
       }
     }
   }
@@ -2445,12 +2515,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     if (plainText.isEmpty) {
       if (mounted) {
         final l10n = AppLocalizations.of(context);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(
-          content: Text(l10n.pleaseInputContent),
-          duration: AppConstants.snackBarDurationError,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.pleaseInputContent),
+            duration: AppConstants.snackBarDurationError,
+          ),
+        );
       }
       return;
     }
@@ -2498,12 +2568,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     if (plainText.isEmpty) {
       if (mounted) {
         final l10n = AppLocalizations.of(context);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(
-          content: Text(l10n.pleaseInputContent),
-          duration: AppConstants.snackBarDurationError,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.pleaseInputContent),
+            duration: AppConstants.snackBarDurationError,
+          ),
+        );
       }
       return;
     }
@@ -2555,12 +2625,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     if (plainText.isEmpty) {
       if (mounted) {
         final l10n = AppLocalizations.of(context);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(
-          content: Text(l10n.pleaseInputContent),
-          duration: AppConstants.snackBarDurationError,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.pleaseInputContent),
+            duration: AppConstants.snackBarDurationError,
+          ),
+        );
       }
       return;
     }
@@ -2592,12 +2662,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
             // 用户点击"复制结果"时调用
             Clipboard.setData(ClipboardData(text: fullText)).then((_) {
               if (mounted) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(
-                  content: Text(l10n.analysisResultCopied),
-                  duration: AppConstants.snackBarDurationImportant,
-                ));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(l10n.analysisResultCopied),
+                    duration: AppConstants.snackBarDurationImportant,
+                  ),
+                );
               }
             });
             Navigator.of(dialogContext).pop(); // 关闭对话框
@@ -2620,12 +2690,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     final plainText = _controller.document.toPlainText().trim();
     if (plainText.isEmpty) {
       final l10n = AppLocalizations.of(context);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(
-        content: Text(l10n.pleaseInputContent),
-        duration: AppConstants.snackBarDurationError,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.pleaseInputContent),
+          duration: AppConstants.snackBarDurationError,
+        ),
+      );
       return;
     }
 
@@ -2725,8 +2795,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
               final imagePath = insert['image'] as String?;
               if (imagePath != null &&
                   await TemporaryMediaService.isTemporaryFile(imagePath)) {
-                final permanentPath =
-                    await _moveMediaFileSafely(imagePath, processedFiles);
+                final permanentPath = await _moveMediaFileSafely(
+                  imagePath,
+                  processedFiles,
+                );
                 if (permanentPath != null) {
                   insert['image'] = permanentPath;
                   hasChanges = true;
@@ -2741,8 +2813,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
               final videoPath = insert['video'] as String?;
               if (videoPath != null &&
                   await TemporaryMediaService.isTemporaryFile(videoPath)) {
-                final permanentPath =
-                    await _moveMediaFileSafely(videoPath, processedFiles);
+                final permanentPath = await _moveMediaFileSafely(
+                  videoPath,
+                  processedFiles,
+                );
                 if (permanentPath != null) {
                   insert['video'] = permanentPath;
                   hasChanges = true;
@@ -2759,8 +2833,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                 final audioPath = custom['audio'] as String?;
                 if (audioPath != null &&
                     await TemporaryMediaService.isTemporaryFile(audioPath)) {
-                  final permanentPath =
-                      await _moveMediaFileSafely(audioPath, processedFiles);
+                  final permanentPath = await _moveMediaFileSafely(
+                    audioPath,
+                    processedFiles,
+                  );
                   if (permanentPath != null) {
                     custom['audio'] = permanentPath;
                     hasChanges = true;

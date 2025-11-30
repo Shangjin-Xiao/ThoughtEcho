@@ -72,8 +72,9 @@ void main() {
       expect(http.toJson()['type'], 'http');
       expect(http.toJson()['ip'], '192.168.1.1');
 
-      const signaling =
-          SignalingDiscovery(signalingServer: 'signal.server.com');
+      const signaling = SignalingDiscovery(
+        signalingServer: 'signal.server.com',
+      );
       expect(signaling.toJson()['type'], 'signaling');
       expect(signaling.toJson()['signalingServer'], 'signal.server.com');
     });
@@ -93,10 +94,7 @@ void main() {
         discoveryMethods: <DiscoveryMethod>{const MulticastDiscovery()},
       );
 
-      final updated = original.copyWith(
-        alias: 'Updated Device',
-        port: 53318,
-      );
+      final updated = original.copyWith(alias: 'Updated Device', port: 53318);
 
       expect(updated.alias, 'Updated Device');
       expect(updated.port, 53318);

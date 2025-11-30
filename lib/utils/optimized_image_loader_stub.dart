@@ -24,11 +24,7 @@ ImageProvider? createOptimizedImageProvider(
   }
 
   if (cacheWidth != null || cacheHeight != null) {
-    provider = ResizeImage(
-      provider,
-      width: cacheWidth,
-      height: cacheHeight,
-    );
+    provider = ResizeImage(provider, width: cacheWidth, height: cacheHeight);
   }
 
   return provider;
