@@ -87,6 +87,14 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 是否显示精确时间（时:分）
+  bool get showExactTime => _appSettings.showExactTime;
+  Future<void> setShowExactTime(bool enabled) async {
+    _appSettings = _appSettings.copyWith(showExactTime: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
   // 语言设置：获取当前语言代码（null 表示跟随系统）
   String? get localeCode => _appSettings.localeCode;
 

@@ -127,6 +127,15 @@ class PreferencesDetailPage extends StatelessWidget {
                 _buildDivider(),
                 _buildSwitchTile(
                   context: context,
+                  title: l10n.showExactTime,
+                  subtitle: l10n.showExactTimeDesc,
+                  icon: Icons.access_time,
+                  value: settings.showExactTime,
+                  onChanged: (v) => settings.setShowExactTime(v),
+                ),
+                _buildDivider(),
+                _buildSwitchTile(
+                  context: context,
                   title: l10n.prioritizeBoldContent,
                   subtitle: l10n.prioritizeBoldContentDesc,
                   icon: Icons.format_bold,

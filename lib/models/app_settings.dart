@@ -10,6 +10,7 @@ class AppSettings {
   final bool showFavoriteButton; // 新增：是否显示心形按钮
   final bool useLocalQuotesOnly; // 新增：仅使用本地笔记作为一言，不请求API
   final String? localeCode; // 新增：语言代码，null 表示跟随系统
+  final bool showExactTime; // 新增：是否在笔记中显示精确时间（时:分）
 
   AppSettings({
     this.hitokotoType = 'a,b,c,d,e,f,g,h,i,j,k', // 默认全选所有类型
@@ -23,6 +24,7 @@ class AppSettings {
     this.showFavoriteButton = true, // 默认显示心形按钮
     this.useLocalQuotesOnly = false, // 默认允许请求一言API
     this.localeCode, // 默认跟随系统
+    this.showExactTime = false, // 默认不显示精确时间
   });
 
   Map<String, dynamic> toJson() {
@@ -38,6 +40,7 @@ class AppSettings {
       'showFavoriteButton': showFavoriteButton,
       'useLocalQuotesOnly': useLocalQuotesOnly,
       'localeCode': localeCode,
+      'showExactTime': showExactTime,
     };
   }
 
@@ -55,6 +58,7 @@ class AppSettings {
       showFavoriteButton: map['showFavoriteButton'] ?? true,
       useLocalQuotesOnly: map['useLocalQuotesOnly'] ?? false,
       localeCode: map['localeCode'] as String?,
+      showExactTime: map['showExactTime'] ?? false,
     );
   }
 
@@ -70,6 +74,7 @@ class AppSettings {
         showFavoriteButton: true,
         useLocalQuotesOnly: false,
         localeCode: null, // 默认跟随系统
+        showExactTime: false, // 默认不显示精确时间
       );
 
   /// 使用特殊标记来区分"未指定"和"设置为null（跟随系统）"
@@ -86,6 +91,7 @@ class AppSettings {
     bool? useLocalQuotesOnly,
     String? localeCode,
     bool clearLocale = false, // 新增：是否清除 localeCode（设置为跟随系统）
+    bool? showExactTime,
   }) {
     return AppSettings(
       hitokotoType: hitokotoType ?? this.hitokotoType,
@@ -103,6 +109,7 @@ class AppSettings {
       showFavoriteButton: showFavoriteButton ?? this.showFavoriteButton,
       useLocalQuotesOnly: useLocalQuotesOnly ?? this.useLocalQuotesOnly,
       localeCode: clearLocale ? null : (localeCode ?? this.localeCode),
+      showExactTime: showExactTime ?? this.showExactTime,
     );
   }
 }

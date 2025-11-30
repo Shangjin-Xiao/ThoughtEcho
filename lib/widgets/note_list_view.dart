@@ -1646,7 +1646,7 @@ class NoteListViewState extends State<NoteListView> {
     // 添加时间段chip - 添加进出场动画
     if (widget.selectedDayPeriods.isNotEmpty) {
       allChips.addAll(widget.selectedDayPeriods.map((periodKey) {
-        final periodLabel = TimeUtils.getDayPeriodLabel(periodKey);
+        final periodLabel = TimeUtils.getLocalizedDayPeriodLabel(context, periodKey);
         final periodIcon = TimeUtils.getDayPeriodIconByKey(periodKey);
         return TweenAnimationBuilder<double>(
           key: ValueKey('period_$periodKey'),

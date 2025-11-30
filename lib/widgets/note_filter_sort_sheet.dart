@@ -67,7 +67,6 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
   late final Map<String, IconData> _weatherIconCache;
   late final Map<String, String> _weatherLabelCache;
   late final Map<String, IconData> _dayPeriodIconCache;
-  late final Map<String, String> _dayPeriodLabelCache;
 
   @override
   void initState() {
@@ -97,15 +96,19 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
           WeatherService.filterCategoryToLabel[category]!;
     }
 
-    // 预缓存时间段相关数据
+    // 预缓存时间段相关数据（图标缓存）
     _dayPeriodIconCache = {};
-    _dayPeriodLabelCache = {};
     for (final periodKey in _dayPeriodKeys) {
       _dayPeriodIconCache[periodKey] = TimeUtils.getDayPeriodIconByKey(
         periodKey,
       );
-      _dayPeriodLabelCache[periodKey] = TimeUtils.getDayPeriodLabel(periodKey);
+      // 标签将在 build 时通过 _getDayPeriodLabel 动态获取以支持国际化
     }
+  }
+
+  /// 获取本地化的时间段标签
+  String _getDayPeriodLabel(BuildContext context, String periodKey) {
+    return TimeUtils.getLocalizedDayPeriodLabel(context, periodKey);
   }
 
   @override
@@ -394,9 +397,9 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
   Widget _buildDayPeriodFilter(ThemeData theme) {
     final chips = _dayPeriodKeys.map((periodKey) {
       final isSelected = _tempSelectedDayPeriods.contains(periodKey);
-      // 使用预缓存的图标和标签，提升性能
+      // 使用预缓存的图标，标签使用本地化方法
       final icon = _dayPeriodIconCache[periodKey]!;
-      final label = _dayPeriodLabelCache[periodKey]!;
+      final label = _getDayPeriodLabel(context, periodKey);
       return FilterChip(
         selected: isSelected,
         label: Row(

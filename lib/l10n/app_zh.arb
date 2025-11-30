@@ -2440,5 +2440,15 @@
   },
   "editMetadataShort": "编辑元数据",
   "startWritingHint": "开始编写你的想法...",
-  "unknownLocation": "未知位置"
+  "unknownLocation": "未知位置",
+  
+  "dayPeriodDawn": "晨曦",
+  "dayPeriodMorning": "上午",
+  "dayPeriodAfternoon": "午后",
+  "dayPeriodDusk": "黄昏",
+  "dayPeriodEvening": "夜晚",
+  "dayPeriodMidnight": "深夜",
+  
+  "showExactTime": "显示精确时间",
+  "showExactTimeDesc": "在笔记中显示时间（时:分）"
 }
