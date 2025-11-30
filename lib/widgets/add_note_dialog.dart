@@ -1102,16 +1102,16 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                const Text(
-                  '添加信息',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                Text(
+                  l10n.addInfo,
+                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(width: 16),
                 // 位置信息按钮
                 Tooltip(
                   message: locationService != null
-                      ? '添加位置: ${_getLocationTooltipText(currentAddress, location)}'
-                      : '位置服务不可用',
+                      ? '${l10n.addLocationPrefix}: ${_getLocationTooltipText(currentAddress, location)}'
+                      : l10n.locationServiceUnavailable,
                   child: Stack(
                     children: [
                       FilterChip(

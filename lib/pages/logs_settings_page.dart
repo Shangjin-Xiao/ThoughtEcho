@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../services/unified_log_service.dart'; // 使用统一日志服务
 import 'logs_page.dart'; // 导入日志查看页面
 import '../utils/color_utils.dart'; // 导入颜色工具
+import '../gen_l10n/app_localizations.dart';
 
 class LogsSettingsPage extends StatelessWidget {
   const LogsSettingsPage({super.key});
@@ -10,15 +11,16 @@ class LogsSettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final logService = Provider.of<UnifiedLogService>(context);
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('日志设置'),
+        title: Text(l10n.logSettingsTitle),
         actions: [
           // 添加一个打开日志查看页面的按钮
           TextButton.icon(
             icon: const Icon(Icons.article_outlined),
-            label: const Text('查看日志'),
+            label: Text(l10n.viewLogs),
             onPressed: () {
               Navigator.push(
                 context,
@@ -33,7 +35,7 @@ class LogsSettingsPage extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Text(
-              '选择应用记录的日志详细程度。更详细的日志有助于调试，但可能会影响性能并占用更多存储空间（如果未来实现日志文件存储）。',
+              l10n.logLevelDescription,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurface.applyOpacity(0.7),
               ),
@@ -53,22 +55,22 @@ class LogsSettingsPage extends StatelessWidget {
                 String subtitle = '';
                 switch (level) {
                   case UnifiedLogLevel.verbose:
-                    subtitle = '记录所有详细信息，用于深入调试。';
+                    subtitle = l10n.logLevelVerbose;
                     break;
                   case UnifiedLogLevel.debug:
-                    subtitle = '记录调试相关信息。';
+                    subtitle = l10n.logLevelDebug;
                     break;
                   case UnifiedLogLevel.info:
-                    subtitle = '记录常规操作信息。 (推荐)';
+                    subtitle = l10n.logLevelInfo;
                     break;
                   case UnifiedLogLevel.warning:
-                    subtitle = '记录潜在问题或警告。';
+                    subtitle = l10n.logLevelWarning;
                     break;
                   case UnifiedLogLevel.error:
-                    subtitle = '仅记录错误信息。';
+                    subtitle = l10n.logLevelError;
                     break;
                   case UnifiedLogLevel.none:
-                    subtitle = '不记录任何日志。';
+                    subtitle = l10n.logLevelNone;
                     break;
                 }
                 return RadioListTile<UnifiedLogLevel>(

@@ -2200,5 +2200,243 @@
   "writeYourThoughts": "写下你的感悟...",
   "workName": "作品名称",
   "searchNotes": "搜索笔记...",
-  "searchCity": "搜索城市..."
+  "searchCity": "搜索城市...",
+  
+  "logSettingsTitle": "日志设置",
+  "viewLogs": "查看日志",
+  "logLevelDescription": "选择应用记录的日志详细程度。更详细的日志有助于调试，但可能会影响性能并占用更多存储空间（如果未来实现日志文件存储）。",
+  "logLevelVerbose": "记录所有详细信息，用于深入调试。",
+  "logLevelDebug": "记录调试相关信息。",
+  "logLevelInfo": "记录常规操作信息。 (推荐)",
+  "logLevelWarning": "记录潜在问题或警告。",
+  "logLevelError": "仅记录错误信息。",
+  "logLevelNone": "不记录任何日志。",
+  
+  "updateFoundNewVersion": "发现新版本",
+  "updateCurrentVersion": "当前版本",
+  "updateLatestVersion": "最新版本",
+  "updateReleaseNotes": "更新内容",
+  "updateReleaseTime": "发布时间: {date}",
+  "@updateReleaseTime": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "updateAlreadyLatest": "已是最新版本",
+  "updateCurrentVersionLabel": "当前版本 {version}",
+  "@updateCurrentVersionLabel": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updateUsingLatestVersion": "您使用的已是最新版本",
+  "updateIgnoreForever": "永久忽略",
+  "updateIgnoreThisTime": "本次忽略",
+  "updateViewDetails": "查看详情",
+  "updateGoToStore": "前往商店",
+  "updateNow": "立即更新",
+  "updateVersionIgnored": "已忽略此版本更新",
+  "updateOpenStoreFailed": "打开Microsoft Store失败: {error}",
+  "@updateOpenStoreFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "updateOpenLinkFailed": "打开下载链接失败: {error}",
+  "@updateOpenLinkFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  
+  "selectCity": "选择城市",
+  "currentWeather": "当前天气",
+  "cityNotSetHint": "尚未设置城市，先在下方搜索并选择",
+  "clickRefreshHint": "城市：{city}（点击右侧按钮刷新）",
+  "@clickRefreshHint": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      }
+    }
+  },
+  "refreshWeather": "刷新天气",
+  "weatherUpdated": "天气已更新",
+  "weatherUpdateFailed": "天气更新失败，请稍后重试",
+  "weatherFetchFailed": "天气获取失败",
+  "pleaseSelectCityFirst": "请先选择城市或启用位置服务",
+  "useCurrentLocation": "使用当前位置",
+  "weatherProvidedBy": "天气数据由 Open-Meteo 提供",
+  "processing": "正在处理...",
+  "searchingCity": "搜索城市中...",
+  "noCityFound": "没有找到匹配的城市",
+  "tryDifferentKeywords": "尝试使用不同的关键词或城市名称",
+  "enterCityToSearch": "输入城市名称开始搜索",
+  
+  "addInfo": "添加信息",
+  "selectTagsWithCount": "选择标签 ({count})",
+  "@selectTagsWithCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noTagsAvailableHint": "暂无可用标签，请先添加标签",
+  "addLocationPrefix": "添加位置",
+  "locationServiceUnavailable": "位置服务不可用",
+  
+  "sourceInfo": "来源信息",
+  "tagsLabel": "标签",
+  "selectedTagsCount": "已选择 {count} 个标签",
+  "@selectedTagsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectedTags": "已选标签",
+  "unknownTagWithId": "未知标签(ID:{id}...)",
+  "@unknownTagWithId": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "colorLabel": "颜色",
+  "selectCardColorLabel": "选择卡片颜色",
+  "noColor": "无颜色",
+  "colorSet": "已设置颜色",
+  "locationAndWeather": "位置和天气",
+  "recordedOnFirstSave": "首次保存时记录",
+  "locationLabel": "位置",
+  "weatherLabel": "天气",
+  "refreshLocationWeather": "刷新位置和天气",
+  "gettingLocationHint": "位置获取中...",
+  "noteNoLocationWeatherInfo": "此笔记首次保存时未记录位置和天气信息",
+  
+  "aiAssistantLabel": "AI助手",
+  "polishingText": "正在润色文本...",
+  "continuingText": "正在续写文本...",
+  "analyzingNote": "正在分析笔记...",
+  "analysisResultWithConfidence": "分析结果 (可信度: {confidence})",
+  "@analysisResultWithConfidence": {
+    "placeholders": {
+      "confidence": {
+        "type": "String"
+      }
+    }
+  },
+  "possibleAuthor": "可能的作者:",
+  "possibleWork": "可能的作品:",
+  "analysisExplanation": "分析说明:",
+  "noAuthorWorkIdentified": "未能识别出明确的作者或作品",
+  "applyAnalysisResult": "应用分析结果",
+  "close": "关闭",
+  "parseResultFailed": "解析结果失败: {error}",
+  "@parseResultFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "analysisFailed": "分析失败: {error}",
+  "@analysisFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pleaseInputContent": "请先输入内容",
+  "copyResult": "复制结果",
+  "analysisResultCopied": "分析结果已复制到剪贴板",
+  "cannotAddLocation": "无法添加位置",
+  "cannotAddLocationDesc": "此笔记首次保存时未记录位置信息，无法补充添加。\n\n如需记录位置，请在新建笔记时勾选位置选项。",
+  "iKnow": "我知道了",
+  "locationInfo": "位置信息",
+  "locationUpdateHint": "当前位置：{coordinates}\n\n可以尝试更新为详细地址，或移除位置（移除后无法再次添加）。",
+  "@locationUpdateHint": {
+    "placeholders": {
+      "coordinates": {
+        "type": "String"
+      }
+    }
+  },
+  "locationRemoveHint": "当前位置：{location}\n\n移除位置信息后将无法再次添加或更改。",
+  "@locationRemoveHint": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      }
+    }
+  },
+  "remove": "移除",
+  "updateLocation": "更新位置",
+  "locationUpdatedTo": "位置已更新为: {address}",
+  "@locationUpdatedTo": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotGetAddress": "无法获取地址，请检查网络",
+  "updateFailed": "更新失败: {error}",
+  "@updateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotAddWeather": "无法添加天气",
+  "cannotAddWeatherDesc": "此笔记首次保存时未记录天气信息，无法补充添加。\n\n如需记录天气，请在新建笔记时勾选天气选项。",
+  "weatherInfo2": "天气信息",
+  "weatherRemoveHint": "当前天气：{weather}\n\n移除天气信息后将无法再次添加或更改。",
+  "@weatherRemoveHint": {
+    "placeholders": {
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotGetLocationTitle": "无法获取位置",
+  "cannotGetLocationDesc": "无法获取当前位置，请检查定位权限或网络状态。",
+  "cannotGetLocationPermissionShort": "无法获取位置权限",
+  
+  "savingNote": "正在保存",
+  "saveComplete": "完成",
+  "writingDatabase": "写入数据库...",
+  "preparingProcess": "准备处理中...",
+  "mediaProcessFailed": "媒体文件处理失败: {error}",
+  "@mediaProcessFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "documentLoadFailed": "文档加载失败，请重新打开编辑器",
+  "tagsCount": "{count}个标签",
+  "@tagsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "editMetadataShort": "编辑元数据",
+  "startWritingHint": "开始编写你的想法..."
 }

@@ -627,6 +627,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   /// 编辑模式下的位置对话框
   Future<void> _showLocationDialogInEditor(
       BuildContext context, ThemeData theme) async {
+    final l10n = AppLocalizations.of(context);
     final hasLocationData = _originalLocation != null ||
         (_originalLatitude != null && _originalLongitude != null);
     final hasCoordinates =
@@ -639,34 +640,34 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
     if (!hasLocationData) {
       // 没有位置数据
-      title = '无法添加位置';
-      content = '此笔记首次保存时未记录位置信息，无法补充添加。\n\n如需记录位置，请在新建笔记时勾选位置选项。';
+      title = l10n.cannotAddLocation;
+      content = l10n.cannotAddLocationDesc;
       actions = [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('我知道了'),
+          child: Text(l10n.iKnow),
         ),
       ];
     } else {
       // 有位置数据
-      title = '位置信息';
+      title = l10n.locationInfo;
       content = hasOnlyCoordinates
-          ? '当前位置：${LocationService.formatCoordinates(_originalLatitude, _originalLongitude)}\n\n可以尝试更新为详细地址，或移除位置（移除后无法再次添加）。'
-          : '当前位置：${_originalLocation ?? _location ?? ""}\n\n移除位置信息后将无法再次添加或更改。';
+          ? l10n.locationUpdateHint(LocationService.formatCoordinates(_originalLatitude, _originalLongitude))
+          : l10n.locationRemoveHint(_originalLocation ?? _location ?? "");
       actions = [
         if (_showLocation)
           TextButton(
             onPressed: () => Navigator.pop(context, 'remove'),
-            child: const Text('移除'),
+            child: Text(l10n.remove),
           ),
         if (hasOnlyCoordinates)
           TextButton(
             onPressed: () => Navigator.pop(context, 'update'),
-            child: const Text('更新位置'),
+            child: Text(l10n.updateLocation),
           ),
         TextButton(
           onPressed: () => Navigator.pop(context, 'cancel'),
-          child: const Text('取消'),
+          child: Text(l10n.cancel),
         ),
       ];
     }
@@ -695,23 +696,23 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
             });
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('位置已更新为: $formattedAddress')),
+                SnackBar(content: Text(l10n.locationUpdatedTo(formattedAddress))),
               );
             }
           } else if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('无法获取地址，请检查网络')),
+              SnackBar(content: Text(l10n.cannotGetAddress)),
             );
           }
         } else if (mounted && context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('无法获取地址，请检查网络')),
+            SnackBar(content: Text(l10n.cannotGetAddress)),
           );
         }
       } catch (e) {
         if (mounted && context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('更新失败: $e')),
+            SnackBar(content: Text(l10n.updateFailed(e.toString()))),
           );
         }
       }
@@ -725,6 +726,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   /// 编辑模式下的天气对话框
   Future<void> _showWeatherDialogInEditor(
       BuildContext context, ThemeData theme) async {
+    final l10n = AppLocalizations.of(context);
     final hasWeatherData = _originalWeather != null;
 
     String title;
@@ -733,30 +735,29 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
     if (!hasWeatherData) {
       // 没有天气数据
-      title = '无法添加天气';
-      content = '此笔记首次保存时未记录天气信息，无法补充添加。\n\n如需记录天气，请在新建笔记时勾选天气选项。';
+      title = l10n.cannotAddWeather;
+      content = l10n.cannotAddWeatherDesc;
       actions = [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('我知道了'),
+          child: Text(l10n.iKnow),
         ),
       ];
     } else {
       // 有天气数据
       final weatherDesc =
           WeatherService.getWeatherDescription(_originalWeather!);
-      title = '天气信息';
-      content =
-          '当前天气：$weatherDesc${_temperature != null ? " $_temperature" : ""}\n\n移除天气信息后将无法再次添加或更改。';
+      title = l10n.weatherInfo2;
+      content = l10n.weatherRemoveHint('$weatherDesc${_temperature != null ? " $_temperature" : ""}');
       actions = [
         if (_showWeather)
           TextButton(
             onPressed: () => Navigator.pop(context, 'remove'),
-            child: const Text('移除'),
+            child: Text(l10n.remove),
           ),
         TextButton(
           onPressed: () => Navigator.pop(context, 'cancel'),
-          child: const Text('取消'),
+          child: Text(l10n.cancel),
         ),
       ];
     }
@@ -790,9 +791,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
           await locationService.requestLocationPermission();
       if (!permissionGranted) {
         if (mounted && context.mounted) {
+          final l10n = AppLocalizations.of(context);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('无法获取位置权限'),
+            SnackBar(
+              content: Text(l10n.cannotGetLocationPermissionShort),
               duration: AppConstants.snackBarDurationError,
             ),
           );
@@ -822,15 +824,16 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       }
     } else if (mounted && context.mounted) {
       // 获取位置失败，给出提示
+      final l10n = AppLocalizations.of(context);
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: const Text('无法获取位置'),
-          content: const Text('无法获取当前位置，请检查定位权限或网络状态。'),
+          title: Text(l10n.cannotGetLocationTitle),
+          content: Text(l10n.cannotGetLocationDesc),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('我知道了'),
+              child: Text(l10n.iKnow),
             ),
           ],
         ),
@@ -887,9 +890,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       });
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('媒体文件处理失败: $e'),
+            content: Text(l10n.mediaProcessFailed(e.toString())),
             backgroundColor: Colors.orange,
             duration: AppConstants.snackBarDurationError,
           ),
@@ -916,9 +920,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       logDebug('获取文档内容失败: $e');
       // 显示错误但继续尝试保存
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('处理富文本时出现问题，尝试以纯文本保存: $e'),
+            content: Text(l10n.documentLoadFailed),
             backgroundColor: Colors.orange,
             duration: AppConstants.snackBarDurationError,
           ),
@@ -1027,9 +1032,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         logDebug('保存失败后的媒体回滚删除出错: $rollbackErr');
       }
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('保存失败: $e'),
+            content: Text(l10n.saveFailed(e.toString())),
             backgroundColor: Colors.red,
             duration: AppConstants.snackBarDurationError,
           ),
@@ -1037,9 +1043,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       }
     } finally {
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         setState(() {
           _saveProgress = 1.0;
-          _saveStatus = '完成';
+          _saveStatus = l10n.saveComplete;
         });
         Future.delayed(const Duration(milliseconds: 320), () {
           if (mounted) {
@@ -1323,6 +1330,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
@@ -1331,17 +1339,17 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
           IconButton(
             key: _metadataButtonKey, // 功能引导 key
             icon: const Icon(Icons.edit_note),
-            tooltip: '编辑元数据',
+            tooltip: l10n.editMetadataShort,
             onPressed: () => _showMetadataDialog(context),
           ),
           IconButton(
             icon: const Icon(Icons.auto_awesome),
-            tooltip: 'AI助手',
+            tooltip: l10n.aiAssistantLabel,
             onPressed: () => _showAIOptions(context),
           ),
           IconButton(
             icon: const Icon(Icons.save),
-            tooltip: '保存',
+            tooltip: l10n.save,
             onPressed: () async {
               try {
                 await pauseAllMediaPlayers();
@@ -1392,7 +1400,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                               visualDensity: VisualDensity.compact,
                               materialTapTargetSize:
                                   MaterialTapTargetSize.shrinkWrap,
-                              label: Text('${_selectedTagIds.length}个标签'),
+                              label: Text(l10n.tagsCount(_selectedTagIds.length)),
                               avatar: const Icon(Icons.tag, size: 16),
                             ),
                           ),
@@ -1560,6 +1568,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   // 显示元数据编辑弹窗
   Future<void> _showMetadataDialog(BuildContext context) async {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -1621,9 +1630,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                         children: [
                           // 作者/作品输入
-                          const Text(
-                            '来源信息',
-                            style: TextStyle(
+                          Text(
+                            l10n.sourceInfo,
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
@@ -1669,16 +1678,16 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                           // 标签选择
                           Row(
                             children: [
-                              const Text(
-                                '标签',
-                                style: TextStyle(
+                              Text(
+                                l10n.tagsLabel,
+                                style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
                               const Spacer(),
                               Text(
-                                '已选择 ${_selectedTagIds.length} 个标签',
+                                l10n.selectedTagsCount(_selectedTagIds.length),
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: theme.colorScheme.onSurfaceVariant,
@@ -1812,9 +1821,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    '已选标签',
-                                    style: TextStyle(
+                                  Text(
+                                    l10n.selectedTags,
+                                    style: const TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -1829,7 +1838,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                         orElse: () => NoteCategory(
                                           id: tagId,
                                           name:
-                                              '未知标签(ID:${tagId.substring(0, min(4, tagId.length))}...)',
+                                              l10n.unknownTagWithId(tagId.substring(0, min(4, tagId.length))),
                                           iconName: 'help_outline',
                                         ),
                                       );
@@ -1850,9 +1859,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                           const SizedBox(height: 24),
 
                           // 颜色选择
-                          const Text(
-                            '颜色',
-                            style: TextStyle(
+                          Text(
+                            l10n.colorLabel,
+                            style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
@@ -1867,9 +1876,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                               ),
                             ),
                             child: ListTile(
-                              title: const Text('选择卡片颜色'),
+                              title: Text(l10n.selectCardColorLabel),
                               subtitle: Text(
-                                _selectedColorHex == null ? '无颜色' : '已设置颜色',
+                                _selectedColorHex == null ? l10n.noColor : l10n.colorSet,
                                 style: TextStyle(
                                   fontSize: 12,
                                   color: theme.colorScheme.onSurfaceVariant,
@@ -1930,9 +1939,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                           // 位置和天气
                           Row(
                             children: [
-                              const Text(
-                                '位置和天气',
-                                style: TextStyle(
+                              Text(
+                                l10n.locationAndWeather,
+                                style: const TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -1941,7 +1950,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                               // 编辑模式提示
                               if (widget.initialQuote != null)
                                 Text(
-                                  '首次保存时记录',
+                                  l10n.recordedOnFirstSave,
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: theme.colorScheme.onSurfaceVariant,
@@ -1979,7 +1988,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                                   : Colors.grey,
                                               size: 18,
                                             ),
-                                            label: const Text('位置'),
+                                            label: Text(l10n.locationLabel),
                                             selected: _showLocation,
                                             onSelected: (value) async {
                                               // 编辑模式下统一弹对话框（只有已保存的笔记才是编辑模式）
@@ -2036,7 +2045,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                               : Colors.grey,
                                           size: 18,
                                         ),
-                                        label: const Text('天气'),
+                                        label: Text(l10n.weatherLabel),
                                         selected: _showWeather,
                                         onSelected: (value) async {
                                           // 编辑模式下统一弹对话框（只有已保存的笔记才是编辑模式）
@@ -2062,7 +2071,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                       IconButton(
                                         icon:
                                             const Icon(Icons.refresh, size: 20),
-                                        tooltip: '刷新位置和天气',
+                                        tooltip: l10n.refreshLocationWeather,
                                         onPressed: () {
                                           _fetchLocationWeather();
                                           setState(() {});
@@ -2096,7 +2105,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                                   ((_latitude != null &&
                                                           _longitude != null)
                                                       ? '📍 ${LocationService.formatCoordinates(_latitude, _longitude)}'
-                                                      : '位置获取中...'),
+                                                      : l10n.gettingLocationHint),
                                               style: TextStyle(
                                                 fontSize: 14,
                                                 color: theme.colorScheme
@@ -2334,48 +2343,49 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
         // 显示结果对话框
         if (mounted) {
+          final l10n = AppLocalizations.of(context);
           showDialog(
             context: context,
             builder: (dialogContext) {
               return AlertDialog(
-                title: Text('分析结果 (可信度: $confidence)'),
+                title: Text(l10n.analysisResultWithConfidence(confidence)),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (author != null && author.isNotEmpty) ...[
-                      const Text(
-                        '可能的作者:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                      Text(
+                        l10n.possibleAuthor,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       Text(author),
                       const SizedBox(height: 8),
                     ],
                     if (work != null && work.isNotEmpty) ...[
-                      const Text(
-                        '可能的作品:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                      Text(
+                        l10n.possibleWork,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       Text(work),
                       const SizedBox(height: 8),
                     ],
                     if (explanation.isNotEmpty) ...[
-                      const Text(
-                        '分析说明:',
-                        style: TextStyle(fontWeight: FontWeight.bold),
+                      Text(
+                        l10n.analysisExplanation,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
                       Text(explanation, style: const TextStyle(fontSize: 13)),
                     ],
                     if ((author == null || author.isEmpty) &&
                         (work == null || work.isEmpty))
-                      const Text('未能识别出明确的作者或作品'),
+                      Text(l10n.noAuthorWorkIdentified),
                   ],
                 ),
                 actions: [
                   if ((author != null && author.isNotEmpty) ||
                       (work != null && work.isNotEmpty))
                     TextButton(
-                      child: const Text('应用分析结果'),
+                      child: Text(l10n.applyAnalysisResult),
                       onPressed: () {
                         setState(() {
                           if (author != null && author.isNotEmpty) {
@@ -2389,7 +2399,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                       },
                     ),
                   TextButton(
-                    child: const Text('关闭'),
+                    child: Text(l10n.close),
                     onPressed: () {
                       Navigator.of(dialogContext).pop();
                     },
@@ -2401,10 +2411,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         }
       } catch (e) {
         if (mounted) {
+          final l10n = AppLocalizations.of(context);
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(
-            content: Text('解析结果失败: $e'),
+            content: Text(l10n.parseResultFailedWithError(e.toString())),
             duration: AppConstants.snackBarDurationError,
           ));
         }
@@ -2417,10 +2428,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       Navigator.of(context).pop();
 
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(
-          content: Text('分析失败: $e'),
+          content: Text(l10n.analysisFailedWithError(e.toString())),
           duration: AppConstants.snackBarDurationError,
         ));
       }
@@ -2432,10 +2444,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     final plainText = _controller.document.toPlainText().trim();
     if (plainText.isEmpty) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(
-          content: Text('请先输入内容'),
+        ).showSnackBar(SnackBar(
+          content: Text(l10n.pleaseInputContent),
           duration: AppConstants.snackBarDurationError,
         ));
       }
@@ -2446,12 +2459,13 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
     // 显示流式文本对话框
     // 注意：这里await showDialog会等待对话框关闭并返回结果
+    final l10n = AppLocalizations.of(context);
     String? finalResult = await showDialog<String?>(
       context: context,
       barrierDismissible: false, // 不允许点击外部关闭
       builder: (dialogContext) {
         return StreamingTextDialog(
-          title: '正在润色文本...',
+          title: l10n.polishingText,
           textStream: aiService.streamPolishText(plainText), // 调用流式方法，使用正确的参数名
           applyButtonText: '应用更改', // 应用按钮文本
           onApply: (fullText) {
@@ -2483,10 +2497,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     final plainText = _controller.document.toPlainText().trim();
     if (plainText.isEmpty) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(
-          content: Text('请先输入内容'),
+        ).showSnackBar(SnackBar(
+          content: Text(l10n.pleaseInputContent),
           duration: AppConstants.snackBarDurationError,
         ));
       }
@@ -2496,12 +2511,13 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     final aiService = Provider.of<AIService>(context, listen: false);
 
     // 显示流式文本对话框
+    final l10n = AppLocalizations.of(context);
     String? finalResult = await showDialog<String?>(
       context: context,
       barrierDismissible: false, // 不允许点击外部关闭
       builder: (dialogContext) {
         return StreamingTextDialog(
-          title: '正在续写内容...',
+          title: l10n.continuingText,
           textStream: aiService.streamContinueText(
             plainText,
           ), // 调用流式方法，使用正确的参数名
@@ -2538,10 +2554,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     final plainText = _controller.document.toPlainText().trim();
     if (plainText.isEmpty) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(
-          content: Text('请先输入内容'),
+        ).showSnackBar(SnackBar(
+          content: Text(l10n.pleaseInputContent),
           duration: AppConstants.snackBarDurationError,
         ));
       }
@@ -2552,6 +2569,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
     // 显示流式文本对话框
     // 对于分析功能，我们只关心对话框的显示，不需要await返回值来更新编辑器
+    final l10n = AppLocalizations.of(context);
     await showDialog<void>(
       context: context,
       barrierDismissible: false, // 不允许点击外部关闭
@@ -2567,17 +2585,17 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         );
 
         return StreamingTextDialog(
-          title: '正在分析内容...',
+          title: l10n.analyzingNote,
           textStream: aiService.streamSummarizeNote(quote), // 调用流式方法，使用正确的参数名
-          applyButtonText: '复制结果', // 分析结果的应用按钮可以是复制
+          applyButtonText: l10n.copyResult, // 分析结果的应用按钮可以是复制
           onApply: (fullText) {
             // 用户点击"复制结果"时调用
             Clipboard.setData(ClipboardData(text: fullText)).then((_) {
               if (mounted) {
                 ScaffoldMessenger.of(
                   context,
-                ).showSnackBar(const SnackBar(
-                  content: Text('分析结果已复制到剪贴板'),
+                ).showSnackBar(SnackBar(
+                  content: Text(l10n.analysisResultCopied),
                   duration: AppConstants.snackBarDurationImportant,
                 ));
               }
@@ -2601,10 +2619,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   Future<void> _askNoteQuestion() async {
     final plainText = _controller.document.toPlainText().trim();
     if (plainText.isEmpty) {
+      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(
-        content: Text('请先输入内容'),
+      ).showSnackBar(SnackBar(
+        content: Text(l10n.pleaseInputContent),
         duration: AppConstants.snackBarDurationError,
       ));
       return;

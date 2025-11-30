@@ -78,15 +78,16 @@ class _TagSelectionSectionState extends State<TagSelectionSection> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     if (widget.tags.isEmpty) {
-      return const Center(child: Text('暂无可用标签，请先添加标签'));
+      return Center(child: Text(l10n.noTagsAvailableHint));
     }
 
     return ExpansionTile(
       title: Row(
         children: [
           Text(
-            '选择标签 (${widget.selectedTagIds.length})',
+            l10n.selectTagsWithCount(widget.selectedTagIds.length),
             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
           ),
           if (widget.isLoading) ...[
