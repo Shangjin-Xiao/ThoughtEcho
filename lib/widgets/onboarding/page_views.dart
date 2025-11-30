@@ -378,8 +378,9 @@ class _WelcomePageViewState extends State<WelcomePageView>
 /// 功能展示页面组件
 class FeaturesPageView extends StatefulWidget {
   final OnboardingPageData pageData;
+  final AppLocalizations l10n;
 
-  const FeaturesPageView({super.key, required this.pageData});
+  const FeaturesPageView({super.key, required this.pageData, required this.l10n});
 
   @override
   State<FeaturesPageView> createState() => _FeaturesPageViewState();
@@ -492,6 +493,7 @@ class _FeaturesPageViewState extends State<FeaturesPageView>
   }
 
   Widget _buildQuickTips(ThemeData theme) {
+    final quickTips = OnboardingConfig.getQuickTips(widget.l10n);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -522,7 +524,7 @@ class _FeaturesPageViewState extends State<FeaturesPageView>
             ],
           ),
           const SizedBox(height: 12),
-          ...OnboardingConfig.quickTips.map(
+          ...quickTips.map(
             (tip) => Padding(
               padding: const EdgeInsets.only(bottom: 6),
               child: Text(
