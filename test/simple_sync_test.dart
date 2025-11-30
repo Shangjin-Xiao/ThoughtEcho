@@ -76,21 +76,13 @@ void main() {
         aiAnalysisDbService: aiService,
       );
 
-      syncService.debugHandleReceiveSessionCreated(
-        'session-a',
-        1024,
-        '设备A',
-      );
+      syncService.debugHandleReceiveSessionCreated('session-a', 1024, '设备A');
       expect(syncService.syncStatus, SyncStatus.receiving);
 
       syncService.cancelReceiving();
       expect(syncService.syncStatus, SyncStatus.failed);
 
-      syncService.debugHandleReceiveSessionCreated(
-        'session-b',
-        2048,
-        '设备B',
-      );
+      syncService.debugHandleReceiveSessionCreated('session-b', 2048, '设备B');
       expect(syncService.syncStatus, SyncStatus.receiving);
 
       syncService.debugHandleReceiveProgress(1024, 2048);

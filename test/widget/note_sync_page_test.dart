@@ -98,8 +98,9 @@ void main() {
         ),
       ];
 
-      when(mockSyncService.discoverNearbyDevices())
-          .thenAnswer((_) async => testDevices);
+      when(
+        mockSyncService.discoverNearbyDevices(),
+      ).thenAnswer((_) async => testDevices);
 
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
@@ -186,10 +187,12 @@ void main() {
         discoveryMethods: <DiscoveryMethod>{const MulticastDiscovery()},
       );
 
-      when(mockSyncService.discoverNearbyDevices())
-          .thenAnswer((_) async => [testDevice]);
-      when(mockSyncService.createSyncPackage(any))
-          .thenAnswer((_) async => 'session-id');
+      when(
+        mockSyncService.discoverNearbyDevices(),
+      ).thenAnswer((_) async => [testDevice]);
+      when(
+        mockSyncService.createSyncPackage(any),
+      ).thenAnswer((_) async => 'session-id');
 
       await tester.pumpWidget(createTestWidget());
       await tester.pumpAndSettle();
@@ -213,11 +216,14 @@ void main() {
       // 验证使用说明
       expect(find.text('使用说明'), findsOneWidget);
       expect(
-          find.text('• 点击设备右侧的发送按钮来分享你的笔记\n'
-              '• 接收到的笔记会自动与现有笔记合并\n'
-              '• 重复的笔记会保留最新版本\n'
-              '• 确保两台设备都连接到同一WiFi网络'),
-          findsOneWidget);
+        find.text(
+          '• 点击设备右侧的发送按钮来分享你的笔记\n'
+          '• 接收到的笔记会自动与现有笔记合并\n'
+          '• 重复的笔记会保留最新版本\n'
+          '• 确保两台设备都连接到同一WiFi网络',
+        ),
+        findsOneWidget,
+      );
     });
   });
 }

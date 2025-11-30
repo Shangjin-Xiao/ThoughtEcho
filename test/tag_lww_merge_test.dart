@@ -34,7 +34,7 @@ void main() {
             'id': 'remote-cat-b',
             'name': '生活',
             'last_modified': DateTime.now().toIso8601String(),
-          }
+          },
         ],
         'quotes': [
           {
@@ -50,12 +50,14 @@ void main() {
             'date': DateTime.now().toIso8601String(),
             'last_modified': DateTime.now().toIso8601String(),
             'tag_ids': 'remote-cat-a',
-          }
-        ]
+          },
+        ],
       };
 
-      final report = await db.importDataWithLWWMerge(remoteData,
-          sourceDevice: 'test-device');
+      final report = await db.importDataWithLWWMerge(
+        remoteData,
+        sourceDevice: 'test-device',
+      );
       expect(report.errors, isEmpty, reason: '合并不应产生错误: ${report.errors}');
 
       final categories = await db.getCategories();
@@ -69,14 +71,16 @@ void main() {
 
       // 使用导出接口重建tag_ids后校验
       final exported = await db.exportDataAsMap();
-      final exportedQuotes =
-          (exported['quotes'] as List).cast<Map<String, dynamic>>();
+      final exportedQuotes = (exported['quotes'] as List)
+          .cast<Map<String, dynamic>>();
       final eq1 = exportedQuotes.firstWhere((m) => m['id'] == 'quote-1');
       final eq2 = exportedQuotes.firstWhere((m) => m['id'] == 'quote-2');
 
       // GROUP_CONCAT 结果是用逗号分隔
-      expect((eq1['tag_ids'] as String).split(',').toSet(),
-          {workLocalId, lifeLocalId});
+      expect((eq1['tag_ids'] as String).split(',').toSet(), {
+        workLocalId,
+        lifeLocalId,
+      });
       expect((eq2['tag_ids'] as String).split(',').toSet(), {workLocalId});
     });
   });

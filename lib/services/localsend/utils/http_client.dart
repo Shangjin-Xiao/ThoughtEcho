@@ -57,10 +57,7 @@ class HttpTextResponse {
   final int statusCode;
   final String body;
 
-  HttpTextResponse({
-    required this.statusCode,
-    required this.body,
-  });
+  HttpTextResponse({required this.statusCode, required this.body});
 
   dynamic get bodyToJson => jsonDecode(body);
 }

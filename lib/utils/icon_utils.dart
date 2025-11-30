@@ -167,7 +167,7 @@ class IconUtils {
       '🎉',
     ],
     '交通': ['🚗', '✈️', '🚢', '🚲', '🚀'],
-    '其他': ['💡', '🔥', '💧', '🌍', '⭐']
+    '其他': ['💡', '🔥', '💧', '🌍', '⭐'],
   };
 
   // Internal category keys for lookup
@@ -185,7 +185,9 @@ class IconUtils {
 
   // Get localized category name
   static String getLocalizedCategoryName(
-      String chineseKey, AppLocalizations l10n) {
+    String chineseKey,
+    AppLocalizations l10n,
+  ) {
     switch (chineseKey) {
       case '情感':
         return l10n.emotion;
@@ -212,7 +214,8 @@ class IconUtils {
 
   // Get localized emoji categories
   static Map<String, List<String>> getLocalizedEmojiCategories(
-      AppLocalizations l10n) {
+    AppLocalizations l10n,
+  ) {
     final result = <String, List<String>>{};
     for (final key in _categoryKeys) {
       if (emojiCategories.containsKey(key)) {
@@ -280,8 +283,9 @@ class IconUtils {
     final List<MapEntry<String, dynamic>> allIcons = [];
 
     // 添加基础emoji
-    final allEmojis =
-        emojiCategories.values.expand((emojis) => emojis).toList();
+    final allEmojis = emojiCategories.values
+        .expand((emojis) => emojis)
+        .toList();
     allIcons.addAll(allEmojis.map((emoji) => MapEntry(emoji, emoji)));
 
     // 添加Material图标

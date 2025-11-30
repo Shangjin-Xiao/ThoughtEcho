@@ -16,9 +16,9 @@ class LocalSendServer {
   int _port = defaultPort;
   final Set<String> _preApprovedFingerprints = {}; // 预先批准一次性
   Function(String sessionId, int totalBytes, String senderAlias)?
-      _onReceiveSessionCreated;
+  _onReceiveSessionCreated;
   Future<bool> Function(String sessionId, int totalBytes, String senderAlias)?
-      _onApprovalNeeded;
+  _onApprovalNeeded;
 
   bool get isRunning => _isRunning;
   int get port => _port;
@@ -29,9 +29,9 @@ class LocalSendServer {
     Function(String filePath)? onFileReceived,
     Function(int received, int total)? onReceiveProgress,
     Function(String sessionId, int totalBytes, String senderAlias)?
-        onReceiveSessionCreated,
+    onReceiveSessionCreated,
     Future<bool> Function(String sessionId, int totalBytes, String senderAlias)?
-        onApprovalNeeded,
+    onApprovalNeeded,
   }) async {
     if (_isRunning) return;
 
@@ -47,17 +47,18 @@ class LocalSendServer {
     _onApprovalNeeded = onApprovalNeeded;
 
     _receiveController = ReceiveController(
-        onFileReceived: onFileReceived,
-        onReceiveProgress: onReceiveProgress,
-        onSessionCreated: onReceiveSessionCreated,
-        onApprovalNeeded: onApprovalNeeded,
-        consumePreApproval: (fp) {
-          if (fp == null) return false;
-          if (_preApprovedFingerprints.remove(fp)) {
-            return true; // consumed
-          }
-          return false;
-        });
+      onFileReceived: onFileReceived,
+      onReceiveProgress: onReceiveProgress,
+      onSessionCreated: onReceiveSessionCreated,
+      onApprovalNeeded: onApprovalNeeded,
+      consumePreApproval: (fp) {
+        if (fp == null) return false;
+        if (_preApprovedFingerprints.remove(fp)) {
+          return true; // consumed
+        }
+        return false;
+      },
+    );
     // ensure fingerprint ready before advertising info endpoint
     await _receiveController.initializeFingerprint();
 
@@ -96,8 +97,10 @@ class LocalSendServer {
           break;
         } catch (e) {
           // Continue trying
-          logWarning('server_try_fail port=$altPort error=$e',
-              source: 'LocalSend');
+          logWarning(
+            'server_try_fail port=$altPort error=$e',
+            source: 'LocalSend',
+          );
         }
       }
 
@@ -126,15 +129,21 @@ class LocalSendServer {
   /// Handle incoming HTTP requests
   Future<void> _handleRequest(HttpRequest request) async {
     try {
-      logDebug('req method=${request.method} path=${request.uri.path}',
-          source: 'LocalSend');
+      logDebug(
+        'req method=${request.method} path=${request.uri.path}',
+        source: 'LocalSend',
+      );
 
       // Add CORS headers
       request.response.headers.add('Access-Control-Allow-Origin', '*');
       request.response.headers.add(
-          'Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-      request.response.headers
-          .add('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        'Access-Control-Allow-Methods',
+        'GET, POST, PUT, DELETE, OPTIONS',
+      );
+      request.response.headers.add(
+        'Access-Control-Allow-Headers',
+        'Content-Type, Authorization',
+      );
       request.response.headers.add('Connection', 'keep-alive');
 
       // Handle preflight requests
@@ -153,8 +162,10 @@ class LocalSendServer {
       int statusCode = 200;
 
       try {
-        logDebug('route path=$path query=${query.isNotEmpty}',
-            source: 'LocalSend');
+        logDebug(
+          'route path=$path query=${query.isNotEmpty}',
+          source: 'LocalSend',
+        );
 
         if ((path == '/api/localsend/v2/info' ||
                 path == '/api/localsend/v1/info') &&
@@ -170,11 +181,15 @@ class LocalSendServer {
           try {
             if (request.method == 'POST') {
               // Drain body to avoid socket issues (ignore content for now)
-              final bodyBytes = await request
-                  .fold<List<int>>(<int>[], (p, e) => p..addAll(e));
+              final bodyBytes = await request.fold<List<int>>(
+                <int>[],
+                (p, e) => p..addAll(e),
+              );
               if (bodyBytes.isNotEmpty) {
-                logDebug('register_body_len=${bodyBytes.length}',
-                    source: 'LocalSend');
+                logDebug(
+                  'register_body_len=${bodyBytes.length}',
+                  source: 'LocalSend',
+                );
               }
             }
           } catch (e) {
@@ -188,8 +203,10 @@ class LocalSendServer {
         } else if (path == '/api/thoughtecho/v1/sync-intent' &&
             request.method == 'POST') {
           // 轻量意向握手：请求体包含 fingerprint, alias, estimatedNotes(optional)
-          final bodyBytes =
-              await request.fold<List<int>>(<int>[], (p, e) => p..addAll(e));
+          final bodyBytes = await request.fold<List<int>>(
+            <int>[],
+            (p, e) => p..addAll(e),
+          );
           final bodyString = utf8.decode(bodyBytes);
           Map<String, dynamic> req = {};
           try {
@@ -223,12 +240,15 @@ class LocalSendServer {
             (previous, element) => previous..addAll(element),
           );
           final bodyString = utf8.decode(bodyBytes);
-          logDebug('prepare_body_len=${bodyString.length}',
-              source: 'LocalSend');
+          logDebug(
+            'prepare_body_len=${bodyString.length}',
+            source: 'LocalSend',
+          );
 
           final requestData = jsonDecode(bodyString) as Map<String, dynamic>;
-          responseData =
-              await _receiveController.handlePrepareUpload(requestData);
+          responseData = await _receiveController.handlePrepareUpload(
+            requestData,
+          );
           logDebug('prepare_ok', source: 'LocalSend');
         } else if ((path == '/api/localsend/v2/upload' ||
                 path == '/api/localsend/v1/send') &&
@@ -240,8 +260,9 @@ class LocalSendServer {
 
           if (sessionId == null || fileId == null || token == null) {
             logWarning(
-                'upload_missing_params sessionId=$sessionId fileId=$fileId token=$token',
-                source: 'LocalSend');
+              'upload_missing_params sessionId=$sessionId fileId=$fileId token=$token',
+              source: 'LocalSend',
+            );
             statusCode = 400;
             responseData = {'error': 'Missing required parameters'};
           } else {
@@ -252,12 +273,15 @@ class LocalSendServer {
                 token,
                 request,
               );
-              logInfo('upload_ok sessionId=$sessionId fileId=$fileId',
-                  source: 'LocalSend');
+              logInfo(
+                'upload_ok sessionId=$sessionId fileId=$fileId',
+                source: 'LocalSend',
+              );
             } catch (e) {
               logError(
-                  'upload_fail sessionId=$sessionId fileId=$fileId error=$e',
-                  source: 'LocalSend');
+                'upload_fail sessionId=$sessionId fileId=$fileId error=$e',
+                source: 'LocalSend',
+              );
               statusCode = 500;
               responseData = {'error': 'File upload failed: $e'};
             }
@@ -266,16 +290,20 @@ class LocalSendServer {
           // 取消会话接口（简化版）
           if (path == '/api/localsend/v2/cancel' && request.method == 'POST') {
             try {
-              final bodyBytes = await request
-                  .fold<List<int>>(<int>[], (p, e) => p..addAll(e));
+              final bodyBytes = await request.fold<List<int>>(
+                <int>[],
+                (p, e) => p..addAll(e),
+              );
               final body = utf8.decode(bodyBytes);
               final data = jsonDecode(body) as Map<String, dynamic>;
               final sessionId = data['sessionId'] as String?;
               if (sessionId != null) {
                 _receiveController.cancelSession(sessionId);
                 responseData = {'ok': true};
-                logInfo('cancel_marked session=$sessionId',
-                    source: 'LocalSend');
+                logInfo(
+                  'cancel_marked session=$sessionId',
+                  source: 'LocalSend',
+                );
               } else {
                 statusCode = 400;
                 responseData = {'error': 'missing sessionId'};
@@ -292,8 +320,12 @@ class LocalSendServer {
           }
         }
       } catch (e, stack) {
-        logError('handle_error error=$e',
-            error: e, stackTrace: stack, source: 'LocalSend');
+        logError(
+          'handle_error error=$e',
+          error: e,
+          stackTrace: stack,
+          source: 'LocalSend',
+        );
         statusCode = 500;
         responseData = {'error': e.toString()};
       }
@@ -302,21 +334,29 @@ class LocalSendServer {
       request.response.statusCode = statusCode;
       request.response.headers.contentType = ContentType.json;
       final body = jsonEncode(responseData);
-      request.response.headers
-          .set(HttpHeaders.contentLengthHeader, utf8.encode(body).length);
+      request.response.headers.set(
+        HttpHeaders.contentLengthHeader,
+        utf8.encode(body).length,
+      );
       request.response.write(body);
       await request.response.close();
       logDebug('resp_sent status=$statusCode', source: 'LocalSend');
     } catch (e, stackTrace) {
-      logError('fatal_req error=$e',
-          error: e, stackTrace: stackTrace, source: 'LocalSend');
+      logError(
+        'fatal_req error=$e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'LocalSend',
+      );
 
       try {
         request.response.statusCode = 500;
         request.response.headers.contentType = ContentType.json;
         const fallback = '{"error":"Internal server error"}';
-        request.response.headers
-            .set(HttpHeaders.contentLengthHeader, fallback.length);
+        request.response.headers.set(
+          HttpHeaders.contentLengthHeader,
+          fallback.length,
+        );
         request.response.write(fallback);
         await request.response.close();
       } catch (e) {

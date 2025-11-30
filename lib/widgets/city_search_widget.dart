@@ -54,7 +54,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
       context,
       listen: false,
     );
-    
+
     // 同步语言设置到 LocationService
     locationService.currentLocaleCode = settingsService.localeCode;
 
@@ -141,8 +141,9 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
               child: Card(
                 elevation: 0,
-                color: theme.colorScheme.surfaceContainerHighest
-                    .withValues(alpha: 0.5),
+                color: theme.colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.5,
+                ),
                 child: ListTile(
                   leading: Icon(weatherService.getWeatherIconData()),
                   title: Text(l10n.currentWeather),
@@ -150,11 +151,13 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                     (weatherService.currentWeather == null &&
                             weatherService.temperature == null)
                         ? (locationService.currentAddress != null
-                            ? l10n.clickRefreshHint(locationService.currentAddress!)
-                            : l10n.cityNotSetHint)
+                              ? l10n.clickRefreshHint(
+                                  locationService.currentAddress!,
+                                )
+                              : l10n.cityNotSetHint)
                         : (weatherService.currentWeather == '天气数据获取失败'
-                            ? l10n.weatherFetchFailed
-                            : '${WeatherService.getLocalizedWeatherDescription(context, weatherService.currentWeather ?? 'unknown')} ${weatherService.temperature ?? ""}'),
+                              ? l10n.weatherFetchFailed
+                              : '${WeatherService.getLocalizedWeatherDescription(context, weatherService.currentWeather ?? 'unknown')} ${weatherService.temperature ?? ""}'),
                     style: const TextStyle(fontSize: 12),
                   ),
                   trailing: IconButton(
@@ -162,37 +165,47 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2))
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
                         : const Icon(Icons.refresh),
                     tooltip: l10n.refreshWeather,
-                    onPressed: (controller.isLoading ||
-                            weatherService.isLoading)
+                    onPressed:
+                        (controller.isLoading || weatherService.isLoading)
                         ? null
                         : () async {
                             final position = locationService.currentPosition;
-                            final messenger =
-                                ScaffoldMessenger.maybeOf(context);
+                            final messenger = ScaffoldMessenger.maybeOf(
+                              context,
+                            );
                             if (position != null) {
                               await weatherService.getWeatherData(
-                                  position.latitude, position.longitude);
+                                position.latitude,
+                                position.longitude,
+                              );
                               if (!mounted) return;
                               if (weatherService.currentWeather != '天气数据获取失败') {
-                                messenger?.showSnackBar(SnackBar(
-                                  content: Text(l10n.weatherUpdated),
-                                  duration: const Duration(seconds: 2),
-                                ));
+                                messenger?.showSnackBar(
+                                  SnackBar(
+                                    content: Text(l10n.weatherUpdated),
+                                    duration: const Duration(seconds: 2),
+                                  ),
+                                );
                               } else {
-                                messenger?.showSnackBar(SnackBar(
-                                  content: Text(l10n.weatherUpdateFailed),
-                                  duration: const Duration(seconds: 3),
-                                ));
+                                messenger?.showSnackBar(
+                                  SnackBar(
+                                    content: Text(l10n.weatherUpdateFailed),
+                                    duration: const Duration(seconds: 3),
+                                  ),
+                                );
                               }
                             } else {
                               if (!mounted) return;
-                              messenger?.showSnackBar(SnackBar(
-                                content: Text(l10n.pleaseSelectCityFirst),
-                                duration: const Duration(seconds: 3),
-                              ));
+                              messenger?.showSnackBar(
+                                SnackBar(
+                                  content: Text(l10n.pleaseSelectCityFirst),
+                                  duration: const Duration(seconds: 3),
+                                ),
+                              );
                             }
                           },
                   ),

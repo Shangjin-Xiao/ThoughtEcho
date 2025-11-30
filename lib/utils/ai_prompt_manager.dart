@@ -482,8 +482,9 @@ ${_getLanguageDirective(languageCode)}''';
   }) {
     final timeText = mostTimePeriod ?? '—';
     final weatherText = mostWeather ?? '—';
-    final tagText =
-        topTag != null && topTag.trim().isNotEmpty ? '#$topTag' : '—';
+    final tagText = topTag != null && topTag.trim().isNotEmpty
+        ? '#$topTag'
+        : '—';
 
     final stats = [
       '周期：$periodLabel',
@@ -499,8 +500,8 @@ ${_getLanguageDirective(languageCode)}''';
     final contentForAnalysis = fullNotesContent ?? notesPreview;
     final contentSection =
         (contentForAnalysis == null || contentForAnalysis.trim().isEmpty)
-            ? '（无可用笔记内容）'
-            : contentForAnalysis;
+        ? '（无可用笔记内容）'
+        : contentForAnalysis;
 
     return '''【统计数据】
 $stats
@@ -528,14 +529,19 @@ $contentSection
   }) {
     // 根据语言选择不同的模板
     final isEnglish = languageCode != null && languageCode.startsWith('en');
-    
-    final time = mostTimePeriod ?? (isEnglish ? 'evenly distributed' : '本期时段分布较均衡');
-    final weather = mostWeather ?? (isEnglish ? 'weather was not a significant factor' : '天气因素不明显');
+
+    final time =
+        mostTimePeriod ?? (isEnglish ? 'evenly distributed' : '本期时段分布较均衡');
+    final weather =
+        mostWeather ??
+        (isEnglish ? 'weather was not a significant factor' : '天气因素不明显');
     // 处理标签：移除已有的#前缀，然后统一添加#
     String tag;
     if (topTag != null && topTag.trim().isNotEmpty) {
       final cleanTag = topTag.trim().replaceAll(RegExp(r'^#+'), ''); // 移除开头的所有#
-      tag = cleanTag.isNotEmpty ? '#$cleanTag' : (isEnglish ? 'themes are still emerging' : '主题尚未收敛');
+      tag = cleanTag.isNotEmpty
+          ? '#$cleanTag'
+          : (isEnglish ? 'themes are still emerging' : '主题尚未收敛');
     } else {
       tag = isEnglish ? 'themes are still emerging' : '主题尚未收敛';
     }
@@ -548,46 +554,103 @@ $contentSection
       // 英文模板
       switch (styleIndex) {
         case 0:
-          return _generateWarmCompanionInsightEn(periodLabel, time, weather, tag,
-              activeDays, noteCount, totalWordCount);
+          return _generateWarmCompanionInsightEn(
+            periodLabel,
+            time,
+            weather,
+            tag,
+            activeDays,
+            noteCount,
+            totalWordCount,
+          );
         case 1:
-          return _generatePoeticInsightEn(periodLabel, time, weather, tag,
-              activeDays, noteCount, totalWordCount);
+          return _generatePoeticInsightEn(
+            periodLabel,
+            time,
+            weather,
+            tag,
+            activeDays,
+            noteCount,
+            totalWordCount,
+          );
         case 2:
-          return _generateGrowthMentorInsightEn(periodLabel, time, weather, tag,
-              activeDays, noteCount, totalWordCount);
+          return _generateGrowthMentorInsightEn(
+            periodLabel,
+            time,
+            weather,
+            tag,
+            activeDays,
+            noteCount,
+            totalWordCount,
+          );
         default:
-          return _generateWarmCompanionInsightEn(periodLabel, time, weather, tag,
-              activeDays, noteCount, totalWordCount);
+          return _generateWarmCompanionInsightEn(
+            periodLabel,
+            time,
+            weather,
+            tag,
+            activeDays,
+            noteCount,
+            totalWordCount,
+          );
       }
     } else {
       // 中文模板
       switch (styleIndex) {
         case 0: // 温暖陪伴型
-          return _generateWarmCompanionInsight(periodLabel, time, weather, tag,
-              activeDays, noteCount, totalWordCount);
+          return _generateWarmCompanionInsight(
+            periodLabel,
+            time,
+            weather,
+            tag,
+            activeDays,
+            noteCount,
+            totalWordCount,
+          );
         case 1: // 诗意文艺型
-          return _generatePoeticInsight(periodLabel, time, weather, tag,
-              activeDays, noteCount, totalWordCount);
+          return _generatePoeticInsight(
+            periodLabel,
+            time,
+            weather,
+            tag,
+            activeDays,
+            noteCount,
+            totalWordCount,
+          );
         case 2: // 成长导师型
-          return _generateGrowthMentorInsight(periodLabel, time, weather, tag,
-              activeDays, noteCount, totalWordCount);
+          return _generateGrowthMentorInsight(
+            periodLabel,
+            time,
+            weather,
+            tag,
+            activeDays,
+            noteCount,
+            totalWordCount,
+          );
         default:
-          return _generateWarmCompanionInsight(periodLabel, time, weather, tag,
-              activeDays, noteCount, totalWordCount);
+          return _generateWarmCompanionInsight(
+            periodLabel,
+            time,
+            weather,
+            tag,
+            activeDays,
+            noteCount,
+            totalWordCount,
+          );
       }
     }
   }
 
   /// 温暖陪伴型洞察
   String _generateWarmCompanionInsight(
-      String periodLabel,
-      String time,
-      String weather,
-      String tag,
-      int activeDays,
-      int noteCount,
-      int totalWordCount) {
+    String periodLabel,
+    String time,
+    String weather,
+    String tag,
+    int activeDays,
+    int noteCount,
+    int totalWordCount,
+  ) {
     final templates = [
       '这$periodLabel你坚持了$activeDays天记录，共写下$noteCount篇温暖的文字。看起来你更喜欢在$time书写，$weather是你的创作伙伴，$tag充满了你的思绪。',
       '一个$periodLabel来，你用$activeDays天时光记录了生活的点滴。$time的时候，你写得最多，$weather见证着$tag的绽放。',
@@ -598,8 +661,15 @@ $contentSection
   }
 
   /// 诗意文艺型洞察
-  String _generatePoeticInsight(String periodLabel, String time, String weather,
-      String tag, int activeDays, int noteCount, int totalWordCount) {
+  String _generatePoeticInsight(
+    String periodLabel,
+    String time,
+    String weather,
+    String tag,
+    int activeDays,
+    int noteCount,
+    int totalWordCount,
+  ) {
     final templates = [
       '时光如水，你用$activeDays个日夜编织了$noteCount个故事片段。$time是你的缪斯时刻，$weather见证着$tag的绽放。',
       '一$periodLabel光阴里，你在$activeDays个日子种下文字的种子。$time最懂你的心思，$tag在笔尖流淌。',
@@ -611,13 +681,14 @@ $contentSection
 
   /// 成长导师型洞察
   String _generateGrowthMentorInsight(
-      String periodLabel,
-      String time,
-      String weather,
-      String tag,
-      int activeDays,
-      int noteCount,
-      int totalWordCount) {
+    String periodLabel,
+    String time,
+    String weather,
+    String tag,
+    int activeDays,
+    int noteCount,
+    int totalWordCount,
+  ) {
     final templates = [
       '本$periodLabel你保持了$activeDays天的记录习惯，积累了$totalWordCount字的思考财富。$time的安静最适合你深度思考，$tag值得进一步探索。',
       '这一$periodLabel你在思考的路上走了$activeDays天，留下了$noteCount篇成长足迹。$time激发你的灵感，$tag或许是下一个突破点。',
@@ -631,13 +702,14 @@ $contentSection
 
   /// Warm companion style insight (English)
   String _generateWarmCompanionInsightEn(
-      String periodLabel,
-      String time,
-      String weather,
-      String tag,
-      int activeDays,
-      int noteCount,
-      int totalWordCount) {
+    String periodLabel,
+    String time,
+    String weather,
+    String tag,
+    int activeDays,
+    int noteCount,
+    int totalWordCount,
+  ) {
     final templates = [
       'This $periodLabel, you maintained $activeDays days of journaling, writing $noteCount heartfelt entries. You seem to prefer writing during $time, with $weather as your creative companion, and $tag fills your thoughts.',
       'Over the $periodLabel, you spent $activeDays days recording life\'s moments. You wrote the most during $time, and $weather witnessed the blossoming of $tag.',
@@ -648,8 +720,15 @@ $contentSection
   }
 
   /// Poetic style insight (English)
-  String _generatePoeticInsightEn(String periodLabel, String time, String weather,
-      String tag, int activeDays, int noteCount, int totalWordCount) {
+  String _generatePoeticInsightEn(
+    String periodLabel,
+    String time,
+    String weather,
+    String tag,
+    int activeDays,
+    int noteCount,
+    int totalWordCount,
+  ) {
     final templates = [
       'Time flows like water, and you wove $noteCount story fragments across $activeDays days and nights. $time was your muse moment, $weather witnessed the blossoming of $tag.',
       'In the tapestry of this $periodLabel, you planted seeds of words across $activeDays days. $time understands your heart best, and $tag flows from your pen.',
@@ -661,13 +740,14 @@ $contentSection
 
   /// Growth mentor style insight (English)
   String _generateGrowthMentorInsightEn(
-      String periodLabel,
-      String time,
-      String weather,
-      String tag,
-      int activeDays,
-      int noteCount,
-      int totalWordCount) {
+    String periodLabel,
+    String time,
+    String weather,
+    String tag,
+    int activeDays,
+    int noteCount,
+    int totalWordCount,
+  ) {
     final templates = [
       'This $periodLabel, you maintained a journaling habit for $activeDays days, accumulating $totalWordCount words of thoughtful reflection. The quiet of $time suits your deep thinking best, and $tag is worth exploring further.',
       'This $periodLabel, you walked $activeDays days on the path of reflection, leaving $noteCount growth footprints. $time sparks your inspiration, and $tag might be your next breakthrough point.',

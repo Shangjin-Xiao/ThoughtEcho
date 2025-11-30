@@ -153,8 +153,8 @@ class IntelligentMemoryManager {
   /// 分析内存压力趋势
   Future<void> _analyzeMemoryPressure() async {
     try {
-      final memoryPressure =
-          await _deviceMemoryManager.getMemoryPressureLevel();
+      final memoryPressure = await _deviceMemoryManager
+          .getMemoryPressureLevel();
       final availableMemory = await _deviceMemoryManager.getAvailableMemory();
       final timestamp = DateTime.now();
 
@@ -225,7 +225,7 @@ class IntelligentMemoryManager {
         : _pressureHistory.toList();
     final avgRecent =
         recent.map((r) => r.pressureLevel).reduce((a, b) => a + b) /
-            recent.length;
+        recent.length;
 
     final older = _pressureHistory.length >= 10
         ? _pressureHistory.skip(_pressureHistory.length - 10).take(5).toList()
@@ -234,7 +234,8 @@ class IntelligentMemoryManager {
       return PressureTrend.stable;
     }
 
-    final avgOlder = older.map((r) => r.pressureLevel).reduce((a, b) => a + b) /
+    final avgOlder =
+        older.map((r) => r.pressureLevel).reduce((a, b) => a + b) /
         older.length;
 
     if (avgRecent > avgOlder + 0.5) {
@@ -254,8 +255,8 @@ class IntelligentMemoryManager {
   /// 执行前检查
   Future<void> _preExecutionCheck(OperationStrategy strategy) async {
     if (strategy.requiresMemoryCheck) {
-      final memoryPressure =
-          await _deviceMemoryManager.getMemoryPressureLevel();
+      final memoryPressure = await _deviceMemoryManager
+          .getMemoryPressureLevel();
       if (memoryPressure >= 3) {
         throw MemoryPressureException('内存压力过高，无法执行操作');
       }

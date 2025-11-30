@@ -4,8 +4,9 @@ import 'package:thoughtecho/models/note_category.dart';
 
 void main() {
   group('性能优化测试', () {
-    testWidgets('NoteFullEditorPage setState 优化验证',
-        (WidgetTester tester) async {
+    testWidgets('NoteFullEditorPage setState 优化验证', (
+      WidgetTester tester,
+    ) async {
       // 这个测试验证我们移除了连续的 setState 调用
       // 通过代码静态分析确认优化效果
 

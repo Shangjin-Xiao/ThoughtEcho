@@ -65,8 +65,9 @@ class SettingsService extends ChangeNotifier {
   bool get prioritizeBoldContentInCollapse =>
       _appSettings.prioritizeBoldContentInCollapse;
   Future<void> setPrioritizeBoldContentInCollapse(bool enabled) async {
-    _appSettings =
-        _appSettings.copyWith(prioritizeBoldContentInCollapse: enabled);
+    _appSettings = _appSettings.copyWith(
+      prioritizeBoldContentInCollapse: enabled,
+    );
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
     notifyListeners();
   }

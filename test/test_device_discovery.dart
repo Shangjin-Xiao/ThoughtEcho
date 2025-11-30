@@ -129,7 +129,8 @@ Future<void> testDeviceDiscovery() async {
     logDebug('发现 ${devices.length} 台设备:');
     for (final device in devices) {
       logDebug(
-          '  - ${device.alias} (${device.ip}:${device.port}) [${device.fingerprint}]');
+        '  - ${device.alias} (${device.ip}:${device.port}) [${device.fingerprint}]',
+      );
     }
     await service.stopDiscovery();
     service.dispose();

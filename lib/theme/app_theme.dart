@@ -148,7 +148,8 @@ class AppTheme with ChangeNotifier {
   // 强制刷新主题，确保所有UI组件正确更新
   void forceRefreshTheme() {
     logDebug(
-        '强制刷新主题: 自定义颜色=$_useCustomColor, 动态取色=$_useDynamicColor, 主题模式=$_themeMode');
+      '强制刷新主题: 自定义颜色=$_useCustomColor, 动态取色=$_useDynamicColor, 主题模式=$_themeMode',
+    );
     notifyListeners();
   }
 
@@ -544,9 +545,7 @@ class AppTheme with ChangeNotifier {
             }
             return colorScheme.onSurface;
           }),
-          side: WidgetStateProperty.all(
-            BorderSide(color: colorScheme.outline),
-          ),
+          side: WidgetStateProperty.all(BorderSide(color: colorScheme.outline)),
         ),
       ),
       // 显式配置 FilterChip/Chip 主题
@@ -626,7 +625,8 @@ class AppTheme with ChangeNotifier {
           side: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.disabled)) {
               return BorderSide(
-                  color: colorScheme.onSurface.withValues(alpha: 0.12));
+                color: colorScheme.onSurface.withValues(alpha: 0.12),
+              );
             }
             return BorderSide(color: colorScheme.outline);
           }),

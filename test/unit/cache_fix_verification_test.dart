@@ -12,7 +12,9 @@ void main() {
     test('修复验证1：removeCacheForQuote 方法存在且可调用', () {
       // 验证新增的清理方法可以正常调用
       expect(
-          () => QuoteContent.removeCacheForQuote('test-id'), returnsNormally);
+        () => QuoteContent.removeCacheForQuote('test-id'),
+        returnsNormally,
+      );
     });
 
     test('修复验证2：删除笔记后缓存应被清理', () {

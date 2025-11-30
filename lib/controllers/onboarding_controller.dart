@@ -56,8 +56,12 @@ class OnboardingController extends ChangeNotifier {
 
       logDebug('OnboardingController初始化完成', source: 'OnboardingController');
     } catch (e, stackTrace) {
-      logError('OnboardingController初始化失败',
-          error: e, stackTrace: stackTrace, source: 'OnboardingController');
+      logError(
+        'OnboardingController初始化失败',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'OnboardingController',
+      );
       rethrow;
     }
   }
@@ -175,8 +179,11 @@ class OnboardingController extends ChangeNotifier {
         await _aiAnalysisDbService.init();
         logInfo('AI分析数据库初始化完成', source: 'OnboardingController');
       } catch (aiDbError) {
-        logError('AI分析数据库初始化失败: $aiDbError',
-            error: aiDbError, source: 'OnboardingController');
+        logError(
+          'AI分析数据库初始化失败: $aiDbError',
+          error: aiDbError,
+          source: 'OnboardingController',
+        );
       }
 
       // 6. 保存用户偏好设置
@@ -188,8 +195,10 @@ class OnboardingController extends ChangeNotifier {
       // 8. 保存当前应用版本号，避免下次启动误判为升级
       final packageInfo = await PackageInfo.fromPlatform();
       await _settingsService.setAppVersion(packageInfo.version);
-      logInfo('已保存应用版本号: ${packageInfo.version}',
-          source: 'OnboardingController');
+      logInfo(
+        '已保存应用版本号: ${packageInfo.version}',
+        source: 'OnboardingController',
+      );
 
       // 9. 标记服务初始化完成
       servicesInitializedNotifier?.value = true;
@@ -276,7 +285,7 @@ class OnboardingController extends ChangeNotifier {
   void _updateNavigationState() {
     final canGoNext =
         _state.currentPageIndex < OnboardingConfig.totalPages - 1 ||
-            _canCompleteOnboarding();
+        _canCompleteOnboarding();
     final canGoPrevious = _state.currentPageIndex > 0;
 
     _state = _state.copyWith(
@@ -334,8 +343,11 @@ class OnboardingController extends ChangeNotifier {
         await _aiAnalysisDbService.init();
         logInfo('AI分析数据库初始化完成', source: 'OnboardingController');
       } catch (aiDbError) {
-        logError('AI分析数据库初始化失败: $aiDbError',
-            error: aiDbError, source: 'OnboardingController');
+        logError(
+          'AI分析数据库初始化失败: $aiDbError',
+          error: aiDbError,
+          source: 'OnboardingController',
+        );
       }
 
       // 7. 标记引导完成（数据库迁移已在performMigration中标记）
@@ -344,8 +356,10 @@ class OnboardingController extends ChangeNotifier {
       // 8. 保存当前应用版本号，避免下次启动误判为升级
       final packageInfo = await PackageInfo.fromPlatform();
       await _settingsService.setAppVersion(packageInfo.version);
-      logInfo('已保存应用版本号: ${packageInfo.version}',
-          source: 'OnboardingController');
+      logInfo(
+        '已保存应用版本号: ${packageInfo.version}',
+        source: 'OnboardingController',
+      );
 
       // 9. 标记服务初始化完成
       servicesInitializedNotifier?.value = true;

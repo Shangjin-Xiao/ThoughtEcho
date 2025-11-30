@@ -98,8 +98,10 @@ class LogViewer {
       if (olderThan != null) {
         final cutoffDate = DateTime.now().subtract(olderThan);
         // 这里需要在UnifiedLogService中添加按日期清理的方法
-        AppLogger.i('清理${cutoffDate.toIso8601String()}之前的日志',
-            source: 'LogViewer');
+        AppLogger.i(
+          '清理${cutoffDate.toIso8601String()}之前的日志',
+          source: 'LogViewer',
+        );
       }
 
       if (keepCount != null) {
@@ -196,10 +198,7 @@ class LogViewer {
   }
 
   /// 生成日志报告
-  static String generateLogReport({
-    DateTime? startDate,
-    DateTime? endDate,
-  }) {
+  static String generateLogReport({DateTime? startDate, DateTime? endDate}) {
     final stats = getLogStatistics();
     final recentErrors = getRecentErrors();
     final recentWarnings = getRecentWarnings();
@@ -237,7 +236,8 @@ class LogViewer {
     buffer.writeln('## 最近错误 (最多10条)');
     for (final error in recentErrors) {
       buffer.writeln(
-          '- [${error.timestamp.toIso8601String()}] ${error.source}: ${error.message}');
+        '- [${error.timestamp.toIso8601String()}] ${error.source}: ${error.message}',
+      );
     }
     buffer.writeln();
 
@@ -245,7 +245,8 @@ class LogViewer {
     buffer.writeln('## 最近警告 (最多10条)');
     for (final warning in recentWarnings) {
       buffer.writeln(
-          '- [${warning.timestamp.toIso8601String()}] ${warning.source}: ${warning.message}');
+        '- [${warning.timestamp.toIso8601String()}] ${warning.source}: ${warning.message}',
+      );
     }
     buffer.writeln();
 
@@ -283,10 +284,7 @@ class LogViewer {
   /// 获取内存使用情况
   static Map<String, dynamic> _getMemoryUsage() {
     // 这里可以添加更详细的内存使用统计
-    return {
-      'platform': Platform.operatingSystem,
-      'isDebugMode': kDebugMode,
-    };
+    return {'platform': Platform.operatingSystem, 'isDebugMode': kDebugMode};
   }
 
   /// 获取系统信息

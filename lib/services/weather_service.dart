@@ -123,7 +123,8 @@ class WeatherService extends ChangeNotifier {
     Duration timeout = const Duration(seconds: 10),
   }) async {
     try {
-      final url = 'https://api.open-meteo.com/v1/forecast'
+      final url =
+          'https://api.open-meteo.com/v1/forecast'
           '?latitude=$latitude'
           '&longitude=$longitude'
           '&current=temperature_2m,weather_code,wind_speed_10m'
@@ -230,7 +231,10 @@ class WeatherService extends ChangeNotifier {
   }
 
   /// 获取国际化天气描述（静态方法，用于 UI 显示）
-  static String getLocalizedWeatherDescription(BuildContext context, String key) {
+  static String getLocalizedWeatherDescription(
+    BuildContext context,
+    String key,
+  ) {
     return WeatherCodeMapper.getLocalizedDescription(context, key);
   }
 

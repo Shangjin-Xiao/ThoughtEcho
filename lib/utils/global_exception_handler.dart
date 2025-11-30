@@ -83,30 +83,32 @@ class GlobalExceptionHandler {
   /// 设置Isolate异常处理
   static void _setupIsolateErrorHandler() {
     try {
-      Isolate.current.addErrorListener(RawReceivePort((pair) {
-        final List<dynamic> errorAndStacktrace = pair;
-        final error = errorAndStacktrace.first;
-        final stackTrace = errorAndStacktrace.length > 1
-            ? StackTrace.fromString(errorAndStacktrace.last.toString())
-            : null;
+      Isolate.current.addErrorListener(
+        RawReceivePort((pair) {
+          final List<dynamic> errorAndStacktrace = pair;
+          final error = errorAndStacktrace.first;
+          final stackTrace = errorAndStacktrace.length > 1
+              ? StackTrace.fromString(errorAndStacktrace.last.toString())
+              : null;
 
-        AppLogger.e(
-          'Isolate异常: $error',
-          error: error,
-          stackTrace: stackTrace,
-          source: 'Isolate',
-        );
+          AppLogger.e(
+            'Isolate异常: $error',
+            error: error,
+            stackTrace: stackTrace,
+            source: 'Isolate',
+          );
 
-        // 保存到延迟处理队列
-        _deferredErrors.add({
-          'type': 'Isolate',
-          'message': 'Isolate异常: $error',
-          'error': error,
-          'stackTrace': stackTrace,
-          'source': 'Isolate',
-          'timestamp': DateTime.now(),
-        });
-      }).sendPort);
+          // 保存到延迟处理队列
+          _deferredErrors.add({
+            'type': 'Isolate',
+            'message': 'Isolate异常: $error',
+            'error': error,
+            'stackTrace': stackTrace,
+            'source': 'Isolate',
+            'timestamp': DateTime.now(),
+          });
+        }).sendPort,
+      );
     } catch (e) {
       AppLogger.w('设置Isolate异常处理失败: $e', source: 'GlobalExceptionHandler');
     }
@@ -142,8 +144,9 @@ class GlobalExceptionHandler {
     String? context,
     Map<String, dynamic>? additionalData,
   }) {
-    final errorMessage =
-        context != null ? '$context: $error' : error.toString();
+    final errorMessage = context != null
+        ? '$context: $error'
+        : error.toString();
 
     AppLogger.e(
       errorMessage,
@@ -224,14 +227,18 @@ class GlobalExceptionHandler {
   static void processDeferredErrors() {
     if (_deferredErrors.isEmpty) return;
 
-    AppLogger.i('开始处理 ${_deferredErrors.length} 个延迟错误',
-        source: 'GlobalExceptionHandler');
+    AppLogger.i(
+      '开始处理 ${_deferredErrors.length} 个延迟错误',
+      source: 'GlobalExceptionHandler',
+    );
 
     for (final error in _deferredErrors) {
       // 这里可以添加更复杂的错误处理逻辑
       // 比如发送到错误报告服务、显示用户通知等
-      AppLogger.d('处理延迟错误: ${error['type']} - ${error['message']}',
-          source: 'GlobalExceptionHandler');
+      AppLogger.d(
+        '处理延迟错误: ${error['type']} - ${error['message']}',
+        source: 'GlobalExceptionHandler',
+      );
     }
 
     clearDeferredErrors();

@@ -200,8 +200,9 @@ class ClipboardService extends ChangeNotifier {
       author = clean(m4.group(1));
       matchedSubstring = m4.group(0);
       // 尝试在此基础上再提取出处
-      final remainingText =
-          text.substring(0, text.length - matchedSubstring!.length).trim();
+      final remainingText = text
+          .substring(0, text.length - matchedSubstring!.length)
+          .trim();
       final m4Source = RegExp(
         r'[《（\(]([^》）\)]+?)[》）\)]\s*$',
       ).firstMatch(remainingText);
@@ -225,8 +226,9 @@ class ClipboardService extends ChangeNotifier {
       source = clean(m5.group(1));
       matchedSubstring = m5.group(0);
       // 尝试在此基础上再提取作者
-      final remainingText =
-          text.substring(0, text.length - matchedSubstring!.length).trim();
+      final remainingText = text
+          .substring(0, text.length - matchedSubstring!.length)
+          .trim();
       final m5Author = RegExp(
         r'[-—–]+\s*([^，。,、\.\n《（\(]{2,20})\s*$',
       ).firstMatch(remainingText);
@@ -295,9 +297,7 @@ class ClipboardService extends ChangeNotifier {
                 ),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(
-                    AppTheme.dialogRadius,
-                  ),
+                  borderRadius: BorderRadius.circular(AppTheme.dialogRadius),
                   boxShadow: AppTheme.defaultShadow,
                 ),
                 child: Row(
@@ -374,12 +374,12 @@ class ClipboardService extends ChangeNotifier {
           onSave: (quote) {
             // 可以在这里添加保存后的回调
             if (context.mounted) {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(
-                content: Text('笔记已保存'),
-                duration: AppConstants.snackBarDurationImportant,
-              ));
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('笔记已保存'),
+                  duration: AppConstants.snackBarDurationImportant,
+                ),
+              );
             }
           },
         ),
@@ -387,12 +387,12 @@ class ClipboardService extends ChangeNotifier {
     } catch (e) {
       logDebug('打开编辑页面失败: $e');
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(
-          content: Text('操作失败: $e'),
-          duration: AppConstants.snackBarDurationError,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('操作失败: $e'),
+            duration: AppConstants.snackBarDurationError,
+          ),
+        );
       }
     }
   }

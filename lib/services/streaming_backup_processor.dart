@@ -218,7 +218,8 @@ class StreamingBackupProcessor {
       final bytes = await file.openRead(0, 4).first;
       if (bytes.length >= 4) {
         logDebug(
-            '文件头字节: ${bytes.map((b) => '0x${b.toRadixString(16).padLeft(2, '0')}').join(' ')}');
+          '文件头字节: ${bytes.map((b) => '0x${b.toRadixString(16).padLeft(2, '0')}').join(' ')}',
+        );
         // ZIP文件魔数: PK (0x504B)
         if (bytes[0] == 0x50 && bytes[1] == 0x4B) {
           logDebug('根据文件头识别为ZIP文件');

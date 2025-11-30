@@ -19,7 +19,10 @@ class _AIFeaturesPageState extends State<AIFeaturesPage>
   void initState() {
     super.initState();
     _tabController = TabController(
-        length: 2, vsync: this, initialIndex: 0); // 默认显示第一个tab（周期报告）
+      length: 2,
+      vsync: this,
+      initialIndex: 0,
+    ); // 默认显示第一个tab（周期报告）
   }
 
   @override
@@ -41,8 +44,9 @@ class _AIFeaturesPageState extends State<AIFeaturesPage>
               color: theme.colorScheme.surface,
               border: Border(
                 bottom: BorderSide(
-                  color:
-                      theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                  color: theme.colorScheme.outlineVariant.withValues(
+                    alpha: 0.3,
+                  ),
                   width: 1,
                 ),
               ),
@@ -54,11 +58,14 @@ class _AIFeaturesPageState extends State<AIFeaturesPage>
                 Tab(text: AppLocalizations.of(context).aiInsightsTab),
               ],
               labelColor: theme.primaryColor,
-              unselectedLabelColor:
-                  theme.colorScheme.onSurface.withValues(alpha: 0.6),
+              unselectedLabelColor: theme.colorScheme.onSurface.withValues(
+                alpha: 0.6,
+              ),
               indicatorColor: theme.primaryColor,
-              labelStyle:
-                  const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              labelStyle: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
               unselectedLabelStyle: const TextStyle(fontSize: 14),
               indicatorSize: TabBarIndicatorSize.tab,
               dividerHeight: 0,
@@ -69,10 +76,7 @@ class _AIFeaturesPageState extends State<AIFeaturesPage>
           Expanded(
             child: TabBarView(
               controller: _tabController,
-              children: const [
-                AIPeriodicReportPage(),
-                InsightsPage(),
-              ],
+              children: const [AIPeriodicReportPage(), InsightsPage()],
             ),
           ),
         ],

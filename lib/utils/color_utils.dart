@@ -88,10 +88,7 @@ class ColorUtils {
       return surfaceColor;
     }
     // 浅色模式：82%不透明的surface叠加到白色上，让背景更接近主题色
-    return Color.alphaBlend(
-      withOpacitySafe(surfaceColor, 0.82),
-      Colors.white,
-    );
+    return Color.alphaBlend(withOpacitySafe(surfaceColor, 0.82), Colors.white);
   }
 
   /// 获取卡片背景色（用于一言框等卡片）
@@ -130,10 +127,7 @@ class ColorUtils {
       return const Color(0xFF2A2A2A);
     }
     // 浅色模式：30%不透明的surface叠加到白色上，产生极浅的主题色背景
-    return Color.alphaBlend(
-      withOpacitySafe(surfaceColor, 0.3),
-      Colors.white,
-    );
+    return Color.alphaBlend(withOpacitySafe(surfaceColor, 0.3), Colors.white);
   }
 
   /// 获取搜索框背景色（比卡片更浅）

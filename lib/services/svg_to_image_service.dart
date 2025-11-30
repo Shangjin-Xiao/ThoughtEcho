@@ -36,14 +36,20 @@ class SvgToImageService {
       }
 
       if (width > 4000 || height > 4000) {
-        AppLogger.w('图片尺寸过大: ${width}x$height，可能导致内存问题',
-            source: 'SvgToImageService');
+        AppLogger.w(
+          '图片尺寸过大: ${width}x$height，可能导致内存问题',
+          source: 'SvgToImageService',
+        );
       }
 
       // 生成缓存键
       final cacheKey = useCache
           ? ImageCacheService.generateCacheKey(
-              svgContent, width, height, format)
+              svgContent,
+              width,
+              height,
+              format,
+            )
           : null;
 
       // 尝试从缓存获取
@@ -64,8 +70,11 @@ class SvgToImageService {
       }
 
       // 标准化SVG内容，确保正确的viewBox和尺寸属性
-      final normalizedSvg =
-          _normalizeSvgForRendering(svgContent, width, height);
+      final normalizedSvg = _normalizeSvgForRendering(
+        svgContent,
+        width,
+        height,
+      );
 
       // 优先使用真实Flutter渲染（与预览完全一致）
       final imageBytes = await _renderSvgToBytes(
@@ -120,11 +129,18 @@ class SvgToImageService {
         onProgress?.call(i + 1, svgContents.length);
       } catch (e) {
         // 使用统一日志服务记录批量转换错误
-        AppLogger.w('批量转换第${i + 1}个SVG失败: $e',
-            error: e, source: 'SvgToImageService');
+        AppLogger.w(
+          '批量转换第${i + 1}个SVG失败: $e',
+          error: e,
+          source: 'SvgToImageService',
+        );
         // 添加错误图片
-        final errorImage =
-            await _generateErrorImage(width, height, format, e.toString());
+        final errorImage = await _generateErrorImage(
+          width,
+          height,
+          format,
+          e.toString(),
+        );
         results.add(errorImage);
       }
     }
@@ -160,7 +176,10 @@ class SvgToImageService {
 
   /// 标准化SVG内容以确保正确渲染
   static String _normalizeSvgForRendering(
-      String svgContent, int width, int height) {
+    String svgContent,
+    int width,
+    int height,
+  ) {
     String normalized = svgContent.trim();
 
     // 确保SVG有xmlns命名空间
@@ -180,10 +199,12 @@ class SvgToImageService {
     }
 
     // 提取SVG内在尺寸
-    final widthMatch =
-        RegExp(r'width="(\d+(?:\.\d+)?)"').firstMatch(normalized);
-    final heightMatch =
-        RegExp(r'height="(\d+(?:\.\d+)?)"').firstMatch(normalized);
+    final widthMatch = RegExp(
+      r'width="(\d+(?:\.\d+)?)"',
+    ).firstMatch(normalized);
+    final heightMatch = RegExp(
+      r'height="(\d+(?:\.\d+)?)"',
+    ).firstMatch(normalized);
 
     String svgWidth;
     String svgHeight;
@@ -237,8 +258,9 @@ class SvgToImageService {
     if (buildContext != null) {
       try {
         AppLogger.d(
-            '使用Flutter真实渲染（与预览一致）: ${width}x$height, 缩放: $scaleFactor, 模式: $renderMode',
-            source: 'SvgToImageService');
+          '使用Flutter真实渲染（与预览一致）: ${width}x$height, 缩放: $scaleFactor, 模式: $renderMode',
+          source: 'SvgToImageService',
+        );
         final result = await SvgOffscreenRenderer.instance.renderSvgString(
           svgContent,
           context: buildContext,
@@ -249,16 +271,23 @@ class SvgToImageService {
           mode: renderMode,
           format: format,
         );
-        AppLogger.i('Flutter真实渲染成功，图片大小: ${result.length} bytes',
-            source: 'SvgToImageService');
+        AppLogger.i(
+          'Flutter真实渲染成功，图片大小: ${result.length} bytes',
+          source: 'SvgToImageService',
+        );
         return result;
       } catch (e) {
-        AppLogger.w('Flutter真实渲染失败，尝试备用方案: $e',
-            error: e, source: 'SvgToImageService');
+        AppLogger.w(
+          'Flutter真实渲染失败，尝试备用方案: $e',
+          error: e,
+          source: 'SvgToImageService',
+        );
       }
     } else {
-      AppLogger.w('缺少BuildContext，无法使用真实渲染，将使用备用方案',
-          source: 'SvgToImageService');
+      AppLogger.w(
+        '缺少BuildContext，无法使用真实渲染，将使用备用方案',
+        source: 'SvgToImageService',
+      );
     }
 
     // 备用方案：使用flutter_svg直接渲染
@@ -274,8 +303,11 @@ class SvgToImageService {
         renderMode,
       );
     } catch (e) {
-      AppLogger.w('flutter_svg渲染失败，使用最终回退: $e',
-          error: e, source: 'SvgToImageService');
+      AppLogger.w(
+        'flutter_svg渲染失败，使用最终回退: $e',
+        error: e,
+        source: 'SvgToImageService',
+      );
       // 最终回退方案
       return await _renderFallbackImage(
         svgContent,
@@ -335,7 +367,11 @@ class SvgToImageService {
 
   /// 改进的SVG内容绘制
   static Future<void> _drawSvgContentImproved(
-      Canvas canvas, String svgContent, int width, int height) async {
+    Canvas canvas,
+    String svgContent,
+    int width,
+    int height,
+  ) async {
     // 解析所有渐变定义
     final gradients = _parseAllGradients(svgContent);
 
@@ -367,14 +403,18 @@ class SvgToImageService {
       if (id.isEmpty) continue;
 
       // 解析渐变方向
-      final x1 =
-          _parsePercentage(RegExp(r'x1="([^"]*)"').firstMatch(tag)?.group(1));
-      final y1 =
-          _parsePercentage(RegExp(r'y1="([^"]*)"').firstMatch(tag)?.group(1));
-      final x2 =
-          _parsePercentage(RegExp(r'x2="([^"]*)"').firstMatch(tag)?.group(1));
-      final y2 =
-          _parsePercentage(RegExp(r'y2="([^"]*)"').firstMatch(tag)?.group(1));
+      final x1 = _parsePercentage(
+        RegExp(r'x1="([^"]*)"').firstMatch(tag)?.group(1),
+      );
+      final y1 = _parsePercentage(
+        RegExp(r'y1="([^"]*)"').firstMatch(tag)?.group(1),
+      );
+      final x2 = _parsePercentage(
+        RegExp(r'x2="([^"]*)"').firstMatch(tag)?.group(1),
+      );
+      final y2 = _parsePercentage(
+        RegExp(r'y2="([^"]*)"').firstMatch(tag)?.group(1),
+      );
 
       // 解析颜色停靠点
       final stops = <double>[];
@@ -462,8 +502,13 @@ class SvgToImageService {
   }
 
   /// 绘制背景矩形
-  static void _drawBackgroundRect(Canvas canvas, String svgContent, int width,
-      int height, Map<String, Gradient> gradients) {
+  static void _drawBackgroundRect(
+    Canvas canvas,
+    String svgContent,
+    int width,
+    int height,
+    Map<String, Gradient> gradients,
+  ) {
     // 查找第一个覆盖整个画布的矩形
     final rectRegex = RegExp(
       r'<rect[^>]*width="([^"]*)"[^>]*height="([^"]*)"[^>]*fill="([^"]*)"[^>]*(?:rx="([^"]*)")?',
@@ -502,8 +547,13 @@ class SvgToImageService {
   }
 
   /// 绘制所有形状
-  static void _drawAllShapes(Canvas canvas, String svgContent, int width,
-      int height, Map<String, Gradient> gradients) {
+  static void _drawAllShapes(
+    Canvas canvas,
+    String svgContent,
+    int width,
+    int height,
+    Map<String, Gradient> gradients,
+  ) {
     // 绘制圆形
     final circleRegex = RegExp(
       r'<circle[^>]*cx="([^"]*)"[^>]*cy="([^"]*)"[^>]*r="([^"]*)"[^>]*(?:fill="([^"]*)")?[^>]*(?:fill-opacity="([^"]*)")?',
@@ -523,7 +573,8 @@ class SvgToImageService {
           final gradient = gradients[gradientId];
           if (gradient != null) {
             paint.shader = gradient.createShader(
-                Rect.fromCircle(center: Offset(cx, cy), radius: r));
+              Rect.fromCircle(center: Offset(cx, cy), radius: r),
+            );
           }
         } else {
           paint.color = _parseColor(fill).withValues(alpha: opacity);
@@ -555,7 +606,9 @@ class SvgToImageService {
 
         final rect = rx > 0
             ? RRect.fromRectAndRadius(
-                Rect.fromLTWH(x, y, w, h), Radius.circular(rx))
+                Rect.fromLTWH(x, y, w, h),
+                Radius.circular(rx),
+              )
             : null;
 
         final paint = Paint();
@@ -582,7 +635,11 @@ class SvgToImageService {
 
   /// 绘制所有文本
   static void _drawAllText(
-      Canvas canvas, String svgContent, int width, int height) {
+    Canvas canvas,
+    String svgContent,
+    int width,
+    int height,
+  ) {
     final textRegex = RegExp(
       r'<text[^>]*x="([^"]*)"[^>]*y="([^"]*)"[^>]*(?:text-anchor="([^"]*)")?[^>]*(?:fill="([^"]*)")?[^>]*(?:font-size="([^"]*)")?[^>]*(?:fill-opacity="([^"]*)")?[^>]*>([^<]*)</text>',
     );
@@ -651,8 +708,10 @@ class SvgToImageService {
 
     // 设置背景色
     final backgroundPaint = Paint()..color = backgroundColor;
-    canvas.drawRect(Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
-        backgroundPaint);
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
+      backgroundPaint,
+    );
 
     // 绘制简化内容
     _drawPlaceholderContent(canvas, width, height, svgContent);
@@ -699,7 +758,11 @@ class SvgToImageService {
 
   /// 绘制占位符内容
   static void _drawPlaceholderContent(
-      Canvas canvas, int width, int height, String svgContent) {
+    Canvas canvas,
+    int width,
+    int height,
+    String svgContent,
+  ) {
     // 绘制边框
     final borderPaint = Paint()
       ..color = Colors.grey[300]!
@@ -748,8 +811,10 @@ class SvgToImageService {
 
     // 绘制红色背景
     final backgroundPaint = Paint()..color = const Color(0xFFFFEBEE);
-    canvas.drawRect(Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
-        backgroundPaint);
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
+      backgroundPaint,
+    );
 
     // 绘制边框
     final borderPaint = Paint()
@@ -772,9 +837,15 @@ class SvgToImageService {
       ..style = PaintingStyle.stroke;
     final center = Offset(width / 2, height / 3);
     canvas.drawLine(
-        center + const Offset(-15, -15), center + const Offset(15, 15), xPaint);
+      center + const Offset(-15, -15),
+      center + const Offset(15, 15),
+      xPaint,
+    );
     canvas.drawLine(
-        center + const Offset(15, -15), center + const Offset(-15, 15), xPaint);
+      center + const Offset(15, -15),
+      center + const Offset(-15, 15),
+      xPaint,
+    );
 
     // 绘制错误文本
     final textPainter = TextPainter(
@@ -792,10 +863,7 @@ class SvgToImageService {
             text: errorMessage.length > 100
                 ? '${errorMessage.substring(0, 100)}...'
                 : errorMessage,
-            style: const TextStyle(
-              color: Color(0xFF666666),
-              fontSize: 12,
-            ),
+            style: const TextStyle(color: Color(0xFF666666), fontSize: 12),
           ),
         ],
       ),

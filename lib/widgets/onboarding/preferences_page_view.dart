@@ -36,7 +36,8 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
       vsync: this,
     );
 
-    final preferencesCount = OnboardingConfig.preferences.length;
+    // Fixed count of 4 preferences (language, hitokoto types, location, start page)
+    const preferencesCount = 4;
     _itemAnimations = List.generate(preferencesCount, (index) {
       // Calculate intervals that ensure end values don't exceed 1.0
       final startDelay = index * 0.1;
@@ -100,8 +101,10 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
 
           const SizedBox(height: 32),
 
-          // 偏好设置列表
-          ...OnboardingConfig.preferences.asMap().entries.map((entry) {
+          // 偏好设置列表（使用动态国际化版本）
+          ...OnboardingConfig.getPreferences(context).asMap().entries.map((
+            entry,
+          ) {
             final index = entry.key;
             final preference = entry.value;
 
@@ -142,15 +145,19 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
                 padding: const EdgeInsets.all(16.0),
                 child: Row(
                   children: [
-                    Icon(Icons.tune,
-                        color: theme.colorScheme.primary, size: 22),
+                    Icon(
+                      Icons.tune,
+                      color: theme.colorScheme.primary,
+                      size: 22,
+                    ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        '更多个性化选项和AI功能可在「设置 > 偏好设置」中随时调整。',
+                        AppLocalizations.of(context).prefMoreOptionsHint,
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurface
-                              .withValues(alpha: 0.7),
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.7,
+                          ),
                         ),
                       ),
                     ),
@@ -182,7 +189,8 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
     OnboardingPreference<dynamic> preference,
     ThemeData theme,
   ) {
-    final value = widget.state.getPreference<bool>(preference.key) ??
+    final value =
+        widget.state.getPreference<bool>(preference.key) ??
         preference.defaultValue as bool;
 
     return Card(
@@ -198,8 +206,8 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
             );
 
             // 请求位置权限
-            final hasPermission =
-                await locationService.requestLocationPermission();
+            final hasPermission = await locationService
+                .requestLocationPermission();
             if (!hasPermission) {
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -220,9 +228,13 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
                   context: context,
                   builder: (context) => AlertDialog(
                     title: Text(
-                        AppLocalizations.of(context).locationServiceNotEnabled),
-                    content: Text(AppLocalizations.of(context)
-                        .pleaseEnableLocationInSettings),
+                      AppLocalizations.of(context).locationServiceNotEnabled,
+                    ),
+                    content: Text(
+                      AppLocalizations.of(
+                        context,
+                      ).pleaseEnableLocationInSettings,
+                    ),
                     actions: [
                       TextButton(
                         onPressed: () => Navigator.pop(context),
@@ -248,7 +260,8 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                      AppLocalizations.of(context).locationServiceEnabledMsg),
+                    AppLocalizations.of(context).locationServiceEnabledMsg,
+                  ),
                   duration: const Duration(seconds: 2),
                 ),
               );
@@ -286,12 +299,14 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
 
     // 根据默认值类型判断是 int 还是 String
     if (preference.defaultValue is int) {
-      final value = widget.state.getPreference<int>(preference.key) ??
+      final value =
+          widget.state.getPreference<int>(preference.key) ??
           preference.defaultValue as int;
       return _buildRadioPreferenceInt(preference, theme, value, options);
     } else {
       // String 类型的 radio（例如语言选择）
-      final value = widget.state.getPreference<String>(preference.key) ??
+      final value =
+          widget.state.getPreference<String>(preference.key) ??
           preference.defaultValue as String;
       return _buildRadioPreferenceString(preference, theme, value, options);
     }
@@ -423,7 +438,8 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
     OnboardingPreference<dynamic> preference,
     ThemeData theme,
   ) {
-    final value = widget.state.getPreference<String>(preference.key) ??
+    final value =
+        widget.state.getPreference<String>(preference.key) ??
         preference.defaultValue as String;
     final selectedValues = value.split(',').where((v) => v.isNotEmpty).toSet();
     final options = preference.options ?? [];
@@ -456,8 +472,9 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () {
-                      final allValues =
-                          options.map((o) => o.value as String).join(',');
+                      final allValues = options
+                          .map((o) => o.value as String)
+                          .join(',');
                       widget.onPreferenceChanged(preference.key, allValues);
                     },
                     icon: const Icon(Icons.select_all, size: 16),
@@ -500,18 +517,14 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
                   label: Text(option.label),
                   selected: isSelected,
                   onSelected: (selected) {
-                    final newSelectedValues = Set<String>.from(
-                      selectedValues,
-                    );
+                    final newSelectedValues = Set<String>.from(selectedValues);
                     if (selected) {
                       newSelectedValues.add(option.value as String);
                     } else {
                       newSelectedValues.remove(option.value as String);
                       // 确保至少有一个选项被选中
                       if (newSelectedValues.isEmpty && options.isNotEmpty) {
-                        newSelectedValues.add(
-                          options.first.value as String,
-                        );
+                        newSelectedValues.add(options.first.value as String);
                       }
                     }
                     widget.onPreferenceChanged(
@@ -523,14 +536,16 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
                   checkmarkColor: theme.colorScheme.primary,
                   backgroundColor: isSelected
                       ? theme.colorScheme.primaryContainer
-                      : theme.colorScheme.surfaceContainerHighest
-                          .withValues(alpha: 0.8),
+                      : theme.colorScheme.surfaceContainerHighest.withValues(
+                          alpha: 0.8,
+                        ),
                   labelStyle: TextStyle(
                     color: isSelected
                         ? theme.colorScheme.onPrimaryContainer
                         : theme.colorScheme.onSurface,
-                    fontWeight:
-                        isSelected ? FontWeight.w600 : FontWeight.normal,
+                    fontWeight: isSelected
+                        ? FontWeight.w600
+                        : FontWeight.normal,
                   ),
                   side: BorderSide(
                     color: isSelected

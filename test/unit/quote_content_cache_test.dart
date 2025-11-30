@@ -25,10 +25,7 @@ class _StubSettingsService extends SettingsService {
   }
 }
 
-Quote _buildRichQuote({
-  required String id,
-  required String content,
-}) {
+Quote _buildRichQuote({required String id, required String content}) {
   final delta = jsonEncode([
     {'insert': content},
     {'insert': '\n'},
@@ -80,16 +77,12 @@ Future<void> _pumpQuoteContent(
 
 Map<String, dynamic> _controllerStats() {
   final stats = QuoteContent.debugCacheStats();
-  return Map<String, dynamic>.from(
-    stats['controller'] as Map<String, dynamic>,
-  );
+  return Map<String, dynamic>.from(stats['controller'] as Map<String, dynamic>);
 }
 
 Map<String, dynamic> _documentStats() {
   final stats = QuoteContent.debugCacheStats();
-  return Map<String, dynamic>.from(
-    stats['document'] as Map<String, dynamic>,
-  );
+  return Map<String, dynamic>.from(stats['document'] as Map<String, dynamic>);
 }
 
 void main() {
@@ -109,8 +102,9 @@ void main() {
     QuoteContent.resetCaches();
   });
 
-  testWidgets('reuses controller instances for identical rich text content',
-      (tester) async {
+  testWidgets('reuses controller instances for identical rich text content', (
+    tester,
+  ) async {
     final quote = _buildRichQuote(id: 'q1', content: 'Hello world');
 
     await _pumpQuoteContent(
@@ -147,8 +141,9 @@ void main() {
     );
   });
 
-  testWidgets('document cache reused across identical delta content',
-      (tester) async {
+  testWidgets('document cache reused across identical delta content', (
+    tester,
+  ) async {
     final quoteA = _buildRichQuote(id: 'docA', content: 'Shared document');
     final quoteB = _buildRichQuote(id: 'docB', content: 'Shared document');
 
@@ -169,16 +164,26 @@ void main() {
     final documentStats = _documentStats();
     final controllerStats = _controllerStats();
 
-    expect(controllerStats['createCount'], 2,
-        reason: 'controller stats: $controllerStats');
-    expect(documentStats['hitCount'], greaterThan(0),
-        reason: 'document stats: $documentStats');
-    expect(documentStats['cacheSize'], 1,
-        reason: 'document stats: $documentStats');
+    expect(
+      controllerStats['createCount'],
+      2,
+      reason: 'controller stats: $controllerStats',
+    );
+    expect(
+      documentStats['hitCount'],
+      greaterThan(0),
+      reason: 'document stats: $documentStats',
+    );
+    expect(
+      documentStats['cacheSize'],
+      1,
+      reason: 'document stats: $documentStats',
+    );
   });
 
-  testWidgets('creates distinct controller variants when view changes',
-      (tester) async {
+  testWidgets('creates distinct controller variants when view changes', (
+    tester,
+  ) async {
     final quote = _buildRichQuote(id: 'q2', content: 'Variant test');
 
     await _pumpQuoteContent(
@@ -200,8 +205,11 @@ void main() {
 
     expect(controllerStats['createCount'], 2);
     expect(controllerStats['hitCount'], 0);
-    expect(documentStats['cacheSize'], 1,
-        reason: 'document stats: $documentStats');
+    expect(
+      documentStats['cacheSize'],
+      1,
+      reason: 'document stats: $documentStats',
+    );
   });
 
   testWidgets('changing content invalidates cached controller', (tester) async {
@@ -227,7 +235,10 @@ void main() {
 
     expect(controllerStats['createCount'], 2);
     expect(controllerStats['hitCount'], 0);
-    expect(documentStats['hitCount'], 0,
-        reason: 'document stats: $documentStats');
+    expect(
+      documentStats['hitCount'],
+      0,
+      reason: 'document stats: $documentStats',
+    );
   });
 }

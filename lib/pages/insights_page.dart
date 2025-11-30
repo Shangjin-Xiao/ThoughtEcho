@@ -28,7 +28,7 @@ class InsightsPage extends StatefulWidget {
 class _InsightsPageState extends State<InsightsPage> {
   bool _isLoading = false;
   Stream<String>?
-      _insightsStream; // Used only to provide stream to StreamBuilder for connection state
+  _insightsStream; // Used only to provide stream to StreamBuilder for connection state
   bool _isGenerating = false; // 新增状态变量表示是否正在生成
   bool _showAnalysisSelection = true; // 控制显示分析选择还是结果
   final TextEditingController _customPromptController = TextEditingController();
@@ -37,7 +37,7 @@ class _InsightsPageState extends State<InsightsPage> {
   String _accumulatedInsightsText =
       ''; // Added state variable for accumulated insights text
   StreamSubscription<String>?
-      _insightsSubscription; // Stream subscription for manual accumulation
+  _insightsSubscription; // Stream subscription for manual accumulation
 
   // 分析类型
   List<Map<String, dynamic>> _getAnalysisTypes(AppLocalizations l10n) {
@@ -80,17 +80,17 @@ class _InsightsPageState extends State<InsightsPage> {
       {
         'title': l10n.analysisStyleFriendly,
         'description': l10n.analysisStyleFriendlyDesc,
-        'style': 'friendly'
+        'style': 'friendly',
       },
       {
         'title': l10n.analysisStyleHumorous,
         'description': l10n.analysisStyleHumorousDesc,
-        'style': 'humorous'
+        'style': 'humorous',
       },
       {
         'title': l10n.analysisStyleLiterary,
         'description': l10n.analysisStyleLiteraryDesc,
-        'style': 'literary'
+        'style': 'literary',
       },
     ];
   }
@@ -163,12 +163,14 @@ class _InsightsPageState extends State<InsightsPage> {
         quoteCount: 0,
       );
 
-      final savedAnalysis =
-          await _aiAnalysisDatabaseService!.saveAnalysis(testAnalysis);
+      final savedAnalysis = await _aiAnalysisDatabaseService!.saveAnalysis(
+        testAnalysis,
+      );
       logDebug('Test save successful, ID: ${savedAnalysis.id}');
 
-      final verifyAnalysis =
-          await _aiAnalysisDatabaseService!.getAnalysisById(savedAnalysis.id!);
+      final verifyAnalysis = await _aiAnalysisDatabaseService!.getAnalysisById(
+        savedAnalysis.id!,
+      );
       if (verifyAnalysis != null) {
         logDebug('Test verification successful');
         await _aiAnalysisDatabaseService!.deleteAnalysis(savedAnalysis.id!);
@@ -198,11 +200,13 @@ class _InsightsPageState extends State<InsightsPage> {
 
     try {
       logDebug(
-          'Starting to save AI analysis, content length: ${content.length}');
+        'Starting to save AI analysis, content length: ${content.length}',
+      );
 
       if (_aiAnalysisDatabaseService == null) {
         logDebug(
-            'AIAnalysisDatabaseService not initialized, trying to re-fetch');
+          'AIAnalysisDatabaseService not initialized, trying to re-fetch',
+        );
         _aiAnalysisDatabaseService = Provider.of<AIAnalysisDatabaseService>(
           context,
           listen: false,
@@ -223,7 +227,8 @@ class _InsightsPageState extends State<InsightsPage> {
       );
 
       logDebug(
-          'Creating AI analysis object: ${analysis.title}, type: ${analysis.analysisType}');
+        'Creating AI analysis object: ${analysis.title}, type: ${analysis.analysisType}',
+      );
 
       if (_aiAnalysisDatabaseService == null) {
         throw Exception('AI analysis database service not initialized');
@@ -237,15 +242,18 @@ class _InsightsPageState extends State<InsightsPage> {
         throw Exception('Database connection failed: $dbError');
       }
 
-      final savedAnalysis =
-          await _aiAnalysisDatabaseService!.saveAnalysis(analysis);
+      final savedAnalysis = await _aiAnalysisDatabaseService!.saveAnalysis(
+        analysis,
+      );
       logDebug('AI analysis saved successfully, ID: ${savedAnalysis.id}');
 
-      final verifyAnalysis =
-          await _aiAnalysisDatabaseService!.getAnalysisById(savedAnalysis.id!);
+      final verifyAnalysis = await _aiAnalysisDatabaseService!.getAnalysisById(
+        savedAnalysis.id!,
+      );
       if (verifyAnalysis != null) {
         logDebug(
-            'Save verification successful, title: ${verifyAnalysis.title}');
+          'Save verification successful, title: ${verifyAnalysis.title}',
+        );
       } else {
         logDebug('Save verification failed, could not find the saved analysis');
       }
@@ -299,10 +307,7 @@ class _InsightsPageState extends State<InsightsPage> {
 
       // 创建一个Quote对象
       final quote = Quote(
-        content: l10n.analysisNoteTitle(
-          content,
-          _getAnalysisTitle(),
-        ),
+        content: l10n.analysisNoteTitle(content, _getAnalysisTitle()),
         date: DateTime.now().toIso8601String(),
         source: l10n.aiAnalysisSource,
         sourceAuthor: l10n.thoughtechoAI,
@@ -315,12 +320,12 @@ class _InsightsPageState extends State<InsightsPage> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(
-        content: Text(l10n.savedAsNote),
-        duration: AppConstants.snackBarDurationImportant,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.savedAsNote),
+          duration: AppConstants.snackBarDurationImportant,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -344,17 +349,15 @@ class _InsightsPageState extends State<InsightsPage> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(
-        content: Text(l10n.analysisCopied),
-        duration: AppConstants.snackBarDurationNormal,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.analysisCopied),
+          duration: AppConstants.snackBarDurationNormal,
+        ),
+      );
 
       // 使用share_plus分享
-      await SharePlus.instance.share(
-        ShareParams(text: content),
-      );
+      await SharePlus.instance.share(ShareParams(text: content));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -398,11 +401,12 @@ class _InsightsPageState extends State<InsightsPage> {
       if (!mounted) return;
 
       if (quotes.isEmpty) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
             content: Text(l10n.noNotesFound),
-            duration: AppConstants.snackBarDurationNormal));
+            duration: AppConstants.snackBarDurationNormal,
+          ),
+        );
         setState(() {
           _isLoading = false;
           _isGenerating = false;
@@ -417,8 +421,8 @@ class _InsightsPageState extends State<InsightsPage> {
         analysisStyle: _selectedAnalysisStyle,
         customPrompt:
             _showCustomPrompt && _customPromptController.text.isNotEmpty
-                ? _customPromptController.text
-                : null,
+            ? _customPromptController.text
+            : null,
       );
 
       if (!mounted) {
@@ -630,9 +634,7 @@ class _InsightsPageState extends State<InsightsPage> {
           ),
         ),
         // 结果内容
-        Expanded(
-          child: _buildAnalysisResultTab(theme),
-        ),
+        Expanded(child: _buildAnalysisResultTab(theme)),
       ],
     );
   }
@@ -648,7 +650,6 @@ class _InsightsPageState extends State<InsightsPage> {
           // _buildWeeklyFavoritesSection(theme),
 
           // const SizedBox(height: 24),
-
           Text(
             l10n.selectAnalysisMethod,
             style: theme.textTheme.titleMedium?.copyWith(
@@ -658,8 +659,9 @@ class _InsightsPageState extends State<InsightsPage> {
           const SizedBox(height: 16),
 
           // 分析类型卡片
-          ..._getAnalysisTypes(AppLocalizations.of(context))
-              .map((type) => _buildAnalysisTypeCard(theme, type)),
+          ..._getAnalysisTypes(
+            AppLocalizations.of(context),
+          ).map((type) => _buildAnalysisTypeCard(theme, type)),
 
           const SizedBox(height: 24),
 
@@ -677,8 +679,9 @@ class _InsightsPageState extends State<InsightsPage> {
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
-              children:
-                  _getAnalysisStyles(AppLocalizations.of(context)).map((style) {
+              children: _getAnalysisStyles(AppLocalizations.of(context)).map((
+                style,
+              ) {
                 final isSelected = _selectedAnalysisStyle == style['style'];
                 final String key = style['style'];
                 return ChoiceChip(
@@ -696,8 +699,9 @@ class _InsightsPageState extends State<InsightsPage> {
                     color: isSelected
                         ? theme.colorScheme.primary
                         : theme.colorScheme.onSurface,
-                    fontWeight:
-                        isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
                   ),
                   tooltip: style['description'],
                 );
@@ -755,10 +759,7 @@ class _InsightsPageState extends State<InsightsPage> {
           Card(
             margin: const EdgeInsets.only(bottom: 16),
             child: ListTile(
-              leading: Icon(
-                Icons.history,
-                color: theme.primaryColor,
-              ),
+              leading: Icon(Icons.history, color: theme.primaryColor),
               title: Text(l10n.analysisHistoryRecord),
               subtitle: Text(l10n.viewPreviousAnalysis),
               trailing: const Icon(Icons.chevron_right),
@@ -848,7 +849,7 @@ class _InsightsPageState extends State<InsightsPage> {
     );
   }
 
-// 收藏功能已移至周期报告页，保持页面专注AI分析
+  // 收藏功能已移至周期报告页，保持页面专注AI分析
 
   Widget _buildAnalysisTypeCard(ThemeData theme, Map<String, dynamic> type) {
     final isSelected = _selectedAnalysisType == type['prompt'];
@@ -894,8 +895,9 @@ class _InsightsPageState extends State<InsightsPage> {
                     Text(
                       type['description'],
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.textTheme.bodySmall?.color
-                            ?.withValues(alpha: 0.7),
+                        color: theme.textTheme.bodySmall?.color?.withValues(
+                          alpha: 0.7,
+                        ),
                       ),
                     ),
                   ],

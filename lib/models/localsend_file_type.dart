@@ -48,13 +48,27 @@ extension FileTypeExtension on FileType {
 
     if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'].contains(ext)) {
       return FileType.image;
-    } else if (['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm']
-        .contains(ext)) {
+    } else if ([
+      'mp4',
+      'avi',
+      'mov',
+      'wmv',
+      'flv',
+      'mkv',
+      'webm',
+    ].contains(ext)) {
       return FileType.video;
     } else if (['mp3', 'wav', 'flac', 'aac', 'ogg', 'm4a'].contains(ext)) {
       return FileType.audio;
-    } else if (['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx']
-        .contains(ext)) {
+    } else if ([
+      'pdf',
+      'doc',
+      'docx',
+      'xls',
+      'xlsx',
+      'ppt',
+      'pptx',
+    ].contains(ext)) {
       return FileType.document;
     } else if (['txt', 'md', 'json', 'xml', 'csv'].contains(ext)) {
       return FileType.text;

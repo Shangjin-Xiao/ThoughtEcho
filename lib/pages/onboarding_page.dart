@@ -77,8 +77,11 @@ class _OnboardingPageState extends State<OnboardingPage>
       try {
         servicesInitializedNotifier = context.read<ValueNotifier<bool>>();
       } catch (e) {
-        logError('无法获取servicesInitializedNotifier: $e',
-            error: e, source: 'OnboardingPage');
+        logError(
+          '无法获取servicesInitializedNotifier: $e',
+          error: e,
+          source: 'OnboardingPage',
+        );
         // 创建临时notifier以继续流程
         servicesInitializedNotifier = ValueNotifier<bool>(false);
       }
@@ -92,8 +95,12 @@ class _OnboardingPageState extends State<OnboardingPage>
       try {
         controller.initialize(context);
       } catch (e, stackTrace) {
-        logError('OnboardingController初始化失败',
-            error: e, stackTrace: stackTrace, source: 'OnboardingPage');
+        logError(
+          'OnboardingController初始化失败',
+          error: e,
+          stackTrace: stackTrace,
+          source: 'OnboardingPage',
+        );
         throw Exception('控制器初始化失败: $e');
       }
 
@@ -104,10 +111,7 @@ class _OnboardingPageState extends State<OnboardingPage>
       _loadingAnimationController = loadingController;
 
       _fadeInAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-        CurvedAnimation(
-          parent: loadingController,
-          curve: Curves.easeOut,
-        ),
+        CurvedAnimation(parent: loadingController, curve: Curves.easeOut),
       );
 
       // 如果是更新后显示，直接处理迁移
@@ -128,8 +132,12 @@ class _OnboardingPageState extends State<OnboardingPage>
         _loadingAnimationController?.forward();
       }
     } catch (e, stackTrace) {
-      logError('初始化引导失败',
-          error: e, stackTrace: stackTrace, source: 'OnboardingPage');
+      logError(
+        '初始化引导失败',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'OnboardingPage',
+      );
       if (mounted) {
         setState(() {
           _errorMessage = '初始化失败，请重试';
@@ -165,8 +173,11 @@ class _OnboardingPageState extends State<OnboardingPage>
           await aiAnalysisDbService.init();
           logInfo('AI分析数据库初始化完成', source: 'OnboardingPage');
         } catch (aiDbError) {
-          logError('AI分析数据库初始化失败: $aiDbError',
-              error: aiDbError, source: 'OnboardingPage');
+          logError(
+            'AI分析数据库初始化失败: $aiDbError',
+            error: aiDbError,
+            source: 'OnboardingPage',
+          );
         }
 
         if (!mounted) return;
@@ -265,8 +276,10 @@ class _OnboardingPageState extends State<OnboardingPage>
                 color: theme.colorScheme.error,
               ),
               const SizedBox(height: 20),
-              Text(AppLocalizations.of(context).onboardingError,
-                  style: theme.textTheme.headlineSmall),
+              Text(
+                AppLocalizations.of(context).onboardingError,
+                style: theme.textTheme.headlineSmall,
+              ),
               const SizedBox(height: 12),
               Text(
                 _errorMessage!,
@@ -276,8 +289,9 @@ class _OnboardingPageState extends State<OnboardingPage>
               const SizedBox(height: 32),
               FilledButton(
                 onPressed: _navigateToHome,
-                child:
-                    Text(AppLocalizations.of(context).onboardingContinueUsing),
+                child: Text(
+                  AppLocalizations.of(context).onboardingContinueUsing,
+                ),
               ),
             ],
           ),
@@ -333,7 +347,8 @@ class _OnboardingPageState extends State<OnboardingPage>
                       FilledButton(
                         onPressed: _navigateToHome,
                         child: Text(
-                            AppLocalizations.of(context).onboardingEnterApp),
+                          AppLocalizations.of(context).onboardingEnterApp,
+                        ),
                       ),
                   ],
                 ),
@@ -399,7 +414,10 @@ class _OnboardingPageState extends State<OnboardingPage>
   /// 构建页面内容
   Widget _buildPageContent(int pageIndex, OnboardingController controller) {
     final state = controller.state;
-    final pageData = OnboardingConfig.getPageData(pageIndex);
+    final pageData = OnboardingConfig.getPageDataWithContext(
+      context,
+      pageIndex,
+    );
 
     switch (pageData.type) {
       case OnboardingPageType.welcome:
@@ -423,13 +441,17 @@ class _OnboardingPageState extends State<OnboardingPage>
 
     return Consumer<OnboardingController>(
       builder: (context, controller, child) {
-        final hitokotoPreference = OnboardingConfig.preferences
-            .firstWhere((p) => p.key == 'hitokotoTypes');
+        final preferences = OnboardingConfig.getPreferences(context);
+        final hitokotoPreference = preferences.firstWhere(
+          (p) => p.key == 'hitokotoTypes',
+        );
         final currentValue =
             controller.state.getPreference<String>('hitokotoTypes') ??
-                hitokotoPreference.defaultValue as String;
-        final selectedValues =
-            currentValue.split(',').where((v) => v.isNotEmpty).toSet();
+            hitokotoPreference.defaultValue as String;
+        final selectedValues = currentValue
+            .split(',')
+            .where((v) => v.isNotEmpty)
+            .toSet();
         final options = hitokotoPreference.options ?? [];
 
         return SingleChildScrollView(
@@ -465,7 +487,9 @@ class _OnboardingPageState extends State<OnboardingPage>
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  '已选择 ${selectedValues.length} 种类型',
+                                  AppLocalizations.of(
+                                    context,
+                                  ).selectedCount(selectedValues.length),
                                   style: theme.textTheme.bodyMedium?.copyWith(
                                     color: theme.colorScheme.onSurface
                                         .withValues(alpha: 0.7),
@@ -480,8 +504,9 @@ class _OnboardingPageState extends State<OnboardingPage>
                       Text(
                         hitokotoPreference.description,
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurface
-                              .withValues(alpha: 0.6),
+                          color: theme.colorScheme.onSurface.withValues(
+                            alpha: 0.6,
+                          ),
                           height: 1.5,
                         ),
                       ),
@@ -497,14 +522,18 @@ class _OnboardingPageState extends State<OnboardingPage>
                                     .map((o) => o.value as String)
                                     .join(',');
                                 controller.updatePreference(
-                                    'hitokotoTypes', allValues);
+                                  'hitokotoTypes',
+                                  allValues,
+                                );
                               },
                               icon: const Icon(Icons.select_all, size: 16),
                               label: Text(
-                                  AppLocalizations.of(context).prefSelectAll),
+                                AppLocalizations.of(context).prefSelectAll,
+                              ),
                               style: OutlinedButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8,
+                                ),
                               ),
                             ),
                           ),
@@ -517,14 +546,18 @@ class _OnboardingPageState extends State<OnboardingPage>
                                     ? options.first.value as String
                                     : 'a';
                                 controller.updatePreference(
-                                    'hitokotoTypes', firstValue);
+                                  'hitokotoTypes',
+                                  firstValue,
+                                );
                               },
                               icon: const Icon(Icons.clear_all, size: 16),
                               label: Text(
-                                  AppLocalizations.of(context).prefClearAll),
+                                AppLocalizations.of(context).prefClearAll,
+                              ),
                               style: OutlinedButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 8,
+                                ),
                               ),
                             ),
                           ),
@@ -536,28 +569,34 @@ class _OnboardingPageState extends State<OnboardingPage>
                         spacing: 8,
                         runSpacing: 8,
                         children: options.map((option) {
-                          final isSelected =
-                              selectedValues.contains(option.value as String);
+                          final isSelected = selectedValues.contains(
+                            option.value as String,
+                          );
                           return FilterChip(
                             label: Text(option.label),
                             selected: isSelected,
                             onSelected: (selected) {
-                              final newSelectedValues =
-                                  Set<String>.from(selectedValues);
+                              final newSelectedValues = Set<String>.from(
+                                selectedValues,
+                              );
                               if (selected) {
                                 newSelectedValues.add(option.value as String);
                               } else {
-                                newSelectedValues
-                                    .remove(option.value as String);
+                                newSelectedValues.remove(
+                                  option.value as String,
+                                );
                                 // 确保至少有一个选项被选中
                                 if (newSelectedValues.isEmpty) {
-                                  newSelectedValues
-                                      .add(options.first.value as String);
+                                  newSelectedValues.add(
+                                    options.first.value as String,
+                                  );
                                 }
                               }
                               final newValue = newSelectedValues.join(',');
                               controller.updatePreference(
-                                  'hitokotoTypes', newValue);
+                                'hitokotoTypes',
+                                newValue,
+                              );
                             },
                             backgroundColor: theme.colorScheme.surface,
                             selectedColor: Colors.transparent,
@@ -573,8 +612,9 @@ class _OnboardingPageState extends State<OnboardingPage>
                             side: BorderSide(
                               color: isSelected
                                   ? theme.colorScheme.primary
-                                  : theme.colorScheme.outline
-                                      .withValues(alpha: 0.3),
+                                  : theme.colorScheme.outline.withValues(
+                                      alpha: 0.3,
+                                    ),
                               width: isSelected ? 2.0 : 1.0,
                             ),
                           );
@@ -612,7 +652,9 @@ class _OnboardingPageState extends State<OnboardingPage>
                     const SizedBox(height: 24),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 16),
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: [
@@ -696,8 +738,9 @@ class _OnboardingPageState extends State<OnboardingPage>
             // 下一步/完成按钮
             if (OnboardingConfig.isLastPage(state.currentPageIndex))
               FilledButton.icon(
-                onPressed:
-                    state.isCompleting ? null : controller.completeOnboarding,
+                onPressed: state.isCompleting
+                    ? null
+                    : controller.completeOnboarding,
                 icon: state.isCompleting
                     ? const SizedBox(
                         width: 18,
@@ -709,9 +752,11 @@ class _OnboardingPageState extends State<OnboardingPage>
                         ),
                       )
                     : const Icon(Icons.check),
-                label: Text(state.isCompleting
-                    ? AppLocalizations.of(context).pleaseWait
-                    : AppLocalizations.of(context).onboardingStart),
+                label: Text(
+                  state.isCompleting
+                      ? AppLocalizations.of(context).pleaseWait
+                      : AppLocalizations.of(context).onboardingStart,
+                ),
               )
             else
               FilledButton.icon(
@@ -783,15 +828,21 @@ class _OnboardingPageState extends State<OnboardingPage>
                           Navigator.pop(dialogContext);
                           // 移除了 _navigateToHome() 调用
                         } catch (error) {
-                          logError('跳过引导失败',
-                              error: error, source: 'OnboardingPage');
+                          logError(
+                            '跳过引导失败',
+                            error: error,
+                            source: 'OnboardingPage',
+                          );
                           if (!dialogContext.mounted) return;
                           Navigator.pop(dialogContext);
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(AppLocalizations.of(context)
-                                    .onboardingInitFailed),
+                                content: Text(
+                                  AppLocalizations.of(
+                                    context,
+                                  ).onboardingInitFailed,
+                                ),
                                 duration: AppConstants.snackBarDurationError,
                               ),
                             );
@@ -799,7 +850,8 @@ class _OnboardingPageState extends State<OnboardingPage>
                         }
                       },
                       child: Text(
-                          AppLocalizations.of(context).onboardingConfirmSkip),
+                        AppLocalizations.of(context).onboardingConfirmSkip,
+                      ),
                     ),
                   ],
           );

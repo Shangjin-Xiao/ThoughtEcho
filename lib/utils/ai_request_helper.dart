@@ -38,9 +38,7 @@ class AIRequestHelper {
     String? model,
     bool stream = false,
   }) {
-    final body = <String, dynamic>{
-      'messages': messages,
-    };
+    final body = <String, dynamic>{'messages': messages};
 
     // 仅当调用方显式提供时才包含，可让服务端使用默认值
     if (temperature != null) {
@@ -211,8 +209,9 @@ class AIRequestHelper {
 
   /// 解析API响应
   String parseResponse(Response response) {
-    final data =
-        response.data is String ? json.decode(response.data) : response.data;
+    final data = response.data is String
+        ? json.decode(response.data)
+        : response.data;
 
     if (data['choices'] != null &&
         data['choices'].isNotEmpty &&

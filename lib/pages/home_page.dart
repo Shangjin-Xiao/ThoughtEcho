@@ -88,7 +88,7 @@ class _HomePageState extends State<HomePage>
   // --- 每日提示相关状态和逻辑 ---
   String _accumulatedPromptText = ''; // Accumulated text for daily prompt
   StreamSubscription<String>?
-      _promptSubscription; // Stream subscription for daily prompt
+  _promptSubscription; // Stream subscription for daily prompt
   bool _isGeneratingDailyPrompt = false; // Loading state for daily prompt
   // 获取每日提示的方法
   Future<void> _fetchDailyPrompt({bool initialLoad = false}) async {
@@ -142,8 +142,8 @@ class _HomePageState extends State<HomePage>
 
       // 获取最近的周期洞察（本周、上周、本月、上月）
       final insightHistoryService = context.read<InsightHistoryService>();
-      final recentInsights =
-          await insightHistoryService.formatRecentInsightsForDailyPrompt();
+      final recentInsights = await insightHistoryService
+          .formatRecentInsightsForDailyPrompt();
       logDebug('获取到 ${recentInsights.length} 条最近的周期洞察', source: 'HomePage');
 
       // Call the new stream method with environment context and historical insights
@@ -178,10 +178,10 @@ class _HomePageState extends State<HomePage>
             // 生成本地提示作为降级
             final fallbackPrompt =
                 DailyPromptGenerator.generatePromptBasedOnContext(
-              city: city,
-              weather: weather,
-              temperature: temperature,
-            );
+                  city: city,
+                  weather: weather,
+                  temperature: temperature,
+                );
 
             setState(() {
               _accumulatedPromptText = fallbackPrompt;
@@ -195,8 +195,8 @@ class _HomePageState extends State<HomePage>
           // Stream finished, update loading state and trim the accumulated text
           if (mounted) {
             setState(() {
-              _accumulatedPromptText =
-                  _accumulatedPromptText.trim(); // 去除前后空白字符
+              _accumulatedPromptText = _accumulatedPromptText
+                  .trim(); // 去除前后空白字符
               _isGeneratingDailyPrompt = false; // Stop loading on done
             });
             // 移除每日思考生成完成的弹窗通知
@@ -213,10 +213,10 @@ class _HomePageState extends State<HomePage>
 
         final fallbackPrompt =
             DailyPromptGenerator.generatePromptBasedOnContext(
-          city: locationService.city,
-          weather: weatherService.currentWeather,
-          temperature: weatherService.temperature,
-        );
+              city: locationService.city,
+              weather: weatherService.currentWeather,
+              temperature: weatherService.temperature,
+            );
 
         setState(() {
           _accumulatedPromptText = fallbackPrompt;
@@ -257,8 +257,9 @@ class _HomePageState extends State<HomePage>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content:
-                Text(AppLocalizations.of(context).refreshFailed(e.toString())),
+            content: Text(
+              AppLocalizations.of(context).refreshFailed(e.toString()),
+            ),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 2),
             behavior: SnackBarBehavior.floating,
@@ -545,17 +546,21 @@ class _HomePageState extends State<HomePage>
     });
   }
 
-  void _scheduleNoteGuideIfNeeded({
-    Duration delay = Duration.zero,
-  }) {
+  void _scheduleNoteGuideIfNeeded({Duration delay = Duration.zero}) {
     if (_noteGuidePending) return;
 
-    final filterShown =
-        FeatureGuideHelper.hasShown(context, 'note_page_filter');
-    final favoriteShown =
-        FeatureGuideHelper.hasShown(context, 'note_page_favorite');
-    final expandShown =
-        FeatureGuideHelper.hasShown(context, 'note_page_expand');
+    final filterShown = FeatureGuideHelper.hasShown(
+      context,
+      'note_page_filter',
+    );
+    final favoriteShown = FeatureGuideHelper.hasShown(
+      context,
+      'note_page_favorite',
+    );
+    final expandShown = FeatureGuideHelper.hasShown(
+      context,
+      'note_page_expand',
+    );
 
     if (filterShown && favoriteShown && expandShown) {
       return;
@@ -610,8 +615,8 @@ class _HomePageState extends State<HomePage>
 
     final allShown =
         FeatureGuideHelper.hasShown(context, 'settings_preferences') &&
-            FeatureGuideHelper.hasShown(context, 'settings_startup') &&
-            FeatureGuideHelper.hasShown(context, 'settings_theme');
+        FeatureGuideHelper.hasShown(context, 'settings_startup') &&
+        FeatureGuideHelper.hasShown(context, 'settings_theme');
     if (allShown) {
       return;
     }
@@ -711,16 +716,16 @@ class _HomePageState extends State<HomePage>
 
         final position = await locationService
             .getCurrentLocation(
-          highAccuracy: false, // 使用低精度模式，更快
-          skipPermissionRequest: true,
-        )
+              highAccuracy: false, // 使用低精度模式，更快
+              skipPermissionRequest: true,
+            )
             .timeout(
-          const Duration(seconds: 8), // 设置超时
-          onTimeout: () {
-            logDebug('位置获取超时');
-            return null;
-          },
-        );
+              const Duration(seconds: 8), // 设置超时
+              onTimeout: () {
+                logDebug('位置获取超时');
+                return null;
+              },
+            );
 
         if (!mounted) return;
 
@@ -836,8 +841,9 @@ class _HomePageState extends State<HomePage>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(AppLocalizations.of(context)
-                  .cannotOpenFullEditor(e.toString())),
+              content: Text(
+                AppLocalizations.of(context).cannotOpenFullEditor(e.toString()),
+              ),
               backgroundColor: Colors.red,
               duration: const Duration(seconds: 2),
               behavior: SnackBarBehavior.floating,
@@ -885,10 +891,7 @@ class _HomePageState extends State<HomePage>
           TextButton(
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             onPressed: () {
-              final db = Provider.of<DatabaseService>(
-                context,
-                listen: false,
-              );
+              final db = Provider.of<DatabaseService>(context, listen: false);
               db.deleteQuote(quote.id!);
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
@@ -922,11 +925,7 @@ class _HomePageState extends State<HomePage>
           content: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
-                Icons.favorite,
-                color: Colors.red,
-                size: 16,
-              ),
+              const Icon(Icons.favorite, color: Colors.red, size: 16),
               const SizedBox(width: 8),
               Text(l10n.favoriteCountWithNum(quote.favoriteCount + 1)),
             ],
@@ -961,12 +960,14 @@ class _HomePageState extends State<HomePage>
   // 生成AI卡片
   void _generateAICard(Quote quote) async {
     if (_aiCardService == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(
-        content: Text(AppLocalizations.of(context).aiCardServiceNotInitialized),
-        duration: AppConstants.snackBarDurationError,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context).aiCardServiceNotInitialized,
+          ),
+          duration: AppConstants.snackBarDurationError,
+        ),
+      );
       return;
     }
 
@@ -1004,7 +1005,8 @@ class _HomePageState extends State<HomePage>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-                AppLocalizations.of(context).generateCardFailed(e.toString())),
+              AppLocalizations.of(context).generateCardFailed(e.toString()),
+            ),
             backgroundColor: Colors.red,
             duration: AppConstants.snackBarDurationError,
           ),
@@ -1086,8 +1088,10 @@ class _HomePageState extends State<HomePage>
                 const Icon(Icons.error, color: Colors.white),
                 const SizedBox(width: 8),
                 Expanded(
-                    child: Text(AppLocalizations.of(context)
-                        .shareFailed(e.toString()))),
+                  child: Text(
+                    AppLocalizations.of(context).shareFailed(e.toString()),
+                  ),
+                ),
               ],
             ),
             backgroundColor: Colors.red,
@@ -1165,8 +1169,10 @@ class _HomePageState extends State<HomePage>
                 const Icon(Icons.error, color: Colors.white),
                 const SizedBox(width: 8),
                 Expanded(
-                    child: Text(
-                        AppLocalizations.of(context).saveFailed(e.toString()))),
+                  child: Text(
+                    AppLocalizations.of(context).saveFailed(e.toString()),
+                  ),
+                ),
               ],
             ),
             backgroundColor: Colors.red,
@@ -1196,7 +1202,8 @@ class _HomePageState extends State<HomePage>
     final isConnected = connectivityService.isConnected;
     final hasPermission = locationService.hasLocationPermission;
     final hasCoordinates = locationService.hasCoordinates;
-    final hasCity = locationService.city != null &&
+    final hasCity =
+        locationService.city != null &&
         !locationService.city!.contains("Throttled!");
     final hasWeather = weatherService.currentWeather != null;
 
@@ -1298,8 +1305,8 @@ class _HomePageState extends State<HomePage>
     final weatherService = Provider.of<WeatherService>(context);
     final locationService = Provider.of<LocationService>(context);
     final theme = Theme.of(context);
-    final aiService =
-        context.watch<AIService>(); // Watch AIService for key changes
+    final aiService = context
+        .watch<AIService>(); // Watch AIService for key changes
     final settingsService = context
         .watch<SettingsService>(); // Watch SettingsService for settings changes
 
@@ -1307,7 +1314,8 @@ class _HomePageState extends State<HomePage>
     final bool servicesInitialized = context.watch<bool>();
 
     // Determine if AI is configured (including checking for valid API Key)
-    final bool isAiConfigured = aiService.hasValidApiKey() &&
+    final bool isAiConfigured =
+        aiService.hasValidApiKey() &&
         settingsService.aiSettings.apiUrl.isNotEmpty &&
         settingsService.aiSettings.model.isNotEmpty;
 
@@ -1332,107 +1340,115 @@ class _HomePageState extends State<HomePage>
       child: Scaffold(
         backgroundColor: scaffoldBackgroundColor,
         appBar: _currentIndex == 1
-          ? null // 记录页不需要标题栏
-          : _currentIndex == 0
-              ? AppBar(
-                  title: Consumer<ConnectivityService>(
-                    builder: (context, connectivityService, child) {
-                      if (!connectivityService.isConnected) {
-                        return Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.wifi_off,
-                                size: 16, color: Colors.red),
-                            const SizedBox(width: 4),
-                            Text(AppLocalizations.of(context).appTitleOffline),
-                          ],
-                        );
-                      }
-                      return Text(AppLocalizations.of(context).appTitle);
-                    },
-                  ),
-                  actions: [
-                    // 显示服务初始化状态指示器
-                    if (!servicesInitialized)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 8.0),
-                        child: SizedBox(
+            ? null // 记录页不需要标题栏
+            : _currentIndex == 0
+            ? AppBar(
+                title: Consumer<ConnectivityService>(
+                  builder: (context, connectivityService, child) {
+                    if (!connectivityService.isConnected) {
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.wifi_off,
+                            size: 16,
+                            color: Colors.red,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(AppLocalizations.of(context).appTitleOffline),
+                        ],
+                      );
+                    }
+                    return Text(AppLocalizations.of(context).appTitle);
+                  },
+                ),
+                actions: [
+                  // 显示服务初始化状态指示器
+                  if (!servicesInitialized)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8.0),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: EnhancedLottieAnimation(
+                          type: LottieAnimationType.pulseLoading,
                           width: 20,
                           height: 20,
-                          child: EnhancedLottieAnimation(
-                            type: LottieAnimationType.pulseLoading,
-                            width: 20,
-                            height: 20,
-                            semanticLabel: '初始化服务',
-                          ),
+                          semanticLabel: '初始化服务',
                         ),
                       ),
-
-                    // 显示位置和天气信息（支持多种状态）
-                    _buildLocationWeatherDisplay(
-                      context,
-                      locationService,
-                      weatherService,
                     ),
-                  ],
-                )
-              : AppBar(toolbarHeight: 0),
-        body: IndexedStack(
-        index: _currentIndex,
-        children: [
-          // 首页 - 每日一言和每日提示
-          RefreshIndicator(
-            onRefresh: _handleRefresh,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final screenHeight = constraints.maxHeight;
-                final screenWidth = constraints.maxWidth;
-                final isSmallScreen = screenHeight < 600;
-                final isVerySmallScreen = screenHeight < 550;
 
-                return SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  child: SizedBox(
-                    height: screenHeight, // 确保占满整个屏幕高度
-                    child: Column(
-                      children: [
-                        // 每日一言部分 - 占用大部分空间，但保留足够空间给今日思考
-                        Expanded(
-                          child: Container(
-                            key: _dailyQuoteGuideKey, // 功能引导 key
-                            constraints: BoxConstraints(
-                              minHeight: screenHeight *
-                                  (isVerySmallScreen ? 0.55 : 0.50), // 极小屏幕调整比例
-                            ),
-                            child: DailyQuoteView(
-                              key: _dailyQuoteViewKey,
-                              onAddQuote:
-                                  (content, author, work, hitokotoData) =>
-                                      _showAddQuoteDialog(
-                                prefilledContent: content,
-                                prefilledAuthor: author,
-                                prefilledWork: work,
-                                hitokotoData: hitokotoData,
+                  // 显示位置和天气信息（支持多种状态）
+                  _buildLocationWeatherDisplay(
+                    context,
+                    locationService,
+                    weatherService,
+                  ),
+                ],
+              )
+            : AppBar(toolbarHeight: 0),
+        body: IndexedStack(
+          index: _currentIndex,
+          children: [
+            // 首页 - 每日一言和每日提示
+            RefreshIndicator(
+              onRefresh: _handleRefresh,
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final screenHeight = constraints.maxHeight;
+                  final screenWidth = constraints.maxWidth;
+                  final isSmallScreen = screenHeight < 600;
+                  final isVerySmallScreen = screenHeight < 550;
+
+                  return SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: SizedBox(
+                      height: screenHeight, // 确保占满整个屏幕高度
+                      child: Column(
+                        children: [
+                          // 每日一言部分 - 占用大部分空间，但保留足够空间给今日思考
+                          Expanded(
+                            child: Container(
+                              key: _dailyQuoteGuideKey, // 功能引导 key
+                              constraints: BoxConstraints(
+                                minHeight:
+                                    screenHeight *
+                                    (isVerySmallScreen
+                                        ? 0.55
+                                        : 0.50), // 极小屏幕调整比例
+                              ),
+                              child: DailyQuoteView(
+                                key: _dailyQuoteViewKey,
+                                onAddQuote:
+                                    (content, author, work, hitokotoData) =>
+                                        _showAddQuoteDialog(
+                                          prefilledContent: content,
+                                          prefilledAuthor: author,
+                                          prefilledWork: work,
+                                          hitokotoData: hitokotoData,
+                                        ),
                               ),
                             ),
-                          ),
-                        ), // 每日提示部分 - 固定在底部，紧凑布局
-                        Container(
-                          width: double.infinity,
-                          margin: EdgeInsets.fromLTRB(
-                            screenWidth > 600
-                                ? 16.0
-                                : (isVerySmallScreen ? 8.0 : 12.0), // 动态调整边距
-                            isVerySmallScreen ? 2.0 : 4.0, // 极小屏幕减少上边距
-                            screenWidth > 600
-                                ? 16.0
-                                : (isVerySmallScreen ? 8.0 : 12.0), // 动态调整边距
-                            isVerySmallScreen ? 8.0 : 12.0, // 极小屏幕减少下边距
-                          ),
+                          ), // 每日提示部分 - 固定在底部，紧凑布局
+                          Container(
+                            width: double.infinity,
+                            margin: EdgeInsets.fromLTRB(
+                              screenWidth > 600
+                                  ? 16.0
+                                  : (isVerySmallScreen ? 8.0 : 12.0), // 动态调整边距
+                              isVerySmallScreen ? 2.0 : 4.0, // 极小屏幕减少上边距
+                              screenWidth > 600
+                                  ? 16.0
+                                  : (isVerySmallScreen ? 8.0 : 12.0), // 动态调整边距
+                              isVerySmallScreen ? 8.0 : 12.0, // 极小屏幕减少下边距
+                            ),
                             padding: EdgeInsets.all(
                               screenWidth > 600
                                   ? 18.0
-                                  : (isVerySmallScreen ? 10.0 : 14.0), // 动态调整内边距
+                                  : (isVerySmallScreen
+                                        ? 10.0
+                                        : 14.0), // 动态调整内边距
                             ),
                             decoration: BoxDecoration(
                               color: theme.colorScheme.surface,
@@ -1446,246 +1462,261 @@ class _HomePageState extends State<HomePage>
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.lightbulb_outline,
-                                    color: theme.colorScheme.primary,
-                                    size: screenWidth > 600
-                                        ? 22
-                                        : (isVerySmallScreen
-                                            ? 16
-                                            : 18), // 动态调整图标大小
-                                  ),
-                                  SizedBox(
-                                      width:
-                                          isVerySmallScreen ? 4 : 6), // 动态调整间距
-                                  Text(
-                                    AppLocalizations.of(context).todayThoughts,
-                                    style:
-                                        theme.textTheme.titleMedium?.copyWith(
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.lightbulb_outline,
                                       color: theme.colorScheme.primary,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: screenWidth > 600
-                                          ? 16
+                                      size: screenWidth > 600
+                                          ? 22
                                           : (isVerySmallScreen
-                                              ? 13
-                                              : 15), // 动态调整字体
+                                                ? 16
+                                                : 18), // 动态调整图标大小
                                     ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(
+                                    SizedBox(
+                                      width: isVerySmallScreen ? 4 : 6,
+                                    ), // 动态调整间距
+                                    Text(
+                                      AppLocalizations.of(
+                                        context,
+                                      ).todayThoughts,
+                                      style: theme.textTheme.titleMedium
+                                          ?.copyWith(
+                                            color: theme.colorScheme.primary,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: screenWidth > 600
+                                                ? 16
+                                                : (isVerySmallScreen
+                                                      ? 13
+                                                      : 15), // 动态调整字体
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                                SizedBox(
                                   height: isVerySmallScreen
                                       ? 4
-                                      : (isSmallScreen ? 6 : 8)), // 动态调整间距
-
-                              // 提示内容区域 - 更紧凑
-                              _isGeneratingDailyPrompt &&
-                                      _accumulatedPromptText.isEmpty
-                                  ? Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        SizedBox(
-                                          width: isVerySmallScreen
-                                              ? 16
-                                              : 18, // 动态调整加载指示器大小
-                                          height: isVerySmallScreen ? 16 : 18,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: theme.colorScheme.primary,
+                                      : (isSmallScreen ? 6 : 8),
+                                ), // 动态调整间距
+                                // 提示内容区域 - 更紧凑
+                                _isGeneratingDailyPrompt &&
+                                        _accumulatedPromptText.isEmpty
+                                    ? Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          SizedBox(
+                                            width: isVerySmallScreen
+                                                ? 16
+                                                : 18, // 动态调整加载指示器大小
+                                            height: isVerySmallScreen ? 16 : 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: theme.colorScheme.primary,
+                                            ),
                                           ),
-                                        ),
-                                        SizedBox(
+                                          SizedBox(
                                             height: isVerySmallScreen
                                                 ? 3
-                                                : (isSmallScreen
-                                                    ? 4
-                                                    : 6)), // 动态调整间距
-                                        Text(
-                                          isAiConfigured
-                                              ? AppLocalizations.of(context)
-                                                  .loadingTodayThoughts
-                                              : AppLocalizations.of(context)
-                                                  .fetchingDefaultPrompt,
-                                          style: theme.textTheme.bodySmall
-                                              ?.copyWith(
-                                            color: theme.colorScheme.onSurface
-                                                .withAlpha(160),
-                                            fontSize: screenWidth > 600
-                                                ? 13
-                                                : (isVerySmallScreen
-                                                    ? 10
-                                                    : 12), // 动态调整字体
+                                                : (isSmallScreen ? 4 : 6),
+                                          ), // 动态调整间距
+                                          Text(
+                                            isAiConfigured
+                                                ? AppLocalizations.of(
+                                                    context,
+                                                  ).loadingTodayThoughts
+                                                : AppLocalizations.of(
+                                                    context,
+                                                  ).fetchingDefaultPrompt,
+                                            style: theme.textTheme.bodySmall
+                                                ?.copyWith(
+                                                  color: theme
+                                                      .colorScheme
+                                                      .onSurface
+                                                      .withAlpha(160),
+                                                  fontSize: screenWidth > 600
+                                                      ? 13
+                                                      : (isVerySmallScreen
+                                                            ? 10
+                                                            : 12), // 动态调整字体
+                                                ),
+                                            textAlign: TextAlign.center,
                                           ),
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ],
-                                    )
-                                  : Text(
-                                      _accumulatedPromptText.isNotEmpty
-                                          ? _accumulatedPromptText.trim()
-                                          : (isAiConfigured
-                                              ? AppLocalizations.of(context)
-                                                  .waitingForTodayThoughts
-                                              : AppLocalizations.of(context)
-                                                  .noTodayThoughts),
-                                      style:
-                                          theme.textTheme.bodyMedium?.copyWith(
-                                        height: 1.4,
-                                        fontSize: screenWidth > 600
-                                            ? 15
-                                            : (isVerySmallScreen
-                                                ? 12
-                                                : 14), // 动态调整字体
-                                        color: _accumulatedPromptText.isNotEmpty
-                                            ? theme.textTheme.bodyMedium?.color
-                                            : theme.colorScheme.onSurface
-                                                .withAlpha(120),
+                                        ],
+                                      )
+                                    : Text(
+                                        _accumulatedPromptText.isNotEmpty
+                                            ? _accumulatedPromptText.trim()
+                                            : (isAiConfigured
+                                                  ? AppLocalizations.of(
+                                                      context,
+                                                    ).waitingForTodayThoughts
+                                                  : AppLocalizations.of(
+                                                      context,
+                                                    ).noTodayThoughts),
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
+                                              height: 1.4,
+                                              fontSize: screenWidth > 600
+                                                  ? 15
+                                                  : (isVerySmallScreen
+                                                        ? 12
+                                                        : 14), // 动态调整字体
+                                              color:
+                                                  _accumulatedPromptText
+                                                      .isNotEmpty
+                                                  ? theme
+                                                        .textTheme
+                                                        .bodyMedium
+                                                        ?.color
+                                                  : theme.colorScheme.onSurface
+                                                        .withAlpha(120),
+                                            ),
+                                        textAlign: TextAlign.center,
+                                        maxLines: isVerySmallScreen
+                                            ? 2
+                                            : 3, // 极小屏幕最多2行
+                                        overflow: TextOverflow.ellipsis,
                                       ),
-                                      textAlign: TextAlign.center,
-                                      maxLines:
-                                          isVerySmallScreen ? 2 : 3, // 极小屏幕最多2行
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
+                  );
+                },
+              ),
+            ),
+            // 笔记列表页
+            Consumer<SettingsService>(
+              builder: (context, settingsService, child) {
+                return Consumer<NoteSearchController>(
+                  builder: (context, searchController, child) {
+                    return NoteListView(
+                      key: _noteListViewKey, // 绑定全局Key
+                      tags: _tags,
+                      selectedTagIds: _selectedTagIds,
+                      onTagSelectionChanged: (tagIds) {
+                        setState(() {
+                          _selectedTagIds = tagIds;
+                        });
+                      },
+                      searchQuery: searchController.searchQuery,
+                      sortType: _sortType,
+                      sortAscending: _sortAscending,
+                      onSortChanged: _handleSortChanged,
+                      onSearchChanged: (query) {
+                        searchController.updateSearch(query);
+                      },
+                      onEdit: _showEditQuoteDialog,
+                      onDelete: _showDeleteConfirmDialog,
+                      onAskAI: _showAIQuestionDialog,
+                      onGenerateCard: _generateAICard,
+                      onFavorite: settingsService.showFavoriteButton
+                          ? _handleFavoriteClick
+                          : null, // 根据设置控制心形按钮显示
+                      isLoadingTags: _isLoadingTags, // 传递标签加载状态
+                      selectedWeathers: _selectedWeathers,
+                      selectedDayPeriods: _selectedDayPeriods,
+                      onFilterChanged: (weathers, dayPeriods) {
+                        setState(() {
+                          _selectedWeathers = weathers;
+                          _selectedDayPeriods = dayPeriods;
+                        });
+                      },
+                      filterButtonKey: _noteFilterGuideKey, // 功能引导 key
+                      favoriteButtonGuideKey: _noteFavoriteGuideKey,
+                      foldToggleGuideKey: _noteFoldGuideKey,
+                      onGuideTargetsReady: _handleNoteGuideTargetsReady,
+                    );
+                  },
                 );
               },
             ),
-          ),
-          // 笔记列表页
-          Consumer<SettingsService>(
-            builder: (context, settingsService, child) {
-              return Consumer<NoteSearchController>(
-                builder: (context, searchController, child) {
-                  return NoteListView(
-                    key: _noteListViewKey, // 绑定全局Key
-                    tags: _tags,
-                    selectedTagIds: _selectedTagIds,
-                    onTagSelectionChanged: (tagIds) {
-                      setState(() {
-                        _selectedTagIds = tagIds;
-                      });
-                    },
-                    searchQuery: searchController.searchQuery,
-                    sortType: _sortType,
-                    sortAscending: _sortAscending,
-                    onSortChanged: _handleSortChanged,
-                    onSearchChanged: (query) {
-                      searchController.updateSearch(query);
-                    },
-                    onEdit: _showEditQuoteDialog,
-                    onDelete: _showDeleteConfirmDialog,
-                    onAskAI: _showAIQuestionDialog,
-                    onGenerateCard: _generateAICard,
-                    onFavorite: settingsService.showFavoriteButton
-                        ? _handleFavoriteClick
-                        : null, // 根据设置控制心形按钮显示
-                    isLoadingTags: _isLoadingTags, // 传递标签加载状态
-                    selectedWeathers: _selectedWeathers,
-                    selectedDayPeriods: _selectedDayPeriods,
-                    onFilterChanged: (weathers, dayPeriods) {
-                      setState(() {
-                        _selectedWeathers = weathers;
-                        _selectedDayPeriods = dayPeriods;
-                      });
-                    },
-                    filterButtonKey: _noteFilterGuideKey, // 功能引导 key
-                    favoriteButtonGuideKey: _noteFavoriteGuideKey,
-                    foldToggleGuideKey: _noteFoldGuideKey,
-                    onGuideTargetsReady: _handleNoteGuideTargetsReady,
-                  );
-                },
-              );
-            },
-          ),
-          // AI页
-          const AIFeaturesPage(),
-          // 设置页
-          SettingsPage(key: _settingsPageKey),
-        ],
-      ),
-      floatingActionButton: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: AppTheme.accentShadow,
+            // AI页
+            const AIFeaturesPage(),
+            // 设置页
+            SettingsPage(key: _settingsPageKey),
+          ],
         ),
-        child: FloatingActionButton(
-          heroTag: 'homePageFAB',
-          onPressed: () => _showAddQuoteDialog(),
-          elevation: 0,
-          backgroundColor:
-              theme.floatingActionButtonTheme.backgroundColor, // 使用主题定义的颜色
-          foregroundColor:
-              theme.floatingActionButtonTheme.foregroundColor, // 使用主题定义的颜色
-          shape: RoundedRectangleBorder(
+        floatingActionButton: Container(
+          decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
+            boxShadow: AppTheme.accentShadow,
           ),
-          child: const Icon(Icons.add, size: 28),
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0), // 毛玻璃模糊效果
-          child: Container(
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface.withValues(alpha: 0.8), // 半透明背景
+          child: FloatingActionButton(
+            heroTag: 'homePageFAB',
+            onPressed: () => _showAddQuoteDialog(),
+            elevation: 0,
+            backgroundColor:
+                theme.floatingActionButtonTheme.backgroundColor, // 使用主题定义的颜色
+            foregroundColor:
+                theme.floatingActionButtonTheme.foregroundColor, // 使用主题定义的颜色
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-            child: NavigationBar(
-              selectedIndex: _currentIndex,
-              onDestinationSelected: (index) {
-                _onTabChanged(index);
-              },
-              elevation: 0,
-              backgroundColor: Colors.transparent, // 透明背景以显示模糊效果
-              surfaceTintColor: Colors.transparent, // 移除表面着色
-              destinations: [
-                NavigationDestination(
-                  icon: const Icon(Icons.home_outlined),
-                  selectedIcon: Icon(
-                    Icons.home,
-                    color: theme.colorScheme.primary,
-                  ),
-                  label: AppLocalizations.of(context).navHome,
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.book_outlined),
-                  selectedIcon: Icon(
-                    Icons.book,
-                    color: theme.colorScheme.primary,
-                  ),
-                  label: AppLocalizations.of(context).navNotes,
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.auto_awesome_outlined),
-                  selectedIcon: Icon(
-                    Icons.auto_awesome,
-                    color: theme.colorScheme.primary,
-                  ),
-                  label: AppLocalizations.of(context).navInsights,
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.settings_outlined),
-                  selectedIcon: Icon(
-                    Icons.settings,
-                    color: theme.colorScheme.primary,
-                  ),
-                  label: AppLocalizations.of(context).navSettings,
-                ),
-              ],
-            ),
+            child: const Icon(Icons.add, size: 28),
           ),
         ),
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+        bottomNavigationBar: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20.0, sigmaY: 20.0), // 毛玻璃模糊效果
+            child: Container(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface.withValues(
+                  alpha: 0.8,
+                ), // 半透明背景
+              ),
+              child: NavigationBar(
+                selectedIndex: _currentIndex,
+                onDestinationSelected: (index) {
+                  _onTabChanged(index);
+                },
+                elevation: 0,
+                backgroundColor: Colors.transparent, // 透明背景以显示模糊效果
+                surfaceTintColor: Colors.transparent, // 移除表面着色
+                destinations: [
+                  NavigationDestination(
+                    icon: const Icon(Icons.home_outlined),
+                    selectedIcon: Icon(
+                      Icons.home,
+                      color: theme.colorScheme.primary,
+                    ),
+                    label: AppLocalizations.of(context).navHome,
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.book_outlined),
+                    selectedIcon: Icon(
+                      Icons.book,
+                      color: theme.colorScheme.primary,
+                    ),
+                    label: AppLocalizations.of(context).navNotes,
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.auto_awesome_outlined),
+                    selectedIcon: Icon(
+                      Icons.auto_awesome,
+                      color: theme.colorScheme.primary,
+                    ),
+                    label: AppLocalizations.of(context).navInsights,
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.settings_outlined),
+                    selectedIcon: Icon(
+                      Icons.settings,
+                      color: theme.colorScheme.primary,
+                    ),
+                    label: AppLocalizations.of(context).navSettings,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
-    ),
     );
   }
 
@@ -1699,13 +1730,16 @@ class _HomePageState extends State<HomePage>
 
     return SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness:
-          statusIconsShouldBeDark ? Brightness.dark : Brightness.light,
-      statusBarBrightness:
-          statusIconsShouldBeDark ? Brightness.light : Brightness.dark,
+      statusBarIconBrightness: statusIconsShouldBeDark
+          ? Brightness.dark
+          : Brightness.light,
+      statusBarBrightness: statusIconsShouldBeDark
+          ? Brightness.light
+          : Brightness.dark,
       systemNavigationBarColor: navColor,
-      systemNavigationBarIconBrightness:
-          navIconsShouldBeDark ? Brightness.dark : Brightness.light,
+      systemNavigationBarIconBrightness: navIconsShouldBeDark
+          ? Brightness.dark
+          : Brightness.light,
       systemNavigationBarDividerColor: Colors.transparent,
       systemNavigationBarContrastEnforced: false,
     );

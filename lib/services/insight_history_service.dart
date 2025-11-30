@@ -49,7 +49,7 @@ class InsightHistoryService extends ChangeNotifier {
   List<PeriodicInsight> _insights = [];
 
   InsightHistoryService({required SettingsService settingsService})
-      : _settingsService = settingsService {
+    : _settingsService = settingsService {
     _loadInsights();
   }
 
@@ -61,8 +61,9 @@ class InsightHistoryService extends ChangeNotifier {
       final jsonString = await _settingsService.getCustomString(_storageKey);
       if (jsonString != null && jsonString.isNotEmpty) {
         final List<dynamic> jsonList = json.decode(jsonString);
-        _insights =
-            jsonList.map((json) => PeriodicInsight.fromJson(json)).toList();
+        _insights = jsonList
+            .map((json) => PeriodicInsight.fromJson(json))
+            .toList();
 
         // 按时间倒序排列
         _insights.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -141,8 +142,10 @@ class InsightHistoryService extends ChangeNotifier {
 
     // 如果没有找到周或月的洞察，返回最近的任何AI洞察
     final recentAiInsight = _insights
-        .where((insight) =>
-            insight.isAiGenerated && insight.createdAt.isAfter(weekAgo))
+        .where(
+          (insight) =>
+              insight.isAiGenerated && insight.createdAt.isAfter(weekAgo),
+        )
         .firstOrNull;
 
     return recentAiInsight?.insight;
@@ -179,8 +182,9 @@ class InsightHistoryService extends ChangeNotifier {
     final threeMonthsAgo = DateTime.now().subtract(const Duration(days: 90));
     final originalLength = _insights.length;
 
-    _insights
-        .removeWhere((insight) => insight.createdAt.isBefore(threeMonthsAgo));
+    _insights.removeWhere(
+      (insight) => insight.createdAt.isBefore(threeMonthsAgo),
+    );
 
     if (_insights.length != originalLength) {
       await _saveInsights();

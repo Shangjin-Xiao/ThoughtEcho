@@ -179,8 +179,9 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
         materialProgressColors: ChewieProgressColors(
           playedColor: Theme.of(context).colorScheme.primary,
           handleColor: Theme.of(context).colorScheme.primary,
-          backgroundColor:
-              Theme.of(context).colorScheme.surfaceContainerHighest,
+          backgroundColor: Theme.of(
+            context,
+          ).colorScheme.surfaceContainerHighest,
           bufferedColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         ),
         // 自定义控制栏选项
@@ -385,9 +386,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('音频加载失败: $e'),
             duration: AppConstants.snackBarDurationError,
@@ -570,18 +569,18 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
                     Text(
                       _getFileName(widget.filePath),
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w500,
-                          ),
+                        fontWeight: FontWeight.w500,
+                      ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       _formatDuration(_duration),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withValues(alpha: 0.6),
-                          ),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.6),
+                      ),
                     ),
                   ],
                 ),
@@ -657,9 +656,9 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
                   child: Slider(
                     value: _position.inMilliseconds.toDouble(),
                     max: _duration.inMilliseconds.toDouble().clamp(
-                          1.0,
-                          double.infinity,
-                        ),
+                      1.0,
+                      double.infinity,
+                    ),
                     onChanged: _onAudioSeek,
                     activeColor: Theme.of(context).colorScheme.primary,
                     inactiveColor: Theme.of(
@@ -739,9 +738,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
 
   void _shareVideo() {
     // 实现视频分享功能
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('分享功能开发中...'),
         duration: AppConstants.snackBarDurationNormal,
@@ -788,9 +785,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
   void _handleAudioMenuAction(String action) {
     switch (action) {
       case 'share':
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('分享功能开发中...'),
             duration: AppConstants.snackBarDurationNormal,

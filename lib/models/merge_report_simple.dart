@@ -39,10 +39,7 @@ class MergeReport {
 
   /// 创建空的初始报告
   factory MergeReport.start({String? sourceDevice}) {
-    return MergeReport(
-      startTime: DateTime.now(),
-      sourceDevice: sourceDevice,
-    );
+    return MergeReport(startTime: DateTime.now(), sourceDevice: sourceDevice);
   }
 
   /// 完成处理，设置结束时间
@@ -207,8 +204,8 @@ class MergeReportBuilder {
   final String? _sourceDevice;
 
   MergeReportBuilder({String? sourceDevice})
-      : _startTime = DateTime.now(),
-        _sourceDevice = sourceDevice;
+    : _startTime = DateTime.now(),
+      _sourceDevice = sourceDevice;
 
   // 笔记操作统计
   void addAppliedQuote() => _appliedQuotes++;

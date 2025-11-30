@@ -19,8 +19,9 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
   Timer? _healthTimer; // 周期性健康检查
   DateTime _lastMessageTime = DateTime.fromMillisecondsSinceEpoch(0);
   DateTime _lastAnnouncementSend = DateTime.fromMillisecondsSinceEpoch(0);
-  static const Duration _socketInactivityRestart =
-      Duration(seconds: 25); // 超过该时间未收到消息则重启监听
+  static const Duration _socketInactivityRestart = Duration(
+    seconds: 25,
+  ); // 超过该时间未收到消息则重启监听
   static const Duration _announcementInterval = Duration(seconds: 5);
   static const Duration _minAnnouncementGap = Duration(seconds: 2);
   static const Duration _healthCheckInterval = Duration(seconds: 6);
@@ -93,16 +94,19 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
             : info.computerName.trim();
       } else if (Platform.isLinux) {
         final info = await plugin.linuxInfo;
-        model =
-            info.prettyName.trim().isEmpty ? 'Linux' : info.prettyName.trim();
+        model = info.prettyName.trim().isEmpty
+            ? 'Linux'
+            : info.prettyName.trim();
       } else {
         model = Platform.operatingSystem;
       }
       if (model.isEmpty) model = 'Unknown Device';
       _deviceModel = model;
       _deviceInfoReady = true;
-      logDebug('discovery_device_model_ready model=$_deviceModel',
-          source: 'LocalSend');
+      logDebug(
+        'discovery_device_model_ready model=$_deviceModel',
+        source: 'LocalSend',
+      );
     } catch (e) {
       _deviceModel = 'Unknown Device';
       _deviceInfoReady = true;
@@ -143,8 +147,10 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
       // 启动UDP组播监听（若失败自动重试一次）
       await _startMulticastListener();
       if (_sockets.isEmpty) {
-        logWarning('discovery_no_socket_first_try retrying...',
-            source: 'LocalSend');
+        logWarning(
+          'discovery_no_socket_first_try retrying...',
+          source: 'LocalSend',
+        );
         await Future.delayed(const Duration(milliseconds: 400));
         await _startMulticastListener();
       }
@@ -182,8 +188,10 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
           }
           if (removed.isNotEmpty) {
             notifyListeners();
-            logInfo('discovery_prune old=${removed.length}',
-                source: 'LocalSend');
+            logInfo(
+              'discovery_prune old=${removed.length}',
+              source: 'LocalSend',
+            );
           }
         }
         // 3. 套接字数量为0 => 重启
@@ -246,11 +254,16 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
           // Windows 平台不使用 reusePort（可能不支持或导致问题）
           final socket = Platform.isWindows
               ? await RawDatagramSocket.bind(
-                  InternetAddress.anyIPv4, defaultMulticastPort,
-                  reuseAddress: true)
+                  InternetAddress.anyIPv4,
+                  defaultMulticastPort,
+                  reuseAddress: true,
+                )
               : await RawDatagramSocket.bind(
-                  InternetAddress.anyIPv4, defaultMulticastPort,
-                  reuseAddress: true, reusePort: true);
+                  InternetAddress.anyIPv4,
+                  defaultMulticastPort,
+                  reuseAddress: true,
+                  reusePort: true,
+                );
 
           debugPrint('UDP套接字成功绑定到端口 ${socket.port}');
 
@@ -263,9 +276,12 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
           // 加入组播组
           try {
             socket.joinMulticast(
-                InternetAddress(defaultMulticastGroup), interface);
+              InternetAddress(defaultMulticastGroup),
+              interface,
+            );
             debugPrint(
-                '✓ 成功加入组播组 $defaultMulticastGroup (接口: ${interface.name})');
+              '✓ 成功加入组播组 $defaultMulticastGroup (接口: ${interface.name})',
+            );
           } catch (e) {
             debugPrint('❌ 加入组播组失败: $e');
             socket.close();
@@ -273,25 +289,28 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
           }
 
           // 设置监听
-          socket.listen((event) {
-            if (event == RawSocketEvent.read) {
-              final datagram = socket.receive();
-              if (datagram != null) {
-                _lastMessageTime = DateTime.now();
-                _handleMulticastMessage(datagram);
-              }
-            } else if (event == RawSocketEvent.closed) {
-              debugPrint('❌ 套接字被关闭，标记自愈');
-              // 延迟触发一个自愈（不直接重启，避免多次触发）
-              Future.microtask(() async {
-                if (_isScanning) {
-                  await _restartSockets();
+          socket.listen(
+            (event) {
+              if (event == RawSocketEvent.read) {
+                final datagram = socket.receive();
+                if (datagram != null) {
+                  _lastMessageTime = DateTime.now();
+                  _handleMulticastMessage(datagram);
                 }
-              });
-            }
-          }, onError: (error) {
-            debugPrint('❌ 套接字监听错误: $error');
-          });
+              } else if (event == RawSocketEvent.closed) {
+                debugPrint('❌ 套接字被关闭，标记自愈');
+                // 延迟触发一个自愈（不直接重启，避免多次触发）
+                Future.microtask(() async {
+                  if (_isScanning) {
+                    await _restartSockets();
+                  }
+                });
+              }
+            },
+            onError: (error) {
+              debugPrint('❌ 套接字监听错误: $error');
+            },
+          );
 
           _sockets.add(socket);
           debugPrint('✓ UDP组播监听已绑定到接口: ${interface.name}');
@@ -357,7 +376,8 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
         notifyListeners();
         debugPrint('✓ 发现新设备: ${device.alias} (${device.ip}:${device.port})');
         debugPrint(
-            '当前设备列表: ${_devices.map((d) => '${d.alias}(${d.ip}:${d.port})').join(', ')}');
+          '当前设备列表: ${_devices.map((d) => '${d.alias}(${d.ip}:${d.port})').join(', ')}',
+        );
 
         // 如果是公告消息，回应一个注册消息
         if (dto.announcement == true || dto.announce == true) {
@@ -412,8 +432,10 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     final message = utf8.encode(messageJson);
 
     debugPrint('=== 发送公告消息 ===');
-    logDebug('discovery_broadcast_send port=$_actualServerPort',
-        source: 'LocalSend');
+    logDebug(
+      'discovery_broadcast_send port=$_actualServerPort',
+      source: 'LocalSend',
+    );
     debugPrint('设备指纹: $fingerprint');
     debugPrint('服务器端口: $_actualServerPort');
     debugPrint('组播地址: $defaultMulticastGroup:$defaultMulticastPort');
@@ -426,13 +448,18 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     for (int i = 0; i < _sockets.length; i++) {
       final socket = _sockets[i];
       try {
-        final result = socket.send(message,
-            InternetAddress(defaultMulticastGroup), defaultMulticastPort);
+        final result = socket.send(
+          message,
+          InternetAddress(defaultMulticastGroup),
+          defaultMulticastPort,
+        );
         if (result > 0) {
           successCount++;
           debugPrint('✓ 套接字 $i 发送成功，字节数: $result');
-          logDebug('discovery_broadcast_sent sock=$i bytes=$result',
-              source: 'LocalSend');
+          logDebug(
+            'discovery_broadcast_sent sock=$i bytes=$result',
+            source: 'LocalSend',
+          );
         } else {
           debugPrint('❌ 套接字 $i 发送失败，返回: $result');
         }
@@ -446,8 +473,9 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     if (successCount > 0) {
       debugPrint('✓ 成功通过 $successCount/${_sockets.length} 个套接字发送公告');
       logInfo(
-          'discovery_broadcast_summary success=$successCount total=${_sockets.length}',
-          source: 'LocalSend');
+        'discovery_broadcast_summary success=$successCount total=${_sockets.length}',
+        source: 'LocalSend',
+      );
     } else {
       debugPrint('❌ 警告: 未能通过任何套接字发送公告');
     }
@@ -479,8 +507,11 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
 
     for (final socket in _sockets) {
       try {
-        socket.send(message, InternetAddress(defaultMulticastGroup),
-            defaultMulticastPort);
+        socket.send(
+          message,
+          InternetAddress(defaultMulticastGroup),
+          defaultMulticastPort,
+        );
       } catch (e) {
         debugPrint('回应公告失败: $e');
       }
@@ -546,12 +577,16 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
       // 向所有套接字发送公告
       for (final socket in _sockets) {
         try {
-          final result =
-              socket.send(messageBytes, multicastAddress, defaultMulticastPort);
+          final result = socket.send(
+            messageBytes,
+            multicastAddress,
+            defaultMulticastPort,
+          );
           if (result > 0) {
             sentCount++;
             debugPrint(
-                '发送设备公告到 ${multicastAddress.address}:$defaultMulticastPort, 发送字节: $result');
+              '发送设备公告到 ${multicastAddress.address}:$defaultMulticastPort, 发送字节: $result',
+            );
           }
         } catch (e) {
           debugPrint('发送公告失败: $e');

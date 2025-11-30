@@ -125,9 +125,7 @@ class _LogsPageState extends State<LogsPage> {
     } catch (e) {
       if (!mounted) return;
       final l10n = AppLocalizations.of(context);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(l10n.logLoadMoreError(e.toString())),
           duration: AppConstants.snackBarDurationError,
@@ -273,8 +271,9 @@ class _LogsPageState extends State<LogsPage> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      AppLocalizations.of(context)
-                          .logTimestamp(log.timestamp.toLocal().toString()),
+                      AppLocalizations.of(
+                        context,
+                      ).logTimestamp(log.timestamp.toLocal().toString()),
                       style: theme.textTheme.bodySmall,
                     ),
                   ],
@@ -288,8 +287,10 @@ class _LogsPageState extends State<LogsPage> {
                   padding: const EdgeInsets.all(16),
                   children: [
                     // 消息
-                    Text(AppLocalizations.of(context).logMessage,
-                        style: theme.textTheme.labelLarge),
+                    Text(
+                      AppLocalizations.of(context).logMessage,
+                      style: theme.textTheme.labelLarge,
+                    ),
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
@@ -337,8 +338,10 @@ class _LogsPageState extends State<LogsPage> {
                     if (log.stackTrace != null &&
                         log.stackTrace!.isNotEmpty) ...[
                       const SizedBox(height: 16),
-                      Text(AppLocalizations.of(context).logStackTrace,
-                          style: theme.textTheme.labelLarge),
+                      Text(
+                        AppLocalizations.of(context).logStackTrace,
+                        style: theme.textTheme.labelLarge,
+                      ),
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
@@ -386,9 +389,7 @@ class _LogsPageState extends State<LogsPage> {
     }
 
     Clipboard.setData(ClipboardData(text: buffer.toString()));
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(l10n.logCopied),
         duration: AppConstants.snackBarDurationImportant,
@@ -434,7 +435,8 @@ class _LogsPageState extends State<LogsPage> {
 
   // 构建过滤器横幅
   Widget _buildFiltersBanner() {
-    final hasFilters = _filterLevel != null ||
+    final hasFilters =
+        _filterLevel != null ||
         (_filterSource != null && _filterSource!.isNotEmpty) ||
         (_searchQuery != null && _searchQuery!.isNotEmpty);
 
@@ -606,10 +608,12 @@ class _LogsPageState extends State<LogsPage> {
                   });
 
                   // 设置新的防抖定时器
-                  _searchDebounceTimer =
-                      Timer(const Duration(milliseconds: 300), () {
-                    if (mounted) _refreshLogs();
-                  });
+                  _searchDebounceTimer = Timer(
+                    const Duration(milliseconds: 300),
+                    () {
+                      if (mounted) _refreshLogs();
+                    },
+                  );
                 },
                 textInputAction: TextInputAction.search,
                 onSubmitted: (value) {
@@ -643,7 +647,8 @@ class _LogsPageState extends State<LogsPage> {
                         : ListView.separated(
                             controller: _scrollController,
                             padding: const EdgeInsets.all(8.0),
-                            itemCount: filteredLogs.length +
+                            itemCount:
+                                filteredLogs.length +
                                 (_isLoadingMore ? 1 : 0) +
                                 (_hasMoreLogs ? 1 : 0),
                             separatorBuilder: (context, index) {
@@ -795,8 +800,10 @@ class _LogsPageState extends State<LogsPage> {
                   children: [
                     const Icon(Icons.filter_list),
                     const SizedBox(width: 8),
-                    Text(AppLocalizations.of(context).logFilterOptions,
-                        style: theme.textTheme.titleMedium),
+                    Text(
+                      AppLocalizations.of(context).logFilterOptions,
+                      style: theme.textTheme.titleMedium,
+                    ),
                     const Spacer(),
                     TextButton(
                       onPressed: () {
@@ -818,8 +825,10 @@ class _LogsPageState extends State<LogsPage> {
                   padding: const EdgeInsets.all(16),
                   children: [
                     // 日志级别过滤
-                    Text(AppLocalizations.of(context).logFilterByLevel,
-                        style: theme.textTheme.titleSmall),
+                    Text(
+                      AppLocalizations.of(context).logFilterByLevel,
+                      style: theme.textTheme.titleSmall,
+                    ),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8.0,
@@ -854,14 +863,17 @@ class _LogsPageState extends State<LogsPage> {
                     const SizedBox(height: 24),
 
                     // 源过滤
-                    Text(AppLocalizations.of(context).logFilterBySource,
-                        style: theme.textTheme.titleSmall),
+                    Text(
+                      AppLocalizations.of(context).logFilterBySource,
+                      style: theme.textTheme.titleSmall,
+                    ),
                     const SizedBox(height: 8),
                     TextField(
                       controller: sourceController,
                       decoration: InputDecoration(
-                        hintText:
-                            AppLocalizations.of(context).logFilterSourceHint,
+                        hintText: AppLocalizations.of(
+                          context,
+                        ).logFilterSourceHint,
                         prefixIcon: const Icon(Icons.source_outlined),
                         border: const OutlineInputBorder(),
                       ),
@@ -940,9 +952,7 @@ class _LogsPageState extends State<LogsPage> {
               logService.clearMemoryLogs();
 
               Navigator.of(context).pop();
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(
+              ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(l10n.logClearMemorySuccess),
                   duration: AppConstants.snackBarDurationNormal,
@@ -1011,10 +1021,7 @@ class _LogEntryItem extends StatelessWidget {
   final LogEntry log;
   final VoidCallback onTap;
 
-  const _LogEntryItem({
-    required this.log,
-    required this.onTap,
-  });
+  const _LogEntryItem({required this.log, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -1024,10 +1031,7 @@ class _LogEntryItem extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(
-          vertical: 8.0,
-          horizontal: 4.0,
-        ),
+        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppTheme.cardRadius),
           border: Border.all(color: theme.colorScheme.outline),
@@ -1038,11 +1042,7 @@ class _LogEntryItem extends StatelessWidget {
             // 日志头部（时间和级别）
             Row(
               children: [
-                Icon(
-                  _getLogLevelIcon(log.level),
-                  size: 16,
-                  color: logColor,
-                ),
+                Icon(_getLogLevelIcon(log.level), size: 16, color: logColor),
                 const SizedBox(width: 4),
                 Text(
                   log.level.name.toUpperCase(),

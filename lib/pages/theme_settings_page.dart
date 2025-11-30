@@ -53,7 +53,9 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                   Text(
                     l10n.themeMode,
                     style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -176,7 +178,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                         ],
                       ),
                       Switch(
-                        value: appTheme.useDynamicColor &&
+                        value:
+                            appTheme.useDynamicColor &&
                             !appTheme.useCustomColor,
                         onChanged: (value) {
                           // 如果启用动态取色，需要禁用自定义主题色
@@ -240,8 +243,9 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                           Icon(
                             Icons.info_outline,
                             size: 20,
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                           ),
                           const SizedBox(width: 8),
                           Expanded(
@@ -275,7 +279,9 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                   Text(
                     l10n.themeTools,
                     style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.bold),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -391,7 +397,8 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
         child: isSelected
             ? Icon(
                 Icons.check,
-                color: ThemeData.estimateBrightnessForColor(color) ==
+                color:
+                    ThemeData.estimateBrightnessForColor(color) ==
                         Brightness.light
                     ? Colors.black
                     : Colors.white,
