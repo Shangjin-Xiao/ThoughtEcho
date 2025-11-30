@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart'
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../services/version_check_service.dart';
+import '../gen_l10n/app_localizations.dart';
 
 // 条件导入：只在非 Web 平台导入
 import '../services/apk_download_service.dart'
@@ -107,7 +108,7 @@ class UpdateBottomSheet extends StatelessWidget {
                   size: 28,
                 ),
                 const SizedBox(width: 12),
-                const Text('发现新版本'),
+                Text(AppLocalizations.of(context).updateFoundNewVersion),
               ],
             ),
           ),
@@ -132,7 +133,7 @@ class UpdateBottomSheet extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '当前版本',
+                        AppLocalizations.of(context).updateCurrentVersion,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -150,7 +151,7 @@ class UpdateBottomSheet extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '最新版本',
+                        AppLocalizations.of(context).updateLatestVersion,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
@@ -184,7 +185,7 @@ class UpdateBottomSheet extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
               child: Text(
-                '更新内容',
+                AppLocalizations.of(context).updateReleaseNotes,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -236,7 +237,7 @@ class UpdateBottomSheet extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  '发布时间: ${_formatDate(versionInfo.publishedAt)}',
+                  AppLocalizations.of(context).updateReleaseTime(_formatDate(versionInfo.publishedAt)),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -287,17 +288,17 @@ class UpdateBottomSheet extends StatelessWidget {
           ),
 
           // 标题区域
-          const Padding(
-            padding: EdgeInsets.fromLTRB(24, 16, 24, 8),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
             child: Row(
               children: [
-                Icon(
+                const Icon(
                   Icons.check_circle,
                   color: Colors.green,
                   size: 28,
                 ),
-                SizedBox(width: 12),
-                Text('已是最新版本'),
+                const SizedBox(width: 12),
+                Text(AppLocalizations.of(context).updateAlreadyLatest),
               ],
             ),
           ),
@@ -324,14 +325,14 @@ class UpdateBottomSheet extends StatelessWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    '当前版本 ${versionInfo.currentVersion}',
+                    AppLocalizations.of(context).updateCurrentVersionLabel(versionInfo.currentVersion),
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '您使用的已是最新版本',
+                    AppLocalizations.of(context).updateUsingLatestVersion,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: colorScheme.onSurfaceVariant,
                     ),
@@ -350,7 +351,7 @@ class UpdateBottomSheet extends StatelessWidget {
                 padding:
                     const EdgeInsets.symmetric(vertical: 12, horizontal: 24),
               ),
-              child: const Text('确定'),
+              child: Text(AppLocalizations.of(context).confirm),
             ),
           ),
         ],
@@ -560,22 +561,23 @@ class UpdateBottomSheet extends StatelessWidget {
     // 根据平台确定更新按钮的文本和图标
     final isWindows =
         !kIsWeb && defaultTargetPlatform == TargetPlatform.windows;
-    final updateButtonLabel = isWindows ? '前往商店' : '立即更新';
+    final l10n = AppLocalizations.of(context);
+    final updateButtonLabel = isWindows ? l10n.updateGoToStore : l10n.updateNow;
     final updateButtonIcon = isWindows ? Icons.store : Icons.download;
 
     // 按钮配置：永久忽略、本次忽略、查看详情、立即更新/前往商店
     final buttons = [
       UpdateButtonConfig(
         type: UpdateButtonType.ignore,
-        label: '永久忽略',
+        label: AppLocalizations.of(context).updateIgnoreForever,
         onPressed: () async {
           await VersionCheckService.ignoreVersion(versionInfo.latestVersion);
           if (context.mounted) {
             Navigator.of(context).pop();
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('已忽略此版本更新'),
-                duration: Duration(seconds: 2),
+              SnackBar(
+                content: Text(AppLocalizations.of(context).updateVersionIgnored),
+                duration: const Duration(seconds: 2),
               ),
             );
           }
@@ -583,12 +585,12 @@ class UpdateBottomSheet extends StatelessWidget {
       ),
       UpdateButtonConfig(
         type: UpdateButtonType.later,
-        label: '本次忽略',
+        label: AppLocalizations.of(context).updateIgnoreThisTime,
         onPressed: () => Navigator.of(context).pop(),
       ),
       UpdateButtonConfig(
         type: UpdateButtonType.viewDetails,
-        label: '查看详情',
+        label: AppLocalizations.of(context).updateViewDetails,
         icon: Icons.open_in_browser,
         onPressed: () async {
           // 不关闭对话框，直接打开GitHub页面
@@ -668,14 +670,14 @@ class UpdateBottomSheet extends StatelessWidget {
         if (await canLaunchUrl(webUri)) {
           await launchUrl(webUri, mode: LaunchMode.externalApplication);
         } else {
-          throw Exception('无法打开Microsoft Store');
+          throw Exception('Cannot open Microsoft Store');
         }
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('打开Microsoft Store失败: $e'),
+            content: Text(AppLocalizations.of(context).updateOpenStoreFailed(e.toString())),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -690,13 +692,13 @@ class UpdateBottomSheet extends StatelessWidget {
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
-        throw Exception('无法打开下载链接');
+        throw Exception('Cannot open download link');
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('打开下载链接失败: $e'),
+            content: Text(AppLocalizations.of(context).updateOpenLinkFailed(e.toString())),
             duration: const Duration(seconds: 2),
           ),
         );

@@ -110,6 +110,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
     final locationService = Provider.of<LocationService>(context);
     final weatherService = Provider.of<WeatherService>(context);
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Consumer<WeatherSearchController>(
       builder: (context, controller, child) {
@@ -118,7 +119,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
           children: [
             // 标题栏
             AppBar(
-              title: const Text('选择城市'),
+              title: Text(l10n.selectCity),
               elevation: 0,
               backgroundColor: Colors.transparent,
               leading: IconButton(
@@ -136,15 +137,15 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                     .withValues(alpha: 0.5),
                 child: ListTile(
                   leading: Icon(weatherService.getWeatherIconData()),
-                  title: const Text('当前天气'),
+                  title: Text(l10n.currentWeather),
                   subtitle: Text(
                     (weatherService.currentWeather == null &&
                             weatherService.temperature == null)
                         ? (locationService.currentAddress != null
-                            ? '城市：${locationService.currentAddress}（点击右侧按钮刷新）'
-                            : '尚未设置城市，先在下方搜索并选择')
+                            ? l10n.clickRefreshHint(locationService.currentAddress!)
+                            : l10n.cityNotSetHint)
                         : (weatherService.currentWeather == '天气数据获取失败'
-                            ? '天气获取失败'
+                            ? l10n.weatherFetchFailed
                             : '${WeatherService.getWeatherDescription(weatherService.currentWeather ?? 'unknown')} ${weatherService.temperature ?? ""}'),
                     style: const TextStyle(fontSize: 12),
                   ),
@@ -155,7 +156,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                             height: 20,
                             child: CircularProgressIndicator(strokeWidth: 2))
                         : const Icon(Icons.refresh),
-                    tooltip: '刷新天气',
+                    tooltip: l10n.refreshWeather,
                     onPressed: (controller.isLoading ||
                             weatherService.isLoading)
                         ? null
@@ -168,21 +169,21 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                                   position.latitude, position.longitude);
                               if (!mounted) return;
                               if (weatherService.currentWeather != '天气数据获取失败') {
-                                messenger?.showSnackBar(const SnackBar(
-                                  content: Text('天气已更新'),
-                                  duration: Duration(seconds: 2),
+                                messenger?.showSnackBar(SnackBar(
+                                  content: Text(l10n.weatherUpdated),
+                                  duration: const Duration(seconds: 2),
                                 ));
                               } else {
-                                messenger?.showSnackBar(const SnackBar(
-                                  content: Text('天气更新失败，请稍后重试'),
-                                  duration: Duration(seconds: 3),
+                                messenger?.showSnackBar(SnackBar(
+                                  content: Text(l10n.weatherUpdateFailed),
+                                  duration: const Duration(seconds: 3),
                                 ));
                               }
                             } else {
                               if (!mounted) return;
-                              messenger?.showSnackBar(const SnackBar(
-                                content: Text('请先选择城市或启用位置服务'),
-                                duration: Duration(seconds: 3),
+                              messenger?.showSnackBar(SnackBar(
+                                content: Text(l10n.pleaseSelectCityFirst),
+                                duration: const Duration(seconds: 3),
                               ));
                             }
                           },
@@ -284,7 +285,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
             const SizedBox(height: 8),
 
             // 搜索结果或加载状态
-            Expanded(child: _buildContent(locationService, controller)),
+            Expanded(child: _buildContent(locationService, controller, l10n)),
 
             // 当前位置按钮
             if (locationService.isLocationServiceEnabled)
@@ -302,7 +303,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                           ),
                         )
                       : const Icon(Icons.my_location),
-                  label: const Text('使用当前位置'),
+                  label: Text(l10n.useCurrentLocation),
                   style: ElevatedButton.styleFrom(
                     minimumSize: const Size.fromHeight(50),
                   ),
@@ -323,7 +324,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    '天气数据由 Open-Meteo 提供',
+                    l10n.weatherProvidedBy,
                     style: TextStyle(
                       fontSize: 12,
                       color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
@@ -341,6 +342,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
   Widget _buildContent(
     LocationService locationService,
     WeatherSearchController controller,
+    AppLocalizations l10n,
   ) {
     // 如果控制器正在加载，显示加载指示器
     if (controller.isLoading) {
@@ -364,7 +366,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text('正在处理...'),
+            Text(l10n.processing),
           ],
         ),
       );
@@ -391,7 +393,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text('搜索城市中...'),
+            Text(l10n.searchingCity),
           ],
         ),
       );
@@ -405,10 +407,10 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
           children: [
             const Icon(Icons.search_off, size: 48, color: Colors.grey),
             const SizedBox(height: 16),
-            const Text('没有找到匹配的城市'),
+            Text(l10n.noCityFound),
             const SizedBox(height: 8),
             Text(
-              '尝试使用不同的关键词或城市名称',
+              l10n.tryDifferentKeywords,
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(
@@ -423,13 +425,13 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
 
     // 如果没有激活搜索，显示提示
     if (!_isSearchActive) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.search, size: 48, color: Colors.grey),
-            SizedBox(height: 16),
-            Text('输入城市名称开始搜索'),
+            const Icon(Icons.search, size: 48, color: Colors.grey),
+            const SizedBox(height: 16),
+            Text(l10n.enterCityToSearch),
           ],
         ),
       );

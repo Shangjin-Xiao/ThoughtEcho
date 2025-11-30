@@ -2200,5 +2200,243 @@
   "writeYourThoughts": "Write your thoughts...",
   "workName": "Work Name",
   "searchNotes": "Search notes...",
-  "searchCity": "Search city..."
+  "searchCity": "Search city...",
+  
+  "logSettingsTitle": "Log Settings",
+  "viewLogs": "View Logs",
+  "logLevelDescription": "Select the logging detail level for the app. More detailed logs help with debugging but may affect performance and use more storage space.",
+  "logLevelVerbose": "Record all detailed information for deep debugging.",
+  "logLevelDebug": "Record debug-related information.",
+  "logLevelInfo": "Record regular operation information. (Recommended)",
+  "logLevelWarning": "Record potential issues or warnings.",
+  "logLevelError": "Record only error information.",
+  "logLevelNone": "Do not record any logs.",
+  
+  "updateFoundNewVersion": "New Version Available",
+  "updateCurrentVersion": "Current Version",
+  "updateLatestVersion": "Latest Version",
+  "updateReleaseNotes": "Release Notes",
+  "updateReleaseTime": "Release Time: {date}",
+  "@updateReleaseTime": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "updateAlreadyLatest": "Already Up to Date",
+  "updateCurrentVersionLabel": "Current Version {version}",
+  "@updateCurrentVersionLabel": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updateUsingLatestVersion": "You are using the latest version",
+  "updateIgnoreForever": "Ignore Forever",
+  "updateIgnoreThisTime": "Ignore This Time",
+  "updateViewDetails": "View Details",
+  "updateGoToStore": "Go to Store",
+  "updateNow": "Update Now",
+  "updateVersionIgnored": "This version update has been ignored",
+  "updateOpenStoreFailed": "Failed to open Microsoft Store: {error}",
+  "@updateOpenStoreFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "updateOpenLinkFailed": "Failed to open download link: {error}",
+  "@updateOpenLinkFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  
+  "selectCity": "Select City",
+  "currentWeather": "Current Weather",
+  "cityNotSetHint": "No city set, search and select below",
+  "clickRefreshHint": "City: {city} (click refresh button)",
+  "@clickRefreshHint": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      }
+    }
+  },
+  "refreshWeather": "Refresh Weather",
+  "weatherUpdated": "Weather updated",
+  "weatherUpdateFailed": "Weather update failed, please try again later",
+  "weatherFetchFailed": "Weather fetch failed",
+  "pleaseSelectCityFirst": "Please select a city or enable location service first",
+  "useCurrentLocation": "Use Current Location",
+  "weatherProvidedBy": "Weather data provided by Open-Meteo",
+  "processing": "Processing...",
+  "searchingCity": "Searching cities...",
+  "noCityFound": "No matching city found",
+  "tryDifferentKeywords": "Try different keywords or city names",
+  "enterCityToSearch": "Enter city name to search",
+  
+  "addInfo": "Add Info",
+  "selectTagsWithCount": "Select Tags ({count})",
+  "@selectTagsWithCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noTagsAvailableHint": "No tags available, please add tags first",
+  "addLocationPrefix": "Add location",
+  "locationServiceUnavailable": "Location service unavailable",
+  
+  "sourceInfo": "Source Info",
+  "tagsLabel": "Tags",
+  "selectedTagsCount": "{count} tags selected",
+  "@selectedTagsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectedTags": "Selected Tags",
+  "unknownTagWithId": "Unknown tag (ID:{id}...)",
+  "@unknownTagWithId": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "colorLabel": "Color",
+  "selectCardColorLabel": "Select Card Color",
+  "noColor": "No color",
+  "colorSet": "Color set",
+  "locationAndWeather": "Location & Weather",
+  "recordedOnFirstSave": "Recorded on first save",
+  "locationLabel": "Location",
+  "weatherLabel": "Weather",
+  "refreshLocationWeather": "Refresh location and weather",
+  "gettingLocationHint": "Getting location...",
+  "noteNoLocationWeatherInfo": "This note did not record location and weather info on first save",
+  
+  "aiAssistantLabel": "AI Assistant",
+  "polishingText": "Polishing text...",
+  "continuingText": "Continuing text...",
+  "analyzingNote": "Analyzing note...",
+  "analysisResultWithConfidence": "Analysis Result (Confidence: {confidence})",
+  "@analysisResultWithConfidence": {
+    "placeholders": {
+      "confidence": {
+        "type": "String"
+      }
+    }
+  },
+  "possibleAuthor": "Possible Author:",
+  "possibleWork": "Possible Work:",
+  "analysisExplanation": "Analysis Explanation:",
+  "noAuthorWorkIdentified": "Could not identify a clear author or work",
+  "applyAnalysisResult": "Apply Analysis Result",
+  "close": "Close",
+  "parseResultFailed": "Parse result failed: {error}",
+  "@parseResultFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "analysisFailed": "Analysis failed: {error}",
+  "@analysisFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pleaseInputContent": "Please input content first",
+  "copyResult": "Copy Result",
+  "analysisResultCopied": "Analysis result copied to clipboard",
+  "cannotAddLocation": "Cannot Add Location",
+  "cannotAddLocationDesc": "This note did not record location info on first save, cannot add later.\n\nTo record location, check the location option when creating a new note.",
+  "iKnow": "I understand",
+  "locationInfo": "Location Info",
+  "locationUpdateHint": "Current location: {coordinates}\n\nYou can try to update to a detailed address, or remove the location (cannot be added again after removal).",
+  "@locationUpdateHint": {
+    "placeholders": {
+      "coordinates": {
+        "type": "String"
+      }
+    }
+  },
+  "locationRemoveHint": "Current location: {location}\n\nLocation info cannot be added or changed again after removal.",
+  "@locationRemoveHint": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      }
+    }
+  },
+  "remove": "Remove",
+  "updateLocation": "Update Location",
+  "locationUpdatedTo": "Location updated to: {address}",
+  "@locationUpdatedTo": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotGetAddress": "Cannot get address, please check network",
+  "updateFailed": "Update failed: {error}",
+  "@updateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotAddWeather": "Cannot Add Weather",
+  "cannotAddWeatherDesc": "This note did not record weather info on first save, cannot add later.\n\nTo record weather, check the weather option when creating a new note.",
+  "weatherInfo2": "Weather Info",
+  "weatherRemoveHint": "Current weather: {weather}\n\nWeather info cannot be added or changed again after removal.",
+  "@weatherRemoveHint": {
+    "placeholders": {
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotGetLocationTitle": "Cannot Get Location",
+  "cannotGetLocationDesc": "Cannot get current location. Please check location permission or network status.",
+  "cannotGetLocationPermissionShort": "Cannot get location permission",
+  
+  "savingNote": "Saving",
+  "saveComplete": "Complete",
+  "writingDatabase": "Writing to database...",
+  "preparingProcess": "Preparing...",
+  "mediaProcessFailed": "Media file processing failed: {error}",
+  "@mediaProcessFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "documentLoadFailed": "Document load failed, please reopen the editor",
+  "tagsCount": "{count} tags",
+  "@tagsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "editMetadataShort": "Edit Metadata",
+  "startWritingHint": "Start writing your thoughts..."
 }
