@@ -3,6 +3,7 @@ import 'dart:io' show File;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../services/database_service.dart';
 import '../services/location_service.dart';
@@ -322,19 +323,27 @@ class _HomePageState extends State<HomePage>
     // 使用传入的初始页面参数
     _currentIndex = widget.initialPage;
 
-    // 预先加载标签数据，确保点击加号按钮时数据已准备好
-    _preloadTags();
-
     // 注册生命周期观察器
     WidgetsBinding.instance.addObserver(this);
 
-    // 使用延迟方法来确保在UI构建完成后执行剪贴板检查，避免冷启动问题
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // 使用延迟方法来确保在UI构建完成后执行初始化
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // 如果初始页面是记录页，优先加载标签数据
+      if (widget.initialPage == 1) {
+        // 记录页启动时，先加载标签（高优先级）
+        await _loadTags();
+      } else {
+        // 其他页面启动时，使用预加载方式
+        _preloadTags();
+      }
+
       // 首次进入应用时检查剪贴板
       _checkClipboard();
 
-      // 确保标签在应用完全初始化后加载
-      _refreshTags();
+      // 如果不是记录页启动，确保标签也被加载
+      if (widget.initialPage != 1) {
+        _refreshTags();
+      }
 
       // 先初始化位置和天气，然后再获取每日提示
       _initLocationAndWeatherThenFetchPrompt();
@@ -1314,9 +1323,15 @@ class _HomePageState extends State<HomePage>
             theme.brightness,
           );
 
-    return Scaffold(
-      backgroundColor: scaffoldBackgroundColor,
-      appBar: _currentIndex == 1
+    final systemUiOverlayStyle = _buildSystemUiOverlayStyle(
+      theme,
+      scaffoldBackgroundColor,
+    );
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: systemUiOverlayStyle,
+      child: Scaffold(
+        backgroundColor: scaffoldBackgroundColor,
+        appBar: _currentIndex == 1
           ? null // 记录页不需要标题栏
           : _currentIndex == 0
               ? AppBar(
@@ -1362,7 +1377,7 @@ class _HomePageState extends State<HomePage>
                   ],
                 )
               : AppBar(toolbarHeight: 0),
-      body: IndexedStack(
+        body: IndexedStack(
         index: _currentIndex,
         children: [
           // 首页 - 每日一言和每日提示
@@ -1670,6 +1685,29 @@ class _HomePageState extends State<HomePage>
           ),
         ),
       ),
+    ),
+    );
+  }
+
+  SystemUiOverlayStyle _buildSystemUiOverlayStyle(
+    ThemeData theme,
+    Color navColor,
+  ) {
+    final navBrightness = ThemeData.estimateBrightnessForColor(navColor);
+    final bool navIconsShouldBeDark = navBrightness == Brightness.light;
+    final bool statusIconsShouldBeDark = theme.brightness == Brightness.light;
+
+    return SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness:
+          statusIconsShouldBeDark ? Brightness.dark : Brightness.light,
+      statusBarBrightness:
+          statusIconsShouldBeDark ? Brightness.light : Brightness.dark,
+      systemNavigationBarColor: navColor,
+      systemNavigationBarIconBrightness:
+          navIconsShouldBeDark ? Brightness.dark : Brightness.light,
+      systemNavigationBarDividerColor: Colors.transparent,
+      systemNavigationBarContrastEnforced: false,
     );
   }
 }

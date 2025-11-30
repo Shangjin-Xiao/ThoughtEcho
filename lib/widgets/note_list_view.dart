@@ -92,6 +92,9 @@ class NoteListViewState extends State<NoteListView> {
   // 修复：添加等待服务初始化的标志
   bool _waitingForServices = true;
 
+  // 修复：本地标签缓存，用于在外部标签为空时自己加载
+  List<NoteCategory> _localTagsCache = [];
+
   // 修复：用于检测和恢复滚动范围异常的计数器
   int _scrollExtentCheckCounter = 0;
   static const int _maxScrollExtentChecks = 3;
@@ -104,6 +107,10 @@ class NoteListViewState extends State<NoteListView> {
   bool _isAutoScrolling = false; // 当前是否有程序驱动的滚动动画
   DateTime? _lastUserScrollTime; // 最近一次用户滚动时间
   bool _isInitializing = true; // 标记是否正在初始化，避免冷启动滚动冲突
+
+  /// 获取有效的标签列表：优先使用外部传入的，若为空则使用本地缓存
+  List<NoteCategory> get _effectiveTags =>
+      widget.tags.isNotEmpty ? widget.tags : _localTagsCache;
 
   bool get hasQuotes => _quotes.isNotEmpty;
 
@@ -161,6 +168,8 @@ class NoteListViewState extends State<NoteListView> {
     // 如果数据库已初始化，直接初始化数据流
     if (db.isInitialized) {
       _waitingForServices = false;
+      // 修复：如果外部传入的标签为空，先加载本地标签缓存
+      _loadLocalTagsCacheIfNeeded();
       _initializeDataStream();
       return;
     }
@@ -168,6 +177,25 @@ class NoteListViewState extends State<NoteListView> {
     // 否则，等待数据库初始化
     logDebug('等待数据库初始化...', source: 'NoteListView');
     db.addListener(_onDatabaseServiceChanged);
+  }
+
+  /// 修复：如果外部传入的标签为空，加载本地标签缓存
+  Future<void> _loadLocalTagsCacheIfNeeded() async {
+    if (widget.tags.isEmpty && _localTagsCache.isEmpty) {
+      try {
+        final db = Provider.of<DatabaseService>(context, listen: false);
+        final categories = await db.getCategories();
+        if (mounted && categories.isNotEmpty) {
+          setState(() {
+            _localTagsCache = categories;
+          });
+          logDebug('NoteListView 本地标签缓存加载完成，共 ${categories.length} 个标签',
+              source: 'NoteListView');
+        }
+      } catch (e) {
+        logDebug('NoteListView 加载本地标签缓存失败: $e', source: 'NoteListView');
+      }
+    }
   }
 
   /// 焦点变化监听器，用于处理Web平台的焦点管理问题
@@ -513,6 +541,12 @@ class NoteListViewState extends State<NoteListView> {
     // 更新搜索控制器文本，避免与外部状态不同步
     if (oldWidget.searchQuery != widget.searchQuery) {
       _searchController.text = widget.searchQuery;
+    }
+
+    // 修复：当外部标签从空变为有数据时，清空本地缓存以使用外部标签
+    if (oldWidget.tags.isEmpty && widget.tags.isNotEmpty) {
+      _localTagsCache = [];
+      logDebug('外部标签已更新，清空本地缓存', source: 'NoteListView');
     }
 
     // 优化：只有在筛选条件真正改变时才更新订阅
@@ -1123,7 +1157,7 @@ class NoteListViewState extends State<NoteListView> {
                 valueListenable: expansionNotifier,
                 builder: (context, isExpanded, child) => QuoteItemWidget(
                   quote: quote,
-                  tags: widget.tags,
+                  tags: _effectiveTags,
                   selectedTagIds: widget.selectedTagIds,
                   isExpanded: isExpanded,
                   onToggleExpanded: (expanded) {
@@ -1367,7 +1401,7 @@ class NoteListViewState extends State<NoteListView> {
                                   ),
                                 ),
                                 builder: (context) => NoteFilterSortSheet(
-                                  allTags: widget.tags,
+                                  allTags: _effectiveTags,
                                   selectedTagIds: widget.selectedTagIds,
                                   sortType: widget.sortType,
                                   sortAscending: widget.sortAscending,
@@ -1488,7 +1522,7 @@ class NoteListViewState extends State<NoteListView> {
     // 添加标签chip (带图标支持) - 添加进出场动画
     if (widget.selectedTagIds.isNotEmpty) {
       allChips.addAll(widget.selectedTagIds.map((tagId) {
-        final tag = widget.tags.firstWhere(
+        final tag = _effectiveTags.firstWhere(
           (tag) => tag.id == tagId,
           orElse: () => NoteCategory(id: tagId, name: '未知标签'),
         );
