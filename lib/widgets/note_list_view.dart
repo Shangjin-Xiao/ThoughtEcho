@@ -160,7 +160,7 @@ class NoteListViewState extends State<NoteListView> {
   }
   
   /// 修复：检查服务初始化状态并初始化数据流
-  void _checkServicesAndInitialize() {
+  Future<void> _checkServicesAndInitialize() async {
     if (!mounted) return;
     
     final db = Provider.of<DatabaseService>(context, listen: false);
@@ -168,8 +168,8 @@ class NoteListViewState extends State<NoteListView> {
     // 如果数据库已初始化，直接初始化数据流
     if (db.isInitialized) {
       _waitingForServices = false;
-      // 修复：如果外部传入的标签为空，先加载本地标签缓存
-      _loadLocalTagsCacheIfNeeded();
+      // 修复：如果外部传入的标签为空，先等待加载本地标签缓存
+      await _loadLocalTagsCacheIfNeeded();
       _initializeDataStream();
       return;
     }
@@ -358,14 +358,20 @@ class NoteListViewState extends State<NoteListView> {
       // 针对安卓平台的特殊处理
       if (!kIsWeb && Platform.isAndroid) {
         // 安卓平台延迟重新订阅，确保数据库完全准备好
-        Future.delayed(const Duration(milliseconds: 200), () {
+        Future.delayed(const Duration(milliseconds: 200), () async {
           if (mounted) {
+            // 修复：先加载本地标签缓存
+            await _loadLocalTagsCacheIfNeeded();
             _initializeDataStream();
           }
         });
       } else {
-        // 其他平台立即重新订阅
-        _initializeDataStream();
+        // 其他平台：先加载标签再初始化数据流
+        _loadLocalTagsCacheIfNeeded().then((_) {
+          if (mounted) {
+            _initializeDataStream();
+          }
+        });
       }
     }
   }
@@ -544,9 +550,12 @@ class NoteListViewState extends State<NoteListView> {
     }
 
     // 修复：当外部标签从空变为有数据时，清空本地缓存以使用外部标签
+    // 并触发 setState 确保 UI 使用新的标签数据重建
     if (oldWidget.tags.isEmpty && widget.tags.isNotEmpty) {
-      _localTagsCache = [];
-      logDebug('外部标签已更新，清空本地缓存', source: 'NoteListView');
+      setState(() {
+        _localTagsCache = [];
+      });
+      logDebug('外部标签已更新，清空本地缓存并刷新 UI', source: 'NoteListView');
     }
 
     // 优化：只有在筛选条件真正改变时才更新订阅
@@ -1013,8 +1022,11 @@ class NoteListViewState extends State<NoteListView> {
     final listKey = ValueKey(
         '${widget.selectedTagIds.join(',')}_${widget.selectedWeathers.join(',')}_${widget.selectedDayPeriods.join(',')}_${widget.searchQuery}');
 
-    // 修复：等待服务初始化时显示加载动画，避免闪现"无笔记"
-    if (_waitingForServices || (_isLoading && _quotes.isEmpty)) {
+    // 修复：检查标签是否已加载（外部标签或本地缓存任一不为空即可）
+    final bool tagsLoaded = widget.tags.isNotEmpty || _localTagsCache.isNotEmpty;
+
+    // 修复：等待服务初始化或标签未加载时显示加载动画，避免闪现"无笔记"或"未知标签"
+    if (_waitingForServices || (_isLoading && _quotes.isEmpty) || (!tagsLoaded && _quotes.isNotEmpty)) {
       // 搜索时用专属动画
       if (widget.searchQuery.isNotEmpty) {
         return LayoutBuilder(
