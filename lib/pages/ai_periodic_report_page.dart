@@ -233,12 +233,12 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       return '- $t';
     }).join('\n');
 
-    // 处理时段显示：转换为中文标签
+    // 处理时段显示：转换为本地化标签
     String? dayPeriodDisplay;
     IconData? dayPeriodIcon;
     if (mostPeriod != null) {
-      dayPeriodDisplay = TimeUtils.getDayPeriodLabel(mostPeriod);
-      dayPeriodIcon = TimeUtils.getDayPeriodIcon(dayPeriodDisplay);
+      dayPeriodDisplay = TimeUtils.getLocalizedDayPeriodLabel(context, mostPeriod);
+      dayPeriodIcon = TimeUtils.getDayPeriodIconByKey(mostPeriod);
     }
 
     // 处理天气显示：转换为中文

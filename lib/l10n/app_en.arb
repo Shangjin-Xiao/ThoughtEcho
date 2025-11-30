@@ -2440,5 +2440,15 @@
   },
   "editMetadataShort": "Edit Metadata",
   "startWritingHint": "Start writing your thoughts...",
-  "unknownLocation": "Unknown Location"
+  "unknownLocation": "Unknown Location",
+  
+  "dayPeriodDawn": "Dawn",
+  "dayPeriodMorning": "Morning",
+  "dayPeriodAfternoon": "Afternoon",
+  "dayPeriodDusk": "Dusk",
+  "dayPeriodEvening": "Evening",
+  "dayPeriodMidnight": "Late Night",
+  
+  "showExactTime": "Show Exact Time",
+  "showExactTimeDesc": "Display time (hour:minute) in notes"
 }

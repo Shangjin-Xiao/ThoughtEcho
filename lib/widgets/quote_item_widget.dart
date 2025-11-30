@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
+import 'package:provider/provider.dart';
 import '../models/quote_model.dart';
 import '../models/note_category.dart';
 import '../theme/app_theme.dart';
 import '../widgets/quote_content_widget.dart';
 import '../services/weather_service.dart';
 import '../services/location_service.dart';
+import '../services/settings_service.dart';
 import '../utils/time_utils.dart';
 import '../utils/icon_utils.dart'; // 添加 IconUtils 导入
 import '../gen_l10n/app_localizations.dart';
@@ -248,11 +250,14 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
 
     // Determine the text color based on the card color
 
-    // 格式化日期和时间段
+    // 格式化日期和时间段（支持国际化和精确时间显示）
     final DateTime quoteDate = DateTime.parse(quote.date);
-    final String formattedDate = TimeUtils.formatQuoteDate(
+    final settingsService = context.watch<SettingsService>();
+    final String formattedDate = TimeUtils.formatQuoteDateLocalized(
+      context,
       quoteDate,
       dayPeriod: quote.dayPeriod,
+      showExactTime: settingsService.showExactTime,
     );
 
     return AnimatedContainer(

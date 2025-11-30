@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../gen_l10n/app_localizations.dart';
 
 /// 时间工具类，用于处理时间相关的功能
 class TimeUtils {
@@ -24,9 +25,35 @@ class TimeUtils {
     }
   }
 
-  /// 根据时间段 Key 获取中文标签
+  /// 根据时间段 Key 获取中文标签（旧方法，用于向后兼容）
   static String getDayPeriodLabel(String key) {
     return dayPeriodKeyToLabel[key] ?? key;
+  }
+
+  /// 根据时间段 Key 获取本地化标签（新方法，支持国际化）
+  static String getLocalizedDayPeriodLabel(BuildContext context, String key) {
+    final l10n = AppLocalizations.of(context);
+    switch (key) {
+      case 'dawn':
+        return l10n.dayPeriodDawn;
+      case 'morning':
+        return l10n.dayPeriodMorning;
+      case 'afternoon':
+        return l10n.dayPeriodAfternoon;
+      case 'dusk':
+        return l10n.dayPeriodDusk;
+      case 'evening':
+        return l10n.dayPeriodEvening;
+      case 'midnight':
+        return l10n.dayPeriodMidnight;
+      default:
+        // 如果是旧的中文标签，尝试转换
+        final reverseMap = dayPeriodKeyToLabel.map((k, v) => MapEntry(v, k));
+        if (reverseMap.containsKey(key)) {
+          return getLocalizedDayPeriodLabel(context, reverseMap[key]!);
+        }
+        return key;
+    }
   }
 
   /// 根据时间段 Key 获取图标
@@ -176,6 +203,57 @@ class TimeUtils {
     }
 
     final dayPeriodLabel = getDayPeriodLabel(dayPeriodKey);
+    return '$formattedDate $dayPeriodLabel';
+  }
+
+  /// 格式化笔记日期（本地化版本，支持国际化）
+  /// 可选参数 showExactTime：是否显示精确时间（时:分）
+  /// 格式：2025-06-21 上午 或 2025-06-21 14:30 上午
+  static String formatQuoteDateLocalized(
+    BuildContext context,
+    DateTime dateTime, {
+    String? dayPeriod,
+    bool showExactTime = false,
+  }) {
+    final formattedDate =
+        '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')}';
+
+    // 确定时间段 key
+    String dayPeriodKey;
+    if (dayPeriod != null) {
+      // 如果传入的是已知的 key，直接使用
+      if (dayPeriodKeyToLabel.containsKey(dayPeriod)) {
+        dayPeriodKey = dayPeriod;
+      } else {
+        // 如果是中文标签，转换为 key
+        final reverseMap = dayPeriodKeyToLabel.map((k, v) => MapEntry(v, k));
+        dayPeriodKey = reverseMap[dayPeriod] ?? dayPeriod;
+      }
+    } else {
+      // 根据时间推算
+      final hour = dateTime.hour;
+      if (hour >= 5 && hour < 8) {
+        dayPeriodKey = 'dawn';
+      } else if (hour >= 8 && hour < 12) {
+        dayPeriodKey = 'morning';
+      } else if (hour >= 12 && hour < 17) {
+        dayPeriodKey = 'afternoon';
+      } else if (hour >= 17 && hour < 20) {
+        dayPeriodKey = 'dusk';
+      } else if (hour >= 20 && hour < 23) {
+        dayPeriodKey = 'evening';
+      } else {
+        dayPeriodKey = 'midnight';
+      }
+    }
+
+    final dayPeriodLabel = getLocalizedDayPeriodLabel(context, dayPeriodKey);
+
+    if (showExactTime) {
+      final timeStr = formatQuoteTime(dateTime);
+      return '$formattedDate $timeStr $dayPeriodLabel';
+    }
+
     return '$formattedDate $dayPeriodLabel';
   }
 
