@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../gen_l10n/app_localizations.dart';
 import '../services/weather_service.dart';
 import '../services/location_service.dart';
 
@@ -8,12 +9,13 @@ class WeatherWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final weatherService = Provider.of<WeatherService>(context);
     final locationService = Provider.of<LocationService>(context);
     final theme = Theme.of(context);
 
     // 构建位置显示文本
-    String locationText = '未知位置';
+    String locationText = l10n.unknownLocation;
     if (locationService.city != null) {
       // 使用城市名作为主要显示
       locationText = locationService.city!;
@@ -48,7 +50,7 @@ class WeatherWidget extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      '当前天气',
+                      l10n.currentWeather,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -102,7 +104,8 @@ class WeatherWidget extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              WeatherService.getWeatherDescription(
+              WeatherService.getLocalizedWeatherDescription(
+                context,
                 weatherService.currentWeather ?? 'unknown',
               ),
               textAlign: TextAlign.center,

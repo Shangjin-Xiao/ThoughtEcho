@@ -224,9 +224,14 @@ class WeatherService extends ChangeNotifier {
     return WeatherCodeMapper.getIcon(key);
   }
 
-  /// 获取天气描述（静态方法，兼容性）
+  /// 获取天气描述（静态方法，兼容性，用于非 UI 场景）
   static String getWeatherDescription(String key) {
     return WeatherCodeMapper.getDescription(key);
+  }
+
+  /// 获取国际化天气描述（静态方法，用于 UI 显示）
+  static String getLocalizedWeatherDescription(BuildContext context, String key) {
+    return WeatherCodeMapper.getLocalizedDescription(context, key);
   }
 
   /// 获取天气key（静态方法，兼容性）

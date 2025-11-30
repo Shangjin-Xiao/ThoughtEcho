@@ -2439,5 +2439,6 @@
     }
   },
   "editMetadataShort": "Edit Metadata",
-  "startWritingHint": "Start writing your thoughts..."
+  "startWritingHint": "Start writing your thoughts...",
+  "unknownLocation": "Unknown Location"
 }

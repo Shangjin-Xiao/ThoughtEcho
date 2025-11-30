@@ -746,7 +746,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     } else {
       // 有天气数据
       final weatherDesc =
-          WeatherService.getWeatherDescription(_originalWeather!);
+          WeatherService.getLocalizedWeatherDescription(context, _originalWeather!);
       title = l10n.weatherInfo2;
       content = l10n.weatherRemoveHint('$weatherDesc${_temperature != null ? " $_temperature" : ""}');
       actions = [
@@ -2126,8 +2126,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                         ),
                                         const SizedBox(width: 8),
                                         Text(
-                                          WeatherService.getWeatherDescription(
-                                              _weather!),
+                                          WeatherService.getLocalizedWeatherDescription(
+                                              context, _weather!),
                                           style: TextStyle(
                                             fontSize: 14,
                                             color: theme

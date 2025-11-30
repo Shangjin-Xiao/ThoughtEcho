@@ -40,6 +40,9 @@ class LocationService extends ChangeNotifier {
   List<CityInfo> _searchResults = [];
   bool _isSearching = false;
 
+  // 当前语言设置（用于 API 调用）
+  String? _currentLocaleCode;
+
   Position? get currentPosition => _currentPosition;
   String? get currentAddress => _currentAddress;
   bool get hasLocationPermission => _hasLocationPermission;
@@ -47,6 +50,29 @@ class LocationService extends ChangeNotifier {
   bool get isLoading => _isLoading;
   List<CityInfo> get searchResults => _searchResults;
   bool get isSearching => _isSearching;
+
+  /// 获取当前语言代码（用于 API 调用）
+  String? get currentLocaleCode => _currentLocaleCode;
+
+  /// 设置当前语言代码
+  set currentLocaleCode(String? code) {
+    _currentLocaleCode = code;
+  }
+
+  /// 获取 API 调用使用的语言参数
+  String get _apiLanguageParam {
+    // 如果设置了语言代码，使用它
+    if (_currentLocaleCode != null) {
+      if (_currentLocaleCode!.startsWith('zh')) return 'zh';
+      if (_currentLocaleCode!.startsWith('en')) return 'en';
+    }
+    // 否则使用系统语言
+    try {
+      final systemLocale = Platform.localeName;
+      if (systemLocale.startsWith('zh')) return 'zh';
+    } catch (_) {}
+    return 'en';
+  }
 
   // 地址组件
   String? _country;
@@ -434,9 +460,9 @@ class LocationService extends ChangeNotifier {
       // 对查询字符串进行URL编码
       final encodedQuery = Uri.encodeComponent(query.trim());
 
-      // 根据输入语言选择合适的语言参数
-      // 如果包含中文字符，使用中文结果；否则根据用户语言偏好
-      final String languageParam = _containsChinese(query) ? 'zh' : 'en';
+      // 根据输入语言和用户语言设置选择合适的语言参数
+      // 如果输入包含中文，使用中文结果；否则根据用户语言设置
+      final String languageParam = _containsChinese(query) ? 'zh' : _apiLanguageParam;
 
       // OpenMeteo地理编码API - 使用URL编码的查询参数
       final url =
@@ -503,10 +529,15 @@ class LocationService extends ChangeNotifier {
 
       logDebug('Nominatim搜索URL: $url');
 
+      // 根据语言设置构建 Accept-Language 头
+      final acceptLanguage = _apiLanguageParam == 'zh'
+          ? 'zh-CN,zh;q=0.9,en;q=0.8'
+          : 'en-US,en;q=0.9,zh;q=0.8';
+
       final response = await NetworkService.instance.get(
         url,
         headers: {
-          'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+          'Accept-Language': acceptLanguage,
           'User-Agent': 'ThoughtEcho App',
         },
         timeoutSeconds: 15,
