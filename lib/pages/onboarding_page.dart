@@ -224,6 +224,7 @@ class _OnboardingPageState extends State<OnboardingPage>
 
   /// 加载视图
   Widget _buildLoadingView() {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       body: Center(
         child: Column(
@@ -236,12 +237,12 @@ class _OnboardingPageState extends State<OnboardingPage>
                   type: LottieAnimationType.pulseLoading,
                   width: s,
                   height: s,
-                  semanticLabel: '正在准备',
+                  semanticLabel: l10n.onboardingPreparingLabel,
                 );
               },
             ),
             const SizedBox(height: 20),
-            Text('正在准备...', style: Theme.of(context).textTheme.titleMedium),
+            Text(l10n.onboardingPreparing, style: Theme.of(context).textTheme.titleMedium),
           ],
         ),
       ),
@@ -398,19 +399,21 @@ class _OnboardingPageState extends State<OnboardingPage>
 
   /// 构建页面内容
   Widget _buildPageContent(int pageIndex, OnboardingController controller) {
+    final l10n = AppLocalizations.of(context);
     final state = controller.state;
-    final pageData = OnboardingConfig.getPageData(pageIndex);
+    final pageData = OnboardingConfig.getPageData(pageIndex, l10n);
 
     switch (pageData.type) {
       case OnboardingPageType.welcome:
         return WelcomePageView(pageData: pageData);
       case OnboardingPageType.features:
-        return FeaturesPageView(pageData: pageData);
+        return FeaturesPageView(pageData: pageData, l10n: l10n);
       case OnboardingPageType.preferences:
         return PreferencesPageView(
           pageData: pageData,
           state: state,
           onPreferenceChanged: controller.updatePreference,
+          l10n: l10n,
         );
       case OnboardingPageType.complete:
         return _buildCompletePage();
@@ -420,10 +423,12 @@ class _OnboardingPageState extends State<OnboardingPage>
   /// 完成页面
   Widget _buildCompletePage() {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Consumer<OnboardingController>(
       builder: (context, controller, child) {
-        final hitokotoPreference = OnboardingConfig.preferences
+        final preferences = OnboardingConfig.getPreferences(l10n);
+        final hitokotoPreference = preferences
             .firstWhere((p) => p.key == 'hitokotoTypes');
         final currentValue =
             controller.state.getPreference<String>('hitokotoTypes') ??
@@ -465,7 +470,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  '已选择 ${selectedValues.length} 种类型',
+                                  l10n.selectedTypesCount(selectedValues.length),
                                   style: theme.textTheme.bodyMedium?.copyWith(
                                     color: theme.colorScheme.onSurface
                                         .withValues(alpha: 0.7),

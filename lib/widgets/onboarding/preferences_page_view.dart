@@ -11,12 +11,14 @@ class PreferencesPageView extends StatefulWidget {
   final OnboardingPageData pageData;
   final OnboardingState state;
   final Function(String key, dynamic value) onPreferenceChanged;
+  final AppLocalizations l10n;
 
   const PreferencesPageView({
     super.key,
     required this.pageData,
     required this.state,
     required this.onPreferenceChanged,
+    required this.l10n,
   });
 
   @override
@@ -27,6 +29,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
     with TickerProviderStateMixin {
   late AnimationController _animationController;
   late List<Animation<double>> _itemAnimations;
+  late List<OnboardingPreference<dynamic>> _preferences;
 
   @override
   void initState() {
@@ -35,8 +38,17 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
       duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
-
-    final preferencesCount = OnboardingConfig.preferences.length;
+  }
+  
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _preferences = OnboardingConfig.getPreferences(widget.l10n);
+    _setupAnimations();
+  }
+  
+  void _setupAnimations() {
+    final preferencesCount = _preferences.length;
     _itemAnimations = List.generate(preferencesCount, (index) {
       // Calculate intervals that ensure end values don't exceed 1.0
       final startDelay = index * 0.1;
@@ -101,7 +113,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
           const SizedBox(height: 32),
 
           // 偏好设置列表
-          ...OnboardingConfig.preferences.asMap().entries.map((entry) {
+          ..._preferences.asMap().entries.map((entry) {
             final index = entry.key;
             final preference = entry.value;
 
@@ -147,7 +159,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        '更多个性化选项和AI功能可在「设置 > 偏好设置」中随时调整。',
+                        widget.l10n.prefMoreOptionsHintFull,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurface
                               .withValues(alpha: 0.7),
@@ -203,9 +215,9 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
             if (!hasPermission) {
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('位置权限被拒绝，无法启用位置服务'),
-                    duration: Duration(seconds: 2),
+                  SnackBar(
+                    content: Text(widget.l10n.locationPermissionDeniedShort),
+                    duration: const Duration(seconds: 2),
                   ),
                 );
               }

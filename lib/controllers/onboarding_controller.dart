@@ -64,11 +64,9 @@ class OnboardingController extends ChangeNotifier {
 
   /// 初始化偏好设置默认值
   void _initializePreferences() {
-    final defaultPreferences = <String, dynamic>{};
-
-    for (final preference in OnboardingConfig.preferences) {
-      defaultPreferences[preference.key] = preference.defaultValue;
-    }
+    final defaultPreferences = Map<String, dynamic>.from(
+      OnboardingConfig.preferenceDefaults,
+    );
 
     _state = _state.copyWith(preferences: defaultPreferences);
     _updateNavigationState();
