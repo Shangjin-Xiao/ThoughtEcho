@@ -2105,5 +2105,100 @@
         "type": "String"
       }
     }
-  }
+  },
+  
+  "prefSettingsTitle": "偏好设置",
+  "personalizationSettings": "个性化设置",
+  "personalizationSettingsDesc": "根据您的使用习惯调整应用行为",
+  "commonPreferences": "常用偏好",
+  "clipboardMonitoring": "剪贴板监控",
+  "clipboardMonitoringDesc": "自动检测剪贴板内容并提示添加笔记",
+  "showFavoriteButton": "显示喜爱按钮",
+  "showFavoriteButtonDesc": "在笔记卡片上显示心形按钮",
+  "prioritizeBoldContent": "优先显示加粗内容",
+  "prioritizeBoldContentDesc": "折叠时优先显示加粗文字",
+  "useLocalNotesOnly": "仅使用本地笔记",
+  "useLocalNotesOnlyDesc": "关闭后，无网络时自动使用本地记录",
+  "aiSmartFeatures": "AI 智能功能",
+  "aiGenerateDailyPrompt": "AI生成每日提示",
+  "aiGenerateDailyPromptDesc": "主页每日提示使用AI生成",
+  "periodicReportAiInsights": "周期报告AI洞察",
+  "periodicReportAiInsightsDesc": "每周/月报告生成时启用AI洞察",
+  "aiCardGenerationLabel": "AI卡片生成",
+  "aiCardGenerationLabelDesc": "为笔记生成可视化SVG卡片",
+  "moreAiSettings": "更多AI设置",
+  "moreAiSettingsDesc": "配置AI服务商、模型等",
+  
+  "licenseInfo": "许可证信息",
+  "appLicense": "本程序许可证",
+  "viewAppLicense": "查看本程序 LICENSE",
+  "loadLicenseFailed": "无法加载本程序许可证：{error}",
+  "@loadLicenseFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "licenseFileNotFound": "未找到本程序 LICENSE 文件。",
+  "openSourceAcknowledgements": "开源库与鸣谢",
+  "lottieAnimationLicense": "Lottie 动画许可",
+  "systemLicenses": "系统许可证",
+  "openSourceDesc": "本应用基于 Flutter 框架构建，使用并感谢下列开源库与服务：",
+  "framework": "框架",
+  "stateManagement": "状态管理",
+  "animationSupport": "动画支持",
+  "localStorage": "本地存储",
+  "syncIntegrationNote": "同步功能集成说明：",
+  "serviceApiAcknowledgements": "服务与 API 鸣谢：",
+  "weatherData": "天气数据",
+  "dailyQuoteApi": "每日一言 API",
+  "viewFullDependencyList": "查看完整依赖列表",
+  "thankOpenSourceContributors": "感谢所有开源项目与社区贡献者，正是这些工具和服务让本应用成为可能。具体许可证请以各项目仓库或包管理页面为准。",
+  "lottieFilesCredits": "应用使用了来自 LottieFiles 的动画资源：",
+  "searchLoadingAnimation": "搜索加载动画",
+  "weatherSearchAnimation": "天气搜索动画",
+  "aiThinkingAnimation": "AI思考动画",
+  "noResultsAnimation": "搜索无结果动画",
+  "thankLottieFiles": "感谢 LottieFiles 提供优质的动画资源。",
+  "sourceLabel": "来源:",
+  "systemLicensesDesc": "系统许可证包括 Flutter SDK 及依赖包的许可证，点击下方按钮查看完整列表。",
+  "viewSystemLicenses": "查看系统许可证",
+  "expandCollapseAll": "全部展开/折叠",
+  "licensePageDesc": "本页自动汇总了 Flutter 及所有依赖包的许可证信息，内容由各依赖包声明自动生成，仅供参考。",
+  "searchPackageOrLicense": "搜索包名或许可证内容（只搜索首段）",
+  "loadSystemLicensesFailed": "加载系统许可证失败：{error}",
+  "@loadSystemLicensesFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noSystemLicensesFound": "未找到系统许可证条目",
+  "noMatchingLicensesFound": "未找到匹配的许可证条目",
+  "licenseEntriesCount": "{visible}/{total} 条",
+  "@licenseEntriesCount": {
+    "placeholders": {
+      "visible": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "unnamed": "未命名",
+  "noLicenseContent": "(无许可内容)",
+  "copyLicense": "复制许可证",
+  "licenseCopied": "已复制许可证内容",
+  
+  "searchAnalysisRecords": "搜索分析记录...",
+  "authorPerson": "作者/人物",
+  "workSource": "作品/来源",
+  "searchTags": "搜索标签...",
+  "writeYourThoughts": "写下你的感悟...",
+  "workName": "作品名称",
+  "searchNotes": "搜索笔记...",
+  "searchCity": "搜索城市..."
 }
