@@ -145,11 +145,15 @@ class OnboardingConfig {
     ];
   }
 
+  /// 页面数量常量
+  /// 页面结构: 欢迎页、功能展示页、个性化设置页
+  static const int _pageCount = 3;
+
   // 获取总页数
-  static int get totalPages => 3;
+  static int get totalPages => _pageCount;
 
   // 检查是否为最后一页
-  static bool isLastPage(int pageIndex) => pageIndex == totalPages - 1;
+  static bool isLastPage(int pageIndex) => pageIndex == _pageCount - 1;
 
   // 获取页面数据
   static OnboardingPageData getPageData(int pageIndex, AppLocalizations l10n) {

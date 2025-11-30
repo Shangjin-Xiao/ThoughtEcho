@@ -30,6 +30,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
   late AnimationController _animationController;
   late List<Animation<double>> _itemAnimations;
   late List<OnboardingPreference<dynamic>> _preferences;
+  bool _isInitialized = false;
 
   @override
   void initState() {
@@ -43,8 +44,12 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _preferences = OnboardingConfig.getPreferences(widget.l10n);
-    _setupAnimations();
+    // Only initialize once to avoid redundant setup on multiple calls
+    if (!_isInitialized) {
+      _preferences = OnboardingConfig.getPreferences(widget.l10n);
+      _setupAnimations();
+      _isInitialized = true;
+    }
   }
   
   void _setupAnimations() {
