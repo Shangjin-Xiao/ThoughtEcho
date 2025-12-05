@@ -532,7 +532,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       final isValid = await backupService.validateBackupFile(file.path!);
       if (!isValid) {
         if (mounted) {
-          _showErrorDialog(l10n.invalidBackupFile, '${l10n.invalidBackupFile}\n\n${l10n.cannotGetFilePath}');
+          _showErrorDialog(l10n.invalidBackupFile, l10n.invalidBackupFileDesc);
         }
         return;
       }

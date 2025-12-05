@@ -753,7 +753,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text(AppLocalizations.of(context)!.videoInfo),
+        title: Text(AppLocalizations.of(context)!.videoInfo),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -803,7 +803,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text(AppLocalizations.of(context)!.audioInfo),
+        title: Text(AppLocalizations.of(context)!.audioInfo),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
