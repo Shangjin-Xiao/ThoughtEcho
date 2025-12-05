@@ -1251,50 +1251,59 @@ class _HomePageState extends State<HomePage>
 
     return Padding(
       padding: const EdgeInsets.only(right: 8.0),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: theme.colorScheme.primaryContainer,
-          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-          boxShadow: AppTheme.defaultShadow,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.location_on,
-              size: 14,
-              color: theme.colorScheme.onPrimaryContainer,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              locationText,
-              style: theme.textTheme.bodySmall?.copyWith(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 200), // 限制最大宽度，防止挤占标题空间
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primaryContainer,
+            borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+            boxShadow: AppTheme.defaultShadow,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.location_on,
+                size: 14,
                 color: theme.colorScheme.onPrimaryContainer,
               ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              '|',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onPrimaryContainer.withAlpha(128),
+              const SizedBox(width: 3),
+              Flexible(
+                child: Text(
+                  locationText,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onPrimaryContainer,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Icon(
-              weatherIcon,
-              size: 18,
-              color: theme.colorScheme.onPrimaryContainer,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              weatherText,
-              style: theme.textTheme.bodySmall?.copyWith(
+              const SizedBox(width: 6),
+              Text(
+                '|',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onPrimaryContainer.withAlpha(128),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Icon(
+                weatherIcon,
+                size: 16,
                 color: theme.colorScheme.onPrimaryContainer,
-                fontWeight: FontWeight.w600,
               ),
-            ),
-          ],
+              const SizedBox(width: 3),
+              Flexible(
+                child: Text(
+                  weatherText,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onPrimaryContainer,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1343,6 +1352,7 @@ class _HomePageState extends State<HomePage>
             ? null // 记录页不需要标题栏
             : _currentIndex == 0
             ? AppBar(
+                titleSpacing: 8, // 减小标题和 leading 之间的间距
                 title: Consumer<ConnectivityService>(
                   builder: (context, connectivityService, child) {
                     if (!connectivityService.isConnected) {
@@ -1355,11 +1365,19 @@ class _HomePageState extends State<HomePage>
                             color: Colors.red,
                           ),
                           const SizedBox(width: 4),
-                          Text(AppLocalizations.of(context).appTitleOffline),
+                          Flexible(
+                            child: Text(
+                              AppLocalizations.of(context).appTitleOffline,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                         ],
                       );
                     }
-                    return Text(AppLocalizations.of(context).appTitle);
+                    return Text(
+                      AppLocalizations.of(context).appTitle,
+                      overflow: TextOverflow.ellipsis,
+                    );
                   },
                 ),
                 actions: [
