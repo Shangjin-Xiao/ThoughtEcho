@@ -47,11 +47,11 @@ class _WelcomePageViewState extends State<WelcomePageView>
 
     _slideAnimation =
         Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _animationController,
-            curve: const Interval(0.3, 1.0, curve: Curves.easeOutBack),
-          ),
-        );
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.3, 1.0, curve: Curves.easeOutBack),
+      ),
+    );
 
     // 初始化语言选择控制器
     _languageScrollController = FixedExtentScrollController(initialItem: 0);
@@ -209,55 +209,9 @@ class _WelcomePageViewState extends State<WelcomePageView>
                       ],
                     ),
 
-                    if (widget.pageData.description != null) ...[
-                      const SizedBox(height: 18),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 18,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surface.withValues(
-                            alpha: 0.82,
-                          ),
-                          borderRadius: BorderRadius.circular(22),
-                          boxShadow: [
-                            BoxShadow(
-                              color: theme.colorScheme.primary.withValues(
-                                alpha: 0.10,
-                              ),
-                              blurRadius: 22,
-                              spreadRadius: 1,
-                              offset: const Offset(0, 6),
-                            ),
-                          ],
-                        ),
-                        child: Text(
-                          widget.pageData.description!,
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: theme.colorScheme.primary,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 19,
-                            letterSpacing: 1.1,
-                            fontFamily: 'Rounded',
-                            shadows: [
-                              Shadow(
-                                color: theme.colorScheme.primary.withValues(
-                                  alpha: 0.13,
-                                ),
-                                blurRadius: 10,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ],
-
-                    // 语言选择器
-                    const SizedBox(height: 40),
-                    _buildLanguageSelector(theme, l10n),
+                    // 语言选择器（简洁版）
+                    const SizedBox(height: 32),
+                    _buildCompactLanguageSelector(theme, l10n),
                   ],
                 ),
               ),
@@ -268,76 +222,52 @@ class _WelcomePageViewState extends State<WelcomePageView>
     );
   }
 
-  /// 构建语言选择器
-  Widget _buildLanguageSelector(ThemeData theme, AppLocalizations l10n) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: theme.colorScheme.outline.withValues(alpha: 0.15),
+  /// 构建简洁的语言选择器（滚轮样式）
+  Widget _buildCompactLanguageSelector(ThemeData theme, AppLocalizations l10n) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        Icon(
+          Icons.translate_rounded,
+          color: theme.colorScheme.primary,
+          size: 22,
         ),
-      ),
-      child: Column(
-        children: [
-          // 标题行
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.language_rounded,
-                color: theme.colorScheme.primary,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                l10n.onboardingSelectLanguage,
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: theme.colorScheme.onSurface,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          // 语言滚轮选择器
-          SizedBox(
-            height: 120,
-            child: ListWheelScrollView.useDelegate(
-              controller: _languageScrollController,
-              itemExtent: 40,
-              perspective: 0.003,
-              diameterRatio: 1.5,
-              physics: const FixedExtentScrollPhysics(),
-              onSelectedItemChanged: _onLanguageChanged,
-              childDelegate: ListWheelChildBuilderDelegate(
-                childCount: _languageCodes.length,
-                builder: (context, index) {
-                  final isSelected = index == _selectedLanguageIndex;
-                  return Center(
-                    child: AnimatedDefaultTextStyle(
-                      duration: const Duration(milliseconds: 200),
-                      style: TextStyle(
-                        fontSize: isSelected ? 18 : 15,
-                        fontWeight: isSelected
-                            ? FontWeight.bold
-                            : FontWeight.normal,
-                        color: isSelected
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurface.withValues(
-                                alpha: 0.5,
-                              ),
-                      ),
-                      child: Text(_getLanguageLabel(_languageCodes[index])),
+        const SizedBox(width: 12),
+        // 语言滚轮选择器
+        SizedBox(
+          width: 140,
+          height: 100,
+          child: ListWheelScrollView.useDelegate(
+            controller: _languageScrollController,
+            itemExtent: 36,
+            perspective: 0.003,
+            diameterRatio: 1.5,
+            physics: const FixedExtentScrollPhysics(),
+            onSelectedItemChanged: _onLanguageChanged,
+            childDelegate: ListWheelChildBuilderDelegate(
+              childCount: _languageCodes.length,
+              builder: (context, index) {
+                final isSelected = index == _selectedLanguageIndex;
+                return Center(
+                  child: AnimatedDefaultTextStyle(
+                    duration: const Duration(milliseconds: 200),
+                    style: TextStyle(
+                      fontSize: isSelected ? 17 : 14,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: isSelected
+                          ? theme.colorScheme.primary
+                          : theme.colorScheme.onSurface.withValues(alpha: 0.45),
                     ),
-                  );
-                },
-              ),
+                    child: Text(_getLanguageLabel(_languageCodes[index])),
+                  ),
+                );
+              },
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -563,9 +493,8 @@ class _FeatureCard extends StatelessWidget {
 
     return Card(
       elevation: isHighlight ? 8 : 2,
-      shadowColor: isHighlight
-          ? theme.colorScheme.primary.withValues(alpha: 0.3)
-          : null,
+      shadowColor:
+          isHighlight ? theme.colorScheme.primary.withValues(alpha: 0.3) : null,
       child: Container(
         decoration: isHighlight
             ? BoxDecoration(
