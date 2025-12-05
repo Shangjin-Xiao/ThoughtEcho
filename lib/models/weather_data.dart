@@ -1,3 +1,4 @@
+// TODO: Weather display strings should be internationalized at the UI layer, not in the model
 import 'package:flutter/material.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 
