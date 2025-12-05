@@ -1251,59 +1251,50 @@ class _HomePageState extends State<HomePage>
 
     return Padding(
       padding: const EdgeInsets.only(right: 8.0),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 200), // 限制最大宽度，防止挤占标题空间
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-            boxShadow: AppTheme.defaultShadow,
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.location_on,
-                size: 14,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.primaryContainer,
+          borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+          boxShadow: AppTheme.defaultShadow,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.location_on,
+              size: 14,
+              color: theme.colorScheme.onPrimaryContainer,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              locationText,
+              style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onPrimaryContainer,
               ),
-              const SizedBox(width: 3),
-              Flexible(
-                child: Text(
-                  locationText,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onPrimaryContainer,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              '|',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onPrimaryContainer.withAlpha(128),
               ),
-              const SizedBox(width: 6),
-              Text(
-                '|',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onPrimaryContainer.withAlpha(128),
-                ),
-              ),
-              const SizedBox(width: 6),
-              Icon(
-                weatherIcon,
-                size: 16,
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              weatherIcon,
+              size: 18,
+              color: theme.colorScheme.onPrimaryContainer,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              weatherText,
+              style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onPrimaryContainer,
+                fontWeight: FontWeight.w600,
               ),
-              const SizedBox(width: 3),
-              Flexible(
-                child: Text(
-                  weatherText,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onPrimaryContainer,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -1340,16 +1331,9 @@ class _HomePageState extends State<HomePage>
             theme.brightness,
           );
 
-    // 底部导航栏的实际颜色：半透明 surface 叠加到 scaffold 背景上
-    // 这样系统导航条的颜色才能和底部导航栏保持一致
-    final navBarColor = Color.alphaBlend(
-      theme.colorScheme.surface.withValues(alpha: 0.8),
-      scaffoldBackgroundColor,
-    );
-
     final systemUiOverlayStyle = _buildSystemUiOverlayStyle(
       theme,
-      navBarColor,
+      scaffoldBackgroundColor,
     );
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: systemUiOverlayStyle,
@@ -1362,6 +1346,14 @@ class _HomePageState extends State<HomePage>
                 titleSpacing: 8, // 减小标题和 leading 之间的间距
                 title: Consumer<ConnectivityService>(
                   builder: (context, connectivityService, child) {
+                    final locale = Localizations.localeOf(context);
+                    final isEnglish = locale.languageCode == 'en';
+                    // 英文标题使用较小字体以避免被截断
+                    final titleStyle = isEnglish
+                        ? Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w500,
+                            )
+                        : null;
                     if (!connectivityService.isConnected) {
                       return Row(
                         mainAxisSize: MainAxisSize.min,
@@ -1375,6 +1367,7 @@ class _HomePageState extends State<HomePage>
                           Flexible(
                             child: Text(
                               AppLocalizations.of(context).appTitleOffline,
+                              style: titleStyle,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -1383,6 +1376,7 @@ class _HomePageState extends State<HomePage>
                     }
                     return Text(
                       AppLocalizations.of(context).appTitle,
+                      style: titleStyle,
                       overflow: TextOverflow.ellipsis,
                     );
                   },
