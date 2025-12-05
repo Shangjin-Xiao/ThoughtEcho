@@ -153,18 +153,16 @@ class VersionCheckService {
       final currentVersion = packageInfo.version;
       logDebug('当前应用版本: $currentVersion');
 
-      final response = await dio
-          .get(
-            _githubApiUrl,
-            options: Options(
-              receiveTimeout: timeout ?? _defaultTimeout,
-              headers: {
-                'Accept': 'application/vnd.github.v3+json',
-                'User-Agent': 'ThoughtEcho-App',
-              },
-            ),
-          )
-          .timeout(timeout ?? _defaultTimeout);
+      final response = await dio.get(
+        _githubApiUrl,
+        options: Options(
+          receiveTimeout: timeout ?? _defaultTimeout,
+          headers: {
+            'Accept': 'application/vnd.github.v3+json',
+            'User-Agent': 'ThoughtEcho-App',
+          },
+        ),
+      );
 
       logDebug('GitHub API响应状态码: ${response.statusCode}');
 
@@ -182,14 +180,18 @@ class VersionCheckService {
       } else {
         throw Exception('GitHub API响应异常: ${response.statusCode}');
       }
-    } on TimeoutException {
-      logDebug('版本检查超时');
-      throw VersionCheckTimeoutException('版本检查超时，请检查网络连接');
     } on DioException catch (e) {
       logDebug('版本检查网络错误: ${e.message}');
       logDebug(
         '错误详情: ${e.response?.statusCode} - ${e.response?.statusMessage}',
       );
+
+      // 处理超时错误
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout ||
+          e.type == DioExceptionType.sendTimeout) {
+        throw VersionCheckTimeoutException('版本检查超时，请检查网络连接');
+      }
 
       if (e.response?.statusCode == 404) {
         // 404错误特殊处理 - 可能是仓库没有releases
