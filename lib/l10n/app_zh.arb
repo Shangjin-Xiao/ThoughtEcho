@@ -10,18 +10,15 @@
   "settings": "设置",
   "loading": "加载中...",
   "retry": "重试",
-  
   "home": "首页",
   "notes": "记录",
   "aiFeatures": "AI",
-  
   "languageSettings": "语言 / Language",
   "languageFollowSystem": "跟随系统 / Follow System",
   "languageChinese": "简体中文",
   "languageEnglish": "English",
   "selectLanguage": "选择语言 / Select Language",
   "onboardingSelectLanguage": "选择语言",
-  
   "onboardingWelcome": "欢迎使用心迹",
   "onboardingSubtitle": "你的专属灵感摘录本",
   "onboardingDescription": "让我们一起随心记录",
@@ -48,12 +45,10 @@
   "onboardingUpdateComplete": "更新完成",
   "onboardingUpdateSuccess": "心迹已成功更新到新版本\n数据已自动迁移，无需手动操作",
   "onboardingEnterApp": "进入应用",
-  
   "onboardingQuickTip1": "单击「每日一言」可复制内容",
   "onboardingQuickTip2": "双击「每日一言」可快速添加到笔记",
   "onboardingQuickTip3": "使用标签来组织您的笔记",
   "onboardingQuickTip4": "支持全文搜索，快速找到目标内容",
-  
   "featureSmartNotes": "智能笔记",
   "featureSmartNotesDesc": "支持富文本编辑，自动记录时间、位置和天气",
   "featureDailyQuote": "每日一言",
@@ -62,7 +57,6 @@
   "featureAiInsightDesc": "智能分析您的笔记内容，发现思维模式和情感变化",
   "featureLocalFirst": "本地优先",
   "featureLocalFirstDesc": "所有数据存储在您的设备上，确保隐私安全",
-  
   "prefLanguage": "语言 / Language",
   "prefLanguageDesc": "选择应用显示语言",
   "prefDailyQuoteType": "每日一言类型",
@@ -75,13 +69,11 @@
   "prefHomeOverviewDesc": "查看每日一言和最近笔记",
   "prefNoteList": "笔记列表",
   "prefNoteListDesc": "直接进入笔记管理界面",
-  
   "prefSelectAll": "全选",
   "prefClearAll": "清空",
   "prefAboutSettings": "关于设置",
   "prefAboutSettingsInfo": "• 所有设置都可以随时在应用的设置页面中修改\n• 我们重视您的隐私，所有数据都存储在您的设备上\n• 权限将在您需要使用相关功能时请求",
   "prefMoreOptionsHint": "更多个性化选项和AI功能可在「设置 > 偏好设置」中随时调整。",
-  
   "settingsTitle": "设置",
   "settingsLocationWeather": "位置与天气设置",
   "settingsUseLocationService": "使用位置服务",
@@ -92,7 +84,6 @@
   "settingsSearchCity": "搜索并选择城市",
   "settingsCurrentLocation": "当前显示位置",
   "settingsNotSet": "未设置",
-  
   "settingsAppSettings": "应用设置",
   "settingsPreferences": "偏好设置",
   "settingsPreferencesDesc": "个性化选项与AI功能",
@@ -110,7 +101,6 @@
   "settingsLogsDesc": "配置应用日志记录级别",
   "settingsStorage": "存储管理",
   "settingsStorageDesc": "查看存储占用，清理缓存与无用文件",
-  
   "settingsContentManagement": "内容管理",
   "settingsTags": "标签管理",
   "settingsTagsDesc": "添加、编辑或删除笔记标签",
@@ -118,7 +108,6 @@
   "settingsBackupDesc": "备份数据或从备份中恢复",
   "settingsSync": "笔记同步",
   "settingsSyncDesc": "与附近设备同步笔记数据",
-  
   "settingsAbout": "关于 心迹 (ThoughtEcho)",
   "settingsAboutSlogan": "你的专属灵感摘录本",
   "settingsViewSource": "查看项目源码 (GitHub)",
@@ -127,7 +116,6 @@
   "settingsCheckUpdate": "检查更新",
   "settingsCheckUpdateDesc": "检查是否有新版本可用",
   "settingsClose": "关闭",
-  
   "locationPermissionDenied": "位置权限被拒绝，无法启用位置服务",
   "enableLocationService": "请启用位置服务",
   "enableLocationServiceDesc": "心迹需要访问您的位置以提供天气等功能。请在系统设置中启用位置服务。",
@@ -136,7 +124,6 @@
   "locationServiceEnabled": "位置服务已启用，位置已更新",
   "locationServiceDisabled": "位置服务已禁用",
   "cannotGetLocation": "无法获取当前位置",
-  
   "selectedCount": "已选择 {count} 种类型",
   "@selectedCount": {
     "placeholders": {
@@ -145,7 +132,6 @@
       }
     }
   },
-  
   "pleaseWait": "请稍候...",
   "close": "关闭",
   "ok": "好的",
@@ -153,7 +139,6 @@
   "success": "成功",
   "warning": "警告",
   "info": "信息",
-  
   "cannotOpenLink": "无法打开链接: {url}",
   "@cannotOpenLink": {
     "placeholders": {
@@ -240,20 +225,16 @@
   "testFailedNetwork": "测试失败：网络连接异常",
   "testInitFailed": "测试初始化失败",
   "followSystem": "跟随系统",
-  
   "navHome": "首页",
   "navNotes": "记录",
   "navInsights": "洞察",
   "navSettings": "设置",
-  
   "appTitleOffline": "心迹 - 无网络",
   "loadingDataPleaseWait": "正在加载数据，请稍等...",
   "noTagsAvailable": "暂无标签数据",
-  
   "deleteNote": "删除笔记",
   "deleteNoteConfirmation": "确定要删除这条笔记吗？此操作无法撤销。",
   "noteDeleted": "笔记已删除",
-  
   "favorited": "已珍藏 ({count})",
   "@favorited": {
     "placeholders": {
@@ -263,7 +244,6 @@
     }
   },
   "favoriteFailed": "收藏失败，请重试",
-  
   "aiCardServiceNotInitialized": "AI卡片服务未初始化",
   "generateCardFailed": "生成卡片失败: {error}",
   "@generateCardFailed": {
@@ -273,7 +253,6 @@
       }
     }
   },
-  
   "generatingShareImage": "正在生成分享图片...",
   "cardSharedSuccessfully": "卡片分享成功",
   "shareFailed": "分享失败: {error}",
@@ -284,7 +263,6 @@
       }
     }
   },
-  
   "savingCardToGallery": "正在保存卡片到相册...",
   "cardSavedToGallery": "卡片已保存到相册: {path}",
   "@cardSavedToGallery": {
@@ -303,13 +281,11 @@
     }
   },
   "view": "查看",
-  
   "todayThoughts": "今日思考",
   "loadingTodayThoughts": "正在加载今日思考...",
   "fetchingDefaultPrompt": "正在获取默认提示...",
   "waitingForTodayThoughts": "等待今日思考...",
   "noTodayThoughts": "暂无今日思考",
-  
   "cannotOpenFullEditor": "无法打开全屏编辑器: {error}",
   "@cannotOpenFullEditor": {
     "placeholders": {
@@ -318,7 +294,6 @@
       }
     }
   },
-  
   "refreshFailed": "刷新失败: {error}",
   "@refreshFailed": {
     "placeholders": {
@@ -327,7 +302,6 @@
       }
     }
   },
-  
   "backupAndRestore": "数据备份与还原",
   "dataBackup": "数据备份",
   "dataRestore": "数据还原",
@@ -359,7 +333,6 @@
   "restoreCanceled": "还原已取消",
   "unknownField": "未知字段",
   "confirmRestoreData": "确认还原数据",
-  
   "insightsTitle": "AI 洞察",
   "analysisTypeComprehensive": "全面分析",
   "analysisTypeComprehensiveDesc": "综合分析您所有笔记，探索主题、情感和思维模式",
@@ -394,14 +367,12 @@
   "analyzing": "正在分析...",
   "analysisSaved": "分析已保存",
   "analysisCopied": "分析已复制到剪贴板",
-  
   "noteSaved": "笔记已保存",
   "selectCardColor": "选择卡片颜色",
   "presetColors": "预设颜色",
   "customColor": "自定义颜色",
   "select": "选择",
   "editMetadata": "编辑元数据",
-  
   "done": "完成",
   "selectTags": "选择标签",
   "noMatchingTags": "没有找到匹配的标签",
@@ -421,23 +392,19 @@
   "noAuthorOrWorkIdentified": "未能识别出明确的作者或作品",
   "applyAnalysisResults": "应用分析结果",
   "parseResultsFailed": "解析结果失败",
-  "analysisFailed": "分析失败",
+  "analysisFailed": "分析失败: {error}",
   "analysisResultsCopied": "分析结果已复制到剪贴板",
   "noteInfo": "笔记信息",
   "source": "来源",
   "createdAt": "创建时间",
   "content": "内容",
-  
   "periodicReport": "周期报告",
   "aiInsightsTab": "智能洞察",
-  
   "locationServiceNotEnabled": "位置服务未启用",
   "pleaseEnableLocationInSettings": "请在系统设置中启用位置服务",
   "locationServiceEnabledMsg": "位置服务已启用",
-  
   "quickTips": "快速提示",
   "coreFeature": "核心",
-  
   "confirmDelete": "确认删除",
   "confirmDeleteAnalysis": "确定要删除这条分析记录吗？",
   "deleteSuccess": "删除成功",
@@ -450,7 +417,6 @@
     }
   },
   "serviceNotInitialized": "服务未初始化",
-  
   "location": "位置",
   "weather": "天气",
   "color": "颜色",
@@ -471,7 +437,6 @@
       }
     }
   },
-  
   "themeSettings": "主题设置",
   "themeMode": "主题模式",
   "themeModeLight": "浅色",
@@ -486,7 +451,6 @@
   "themeToolsDesc": "如果主题颜色显示异常，可以尝试刷新主题",
   "themeRefreshed": "主题已刷新",
   "refreshTheme": "刷新主题",
-  
   "hitokotoSettings": "每日一言设置",
   "hitokotoTypeSettings": "每日一言类型设置",
   "hitokotoTypeDesc": "您可以选择一个或多个\"每日一言\"类型，程序将从您选择的类型中随机抽取内容展示。不同类型代表不同的内容来源和风格。",
@@ -500,7 +464,6 @@
   "hitokotoHelpItem2": "选择多种类型可以获得更丰富多样的内容体验",
   "hitokotoHelpItem3": "不同类型代表不同的内容风格和来源平台",
   "settingsSaved": "设置已保存",
-  
   "tagManagement": "标签管理",
   "newTagName": "新标签名称",
   "enterTagNameHint": "输入标签名称（最多50字）",
@@ -569,7 +532,6 @@
     }
   },
   "systemIcons": "系统图标",
-  
   "storageManagement": "存储管理",
   "clearCache": "清理缓存",
   "clearCacheConfirmTitle": "清理缓存",
@@ -713,7 +675,6 @@
       }
     }
   },
-  
   "logsViewer": "日志查看",
   "logFilter": "日志过滤",
   "clearLogs": "清除日志",
@@ -791,7 +752,6 @@
     }
   },
   "logPageError": "日志页渲染异常:",
-  
   "networkDiagnostic": "网络诊断",
   "networkConfig": "网络配置",
   "networkDiagnosticSection": "网络诊断",
@@ -1056,7 +1016,7 @@
   "aiAnalysisUsageInstructionsTitle": "AI 分析使用说明",
   "aiAnalysisUsageInstructions": "1. AI可能会生成不准确或误导性内容，请谨慎评估分析结果\n2. 使用此功能时，您的所有笔记信息（包括内容、日期、位置、天气和温度等）都会发送给AI进行全面分析\n3. 分析结果仅供参考，最终解释权归您自己\n4. 建议在网络良好的环境下使用此功能，以获得最佳体验",
   "copyToClipboard": "复制到剪贴板",
-  "analysisResultCopied": "分析结果已复制",
+  "analysisResultCopied": "分析结果已复制到剪贴板",
   "saveAsNoteButton": "保存为笔记",
   "saveAnalysisButton": "保存分析",
   "shareInsightsButton": "分享洞察",
@@ -1696,10 +1656,8 @@
       }
     }
   },
-
   "generatingAiReport": "正在生成AI年度报告...",
   "testFailedEmptyContent": "测试失败：AI返回了空内容",
-  
   "includeMediaFilesHint": "勾选后将备份图片、音频等媒体文件（文件更大但更完整）",
   "overwriteImport": "覆盖导入 (清空现有数据)",
   "overwriteImportDesc": "删除当前所有数据，以备份内容替换",
@@ -1709,7 +1667,6 @@
   "mergeImportHint": "此操作将保留当前数据，并与备份数据进行合并：",
   "mergeImportReversible": "此操作可逆：可再次导入覆盖备份或继续合并。",
   "confirmRestoreBtn": "确认还原",
-  
   "favoriteCountWithNum": "已珍藏 ({count})",
   "@favoriteCountWithNum": {
     "placeholders": {
@@ -1718,7 +1675,6 @@
       }
     }
   },
-  
   "analysisRecordDeleted": "分析记录已删除",
   "loadFailed": "加载失败: {error}",
   "@loadFailed": {
@@ -1735,7 +1691,6 @@
   "allRecordsDeleted": "所有记录已删除",
   "selectAnnualReportType": "选择年度报告类型",
   "selectReportTypeHint": "请选择要生成的年度报告类型：",
-  
   "unknownTag": "未知标签",
   "morning": "早晨",
   "forenoon": "上午",
@@ -1749,21 +1704,26 @@
   "harvest": "收获",
   "breakthrough": "突破",
   "hope": "希望",
-  
   "backupFormatZip": "将创建ZIP格式的备份文件，包含所有笔记、设置和媒体文件",
   "backupFormatJson": "将创建JSON格式的备份文件，包含所有笔记和设置",
   "supportedBackupFormats": "支持新版ZIP格式和旧版JSON格式的备份文件",
   "restoringData": "正在还原数据... {current}/{total}",
   "@restoringData": {
     "placeholders": {
-      "current": {"type": "int"},
-      "total": {"type": "int"}
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "restoreFailedGeneric": "无法完成数据还原：{error}",
   "@restoreFailedGeneric": {
     "placeholders": {
-      "error": {"type": "String"}
+      "error": {
+        "type": "String"
+      }
     }
   },
   "restoreFailedOutOfMemory": "还原失败：内存不足\n\n建议：\n• 关闭其他应用释放内存\n• 重启应用后再试\n• 检查备份文件大小是否过大",
@@ -1771,21 +1731,18 @@
   "restoreFailedPermission": "还原失败：权限不足\n\n请检查应用的存储权限设置。",
   "restoreCancelled": "还原已取消",
   "restoreFailedCorrupt": "还原失败：备份文件损坏或格式不正确\n\n请检查备份文件是否完整。",
-  
   "restoreConfirmDialogTitle": "确认还原数据",
   "restoreConfirmDialogDesc": "此操作将：",
   "restoreConfirmDialogItem1": "• 删除当前设备上的所有笔记和设置",
   "restoreConfirmDialogItem2": "• 用备份文件中的数据替换",
   "restoreConfirmDialogItem3": "• 此操作无法撤销",
   "restoreConfirmDialogWarning": "请确保您已经备份了当前的重要数据。",
-  
   "mergeConfirmDialogTitle": "确认合并导入",
   "mergeConfirmDialogDesc": "此操作将保留当前数据，并与备份数据进行合并：",
   "mergeConfirmDialogItem1": "• 相同ID的笔记按「最后写入 wins」保留较新版本",
   "mergeConfirmDialogItem2": "• 不同ID的笔记全部保留",
   "mergeConfirmDialogItem3": "• 设置与AI分析数据合并追加",
   "mergeConfirmDialogReversible": "此操作可逆：可再次导入覆盖备份或继续合并。",
-  
   "tagSettingsDescription": "创建和管理您的个人标签体系",
   "addNewTag": "添加新标签",
   "tagNameHint": "请输入标签名称",
@@ -1811,7 +1768,6 @@
       }
     }
   },
-  
   "noteSync": "笔记同步",
   "refreshDeviceList": "刷新设备列表",
   "initializingService": "正在启动...",
@@ -1969,7 +1925,6 @@
   "discoverDevices": "发现设备",
   "cancelDiscoveryTooltip": "取消本次设备发现",
   "startDiscoveryTooltip": "开始发现附近设备",
-  
   "receiveSyncRequest": "接收同步请求",
   "waitingPeerApproval": "等待对方确认",
   "deviceWantsToSync": "设备 \"{alias}\" 想同步笔记",
@@ -1989,7 +1944,6 @@
   "cancelReceive": "取消接收",
   "cancelSend": "取消发送",
   "syncCompleted": "同步完成",
-  
   "syncStatusIdle": "空闲",
   "syncStatusPackaging": "正在打包数据",
   "syncStatusSending": "正在发送",
@@ -1997,7 +1951,6 @@
   "syncStatusMerging": "正在合并",
   "syncStatusCompleted": "同步完成",
   "syncStatusFailed": "同步失败",
-  
   "weatherClear": "晴",
   "weatherPartlyCloudy": "少云",
   "weatherCloudy": "多云",
@@ -2015,7 +1968,6 @@
   "weatherError": "获取失败",
   "weatherDataFetchFailed": "天气数据获取失败",
   "unknownWeather": "未知天气",
-  
   "noAiAnalysisRecords": "暂无AI分析记录",
   "aiAssistant": "AI助手",
   "analyzingSource": "正在分析来源...",
@@ -2085,7 +2037,6 @@
   "noteAnalysis": "笔记分析",
   "applyToNote": "应用到笔记",
   "analysisComplete": "分析完成",
-  
   "filterAndSort": "筛选与排序",
   "resetFilter": "重置",
   "tagFilter": "标签筛选",
@@ -2101,13 +2052,11 @@
   "sortByFavorite": "按喜爱度排序",
   "ascending": "升序",
   "applyFilter": "应用",
-  
   "editNoteMenu": "编辑笔记",
   "askAIMenu": "向AI提问",
   "generateCardShareMenu": "生成卡片分享",
   "deleteNoteMenu": "删除笔记",
   "doubleTapToViewFull": "双击查看全文",
-  
   "logLevel": "级别: {level}",
   "@logLevel": {
     "placeholders": {
@@ -2116,7 +2065,6 @@
       }
     }
   },
-  
   "prefSettingsTitle": "偏好设置",
   "personalizationSettings": "个性化设置",
   "personalizationSettingsDesc": "根据您的使用习惯调整应用行为",
@@ -2138,7 +2086,6 @@
   "aiCardGenerationLabelDesc": "为笔记生成可视化SVG卡片",
   "moreAiSettings": "更多AI设置",
   "moreAiSettingsDesc": "配置AI服务商、模型等",
-  
   "licenseInfo": "许可证信息",
   "appLicense": "本程序许可证",
   "viewAppLicense": "查看本程序 LICENSE",
@@ -2202,7 +2149,6 @@
   "noLicenseContent": "(无许可内容)",
   "copyLicense": "复制许可证",
   "licenseCopied": "已复制许可证内容",
-  
   "searchAnalysisRecords": "搜索分析记录...",
   "authorPerson": "作者/人物",
   "workSource": "作品/来源",
@@ -2211,7 +2157,6 @@
   "workName": "作品名称",
   "searchNotes": "搜索笔记...",
   "searchCity": "搜索城市...",
-  
   "logSettingsTitle": "日志设置",
   "viewLogs": "查看日志",
   "logLevelDescription": "选择应用记录的日志详细程度。更详细的日志有助于调试，但可能会影响性能并占用更多存储空间（如果未来实现日志文件存储）。",
@@ -2221,7 +2166,6 @@
   "logLevelWarning": "记录潜在问题或警告。",
   "logLevelError": "仅记录错误信息。",
   "logLevelNone": "不记录任何日志。",
-  
   "updateFoundNewVersion": "发现新版本",
   "updateCurrentVersion": "当前版本",
   "updateLatestVersion": "最新版本",
@@ -2266,7 +2210,6 @@
       }
     }
   },
-  
   "selectCity": "选择城市",
   "currentWeather": "当前天气",
   "cityNotSetHint": "尚未设置城市，先在下方搜索并选择",
@@ -2290,7 +2233,6 @@
   "noCityFound": "没有找到匹配的城市",
   "tryDifferentKeywords": "尝试使用不同的关键词或城市名称",
   "enterCityToSearch": "输入城市名称开始搜索",
-  
   "addInfo": "添加信息",
   "selectTagsWithCount": "选择标签 ({count})",
   "@selectTagsWithCount": {
@@ -2303,7 +2245,6 @@
   "noTagsAvailableHint": "暂无可用标签，请先添加标签",
   "addLocationPrefix": "添加位置",
   "locationServiceUnavailable": "位置服务不可用",
-  
   "sourceInfo": "来源信息",
   "tagsLabel": "标签",
   "selectedTagsCount": "已选择 {count} 个标签",
@@ -2334,7 +2275,6 @@
   "refreshLocationWeather": "刷新位置和天气",
   "gettingLocationHint": "位置获取中...",
   "noteNoLocationWeatherInfo": "此笔记首次保存时未记录位置和天气信息",
-  
   "aiAssistantLabel": "AI助手",
   "polishingText": "正在润色文本...",
   "continuingText": "正在续写文本...",
@@ -2352,7 +2292,6 @@
   "analysisExplanation": "分析说明:",
   "noAuthorWorkIdentified": "未能识别出明确的作者或作品",
   "applyAnalysisResult": "应用分析结果",
-  "close": "关闭",
   "parseResultFailed": "解析结果失败: {error}",
   "@parseResultFailed": {
     "placeholders": {
@@ -2361,7 +2300,6 @@
       }
     }
   },
-  "analysisFailed": "分析失败: {error}",
   "@analysisFailed": {
     "placeholders": {
       "error": {
@@ -2371,7 +2309,6 @@
   },
   "pleaseInputContent": "请先输入内容",
   "copyResult": "复制结果",
-  "analysisResultCopied": "分析结果已复制到剪贴板",
   "cannotAddLocation": "无法添加位置",
   "cannotAddLocationDesc": "此笔记首次保存时未记录位置信息，无法补充添加。\n\n如需记录位置，请在新建笔记时勾选位置选项。",
   "iKnow": "我知道了",
@@ -2425,7 +2362,6 @@
   "cannotGetLocationTitle": "无法获取位置",
   "cannotGetLocationDesc": "无法获取当前位置，请检查定位权限或网络状态。",
   "cannotGetLocationPermissionShort": "无法获取位置权限",
-  
   "savingNote": "正在保存",
   "saveComplete": "完成",
   "writingDatabase": "写入数据库...",
@@ -2450,17 +2386,14 @@
   "editMetadataShort": "编辑元数据",
   "startWritingHint": "开始编写你的想法...",
   "unknownLocation": "未知位置",
-  
   "dayPeriodDawn": "晨曦",
   "dayPeriodMorning": "上午",
   "dayPeriodAfternoon": "午后",
   "dayPeriodDusk": "黄昏",
   "dayPeriodEvening": "夜晚",
   "dayPeriodMidnight": "深夜",
-  
   "showExactTime": "显示精确时间",
   "showExactTimeDesc": "在笔记中显示时间（时:分）",
-  
   "guideHomepageDailyQuoteTitle": "每日一言小技巧",
   "guideHomepageDailyQuoteDesc": "单击可快速复制内容\n双击可快速添加到笔记",
   "guideNotePageFilterTitle": "筛选与排序",
@@ -2481,7 +2414,6 @@
   "guideSettingsStartupDesc": "可以设置应用启动时默认打开的页面",
   "guideSettingsThemeTitle": "主题设置",
   "guideSettingsThemeDesc": "这里可以自定义应用的主题颜色和外观",
-
   "apkDownloadTitle": "下载APK",
   "apkDownloading": "正在下载 ThoughtEcho {version}...",
   "@apkDownloading": {
@@ -2537,8 +2469,171 @@
   "apkNotificationTitle": "APK下载",
   "storagePermissionRequired": "需要存储权限",
   "storagePermissionDesc": "下载APK文件需要存储权限。请在设置中允许应用访问存储空间。",
-  "goToSettings": "去设置",
   "errorTitle": "错误",
   "cannotGetDownloadDir": "无法获取下载目录",
-  "webPlatformApkNotSupported": "Web 平台不支持 APK 下载"
+  "webPlatformApkNotSupported": "Web 平台不支持 APK 下载",
+  "serviceNotInitializedDeleteFailed": "服务未初始化，删除失败",
+  "deleteAllConfirmMessage": "确定要删除所有分析记录吗？此操作不可恢复。",
+  "deleteFailedSimple": "删除失败",
+  "aiAnalysisDetails": "AI分析详情",
+  "analysisTime": "分析时间",
+  "analysisContent": "分析内容",
+  "aiAnalysisResult": "AI分析结果",
+  "emotionalAnalysis": "情感分析",
+  "comprehensiveAnalysis": "综合分析",
+  "mindMapAnalysis": "思维导图",
+  "growthAnalysis": "成长分析",
+  "aiAnalysis": "AI分析",
+  "selectReportTypePrompt": "请选择要生成的年度报告类型：",
+  "aiSmartReport": "AI 智能报告",
+  "aiSmartReportDesc": "基于AI分析生成的精美HTML报告，包含深度洞察和可视化图表",
+  "nativeFlutterReport": "原生 Flutter 报告",
+  "nativeFlutterReportDesc": "使用Flutter原生组件生成的交互式报告，流畅的动画效果",
+  "generateAnnualReportFailed": "生成年度报告失败",
+  "generatingAIAnnualReport": "正在生成AI年度报告...",
+  "cannotReadReportTemplate": "无法读取报告模板",
+  "aiReturnFormatAbnormal": "AI返回格式异常，已使用备用模板生成报告",
+  "aiServiceAbnormal": "AI服务异常，已使用备用模板生成报告",
+  "monthJan": "1月",
+  "monthFeb": "2月",
+  "monthMar": "3月",
+  "monthApr": "4月",
+  "monthMay": "5月",
+  "monthJun": "6月",
+  "monthJul": "7月",
+  "monthAug": "8月",
+  "monthSep": "9月",
+  "monthOct": "10月",
+  "monthNov": "11月",
+  "monthDec": "12月",
+  "achievementRecordMaster": "记录达人",
+  "achievementPersistent": "坚持不懈",
+  "achievementWriter": "文字创作者",
+  "achievementOrganizer": "分类整理",
+  "continuingToGrow": "持续成长中",
+  "allDayLong": "全天候",
+  "preparingBackup": "准备开始备份...",
+  "collectingData": "正在收集数据...",
+  "processingNoteData": "正在处理笔记数据...",
+  "processingMediaFiles": "正在处理媒体文件...",
+  "creatingBackupFile": "正在创建备份文件...",
+  "verifyingBackupFile": "正在验证备份文件...",
+  "thoughtEchoBackupFile": "心迹备份文件",
+  "backupFileReady": "备份文件已准备就绪，请通过分享保存",
+  "backupCompleteSelectLocation": "备份完成，请选择保存位置",
+  "zipFile": "ZIP 文件",
+  "jsonFile": "JSON 文件",
+  "outOfMemoryText": "内存不足",
+  "storageSpaceText": "存储空间",
+  "permissionText": "权限",
+  "backupCancelled": "备份已取消",
+  "backupFailedText": "备份失败",
+  "selectFileError": "选择文件失败",
+  "mergingDataProgress": "正在合并数据...",
+  "yearAIAnnualReport": "{year} AI年度报告",
+  "openInBrowser": "在浏览器中打开",
+  "shareReport": "分享报告",
+  "saveReport": "保存报告",
+  "processingReport": "正在处理报告...",
+  "personalizedSummaryByAI": "基于AI分析的个性化总结",
+  "aiGeneratedReview": "AI已为您生成专属的年度回顾，包含数据分析、成长洞察和未来建议",
+  "reportPreview": "报告内容预览",
+  "fullReportViewInBrowser": "完整报告包含精美的图表和交互效果，建议在浏览器中查看",
+  "openFullReportInBrowser": "用浏览器打开完整报告",
+  "shareBtn": "分享",
+  "saveBtn": "保存",
+  "work": "作品: ",
+  "explanation": "说明: ",
+  "generatingReportContent": "正在生成报告内容...",
+  "reportOpenedInBrowser": "报告已在浏览器中打开",
+  "cannotOpenBrowserUseShare": "无法直接打开浏览器，请使用分享功能选择浏览器打开",
+  "reportFileSavedInstructions": "报告文件已保存，请按以下步骤在浏览器中打开：",
+  "step1OpenFileManager": "1. 打开手机的文件管理器",
+  "step2NavigateToPath": "2. 导航到以下路径：",
+  "step3TapHtmlFile": "3. 点击HTML文件",
+  "step4SelectBrowser": "4. 选择浏览器打开",
+  "gotIt": "知道了",
+  "copyPath": "复制路径",
+  "pathCopied": "文件路径已复制到剪贴板",
+  "howToViewInBrowser": "如何在浏览器中查看",
+  "htmlContentCopied": "HTML报告内容已复制到剪贴板。请按以下步骤操作：",
+  "mobileSteps": "📱 手机端：",
+  "desktopSteps": "💻 电脑端：",
+  "copyPrefix": "复制前缀",
+  "addressBarPrefixCopied": "地址栏前缀已复制，请在浏览器中粘贴后再粘贴HTML内容",
+  "reportShared": "报告已分享",
+  "reportSavedLocally": "报告已保存到本地文件",
+  "cannotSaveFileCopyToClipboard": "无法保存文件，内容已复制到剪贴板",
+  "videoFileNotFound": "视频文件不存在",
+  "initializingLargeVideo": "开始初始化大视频文件",
+  "videoLoadingTooLong": "视频加载时间过长，请尝试使用较小的视频文件",
+  "videoInitTimeout": "视频初始化超时，文件可能过大",
+  "largeVideoInitSuccess": "大视频初始化成功",
+  "playbackSpeed": "播放速度",
+  "subtitles": "字幕",
+  "shareVideo": "分享视频",
+  "videoInfo": "视频信息",
+  "videoLoadFailed": "视频加载失败",
+  "timeout": "超时",
+  "videoLoadTimeout": "视频加载超时",
+  "fileTooLargeUseSmaller": "文件可能过大，请稍后重试或使用较小的视频文件",
+  "format": "格式",
+  "unsupportedVideoFormat": "不支持的视频格式",
+  "useCommonFormats": "请使用MP4、MOV等常见格式",
+  "cannotAccessVideoFile": "无法访问视频文件",
+  "checkFilePermissions": "请检查文件权限",
+  "checkFileIntegrity": "请检查文件是否完整或尝试重新导入",
+  "outOfMemoryVideo": "内存不足，无法加载视频",
+  "audioFileNotFound": "音频文件不存在",
+  "clickToPlayVideo": "点击播放视频",
+  "loadingVideo": "正在加载视频...",
+  "shareAudio": "分享音频",
+  "fileInfo": "文件信息",
+  "audioInfo": "音频信息",
+  "fileName": "文件名",
+  "duration": "时长",
+  "path": "路径",
+  "resolution": "分辨率",
+  "aspectRatio": "长宽比",
+  "featureInDevelopment": "分享功能开发中...",
+  "selectFromFiles": "从文件选择",
+  "supportsLargeFiles": "支持大文件，内存安全处理",
+  "takePhoto": "拍照",
+  "recordVideo": "录制视频",
+  "recordAudio": "录制音频",
+  "takePhotoDirectly": "直接拍照",
+  "recordVideoDirectly": "直接录制",
+  "recordAudioDirectly": "直接录音",
+  "enterUrlHint": "输入媒体文件的网址",
+  "image": "图片",
+  "video": "视频",
+  "audio": "音频",
+  "weatherSunny": "晴",
+  "weatherUnknownWeather": "未知天气",
+  "weatherShowers": "阵雨",
+  "weatherSnowShowers": "阵雪",
+  "weatherThunderstormWithHail": "雷暴雨",
+  "fileTypeImage": "图片",
+  "fileTypeVideo": "视频",
+  "fileTypeAudio": "音频",
+  "fileTypeDocument": "文档",
+  "fileTypeText": "文本",
+  "fileTypeApplication": "应用",
+  "fileTypeOther": "其他",
+  "fileStatusQueued": "队列中",
+  "fileStatusSending": "正在发送",
+  "fileStatusCompleted": "已完成",
+  "fileStatusFailed": "失败",
+  "fileStatusSkipped": "已跳过",
+  "sessionStatusWaiting": "等待中",
+  "sessionStatusSending": "正在发送",
+  "sessionStatusReceiving": "正在接收",
+  "sessionStatusCompleted": "已完成",
+  "sessionStatusCancelled": "已取消",
+  "sessionStatusRejected": "被拒绝",
+  "sessionStatusError": "发生错误",
+  "timeMorning": "早上",
+  "timeAfternoon": "下午",
+  "timeEvening": "晚上",
+  "timeLateNight": "深夜"
 }

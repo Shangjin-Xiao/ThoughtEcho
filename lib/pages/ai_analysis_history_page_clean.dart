@@ -123,8 +123,8 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
       if (_aiAnalysisDatabaseService == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('服务未初始化，删除失败'),
+            SnackBar(
+              content: Text(AppLocalizations.of(context).serviceNotInitializedDeleteFailed),
               duration: AppConstants.snackBarDurationError,
             ),
           );
@@ -164,16 +164,16 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('确认删除'),
-        content: const Text('确定要删除所有分析记录吗？此操作不可恢复。'),
+        title: Text(AppLocalizations.of(context).confirmDeleteAll),
+        content: Text(AppLocalizations.of(context).deleteAllConfirmMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(AppLocalizations.of(context).cancel),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('删除'),
+            child: Text(AppLocalizations.of(context).delete),
           ),
         ],
       ),
@@ -183,8 +183,8 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
       if (_aiAnalysisDatabaseService == null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('服务未初始化，删除失败'),
+            SnackBar(
+              content: Text(AppLocalizations.of(context).serviceNotInitializedDeleteFailed),
               duration: AppConstants.snackBarDurationError,
             ),
           );
@@ -201,8 +201,8 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
         _loadAnalyses();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('所有记录已删除'),
+            SnackBar(
+              content: Text(AppLocalizations.of(context).allRecordsDeleted),
               duration: AppConstants.snackBarDurationImportant,
             ),
           );
@@ -211,8 +211,8 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
         AppLogger.e('删除所有分析记录失败', error: e);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('删除失败'),
+            SnackBar(
+              content: Text(AppLocalizations.of(context).deleteFailedSimple),
               duration: AppConstants.snackBarDurationError,
             ),
           );
@@ -252,7 +252,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                 children: [
                   Expanded(
                     child: Text(
-                      'AI分析详情',
+                      AppLocalizations.of(context).aiAnalysisDetails,
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                   ),
@@ -270,7 +270,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '分析时间',
+                      AppLocalizations.of(context).analysisTime,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 4),
@@ -284,7 +284,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      '分析内容',
+                      AppLocalizations.of(context).analysisContent,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 8),
@@ -311,7 +311,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      'AI分析结果',
+                      AppLocalizations.of(context).aiAnalysisResult,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 8),
@@ -410,15 +410,15 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
   String _getAnalysisTypeName(String type) {
     switch (type) {
       case 'emotional':
-        return '情感分析';
+        return AppLocalizations.of(context).emotionalAnalysis;
       case 'comprehensive':
-        return '综合分析';
+        return AppLocalizations.of(context).comprehensiveAnalysis;
       case 'mindmap':
-        return '思维导图';
+        return AppLocalizations.of(context).mindMapAnalysis;
       case 'growth':
-        return '成长分析';
+        return AppLocalizations.of(context).growthAnalysis;
       default:
-        return 'AI分析';
+        return AppLocalizations.of(context).aiAnalysis;
     }
   }
 
@@ -509,20 +509,20 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                 size: 28,
               ),
               const SizedBox(width: 12),
-              const Text('选择年度报告类型'),
+              Text(AppLocalizations.of(context).selectAnnualReportType),
             ],
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('请选择要生成的年度报告类型：', style: TextStyle(fontSize: 16)),
+              Text(AppLocalizations.of(context).selectReportTypePrompt, style: const TextStyle(fontSize: 16)),
               const SizedBox(height: 20),
               _buildReportOption(
                 context,
                 icon: Icons.psychology,
-                title: 'AI 智能报告',
-                description: '基于AI分析生成的精美HTML报告，包含深度洞察和可视化图表',
+                title: AppLocalizations.of(context).aiSmartReport,
+                description: AppLocalizations.of(context).aiSmartReportDesc,
                 color: Colors.purple,
                 onTap: () => Navigator.pop(context, 'ai'),
               ),
@@ -530,8 +530,8 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
               _buildReportOption(
                 context,
                 icon: Icons.dashboard,
-                title: '原生 Flutter 报告',
-                description: '使用Flutter原生组件生成的交互式报告，流畅的动画效果',
+                title: AppLocalizations.of(context).nativeFlutterReport,
+                description: AppLocalizations.of(context).nativeFlutterReportDesc,
                 color: Colors.blue,
                 onTap: () => Navigator.pop(context, 'flutter'),
               ),
@@ -540,7 +540,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('取消'),
+              child: Text(AppLocalizations.of(context).cancel),
             ),
           ],
         ),
@@ -573,8 +573,8 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
       AppLogger.e('生成年度报告失败', error: e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('生成年度报告失败'),
+          SnackBar(
+            content: Text(AppLocalizations.of(context).generateAnnualReportFailed),
             duration: AppConstants.snackBarDurationError,
           ),
         );
@@ -595,7 +595,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
           children: [
             CircularProgressIndicator(),
             SizedBox(width: 16),
-            Text('正在生成AI年度报告...'),
+            Text(AppLocalizations.of(context).generatingAIAnnualReport),
           ],
         ),
       ),
@@ -774,8 +774,8 @@ $positiveQuotesText
 
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('AI返回格式异常，已使用备用模板生成报告'),
+              SnackBar(
+                content: Text(AppLocalizations.of(context).aiReturnFormatAbnormal),
                 duration: AppConstants.snackBarDurationImportant,
               ),
             );
@@ -798,8 +798,8 @@ $positiveQuotesText
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('AI服务异常，已使用备用模板生成报告'),
+            SnackBar(
+              content: Text(AppLocalizations.of(context).aiServiceAbnormal),
               duration: Duration(seconds: 2),
             ),
           );
@@ -829,7 +829,7 @@ $positiveQuotesText
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('生成AI年度报告失败: ${e.toString()}'),
+            content: Text('${AppLocalizations.of(context).generateAnnualReportFailed}: ${e.toString()}'),
             duration: AppConstants.snackBarDurationError,
           ),
         );
@@ -855,18 +855,18 @@ $positiveQuotesText
       final month = i + 1;
       final count = monthlyStats[month] ?? 0;
       final monthNames = [
-        '1月',
-        '2月',
-        '3月',
-        '4月',
-        '5月',
-        '6月',
-        '7月',
-        '8月',
-        '9月',
-        '10月',
-        '11月',
-        '12月',
+        AppLocalizations.of(context).monthJan,
+        AppLocalizations.of(context).monthFeb,
+        AppLocalizations.of(context).monthMar,
+        AppLocalizations.of(context).monthApr,
+        AppLocalizations.of(context).monthMay,
+        AppLocalizations.of(context).monthJun,
+        AppLocalizations.of(context).monthJul,
+        AppLocalizations.of(context).monthAug,
+        AppLocalizations.of(context).monthSep,
+        AppLocalizations.of(context).monthOct,
+        AppLocalizations.of(context).monthNov,
+        AppLocalizations.of(context).monthDec,
       ];
       return '<div class="month-item"><div class="month-name">${monthNames[i]}</div><div class="month-count">$count</div></div>';
     }).join('\n');
@@ -955,7 +955,7 @@ $positiveQuotesText
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AI分析历史'),
+        title: Text(AppLocalizations.of(context).aiAnalysis),
         actions: [
           IconButton(
             onPressed: _loadAnalyses,
