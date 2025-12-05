@@ -5,17 +5,25 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../gen_l10n/app_localizations.dart';
 import '../utils/app_logger.dart';
 
 /// APK下载和安装服务
 class ApkDownloadService {
   static const String _notificationChannelId = 'apk_download_channel';
-  static const String _notificationChannelName = 'APK下载';
-  static const String _notificationChannelDescription = 'APK文件下载进度通知';
+  static const String _notificationChannelName = 'APK Download';
+  static const String _notificationChannelDescription = 'APK file download progress notifications';
 
   static Dio? _dio;
   static FlutterLocalNotificationsPlugin? _notificationsPlugin;
   static int? _currentNotificationId;
+  
+  // 缓存的本地化字符串，用于通知（因为通知无法访问 BuildContext）
+  static String? _cachedNotificationTitle;
+  static String? _cachedDownloadStarted;
+  static String? _cachedDownloadProgress;
+  static String? _cachedDownloadComplete;
+  static String? _cachedDownloadFailed;
 
   /// 获取Dio实例
   static Dio get dio {
@@ -68,7 +76,8 @@ class ApkDownloadService {
       final downloadDir = await _getDownloadDirectory();
       if (downloadDir == null) {
         if (context.mounted) {
-          _showErrorDialog(context, '无法获取下载目录');
+          final l10n = AppLocalizations.of(context);
+          _showErrorDialog(context, l10n.cannotGetDownloadDir);
         }
         return;
       }
@@ -94,7 +103,8 @@ class ApkDownloadService {
     } catch (e) {
       logError('APK下载失败: $e');
       if (context.mounted) {
-        _showErrorDialog(context, '下载失败: $e');
+        final l10n = AppLocalizations.of(context);
+        _showErrorDialog(context, l10n.apkDownloadFailed(e.toString()));
       }
     }
   }
@@ -169,22 +179,23 @@ class ApkDownloadService {
     String filePath,
     String version,
   ) {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('下载APK'),
+          title: Text(l10n.apkDownloadTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const CircularProgressIndicator(),
               const SizedBox(height: 16),
-              Text('正在下载 ThoughtEcho $version...'),
+              Text(l10n.apkDownloading(version)),
               const SizedBox(height: 8),
-              const Text(
-                '请勿关闭应用，下载完成后将自动开始安装',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
+              Text(
+                l10n.apkDownloadHint,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ],
           ),
@@ -195,7 +206,7 @@ class ApkDownloadService {
                 dio.close(force: true);
                 Navigator.of(dialogContext).pop();
               },
-              child: const Text('取消'),
+              child: Text(l10n.cancel),
             ),
           ],
         );
@@ -213,6 +224,13 @@ class ApkDownloadService {
     String filePath,
     String version,
   ) async {
+    // 缓存本地化字符串用于通知
+    final l10n = AppLocalizations.of(context);
+    _cachedNotificationTitle = l10n.apkNotificationTitle;
+    _cachedDownloadStarted = l10n.apkDownloadStarted(version);
+    _cachedDownloadComplete = l10n.apkDownloadComplete;
+    _cachedDownloadFailed = l10n.apkDownloadFailed('');
+    
     try {
       // 创建通知渠道
       await _createNotificationChannel();
@@ -221,7 +239,7 @@ class ApkDownloadService {
       _currentNotificationId = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
       // 显示初始通知
-      await _showDownloadNotification('开始下载 ThoughtEcho $version', 0);
+      await _showDownloadNotification(_cachedDownloadStarted!, 0);
 
       final response = await dio.download(
         apkUrl,
@@ -229,14 +247,15 @@ class ApkDownloadService {
         onReceiveProgress: (received, total) {
           if (total != -1) {
             final progress = (received / total * 100).round();
-            _showDownloadNotification('下载中... $progress%', progress);
+            _cachedDownloadProgress = l10n.apkDownloadProgress(progress);
+            _showDownloadNotification(_cachedDownloadProgress!, progress);
           }
         },
       );
 
       if (response.statusCode == 200) {
         // 下载完成
-        await _showDownloadNotification('下载完成，正在安装...', 100);
+        await _showDownloadNotification(_cachedDownloadComplete!, 100);
 
         // 关闭下载对话框
         if (context.mounted) {
@@ -248,23 +267,26 @@ class ApkDownloadService {
           await _installApk(context, filePath);
         }
       } else {
-        throw Exception('下载失败: $response.statusCode');
+        throw Exception('Download failed: ${response.statusCode}');
       }
     } catch (e) {
       logError('下载过程出错: $e');
 
       // 显示错误通知
-      await _showDownloadNotification('下载失败: $e', -1);
-
       if (context.mounted) {
+        final errorL10n = AppLocalizations.of(context);
+        await _showDownloadNotification(errorL10n.apkDownloadFailed(e.toString()), -1);
         Navigator.of(context).pop(); // 关闭下载对话框
-        _showErrorDialog(context, '下载失败: $e');
+        _showErrorDialog(context, errorL10n.apkDownloadFailed(e.toString()));
+      } else {
+        await _showDownloadNotification('Download failed: $e', -1);
       }
     }
   }
 
   /// 安装APK文件
   static Future<void> _installApk(BuildContext context, String filePath) async {
+    final l10n = AppLocalizations.of(context);
     try {
       final result = await OpenFile.open(filePath);
 
@@ -272,9 +294,9 @@ class ApkDownloadService {
         // 安装成功或文件已打开
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('APK文件已准备就绪，请在系统安装程序中完成安装'),
-              duration: Duration(seconds: 3),
+            SnackBar(
+              content: Text(l10n.apkInstallReady),
+              duration: const Duration(seconds: 3),
             ),
           );
         }
@@ -282,13 +304,13 @@ class ApkDownloadService {
         // 安装失败
         logError('APK安装失败: ${result.message}');
         if (context.mounted) {
-          _showErrorDialog(context, '无法打开APK文件: ${result.message}');
+          _showErrorDialog(context, l10n.apkOpenFailed(result.message ?? ''));
         }
       }
     } catch (e) {
       logError('APK安装过程出错: $e');
       if (context.mounted) {
-        _showErrorDialog(context, '安装失败: $e');
+        _showErrorDialog(context, l10n.apkInstallFailed(e.toString()));
       }
     }
   }
@@ -340,7 +362,7 @@ class ApkDownloadService {
 
     await notificationsPlugin.show(
       _currentNotificationId ?? 0,
-      'APK下载',
+      _cachedNotificationTitle ?? 'APK Download',
       message,
       details,
     );
@@ -348,23 +370,24 @@ class ApkDownloadService {
 
   /// 显示权限对话框
   static void _showPermissionDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('需要存储权限'),
-          content: const Text('下载APK文件需要存储权限。请在设置中允许应用访问存储空间。'),
+          title: Text(l10n.storagePermissionRequired),
+          content: Text(l10n.storagePermissionDesc),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('取消'),
+              child: Text(l10n.cancel),
             ),
             FilledButton(
               onPressed: () {
                 Navigator.of(dialogContext).pop();
                 openAppSettings();
               },
-              child: const Text('去设置'),
+              child: Text(l10n.goToSettings),
             ),
           ],
         );
@@ -374,16 +397,17 @@ class ApkDownloadService {
 
   /// 显示错误对话框
   static void _showErrorDialog(BuildContext context, String message) {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('错误'),
+          title: Text(l10n.errorTitle),
           content: Text(message),
           actions: [
             FilledButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('确定'),
+              child: Text(l10n.confirm),
             ),
           ],
         );

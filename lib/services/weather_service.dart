@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../services/network_service.dart';
 import '../services/weather_cache_manager.dart';
 import '../models/weather_data.dart';
+import '../gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
 /// 天气服务状态枚举
@@ -123,8 +124,7 @@ class WeatherService extends ChangeNotifier {
     Duration timeout = const Duration(seconds: 10),
   }) async {
     try {
-      final url =
-          'https://api.open-meteo.com/v1/forecast'
+      final url = 'https://api.open-meteo.com/v1/forecast'
           '?latitude=$latitude'
           '&longitude=$longitude'
           '&current=temperature_2m,weather_code,wind_speed_10m'
@@ -362,6 +362,26 @@ class WeatherService extends ChangeNotifier {
         return Icons.ac_unit;
       default:
         return Icons.cloud_queue;
+    }
+  }
+
+  /// 获取筛选分类的本地化标签（用于 UI 显示）
+  static String getLocalizedFilterCategoryLabel(
+    BuildContext context,
+    String filterCategory,
+  ) {
+    final l10n = AppLocalizations.of(context);
+    switch (filterCategory) {
+      case 'sunny':
+        return l10n.weatherFilterSunny;
+      case 'rainy':
+        return l10n.weatherFilterRainy;
+      case 'cloudy':
+        return l10n.weatherFilterCloudy;
+      case 'snowy':
+        return l10n.weatherFilterSnowy;
+      default:
+        return filterCategory;
     }
   }
 }
