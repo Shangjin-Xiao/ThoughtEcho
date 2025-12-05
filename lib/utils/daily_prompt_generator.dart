@@ -1,3 +1,4 @@
+// TODO: This class needs refactoring to accept BuildContext for internationalization
 import 'dart:math';
 import '../services/weather_service.dart';
 

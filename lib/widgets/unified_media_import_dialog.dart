@@ -9,6 +9,7 @@ import '../services/media_file_service.dart';
 import '../utils/stream_file_selector.dart';
 import '../services/large_file_manager.dart' as lfm;
 import '../utils/app_logger.dart';
+import '../gen_l10n/app_localizations.dart';
 
 /// 统一的媒体导入对话框
 ///
@@ -42,7 +43,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('导入${_getMediaTypeName(widget.mediaType)}'),
+      title: Text('${AppLocalizations.of(context)!.unifiedMediaImport_importMedia.replaceAll('{mediaType}', _getMediaTypeName(widget.mediaType))}'),
       content: SizedBox(
         width: 400,
         child: _isImporting ? _buildImportProgress() : _buildImportOptions(),
@@ -59,7 +60,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
         ListTile(
           leading: const Icon(Icons.folder_open),
           title: Text(_filePickTitle()),
-          subtitle: const Text('支持大文件，内存安全处理'),
+          subtitle: Text(AppLocalizations.of(context)!.supportsLargeFiles),
           onTap: () => _importFromFile(),
         ),
 
@@ -68,7 +69,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
           ListTile(
             leading: Icon(_getCameraIcon()),
             title: Text(_getCameraTitle()),
-            subtitle: Text('直接${_getCameraAction()}'),
+            subtitle: Text(_getCameraAction()),
             onTap: () => _importFromCamera(),
           ),
         ],
@@ -76,8 +77,8 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
         // 网址导入选项
         ListTile(
           leading: const Icon(Icons.link),
-          title: Text('从网址导入${_getMediaTypeName(widget.mediaType)}'),
-          subtitle: const Text('输入媒体文件的网址'),
+          title: Text('${AppLocalizations.of(context)!.enterUrlHint}'),
+          subtitle: Text(AppLocalizations.of(context)!.enterUrlHint),
           onTap: () => _importFromUrl(),
         ),
 

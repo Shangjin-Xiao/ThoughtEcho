@@ -10,18 +10,15 @@
   "settings": "Settings",
   "loading": "Loading...",
   "retry": "Retry",
-  
   "home": "Home",
   "notes": "Notes",
   "aiFeatures": "AI",
-  
   "languageSettings": "Language",
   "languageFollowSystem": "Follow System",
   "languageChinese": "简体中文",
   "languageEnglish": "English",
   "selectLanguage": "Select Language",
   "onboardingSelectLanguage": "Select Language",
-  
   "onboardingWelcome": "Welcome to ThoughtEcho",
   "onboardingSubtitle": "Your Personal Inspiration Notebook with AI Power",
   "onboardingDescription": "Let's record together",
@@ -48,12 +45,10 @@
   "onboardingUpdateComplete": "Update Complete",
   "onboardingUpdateSuccess": "ThoughtEcho has been successfully updated\nYour data has been automatically migrated",
   "onboardingEnterApp": "Enter App",
-  
   "onboardingQuickTip1": "Single tap on Daily Quote to copy content",
   "onboardingQuickTip2": "Double tap on Daily Quote to quickly add to notes",
   "onboardingQuickTip3": "Use tags to organize your notes",
   "onboardingQuickTip4": "Full-text search to quickly find content",
-  
   "featureSmartNotes": "Smart Notes",
   "featureSmartNotesDesc": "Rich text editing with automatic time, location and weather recording",
   "featureDailyQuote": "Daily Quote",
@@ -62,7 +57,6 @@
   "featureAiInsightDesc": "Intelligent analysis of your notes to discover thinking patterns and emotional changes",
   "featureLocalFirst": "Local First",
   "featureLocalFirstDesc": "All data stored on your device for privacy and security",
-  
   "prefLanguage": "Language",
   "prefLanguageDesc": "Select app display language",
   "prefDailyQuoteType": "Daily Quote Types",
@@ -75,13 +69,11 @@
   "prefHomeOverviewDesc": "View daily quote and recent notes",
   "prefNoteList": "Note List",
   "prefNoteListDesc": "Go directly to note management",
-  
   "prefSelectAll": "Select All",
   "prefClearAll": "Clear",
   "prefAboutSettings": "About Settings",
   "prefAboutSettingsInfo": "• All settings can be modified in the app settings anytime\n• We value your privacy, all data is stored on your device\n• Permissions will be requested when you need related features",
   "prefMoreOptionsHint": "More personalization options and AI features available in Settings > Preferences.",
-  
   "settingsTitle": "Settings",
   "settingsLocationWeather": "Location & Weather Settings",
   "settingsUseLocationService": "Use Location Service",
@@ -92,7 +84,6 @@
   "settingsSearchCity": "Search and Select City",
   "settingsCurrentLocation": "Current Display Location",
   "settingsNotSet": "Not Set",
-  
   "settingsAppSettings": "App Settings",
   "settingsPreferences": "Preferences",
   "settingsPreferencesDesc": "Personalization and AI features",
@@ -110,7 +101,6 @@
   "settingsLogsDesc": "Configure app logging level",
   "settingsStorage": "Storage Management",
   "settingsStorageDesc": "View storage usage, clean cache and unused files",
-  
   "settingsContentManagement": "Content Management",
   "settingsTags": "Tag Management",
   "settingsTagsDesc": "Add, edit or delete note tags",
@@ -118,7 +108,6 @@
   "settingsBackupDesc": "Backup data or restore from backup",
   "settingsSync": "Note Sync",
   "settingsSyncDesc": "Sync notes with nearby devices",
-  
   "settingsAbout": "About ThoughtEcho",
   "settingsAboutSlogan": "Your Personal Inspiration Notebook with AI Power",
   "settingsViewSource": "View Source Code (GitHub)",
@@ -127,7 +116,6 @@
   "settingsCheckUpdate": "Check for Updates",
   "settingsCheckUpdateDesc": "Check if a new version is available",
   "settingsClose": "Close",
-  
   "locationPermissionDenied": "Location permission denied, cannot enable location service",
   "enableLocationService": "Please Enable Location Service",
   "enableLocationServiceDesc": "ThoughtEcho needs access to your location to provide weather and other features. Please enable location service in system settings.",
@@ -136,7 +124,6 @@
   "locationServiceEnabled": "Location service enabled, location updated",
   "locationServiceDisabled": "Location service disabled",
   "cannotGetLocation": "Cannot get current location",
-  
   "selectedCount": "{count} types selected",
   "@selectedCount": {
     "placeholders": {
@@ -145,7 +132,6 @@
       }
     }
   },
-  
   "pleaseWait": "Please wait...",
   "close": "Close",
   "ok": "OK",
@@ -153,7 +139,6 @@
   "success": "Success",
   "warning": "Warning",
   "info": "Info",
-  
   "cannotOpenLink": "Cannot open link: {url}",
   "@cannotOpenLink": {
     "placeholders": {
@@ -240,20 +225,16 @@
   "testFailedNetwork": "Test failed: Network error",
   "testInitFailed": "Test initialization failed",
   "followSystem": "Follow System",
-  
   "navHome": "Home",
   "navNotes": "Notes",
   "navInsights": "Insights",
   "navSettings": "Settings",
-  
   "appTitleOffline": "ThoughtEcho - Offline",
   "loadingDataPleaseWait": "Loading data, please wait...",
   "noTagsAvailable": "No tags available",
-  
   "deleteNote": "Delete Note",
   "deleteNoteConfirmation": "Are you sure you want to delete this note? This action cannot be undone.",
   "noteDeleted": "Note deleted",
-  
   "favorited": "Favorited ({count})",
   "@favorited": {
     "placeholders": {
@@ -263,7 +244,6 @@
     }
   },
   "favoriteFailed": "Failed to favorite, please try again",
-  
   "aiCardServiceNotInitialized": "AI card service not initialized",
   "generateCardFailed": "Failed to generate card: {error}",
   "@generateCardFailed": {
@@ -273,7 +253,6 @@
       }
     }
   },
-  
   "generatingShareImage": "Generating share image...",
   "cardSharedSuccessfully": "Card shared successfully",
   "shareFailed": "Share failed: {error}",
@@ -284,7 +263,6 @@
       }
     }
   },
-  
   "savingCardToGallery": "Saving card to gallery...",
   "cardSavedToGallery": "Card saved to gallery: {path}",
   "@cardSavedToGallery": {
@@ -303,13 +281,11 @@
     }
   },
   "view": "View",
-  
   "todayThoughts": "Today's Thoughts",
   "loadingTodayThoughts": "Loading today's thoughts...",
   "fetchingDefaultPrompt": "Fetching default prompt...",
   "waitingForTodayThoughts": "Waiting for today's thoughts...",
   "noTodayThoughts": "No thoughts for today",
-  
   "cannotOpenFullEditor": "Cannot open full editor: {error}",
   "@cannotOpenFullEditor": {
     "placeholders": {
@@ -318,7 +294,6 @@
       }
     }
   },
-  
   "refreshFailed": "Refresh failed: {error}",
   "@refreshFailed": {
     "placeholders": {
@@ -327,7 +302,6 @@
       }
     }
   },
-  
   "backupAndRestore": "Backup & Restore",
   "dataBackup": "Data Backup",
   "dataRestore": "Data Restore",
@@ -359,7 +333,6 @@
   "restoreCanceled": "Restore canceled",
   "unknownField": "Unknown field",
   "confirmRestoreData": "Confirm Restore Data",
-  
   "insightsTitle": "AI Insights",
   "analysisTypeComprehensive": "Comprehensive Analysis",
   "analysisTypeComprehensiveDesc": "Analyze all your notes to explore themes, emotions and thinking patterns",
@@ -394,14 +367,12 @@
   "analyzing": "Analyzing...",
   "analysisSaved": "Analysis saved",
   "analysisCopied": "Analysis copied to clipboard",
-  
   "noteSaved": "Note saved",
   "selectCardColor": "Select Card Color",
   "presetColors": "Preset Colors",
   "customColor": "Custom Color",
   "select": "Select",
   "editMetadata": "Edit Metadata",
-  
   "done": "Done",
   "selectTags": "Select Tags",
   "noMatchingTags": "No matching tags found",
@@ -421,23 +392,19 @@
   "noAuthorOrWorkIdentified": "Could not identify a clear author or work",
   "applyAnalysisResults": "Apply Analysis Results",
   "parseResultsFailed": "Failed to parse results",
-  "analysisFailed": "Analysis failed",
+  "analysisFailed": "Analysis failed: {error}",
   "analysisResultsCopied": "Analysis results copied to clipboard",
   "noteInfo": "Note Info",
   "source": "Source",
   "createdAt": "Created At",
   "content": "Content",
-  
   "periodicReport": "Periodic Report",
   "aiInsightsTab": "AI Insights",
-  
   "locationServiceNotEnabled": "Location Service Not Enabled",
   "pleaseEnableLocationInSettings": "Please enable location service in system settings",
   "locationServiceEnabledMsg": "Location service enabled",
-  
   "quickTips": "Quick Tips",
   "coreFeature": "Core",
-  
   "confirmDelete": "Confirm Delete",
   "confirmDeleteAnalysis": "Are you sure you want to delete this analysis record?",
   "deleteSuccess": "Deleted successfully",
@@ -450,7 +417,6 @@
     }
   },
   "serviceNotInitialized": "Service not initialized",
-  
   "location": "Location",
   "weather": "Weather",
   "color": "Color",
@@ -471,7 +437,6 @@
       }
     }
   },
-  
   "themeSettings": "Theme Settings",
   "themeMode": "Theme Mode",
   "themeModeLight": "Light",
@@ -486,7 +451,6 @@
   "themeToolsDesc": "If theme colors appear abnormal, try refreshing the theme",
   "themeRefreshed": "Theme refreshed",
   "refreshTheme": "Refresh Theme",
-  
   "hitokotoSettings": "Daily Quote Settings",
   "hitokotoTypeSettings": "Daily Quote Type Settings",
   "hitokotoTypeDesc": "You can select one or more daily quote types. The app will randomly display content from your selected types. Different types represent different content sources and styles.",
@@ -500,7 +464,6 @@
   "hitokotoHelpItem2": "Selecting multiple types provides a richer variety of content",
   "hitokotoHelpItem3": "Different types represent different content styles and sources",
   "settingsSaved": "Settings saved",
-  
   "tagManagement": "Tag Management",
   "newTagName": "New Tag Name",
   "enterTagNameHint": "Enter tag name (max 50 characters)",
@@ -569,7 +532,6 @@
     }
   },
   "systemIcons": "System Icons",
-  
   "storageManagement": "Storage Management",
   "clearCache": "Clear Cache",
   "clearCacheConfirmTitle": "Clear Cache",
@@ -713,7 +675,6 @@
       }
     }
   },
-  
   "logsViewer": "Log Viewer",
   "logFilter": "Log Filter",
   "clearLogs": "Clear Logs",
@@ -791,7 +752,6 @@
     }
   },
   "logPageError": "Log page rendering error:",
-  
   "networkDiagnostic": "Network Diagnostic",
   "networkConfig": "Network Configuration",
   "networkDiagnosticSection": "Network Diagnostic",
@@ -1056,7 +1016,7 @@
   "aiAnalysisUsageInstructionsTitle": "AI Analysis Usage Instructions",
   "aiAnalysisUsageInstructions": "1. AI may generate inaccurate or misleading content, please evaluate the analysis results with caution\n2. When using this feature, all your note information (including content, date, location, weather, and temperature, etc.) will be sent to the AI for comprehensive analysis\n3. The analysis results are for reference only, and the final interpretation is up to you\n4. It is recommended to use this feature in a good network environment to get the best experience",
   "copyToClipboard": "Copy to Clipboard",
-  "analysisResultCopied": "Analysis result copied",
+  "analysisResultCopied": "Analysis result copied to clipboard",
   "saveAsNoteButton": "Save as Note",
   "saveAnalysisButton": "Save Analysis",
   "shareInsightsButton": "Share Insights",
@@ -1696,10 +1656,8 @@
       }
     }
   },
-
   "generatingAiReport": "Generating AI annual report...",
   "testFailedEmptyContent": "Test failed: AI returned empty content",
-  
   "includeMediaFilesHint": "Include images, audio and other media files when checked (larger file but more complete)",
   "overwriteImport": "Overwrite Import (Clear existing data)",
   "overwriteImportDesc": "Delete all current data and replace with backup content",
@@ -1709,7 +1667,6 @@
   "mergeImportHint": "This operation will keep current data and merge with backup data:",
   "mergeImportReversible": "This operation is reversible: you can import overwrite backup or continue merging again.",
   "confirmRestoreBtn": "Confirm Restore",
-  
   "favoriteCountWithNum": "Favorited ({count})",
   "@favoriteCountWithNum": {
     "placeholders": {
@@ -1718,7 +1675,6 @@
       }
     }
   },
-  
   "analysisRecordDeleted": "Analysis record deleted",
   "loadFailed": "Load failed: {error}",
   "@loadFailed": {
@@ -1735,7 +1691,6 @@
   "allRecordsDeleted": "All records deleted",
   "selectAnnualReportType": "Select Annual Report Type",
   "selectReportTypeHint": "Please select the type of annual report to generate:",
-  
   "unknownTag": "Unknown tag",
   "morning": "Morning",
   "forenoon": "Forenoon",
@@ -1749,21 +1704,26 @@
   "harvest": "Harvest",
   "breakthrough": "Breakthrough",
   "hope": "Hope",
-  
   "backupFormatZip": "Will create a ZIP backup file containing all notes, settings and media files",
   "backupFormatJson": "Will create a JSON backup file containing all notes and settings",
   "supportedBackupFormats": "Supports new ZIP format and legacy JSON format backup files",
   "restoringData": "Restoring data... {current}/{total}",
   "@restoringData": {
     "placeholders": {
-      "current": {"type": "int"},
-      "total": {"type": "int"}
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "restoreFailedGeneric": "Failed to restore data: {error}",
   "@restoreFailedGeneric": {
     "placeholders": {
-      "error": {"type": "String"}
+      "error": {
+        "type": "String"
+      }
     }
   },
   "restoreFailedOutOfMemory": "Restore failed: Out of memory\n\nSuggestions:\n• Close other apps to free memory\n• Restart the app and try again\n• Check if the backup file is too large",
@@ -1771,21 +1731,18 @@
   "restoreFailedPermission": "Restore failed: Permission denied\n\nPlease check the app's storage permission settings.",
   "restoreCancelled": "Restore cancelled",
   "restoreFailedCorrupt": "Restore failed: Backup file is corrupted or in incorrect format\n\nPlease check if the backup file is complete.",
-  
   "restoreConfirmDialogTitle": "Confirm Restore",
   "restoreConfirmDialogDesc": "This operation will:",
   "restoreConfirmDialogItem1": "• Delete all notes and settings on this device",
   "restoreConfirmDialogItem2": "• Replace with data from backup file",
   "restoreConfirmDialogItem3": "• This action cannot be undone",
   "restoreConfirmDialogWarning": "Please make sure you have backed up important data.",
-  
   "mergeConfirmDialogTitle": "Confirm Merge Import",
   "mergeConfirmDialogDesc": "This operation will keep current data and merge with backup data:",
   "mergeConfirmDialogItem1": "• Notes with same ID will keep the newer version (Last-Write-Wins)",
   "mergeConfirmDialogItem2": "• Notes with different IDs will all be kept",
   "mergeConfirmDialogItem3": "• Settings and AI analysis data will be merged",
   "mergeConfirmDialogReversible": "This operation is reversible: you can import overwrite backup or continue merging again.",
-  
   "tagSettingsDescription": "Create and manage your personal tag system",
   "addNewTag": "Add New Tag",
   "tagNameHint": "Please enter a tag name",
@@ -1811,7 +1768,6 @@
       }
     }
   },
-  
   "noteSync": "Note Sync",
   "refreshDeviceList": "Refresh device list",
   "initializingService": "Starting...",
@@ -1969,7 +1925,6 @@
   "discoverDevices": "Discover Devices",
   "cancelDiscoveryTooltip": "Cancel current device discovery",
   "startDiscoveryTooltip": "Start discovering nearby devices",
-  
   "receiveSyncRequest": "Receive Sync Request",
   "waitingPeerApproval": "Waiting for peer approval",
   "deviceWantsToSync": "Device \"{alias}\" wants to sync notes",
@@ -1989,7 +1944,6 @@
   "cancelReceive": "Cancel Receive",
   "cancelSend": "Cancel Send",
   "syncCompleted": "Sync completed",
-  
   "syncStatusIdle": "Idle",
   "syncStatusPackaging": "Packaging data",
   "syncStatusSending": "Sending",
@@ -1997,7 +1951,6 @@
   "syncStatusMerging": "Merging",
   "syncStatusCompleted": "Sync completed",
   "syncStatusFailed": "Sync failed",
-  
   "weatherClear": "Clear",
   "weatherPartlyCloudy": "Partly cloudy",
   "weatherCloudy": "Cloudy",
@@ -2015,7 +1968,6 @@
   "weatherError": "Failed to fetch",
   "weatherDataFetchFailed": "Failed to fetch weather data",
   "unknownWeather": "Unknown weather",
-  
   "noAiAnalysisRecords": "No AI analysis records",
   "aiAssistant": "AI Assistant",
   "analyzingSource": "Analyzing source...",
@@ -2085,7 +2037,6 @@
   "noteAnalysis": "Note Analysis",
   "applyToNote": "Apply to Note",
   "analysisComplete": "Analysis complete",
-  
   "filterAndSort": "Filter & Sort",
   "resetFilter": "Reset",
   "tagFilter": "Tag Filter",
@@ -2101,13 +2052,11 @@
   "sortByFavorite": "Sort by favorite",
   "ascending": "Ascending",
   "applyFilter": "Apply",
-  
   "editNoteMenu": "Edit Note",
   "askAIMenu": "Ask AI",
   "generateCardShareMenu": "Generate Card",
   "deleteNoteMenu": "Delete Note",
   "doubleTapToViewFull": "Double tap to view full",
-  
   "logLevel": "Level: {level}",
   "@logLevel": {
     "placeholders": {
@@ -2116,7 +2065,6 @@
       }
     }
   },
-  
   "prefSettingsTitle": "Preferences",
   "personalizationSettings": "Personalization",
   "personalizationSettingsDesc": "Adjust app behavior based on your usage habits",
@@ -2138,7 +2086,6 @@
   "aiCardGenerationLabelDesc": "Generate visual SVG cards for notes",
   "moreAiSettings": "More AI Settings",
   "moreAiSettingsDesc": "Configure AI providers, models, etc.",
-  
   "licenseInfo": "License Information",
   "appLicense": "App License",
   "viewAppLicense": "View App LICENSE",
@@ -2202,7 +2149,6 @@
   "noLicenseContent": "(No license content)",
   "copyLicense": "Copy License",
   "licenseCopied": "License content copied",
-  
   "searchAnalysisRecords": "Search analysis records...",
   "authorPerson": "Author/Person",
   "workSource": "Work/Source",
@@ -2211,7 +2157,6 @@
   "workName": "Work Name",
   "searchNotes": "Search notes...",
   "searchCity": "Search city...",
-  
   "logSettingsTitle": "Log Settings",
   "viewLogs": "View Logs",
   "logLevelDescription": "Select the logging detail level for the app. More detailed logs help with debugging but may affect performance and use more storage space.",
@@ -2221,7 +2166,6 @@
   "logLevelWarning": "Record potential issues or warnings.",
   "logLevelError": "Record only error information.",
   "logLevelNone": "Do not record any logs.",
-  
   "updateFoundNewVersion": "New Version Available",
   "updateCurrentVersion": "Current Version",
   "updateLatestVersion": "Latest Version",
@@ -2266,7 +2210,6 @@
       }
     }
   },
-  
   "selectCity": "Select City",
   "currentWeather": "Current Weather",
   "cityNotSetHint": "No city set, search and select below",
@@ -2290,7 +2233,6 @@
   "noCityFound": "No matching city found",
   "tryDifferentKeywords": "Try different keywords or city names",
   "enterCityToSearch": "Enter city name to search",
-  
   "addInfo": "Add Info",
   "selectTagsWithCount": "Select Tags ({count})",
   "@selectTagsWithCount": {
@@ -2303,7 +2245,6 @@
   "noTagsAvailableHint": "No tags available, please add tags first",
   "addLocationPrefix": "Add location",
   "locationServiceUnavailable": "Location service unavailable",
-  
   "sourceInfo": "Source Info",
   "tagsLabel": "Tags",
   "selectedTagsCount": "{count} tags selected",
@@ -2334,7 +2275,6 @@
   "refreshLocationWeather": "Refresh location and weather",
   "gettingLocationHint": "Getting location...",
   "noteNoLocationWeatherInfo": "This note did not record location and weather info on first save",
-  
   "aiAssistantLabel": "AI Assistant",
   "polishingText": "Polishing text...",
   "continuingText": "Continuing text...",
@@ -2352,7 +2292,6 @@
   "analysisExplanation": "Analysis Explanation:",
   "noAuthorWorkIdentified": "Could not identify a clear author or work",
   "applyAnalysisResult": "Apply Analysis Result",
-  "close": "Close",
   "parseResultFailed": "Parse result failed: {error}",
   "@parseResultFailed": {
     "placeholders": {
@@ -2361,7 +2300,6 @@
       }
     }
   },
-  "analysisFailed": "Analysis failed: {error}",
   "@analysisFailed": {
     "placeholders": {
       "error": {
@@ -2371,7 +2309,6 @@
   },
   "pleaseInputContent": "Please input content first",
   "copyResult": "Copy Result",
-  "analysisResultCopied": "Analysis result copied to clipboard",
   "cannotAddLocation": "Cannot Add Location",
   "cannotAddLocationDesc": "This note did not record location info on first save, cannot add later.\n\nTo record location, check the location option when creating a new note.",
   "iKnow": "I understand",
@@ -2425,7 +2362,6 @@
   "cannotGetLocationTitle": "Cannot Get Location",
   "cannotGetLocationDesc": "Cannot get current location. Please check location permission or network status.",
   "cannotGetLocationPermissionShort": "Cannot get location permission",
-  
   "savingNote": "Saving",
   "saveComplete": "Complete",
   "writingDatabase": "Writing to database...",
@@ -2450,17 +2386,14 @@
   "editMetadataShort": "Edit Metadata",
   "startWritingHint": "Start writing your thoughts...",
   "unknownLocation": "Unknown Location",
-  
   "dayPeriodDawn": "Dawn",
   "dayPeriodMorning": "Morning",
   "dayPeriodAfternoon": "Afternoon",
   "dayPeriodDusk": "Dusk",
   "dayPeriodEvening": "Evening",
   "dayPeriodMidnight": "Late Night",
-  
   "showExactTime": "Show Exact Time",
   "showExactTimeDesc": "Display time (hour:minute) in notes",
-  
   "guideHomepageDailyQuoteTitle": "Daily Quote Tips",
   "guideHomepageDailyQuoteDesc": "Single tap to copy content\nDouble tap to quickly add to notes",
   "guideNotePageFilterTitle": "Filter & Sort",
@@ -2481,7 +2414,6 @@
   "guideSettingsStartupDesc": "Set the default page to open when launching the app",
   "guideSettingsThemeTitle": "Theme Settings",
   "guideSettingsThemeDesc": "Customize app theme colors and appearance here",
-
   "apkDownloadTitle": "Download APK",
   "apkDownloading": "Downloading ThoughtEcho {version}...",
   "@apkDownloading": {
@@ -2537,8 +2469,171 @@
   "apkNotificationTitle": "APK Download",
   "storagePermissionRequired": "Storage Permission Required",
   "storagePermissionDesc": "Storage permission is required to download APK files. Please allow storage access in settings.",
-  "goToSettings": "Go to Settings",
   "errorTitle": "Error",
   "cannotGetDownloadDir": "Cannot get download directory",
-  "webPlatformApkNotSupported": "APK download is not supported on Web platform"
+  "webPlatformApkNotSupported": "APK download is not supported on Web platform",
+  "serviceNotInitializedDeleteFailed": "Service not initialized, delete failed",
+  "deleteAllConfirmMessage": "Are you sure you want to delete all analysis records? This action cannot be undone.",
+  "deleteFailedSimple": "Delete failed",
+  "aiAnalysisDetails": "AI Analysis Details",
+  "analysisTime": "Analysis Time",
+  "analysisContent": "Analysis Content",
+  "aiAnalysisResult": "AI Analysis Result",
+  "emotionalAnalysis": "Emotional Analysis",
+  "comprehensiveAnalysis": "Comprehensive Analysis",
+  "mindMapAnalysis": "Mind Map",
+  "growthAnalysis": "Growth Analysis",
+  "aiAnalysis": "AI Analysis",
+  "selectReportTypePrompt": "Please select the type of annual report to generate:",
+  "aiSmartReport": "AI Smart Report",
+  "aiSmartReportDesc": "Beautiful HTML report generated based on AI analysis, including deep insights and visual charts",
+  "nativeFlutterReport": "Native Flutter Report",
+  "nativeFlutterReportDesc": "Interactive report generated using native Flutter components with smooth animations",
+  "generateAnnualReportFailed": "Failed to generate annual report",
+  "generatingAIAnnualReport": "Generating AI annual report...",
+  "cannotReadReportTemplate": "Cannot read report template",
+  "aiReturnFormatAbnormal": "AI return format abnormal, used backup template to generate report",
+  "aiServiceAbnormal": "AI service abnormal, used backup template to generate report",
+  "monthJan": "Jan",
+  "monthFeb": "Feb",
+  "monthMar": "Mar",
+  "monthApr": "Apr",
+  "monthMay": "May",
+  "monthJun": "Jun",
+  "monthJul": "Jul",
+  "monthAug": "Aug",
+  "monthSep": "Sep",
+  "monthOct": "Oct",
+  "monthNov": "Nov",
+  "monthDec": "Dec",
+  "achievementRecordMaster": "Record Master",
+  "achievementPersistent": "Persistent",
+  "achievementWriter": "Writer",
+  "achievementOrganizer": "Organizer",
+  "continuingToGrow": "Continuing to grow",
+  "allDayLong": "All day",
+  "preparingBackup": "Preparing backup...",
+  "collectingData": "Collecting data...",
+  "processingNoteData": "Processing note data...",
+  "processingMediaFiles": "Processing media files...",
+  "creatingBackupFile": "Creating backup file...",
+  "verifyingBackupFile": "Verifying backup file...",
+  "thoughtEchoBackupFile": "ThoughtEcho Backup File",
+  "backupFileReady": "Backup file is ready, please save via sharing",
+  "backupCompleteSelectLocation": "Backup complete, please choose save location",
+  "zipFile": "ZIP File",
+  "jsonFile": "JSON File",
+  "outOfMemoryText": "Out of memory",
+  "storageSpaceText": "Storage space",
+  "permissionText": "Permission",
+  "backupCancelled": "Backup cancelled",
+  "backupFailedText": "Backup failed",
+  "selectFileError": "Failed to select file",
+  "mergingDataProgress": "Merging data...",
+  "yearAIAnnualReport": "{year} AI Annual Report",
+  "openInBrowser": "Open in Browser",
+  "shareReport": "Share Report",
+  "saveReport": "Save Report",
+  "processingReport": "Processing report...",
+  "personalizedSummaryByAI": "Personalized summary based on AI analysis",
+  "aiGeneratedReview": "AI has generated your exclusive annual review, including data analysis, growth insights, and future suggestions",
+  "reportPreview": "Report Preview",
+  "fullReportViewInBrowser": "Full report contains beautiful charts and interactive effects, recommended to view in browser",
+  "openFullReportInBrowser": "Open Full Report in Browser",
+  "shareBtn": "Share",
+  "saveBtn": "Save",
+  "work": "Work: ",
+  "explanation": "Explanation: ",
+  "generatingReportContent": "Generating report content...",
+  "reportOpenedInBrowser": "Report opened in browser",
+  "cannotOpenBrowserUseShare": "Cannot open browser directly, please use share function to select browser",
+  "reportFileSavedInstructions": "Report file saved, please follow these steps to open in browser:",
+  "step1OpenFileManager": "1. Open phone file manager",
+  "step2NavigateToPath": "2. Navigate to the following path:",
+  "step3TapHtmlFile": "3. Tap the HTML file",
+  "step4SelectBrowser": "4. Select browser to open",
+  "gotIt": "Got it",
+  "copyPath": "Copy Path",
+  "pathCopied": "File path copied to clipboard",
+  "howToViewInBrowser": "How to View in Browser",
+  "htmlContentCopied": "HTML report content copied to clipboard. Please follow these steps:",
+  "mobileSteps": "📱 Mobile:",
+  "desktopSteps": "💻 Desktop:",
+  "copyPrefix": "Copy Prefix",
+  "addressBarPrefixCopied": "Address bar prefix copied, please paste in browser then paste HTML content",
+  "reportShared": "Report shared",
+  "reportSavedLocally": "Report saved to local file",
+  "cannotSaveFileCopyToClipboard": "Cannot save file, content copied to clipboard",
+  "videoFileNotFound": "Video file not found",
+  "initializingLargeVideo": "Initializing large video file",
+  "videoLoadingTooLong": "Video loading takes too long, please try using a smaller video file",
+  "videoInitTimeout": "Video initialization timeout, file may be too large",
+  "largeVideoInitSuccess": "Large video initialized successfully",
+  "playbackSpeed": "Playback Speed",
+  "subtitles": "Subtitles",
+  "shareVideo": "Share Video",
+  "videoInfo": "Video Info",
+  "videoLoadFailed": "Video load failed",
+  "timeout": "Timeout",
+  "videoLoadTimeout": "Video load timeout",
+  "fileTooLargeUseSmaller": "File may be too large, please try again later or use a smaller video file",
+  "format": "Format",
+  "unsupportedVideoFormat": "Unsupported video format",
+  "useCommonFormats": "Please use common formats like MP4, MOV",
+  "cannotAccessVideoFile": "Cannot access video file",
+  "checkFilePermissions": "Please check file permissions",
+  "checkFileIntegrity": "Please check if file is complete or try reimporting",
+  "outOfMemoryVideo": "Out of memory, cannot load video",
+  "audioFileNotFound": "Audio file not found",
+  "clickToPlayVideo": "Tap to play video",
+  "loadingVideo": "Loading video...",
+  "shareAudio": "Share Audio",
+  "fileInfo": "File Info",
+  "audioInfo": "Audio Info",
+  "fileName": "File Name",
+  "duration": "Duration",
+  "path": "Path",
+  "resolution": "Resolution",
+  "aspectRatio": "Aspect Ratio",
+  "featureInDevelopment": "Share feature in development...",
+  "selectFromFiles": "Select from Files",
+  "supportsLargeFiles": "Supports large files with memory-safe handling",
+  "takePhoto": "Take Photo",
+  "recordVideo": "Record Video",
+  "recordAudio": "Record Audio",
+  "takePhotoDirectly": "Take photo directly",
+  "recordVideoDirectly": "Record directly",
+  "recordAudioDirectly": "Record directly",
+  "enterUrlHint": "Enter media file URL",
+  "image": "Image",
+  "video": "Video",
+  "audio": "Audio",
+  "weatherSunny": "Sunny",
+  "weatherUnknownWeather": "Unknown weather",
+  "weatherShowers": "Showers",
+  "weatherSnowShowers": "Snow Showers",
+  "weatherThunderstormWithHail": "Thunderstorm with Hail",
+  "fileTypeImage": "Image",
+  "fileTypeVideo": "Video",
+  "fileTypeAudio": "Audio",
+  "fileTypeDocument": "Document",
+  "fileTypeText": "Text",
+  "fileTypeApplication": "Application",
+  "fileTypeOther": "Other",
+  "fileStatusQueued": "Queued",
+  "fileStatusSending": "Sending",
+  "fileStatusCompleted": "Completed",
+  "fileStatusFailed": "Failed",
+  "fileStatusSkipped": "Skipped",
+  "sessionStatusWaiting": "Waiting",
+  "sessionStatusSending": "Sending",
+  "sessionStatusReceiving": "Receiving",
+  "sessionStatusCompleted": "Completed",
+  "sessionStatusCancelled": "Cancelled",
+  "sessionStatusRejected": "Rejected",
+  "sessionStatusError": "Error",
+  "timeMorning": "Morning",
+  "timeAfternoon": "Afternoon",
+  "timeEvening": "Evening",
+  "timeLateNight": "Late Night"
 }

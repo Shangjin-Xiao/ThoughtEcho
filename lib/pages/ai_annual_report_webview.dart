@@ -5,6 +5,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import '../constants/app_constants.dart';
+import '../gen_l10n/app_localizations.dart';
 
 class AIAnnualReportWebView extends StatefulWidget {
   final String htmlContent;
@@ -62,7 +63,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: Text('${widget.year} AI年度报告'),
+        title: Text(AppLocalizations.of(context)!.yearAIAnnualReport.replaceAll('{year}', widget.year.toString())),
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
         elevation: 0,
@@ -70,17 +71,17 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
           IconButton(
             icon: const Icon(Icons.open_in_browser),
             onPressed: _openInBrowser,
-            tooltip: '在浏览器中打开',
+            tooltip: AppLocalizations.of(context)!.openInBrowser,
           ),
           IconButton(
             icon: const Icon(Icons.share),
             onPressed: _shareReport,
-            tooltip: '分享报告',
+            tooltip: AppLocalizations.of(context)!.shareReport,
           ),
           IconButton(
             icon: const Icon(Icons.save_alt),
             onPressed: _saveReport,
-            tooltip: '保存报告',
+            tooltip: AppLocalizations.of(context)!.saveReport,
           ),
         ],
       ),
@@ -92,7 +93,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
                   CircularProgressIndicator(color: colorScheme.primary),
                   const SizedBox(height: 16),
                   Text(
-                    '正在处理报告...',
+                    AppLocalizations.of(context)!.processingReport,
                     style: TextStyle(
                       color: colorScheme.onSurface.withValues(alpha: 0.7),
                       fontSize: 16,
@@ -169,7 +170,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${widget.year} AI年度报告',
+                        AppLocalizations.of(context)!.yearAIAnnualReport.replaceAll('{year}', widget.year.toString()),
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -178,7 +179,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '基于AI分析的个性化总结',
+                        AppLocalizations.of(context)!.personalizedSummaryByAI,
                         style: TextStyle(
                           fontSize: 16,
                           color: colorScheme.onPrimary.withValues(alpha: 0.9),
@@ -206,7 +207,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'AI已为您生成专属的年度回顾，包含数据分析、成长洞察和未来建议',
+                      AppLocalizations.of(context)!.aiGeneratedReview,
                       style: TextStyle(
                         fontSize: 14,
                         color: colorScheme.onPrimary.withValues(alpha: 0.9),
@@ -238,7 +239,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
                 Icon(Icons.preview, color: colorScheme.primary, size: 24),
                 const SizedBox(width: 12),
                 Text(
-                  '报告内容预览',
+                  AppLocalizations.of(context)!.reportPreview,
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -287,7 +288,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      '完整报告包含精美的图表和交互效果，建议在浏览器中查看',
+                      AppLocalizations.of(context)!.fullReportViewInBrowser,
                       style: TextStyle(
                         fontSize: 13,
                         color: colorScheme.onPrimaryContainer,
@@ -311,7 +312,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
           child: FilledButton.icon(
             onPressed: _openInBrowser,
             icon: const Icon(Icons.open_in_browser),
-            label: const Text('用浏览器打开完整报告'),
+            label: Text(AppLocalizations.of(context)!.openFullReportInBrowser),
             style: FilledButton.styleFrom(
               backgroundColor: colorScheme.primary,
               foregroundColor: colorScheme.onPrimary,
@@ -329,7 +330,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
               child: OutlinedButton.icon(
                 onPressed: _shareReport,
                 icon: const Icon(Icons.share),
-                label: const Text('分享'),
+                label: Text(AppLocalizations.of(context)!.shareBtn),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
@@ -343,7 +344,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
               child: OutlinedButton.icon(
                 onPressed: _saveReport,
                 icon: const Icon(Icons.save_alt),
-                label: const Text('保存'),
+                label: Text(AppLocalizations.of(context)!.saveBtn),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
@@ -365,10 +366,10 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
       try {
         // 简单清理JSON格式的显示
         String cleanJson = content
-            .replaceAll('"author":', '作者: ')
-            .replaceAll('"work":', '作品: ')
-            .replaceAll('"confidence":', '可信度: ')
-            .replaceAll('"explanation":', '说明: ')
+            .replaceAll('"author":', AppLocalizations.of(context)!.author)
+            .replaceAll('"work":', AppLocalizations.of(context)!.work)
+            .replaceAll('"confidence":', AppLocalizations.of(context)!.confidence)
+            .replaceAll('"explanation":', AppLocalizations.of(context)!.explanation)
             .replaceAll(RegExp(r'[{}",]'), '')
             .replaceAll(RegExp(r'\s+'), ' ')
             .trim();
@@ -437,7 +438,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
       text = '${text.substring(0, 800)}...';
     }
 
-    return text.isEmpty ? '正在生成报告内容...' : text;
+    return text.isEmpty ? AppLocalizations.of(context)!.generatingReportContent : text;
   }
 
   void _openInBrowser() async {
@@ -530,7 +531,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
                     children: [
                       Icon(Icons.check_circle, color: Colors.white),
                       SizedBox(width: 8),
-                      Text('报告已在浏览器中打开'),
+                      Text(AppLocalizations.of(context)!.reportOpenedInBrowser),
                     ],
                   ),
                   backgroundColor: Theme.of(context).colorScheme.primary,
@@ -601,7 +602,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('操作失败: $e'),
+            content: Text('${AppLocalizations.of(context)!.cannotGetFilePath}: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
             duration: AppConstants.snackBarDurationError,
           ),
@@ -671,7 +672,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
             backgroundColor: Theme.of(context).colorScheme.primary,
             duration: const Duration(seconds: 4),
             action: SnackBarAction(
-              label: '分享',
+              label: AppLocalizations.of(context)!.shareBtn,
               textColor: Colors.white,
               onPressed: () => _shareReportFile(htmlFile.path),
             ),
@@ -704,7 +705,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('分享失败: $e'),
+            content: Text('${AppLocalizations.of(context)!.shareReport}: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
             duration: AppConstants.snackBarDurationError,
           ),
@@ -730,10 +731,10 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('报告文件已保存，请按以下步骤在浏览器中打开：'),
+            Text(AppLocalizations.of(context)!.reportFileSavedInstructions),
             const SizedBox(height: 16),
-            const Text('1. 打开手机的文件管理器'),
-            const Text('2. 导航到以下路径：'),
+            Text(AppLocalizations.of(context)!.step1OpenFileManager),
+            Text(AppLocalizations.of(context)!.step2NavigateToPath),
             Container(
               margin: const EdgeInsets.symmetric(vertical: 8),
               padding: const EdgeInsets.all(8),
@@ -746,14 +747,14 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
                 style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
               ),
             ),
-            const Text('3. 点击HTML文件'),
-            const Text('4. 选择浏览器打开'),
+            Text(AppLocalizations.of(context)!.step3TapHtmlFile),
+            Text(AppLocalizations.of(context)!.step4SelectBrowser),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('知道了'),
+            child: Text(AppLocalizations.of(context)!.gotIt),
           ),
           FilledButton(
             onPressed: () {
@@ -761,13 +762,13 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
               // 复制文件路径到剪贴板
               Clipboard.setData(ClipboardData(text: filePath));
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('文件路径已复制到剪贴板'),
+                SnackBar(
+                  content: Text(AppLocalizations.of(context)!.pathCopied),
                   duration: AppConstants.snackBarDurationImportant,
                 ),
               );
             },
-            child: const Text('复制路径'),
+            child: Text(AppLocalizations.of(context)!.copyPath),
           ),
         ],
       ),
@@ -808,20 +809,20 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('知道了'),
+            child: Text(AppLocalizations.of(context)!.gotIt),
           ),
           FilledButton(
             onPressed: () {
               Navigator.of(context).pop();
               Clipboard.setData(const ClipboardData(text: 'data:text/html,'));
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('地址栏前缀已复制，请在浏览器中粘贴后再粘贴HTML内容'),
+                SnackBar(
+                  content: Text(AppLocalizations.of(context)!.addressBarPrefixCopied),
                   duration: Duration(seconds: 3),
                 ),
               );
             },
-            child: const Text('复制前缀'),
+            child: Text(AppLocalizations.of(context)!.copyPrefix),
           ),
         ],
       ),
@@ -901,8 +902,8 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
       // 使用系统分享功能
       await SharePlus.instance.share(
         ShareParams(
-          text: '心迹${widget.year}年度报告',
-          subject: '心迹${widget.year}年度报告',
+          text: AppLocalizations.of(context)!.yearAIAnnualReport.replaceAll('{year}', widget.year.toString()),
+          subject: AppLocalizations.of(context)!.yearAIAnnualReport.replaceAll('{year}', widget.year.toString()),
           files: [XFile(htmlFile.path)],
         ),
       );
@@ -914,7 +915,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
               children: [
                 Icon(Icons.check_circle, color: Colors.white),
                 SizedBox(width: 8),
-                Text('报告已分享'),
+                Text(AppLocalizations.of(context)!.reportShared),
               ],
             ),
             backgroundColor: Theme.of(context).colorScheme.primary,
@@ -926,7 +927,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('分享失败: $e'),
+            content: Text('${AppLocalizations.of(context)!.shareReport}: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
             duration: AppConstants.snackBarDurationError,
           ),
@@ -1006,7 +1007,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('保存失败: $e'),
+            content: Text('${AppLocalizations.of(context)!.saveReport}: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
             duration: AppConstants.snackBarDurationError,
           ),

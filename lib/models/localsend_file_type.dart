@@ -1,3 +1,4 @@
+// TODO: Display strings should be internationalized at the UI layer, not in the model
 /// 文件类型枚举
 enum FileType {
   /// 图片
