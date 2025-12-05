@@ -7,6 +7,20 @@ import 'package:thoughtecho/models/feature_guide.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 
+// Shared constant for all guide IDs used in tests
+const _allGuideIds = [
+  'homepage_daily_quote',
+  'note_page_filter',
+  'note_page_favorite',
+  'note_page_expand',
+  'editor_metadata',
+  'editor_toolbar_usage',
+  'add_note_fullscreen_button',
+  'settings_preferences',
+  'settings_startup',
+  'settings_theme',
+];
+
 void main() {
   group('FeatureGuide Localization Tests', () {
     testWidgets(
@@ -85,19 +99,6 @@ void main() {
 
     testWidgets('should return localized Chinese titles for all guide IDs',
         (WidgetTester tester) async {
-      final guideIds = [
-        'homepage_daily_quote',
-        'note_page_filter',
-        'note_page_favorite',
-        'note_page_expand',
-        'editor_metadata',
-        'editor_toolbar_usage',
-        'add_note_fullscreen_button',
-        'settings_preferences',
-        'settings_startup',
-        'settings_theme',
-      ];
-
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('zh'),
@@ -113,7 +114,7 @@ void main() {
           ],
           home: Builder(
             builder: (BuildContext context) {
-              for (final guideId in guideIds) {
+              for (final guideId in _allGuideIds) {
                 final title = FeatureGuide.getLocalizedTitle(context, guideId);
                 final description =
                     FeatureGuide.getLocalizedDescription(context, guideId);
@@ -134,19 +135,6 @@ void main() {
 
     testWidgets('should return localized English titles for all guide IDs',
         (WidgetTester tester) async {
-      final guideIds = [
-        'homepage_daily_quote',
-        'note_page_filter',
-        'note_page_favorite',
-        'note_page_expand',
-        'editor_metadata',
-        'editor_toolbar_usage',
-        'add_note_fullscreen_button',
-        'settings_preferences',
-        'settings_startup',
-        'settings_theme',
-      ];
-
       await tester.pumpWidget(
         MaterialApp(
           locale: const Locale('en'),
@@ -162,7 +150,7 @@ void main() {
           ],
           home: Builder(
             builder: (BuildContext context) {
-              for (final guideId in guideIds) {
+              for (final guideId in _allGuideIds) {
                 final title = FeatureGuide.getLocalizedTitle(context, guideId);
                 final description =
                     FeatureGuide.getLocalizedDescription(context, guideId);
@@ -230,20 +218,7 @@ void main() {
     });
 
     test('All guide IDs should have corresponding configs', () {
-      final guideIds = [
-        'homepage_daily_quote',
-        'note_page_filter',
-        'note_page_favorite',
-        'note_page_expand',
-        'editor_metadata',
-        'editor_toolbar_usage',
-        'add_note_fullscreen_button',
-        'settings_preferences',
-        'settings_startup',
-        'settings_theme',
-      ];
-
-      for (final guideId in guideIds) {
+      for (final guideId in _allGuideIds) {
         expect(FeatureGuide.configs.containsKey(guideId), isTrue,
             reason: 'Config for $guideId should exist');
       }
