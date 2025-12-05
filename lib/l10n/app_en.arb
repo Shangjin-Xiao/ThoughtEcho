@@ -2455,5 +2455,26 @@
   "dayPeriodMidnight": "Late Night",
   
   "showExactTime": "Show Exact Time",
-  "showExactTimeDesc": "Display time (hour:minute) in notes"
+  "showExactTimeDesc": "Display time (hour:minute) in notes",
+  
+  "guideHomepageDailyQuoteTitle": "Daily Quote Tips",
+  "guideHomepageDailyQuoteDesc": "Single tap to copy content\nDouble tap to quickly add to notes",
+  "guideNotePageFilterTitle": "Filter & Sort",
+  "guideNotePageFilterDesc": "Tap here to filter and sort your notes\nSupports filtering by tags, weather, time and more",
+  "guideNotePageFavoriteTitle": "Favorite Mark",
+  "guideNotePageFavoriteDesc": "Tap the heart icon to mark as favorite\nYou can sort by favorites in filters",
+  "guideNotePageExpandTitle": "Expand/Collapse Notes",
+  "guideNotePageExpandDesc": "Double tap card to expand full content\nDouble tap again to collapse",
+  "guideEditorMetadataTitle": "Edit Note Metadata",
+  "guideEditorMetadataDesc": "Tap here to edit note tags, categories and more",
+  "guideEditorToolbarUsageTitle": "Toolbar Tips",
+  "guideEditorToolbarUsageDesc": "Toolbar supports horizontal scrolling\nTry adding images, videos and other media!",
+  "guideAddNoteFullscreenButtonTitle": "Full Screen Editor",
+  "guideAddNoteFullscreenButtonDesc": "Tap here to open full screen editor\nSupports rich text, images, audio and video",
+  "guideSettingsPreferencesTitle": "Preferences",
+  "guideSettingsPreferencesDesc": "Enable bold text priority, clipboard monitoring and other personalization settings here.",
+  "guideSettingsStartupTitle": "Default Start Page",
+  "guideSettingsStartupDesc": "Set the default page to open when launching the app",
+  "guideSettingsThemeTitle": "Theme Settings",
+  "guideSettingsThemeDesc": "Customize app theme colors and appearance here"
 }
