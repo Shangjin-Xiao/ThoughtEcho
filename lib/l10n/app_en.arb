@@ -2480,5 +2480,65 @@
   "guideSettingsStartupTitle": "Default Start Page",
   "guideSettingsStartupDesc": "Set the default page to open when launching the app",
   "guideSettingsThemeTitle": "Theme Settings",
-  "guideSettingsThemeDesc": "Customize app theme colors and appearance here"
+  "guideSettingsThemeDesc": "Customize app theme colors and appearance here",
+
+  "apkDownloadTitle": "Download APK",
+  "apkDownloading": "Downloading ThoughtEcho {version}...",
+  "@apkDownloading": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "apkDownloadHint": "Please do not close the app. Installation will start automatically after download.",
+  "apkDownloadStarted": "Started downloading ThoughtEcho {version}",
+  "@apkDownloadStarted": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "apkDownloadProgress": "Downloading... {progress}%",
+  "@apkDownloadProgress": {
+    "placeholders": {
+      "progress": {
+        "type": "int"
+      }
+    }
+  },
+  "apkDownloadComplete": "Download complete, installing...",
+  "apkDownloadFailed": "Download failed: {error}",
+  "@apkDownloadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apkInstallReady": "APK file is ready. Please complete the installation in the system installer.",
+  "apkOpenFailed": "Cannot open APK file: {error}",
+  "@apkOpenFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apkInstallFailed": "Installation failed: {error}",
+  "@apkInstallFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apkNotificationTitle": "APK Download",
+  "storagePermissionRequired": "Storage Permission Required",
+  "storagePermissionDesc": "Storage permission is required to download APK files. Please allow storage access in settings.",
+  "goToSettings": "Go to Settings",
+  "errorTitle": "Error",
+  "cannotGetDownloadDir": "Cannot get download directory",
+  "webPlatformApkNotSupported": "APK download is not supported on Web platform"
 }
