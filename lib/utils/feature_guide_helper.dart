@@ -101,8 +101,8 @@ class FeatureGuideHelper {
 
       final guide = FeatureGuide(
         id: guideId,
-        title: config.title,
-        description: config.description,
+        title: FeatureGuide.getLocalizedTitle(context, guideId),
+        description: FeatureGuide.getLocalizedDescription(context, guideId),
         targetKey: targetKey,
         preferredPlacement: config.placement,
         offset: config.offset,

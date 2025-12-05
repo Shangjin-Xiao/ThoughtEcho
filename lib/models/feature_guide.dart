@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../gen_l10n/app_localizations.dart';
 
 /// 引导提示的预设位置偏好
 enum FeatureGuidePlacement { auto, above, below, left, right }
@@ -45,75 +46,105 @@ class FeatureGuide {
   static const Map<String, FeatureGuideConfig> configs = {
     // 首页
     'homepage_daily_quote': FeatureGuideConfig(
-      title: '每日一言小技巧',
-      description: '单击可快速复制内容\n双击可快速添加到笔记',
       placement: FeatureGuidePlacement.above,
     ),
 
     // 记录页
-    'note_page_filter': FeatureGuideConfig(
-      title: '筛选与排序',
-      description: '点击这里可以筛选和排序你的笔记\n支持按标签、天气、时间等多种方式',
-    ),
-    'note_page_favorite': FeatureGuideConfig(
-      title: '喜爱标记',
-      description: '点击心形图标可以标记喜爱\n在筛选中可以按喜爱度排序',
-    ),
-    'note_page_expand': FeatureGuideConfig(
-      title: '展开/折叠笔记',
-      description: '双击卡片可以展开查看完整内容\n再次双击即可折叠',
-    ),
+    'note_page_filter': FeatureGuideConfig(),
+    'note_page_favorite': FeatureGuideConfig(),
+    'note_page_expand': FeatureGuideConfig(),
 
     // 全屏编辑器
-    'editor_metadata': FeatureGuideConfig(
-      title: '编辑笔记元数据',
-      description: '点击这里可以编辑笔记的标签、分类等信息',
-    ),
+    'editor_metadata': FeatureGuideConfig(),
     // 新增：全屏编辑器工具栏操作气泡
     'editor_toolbar_usage': FeatureGuideConfig(
-      title: '工具栏操作提示',
-      description: '工具栏支持左右滑动\n试试添加图片、视频等媒体文件！',
       placement: FeatureGuidePlacement.below,
       offset: Offset(0, 8),
     ),
     'add_note_fullscreen_button': FeatureGuideConfig(
-      title: '全屏编辑器',
-      description: '点击这里打开全屏编辑器\n支持富文本、插入图片/音频/视频',
       placement: FeatureGuidePlacement.left,
     ),
 
     // 设置页
     'settings_preferences': FeatureGuideConfig(
-      title: '偏好设置',
-      description: '这里可开启加粗优先显示、剪贴板监控等个性化设置。',
       placement: FeatureGuidePlacement.right,
       offset: Offset(-30, -10), // 右侧偏上一点，避免挡住文字
     ),
     'settings_startup': FeatureGuideConfig(
-      title: '默认启动页面',
-      description: '可以设置应用启动时默认打开的页面',
       placement: FeatureGuidePlacement.right,
       offset: Offset(-30, 5), // 右侧居中
     ),
     'settings_theme': FeatureGuideConfig(
-      title: '主题设置',
-      description: '这里可以自定义应用的主题颜色和外观',
       placement: FeatureGuidePlacement.right,
       offset: Offset(-30, 10), // 右侧偏下一点
     ),
   };
+
+  /// 获取指定 guideId 的本地化标题
+  static String getLocalizedTitle(BuildContext context, String guideId) {
+    final l10n = AppLocalizations.of(context);
+    switch (guideId) {
+      case 'homepage_daily_quote':
+        return l10n.guideHomepageDailyQuoteTitle;
+      case 'note_page_filter':
+        return l10n.guideNotePageFilterTitle;
+      case 'note_page_favorite':
+        return l10n.guideNotePageFavoriteTitle;
+      case 'note_page_expand':
+        return l10n.guideNotePageExpandTitle;
+      case 'editor_metadata':
+        return l10n.guideEditorMetadataTitle;
+      case 'editor_toolbar_usage':
+        return l10n.guideEditorToolbarUsageTitle;
+      case 'add_note_fullscreen_button':
+        return l10n.guideAddNoteFullscreenButtonTitle;
+      case 'settings_preferences':
+        return l10n.guideSettingsPreferencesTitle;
+      case 'settings_startup':
+        return l10n.guideSettingsStartupTitle;
+      case 'settings_theme':
+        return l10n.guideSettingsThemeTitle;
+      default:
+        return '';
+    }
+  }
+
+  /// 获取指定 guideId 的本地化描述
+  static String getLocalizedDescription(BuildContext context, String guideId) {
+    final l10n = AppLocalizations.of(context);
+    switch (guideId) {
+      case 'homepage_daily_quote':
+        return l10n.guideHomepageDailyQuoteDesc;
+      case 'note_page_filter':
+        return l10n.guideNotePageFilterDesc;
+      case 'note_page_favorite':
+        return l10n.guideNotePageFavoriteDesc;
+      case 'note_page_expand':
+        return l10n.guideNotePageExpandDesc;
+      case 'editor_metadata':
+        return l10n.guideEditorMetadataDesc;
+      case 'editor_toolbar_usage':
+        return l10n.guideEditorToolbarUsageDesc;
+      case 'add_note_fullscreen_button':
+        return l10n.guideAddNoteFullscreenButtonDesc;
+      case 'settings_preferences':
+        return l10n.guideSettingsPreferencesDesc;
+      case 'settings_startup':
+        return l10n.guideSettingsStartupDesc;
+      case 'settings_theme':
+        return l10n.guideSettingsThemeDesc;
+      default:
+        return '';
+    }
+  }
 }
 
 /// 功能引导配置（简化版，不包含运行时的 Key）
 class FeatureGuideConfig {
-  final String title;
-  final String description;
   final FeatureGuidePlacement placement;
   final Offset? offset; // 位置微调偏移
 
   const FeatureGuideConfig({
-    required this.title,
-    required this.description,
     this.placement = FeatureGuidePlacement.auto,
     this.offset,
   });
