@@ -340,7 +340,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
     setState(() {
       _isLoading = true;
       _progress = 0.0;
-      _progressText = '准备开始备份...';
+      _progressText = l10n.preparingBackup;
     });
 
     // 创建取消令牌
@@ -351,7 +351,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       final now = DateTime.now();
       final formattedDate = TimeUtils.formatFileTimestamp(now);
       final extension = _includeMediaFiles ? 'zip' : 'json';
-      final fileName = '心迹_备份_$formattedDate.$extension';
+      final fileName = '${l10n.appTitle}_${l10n.thoughtEchoBackupFile}_$formattedDate.$extension';
 
       String? backupPath;
 
@@ -366,15 +366,15 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
 
                 // 根据进度阶段显示不同的状态文本
                 if (current < 15) {
-                  _progressText = '正在收集数据...';
+                  _progressText = l10n.collectingData;
                 } else if (current < 30) {
-                  _progressText = '正在处理笔记数据...';
+                  _progressText = l10n.processingNoteData;
                 } else if (current < 60) {
-                  _progressText = '正在处理媒体文件...';
+                  _progressText = l10n.processingMediaFiles;
                 } else if (current < 95) {
-                  _progressText = '正在创建备份文件...';
+                  _progressText = l10n.creatingBackupFile;
                 } else {
-                  _progressText = '正在验证备份文件...';
+                  _progressText = l10n.verifyingBackupFile;
                 }
               });
             }
@@ -385,13 +385,13 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         if (mounted) {
           await SharePlus.instance.share(
             ShareParams(
-              text: '心迹备份文件',
+              text: l10n.thoughtEchoBackupFile,
               subject: fileName,
               files: [XFile(backupPath)],
             ),
           );
 
-          _showSuccessSnackBar('备份文件已准备就绪，请通过分享保存');
+          _showSuccessSnackBar(l10n.backupFileReady);
         }
       } else if (Platform.isAndroid || Platform.isIOS) {
         // 移动平台：创建备份并分享
@@ -404,15 +404,15 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
 
                 // 根据进度阶段显示不同的状态文本
                 if (current < 15) {
-                  _progressText = '正在收集数据...';
+                  _progressText = l10n.collectingData;
                 } else if (current < 30) {
-                  _progressText = '正在处理笔记数据...';
+                  _progressText = l10n.processingNoteData;
                 } else if (current < 60) {
-                  _progressText = '正在处理媒体文件...';
+                  _progressText = l10n.processingMediaFiles;
                 } else if (current < 95) {
-                  _progressText = '正在创建备份文件...';
+                  _progressText = l10n.creatingBackupFile;
                 } else {
-                  _progressText = '正在验证备份文件...';
+                  _progressText = l10n.verifyingBackupFile;
                 }
               });
             }
@@ -423,13 +423,13 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         if (mounted) {
           await SharePlus.instance.share(
             ShareParams(
-              text: '心迹备份文件',
+              text: l10n.thoughtEchoBackupFile,
               subject: fileName,
               files: [XFile(backupPath)],
             ),
           );
 
-          _showSuccessSnackBar('备份完成，请选择保存位置');
+          _showSuccessSnackBar(l10n.backupCompleteSelectLocation);
         }
       } else {
         // 桌面平台：选择保存位置
@@ -437,7 +437,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           suggestedName: fileName,
           acceptedTypeGroups: [
             XTypeGroup(
-              label: _includeMediaFiles ? 'ZIP 文件' : 'JSON 文件',
+              label: _includeMediaFiles ? l10n.zipFile : l10n.jsonFile,
               extensions: [extension],
             ),
           ],
@@ -454,15 +454,15 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
 
                   // 根据进度阶段显示不同的状态文本
                   if (current < 15) {
-                    _progressText = '正在收集数据...';
+                    _progressText = l10n.collectingData;
                   } else if (current < 30) {
-                    _progressText = '正在处理笔记数据...';
+                    _progressText = l10n.processingNoteData;
                   } else if (current < 60) {
-                    _progressText = '正在处理媒体文件...';
+                    _progressText = l10n.processingMediaFiles;
                   } else if (current < 95) {
-                    _progressText = '正在创建备份文件...';
+                    _progressText = l10n.creatingBackupFile;
                   } else {
-                    _progressText = '正在验证备份文件...';
+                    _progressText = l10n.verifyingBackupFile;
                   }
                 });
               }
@@ -493,7 +493,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           errorMessage = '备份已取消';
         }
 
-        _showErrorDialog('备份失败', errorMessage);
+        _showErrorDialog(l10n.backupFailedText, errorMessage);
       }
     } finally {
       if (mounted) {
@@ -518,7 +518,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
 
       final file = result.files.first;
       if (file.path == null) {
-        _showErrorDialog('选择文件失败', '无法获取文件路径，请重新选择');
+        _showErrorDialog(l10n.selectFileError, l10n.cannotGetFilePath);
         return;
       }
 
@@ -532,7 +532,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
       final isValid = await backupService.validateBackupFile(file.path!);
       if (!isValid) {
         if (mounted) {
-          _showErrorDialog('无效的备份文件', '所选文件不是有效的心迹备份文件。\n\n请选择正确的备份文件。');
+          _showErrorDialog(l10n.invalidBackupFile, l10n.invalidBackupFileDesc);
         }
         return;
       }
@@ -608,7 +608,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             if (mounted) {
               setState(() {
                 _progress = (current / total * 100).toDouble();
-                _progressText = '正在合并数据... $current/$total';
+                _progressText = '${l10n.mergingDataProgress} $current/$total';
               });
             }
           },
@@ -821,7 +821,7 @@ Details: $e''';
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('确定'),
+            child: Text(l10n.confirm),
           ),
         ],
       ),

@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:video_player/video_player.dart';
 import '../constants/app_constants.dart';
 import '../utils/lottie_animation_manager.dart';
+import '../gen_l10n/app_localizations.dart';
 
 /// 统一的媒体播放器组件
 /// 支持视频和音频播放，提供丰富的用户体验
@@ -99,7 +100,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('视频文件不存在: ${widget.filePath}'),
+              content: Text('${AppLocalizations.of(context)!.videoFileNotFound}: ${widget.filePath}'),
               duration: AppConstants.snackBarDurationError,
             ),
           );
@@ -186,9 +187,9 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
         ),
         // 自定义控制栏选项
         optionsTranslation: OptionsTranslation(
-          playbackSpeedButtonText: '播放速度',
-          subtitlesButtonText: '字幕',
-          cancelButtonText: '取消',
+          playbackSpeedButtonText: AppLocalizations.of(context)!.playbackSpeed,
+          subtitlesButtonText: AppLocalizations.of(context)!.subtitles,
+          cancelButtonText: AppLocalizations.of(context)!.cancel,
         ),
         hideControlsTimer: const Duration(seconds: 3),
         // 添加自定义操作
@@ -196,12 +197,12 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
           OptionItem(
             onTap: (context) => _shareVideo(),
             iconData: Icons.share,
-            title: '分享视频',
+            title: AppLocalizations.of(context)!.shareVideo,
           ),
           OptionItem(
             onTap: (context) => _showVideoInfo(),
             iconData: Icons.info,
-            title: '视频信息',
+            title: AppLocalizations.of(context)!.videoInfo,
           ),
         ],
       );
@@ -439,7 +440,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      '点击播放视频',
+                      AppLocalizations.of(context)!.clickToPlayVideo,
                       style: TextStyle(
                         color: Theme.of(
                           context,
@@ -510,7 +511,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
           ),
           const SizedBox(height: 16),
           Text(
-            '正在加载视频...',
+            AppLocalizations.of(context)!.loadingVideo,
             style: TextStyle(
               color: Theme.of(
                 context,
@@ -602,7 +603,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
                       children: [
                         Icon(Icons.share),
                         SizedBox(width: 8),
-                        Text('分享音频'),
+                        Text(AppLocalizations.of(context)!.shareAudio),
                       ],
                     ),
                   ),
@@ -612,7 +613,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
                       children: [
                         Icon(Icons.info),
                         SizedBox(width: 8),
-                        Text('文件信息'),
+                        Text(AppLocalizations.of(context)!.fileInfo),
                       ],
                     ),
                   ),
@@ -752,7 +753,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('视频信息'),
+        title: Text(AppLocalizations.of(context)!.videoInfo),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -775,7 +776,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('确定'),
+            child: Text(AppLocalizations.of(context)!.confirm),
           ),
         ],
       ),
@@ -802,7 +803,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('音频信息'),
+        title: Text(AppLocalizations.of(context)!.audioInfo),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -815,7 +816,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('确定'),
+            child: Text(AppLocalizations.of(context)!.confirm),
           ),
         ],
       ),
