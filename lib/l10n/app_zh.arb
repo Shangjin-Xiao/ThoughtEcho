@@ -2455,5 +2455,26 @@
   "dayPeriodMidnight": "深夜",
   
   "showExactTime": "显示精确时间",
-  "showExactTimeDesc": "在笔记中显示时间（时:分）"
+  "showExactTimeDesc": "在笔记中显示时间（时:分）",
+  
+  "guideHomepageDailyQuoteTitle": "每日一言小技巧",
+  "guideHomepageDailyQuoteDesc": "单击可快速复制内容\n双击可快速添加到笔记",
+  "guideNotePageFilterTitle": "筛选与排序",
+  "guideNotePageFilterDesc": "点击这里可以筛选和排序你的笔记\n支持按标签、天气、时间等多种方式",
+  "guideNotePageFavoriteTitle": "喜爱标记",
+  "guideNotePageFavoriteDesc": "点击心形图标可以标记喜爱\n在筛选中可以按喜爱度排序",
+  "guideNotePageExpandTitle": "展开/折叠笔记",
+  "guideNotePageExpandDesc": "双击卡片可以展开查看完整内容\n再次双击即可折叠",
+  "guideEditorMetadataTitle": "编辑笔记元数据",
+  "guideEditorMetadataDesc": "点击这里可以编辑笔记的标签、分类等信息",
+  "guideEditorToolbarUsageTitle": "工具栏操作提示",
+  "guideEditorToolbarUsageDesc": "工具栏支持左右滑动\n试试添加图片、视频等媒体文件！",
+  "guideAddNoteFullscreenButtonTitle": "全屏编辑器",
+  "guideAddNoteFullscreenButtonDesc": "点击这里打开全屏编辑器\n支持富文本、插入图片/音频/视频",
+  "guideSettingsPreferencesTitle": "偏好设置",
+  "guideSettingsPreferencesDesc": "这里可开启加粗优先显示、剪贴板监控等个性化设置。",
+  "guideSettingsStartupTitle": "默认启动页面",
+  "guideSettingsStartupDesc": "可以设置应用启动时默认打开的页面",
+  "guideSettingsThemeTitle": "主题设置",
+  "guideSettingsThemeDesc": "这里可以自定义应用的主题颜色和外观"
 }
