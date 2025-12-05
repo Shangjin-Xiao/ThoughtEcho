@@ -1,3 +1,4 @@
+// TODO: Display strings should be internationalized at the UI layer, not in the model
 /// 会话状态枚举
 enum SessionStatus {
   /// 等待中
