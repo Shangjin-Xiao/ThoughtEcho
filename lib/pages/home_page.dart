@@ -1340,9 +1340,16 @@ class _HomePageState extends State<HomePage>
             theme.brightness,
           );
 
+    // 底部导航栏的实际颜色：半透明 surface 叠加到 scaffold 背景上
+    // 这样系统导航条的颜色才能和底部导航栏保持一致
+    final navBarColor = Color.alphaBlend(
+      theme.colorScheme.surface.withValues(alpha: 0.8),
+      scaffoldBackgroundColor,
+    );
+
     final systemUiOverlayStyle = _buildSystemUiOverlayStyle(
       theme,
-      scaffoldBackgroundColor,
+      navBarColor,
     );
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: systemUiOverlayStyle,
