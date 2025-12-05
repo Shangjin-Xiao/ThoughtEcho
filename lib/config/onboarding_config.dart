@@ -87,27 +87,13 @@ class OnboardingConfig {
   ) {
     final l10n = AppLocalizations.of(context);
     return [
-      // 0. 语言选择（放在最前面）
-      OnboardingPreference<String>(
-        key: 'localeCode',
-        title: l10n.prefLanguage,
-        description: l10n.prefLanguageDesc,
-        defaultValue: '', // 空字符串表示跟随系统
-        type: OnboardingPreferenceType.radio,
-        options: [
-          OnboardingPreferenceOption<String>(
-            value: '',
-            label: l10n.languageFollowSystem,
-          ),
-          OnboardingPreferenceOption<String>(
-            value: 'zh',
-            label: l10n.languageChinese,
-          ),
-          OnboardingPreferenceOption<String>(
-            value: 'en',
-            label: l10n.languageEnglish,
-          ),
-        ],
+      // 0. 位置服务（放在最前面）
+      OnboardingPreference<bool>(
+        key: 'locationService',
+        title: l10n.prefLocationService,
+        description: l10n.prefLocationServiceDesc,
+        defaultValue: false,
+        type: OnboardingPreferenceType.toggle,
       ),
 
       // 1. 每日一言类型选择
@@ -120,16 +106,7 @@ class OnboardingConfig {
         options: getHitokotoTypeOptions(context),
       ),
 
-      // 2. 位置服务
-      OnboardingPreference<bool>(
-        key: 'locationService',
-        title: l10n.prefLocationService,
-        description: l10n.prefLocationServiceDesc,
-        defaultValue: false,
-        type: OnboardingPreferenceType.toggle,
-      ),
-
-      // 3. 默认启动页面
+      // 2. 默认启动页面
       OnboardingPreference<int>(
         key: 'defaultStartPage',
         title: l10n.prefDefaultStartPage,

@@ -36,8 +36,8 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
       vsync: this,
     );
 
-    // Fixed count of 4 preferences (language, hitokoto types, location, start page)
-    const preferencesCount = 4;
+    // Fixed count of 3 preferences (location, hitokoto types, start page)
+    const preferencesCount = 3;
     _itemAnimations = List.generate(preferencesCount, (index) {
       // Calculate intervals that ensure end values don't exceed 1.0
       final startDelay = index * 0.1;
