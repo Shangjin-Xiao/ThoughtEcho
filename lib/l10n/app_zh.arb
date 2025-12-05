@@ -2090,6 +2090,10 @@
   "resetFilter": "重置",
   "tagFilter": "标签筛选",
   "weatherFilter": "天气筛选",
+  "weatherFilterSunny": "晴",
+  "weatherFilterRainy": "雨",
+  "weatherFilterCloudy": "多云",
+  "weatherFilterSnowy": "雪",
   "timePeriodFilter": "时间段筛选",
   "sortMethod": "排序方式",
   "sortByTime": "按时间排序",
@@ -2476,5 +2480,65 @@
   "guideSettingsStartupTitle": "默认启动页面",
   "guideSettingsStartupDesc": "可以设置应用启动时默认打开的页面",
   "guideSettingsThemeTitle": "主题设置",
-  "guideSettingsThemeDesc": "这里可以自定义应用的主题颜色和外观"
+  "guideSettingsThemeDesc": "这里可以自定义应用的主题颜色和外观",
+
+  "apkDownloadTitle": "下载APK",
+  "apkDownloading": "正在下载 ThoughtEcho {version}...",
+  "@apkDownloading": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "apkDownloadHint": "请勿关闭应用，下载完成后将自动开始安装",
+  "apkDownloadStarted": "开始下载 ThoughtEcho {version}",
+  "@apkDownloadStarted": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "apkDownloadProgress": "下载中... {progress}%",
+  "@apkDownloadProgress": {
+    "placeholders": {
+      "progress": {
+        "type": "int"
+      }
+    }
+  },
+  "apkDownloadComplete": "下载完成，正在安装...",
+  "apkDownloadFailed": "下载失败: {error}",
+  "@apkDownloadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apkInstallReady": "APK文件已准备就绪，请在系统安装程序中完成安装",
+  "apkOpenFailed": "无法打开APK文件: {error}",
+  "@apkOpenFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apkInstallFailed": "安装失败: {error}",
+  "@apkInstallFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apkNotificationTitle": "APK下载",
+  "storagePermissionRequired": "需要存储权限",
+  "storagePermissionDesc": "下载APK文件需要存储权限。请在设置中允许应用访问存储空间。",
+  "goToSettings": "去设置",
+  "errorTitle": "错误",
+  "cannotGetDownloadDir": "无法获取下载目录",
+  "webPlatformApkNotSupported": "Web 平台不支持 APK 下载"
 }

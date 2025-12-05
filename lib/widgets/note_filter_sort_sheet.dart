@@ -18,8 +18,7 @@ class NoteFilterSortSheet extends StatefulWidget {
     bool sortAscending,
     List<String> selectedWeathers,
     List<String> selectedDayPeriods,
-  )
-  onApply;
+  ) onApply;
 
   const NoteFilterSortSheet({
     super.key,
@@ -64,9 +63,8 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
   late final List<String> _weatherCategories;
   late final List<String> _dayPeriodKeys;
 
-  // 性能优化：缓存天气图标和标签映射，避免build过程中重复计算
+  // 性能优化：缓存天气图标和时间段图标映射，避免build过程中重复计算
   late final Map<String, IconData> _weatherIconCache;
-  late final Map<String, String> _weatherLabelCache;
   late final Map<String, IconData> _dayPeriodIconCache;
 
   @override
@@ -86,15 +84,12 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
     _weatherCategories = WeatherService.filterCategoryToLabel.keys.toList();
     _dayPeriodKeys = TimeUtils.dayPeriodKeyToLabel.keys.toList();
 
-    // 预缓存天气相关数据
+    // 预缓存天气图标（标签将在 build 时通过 _getWeatherFilterLabel 动态获取以支持国际化）
     _weatherIconCache = {};
-    _weatherLabelCache = {};
     for (final category in _weatherCategories) {
       _weatherIconCache[category] = WeatherService.getFilterCategoryIcon(
         category,
       );
-      _weatherLabelCache[category] =
-          WeatherService.filterCategoryToLabel[category]!;
     }
 
     // 预缓存时间段相关数据（图标缓存）
@@ -105,6 +100,12 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
       );
       // 标签将在 build 时通过 _getDayPeriodLabel 动态获取以支持国际化
     }
+  }
+
+  /// 获取本地化的天气筛选分类标签
+  String _getWeatherFilterLabel(BuildContext context, String filterCategory) {
+    return WeatherService.getLocalizedFilterCategoryLabel(
+        context, filterCategory);
   }
 
   /// 获取本地化的时间段标签
@@ -314,8 +315,9 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
                   ? Text(tag.iconName!, style: const TextStyle(fontSize: 16))
                   // Use the IconData from IconUtils
                   : (tagIcon is IconData) // Check if it's IconData
-                  ? Icon(tagIcon, size: 16)
-                  : const SizedBox.shrink(), // Fallback if not IconData (though getIconData should return a default)                if (tag.iconName != null && tag.iconName!.isNotEmpty)
+                      ? Icon(tagIcon, size: 16)
+                      : const SizedBox
+                          .shrink(), // Fallback if not IconData (though getIconData should return a default)                if (tag.iconName != null && tag.iconName!.isNotEmpty)
             const SizedBox(width: 4),
             Flexible(
               child: Text(
@@ -349,9 +351,9 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
           filterCategory,
         ).contains(selectedWeather),
       );
-      // 使用预缓存的图标和标签，提升性能
+      // 使用预缓存的图标，标签使用本地化方法
       final icon = _weatherIconCache[filterCategory]!;
-      final label = _weatherLabelCache[filterCategory]!;
+      final label = _getWeatherFilterLabel(context, filterCategory);
       return FilterChip(
         selected: isSelected,
         label: Row(
