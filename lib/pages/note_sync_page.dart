@@ -1003,7 +1003,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                       : progress;
                   final String progressMessage = waitingPeer
                       ? l10n.syncRequestSent
-                      : s.syncStatusMessage;
+                      : _localizeProgressMessage(s.syncStatusMessage, l10n);
 
                   return AlertDialog(
                     shape: RoundedRectangleBorder(
@@ -1282,7 +1282,35 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   /// 获取同步状态颜色
   // 已移除顶部状态条颜色逻辑，保留方法则会未使用，故删除
 
-  /// 获取同步状态文本
+  /// 将服务的原始消息国际化（处理发送/接收进度消息）
+  String _localizeProgressMessage(String rawMessage, AppLocalizations l10n) {
+    // 格式：SENDING|sentMB|totalMB| extra
+    if (rawMessage.startsWith('SENDING|')) {
+      final parts = rawMessage.split('|');
+      if (parts.length >= 3) {
+        final sent = parts[1];
+        final total = parts[2];
+        final extra = parts.length > 3 ? parts[3] : '';
+        return l10n.sendingProgressMessage(sent, total, extra);
+      }
+    }
+    
+    // 格式：RECEIVING|fromAlias|receivedMB|totalMB| extra
+    if (rawMessage.startsWith('RECEIVING|')) {
+      final parts = rawMessage.split('|');
+      if (parts.length >= 4) {
+        final from = parts[1];
+        final received = parts[2];
+        final total = parts[3];
+        final extra = parts.length > 4 ? parts[4] : '';
+        final fromDisplay = from.isNotEmpty ? '（来自$from）' : '';
+        return l10n.receivingProgressMessage(fromDisplay, received, total, extra);
+      }
+    }
+    
+    // 如果无法匹配，直接返回原消息
+    return rawMessage;
+  }
   String _getSyncStatusText(SyncStatus status, AppLocalizations l10n) {
     switch (status) {
       case SyncStatus.idle:

@@ -1825,7 +1825,7 @@
     }
   },
   "noNearbyDevices": "未发现附近设备",
-  "ensureDeviceOnSameNetwork": "确保目标设备也打开了ThoughtEcho\n并且在同一网络中",
+  "ensureDeviceOnSameNetwork": "请确保目标设备也打开了心迹同步页\n并且两台设备在同一WiFi网络中",
   "networkInfoUnknown": "网络信息未知",
   "portNumber": "端口 {port}",
   "@portNumber": {
@@ -1960,6 +1960,37 @@
   "syncStatusMerging": "正在合并",
   "syncStatusCompleted": "同步完成",
   "syncStatusFailed": "同步失败",
+  "sendingProgressMessage": "已发送 {sent}MB / {total}MB{extra}",
+  "@sendingProgressMessage": {
+    "placeholders": {
+      "sent": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      },
+      "extra": {
+        "type": "String"
+      }
+    }
+  },
+  "receivingProgressMessage": "已接收{from} {received}MB / {total}MB{extra}",
+  "@receivingProgressMessage": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "received": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      },
+      "extra": {
+        "type": "String"
+      }
+    }
+  },
   "weatherClear": "晴",
   "weatherPartlyCloudy": "少云",
   "weatherCloudy": "多云",

@@ -699,7 +699,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     if (result == 'update' && hasCoordinates) {
       // 尝试用坐标更新地址
       try {
-        // 获取当前语言设置
+        // 获取当前语言设置（在异步操作前获取，避免context跨越异步间隙）
+        if (!context.mounted) return;
         final locationService = Provider.of<LocationService>(context, listen: false);
         final localeCode = locationService.currentLocaleCode;
         final addressInfo =
