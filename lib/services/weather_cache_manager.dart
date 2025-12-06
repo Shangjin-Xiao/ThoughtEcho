@@ -154,9 +154,8 @@ class WeatherCacheManager {
         'hasCache': true,
         'isExpired': isExpired,
         'expiryTime': cacheExpiry.toIso8601String(),
-        'remainingTime': isExpired
-            ? 0
-            : cacheExpiry.difference(DateTime.now()).inMinutes,
+        'remainingTime':
+            isExpired ? 0 : cacheExpiry.difference(DateTime.now()).inMinutes,
       };
     } catch (e) {
       logError('获取缓存信息失败: $e', error: e);

@@ -25,8 +25,7 @@ class MultiAISettings {
   List<AIProviderSettings> get availableProviders => providers;
   factory MultiAISettings.fromJson(Map<String, dynamic> json) {
     return MultiAISettings(
-      providers:
-          (json['providers'] as List<dynamic>?)
+      providers: (json['providers'] as List<dynamic>?)
               ?.map(
                 (e) => AIProviderSettings.fromJson(e as Map<String, dynamic>),
               )
@@ -37,8 +36,7 @@ class MultiAISettings {
               )
               .toList() ??
           [],
-      currentProviderId:
-          json['currentProviderId'] as String? ??
+      currentProviderId: json['currentProviderId'] as String? ??
           _extractCurrentProviderIdFromLegacy(json),
       enableFailover: json['enableFailover'] ?? true,
     );

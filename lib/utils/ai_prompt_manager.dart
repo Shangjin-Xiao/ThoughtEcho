@@ -482,9 +482,8 @@ ${_getLanguageDirective(languageCode)}''';
   }) {
     final timeText = mostTimePeriod ?? '—';
     final weatherText = mostWeather ?? '—';
-    final tagText = topTag != null && topTag.trim().isNotEmpty
-        ? '#$topTag'
-        : '—';
+    final tagText =
+        topTag != null && topTag.trim().isNotEmpty ? '#$topTag' : '—';
 
     final stats = [
       '周期：$periodLabel',
@@ -500,8 +499,8 @@ ${_getLanguageDirective(languageCode)}''';
     final contentForAnalysis = fullNotesContent ?? notesPreview;
     final contentSection =
         (contentForAnalysis == null || contentForAnalysis.trim().isEmpty)
-        ? '（无可用笔记内容）'
-        : contentForAnalysis;
+            ? '（无可用笔记内容）'
+            : contentForAnalysis;
 
     return '''【统计数据】
 $stats
@@ -532,8 +531,7 @@ $contentSection
 
     final time =
         mostTimePeriod ?? (isEnglish ? 'evenly distributed' : '本期时段分布较均衡');
-    final weather =
-        mostWeather ??
+    final weather = mostWeather ??
         (isEnglish ? 'weather was not a significant factor' : '天气因素不明显');
     // 处理标签：移除已有的#前缀，然后统一添加#
     String tag;

@@ -78,21 +78,21 @@ class SVGCardWidget extends StatelessWidget {
         allowDrawingOutsideViewBox: false, // 与offscreen renderer保持一致
         placeholderBuilder: showLoadingIndicator
             ? (context) => Container(
-                color: Colors.grey[200],
-                child: const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircularProgressIndicator(),
-                      SizedBox(height: 8),
-                      Text(
-                        '正在加载SVG...',
-                        style: TextStyle(color: Colors.grey, fontSize: 12),
-                      ),
-                    ],
+                  color: Colors.grey[200],
+                  child: const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 8),
+                        Text(
+                          '正在加载SVG...',
+                          style: TextStyle(color: Colors.grey, fontSize: 12),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              )
+                )
             : null,
         errorBuilder: (context, error, stackTrace) {
           AppLogger.e(
@@ -200,21 +200,21 @@ class SVGCardWidget extends StatelessWidget {
         fit: fit,
         placeholderBuilder: showLoadingIndicator
             ? (context) => Container(
-                color: Colors.grey[100],
-                child: const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircularProgressIndicator(),
-                      SizedBox(height: 8),
-                      Text(
-                        '正在加载备用模板...',
-                        style: TextStyle(color: Colors.grey, fontSize: 12),
-                      ),
-                    ],
+                  color: Colors.grey[100],
+                  child: const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 8),
+                        Text(
+                          '正在加载备用模板...',
+                          style: TextStyle(color: Colors.grey, fontSize: 12),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              )
+                )
             : null,
         errorBuilder: (context, error, stackTrace) {
           AppLogger.e(
@@ -305,9 +305,8 @@ class SVGCardWidget extends StatelessWidget {
   /// 生成回退SVG内容
   String _generateFallbackSVGContent(String content) {
     // 限制内容长度
-    final displayContent = content.length > 50
-        ? '${content.substring(0, 50)}...'
-        : content;
+    final displayContent =
+        content.length > 50 ? '${content.substring(0, 50)}...' : content;
 
     return '''
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600">
@@ -559,7 +558,9 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
                               // 标题
                               Text(
                                 '精选卡片',
-                                style: Theme.of(context).textTheme.titleLarge
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleLarge
                                     ?.copyWith(fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 16),

@@ -42,8 +42,7 @@ class CardTemplates {
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
     const contentAreaTop = 180.0;
     const contentAreaHeight = 280.0;
-    final contentStartY =
-        contentAreaTop +
+    final contentStartY = contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize +
         20;
@@ -123,8 +122,7 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#1e293b')
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
     const contentAreaTop = 200.0;
     const contentAreaHeight = 240.0;
-    final contentStartY =
-        contentAreaTop +
+    final contentStartY = contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize +
         20;
@@ -186,8 +184,7 @@ ${authorDisplay.isNotEmpty ? '''
     String? dayPeriod,
   }) {
     final displayContent = _processDisplayContent(content, maxLength: 200);
-    final displayDate =
-        date ??
+    final displayDate = date ??
         '${DateTime.now().year}年${DateTime.now().month}月${DateTime.now().day}日';
     final lines = _splitTextIntoAdaptiveLines(displayContent, 26, maxLines: 8);
     final metaLines = _buildMetadataLines(
@@ -288,8 +285,7 @@ ${authorDisplay.isNotEmpty ? '''
     String? dayPeriod,
   }) {
     final displayContent = _processDisplayContent(content, maxLength: 160);
-    final displayDate =
-        date ??
+    final displayDate = date ??
         '${DateTime.now().year}年${DateTime.now().month}月${DateTime.now().day}日';
     final lines = _splitTextIntoAdaptiveLines(displayContent, 22, maxLines: 8);
     final metaLines = _buildMetadataLines(

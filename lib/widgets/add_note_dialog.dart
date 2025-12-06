@@ -238,8 +238,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         bool needsUpdate = _availableTags.length != updatedTags.length;
         if (!needsUpdate && _availableTags.isNotEmpty) {
           // 简单检查第一个和最后一个标签是否相同
-          needsUpdate =
-              _availableTags.first.id != updatedTags.first.id ||
+          needsUpdate = _availableTags.first.id != updatedTags.first.id ||
               _availableTags.last.id != updatedTags.last.id;
         }
 
@@ -367,7 +366,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   /// 修复：新建模式只显示实时获取的位置，而不是从 LocationService 获取的缓存位置
   String _getLocationTooltipText(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    
+
     // 编辑模式：显示原始位置
     if (widget.initialQuote != null) {
       if (_originalLocation != null && _originalLocation!.isNotEmpty) {
@@ -399,8 +398,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     ThemeData theme,
   ) async {
     final l10n = AppLocalizations.of(context);
-    final hasLocationData =
-        _originalLocation != null ||
+    final hasLocationData = _originalLocation != null ||
         (_originalLatitude != null && _originalLongitude != null);
     final hasCoordinates =
         _originalLatitude != null && _originalLongitude != null;
@@ -424,7 +422,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       // 有位置数据
       title = l10n.locationInfo;
       content = hasOnlyCoordinates
-          ? l10n.locationUpdateHint(LocationService.formatCoordinates(_originalLatitude, _originalLongitude))
+          ? l10n.locationUpdateHint(LocationService.formatCoordinates(
+              _originalLatitude, _originalLongitude))
           : l10n.locationRemoveHint(_originalLocation ?? "");
       actions = [
         if (_includeLocation)
@@ -460,10 +459,10 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         final localeCode = _cachedLocationService?.currentLocaleCode;
         final addressInfo =
             await LocalGeocodingService.getAddressFromCoordinates(
-              _originalLatitude!,
-              _originalLongitude!,
-              localeCode: localeCode,
-            );
+          _originalLatitude!,
+          _originalLongitude!,
+          localeCode: localeCode,
+        );
         if (addressInfo != null && mounted) {
           final formattedAddress = addressInfo['formatted_address'];
           if (formattedAddress != null && formattedAddress.isNotEmpty) {
@@ -473,7 +472,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
             if (context.mounted) {
               final l10n = AppLocalizations.of(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(l10n.locationUpdatedTo(formattedAddress))),
+                SnackBar(
+                    content: Text(l10n.locationUpdatedTo(formattedAddress))),
               );
             }
           } else if (context.mounted) {
@@ -493,7 +493,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
           final l10n = AppLocalizations.of(context);
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(SnackBar(content: Text(l10n.updateFailed(e.toString()))));
+          ).showSnackBar(
+              SnackBar(content: Text(l10n.updateFailed(e.toString()))));
         }
       }
     } else if (result == 'remove') {
@@ -525,7 +526,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     } else {
       // 有天气数据
       title = l10n.weatherInfo2;
-      final weatherDisplay = '$_originalWeather${_originalTemperature != null ? " $_originalTemperature" : ""}';
+      final weatherDisplay =
+          '$_originalWeather${_originalTemperature != null ? " $_originalTemperature" : ""}';
       content = l10n.weatherRemoveHint(weatherDisplay);
       actions = [
         if (_includeWeather)
@@ -927,7 +929,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                             ),
                           IconButton(
                             key: _fullscreenButtonKey,
-                            tooltip: isLongContent ? l10n.fullscreenEditLongTextTip : l10n.fullscreenEditTooltip,
+                            tooltip: isLongContent
+                                ? l10n.fullscreenEditLongTextTip
+                                : l10n.fullscreenEditTooltip,
                             icon: Icon(
                               Icons.fullscreen,
                               color: theme.colorScheme.primary,
@@ -938,11 +942,11 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                 // 获取所有标签数据
                                 final databaseService =
                                     Provider.of<DatabaseService>(
-                                      context,
-                                      listen: false,
-                                    );
-                                final allTags = await databaseService
-                                    .getCategories();
+                                  context,
+                                  listen: false,
+                                );
+                                final allTags =
+                                    await databaseService.getCategories();
 
                                 // 修复内存泄露：在异步操作后检查mounted状态
                                 if (!mounted) return;
@@ -951,14 +955,14 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                 // 创建包含当前元数据的临时Quote对象，确保全屏编辑器能继承所有元数据
                                 final locationService =
                                     Provider.of<LocationService>(
-                                      context,
-                                      listen: false,
-                                    );
+                                  context,
+                                  listen: false,
+                                );
                                 final weatherService =
                                     Provider.of<WeatherService>(
-                                      context,
-                                      listen: false,
-                                    );
+                                  context,
+                                  listen: false,
+                                );
 
                                 // 获取位置和天气信息
                                 String? currentLocation;
@@ -966,17 +970,14 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                 String? currentTemperature;
 
                                 if (_includeLocation) {
-                                  currentLocation =
-                                      _originalLocation ??
+                                  currentLocation = _originalLocation ??
                                       locationService.getFormattedLocation();
                                 }
 
                                 if (_includeWeather) {
-                                  currentWeather =
-                                      _originalWeather ??
+                                  currentWeather = _originalWeather ??
                                       weatherService.currentWeather;
-                                  currentTemperature =
-                                      _originalTemperature ??
+                                  currentTemperature = _originalTemperature ??
                                       weatherService.temperature;
                                 }
 
@@ -985,41 +986,35 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                 final currentLat = widget.initialQuote != null
                                     ? _originalLatitude
                                     : _newLatitude ??
-                                          locationService
-                                              .currentPosition
-                                              ?.latitude;
+                                        locationService
+                                            .currentPosition?.latitude;
                                 final currentLon = widget.initialQuote != null
                                     ? _originalLongitude
                                     : _newLongitude ??
-                                          locationService
-                                              .currentPosition
-                                              ?.longitude;
+                                        locationService
+                                            .currentPosition?.longitude;
 
                                 final tempQuote = Quote(
                                   id: widget
-                                      .initialQuote
-                                      ?.id, // 保持原有ID（如果是编辑模式）
+                                      .initialQuote?.id, // 保持原有ID（如果是编辑模式）
                                   content: _contentController.text,
-                                  date:
-                                      widget.initialQuote?.date ??
+                                  date: widget.initialQuote?.date ??
                                       DateTime.now().toIso8601String(),
                                   sourceAuthor:
                                       _authorController.text.trim().isEmpty
-                                      ? null
-                                      : _authorController.text.trim(),
+                                          ? null
+                                          : _authorController.text.trim(),
                                   sourceWork:
                                       _workController.text.trim().isEmpty
-                                      ? null
-                                      : _workController.text.trim(),
+                                          ? null
+                                          : _workController.text.trim(),
                                   tagIds: _selectedTagIds,
                                   colorHex: _selectedColorHex,
                                   location: currentLocation,
-                                  latitude: _includeLocation
-                                      ? currentLat
-                                      : null,
-                                  longitude: _includeLocation
-                                      ? currentLon
-                                      : null,
+                                  latitude:
+                                      _includeLocation ? currentLat : null,
+                                  longitude:
+                                      _includeLocation ? currentLon : null,
                                   weather: currentWeather,
                                   temperature: currentTemperature,
                                   aiAnalysis: widget.initialQuote?.aiAnalysis,
@@ -1058,7 +1053,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                 if (mounted && context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: Text('${l10n.openFullEditorFailedSimple}: $e'),
+                                      content: Text(
+                                          '${l10n.openFullEditorFailedSimple}: $e'),
                                       backgroundColor: Colors.red,
                                       duration: const Duration(seconds: 3),
                                     ),
@@ -1110,7 +1106,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                l10n.sourcePreviewFormat(_formatSource(_authorController.text, _workController.text)),
+                l10n.sourcePreviewFormat(_formatSource(
+                    _authorController.text, _workController.text)),
                 style: TextStyle(
                   fontSize: 12,
                   fontStyle: FontStyle.italic,
@@ -1224,7 +1221,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                 const SizedBox(width: 8),
                 // 颜色选择按钮
                 Tooltip(
-                  message: _selectedColorHex != null ? l10n.cardColorSet : l10n.setCardColor,
+                  message: _selectedColorHex != null
+                      ? l10n.cardColorSet
+                      : l10n.setCardColor,
                   child: FilterChip(
                     avatar: _selectedColorHex != null
                         ? Container(
@@ -1379,8 +1378,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                       final Quote quote = Quote(
                         id: widget.initialQuote?.id ?? const Uuid().v4(),
                         content: _contentController.text,
-                        date:
-                            widget.initialQuote?.date ??
+                        date: widget.initialQuote?.date ??
                             DateTime.now().toIso8601String(),
                         aiAnalysis: _aiSummary,
                         source: _formatSource(
@@ -1393,14 +1391,13 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                         sentiment: widget.initialQuote?.sentiment,
                         keywords: widget.initialQuote?.keywords,
                         summary: widget.initialQuote?.summary,
-                        categoryId:
-                            _selectedCategory?.id ??
+                        categoryId: _selectedCategory?.id ??
                             widget.initialQuote?.categoryId,
                         colorHex: _selectedColorHex,
                         location: _includeLocation
                             ? (isEditing
-                                  ? _originalLocation
-                                  : _newLocation ?? location)
+                                ? _originalLocation
+                                : _newLocation ?? location)
                             : null,
                         latitude: _includeLocation
                             ? (isEditing ? _originalLatitude : _newLatitude)
@@ -1414,8 +1411,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                         temperature: _includeWeather
                             ? (isEditing ? _originalTemperature : temperature)
                             : null,
-                        dayPeriod:
-                            widget.initialQuote?.dayPeriod ??
+                        dayPeriod: widget.initialQuote?.dayPeriod ??
                             currentDayPeriodKey, // 保存 Key
                         editSource: widget.initialQuote?.editSource, // 保证兼容
                         deltaContent: widget.initialQuote?.deltaContent, // 保证兼容
@@ -1593,8 +1589,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                 color: isSelected
                                     ? colorScheme.primary
                                     : color == Colors.transparent
-                                    ? Colors.grey.applyOpacity(0.5) // MODIFIED
-                                    : Colors.transparent,
+                                        ? Colors.grey
+                                            .applyOpacity(0.5) // MODIFIED
+                                        : Colors.transparent,
                                 width: 2,
                               ),
                               boxShadow: [
@@ -1612,20 +1609,19 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                               child: isSelected
                                   ? Icon(
                                       Icons.check_circle,
-                                      color:
-                                          color == Colors.transparent ||
+                                      color: color == Colors.transparent ||
                                               color.computeLuminance() > 0.7
                                           ? colorScheme.primary
                                           : Colors.white,
                                       size: 24,
                                     )
                                   : color == Colors.transparent
-                                  ? const Icon(
-                                      Icons.block,
-                                      color: Colors.grey,
-                                      size: 18,
-                                    )
-                                  : null,
+                                      ? const Icon(
+                                          Icons.block,
+                                          color: Colors.grey,
+                                          size: 18,
+                                        )
+                                      : null,
                             ),
                           ),
                         );

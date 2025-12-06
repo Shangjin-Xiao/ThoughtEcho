@@ -178,18 +178,18 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                           onPressed: () => _showIconSelector(context, l10n),
                           icon: _selectedIconName != null
                               ? (IconUtils.isEmoji(_selectedIconName!)
-                                    ? Text(
-                                        IconUtils.getDisplayIcon(
-                                          _selectedIconName!,
-                                        ),
-                                        style: const TextStyle(fontSize: 20),
-                                      )
-                                    : Icon(
-                                        IconUtils.getIconData(
-                                          _selectedIconName!,
-                                        ),
-                                        color: colorScheme.primary,
-                                      ))
+                                  ? Text(
+                                      IconUtils.getDisplayIcon(
+                                        _selectedIconName!,
+                                      ),
+                                      style: const TextStyle(fontSize: 20),
+                                    )
+                                  : Icon(
+                                      IconUtils.getIconData(
+                                        _selectedIconName!,
+                                      ),
+                                      color: colorScheme.primary,
+                                    ))
                               : Icon(
                                   Icons.add_photo_alternate_outlined,
                                   color: colorScheme.onSurfaceVariant,
@@ -218,8 +218,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                   // 在异步操作前获取上下文的参数和服务
                                   final scaffoldMessenger =
                                       ScaffoldMessenger.of(context);
-                                  final dbService = context
-                                      .read<DatabaseService>();
+                                  final dbService =
+                                      context.read<DatabaseService>();
 
                                   setState(() => _isLoading = true);
                                   try {
@@ -482,11 +482,11 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                               subtitle: tag.isDefault
                                   ? Text(
                                       l10n.systemDefaultTag,
-                                      style: theme.textTheme.bodySmall
-                                          ?.copyWith(
-                                            color: colorScheme.primary
-                                                .withAlpha(150),
-                                          ),
+                                      style:
+                                          theme.textTheme.bodySmall?.copyWith(
+                                        color:
+                                            colorScheme.primary.withAlpha(150),
+                                      ),
                                     )
                                   : null,
                               trailing: tag.isDefault
@@ -510,9 +510,9 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                         l10n.defaultTag,
                                         style: theme.textTheme.labelSmall
                                             ?.copyWith(
-                                              color: colorScheme.primary,
-                                              fontWeight: FontWeight.w600,
-                                            ),
+                                          color: colorScheme.primary,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                     )
                                   : IconButton(
@@ -524,10 +524,11 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                         // 在异步操作前获取上下文的参数和服务
                                         final scaffoldMessenger =
                                             ScaffoldMessenger.of(context);
-                                        final dbService = context
-                                            .read<DatabaseService>();
+                                        final dbService =
+                                            context.read<DatabaseService>();
 
-                                        final confirmed = await showDialog<bool>(
+                                        final confirmed =
+                                            await showDialog<bool>(
                                           context: context,
                                           builder: (context) => AlertDialog(
                                             shape: RoundedRectangleBorder(
@@ -815,13 +816,13 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                             decoration: BoxDecoration(
                                               color: isSelected
                                                   ? Theme.of(context)
-                                                        .colorScheme
-                                                        .primaryContainer
+                                                      .colorScheme
+                                                      .primaryContainer
                                                   : Colors.transparent,
                                               borderRadius:
                                                   BorderRadius.circular(
-                                                    AppTheme.cardRadius,
-                                                  ),
+                                                AppTheme.cardRadius,
+                                              ),
                                               border: Border.all(
                                                 color: isSelected
                                                     ? Theme.of(
@@ -909,13 +910,13 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                             decoration: BoxDecoration(
                                               color: isSelected
                                                   ? Theme.of(context)
-                                                        .colorScheme
-                                                        .primaryContainer
+                                                      .colorScheme
+                                                      .primaryContainer
                                                   : Colors.transparent,
                                               borderRadius:
                                                   BorderRadius.circular(
-                                                    AppTheme.cardRadius,
-                                                  ),
+                                                AppTheme.cardRadius,
+                                              ),
                                               border: Border.all(
                                                 color: isSelected
                                                     ? Theme.of(

@@ -90,18 +90,21 @@ void main() {
         'assets': [
           {
             'name': 'app-release.apk',
-            'browser_download_url': 'https://github.com/test/releases/download/v1.2.0/app-release.apk',
+            'browser_download_url':
+                'https://github.com/test/releases/download/v1.2.0/app-release.apk',
           },
           {
             'name': 'other-file.zip',
-            'browser_download_url': 'https://github.com/test/releases/download/v1.2.0/other.zip',
+            'browser_download_url':
+                'https://github.com/test/releases/download/v1.2.0/other.zip',
           },
         ],
       };
 
       final versionInfo = VersionInfo.fromJson(mockResponseWithApk, '1.0.0');
 
-      expect(versionInfo.apkDownloadUrl, 'https://github.com/test/releases/download/v1.2.0/app-release.apk');
+      expect(versionInfo.apkDownloadUrl,
+          'https://github.com/test/releases/download/v1.2.0/app-release.apk');
     });
 
     test('should handle response without APK assets', () {
@@ -113,7 +116,8 @@ void main() {
         'assets': [
           {
             'name': 'other-file.zip',
-            'browser_download_url': 'https://github.com/test/releases/download/v1.2.0/other.zip',
+            'browser_download_url':
+                'https://github.com/test/releases/download/v1.2.0/other.zip',
           },
         ],
       };

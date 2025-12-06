@@ -27,7 +27,7 @@ class InsightsPage extends StatefulWidget {
 class _InsightsPageState extends State<InsightsPage> {
   bool _isLoading = false;
   Stream<String>?
-  _insightsStream; // Used only to provide stream to StreamBuilder for connection state
+      _insightsStream; // Used only to provide stream to StreamBuilder for connection state
   bool _isGenerating = false; // 新增状态变量表示是否正在生成
   bool _showAnalysisSelection = true; // 控制显示分析选择还是结果
   final TextEditingController _customPromptController = TextEditingController();
@@ -36,7 +36,7 @@ class _InsightsPageState extends State<InsightsPage> {
   String _accumulatedInsightsText =
       ''; // Added state variable for accumulated insights text
   StreamSubscription<String>?
-  _insightsSubscription; // Stream subscription for manual accumulation
+      _insightsSubscription; // Stream subscription for manual accumulation
 
   // 分析类型
   List<Map<String, dynamic>> _getAnalysisTypes(AppLocalizations l10n) {
@@ -420,8 +420,8 @@ class _InsightsPageState extends State<InsightsPage> {
         analysisStyle: _selectedAnalysisStyle,
         customPrompt:
             _showCustomPrompt && _customPromptController.text.isNotEmpty
-            ? _customPromptController.text
-            : null,
+                ? _customPromptController.text
+                : null,
       );
 
       if (!mounted) {
@@ -694,9 +694,8 @@ class _InsightsPageState extends State<InsightsPage> {
                     color: isSelected
                         ? theme.colorScheme.primary
                         : theme.colorScheme.onSurface,
-                    fontWeight: isSelected
-                        ? FontWeight.bold
-                        : FontWeight.normal,
+                    fontWeight:
+                        isSelected ? FontWeight.bold : FontWeight.normal,
                   ),
                   tooltip: style['description'],
                 );

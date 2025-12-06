@@ -51,11 +51,11 @@ class WeatherSearchController extends ChangeNotifier {
       await _weatherService
           .getWeatherData(position.latitude, position.longitude)
           .timeout(
-            const Duration(seconds: 15),
-            onTimeout: () {
-              throw Exception('天气获取超时，请稍后重试');
-            },
-          );
+        const Duration(seconds: 15),
+        onTimeout: () {
+          throw Exception('天气获取超时，请稍后重试');
+        },
+      );
 
       // 4. 检查天气数据是否获取成功
       if (_weatherService.currentWeather == '天气数据获取失败') {
@@ -96,11 +96,11 @@ class WeatherSearchController extends ChangeNotifier {
       await _weatherService
           .getWeatherData(position.latitude, position.longitude)
           .timeout(
-            const Duration(seconds: 15),
-            onTimeout: () {
-              throw Exception('天气获取超时，请稍后重试');
-            },
-          );
+        const Duration(seconds: 15),
+        onTimeout: () {
+          throw Exception('天气获取超时，请稍后重试');
+        },
+      );
 
       // 3. 检查天气数据是否获取成功
       if (_weatherService.currentWeather == '天气数据获取失败') {

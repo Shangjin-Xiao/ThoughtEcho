@@ -65,9 +65,8 @@ class LocalGeocodingService {
       }
 
       // 根据精度要求设置参数
-      final accuracy = highAccuracy
-          ? LocationAccuracy.high
-          : LocationAccuracy.reduced;
+      final accuracy =
+          highAccuracy ? LocationAccuracy.high : LocationAccuracy.reduced;
       final timeout = highAccuracy
           ? const Duration(seconds: 10)
           : const Duration(seconds: 5);
@@ -114,7 +113,7 @@ class LocalGeocodingService {
   }) async {
     try {
       final bool isEnglish = localeCode == 'en';
-      
+
       // Windows平台简化处理
       if (!kIsWeb && Platform.isWindows) {
         logDebug('Windows平台：使用在线地理编码服务');
@@ -125,19 +124,19 @@ class LocalGeocodingService {
           'city': isEnglish ? 'Unknown City' : '未知城市',
           'district': null,
           'street': null,
-          'formatted_address': isEnglish 
-              ? 'China, Unknown Province, Unknown City' 
+          'formatted_address': isEnglish
+              ? 'China, Unknown Province, Unknown City'
               : '中国, 未知省份, 未知城市',
           'source': 'fallback',
         };
       }
-      
+
       // 英文环境：跳过系统地理编码（无法控制语言），返回 null 让调用者使用在线服务
       if (isEnglish) {
         logDebug('英文环境：跳过系统地理编码，使用在线服务');
         return null;
       }
-      
+
       // 首先尝试从缓存读取（只对中文环境使用缓存）
       final cachedAddress = await _getFromCache(latitude, longitude);
       if (cachedAddress != null) {

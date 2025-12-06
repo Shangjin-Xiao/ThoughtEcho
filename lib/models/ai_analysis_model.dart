@@ -4,9 +4,9 @@ class AIAnalysis {
   final String title;
   final String content;
   final String
-  analysisType; // 'comprehensive', 'emotional', 'mindmap', 'growth' 或 'custom'
+      analysisType; // 'comprehensive', 'emotional', 'mindmap', 'growth' 或 'custom'
   final String
-  analysisStyle; // 'professional', 'friendly', 'humorous', 'literary'
+      analysisStyle; // 'professional', 'friendly', 'humorous', 'literary'
   final String? customPrompt; // 自定义提示词（如果使用）
   final String createdAt;
   final List<String>? relatedQuoteIds; // 相关的笔记ID列表

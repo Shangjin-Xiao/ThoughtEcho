@@ -75,9 +75,8 @@ class LargeFileManager {
         final totalLength = jsonString.length;
 
         for (int i = 0; i < totalLength; i += chunkSize) {
-          final end = (i + chunkSize < totalLength)
-              ? i + chunkSize
-              : totalLength;
+          final end =
+              (i + chunkSize < totalLength) ? i + chunkSize : totalLength;
           final chunk = jsonString.substring(i, end);
           sink.write(chunk);
 

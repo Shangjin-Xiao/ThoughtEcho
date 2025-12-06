@@ -24,9 +24,9 @@ class MigrationService {
     required DatabaseService databaseService,
     required SettingsService settingsService,
     required MMKVService mmkvService,
-  }) : _databaseService = databaseService,
-       _settingsService = settingsService,
-       _mmkvService = mmkvService;
+  })  : _databaseService = databaseService,
+        _settingsService = settingsService,
+        _mmkvService = mmkvService;
 
   /// 检查是否需要执行迁移
   Future<bool> needsMigration() async {
@@ -39,7 +39,7 @@ class MigrationService {
       final isFirstSetup = !_settingsService.isInitialDatabaseSetupComplete();
       final isUpdateRequiringMigration =
           currentBuildNumber > lastRunBuildNumber &&
-          currentBuildNumber >= _migrationNeededFromBuildNumber;
+              currentBuildNumber >= _migrationNeededFromBuildNumber;
 
       final needsMigration = isFirstSetup || isUpdateRequiringMigration;
 

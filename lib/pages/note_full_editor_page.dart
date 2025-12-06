@@ -659,8 +659,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     ThemeData theme,
   ) async {
     final l10n = AppLocalizations.of(context);
-    final hasLocationData =
-        _originalLocation != null ||
+    final hasLocationData = _originalLocation != null ||
         (_originalLatitude != null && _originalLongitude != null);
     final hasCoordinates =
         _originalLatitude != null && _originalLongitude != null;
@@ -727,14 +726,15 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       try {
         // 获取当前语言设置（在异步操作前获取，避免context跨越异步间隙）
         if (!context.mounted) return;
-        final locationService = Provider.of<LocationService>(context, listen: false);
+        final locationService =
+            Provider.of<LocationService>(context, listen: false);
         final localeCode = locationService.currentLocaleCode;
         final addressInfo =
             await LocalGeocodingService.getAddressFromCoordinates(
-              _originalLatitude!,
-              _originalLongitude!,
-              localeCode: localeCode,
-            );
+          _originalLatitude!,
+          _originalLongitude!,
+          localeCode: localeCode,
+        );
         if (addressInfo != null && mounted) {
           final formattedAddress = addressInfo['formatted_address'];
           if (formattedAddress != null && formattedAddress.isNotEmpty) {
@@ -843,8 +843,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
     // 检查并请求权限
     if (!locationService.hasLocationPermission) {
-      bool permissionGranted = await locationService
-          .requestLocationPermission();
+      bool permissionGranted =
+          await locationService.requestLocationPermission();
       if (!permissionGranted) {
         if (mounted && context.mounted) {
           final l10n = AppLocalizations.of(context);
@@ -940,7 +940,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     // 检查标签
     final selectedTagSet = Set.from(_selectedTagIds);
     final initialTagSet = Set.from(_initialTagIds);
-    if (!selectedTagSet.containsAll(initialTagSet) || !initialTagSet.containsAll(selectedTagSet)) {
+    if (!selectedTagSet.containsAll(initialTagSet) ||
+        !initialTagSet.containsAll(selectedTagSet)) {
       return true;
     }
 
@@ -1311,8 +1312,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                 color: isSelected
                                     ? colorScheme.primary
                                     : color == Colors.transparent
-                                    ? Colors.grey.applyOpacity(0.5) // MODIFIED
-                                    : Colors.transparent,
+                                        ? Colors.grey
+                                            .applyOpacity(0.5) // MODIFIED
+                                        : Colors.transparent,
                                 width: 2,
                               ),
                               boxShadow: [
@@ -1330,20 +1332,19 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                               child: isSelected
                                   ? Icon(
                                       Icons.check_circle,
-                                      color:
-                                          color == Colors.transparent ||
+                                      color: color == Colors.transparent ||
                                               color.computeLuminance() > 0.7
                                           ? colorScheme.primary
                                           : Colors.white,
                                       size: 24,
                                     )
                                   : color == Colors.transparent
-                                  ? const Icon(
-                                      Icons.block,
-                                      color: Colors.grey,
-                                      size: 18,
-                                    )
-                                  : null,
+                                      ? const Icon(
+                                          Icons.block,
+                                          color: Colors.grey,
+                                          size: 18,
+                                        )
+                                      : null,
                             ),
                           ),
                         );
@@ -1488,247 +1489,250 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         }
       },
       child: Scaffold(
-      backgroundColor: theme.colorScheme.surface,
-      appBar: AppBar(
-        title: const SizedBox.shrink(),
-        actions: [
-          IconButton(
-            key: _metadataButtonKey, // 功能引导 key
-            icon: const Icon(Icons.edit_note),
-            tooltip: l10n.editMetadataShort,
-            onPressed: () => _showMetadataDialog(context),
-          ),
-          IconButton(
-            icon: const Icon(Icons.auto_awesome),
-            tooltip: l10n.aiAssistantLabel,
-            onPressed: () => _showAIOptions(context),
-          ),
-          IconButton(
-            icon: const Icon(Icons.save),
-            tooltip: l10n.save,
-            onPressed: () async {
-              try {
-                await pauseAllMediaPlayers();
-              } catch (_) {}
-              await _saveContent();
-            },
-          ),
-        ],
-        automaticallyImplyLeading: true,
-      ),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Column(
-              children: [
-                UnifiedQuillToolbar(
-                  key: _toolbarGuideKey, // 新增：用于气泡定位
-                  controller: _controller,
-                  onMediaImported: (String filePath) {
-                    _sessionImportedMedia.add(filePath);
-                  },
-                ),
-                if (_selectedTagIds.isNotEmpty ||
-                    _selectedColorHex != null ||
-                    _showLocation ||
-                    _showWeather)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surface,
-                      border: Border(
-                        bottom: BorderSide(
-                          color: theme.colorScheme.outlineVariant.applyOpacity(
-                            0.1,
-                          ),
-                          width: 1,
-                        ),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        if (_selectedTagIds.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 12),
-                            child: Chip(
-                              visualDensity: VisualDensity.compact,
-                              materialTapTargetSize:
-                                  MaterialTapTargetSize.shrinkWrap,
-                              label: Text(
-                                l10n.tagsCount(_selectedTagIds.length),
-                              ),
-                              avatar: const Icon(Icons.tag, size: 16),
-                            ),
-                          ),
-                        if (_selectedColorHex != null)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 12),
-                            child: Container(
-                              width: 16,
-                              height: 16,
-                              decoration: BoxDecoration(
-                                color: Color(
-                                  int.parse(
-                                        _selectedColorHex!.substring(1),
-                                        radix: 16,
-                                      ) |
-                                      0xFF000000,
-                                ),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: theme.colorScheme.outline.applyOpacity(
-                                    0.2,
-                                  ),
-                                  width: 1,
-                                ),
-                              ),
-                              key: ValueKey(
-                                'color-indicator-$_selectedColorHex',
-                              ),
-                            ),
-                          ),
-                        if (_showLocation &&
-                            (_location != null ||
-                                (_latitude != null && _longitude != null)))
-                          Padding(
-                            padding: const EdgeInsets.only(right: 12),
-                            child: Icon(
-                              Icons.location_on,
-                              size: 16,
-                              color: theme.colorScheme.primary,
-                            ),
-                          ),
-                        if (_showWeather && _weather != null)
-                          Padding(
-                            padding: const EdgeInsets.only(right: 12),
-                            child: Icon(
-                              _getWeatherIcon(_weather!),
-                              size: 16,
-                              color: theme.colorScheme.primary,
-                            ),
-                          ),
-                        const Spacer(),
-                        TextButton(
-                          onPressed: () => _showMetadataDialog(context),
-                          child: const Text(
-                            '编辑元数据',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                Expanded(
-                  child: Container(
-                    color: theme.colorScheme.surface,
-                    padding: const EdgeInsets.all(16),
-                    child: quill.QuillEditor(
-                      controller: _controller,
-                      scrollController: ScrollController(),
-                      focusNode: FocusNode(),
-                      config: quill.QuillEditorConfig(
-                        embedBuilders: kIsWeb
-                            ? FlutterQuillEmbeds.editorWebBuilders()
-                            : QuillEditorExtensions.getEmbedBuilders(
-                                optimizedImages: false,
-                              ),
-                        placeholder: AppLocalizations.of(context).fullscreenEditorPlaceholder,
-                        padding: const EdgeInsets.all(16),
-                        autoFocus: false,
-                        expands: false,
-                        scrollable: true,
-                        enableInteractiveSelection: true,
-                        enableSelectionToolbar: true,
-                        showCursor: true,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+        backgroundColor: theme.colorScheme.surface,
+        appBar: AppBar(
+          title: const SizedBox.shrink(),
+          actions: [
+            IconButton(
+              key: _metadataButtonKey, // 功能引导 key
+              icon: const Icon(Icons.edit_note),
+              tooltip: l10n.editMetadataShort,
+              onPressed: () => _showMetadataDialog(context),
             ),
-            if (_isSaving)
-              Positioned.fill(
-                child: Container(
-                  color: theme.colorScheme.surface.withValues(alpha: 0.72),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 300),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 24,
-                        ),
-                        decoration: BoxDecoration(
-                          color: theme.colorScheme.surface,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.08),
-                              blurRadius: 18,
-                              offset: const Offset(0, 4),
+            IconButton(
+              icon: const Icon(Icons.auto_awesome),
+              tooltip: l10n.aiAssistantLabel,
+              onPressed: () => _showAIOptions(context),
+            ),
+            IconButton(
+              icon: const Icon(Icons.save),
+              tooltip: l10n.save,
+              onPressed: () async {
+                try {
+                  await pauseAllMediaPlayers();
+                } catch (_) {}
+                await _saveContent();
+              },
+            ),
+          ],
+          automaticallyImplyLeading: true,
+        ),
+        body: SafeArea(
+          child: Stack(
+            children: [
+              Column(
+                children: [
+                  UnifiedQuillToolbar(
+                    key: _toolbarGuideKey, // 新增：用于气泡定位
+                    controller: _controller,
+                    onMediaImported: (String filePath) {
+                      _sessionImportedMedia.add(filePath);
+                    },
+                  ),
+                  if (_selectedTagIds.isNotEmpty ||
+                      _selectedColorHex != null ||
+                      _showLocation ||
+                      _showWeather)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface,
+                        border: Border(
+                          bottom: BorderSide(
+                            color:
+                                theme.colorScheme.outlineVariant.applyOpacity(
+                              0.1,
                             ),
-                          ],
+                            width: 1,
+                          ),
                         ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                SizedBox(
-                                  width: 22,
-                                  height: 22,
-                                  child: CircularProgressIndicator(
-                                    value: _saveProgress >= 0.99
-                                        ? 1.0
-                                        : (_saveProgress <= 0
+                      ),
+                      child: Row(
+                        children: [
+                          if (_selectedTagIds.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: Chip(
+                                visualDensity: VisualDensity.compact,
+                                materialTapTargetSize:
+                                    MaterialTapTargetSize.shrinkWrap,
+                                label: Text(
+                                  l10n.tagsCount(_selectedTagIds.length),
+                                ),
+                                avatar: const Icon(Icons.tag, size: 16),
+                              ),
+                            ),
+                          if (_selectedColorHex != null)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: Container(
+                                width: 16,
+                                height: 16,
+                                decoration: BoxDecoration(
+                                  color: Color(
+                                    int.parse(
+                                          _selectedColorHex!.substring(1),
+                                          radix: 16,
+                                        ) |
+                                        0xFF000000,
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(
+                                    color:
+                                        theme.colorScheme.outline.applyOpacity(
+                                      0.2,
+                                    ),
+                                    width: 1,
+                                  ),
+                                ),
+                                key: ValueKey(
+                                  'color-indicator-$_selectedColorHex',
+                                ),
+                              ),
+                            ),
+                          if (_showLocation &&
+                              (_location != null ||
+                                  (_latitude != null && _longitude != null)))
+                            Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: Icon(
+                                Icons.location_on,
+                                size: 16,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                          if (_showWeather && _weather != null)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: Icon(
+                                _getWeatherIcon(_weather!),
+                                size: 16,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                          const Spacer(),
+                          TextButton(
+                            onPressed: () => _showMetadataDialog(context),
+                            child: const Text(
+                              '编辑元数据',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  Expanded(
+                    child: Container(
+                      color: theme.colorScheme.surface,
+                      padding: const EdgeInsets.all(16),
+                      child: quill.QuillEditor(
+                        controller: _controller,
+                        scrollController: ScrollController(),
+                        focusNode: FocusNode(),
+                        config: quill.QuillEditorConfig(
+                          embedBuilders: kIsWeb
+                              ? FlutterQuillEmbeds.editorWebBuilders()
+                              : QuillEditorExtensions.getEmbedBuilders(
+                                  optimizedImages: false,
+                                ),
+                          placeholder: AppLocalizations.of(context)
+                              .fullscreenEditorPlaceholder,
+                          padding: const EdgeInsets.all(16),
+                          autoFocus: false,
+                          expands: false,
+                          scrollable: true,
+                          enableInteractiveSelection: true,
+                          enableSelectionToolbar: true,
+                          showCursor: true,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              if (_isSaving)
+                Positioned.fill(
+                  child: Container(
+                    color: theme.colorScheme.surface.withValues(alpha: 0.72),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 300),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 24,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surface,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.08),
+                                blurRadius: 18,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                      value: _saveProgress >= 0.99
+                                          ? 1.0
+                                          : (_saveProgress <= 0
                                               ? null
                                               : _saveProgress),
-                                    strokeWidth: 3,
+                                      strokeWidth: 3,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  _saveProgress < 1.0 ? '正在保存' : '完成',
-                                  style: theme.textTheme.titleMedium,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            LinearProgressIndicator(
-                              value: _saveProgress.clamp(0.0, 1.0),
-                              minHeight: 6,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            const SizedBox(height: 12),
-                            if (_saveStatus != null)
-                              Text(
-                                _saveStatus!,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                                textAlign: TextAlign.center,
+                                  const SizedBox(width: 12),
+                                  Text(
+                                    _saveProgress < 1.0 ? '正在保存' : '完成',
+                                    style: theme.textTheme.titleMedium,
+                                  ),
+                                ],
                               ),
-                            const SizedBox(height: 8),
-                            Text(
-                              '${(_saveProgress * 100).clamp(0, 100).toStringAsFixed(0)}%',
-                              style: theme.textTheme.labelMedium,
-                            ),
-                          ],
+                              const SizedBox(height: 16),
+                              LinearProgressIndicator(
+                                value: _saveProgress.clamp(0.0, 1.0),
+                                minHeight: 6,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              const SizedBox(height: 12),
+                              if (_saveStatus != null)
+                                Text(
+                                  _saveStatus!,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              const SizedBox(height: 8),
+                              Text(
+                                '${(_saveProgress * 100).clamp(0, 100).toStringAsFixed(0)}%',
+                                style: theme.textTheme.labelMedium,
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
   }
 
   // 显示元数据编辑弹窗
@@ -1760,11 +1764,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                         width: 40,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.onSurfaceVariant
-                              .applyOpacity(
-                                // MODIFIED
-                                0.4,
-                              ),
+                          color:
+                              theme.colorScheme.onSurfaceVariant.applyOpacity(
+                            // MODIFIED
+                            0.4,
+                          ),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -1928,16 +1932,13 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                     child: Builder(
                                       builder: (context) {
                                         // 过滤标签
-                                        final filteredTags = widget.allTags!
-                                            .where((tag) {
-                                              return _tagSearchQuery.isEmpty ||
-                                                  tag.name
-                                                      .toLowerCase()
-                                                      .contains(
-                                                        _tagSearchQuery,
-                                                      );
-                                            })
-                                            .toList();
+                                        final filteredTags =
+                                            widget.allTags!.where((tag) {
+                                          return _tagSearchQuery.isEmpty ||
+                                              tag.name.toLowerCase().contains(
+                                                    _tagSearchQuery,
+                                                  );
+                                        }).toList();
 
                                         if (filteredTags.isEmpty) {
                                           return Center(
@@ -1978,8 +1979,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                                 });
                                               },
                                               selectedColor: theme
-                                                  .colorScheme
-                                                  .primaryContainer,
+                                                  .colorScheme.primaryContainer,
                                               checkmarkColor:
                                                   theme.colorScheme.primary,
                                             );
@@ -2199,8 +2199,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                               });
                                             },
                                             selectedColor: theme
-                                                .colorScheme
-                                                .primaryContainer,
+                                                .colorScheme.primaryContainer,
                                           ),
                                           // 小红点：有坐标但没地址时提示可更新（仅已保存笔记）
                                           if (widget.initialQuote?.id != null &&
@@ -2300,11 +2299,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                                   ((_latitude != null &&
                                                           _longitude != null)
                                                       ? '📍 ${LocationService.formatCoordinates(_latitude, _longitude)}'
-                                                      : l10n.gettingLocationHint),
+                                                      : l10n
+                                                          .gettingLocationHint),
                                               style: TextStyle(
                                                 fontSize: 14,
-                                                color: theme
-                                                    .colorScheme
+                                                color: theme.colorScheme
                                                     .onSurfaceVariant,
                                               ),
                                             ),
@@ -2322,15 +2321,15 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                         ),
                                         const SizedBox(width: 8),
                                         Text(
-                                          WeatherService.getLocalizedWeatherDescription(
+                                          WeatherService
+                                              .getLocalizedWeatherDescription(
                                             AppLocalizations.of(context),
                                             _weather!,
                                           ),
                                           style: TextStyle(
                                             fontSize: 14,
                                             color: theme
-                                                .colorScheme
-                                                .onSurfaceVariant,
+                                                .colorScheme.onSurfaceVariant,
                                           ),
                                         ),
                                         if (_temperature != null)
@@ -2339,8 +2338,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                             style: TextStyle(
                                               fontSize: 14,
                                               color: theme
-                                                  .colorScheme
-                                                  .onSurfaceVariant,
+                                                  .colorScheme.onSurfaceVariant,
                                             ),
                                           ),
                                       ],

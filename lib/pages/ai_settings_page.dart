@@ -764,16 +764,14 @@ class _AISettingsPageState extends State<AISettingsPage> {
     );
 
     if (confirmed == true) {
-      final updatedProviders = _multiSettings.providers
-          .where((p) => p.id != provider.id)
-          .toList();
+      final updatedProviders =
+          _multiSettings.providers.where((p) => p.id != provider.id).toList();
 
       // 如果删除的是当前provider，切换到第一个可用的provider或清空
       String? newCurrentProviderId = _multiSettings.currentProviderId;
       if (_currentProvider?.id == provider.id) {
-        newCurrentProviderId = updatedProviders.isNotEmpty
-            ? updatedProviders.first.id
-            : null;
+        newCurrentProviderId =
+            updatedProviders.isNotEmpty ? updatedProviders.first.id : null;
       }
 
       final updatedMultiSettings = _multiSettings.copyWith(
@@ -836,8 +834,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
                 Text(
                   l10n.aiProviderSelection,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
               ],
             ),
@@ -869,7 +867,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
                         children: [
                           Text(
                             l10n.currentProvider(_currentProvider!.name),
-                            style: Theme.of(context).textTheme.titleSmall
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleSmall
                                 ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                           Text(
@@ -887,16 +887,17 @@ class _AISettingsPageState extends State<AISettingsPage> {
                           ),
                           Text(
                             l10n.apiKeyLabel(_apiKeyStatus),
-                            style: Theme.of(context).textTheme.bodySmall
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall
                                 ?.copyWith(
-                                  color:
-                                      _apiKeyStatus.contains('有效') ||
+                                  color: _apiKeyStatus.contains('有效') ||
                                           _apiKeyStatus.contains('valid')
                                       ? Colors.green
                                       : _apiKeyStatus.contains('无效') ||
-                                            _apiKeyStatus.contains('invalid')
-                                      ? Colors.red
-                                      : Colors.orange,
+                                              _apiKeyStatus.contains('invalid')
+                                          ? Colors.red
+                                          : Colors.orange,
                                 ),
                           ),
                         ],
@@ -981,10 +982,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
                           Text(
                             _testResults[provider.id]!,
                             style: TextStyle(
-                              color:
-                                  _testResults[provider.id]!.contains(
-                                    l10n.connectionSuccess,
-                                  )
+                              color: _testResults[provider.id]!.contains(
+                                l10n.connectionSuccess,
+                              )
                                   ? Colors.green
                                   : Colors.red,
                             ),
@@ -1025,9 +1025,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
                           ),
                       ],
                     ),
-                    onTap: !isCurrent
-                        ? () => _setCurrentProvider(provider)
-                        : null,
+                    onTap:
+                        !isCurrent ? () => _setCurrentProvider(provider) : null,
                   ),
                 );
               }),
@@ -1098,7 +1097,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
                           const SizedBox(width: 8),
                           Text(
                             l10n.quickPresets,
-                            style: Theme.of(context).textTheme.titleMedium
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
                                 ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                         ],
@@ -1161,7 +1162,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
                                   _selectedPreset ??
                                   l10n.custom,
                             ),
-                            style: Theme.of(context).textTheme.titleMedium
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
                                 ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                         ],
@@ -1226,7 +1229,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
                           const SizedBox(width: 8),
                           Text(
                             l10n.modelAndAdvanced,
-                            style: Theme.of(context).textTheme.titleMedium
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
                                 ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                         ],
@@ -1236,8 +1241,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
                         controller: _modelController,
                         decoration: InputDecoration(
                           labelText: l10n.modelNameField,
-                          hintText:
-                              _selectedPreset != null &&
+                          hintText: _selectedPreset != null &&
                                   _getAiPresets(l10n)
                                       .firstWhere(
                                         (p) => p['name'] == _selectedPreset,
@@ -1302,7 +1306,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
                           const SizedBox(width: 8),
                           Text(
                             l10n.aiCardGeneration,
-                            style: Theme.of(context).textTheme.titleMedium
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
                                 ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                         ],
@@ -1311,16 +1317,16 @@ class _AISettingsPageState extends State<AISettingsPage> {
                       Text(
                         l10n.aiCardGenerationDesc,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.grey[600],
-                        ),
+                              color: Colors.grey[600],
+                            ),
                       ),
                       const SizedBox(height: 6),
                       Text(
                         l10n.aiCardGenerationTip,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.orange[600],
-                          fontSize: 11,
-                        ),
+                              color: Colors.orange[600],
+                              fontSize: 11,
+                            ),
                       ),
                       const SizedBox(height: 12),
                       Consumer<SettingsService>(

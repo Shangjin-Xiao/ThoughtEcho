@@ -12,7 +12,7 @@ class AiDialogHelper {
   final AIService aiService;
 
   AiDialogHelper(this.context)
-    : aiService = Provider.of<AIService>(context, listen: false);
+      : aiService = Provider.of<AIService>(context, listen: false);
 
   // 显示AI选项菜单
   void showAiOptions({

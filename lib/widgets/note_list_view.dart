@@ -396,159 +396,154 @@ class NoteListViewState extends State<NoteListView> {
 
     _quotesSub = db
         .watchQuotes(
-          tagIds: widget.selectedTagIds.isNotEmpty
-              ? widget.selectedTagIds
-              : null,
-          limit: _pageSize,
-          orderBy: widget.sortType == 'time'
-              ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
-              : widget.sortType == 'favorite'
+      tagIds: widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
+      limit: _pageSize,
+      orderBy: widget.sortType == 'time'
+          ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
+          : widget.sortType == 'favorite'
               ? 'favorite_count ${widget.sortAscending ? 'ASC' : 'DESC'}'
               : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
-          searchQuery: widget.searchQuery.isNotEmpty
-              ? widget.searchQuery
-              : null,
-          selectedWeathers: widget.selectedWeathers.isNotEmpty
-              ? widget.selectedWeathers
-              : null,
-          selectedDayPeriods: widget.selectedDayPeriods.isNotEmpty
-              ? widget.selectedDayPeriods
-              : null,
-        )
+      searchQuery: widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
+      selectedWeathers:
+          widget.selectedWeathers.isNotEmpty ? widget.selectedWeathers : null,
+      selectedDayPeriods: widget.selectedDayPeriods.isNotEmpty
+          ? widget.selectedDayPeriods
+          : null,
+    )
         .listen(
-          (list) {
-            if (mounted) {
-              // 修复：在首次加载期间保存滚动位置，避免数据刷新时滚动到顶部
-              double? savedScrollOffset;
-              if (isFirstLoad &&
+      (list) {
+        if (mounted) {
+          // 修复：在首次加载期间保存滚动位置，避免数据刷新时滚动到顶部
+          double? savedScrollOffset;
+          if (isFirstLoad &&
+              _scrollController.hasClients &&
+              _quotes.isNotEmpty) {
+            savedScrollOffset = _scrollController.offset;
+            logDebug(
+              '首次加载期间保存滚动位置: $savedScrollOffset',
+              source: 'NoteListView',
+            );
+          }
+
+          setState(() {
+            if (isFirstLoad) {
+              _quotes.clear();
+            }
+            _quotes
+              ..clear()
+              ..addAll(
+                list,
+              ); // Simplified: always replace for consistency, but flag prevents extra sets
+            _hasMore = list.length >= _pageSize;
+            _isLoading = false;
+            _pruneExpansionControllers();
+          });
+
+          if (widget.onGuideTargetsReady != null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              widget.onGuideTargetsReady!.call();
+            });
+          }
+
+          // 修复：在首次加载期间恢复滚动位置
+          if (savedScrollOffset != null &&
+              savedScrollOffset > 0 &&
+              !_isUserScrolling) {
+            final offset = savedScrollOffset; // 捕获非空值
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted &&
                   _scrollController.hasClients &&
-                  _quotes.isNotEmpty) {
-                savedScrollOffset = _scrollController.offset;
-                logDebug(
-                  '首次加载期间保存滚动位置: $savedScrollOffset',
-                  source: 'NoteListView',
-                );
+                  offset <= _scrollController.position.maxScrollExtent) {
+                _scrollController.jumpTo(offset);
+                logDebug('首次加载期间恢复滚动位置: $offset', source: 'NoteListView');
               }
+            });
+          }
 
-              setState(() {
-                if (isFirstLoad) {
-                  _quotes.clear();
-                }
-                _quotes
-                  ..clear()
-                  ..addAll(
-                    list,
-                  ); // Simplified: always replace for consistency, but flag prevents extra sets
-                _hasMore = list.length >= _pageSize;
-                _isLoading = false;
-                _pruneExpansionControllers();
-              });
-
-              if (widget.onGuideTargetsReady != null) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (!mounted) return;
-                  widget.onGuideTargetsReady!.call();
-                });
+          if (isFirstLoad) {
+            _initialDataLoaded = true;
+            // 延迟启用自动滚动，避免冷启动时的滚动冲突
+            Future.delayed(const Duration(milliseconds: 1500), () {
+              if (mounted) {
+                _autoScrollEnabled = true;
+                _isInitializing = false;
+                logDebug('首次加载完成，启用自动滚动', source: 'NoteListView');
               }
+            });
+            // 冷启动保护期：设置较长的保护期，避免首次进入时的滚动冲突
+            _lastUserScrollTime = DateTime.now();
+            logDebug('首次数据加载完成', source: 'NoteListView');
+          }
 
-              // 修复：在首次加载期间恢复滚动位置
-              if (savedScrollOffset != null &&
-                  savedScrollOffset > 0 &&
-                  !_isUserScrolling) {
-                final offset = savedScrollOffset; // 捕获非空值
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (mounted &&
-                      _scrollController.hasClients &&
-                      offset <= _scrollController.position.maxScrollExtent) {
-                    _scrollController.jumpTo(offset);
-                    logDebug('首次加载期间恢复滚动位置: $offset', source: 'NoteListView');
-                  }
-                });
-              }
+          // 修复：同步 _hasMore 状态与数据库服务状态
+          final dbService = Provider.of<DatabaseService>(
+            context,
+            listen: false,
+          );
+          if (_hasMore != dbService.hasMoreQuotes) {
+            logDebug(
+              '同步 _hasMore 状态: $_hasMore -> ${dbService.hasMoreQuotes}',
+              source: 'NoteListView',
+            );
+            _hasMore = dbService.hasMoreQuotes;
+          }
+          // 重置滚动范围检查计数器
+          _scrollExtentCheckCounter = 0;
 
-              if (isFirstLoad) {
-                _initialDataLoaded = true;
-                // 延迟启用自动滚动，避免冷启动时的滚动冲突
-                Future.delayed(const Duration(milliseconds: 1500), () {
-                  if (mounted) {
-                    _autoScrollEnabled = true;
-                    _isInitializing = false;
-                    logDebug('首次加载完成，启用自动滚动', source: 'NoteListView');
-                  }
-                });
-                // 冷启动保护期：设置较长的保护期，避免首次进入时的滚动冲突
-                _lastUserScrollTime = DateTime.now();
-                logDebug('首次数据加载完成', source: 'NoteListView');
-              }
+          // 通知搜索控制器数据加载完成
+          try {
+            final searchController = Provider.of<NoteSearchController>(
+              context,
+              listen: false,
+            );
+            searchController.setSearchState(false);
+          } catch (e) {
+            logDebug('更新搜索控制器状态失败: $e');
+          }
 
-              // 修复：同步 _hasMore 状态与数据库服务状态
-              final dbService = Provider.of<DatabaseService>(
-                context,
-                listen: false,
-              );
-              if (_hasMore != dbService.hasMoreQuotes) {
-                logDebug(
-                  '同步 _hasMore 状态: $_hasMore -> ${dbService.hasMoreQuotes}',
-                  source: 'NoteListView',
-                );
-                _hasMore = dbService.hasMoreQuotes;
-              }
-              // 重置滚动范围检查计数器
-              _scrollExtentCheckCounter = 0;
+          if (isFirstLoad) {
+            isFirstLoad = false;
+          }
+        }
+      },
+      onError: (error) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
 
-              // 通知搜索控制器数据加载完成
-              try {
-                final searchController = Provider.of<NoteSearchController>(
-                  context,
-                  listen: false,
-                );
-                searchController.setSearchState(false);
-              } catch (e) {
-                logDebug('更新搜索控制器状态失败: $e');
-              }
+          // 重置搜索控制器状态
+          try {
+            final searchController = Provider.of<NoteSearchController>(
+              context,
+              listen: false,
+            );
+            searchController.resetSearchState();
+          } catch (e) {
+            logDebug('重置搜索控制器状态失败: $e');
+          }
 
-              if (isFirstLoad) {
-                isFirstLoad = false;
-              }
-            }
-          },
-          onError: (error) {
-            if (mounted) {
-              setState(() {
-                _isLoading = false;
-              });
+          logError('加载笔记失败: $error', error: error, source: 'NoteListView');
 
-              // 重置搜索控制器状态
-              try {
-                final searchController = Provider.of<NoteSearchController>(
-                  context,
-                  listen: false,
-                );
-                searchController.resetSearchState();
-              } catch (e) {
-                logDebug('重置搜索控制器状态失败: $e');
-              }
-
-              logError('加载笔记失败: $error', error: error, source: 'NoteListView');
-
-              // 显示错误提示
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    '加载失败: ${error.toString().contains('TimeoutException') ? '查询超时' : error.toString()}',
-                  ),
-                  duration: AppConstants.snackBarDurationImportant,
-                  backgroundColor: Colors.red,
-                  action: SnackBarAction(
-                    label: '重试',
-                    textColor: Colors.white,
-                    onPressed: () => _updateStreamSubscription(),
-                  ),
-                ),
-              );
-            }
-          },
-        );
+          // 显示错误提示
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '加载失败: ${error.toString().contains('TimeoutException') ? '查询超时' : error.toString()}',
+              ),
+              duration: AppConstants.snackBarDurationImportant,
+              backgroundColor: Colors.red,
+              action: SnackBarAction(
+                label: '重试',
+                textColor: Colors.white,
+                onPressed: () => _updateStreamSubscription(),
+              ),
+            ),
+          );
+        }
+      },
+    );
     // 注释掉重复的loadMore调用，因为watchQuotes已经会自动加载数据
     // _loadMore(); // 这行导致双重加载和滚动位置混乱
   }
@@ -582,8 +577,8 @@ class NoteListViewState extends State<NoteListView> {
       }
 
       // 判断是否仅为排序变化（不影响列表内容，只影响顺序）
-      final bool isOnlySortChange =
-          oldWidget.searchQuery == widget.searchQuery &&
+      final bool isOnlySortChange = oldWidget.searchQuery ==
+              widget.searchQuery &&
           _areListsEqual(oldWidget.selectedTagIds, widget.selectedTagIds) &&
           _areListsEqual(oldWidget.selectedWeathers, widget.selectedWeathers) &&
           _areListsEqual(
@@ -658,129 +653,124 @@ class NoteListViewState extends State<NoteListView> {
 
     _quotesSub = db
         .watchQuotes(
-          tagIds: widget.selectedTagIds.isNotEmpty
-              ? widget.selectedTagIds
-              : null,
-          limit: _pageSize,
-          orderBy: widget.sortType == 'time'
-              ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
-              : widget.sortType == 'favorite'
+      tagIds: widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
+      limit: _pageSize,
+      orderBy: widget.sortType == 'time'
+          ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
+          : widget.sortType == 'favorite'
               ? 'favorite_count ${widget.sortAscending ? 'ASC' : 'DESC'}'
               : 'content ${widget.sortAscending ? 'ASC' : 'DESC'}',
-          searchQuery: widget.searchQuery.isNotEmpty
-              ? widget.searchQuery
-              : null,
-          selectedWeathers: widget.selectedWeathers.isNotEmpty
-              ? widget.selectedWeathers
-              : null,
-          selectedDayPeriods: widget.selectedDayPeriods.isNotEmpty
-              ? widget.selectedDayPeriods
-              : null,
-        )
+      searchQuery: widget.searchQuery.isNotEmpty ? widget.searchQuery : null,
+      selectedWeathers:
+          widget.selectedWeathers.isNotEmpty ? widget.selectedWeathers : null,
+      selectedDayPeriods: widget.selectedDayPeriods.isNotEmpty
+          ? widget.selectedDayPeriods
+          : null,
+    )
         .listen(
-          (list) {
-            if (mounted) {
-              setState(() {
-                _quotes.clear();
-                _quotes.addAll(list);
-                _hasMore = list.length >= _pageSize;
-                _isLoading = false;
-                _pruneExpansionControllers();
-              });
+      (list) {
+        if (mounted) {
+          setState(() {
+            _quotes.clear();
+            _quotes.addAll(list);
+            _hasMore = list.length >= _pageSize;
+            _isLoading = false;
+            _pruneExpansionControllers();
+          });
 
-              if (widget.onGuideTargetsReady != null) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (!mounted) return;
-                  widget.onGuideTargetsReady!.call();
-                });
-              }
+          if (widget.onGuideTargetsReady != null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              widget.onGuideTargetsReady!.call();
+            });
+          }
 
-              // Restore scroll position smoothly (only if preserveScrollPosition is true)
+          // Restore scroll position smoothly (only if preserveScrollPosition is true)
+          if (savedScrollOffset != null &&
+              _scrollController.hasClients &&
+              _initialDataLoaded) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
               if (savedScrollOffset != null &&
                   _scrollController.hasClients &&
-                  _initialDataLoaded) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  if (savedScrollOffset != null &&
-                      _scrollController.hasClients &&
-                      savedScrollOffset <=
-                          _scrollController.position.maxScrollExtent) {
-                    _scrollController.animateTo(
-                      savedScrollOffset,
-                      duration: const Duration(milliseconds: 200),
-                      curve: Curves.easeOut,
-                    );
-                    logDebug(
-                      '平滑恢复滚动位置: $savedScrollOffset',
-                      source: 'NoteListView',
-                    );
-                  } else {
-                    logDebug('滚动位置超出范围或条件不满足，保持当前位置', source: 'NoteListView');
-                  }
-                });
-              }
-
-              // 修复：同步 _hasMore 状态与数据库服务状态
-              final dbServiceForSync = Provider.of<DatabaseService>(
-                context,
-                listen: false,
-              );
-              if (_hasMore != dbServiceForSync.hasMoreQuotes) {
+                  savedScrollOffset <=
+                      _scrollController.position.maxScrollExtent) {
+                _scrollController.animateTo(
+                  savedScrollOffset,
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeOut,
+                );
                 logDebug(
-                  '更新订阅后同步 _hasMore 状态: $_hasMore -> ${dbServiceForSync.hasMoreQuotes}',
+                  '平滑恢复滚动位置: $savedScrollOffset',
                   source: 'NoteListView',
                 );
-                _hasMore = dbServiceForSync.hasMoreQuotes;
+              } else {
+                logDebug('滚动位置超出范围或条件不满足，保持当前位置', source: 'NoteListView');
               }
-              // 重置滚动范围检查计数器
-              _scrollExtentCheckCounter = 0;
+            });
+          }
 
-              // 通知搜索控制器数据加载完成
-              try {
-                final searchController = Provider.of<NoteSearchController>(
-                  context,
-                  listen: false,
-                );
-                searchController.setSearchState(false);
-              } catch (e) {
-                logDebug('更新搜索控制器状态失败: $e');
-              }
+          // 修复：同步 _hasMore 状态与数据库服务状态
+          final dbServiceForSync = Provider.of<DatabaseService>(
+            context,
+            listen: false,
+          );
+          if (_hasMore != dbServiceForSync.hasMoreQuotes) {
+            logDebug(
+              '更新订阅后同步 _hasMore 状态: $_hasMore -> ${dbServiceForSync.hasMoreQuotes}',
+              source: 'NoteListView',
+            );
+            _hasMore = dbServiceForSync.hasMoreQuotes;
+          }
+          // 重置滚动范围检查计数器
+          _scrollExtentCheckCounter = 0;
 
-              logDebug(
-                '数据流更新完成，加载了 ${list.length} 条记录',
-                source: 'NoteListView',
-              );
-            }
-          },
-          onError: (error) {
-            if (mounted) {
-              setState(() {
-                _isLoading = false; // 出错时停止加载
-              });
+          // 通知搜索控制器数据加载完成
+          try {
+            final searchController = Provider.of<NoteSearchController>(
+              context,
+              listen: false,
+            );
+            searchController.setSearchState(false);
+          } catch (e) {
+            logDebug('更新搜索控制器状态失败: $e');
+          }
 
-              // 重置搜索控制器状态
-              try {
-                final searchController = Provider.of<NoteSearchController>(
-                  context,
-                  listen: false,
-                );
-                searchController.resetSearchState();
-              } catch (e) {
-                logDebug('重置搜索控制器状态失败: $e');
-              }
+          logDebug(
+            '数据流更新完成，加载了 ${list.length} 条记录',
+            source: 'NoteListView',
+          );
+        }
+      },
+      onError: (error) {
+        if (mounted) {
+          setState(() {
+            _isLoading = false; // 出错时停止加载
+          });
 
-              logError('数据流加载失败: $error', error: error, source: 'NoteListView');
+          // 重置搜索控制器状态
+          try {
+            final searchController = Provider.of<NoteSearchController>(
+              context,
+              listen: false,
+            );
+            searchController.resetSearchState();
+          } catch (e) {
+            logDebug('重置搜索控制器状态失败: $e');
+          }
 
-              // 优化：更友好的错误提示
-              String errorMessage = '加载笔记失败';
-              if (error.toString().contains('TimeoutException')) {
-                errorMessage = '查询超时，请重试';
-              } else if (error.toString().contains('DatabaseException')) {
-                errorMessage = '数据库查询出错';
-              }
-              _showErrorSnackBar(errorMessage);
-            }
-          },
-        );
+          logError('数据流加载失败: $error', error: error, source: 'NoteListView');
+
+          // 优化：更友好的错误提示
+          String errorMessage = '加载笔记失败';
+          if (error.toString().contains('TimeoutException')) {
+            errorMessage = '查询超时，请重试';
+          } else if (error.toString().contains('DatabaseException')) {
+            errorMessage = '数据库查询出错';
+          }
+          _showErrorSnackBar(errorMessage);
+        }
+      },
+    );
   }
 
   /// 优化：显示错误提示的统一方法
@@ -865,10 +855,8 @@ class NoteListViewState extends State<NoteListView> {
   }
 
   void _pruneExpansionControllers() {
-    final activeIds = _quotes
-        .map((quote) => quote.id)
-        .whereType<String>()
-        .toSet();
+    final activeIds =
+        _quotes.map((quote) => quote.id).whereType<String>().toSet();
 
     final removableIds = _expansionNotifiers.keys
         .where((id) => !activeIds.contains(id))
@@ -944,8 +932,7 @@ class NoteListViewState extends State<NoteListView> {
       final currentOffset = position.pixels;
 
       if (viewportExtent > 0) {
-        final topVisible =
-            targetOffset >= currentOffset &&
+        final topVisible = targetOffset >= currentOffset &&
             targetOffset < currentOffset + viewportExtent;
         if (topVisible) {
           logDebug('笔记顶部已在视口内，跳过自动滚动', source: 'NoteListView');
@@ -956,9 +943,8 @@ class NoteListViewState extends State<NoteListView> {
       final minExtent = position.minScrollExtent;
       final maxExtent = position.maxScrollExtent;
 
-      double desiredOffset = (targetOffset - 12.0)
-          .clamp(minExtent, maxExtent)
-          .toDouble();
+      double desiredOffset =
+          (targetOffset - 12.0).clamp(minExtent, maxExtent).toDouble();
 
       if ((currentOffset - desiredOffset).abs() <= 4) {
         logDebug('目标偏移量变化较小，跳过自动滚动', source: 'NoteListView');
@@ -973,19 +959,17 @@ class NoteListViewState extends State<NoteListView> {
 
       _scrollController
           .animateTo(
-            desiredOffset,
-            duration: QuoteItemWidget.expandCollapseDuration,
-            curve: Curves.easeOutCubic,
-          )
+        desiredOffset,
+        duration: QuoteItemWidget.expandCollapseDuration,
+        curve: Curves.easeOutCubic,
+      )
           .then((_) {
-            logDebug('滚动完成', source: 'NoteListView');
-          })
-          .catchError((e) {
-            logDebug('滚动失败: $e', source: 'NoteListView');
-          })
-          .whenComplete(() {
-            _isAutoScrolling = false;
-          });
+        logDebug('滚动完成', source: 'NoteListView');
+      }).catchError((e) {
+        logDebug('滚动失败: $e', source: 'NoteListView');
+      }).whenComplete(() {
+        _isAutoScrolling = false;
+      });
     } catch (e, st) {
       logDebug('滚动失败: $e\n$st', source: 'NoteListView');
       _isAutoScrolling = false;
@@ -1187,12 +1171,10 @@ class NoteListViewState extends State<NoteListView> {
               quote,
             );
 
-            final attachFavoriteGuideKey =
-                !favoriteGuideAssigned &&
+            final attachFavoriteGuideKey = !favoriteGuideAssigned &&
                 widget.favoriteButtonGuideKey != null &&
                 widget.onFavorite != null;
-            final attachFoldGuideKey =
-                !foldGuideAssigned &&
+            final attachFoldGuideKey = !foldGuideAssigned &&
                 widget.foldToggleGuideKey != null &&
                 needsExpansion;
 
@@ -1227,7 +1209,7 @@ class NoteListViewState extends State<NoteListView> {
                     if (!expanded && requiresAlignment) {
                       final waitDuration =
                           QuoteItemWidget.expandCollapseDuration +
-                          const Duration(milliseconds: 80);
+                              const Duration(milliseconds: 80);
                       Future.delayed(waitDuration, () {
                         if (!mounted) return;
                         WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1249,9 +1231,8 @@ class NoteListViewState extends State<NoteListView> {
                   favoriteButtonGuideKey: attachFavoriteGuideKey
                       ? widget.favoriteButtonGuideKey
                       : null,
-                  foldToggleGuideKey: attachFoldGuideKey
-                      ? widget.foldToggleGuideKey
-                      : null,
+                  foldToggleGuideKey:
+                      attachFoldGuideKey ? widget.foldToggleGuideKey : null,
                   // 不使用自定义 tagBuilder，让 QuoteItemWidget 使用内部的标签渲染逻辑
                   // 这样可以支持筛选标签的优先显示和高亮效果
                 ),
@@ -1274,8 +1255,7 @@ class NoteListViewState extends State<NoteListView> {
     _searchDebounceTimer?.cancel();
 
     // 性能优化：只在必要时调用 setState，避免不必要的重建
-    final shouldSetLoading =
-        (value.isEmpty && widget.searchQuery.isNotEmpty) ||
+    final shouldSetLoading = (value.isEmpty && widget.searchQuery.isNotEmpty) ||
         (value.isNotEmpty && value.length >= AppConstants.minSearchLength);
 
     if (shouldSetLoading && !_isLoading) {
@@ -1465,25 +1445,24 @@ class NoteListViewState extends State<NoteListView> {
                                 sortAscending: widget.sortAscending,
                                 selectedWeathers: widget.selectedWeathers,
                                 selectedDayPeriods: widget.selectedDayPeriods,
-                                onApply:
-                                    (
-                                      tagIds,
-                                      sortType,
-                                      sortAscending,
-                                      selectedWeathers,
-                                      selectedDayPeriods,
-                                    ) {
-                                      widget.onTagSelectionChanged(tagIds);
-                                      widget.onSortChanged(
-                                        sortType,
-                                        sortAscending,
-                                      );
-                                      widget.onFilterChanged(
-                                        selectedWeathers,
-                                        selectedDayPeriods,
-                                      );
-                                      _updateStreamSubscription();
-                                    },
+                                onApply: (
+                                  tagIds,
+                                  sortType,
+                                  sortAscending,
+                                  selectedWeathers,
+                                  selectedDayPeriods,
+                                ) {
+                                  widget.onTagSelectionChanged(tagIds);
+                                  widget.onSortChanged(
+                                    sortType,
+                                    sortAscending,
+                                  );
+                                  widget.onFilterChanged(
+                                    selectedWeathers,
+                                    selectedDayPeriods,
+                                  );
+                                  _updateStreamSubscription();
+                                },
                               ),
                             );
                           },
@@ -1557,8 +1536,7 @@ class NoteListViewState extends State<NoteListView> {
 
   /// 构建现代化的筛选条件展示区域
   Widget _buildFilterDisplay(ThemeData theme, double horizontalPadding) {
-    final hasFilters =
-        widget.selectedTagIds.isNotEmpty ||
+    final hasFilters = widget.selectedTagIds.isNotEmpty ||
         widget.selectedWeathers.isNotEmpty ||
         widget.selectedDayPeriods.isNotEmpty;
 
@@ -1666,9 +1644,8 @@ class NoteListViewState extends State<NoteListView> {
       final Set<String> knownKeys = categorySet
           .expand((cat) => WeatherService.getWeatherKeysByFilterCategory(cat))
           .toSet();
-      final List<String> others = widget.selectedWeathers
-          .where((k) => !knownKeys.contains(k))
-          .toList();
+      final List<String> others =
+          widget.selectedWeathers.where((k) => !knownKeys.contains(k)).toList();
       for (final k in others) {
         final label = WeatherService.weatherKeyToLabel[k] ?? k;
         allChips.add(

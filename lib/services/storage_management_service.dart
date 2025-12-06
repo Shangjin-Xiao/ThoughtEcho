@@ -172,9 +172,8 @@ class StorageManagementService {
       aiDatabaseSize: results[2] as int,
       mediaFilesSize: (results[3] as Map<String, dynamic>)['total'] as int,
       cacheSize: results[4] as int,
-      mediaBreakdown:
-          (results[3] as Map<String, dynamic>)['breakdown']
-              as MediaFilesBreakdown,
+      mediaBreakdown: (results[3] as Map<String, dynamic>)['breakdown']
+          as MediaFilesBreakdown,
     );
   }
 

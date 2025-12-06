@@ -283,9 +283,8 @@ class IconUtils {
     final List<MapEntry<String, dynamic>> allIcons = [];
 
     // 添加基础emoji
-    final allEmojis = emojiCategories.values
-        .expand((emojis) => emojis)
-        .toList();
+    final allEmojis =
+        emojiCategories.values.expand((emojis) => emojis).toList();
     allIcons.addAll(allEmojis.map((emoji) => MapEntry(emoji, emoji)));
 
     // 添加Material图标

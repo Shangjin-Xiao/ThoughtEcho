@@ -26,9 +26,9 @@ class BackupService {
     required DatabaseService databaseService,
     required SettingsService settingsService,
     required AIAnalysisDatabaseService aiAnalysisDbService,
-  }) : _databaseService = databaseService,
-       _settingsService = settingsService,
-       _aiAnalysisDbService = aiAnalysisDbService;
+  })  : _databaseService = databaseService,
+        _settingsService = settingsService,
+        _aiAnalysisDbService = aiAnalysisDbService;
 
   static const String _backupDataFile = 'backup_data.json';
   static const String _backupVersion = '1.2.0'; // 版本更新，因为数据结构变化
@@ -77,8 +77,7 @@ class BackupService {
   }) async {
     final tempDir = await getTemporaryDirectory();
     final backupId = DateTime.now().millisecondsSinceEpoch;
-    final archivePath =
-        customPath ??
+    final archivePath = customPath ??
         path.join(tempDir.path, 'thoughtecho_backup_$backupId.zip');
 
     File? jsonFile;
@@ -127,17 +126,17 @@ class BackupService {
       // 4. (可选) 收集媒体文件 - 使用优化的媒体处理器
       final mediaFilesMap =
           await BackupMediaProcessor.collectMediaFilesForBackup(
-            includeMediaFiles: includeMediaFiles,
-            onProgress: (current, total) {
-              // 媒体文件收集进度占总进度的25% (35% - 60%)
-              final mediaProgress = (current / 100 * 25).round();
-              onProgress?.call(35 + mediaProgress, 100);
-            },
-            onStatusUpdate: (status) {
-              logDebug('媒体处理状态: $status');
-            },
-            cancelToken: cancelToken,
-          );
+        includeMediaFiles: includeMediaFiles,
+        onProgress: (current, total) {
+          // 媒体文件收集进度占总进度的25% (35% - 60%)
+          final mediaProgress = (current / 100 * 25).round();
+          onProgress?.call(35 + mediaProgress, 100);
+        },
+        onStatusUpdate: (status) {
+          logDebug('媒体处理状态: $status');
+        },
+        cancelToken: cancelToken,
+      );
 
       // 将媒体文件添加到ZIP列表
       filesToZip.addAll(mediaFilesMap);
@@ -462,9 +461,9 @@ class BackupService {
             } else {
               final deltaJson =
                   await LargeFileManager.processLargeJson<Map<String, dynamic>>(
-                    deltaContent,
-                    encode: false,
-                  );
+                deltaContent,
+                encode: false,
+              );
               final convertedDelta = _convertDeltaMediaPaths(
                 deltaJson,
                 appPath,
@@ -472,9 +471,9 @@ class BackupService {
               );
               quote['deltaContent'] =
                   await LargeFileManager.processLargeJson<String>(
-                    convertedDelta,
-                    encode: true,
-                  );
+                convertedDelta,
+                encode: true,
+              );
             }
           } catch (e) {
             logDebug('处理笔记 ${quote['id']} 的富文本内容时出错: $e');
@@ -515,9 +514,9 @@ class BackupService {
             } else {
               final deltaJson =
                   await LargeFileManager.processLargeJson<Map<String, dynamic>>(
-                    deltaContent,
-                    encode: false,
-                  );
+                deltaContent,
+                encode: false,
+              );
               final convertedDelta = _convertDeltaMediaPaths(
                 deltaJson,
                 appPath,
@@ -525,9 +524,9 @@ class BackupService {
               );
               quote['deltaContent'] =
                   await LargeFileManager.processLargeJson<String>(
-                    convertedDelta,
-                    encode: true,
-                  );
+                convertedDelta,
+                encode: true,
+              );
             }
           } catch (e) {
             logDebug('处理笔记 ${quote['id']} 的富文本内容时出错: $e');

@@ -63,8 +63,8 @@ void main() {
       );
 
       // 获取格式化的提示
-      final formattedPrompt = await insightHistoryService
-          .formatRecentInsightsForDailyPrompt();
+      final formattedPrompt =
+          await insightHistoryService.formatRecentInsightsForDailyPrompt();
 
       expect(formattedPrompt.contains('参考洞察'), true);
       expect(formattedPrompt.contains('这周你展现了坚持的力量'), true);

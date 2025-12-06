@@ -94,8 +94,8 @@ class _CustomAudioEmbedBuilder extends quill.EmbedBuilder {
 class _OptimizedImageEmbedBuilder extends quill.EmbedBuilder {
   static const QuillEditorImageEmbedConfig _imageConfig =
       QuillEditorImageEmbedConfig(
-        imageProviderBuilder: _optimizedImageProviderBuilder,
-      );
+    imageProviderBuilder: _optimizedImageProviderBuilder,
+  );
 
   static ImageProvider? _optimizedImageProviderBuilder(
     BuildContext context,
@@ -382,7 +382,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
                     child: CircularProgressIndicator(
                       value: progress.expectedTotalBytes != null
                           ? progress.cumulativeBytesLoaded /
-                                progress.expectedTotalBytes!
+                              progress.expectedTotalBytes!
                           : null,
                       strokeWidth: 2,
                     ),

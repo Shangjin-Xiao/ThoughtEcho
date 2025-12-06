@@ -8,7 +8,7 @@ class DailyPromptGenerator {
     // 使用日期为种子选择一个提示，确保同一天显示相同提示
     final today = DateTime.now();
     final dayOfYear = today.difference(DateTime(today.year, 1, 1)).inDays;
-    
+
     // 所有默认提示
     final prompts = [
       l10n.promptDefault1,
@@ -24,7 +24,7 @@ class DailyPromptGenerator {
       l10n.promptDefault11,
       l10n.promptDefault12,
     ];
-    
+
     final index = dayOfYear % prompts.length;
     return prompts[index];
   }

@@ -94,9 +94,8 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
             : info.computerName.trim();
       } else if (Platform.isLinux) {
         final info = await plugin.linuxInfo;
-        model = info.prettyName.trim().isEmpty
-            ? 'Linux'
-            : info.prettyName.trim();
+        model =
+            info.prettyName.trim().isEmpty ? 'Linux' : info.prettyName.trim();
       } else {
         model = Platform.operatingSystem;
       }

@@ -68,9 +68,8 @@ class StreamingFileProcessor {
 
         // 计算本次读取的大小
         final remainingBytes = totalSize - copiedBytes;
-        final bytesToRead = remainingBytes < chunkSize
-            ? remainingBytes
-            : chunkSize;
+        final bytesToRead =
+            remainingBytes < chunkSize ? remainingBytes : chunkSize;
 
         // 读取数据块
         final bytesRead = await sourceFile.readInto(buffer, 0, bytesToRead);

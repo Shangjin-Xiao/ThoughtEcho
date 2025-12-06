@@ -109,7 +109,8 @@ class _WelcomePageViewState extends State<WelcomePageView>
     final locationService = context.read<LocationService>();
     settingsService.setLocale(selectedCode.isEmpty ? null : selectedCode);
     // 同步更新位置服务的语言设置
-    locationService.currentLocaleCode = selectedCode.isEmpty ? null : selectedCode;
+    locationService.currentLocaleCode =
+        selectedCode.isEmpty ? null : selectedCode;
   }
 
   @override

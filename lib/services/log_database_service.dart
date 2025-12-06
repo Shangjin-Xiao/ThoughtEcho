@@ -217,15 +217,13 @@ class WebLogStorage implements LogStorage {
     }
 
     if (startDate != null) {
-      logs = logs
-          .where((log) => log.timestamp.compareTo(startDate) >= 0)
-          .toList();
+      logs =
+          logs.where((log) => log.timestamp.compareTo(startDate) >= 0).toList();
     }
 
     if (endDate != null) {
-      logs = logs
-          .where((log) => log.timestamp.compareTo(endDate) <= 0)
-          .toList();
+      logs =
+          logs.where((log) => log.timestamp.compareTo(endDate) <= 0).toList();
     }
 
     // 排序
@@ -582,9 +580,8 @@ class NativeLogStorage implements LogStorage {
         arguments.add(endDate);
       }
 
-      final whereClause = conditions.isNotEmpty
-          ? conditions.join(' AND ')
-          : null;
+      final whereClause =
+          conditions.isNotEmpty ? conditions.join(' AND ') : null;
 
       // 执行查询
       return await db.query(

@@ -93,8 +93,8 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
     }
     return _analyses.where((analysis) {
       return analysis.content.toLowerCase().contains(
-            _searchQuery.toLowerCase(),
-          ) ||
+                _searchQuery.toLowerCase(),
+              ) ||
           analysis.title.toLowerCase().contains(_searchQuery.toLowerCase());
     }).toList();
   }
@@ -124,7 +124,8 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(AppLocalizations.of(context).serviceNotInitializedDeleteFailed),
+              content: Text(AppLocalizations.of(context)
+                  .serviceNotInitializedDeleteFailed),
               duration: AppConstants.snackBarDurationError,
             ),
           );
@@ -184,7 +185,8 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(AppLocalizations.of(context).serviceNotInitializedDeleteFailed),
+              content: Text(AppLocalizations.of(context)
+                  .serviceNotInitializedDeleteFailed),
               duration: AppConstants.snackBarDurationError,
             ),
           );
@@ -277,10 +279,10 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                     Text(
                       analysis.createdAt,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.7),
+                          ),
                     ),
                     const SizedBox(height: 20),
                     Text(
@@ -298,15 +300,14 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                       ),
                       child: MarkdownBody(
                         data: analysis.content,
-                        styleSheet:
-                            MarkdownStyleSheet.fromTheme(
-                              Theme.of(context),
-                            ).copyWith(
-                              p: Theme.of(context).textTheme.bodyMedium,
-                              h1: Theme.of(context).textTheme.titleLarge,
-                              h2: Theme.of(context).textTheme.titleMedium,
-                              h3: Theme.of(context).textTheme.titleSmall,
-                            ),
+                        styleSheet: MarkdownStyleSheet.fromTheme(
+                          Theme.of(context),
+                        ).copyWith(
+                          p: Theme.of(context).textTheme.bodyMedium,
+                          h1: Theme.of(context).textTheme.titleLarge,
+                          h2: Theme.of(context).textTheme.titleMedium,
+                          h3: Theme.of(context).textTheme.titleSmall,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -325,59 +326,58 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                       ),
                       child: MarkdownBody(
                         data: analysis.content,
-                        styleSheet:
-                            MarkdownStyleSheet.fromTheme(
-                              Theme.of(context),
-                            ).copyWith(
-                              p: Theme.of(context).textTheme.bodyMedium,
-                              h1: Theme.of(context).textTheme.titleLarge,
-                              h2: Theme.of(context).textTheme.titleMedium,
-                              h3: Theme.of(context).textTheme.titleSmall,
-                              code: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
+                        styleSheet: MarkdownStyleSheet.fromTheme(
+                          Theme.of(context),
+                        ).copyWith(
+                          p: Theme.of(context).textTheme.bodyMedium,
+                          h1: Theme.of(context).textTheme.titleLarge,
+                          h2: Theme.of(context).textTheme.titleMedium,
+                          h3: Theme.of(context).textTheme.titleSmall,
+                          code:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     backgroundColor: Theme.of(
                                       context,
                                     ).colorScheme.surfaceContainerHigh,
                                     fontFamily: 'monospace',
                                     fontSize: 14,
                                   ),
-                              codeblockPadding: const EdgeInsets.all(12),
-                              codeblockDecoration: BoxDecoration(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.surfaceContainerHigh,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.outline.withValues(alpha: 0.2),
-                                  width: 1,
-                                ),
-                              ),
-                              blockquote: Theme.of(context).textTheme.bodyMedium
-                                  ?.copyWith(
+                          codeblockPadding: const EdgeInsets.all(12),
+                          codeblockDecoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHigh,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.outline.withValues(alpha: 0.2),
+                              width: 1,
+                            ),
+                          ),
+                          blockquote:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     fontStyle: FontStyle.italic,
                                     color: Theme.of(context)
                                         .colorScheme
                                         .onSurface
                                         .withValues(alpha: 0.8),
                                   ),
-                              blockquotePadding: const EdgeInsets.all(12),
-                              blockquoteDecoration: BoxDecoration(
+                          blockquotePadding: const EdgeInsets.all(12),
+                          blockquoteDecoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerLow,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border(
+                              left: BorderSide(
                                 color: Theme.of(
                                   context,
-                                ).colorScheme.surfaceContainerLow,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border(
-                                  left: BorderSide(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
-                                    width: 4,
-                                  ),
-                                ),
+                                ).colorScheme.primary,
+                                width: 4,
                               ),
                             ),
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -516,7 +516,8 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(AppLocalizations.of(context).selectReportTypePrompt, style: const TextStyle(fontSize: 16)),
+              Text(AppLocalizations.of(context).selectReportTypePrompt,
+                  style: const TextStyle(fontSize: 16)),
               const SizedBox(height: 20),
               _buildReportOption(
                 context,
@@ -531,7 +532,8 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                 context,
                 icon: Icons.dashboard,
                 title: AppLocalizations.of(context).nativeFlutterReport,
-                description: AppLocalizations.of(context).nativeFlutterReportDesc,
+                description:
+                    AppLocalizations.of(context).nativeFlutterReportDesc,
                 color: Colors.blue,
                 onTap: () => Navigator.pop(context, 'flutter'),
               ),
@@ -574,7 +576,8 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context).generateAnnualReportFailed),
+            content:
+                Text(AppLocalizations.of(context).generateAnnualReportFailed),
             duration: AppConstants.snackBarDurationError,
           ),
         );
@@ -628,9 +631,8 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
         0,
         (sum, quote) => sum + quote.content.split('').length,
       );
-      final averageWordsPerNote = totalNotes > 0
-          ? (totalWords / totalNotes).round()
-          : 0;
+      final averageWordsPerNote =
+          totalNotes > 0 ? (totalWords / totalNotes).round() : 0;
 
       // 计算活跃天数
       final uniqueDates = quotes.map((quote) {
@@ -724,8 +726,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
       // 尝试AI生成，如果失败则使用备用方案
       String result;
       try {
-        final prompt =
-            '''
+        final prompt = '''
 请基于以下数据生成一个完整的HTML年度报告。
 
 数据统计：
@@ -778,7 +779,8 @@ $positiveQuotesText
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(AppLocalizations.of(context).aiReturnFormatAbnormal),
+                content:
+                    Text(AppLocalizations.of(context).aiReturnFormatAbnormal),
                 duration: AppConstants.snackBarDurationImportant,
               ),
             );
@@ -832,7 +834,8 @@ $positiveQuotesText
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${AppLocalizations.of(context).generateAnnualReportFailed}: ${e.toString()}'),
+            content: Text(
+                '${AppLocalizations.of(context).generateAnnualReportFailed}: ${e.toString()}'),
             duration: AppConstants.snackBarDurationError,
           ),
         );
@@ -875,25 +878,19 @@ $positiveQuotesText
     }).join('\n');
 
     // 生成分类标签云HTML
-    final tagCloud = categoryCounts.entries
-        .take(10)
-        .map((entry) {
-          final isPopular = entry.value > (totalNotes * 0.1);
-          return '<span class="tag${isPopular ? ' popular' : ''}">${entry.key}</span>';
-        })
-        .join('');
+    final tagCloud = categoryCounts.entries.take(10).map((entry) {
+      final isPopular = entry.value > (totalNotes * 0.1);
+      return '<span class="tag${isPopular ? ' popular' : ''}">${entry.key}</span>';
+    }).join('');
 
     // 生成精选笔记HTML
-    final featuredQuotes = positiveQuotes
-        .take(3)
-        .map((quote) {
-          final content = quote.content.length > 150
-              ? '${quote.content.substring(0, 150)}...'
-              : quote.content;
-          final date = DateTime.parse(quote.date).toString().substring(0, 10);
-          return '<div class="quote-card"><div class="quote-content">$content</div><div class="quote-date">$date</div></div>';
-        })
-        .join('\n');
+    final featuredQuotes = positiveQuotes.take(3).map((quote) {
+      final content = quote.content.length > 150
+          ? '${quote.content.substring(0, 150)}...'
+          : quote.content;
+      final date = DateTime.parse(quote.date).toString().substring(0, 10);
+      return '<div class="quote-card"><div class="quote-content">$content</div><div class="quote-date">$date</div></div>';
+    }).join('\n');
 
     // 生成成就HTML
     final achievements = [
@@ -1037,121 +1034,125 @@ $positiveQuotesText
             child: _isLoading
                 ? const AppLoadingView()
                 : filteredAnalyses.isEmpty
-                ? AppEmptyView(
-                    svgAsset: 'assets/empty/empty_state.svg',
-                    text: _analyses.isEmpty
-                        ? '暂无AI分析记录\n在笔记页面点击AI分析按钮，开始你的第一次AI分析吧！'
-                        : '未找到匹配的记录\n尝试使用其他关键词搜索',
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: filteredAnalyses.length,
-                    itemBuilder: (context, index) {
-                      final analysis = filteredAnalyses[index];
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            AppTheme.cardRadius,
-                          ),
-                        ),
-                        child: InkWell(
-                          onTap: () => _viewAnalysisDetails(analysis),
-                          borderRadius: BorderRadius.circular(
-                            AppTheme.cardRadius,
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
+                    ? AppEmptyView(
+                        svgAsset: 'assets/empty/empty_state.svg',
+                        text: _analyses.isEmpty
+                            ? '暂无AI分析记录\n在笔记页面点击AI分析按钮，开始你的第一次AI分析吧！'
+                            : '未找到匹配的记录\n尝试使用其他关键词搜索',
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: filteredAnalyses.length,
+                        itemBuilder: (context, index) {
+                          final analysis = filteredAnalyses[index];
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                AppTheme.cardRadius,
+                              ),
+                            ),
+                            child: InkWell(
+                              onTap: () => _viewAnalysisDetails(analysis),
+                              borderRadius: BorderRadius.circular(
+                                AppTheme.cardRadius,
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Icon(
-                                      _getAnalysisTypeIcon(
-                                        analysis.analysisType,
-                                      ),
-                                      size: 20,
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.primary,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        _getAnalysisTypeName(
-                                          analysis.analysisType,
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          _getAnalysisTypeIcon(
+                                            analysis.analysisType,
+                                          ),
+                                          size: 20,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.primary,
                                         ),
-                                        style: Theme.of(
-                                          context,
-                                        ).textTheme.titleMedium,
-                                      ),
-                                    ),
-                                    Text(
-                                      analysis.createdAt,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall
-                                          ?.copyWith(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurface
-                                                .withValues(alpha: 0.6),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            _getAnalysisTypeName(
+                                              analysis.analysisType,
+                                            ),
+                                            style: Theme.of(
+                                              context,
+                                            ).textTheme.titleMedium,
                                           ),
-                                    ),
-                                    PopupMenuButton<String>(
-                                      onSelected: (value) {
-                                        if (value == 'delete') {
-                                          _deleteAnalysis(analysis);
-                                        }
-                                      },
-                                      itemBuilder: (context) => [
-                                        PopupMenuItem(
-                                          value: 'delete',
-                                          child: Row(
-                                            children: [
-                                              Icon(Icons.delete, size: 16),
-                                              SizedBox(width: 8),
-                                              Text(AppLocalizations.of(context).delete),
-                                            ],
-                                          ),
+                                        ),
+                                        Text(
+                                          analysis.createdAt,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurface
+                                                    .withValues(alpha: 0.6),
+                                              ),
+                                        ),
+                                        PopupMenuButton<String>(
+                                          onSelected: (value) {
+                                            if (value == 'delete') {
+                                              _deleteAnalysis(analysis);
+                                            }
+                                          },
+                                          itemBuilder: (context) => [
+                                            PopupMenuItem(
+                                              value: 'delete',
+                                              child: Row(
+                                                children: [
+                                                  Icon(Icons.delete, size: 16),
+                                                  SizedBox(width: 8),
+                                                  Text(AppLocalizations.of(
+                                                          context)
+                                                      .delete),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      analysis.content,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.surfaceContainerHighest,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        analysis.title,
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.bodySmall,
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
                                   ],
                                 ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  analysis.content,
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 8),
-                                Container(
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.surfaceContainerHighest,
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    analysis.title,
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodySmall,
-                                    maxLines: 3,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                          );
+                        },
+                      ),
           ),
         ],
       ),

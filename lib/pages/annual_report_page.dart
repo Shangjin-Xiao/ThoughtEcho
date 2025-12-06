@@ -174,19 +174,15 @@ class _AnnualReportPageState extends State<AnnualReportPage>
         : null;
 
     // 最常用标签名（topTags 已解析名称）
-    final topTagName = stats.topTags.isNotEmpty
-        ? stats.topTags.first.name
-        : null;
+    final topTagName =
+        stats.topTags.isNotEmpty ? stats.topTags.first.name : null;
 
     // 笔记片段预览（最多5条，每条截断80字）
-    final samples = quotes
-        .take(5)
-        .map((q) {
-          var t = q.content.trim().replaceAll('\n', ' ');
-          if (t.length > 80) t = '${t.substring(0, 80)}…';
-          return '- $t';
-        })
-        .join('\n');
+    final samples = quotes.take(5).map((q) {
+      var t = q.content.trim().replaceAll('\n', ' ');
+      if (t.length > 80) t = '${t.substring(0, 80)}…';
+      return '- $t';
+    }).join('\n');
 
     if (mounted) {
       setState(() {
@@ -220,53 +216,51 @@ class _AnnualReportPageState extends State<AnnualReportPage>
       final ai = context.read<AIService>();
 
       // 准备完整的笔记内容用于AI分析
-      final fullNotesContent = widget.quotes
-          .map((quote) {
-            final date = DateTime.parse(quote.date);
-            final dateStr = l10n.noteDate(
-              l10n.monthX(date.month),
-              l10n.dayOfMonth(date.day),
-            );
-            var content = quote.content.trim();
+      final fullNotesContent = widget.quotes.map((quote) {
+        final date = DateTime.parse(quote.date);
+        final dateStr = l10n.noteDate(
+          l10n.monthX(date.month),
+          l10n.dayOfMonth(date.day),
+        );
+        var content = quote.content.trim();
 
-            // 添加位置信息
-            if (quote.location != null && quote.location!.isNotEmpty) {
-              content = '[$dateStr·${quote.location}]$content';
-            } else {
-              content = '[$dateStr]$content';
-            }
+        // 添加位置信息
+        if (quote.location != null && quote.location!.isNotEmpty) {
+          content = '[$dateStr·${quote.location}]$content';
+        } else {
+          content = '[$dateStr]$content';
+        }
 
-            // 添加天气信息
-            if (quote.weather != null && quote.weather!.isNotEmpty) {
-              content += l10n.noteWeather(quote.weather!);
-            }
+        // 添加天气信息
+        if (quote.weather != null && quote.weather!.isNotEmpty) {
+          content += l10n.noteWeather(quote.weather!);
+        }
 
-            return content;
-          })
-          .join('\n\n');
+        return content;
+      }).join('\n\n');
 
       _insightSub = ai
           .streamReportInsight(
-            periodLabel: periodLabel,
-            mostTimePeriod: _mostDayPeriod,
-            mostWeather: _mostWeather,
-            topTag: _mostTopTag,
-            activeDays: _stats!.activeDays,
-            noteCount: _stats!.totalNotes,
-            totalWordCount: _totalWordCount,
-            notesPreview: _notesPreview,
-            fullNotesContent: fullNotesContent, // 传递完整内容
-          )
+        periodLabel: periodLabel,
+        mostTimePeriod: _mostDayPeriod,
+        mostWeather: _mostWeather,
+        topTag: _mostTopTag,
+        activeDays: _stats!.activeDays,
+        noteCount: _stats!.totalNotes,
+        totalWordCount: _totalWordCount,
+        notesPreview: _notesPreview,
+        fullNotesContent: fullNotesContent, // 传递完整内容
+      )
           .listen(
-            (chunk) {
-              if (!mounted) return;
-              setState(() {
-                _insightText += chunk;
-              });
-            },
-            onError: (_) {
-              if (!mounted) return;
-              final local = context.read<AIService>().buildLocalReportInsight(
+        (chunk) {
+          if (!mounted) return;
+          setState(() {
+            _insightText += chunk;
+          });
+        },
+        onError: (_) {
+          if (!mounted) return;
+          final local = context.read<AIService>().buildLocalReportInsight(
                 periodLabel: periodLabel,
                 mostTimePeriod: _mostDayPeriod,
                 mostWeather: _mostWeather,
@@ -275,28 +269,28 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                 noteCount: _stats!.totalNotes,
                 totalWordCount: _totalWordCount,
               );
-              setState(() {
-                _insightText = local;
-                _insightLoading = false;
-              });
-            },
-            onDone: () {
-              if (!mounted) return;
-              setState(() {
-                _insightLoading = false;
-              });
-            },
-          );
+          setState(() {
+            _insightText = local;
+            _insightLoading = false;
+          });
+        },
+        onDone: () {
+          if (!mounted) return;
+          setState(() {
+            _insightLoading = false;
+          });
+        },
+      );
     } else {
       final local = context.read<AIService>().buildLocalReportInsight(
-        periodLabel: periodLabel,
-        mostTimePeriod: _mostDayPeriod,
-        mostWeather: _mostWeather,
-        topTag: _mostTopTag,
-        activeDays: _stats!.activeDays,
-        noteCount: _stats!.totalNotes,
-        totalWordCount: _totalWordCount,
-      );
+            periodLabel: periodLabel,
+            mostTimePeriod: _mostDayPeriod,
+            mostWeather: _mostWeather,
+            topTag: _mostTopTag,
+            activeDays: _stats!.activeDays,
+            noteCount: _stats!.totalNotes,
+            totalWordCount: _totalWordCount,
+          );
       setState(() {
         _insightText = local;
         _insightLoading = false;
@@ -314,14 +308,14 @@ class _AnnualReportPageState extends State<AnnualReportPage>
 
       _pageController
           .nextPage(
-            duration: const Duration(milliseconds: 600),
-            curve: Curves.easeInOutCubic,
-          )
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeInOutCubic,
+      )
           .then((_) {
-            setState(() {
-              _isAnimating = false;
-            });
-          });
+        setState(() {
+          _isAnimating = false;
+        });
+      });
     }
   }
 
@@ -333,17 +327,15 @@ class _AnnualReportPageState extends State<AnnualReportPage>
     // 如果统计数据还未加载完成，显示加载界面
     if (_stats == null) {
       return Scaffold(
-        backgroundColor: isDark
-            ? const Color(0xFF0A0A0A)
-            : const Color(0xFFF8F9FA),
+        backgroundColor:
+            isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF8F9FA),
         body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     return Scaffold(
-      backgroundColor: isDark
-          ? const Color(0xFF0A0A0A)
-          : const Color(0xFFF8F9FA),
+      backgroundColor:
+          isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF8F9FA),
       body: Stack(
         children: [
           // 背景渐变
@@ -467,20 +459,19 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             FadeTransition(
               opacity: _controller,
               child: SlideTransition(
-                position:
-                    Tween<Offset>(
-                      begin: const Offset(0, 0.5),
-                      end: Offset.zero,
-                    ).animate(
-                      CurvedAnimation(
-                        parent: _controller,
-                        curve: const Interval(
-                          0.0,
-                          0.6,
-                          curve: Curves.easeOutCubic,
-                        ),
-                      ),
+                position: Tween<Offset>(
+                  begin: const Offset(0, 0.5),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(
+                    parent: _controller,
+                    curve: const Interval(
+                      0.0,
+                      0.6,
+                      curve: Curves.easeOutCubic,
                     ),
+                  ),
+                ),
                 child: Text(
                   '${widget.year}',
                   style: const TextStyle(
@@ -498,20 +489,19 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             FadeTransition(
               opacity: _controller,
               child: SlideTransition(
-                position:
-                    Tween<Offset>(
-                      begin: const Offset(0, 0.3),
-                      end: Offset.zero,
-                    ).animate(
-                      CurvedAnimation(
-                        parent: _controller,
-                        curve: const Interval(
-                          0.2,
-                          0.8,
-                          curve: Curves.easeOutCubic,
-                        ),
-                      ),
+                position: Tween<Offset>(
+                  begin: const Offset(0, 0.3),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(
+                    parent: _controller,
+                    curve: const Interval(
+                      0.2,
+                      0.8,
+                      curve: Curves.easeOutCubic,
                     ),
+                  ),
+                ),
                 child: Text(
                   l10n.yourThoughtTrack,
                   style: const TextStyle(
@@ -529,20 +519,19 @@ class _AnnualReportPageState extends State<AnnualReportPage>
             FadeTransition(
               opacity: _controller,
               child: SlideTransition(
-                position:
-                    Tween<Offset>(
-                      begin: const Offset(0, 0.2),
-                      end: Offset.zero,
-                    ).animate(
-                      CurvedAnimation(
-                        parent: _controller,
-                        curve: const Interval(
-                          0.4,
-                          1.0,
-                          curve: Curves.easeOutCubic,
-                        ),
-                      ),
+                position: Tween<Offset>(
+                  begin: const Offset(0, 0.2),
+                  end: Offset.zero,
+                ).animate(
+                  CurvedAnimation(
+                    parent: _controller,
+                    curve: const Interval(
+                      0.4,
+                      1.0,
+                      curve: Curves.easeOutCubic,
                     ),
+                  ),
+                ),
                 child: Text(
                   l10n.annualReportTitle,
                   style: TextStyle(
@@ -988,9 +977,8 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                         final maxCount = _stats!.monthlyStats
                             .map((m) => m.count)
                             .reduce((a, b) => a > b ? a : b);
-                        final percentage = maxCount > 0
-                            ? month.count / maxCount
-                            : 0.0;
+                        final percentage =
+                            maxCount > 0 ? month.count / maxCount : 0.0;
 
                         return Container(
                           margin: const EdgeInsets.only(bottom: 16),
@@ -1218,13 +1206,13 @@ class _AnnualReportPageState extends State<AnnualReportPage>
     required double delay,
   }) {
     return SlideTransition(
-      position: Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero)
-          .animate(
-            CurvedAnimation(
-              parent: _controller,
-              curve: Interval(delay, delay + 0.5, curve: Curves.easeOutCubic),
-            ),
-          ),
+      position:
+          Tween<Offset>(begin: const Offset(1, 0), end: Offset.zero).animate(
+        CurvedAnimation(
+          parent: _controller,
+          curve: Interval(delay, delay + 0.5, curve: Curves.easeOutCubic),
+        ),
+      ),
       child: Container(
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
@@ -1565,15 +1553,13 @@ class AnnualStats {
       if (diff == 1) {
         currentStreak++;
       } else {
-        longestStreak = longestStreak > currentStreak
-            ? longestStreak
-            : currentStreak;
+        longestStreak =
+            longestStreak > currentStreak ? longestStreak : currentStreak;
         currentStreak = 1;
       }
     }
-    longestStreak = longestStreak > currentStreak
-        ? longestStreak
-        : currentStreak;
+    longestStreak =
+        longestStreak > currentStreak ? longestStreak : currentStreak;
 
     // 计算标签统计
     final Map<String, int> tagCounts = {};
@@ -1583,11 +1569,10 @@ class AnnualStats {
       }
     }
 
-    final topTags =
-        tagCounts.entries
-            .map((e) => TagStat(name: e.key, count: e.value))
-            .toList()
-          ..sort((a, b) => b.count.compareTo(a.count));
+    final topTags = tagCounts.entries
+        .map((e) => TagStat(name: e.key, count: e.value))
+        .toList()
+      ..sort((a, b) => b.count.compareTo(a.count));
 
     // 计算时间统计
     final hourCounts = <int, int>{};
@@ -1615,8 +1600,8 @@ class AnnualStats {
     ];
     final mostActiveWeekday = weekdayCounts.entries.isNotEmpty
         ? weekdayNames[weekdayCounts.entries
-              .reduce((a, b) => a.value > b.value ? a : b)
-              .key]
+            .reduce((a, b) => a.value > b.value ? a : b)
+            .key]
         : null;
 
     // 计算月度统计
