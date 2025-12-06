@@ -554,7 +554,7 @@ class UpdateBottomSheet extends StatelessWidget {
     final updateButtonLabel = isWindows ? l10n.updateGoToStore : l10n.updateNow;
     final updateButtonIcon = isWindows ? Icons.store : Icons.download;
 
-    // 按钮配置：永久忽略、本次忽略、查看详情、立即更新/前往商店
+    // 按钮配置：永久忽略、查看详情、立即更新/前往商店
     final buttons = [
       UpdateButtonConfig(
         type: UpdateButtonType.ignore,
@@ -573,11 +573,6 @@ class UpdateBottomSheet extends StatelessWidget {
             );
           }
         },
-      ),
-      UpdateButtonConfig(
-        type: UpdateButtonType.later,
-        label: AppLocalizations.of(context).updateIgnoreThisTime,
-        onPressed: () => Navigator.of(context).pop(),
       ),
       UpdateButtonConfig(
         type: UpdateButtonType.viewDetails,

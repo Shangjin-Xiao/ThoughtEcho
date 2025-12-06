@@ -2518,6 +2518,8 @@
   "apkNotificationTitle": "APK Download",
   "storagePermissionRequired": "Storage Permission Required",
   "storagePermissionDesc": "Storage permission is required to download APK files. Please allow storage access in settings.",
+  "installPermissionRequired": "Install Permission Required",
+  "installPermissionDesc": "Permission to install unknown apps is required to install APK. Please allow installing apps from unknown sources in settings.",
   "errorTitle": "Error",
   "cannotGetDownloadDir": "Cannot get download directory",
   "webPlatformApkNotSupported": "APK download is not supported on Web platform",

@@ -2518,6 +2518,8 @@
   "apkNotificationTitle": "APK下载",
   "storagePermissionRequired": "需要存储权限",
   "storagePermissionDesc": "下载APK文件需要存储权限。请在设置中允许应用访问存储空间。",
+  "installPermissionRequired": "需要安装权限",
+  "installPermissionDesc": "安装APK需要安装未知应用权限。请在设置中允许安装未知来源应用。",
   "errorTitle": "错误",
   "cannotGetDownloadDir": "无法获取下载目录",
   "webPlatformApkNotSupported": "Web 平台不支持 APK 下载",

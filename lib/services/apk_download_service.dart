@@ -294,6 +294,20 @@ class ApkDownloadService {
   static Future<void> _installApk(BuildContext context, String filePath) async {
     final l10n = AppLocalizations.of(context);
     try {
+      // Android 8.0+ 需要请求安装权限
+      if (Platform.isAndroid) {
+        final installStatus = await Permission.requestInstallPackages.status;
+        if (installStatus.isDenied) {
+          final result = await Permission.requestInstallPackages.request();
+          if (result.isDenied) {
+            if (context.mounted) {
+              _showInstallPermissionDialog(context);
+            }
+            return;
+          }
+        }
+      }
+
       final result = await OpenFile.open(filePath);
 
       if (result.type == ResultType.done) {
@@ -382,6 +396,33 @@ class ApkDownloadService {
         return AlertDialog(
           title: Text(l10n.storagePermissionRequired),
           content: Text(l10n.storagePermissionDesc),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                openAppSettings();
+              },
+              child: Text(l10n.goToSettings),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// 显示安装权限对话框
+  static void _showInstallPermissionDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(l10n.installPermissionRequired),
+          content: Text(l10n.installPermissionDesc),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(),
