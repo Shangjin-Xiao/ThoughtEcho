@@ -101,14 +101,8 @@ class LocationService extends ChangeNotifier {
   Future<void> init() async {
     logDebug('开始初始化位置服务');
     try {
-      // Windows平台简化位置服务初始化
-      if (!kIsWeb && Platform.isWindows) {
-        logDebug('Windows平台：跳过位置服务初始化');
-        _isLocationServiceEnabled = false;
-        _hasLocationPermission = false;
-        notifyListeners();
-        return;
-      }
+      // Windows平台使用geolocator_windows插件，支持系统定位服务
+      // 需要在Windows设置中启用位置服务：设置 > 隐私 > 位置
       _isLocationServiceEnabled = await Geolocator.isLocationServiceEnabled();
 
       // 只在位置服务启用时检查权限

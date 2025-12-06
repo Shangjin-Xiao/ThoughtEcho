@@ -25,23 +25,8 @@ class LocalGeocodingService {
     bool highAccuracy = false,
   }) async {
     try {
-      // Windows平台简化处理 - 返回模拟位置数据以保持API一致性
-      if (!kIsWeb && Platform.isWindows) {
-        logDebug('Windows平台：返回模拟位置数据');
-        // 返回北京市中心的模拟坐标，与getAddressFromCoordinates的行为保持一致
-        return Position(
-          latitude: 39.9042, // 北京市中心纬度
-          longitude: 116.4074, // 北京市中心经度
-          timestamp: DateTime.now(),
-          accuracy: 100.0, // 模拟精度100米
-          altitude: 0.0,
-          heading: 0.0,
-          speed: 0.0,
-          speedAccuracy: 0.0,
-          altitudeAccuracy: 0.0,
-          headingAccuracy: 0.0,
-        );
-      }
+      // Windows平台使用geolocator_windows插件获取真实位置
+      // 需要在Windows设置中启用位置服务：设置 > 隐私 > 位置
       // 检查位置服务是否启用
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
@@ -114,21 +99,10 @@ class LocalGeocodingService {
     try {
       final bool isEnglish = localeCode == 'en';
 
-      // Windows平台简化处理
+      // Windows平台：跳过系统地理编码（不支持），返回 null 让调用者使用在线服务
       if (!kIsWeb && Platform.isWindows) {
-        logDebug('Windows平台：使用在线地理编码服务');
-        // 返回对应语言的回退数据
-        return {
-          'country': isEnglish ? 'China' : '中国',
-          'province': isEnglish ? 'Unknown Province' : '未知省份',
-          'city': isEnglish ? 'Unknown City' : '未知城市',
-          'district': null,
-          'street': null,
-          'formatted_address': isEnglish
-              ? 'China, Unknown Province, Unknown City'
-              : '中国, 未知省份, 未知城市',
-          'source': 'fallback',
-        };
+        logDebug('Windows平台：系统地理编码不支持，将使用在线服务');
+        return null;
       }
 
       // 英文环境：跳过系统地理编码（无法控制语言），返回 null 让调用者使用在线服务

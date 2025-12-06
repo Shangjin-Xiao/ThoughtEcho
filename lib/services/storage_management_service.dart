@@ -8,6 +8,7 @@ import 'image_cache_service.dart';
 import 'weather_service.dart';
 import 'version_check_service.dart';
 import 'media_reference_service.dart';
+import 'data_directory_service.dart';
 
 /// 存储占用统计数据模型
 class StorageStats {
@@ -441,8 +442,12 @@ class StorageManagementService {
   }
 
   /// 获取应用数据目录路径
+  /// Windows 平台使用 Documents/ThoughtEcho，其他平台使用 Documents
   static Future<String> getAppDataDirectory() async {
     try {
+      if (!kIsWeb && Platform.isWindows) {
+        return await DataDirectoryService.getCurrentDataDirectory();
+      }
       final appDir = await getApplicationDocumentsDirectory();
       return appDir.path;
     } catch (e) {
