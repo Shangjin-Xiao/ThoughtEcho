@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- 组播网络权限 - 用于设备发现 -->
+	<key>com.apple.developer.networking.multicast</key>
+	<true/>
+</dict>
+</plist>
