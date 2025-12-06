@@ -382,9 +382,11 @@ class NoteSyncService extends ChangeNotifier {
           }
 
           final progress = 0.5 + ratio * 0.4; // 线性映射
+          final sentMB = (sent / 1024 / 1024).toStringAsFixed(1);
+          final totalMB = (total / 1024 / 1024).toStringAsFixed(1);
           _updateSyncStatus(
             SyncStatus.sending,
-            '正在发送 ${(sent / 1024 / 1024).toStringAsFixed(1)}MB / ${(total / 1024 / 1024).toStringAsFixed(1)}MB$extra',
+            'SENDING|$sentMB|$totalMB$extra',
             progress,
           );
         },
@@ -911,9 +913,12 @@ class NoteSyncService extends ChangeNotifier {
           ' | ${speedMBps.toStringAsFixed(2)}MB/s | 剩余${etaSec < 1 ? '<1' : etaSec.toStringAsFixed(0)}s';
     }
 
+    final receivedMB = (received / 1024 / 1024).toStringAsFixed(1);
+    final totalMB = (total / 1024 / 1024).toStringAsFixed(1);
+    final fromAlias = _receiveSenderAlias ?? '';
     _updateSyncStatus(
       SyncStatus.receiving,
-      '正在接收${_receiveSenderAlias != null ? '（来自$_receiveSenderAlias）' : ''} ${(received / 1024 / 1024).toStringAsFixed(1)}MB / ${(total / 1024 / 1024).toStringAsFixed(1)}MB$extra',
+      'RECEIVING|$fromAlias|$receivedMB|$totalMB$extra',
       0.05 + ratio * 0.75,
     );
   }

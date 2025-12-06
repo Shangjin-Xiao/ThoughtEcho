@@ -1825,7 +1825,7 @@
     }
   },
   "noNearbyDevices": "No nearby devices found",
-  "ensureDeviceOnSameNetwork": "Make sure the target device also has ThoughtEcho open\nand is on the same network",
+  "ensureDeviceOnSameNetwork": "Make sure the target device also has ThoughtEcho sync page open\nand both devices are on the same WiFi network",
   "networkInfoUnknown": "Network info unknown",
   "portNumber": "Port {port}",
   "@portNumber": {
@@ -1960,6 +1960,37 @@
   "syncStatusMerging": "Merging",
   "syncStatusCompleted": "Sync completed",
   "syncStatusFailed": "Sync failed",
+  "sendingProgressMessage": "Sent {sent}MB / {total}MB{extra}",
+  "@sendingProgressMessage": {
+    "placeholders": {
+      "sent": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      },
+      "extra": {
+        "type": "String"
+      }
+    }
+  },
+  "receivingProgressMessage": "Received {from}{received}MB / {total}MB{extra}",
+  "@receivingProgressMessage": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "received": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      },
+      "extra": {
+        "type": "String"
+      }
+    }
+  },
   "weatherClear": "Clear",
   "weatherPartlyCloudy": "Partly cloudy",
   "weatherCloudy": "Cloudy",
