@@ -242,6 +242,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         })
         .join('\n');
 
+    // 本地化资源
+    final l10n = AppLocalizations.of(context);
+
     // 处理时段显示：转换为本地化标签
     String? dayPeriodDisplay;
     IconData? dayPeriodIcon;
@@ -264,7 +267,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       } else {
         // 否则按原逻辑处理
         weatherDisplay = WeatherCodeMapper.getLocalizedDescription(
-          context,
+          l10n,
           mostWeather,
         );
         weatherIcon = WeatherCodeMapper.getIcon(mostWeather);
@@ -339,7 +342,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
               final w = quote.weather!.trim();
               // 优先把英文key映射为国际化描述
               final wDesc = WeatherCodeMapper.getLocalizedDescription(
-                context,
+                l10n,
                 w,
               );
               final display = wDesc == l10n.weatherUnknown ? w : wDesc;

@@ -157,7 +157,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                               : l10n.cityNotSetHint)
                         : (weatherService.currentWeather == '天气数据获取失败'
                               ? l10n.weatherFetchFailed
-                              : '${WeatherService.getLocalizedWeatherDescription(context, weatherService.currentWeather ?? 'unknown')} ${weatherService.temperature ?? ""}'),
+                              : '${WeatherService.getLocalizedWeatherDescription(AppLocalizations.of(context), weatherService.currentWeather ?? 'unknown')} ${weatherService.temperature ?? ""}'),
                     style: const TextStyle(fontSize: 12),
                   ),
                   trailing: IconButton(

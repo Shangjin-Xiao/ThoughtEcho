@@ -763,7 +763,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     } else {
       // 有天气数据
       final weatherDesc = WeatherService.getLocalizedWeatherDescription(
-        context,
+        AppLocalizations.of(context),
         _originalWeather!,
       );
       title = l10n.weatherInfo2;
@@ -2189,7 +2189,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                         const SizedBox(width: 8),
                                         Text(
                                           WeatherService.getLocalizedWeatherDescription(
-                                            context,
+                                            AppLocalizations.of(context),
                                             _weather!,
                                           ),
                                           style: TextStyle(

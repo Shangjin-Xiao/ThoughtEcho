@@ -1,11 +1,10 @@
-// TODO: Weather display strings should be internationalized at the UI layer, not in the model
 import 'package:flutter/material.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 
 /// 天气数据模型
 class WeatherData {
   final String key; // 天气关键字（如 'clear', 'cloudy' 等）
-  final String description; // 天气描述（如 '晴', '多云' 等）
+  final String description; // 天气描述 key（UI 侧通过 l10n 转换）
   final double? temperature; // 温度值
   final String? temperatureText; // 温度文本（如 '25°C'）
   final String iconCode; // 天气图标代码
@@ -24,12 +23,13 @@ class WeatherData {
     this.longitude,
   });
 
-  /// 获取格式化的天气字符串
-  String get formattedText {
+  /// 获取格式化的天气字符串（UI 侧使用 l10n 显示）
+  String formattedText(AppLocalizations l10n) {
+    final desc = WeatherCodeMapper.getLocalizedDescription(l10n, key);
     if (temperatureText != null) {
-      return '$description $temperatureText';
+      return '$desc $temperatureText';
     }
-    return description;
+    return desc;
   }
 
   /// 获取天气图标
@@ -77,7 +77,7 @@ class WeatherData {
   factory WeatherData.fromJson(Map<String, dynamic> json) {
     return WeatherData(
       key: json['key'] ?? 'unknown',
-      description: json['description'] ?? '未知',
+      description: json['description'] ?? json['key'] ?? 'unknown',
       temperature: json['temperature']?.toDouble(),
       temperatureText: json['temperatureText'],
       iconCode: json['iconCode'] ?? 'cloudy',
@@ -105,7 +105,7 @@ class WeatherData {
   factory WeatherData.error([String? message]) {
     return WeatherData(
       key: 'error',
-      description: message ?? '天气数据获取失败',
+      description: message ?? 'error',
       iconCode: 'error',
       timestamp: DateTime.now(),
     );
@@ -115,7 +115,7 @@ class WeatherData {
   factory WeatherData.unknown() {
     return WeatherData(
       key: 'unknown',
-      description: '未知天气',
+      description: 'unknown',
       iconCode: 'cloudy',
       timestamp: DateTime.now(),
     );
@@ -145,21 +145,22 @@ class WeatherData {
 /// 天气代码映射工具类
 class WeatherCodeMapper {
   static const Map<String, String> _keyToDescription = {
-    'clear': '晴',
-    'partly_cloudy': '少云',
-    'cloudy': '多云',
-    'fog': '雾',
-    'drizzle': '毛毛雨',
-    'freezing_rain': '冻雨',
-    'rain': '雨',
-    'snow': '雪',
-    'snow_grains': '雪粒',
-    'rain_shower': '阵雨',
-    'snow_shower': '阵雪',
-    'thunderstorm': '雷雨',
-    'thunderstorm_heavy': '雷暴雨',
-    'unknown': '未知',
-    'error': '获取失败',
+    // 保留用于日志/调试的非 UI 文案
+    'clear': 'clear',
+    'partly_cloudy': 'partly_cloudy',
+    'cloudy': 'cloudy',
+    'fog': 'fog',
+    'drizzle': 'drizzle',
+    'freezing_rain': 'freezing_rain',
+    'rain': 'rain',
+    'snow': 'snow',
+    'snow_grains': 'snow_grains',
+    'rain_shower': 'rain_shower',
+    'snow_shower': 'snow_shower',
+    'thunderstorm': 'thunderstorm',
+    'thunderstorm_heavy': 'thunderstorm_heavy',
+    'unknown': 'unknown',
+    'error': 'error',
   };
 
   static const Map<String, String> _keyToIconCode = {
@@ -211,12 +212,11 @@ class WeatherCodeMapper {
 
   /// 根据key获取描述（中文硬编码，用于非 UI 场景如日志）
   static String getDescription(String key) {
-    return _keyToDescription[key] ?? '未知';
+    return _keyToDescription[key] ?? 'unknown';
   }
 
   /// 根据key获取国际化描述（用于 UI 显示）
-  static String getLocalizedDescription(BuildContext context, String key) {
-    final l10n = AppLocalizations.of(context);
+  static String getLocalizedDescription(AppLocalizations l10n, String key) {
     switch (key) {
       case 'clear':
         return l10n.weatherClear;

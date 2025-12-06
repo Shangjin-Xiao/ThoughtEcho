@@ -274,9 +274,15 @@ class ApkDownloadService {
       // 显示错误通知
       if (context.mounted) {
         final errorL10n = AppLocalizations.of(context);
-        await _showDownloadNotification(errorL10n.apkDownloadFailed(e.toString()), -1);
+        await _showDownloadNotification(
+          errorL10n.apkDownloadFailed(e.toString()),
+          -1,
+        );
+        if (!context.mounted) return;
         Navigator.of(context).pop(); // 关闭下载对话框
-        _showErrorDialog(context, errorL10n.apkDownloadFailed(e.toString()));
+        if (context.mounted) {
+          _showErrorDialog(context, errorL10n.apkDownloadFailed(e.toString()));
+        }
       } else {
         await _showDownloadNotification('Download failed: $e', -1);
       }

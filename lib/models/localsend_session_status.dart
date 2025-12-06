@@ -1,56 +1,43 @@
-// TODO: Display strings should be internationalized at the UI layer, not in the model
-/// 会话状态枚举
+import '../gen_l10n/app_localizations.dart';
+
+/// 会话状态枚举（UI 文案通过 l10n 获取）
 enum SessionStatus {
-  /// 等待中
   waiting,
-
-  /// 正在发送
   sending,
-
-  /// 正在接收
   receiving,
-
-  /// 已完成
   finished,
-
-  /// 已取消
   cancelled,
-
-  /// 被拒绝
   declined,
-
-  /// 发生错误
   error,
 }
 
 extension SessionStatusExtension on SessionStatus {
-  String get displayName {
+  /// 获取本地化名称（在 UI 层调用并传入 l10n）
+  String localized(AppLocalizations l10n) {
     switch (this) {
       case SessionStatus.waiting:
-        return '等待中';
+        return l10n.sessionStatusWaiting;
       case SessionStatus.sending:
-        return '正在发送';
+        return l10n.sessionStatusSending;
       case SessionStatus.receiving:
-        return '正在接收';
+        return l10n.sessionStatusReceiving;
       case SessionStatus.finished:
-        return '已完成';
+        return l10n.sessionStatusCompleted;
       case SessionStatus.cancelled:
-        return '已取消';
+        return l10n.sessionStatusCancelled;
       case SessionStatus.declined:
-        return '被拒绝';
+        return l10n.sessionStatusRejected;
       case SessionStatus.error:
-        return '发生错误';
+        return l10n.sessionStatusError;
     }
   }
 
-  bool get isActive {
-    return this == SessionStatus.sending || this == SessionStatus.receiving;
-  }
+  bool get isActive =>
+      this == SessionStatus.sending || this == SessionStatus.receiving;
 
-  bool get isCompleted {
-    return this == SessionStatus.finished ||
-        this == SessionStatus.cancelled ||
-        this == SessionStatus.declined ||
-        this == SessionStatus.error;
-  }
+  bool get isCompleted =>
+      this == SessionStatus.finished ||
+      this == SessionStatus.cancelled ||
+      this == SessionStatus.declined ||
+      this == SessionStatus.error;
 }

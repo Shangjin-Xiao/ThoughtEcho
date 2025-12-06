@@ -861,7 +861,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
     final String? weather = weatherService?.currentWeather;
     final String? temperature = weatherService?.temperature;
-    final String? formattedWeather = weatherService?.getFormattedWeather();
+    final String? formattedWeather = weatherService?.getFormattedWeather(l10n);
 
     return Padding(
       padding: EdgeInsets.only(
