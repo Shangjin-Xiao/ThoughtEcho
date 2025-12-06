@@ -144,6 +144,8 @@ class AICardGenerationService {
       CardType.quote,
       CardType.philosophical,
       CardType.minimalist,
+      CardType.nature,
+      CardType.retro,
     ];
 
     // 基于内容特征调整权重
@@ -153,6 +155,21 @@ class AICardGenerationService {
         content.contains('意义')) {
       // 哲学内容:40%哲学,其他平分
       if (random < 40) return CardType.philosophical;
+    } else if (content.contains('自然') ||
+        content.contains('树') ||
+        content.contains('花') ||
+        content.contains('草') ||
+        content.contains('山') ||
+        content.contains('水')) {
+      // 自然内容:40%自然,其他平分
+      if (random < 40) return CardType.nature;
+    } else if (content.contains('旧') ||
+        content.contains('回忆') ||
+        content.contains('历史') ||
+        content.contains('过去') ||
+        content.contains('时光')) {
+      // 复古内容:40%复古,其他平分
+      if (random < 40) return CardType.retro;
     }
 
     // 其他情况:平均分配概率
