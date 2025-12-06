@@ -982,6 +982,12 @@
     }
   },
   "configureApiKey": "Please configure the API Key in the settings first",
+  "noteListEmptyTitle": "No notes yet, start journaling!",
+  "noteSearchEmptyTitle": "No related notes found",
+  "noteSearchEmptySubtitle": "Try other keywords or check your spelling",
+  "noteSearchTimeoutMessage": "Search timed out, please retry or check your connection",
+  "searchingLabel": "Searching",
+  "filterAndSortTooltip": "Filter/Sort",
   "noNotesFound": "No notes found, please add some notes first",
   "generateInsightsError": "Failed to generate insights: {error}",
   "@generateInsightsError": {
