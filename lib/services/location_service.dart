@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'dart:convert';
 import 'dart:io';
 import '../services/network_service.dart';
@@ -179,8 +178,15 @@ class LocationService extends ChangeNotifier {
   // 请求位置权限
   Future<bool> requestLocationPermission() async {
     try {
-      var status = await Permission.location.request();
-      _hasLocationPermission = status.isGranted;
+      // iOS 必须使用 geolocator 请求权限，而不是 permission_handler
+      LocationPermission permission = await Geolocator.checkPermission();
+      
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      
+      _hasLocationPermission = (permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always);
       notifyListeners();
       return _hasLocationPermission;
     } catch (e) {
