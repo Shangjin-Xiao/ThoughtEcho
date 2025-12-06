@@ -218,40 +218,45 @@ class TimeUtils {
     final formattedDate =
         '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')}';
 
-    // 确定时间段 key
-    String dayPeriodKey;
-    if (dayPeriod != null) {
-      // 如果传入的是已知的 key，直接使用
-      if (dayPeriodKeyToLabel.containsKey(dayPeriod)) {
-        dayPeriodKey = dayPeriod;
-      } else {
-        // 如果是中文标签，转换为 key
+    String resolveDayPeriodKey() {
+      final normalized = dayPeriod?.trim();
+
+      // 优先使用传入值（兼容 key 与本地化标签）
+      if (normalized != null && normalized.isNotEmpty) {
+        if (dayPeriodKeyToLabel.containsKey(normalized)) {
+          return normalized;
+        }
+
         final reverseMap = dayPeriodKeyToLabel.map((k, v) => MapEntry(v, k));
-        dayPeriodKey = reverseMap[dayPeriod] ?? dayPeriod;
+        final mapped = reverseMap[normalized];
+        if (mapped != null && mapped.isNotEmpty) {
+          return mapped;
+        }
       }
-    } else {
-      // 根据时间推算
+
+      // 兜底：根据时间推算时间段
       final hour = dateTime.hour;
       if (hour >= 5 && hour < 8) {
-        dayPeriodKey = 'dawn';
+        return 'dawn';
       } else if (hour >= 8 && hour < 12) {
-        dayPeriodKey = 'morning';
+        return 'morning';
       } else if (hour >= 12 && hour < 17) {
-        dayPeriodKey = 'afternoon';
+        return 'afternoon';
       } else if (hour >= 17 && hour < 20) {
-        dayPeriodKey = 'dusk';
+        return 'dusk';
       } else if (hour >= 20 && hour < 23) {
-        dayPeriodKey = 'evening';
+        return 'evening';
       } else {
-        dayPeriodKey = 'midnight';
+        return 'midnight';
       }
     }
 
+    final dayPeriodKey = resolveDayPeriodKey();
     final dayPeriodLabel = getLocalizedDayPeriodLabel(context, dayPeriodKey);
 
     if (showExactTime) {
       final timeStr = formatQuoteTime(dateTime);
-      return '$formattedDate $timeStr $dayPeriodLabel';
+      return '$formattedDate $timeStr';
     }
 
     return '$formattedDate $dayPeriodLabel';
