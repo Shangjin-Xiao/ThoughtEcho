@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import '../gen_l10n/app_localizations.dart';
 import '../models/generated_card.dart';
 import '../utils/app_logger.dart';
 
@@ -468,14 +468,16 @@ class _ActionButton extends StatelessWidget {
 /// 卡片预览对话框
 class CardPreviewDialog extends StatefulWidget {
   final GeneratedCard card;
-  final VoidCallback? onShare;
-  final VoidCallback? onSave;
+  final Future<void> Function(GeneratedCard card)? onShare;
+  final Future<void> Function(GeneratedCard card)? onSave;
+  final Future<GeneratedCard> Function()? onRegenerate;
 
   const CardPreviewDialog({
     super.key,
     required this.card,
     this.onShare,
     this.onSave,
+    this.onRegenerate,
   });
 
   @override
@@ -487,10 +489,13 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
   late Animation<double> _opacityAnimation;
+  late GeneratedCard _currentCard;
+  bool _isRegenerating = false;
 
   @override
   void initState() {
     super.initState();
+    _currentCard = widget.card;
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -507,6 +512,38 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
     _animationController.forward();
   }
 
+  Future<void> _handleRegenerate() async {
+    if (widget.onRegenerate == null || _isRegenerating) return;
+
+    setState(() {
+      _isRegenerating = true;
+    });
+
+    try {
+      final newCard = await widget.onRegenerate!();
+      if (!mounted) return;
+      setState(() {
+        _currentCard = newCard;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.generateCardFailed(e.toString())),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRegenerating = false;
+        });
+      }
+    }
+  }
+
   @override
   void dispose() {
     _animationController.dispose();
@@ -515,6 +552,7 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return AnimatedBuilder(
       animation: _animationController,
       builder: (context, child) {
@@ -547,7 +585,7 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
                             color: Colors.white,
                             size: 24,
                           ),
-                          tooltip: '关闭',
+                          tooltip: l10n.close,
                         ),
                       ),
                     ),
@@ -573,7 +611,7 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
                             children: [
                               // 标题
                               Text(
-                                '精选卡片',
+                                l10n.featuredCards,
                                 style: Theme.of(context)
                                     .textTheme
                                     .titleLarge
@@ -582,12 +620,38 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
                               const SizedBox(height: 16),
                               // 卡片
                               GeneratedCardWidget(
-                                card: widget.card,
+                                card: _currentCard,
                                 onShare: widget.onShare,
                                 onSave: widget.onSave,
+                                onRegenerate: widget.onRegenerate == null
+                                    ? null
+                                    : () => _handleRegenerate(),
+                                actionsEnabled: !_isRegenerating,
                                 width: 300,
                                 height: 400,
                               ),
+                              if (_isRegenerating) ...[
+                                const SizedBox(height: 12),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      l10n.regeneratingCard,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium,
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -606,29 +670,31 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
 
 /// 卡片生成加载对话框
 class CardGenerationLoadingDialog extends StatelessWidget {
-  final String message;
+  final String? message;
   final VoidCallback? onCancel;
 
   const CardGenerationLoadingDialog({
     super.key,
-    this.message = '正在生成卡片...',
+    this.message,
     this.onCancel,
   });
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final displayMessage = message ?? l10n.cardGenerating;
     return AlertDialog(
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           const CircularProgressIndicator(),
           const SizedBox(height: 16),
-          Text(message),
+          Text(displayMessage),
         ],
       ),
       actions: [
         if (onCancel != null)
-          TextButton(onPressed: onCancel, child: const Text('取消')),
+          TextButton(onPressed: onCancel, child: Text(l10n.cancel)),
       ],
     );
   }

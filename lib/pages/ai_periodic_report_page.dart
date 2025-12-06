@@ -2181,14 +2181,41 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       _selectedCardIndex = cardIndex;
     });
 
+    Quote? quoteForCard;
+    for (final quote in _periodQuotes) {
+      if (quote.id == card.noteId) {
+        quoteForCard = quote;
+        break;
+      }
+    }
+
+    Future<GeneratedCard> Function()? regenerateCallback;
+    if (_aiCardService != null && quoteForCard != null) {
+      regenerateCallback = () async {
+        final newCard =
+            await _aiCardService!.generateCard(note: quoteForCard!);
+        if (mounted) {
+          setState(() {
+            final index =
+                _featuredCards.indexWhere((existing) => existing.id == card.id);
+            if (index != -1) {
+              _featuredCards[index] = newCard;
+            }
+          });
+        }
+        return newCard;
+      };
+    }
+
     showDialog(
       context: context,
       barrierDismissible: true,
       barrierColor: Colors.black.withValues(alpha: 0.7),
       builder: (context) => CardPreviewDialog(
         card: card,
-        onShare: () => _shareCard(card),
-        onSave: () => _saveCard(card),
+        onShare: (selected) => _shareCard(selected),
+        onSave: (selected) => _saveCard(selected),
+        onRegenerate: regenerateCallback,
       ),
     ).then((_) {
       // 对话框关闭后清除选中状态
@@ -2199,7 +2226,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   }
 
   /// 分享卡片
-  void _shareCard(GeneratedCard card) async {
+  Future<void> _shareCard(GeneratedCard card) async {
     final l10n = AppLocalizations.of(context);
     Navigator.of(context).pop(); // 关闭对话框
 
@@ -2286,7 +2313,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   }
 
   /// 保存卡片
-  void _saveCard(GeneratedCard card) async {
+  Future<void> _saveCard(GeneratedCard card) async {
     final l10n = AppLocalizations.of(context);
     // 关键修复：在关闭对话框之前，先获取外层scaffold的context
     final scaffoldContext = context;

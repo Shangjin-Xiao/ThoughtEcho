@@ -1002,8 +1002,9 @@ class _HomePageState extends State<HomePage>
           context: context,
           builder: (context) => CardPreviewDialog(
             card: card,
-            onShare: () => _shareCard(card),
-            onSave: () => _saveCard(card),
+            onShare: (selected) => _shareCard(selected),
+            onSave: (selected) => _saveCard(selected),
+            onRegenerate: () => _aiCardService!.generateCard(note: quote),
           ),
         );
       }
@@ -1027,7 +1028,7 @@ class _HomePageState extends State<HomePage>
   }
 
   // 分享卡片
-  void _shareCard(GeneratedCard card) async {
+  Future<void> _shareCard(GeneratedCard card) async {
     try {
       // 显示加载指示器
       if (mounted) {
@@ -1114,7 +1115,7 @@ class _HomePageState extends State<HomePage>
   }
 
   // 保存卡片
-  void _saveCard(GeneratedCard card) async {
+  Future<void> _saveCard(GeneratedCard card) async {
     try {
       // 显示加载指示器
       if (mounted) {
