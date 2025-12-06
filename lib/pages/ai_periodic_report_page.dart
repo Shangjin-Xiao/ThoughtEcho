@@ -122,7 +122,15 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
     try {
       final databaseService = context.read<DatabaseService>();
-      final quotes = await databaseService.getUserQuotes();
+      // 修复：使用 getAllQuotes() 获取所有笔记，而非 getUserQuotes() 的默认 limit=10
+      final quotes = await databaseService.getAllQuotes();
+
+      // 调试：打印获取到的所有笔记数量
+      AppLogger.d('getAllQuotes 返回笔记数: ${quotes.length}');
+      // 打印每条笔记的日期（前10条）
+      for (var i = 0; i < quotes.length && i < 10; i++) {
+        AppLogger.d('  原始笔记[$i]: date=${quotes[i].date}');
+      }
 
       // 根据选择的时间范围筛选笔记
       final filteredQuotes = _filterQuotesByPeriod(quotes);
@@ -460,13 +468,27 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         return quotes;
     }
 
-    return quotes.where((quote) {
+    // 调试日志
+    AppLogger.d('筛选条件: period=$_selectedPeriod, selectedDate=$_selectedDate');
+    AppLogger.d('筛选范围: startDate=$startDate, endDate=$endDate');
+    AppLogger.d('总笔记数: ${quotes.length}');
+
+    final filtered = quotes.where((quote) {
       final quoteDateTime = DateTime.parse(quote.date);
       // 归一化笔记日期为当天开始时间，只比较日期部分
       final quoteDate = DateTime(quoteDateTime.year, quoteDateTime.month, quoteDateTime.day);
       // 使用 >= startDate 且 <= endDate 的逻辑
-      return !quoteDate.isBefore(startDate) && !quoteDate.isAfter(endDate);
+      final isInRange = !quoteDate.isBefore(startDate) && !quoteDate.isAfter(endDate);
+      return isInRange;
     }).toList();
+
+    AppLogger.d('筛选后笔记数: ${filtered.length}');
+    // 打印前5条笔记的日期以便调试
+    for (var i = 0; i < filtered.length && i < 5; i++) {
+      AppLogger.d('  笔记[$i]: ${filtered[i].date}');
+    }
+
+    return filtered;
   }
 
   /// 保存洞察到历史记录
