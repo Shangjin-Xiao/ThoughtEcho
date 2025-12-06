@@ -1353,7 +1353,10 @@ class _HomePageState extends State<HomePage>
             ? null // 记录页不需要标题栏
             : _currentIndex == 0
                 ? AppBar(
-                    titleSpacing: NavigationToolbar.kMiddleSpacing, // 使用默认间距，保持左边留白
+                  automaticallyImplyLeading: false,
+                  leadingWidth: NavigationToolbar.kMiddleSpacing,
+                  leading: const SizedBox.shrink(),
+                  titleSpacing: 0, // 左侧保留默认留白，且让标题充分利用空间
                     title: Consumer<ConnectivityService>(
                       builder: (context, connectivityService, child) {
                         final locale = Localizations.localeOf(context);
