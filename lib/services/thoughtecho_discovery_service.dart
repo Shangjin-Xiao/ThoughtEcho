@@ -462,6 +462,23 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
         } else {
           debugPrint('❌ 套接字 $i 发送失败，返回: $result');
         }
+
+        // 额外的广播兜底（部分路由器/平台屏蔽组播）
+        try {
+          final br = socket.send(
+            message,
+            InternetAddress('255.255.255.255'),
+            defaultMulticastPort,
+          );
+          if (br > 0) {
+            logDebug(
+              'discovery_broadcast_fallback sock=$i bytes=$br',
+              source: 'LocalSend',
+            );
+          }
+        } catch (e) {
+          debugPrint('广播兜底发送失败: $e');
+        }
       } catch (e) {
         debugPrint('❌ 套接字 $i 发送异常: $e');
       }
@@ -586,6 +603,23 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
             debugPrint(
               '发送设备公告到 ${multicastAddress.address}:$defaultMulticastPort, 发送字节: $result',
             );
+          }
+
+          // 额外的广播兜底
+          try {
+            final br = socket.send(
+              messageBytes,
+              InternetAddress('255.255.255.255'),
+              defaultMulticastPort,
+            );
+            if (br > 0) {
+              logDebug(
+                'discovery_broadcast_fallback bytes=$br',
+                source: 'LocalSend',
+              );
+            }
+          } catch (e) {
+            debugPrint('广播兜底失败: $e');
           }
         } catch (e) {
           debugPrint('发送公告失败: $e');
