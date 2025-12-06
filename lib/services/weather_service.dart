@@ -210,9 +210,10 @@ class WeatherService extends ChangeNotifier {
   /// 检查是否有有效的天气数据
   bool get hasValidWeatherData => hasData;
 
-  /// 获取格式化的天气字符串（兼容性方法）
-  String getFormattedWeather() {
-    return _currentWeatherData?.formattedText ?? '';
+  /// 获取格式化的天气字符串（兼容性方法，需传入 l10n）
+  String getFormattedWeather(AppLocalizations l10n) {
+    final data = _currentWeatherData;
+    return data == null ? '' : data.formattedText(l10n);
   }
 
   /// 获取天气图标（兼容性方法）
@@ -232,10 +233,10 @@ class WeatherService extends ChangeNotifier {
 
   /// 获取国际化天气描述（静态方法，用于 UI 显示）
   static String getLocalizedWeatherDescription(
-    BuildContext context,
+    AppLocalizations l10n,
     String key,
   ) {
-    return WeatherCodeMapper.getLocalizedDescription(context, key);
+    return WeatherCodeMapper.getLocalizedDescription(l10n, key);
   }
 
   /// 获取天气key（静态方法，兼容性）

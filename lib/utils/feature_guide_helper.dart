@@ -99,6 +99,10 @@ class FeatureGuideHelper {
         return;
       }
 
+      if (!context.mounted) {
+        return;
+      }
+
       final guide = FeatureGuide(
         id: guideId,
         title: FeatureGuide.getLocalizedTitle(context, guideId),

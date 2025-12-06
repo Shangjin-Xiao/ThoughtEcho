@@ -351,7 +351,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                           ),
                           const SizedBox(width: 2),
                           Text(
-                            '${WeatherService.getLocalizedWeatherDescription(context, quote.weather!)}${quote.temperature != null ? ' ${quote.temperature}' : ''}',
+                            '${WeatherService.getLocalizedWeatherDescription(AppLocalizations.of(context), quote.weather!)}${quote.temperature != null ? ' ${quote.temperature}' : ''}',
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: secondaryTextColor,
                               fontSize: 12,

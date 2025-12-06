@@ -1,45 +1,34 @@
-// TODO: Display strings should be internationalized at the UI layer, not in the model
-/// 文件类型枚举
+import '../gen_l10n/app_localizations.dart';
+
+/// 文件类型枚举（UI 文案通过 l10n 获取）
 enum FileType {
-  /// 图片
   image,
-
-  /// 视频
   video,
-
-  /// 音频
   audio,
-
-  /// 文档
   document,
-
-  /// 文本
   text,
-
-  /// 应用
   apk,
-
-  /// 其他
   other,
 }
 
 extension FileTypeExtension on FileType {
-  String get displayName {
+  /// 获取本地化名称（在 UI 层调用并传入 l10n）
+  String localized(AppLocalizations l10n) {
     switch (this) {
       case FileType.image:
-        return '图片';
+        return l10n.fileTypeImage;
       case FileType.video:
-        return '视频';
+        return l10n.fileTypeVideo;
       case FileType.audio:
-        return '音频';
+        return l10n.fileTypeAudio;
       case FileType.document:
-        return '文档';
+        return l10n.fileTypeDocument;
       case FileType.text:
-        return '文本';
+        return l10n.fileTypeText;
       case FileType.apk:
-        return '应用';
+        return l10n.fileTypeApplication;
       case FileType.other:
-        return '其他';
+        return l10n.fileTypeOther;
     }
   }
 

@@ -1,45 +1,35 @@
-// TODO: Display strings should be internationalized at the UI layer, not in the model
-/// 文件状态枚举
+import '../gen_l10n/app_localizations.dart';
+
+/// 文件状态枚举（UI 文案通过 l10n 获取）
 enum FileStatus {
-  /// 队列中
   queue,
-
-  /// 正在发送
   sending,
-
-  /// 已完成
   finished,
-
-  /// 失败
   failed,
-
-  /// 已跳过
   skipped,
 }
 
 extension FileStatusExtension on FileStatus {
-  String get displayName {
+  /// 获取本地化名称（在 UI 层调用并传入 l10n）
+  String localized(AppLocalizations l10n) {
     switch (this) {
       case FileStatus.queue:
-        return '队列中';
+        return l10n.fileStatusQueued;
       case FileStatus.sending:
-        return '正在发送';
+        return l10n.fileStatusSending;
       case FileStatus.finished:
-        return '已完成';
+        return l10n.fileStatusCompleted;
       case FileStatus.failed:
-        return '失败';
+        return l10n.fileStatusFailed;
       case FileStatus.skipped:
-        return '已跳过';
+        return l10n.fileStatusSkipped;
     }
   }
 
-  bool get isActive {
-    return this == FileStatus.sending;
-  }
+  bool get isActive => this == FileStatus.sending;
 
-  bool get isCompleted {
-    return this == FileStatus.finished ||
-        this == FileStatus.failed ||
-        this == FileStatus.skipped;
-  }
+  bool get isCompleted =>
+      this == FileStatus.finished ||
+      this == FileStatus.failed ||
+      this == FileStatus.skipped;
 }
