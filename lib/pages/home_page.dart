@@ -150,7 +150,7 @@ class _HomePageState extends State<HomePage>
 
       // Call the new stream method with environment context and historical insights
       if (!mounted) {
-        return; // Ensure the widget is still in the tree after async work
+        return; // Ensure the widget is still mounted after async work
       }
 
       final l10n = AppLocalizations.of(context);
@@ -1244,8 +1244,9 @@ class _HomePageState extends State<HomePage>
     } else if (hasCity && hasWeather) {
       // 正常状态
       locationText = locationService.getDisplayLocation();
+      final l10n = AppLocalizations.of(context);
       weatherText =
-          '${WeatherService.getLocalizedWeatherDescription(AppLocalizations.of(context), weatherService.currentWeather!)}'
+          '${WeatherService.getLocalizedWeatherDescription(l10n, weatherService.currentWeather!)}'
           '${weatherService.temperature != null && weatherService.temperature!.isNotEmpty ? ' ${weatherService.temperature}' : ''}';
       weatherIcon = weatherService.getWeatherIconData();
     } else if (hasCoordinates) {

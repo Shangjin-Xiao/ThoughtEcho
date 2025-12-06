@@ -692,6 +692,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       ),
     );
 
+    if (!mounted) {
+      return; // Ensure the widget is still in the tree before using context
+    }
+
     if (result == 'update' && hasCoordinates) {
       // 尝试用坐标更新地址
       try {
