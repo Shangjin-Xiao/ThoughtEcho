@@ -982,6 +982,12 @@
     }
   },
   "configureApiKey": "请先在设置中配置 API Key",
+  "noteListEmptyTitle": "还没有笔记，开始记录吧！",
+  "noteSearchEmptyTitle": "未找到相关笔记",
+  "noteSearchEmptySubtitle": "尝试使用其他关键词或检查拼写",
+  "noteSearchTimeoutMessage": "搜索超时，请重试或检查网络连接",
+  "searchingLabel": "搜索中",
+  "filterAndSortTooltip": "筛选/排序",
   "noNotesFound": "没有找到笔记，请先添加一些笔记",
   "generateInsightsError": "生成洞察失败: {error}",
   "@generateInsightsError": {

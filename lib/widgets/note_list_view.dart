@@ -1053,6 +1053,7 @@ class NoteListViewState extends State<NoteListView> {
   }
 
   Widget _buildNoteList(DatabaseService db, ThemeData theme) {
+    final l10n = AppLocalizations.of(context);
     // 为 AnimatedSwitcher 提供唯一 key，确保筛选变化时能触发动画
     final listKey = ValueKey(
       '${widget.selectedTagIds.join(',')}_${widget.selectedWeathers.join(',')}_${widget.selectedDayPeriods.join(',')}_${widget.searchQuery}',
@@ -1077,7 +1078,7 @@ class NoteListViewState extends State<NoteListView> {
                 type: LottieAnimationType.weatherSearchLoading,
                 width: size,
                 height: size,
-                semanticLabel: '搜索中',
+                semanticLabel: l10n.searchingLabel,
               ),
             );
           },
@@ -1089,7 +1090,7 @@ class NoteListViewState extends State<NoteListView> {
       return AppEmptyView(
         key: listKey,
         svgAsset: 'assets/empty/empty_state.svg',
-        text: '还没有笔记，开始记录吧！',
+        text: l10n.noteListEmptyTitle,
       );
     }
     if (_quotes.isEmpty && widget.searchQuery.isNotEmpty) {
@@ -1109,14 +1110,14 @@ class NoteListViewState extends State<NoteListView> {
               },
             ),
             const SizedBox(height: 16),
-            const Text(
-              '未找到相关笔记',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            Text(
+              l10n.noteSearchEmptyTitle,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 8),
-            const Text(
-              '尝试使用其他关键词或检查拼写',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
+            Text(
+              l10n.noteSearchEmptySubtitle,
+              style: const TextStyle(fontSize: 14, color: Colors.grey),
             ),
           ],
         ),
@@ -1347,14 +1348,15 @@ class NoteListViewState extends State<NoteListView> {
 
           // 显示超时提示
           if (mounted) {
+            final l10n = AppLocalizations.of(context);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: const Text('搜索超时，请重试或检查网络连接'),
+                content: Text(l10n.noteSearchTimeoutMessage),
                 duration: AppConstants.snackBarDurationImportant,
                 behavior: SnackBarBehavior.floating,
                 backgroundColor: Colors.orange,
                 action: SnackBarAction(
-                  label: '重试',
+                  label: l10n.retry,
                   textColor: Colors.white,
                   onPressed: () => _performSearch(value),
                 ),
@@ -1371,6 +1373,7 @@ class NoteListViewState extends State<NoteListView> {
     final db = Provider.of<DatabaseService>(context);
     final searchController = Provider.of<NoteSearchController>(context);
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     // 监听搜索控制器状态，如果搜索出错则重置本地加载状态
     if (searchController.searchError != null && _isLoading) {
@@ -1420,7 +1423,7 @@ class NoteListViewState extends State<NoteListView> {
                       onChanged: _onSearchChanged,
                       textInputAction: TextInputAction.search,
                       decoration: InputDecoration(
-                        hintText: AppLocalizations.of(context).searchNotes,
+                        hintText: l10n.searchNotes,
                         isDense: true,
                         filled: true,
                         fillColor: ColorUtils.getSearchBoxBackgroundColor(
@@ -1444,7 +1447,7 @@ class NoteListViewState extends State<NoteListView> {
                         suffixIcon: IconButton(
                           key: widget.filterButtonKey, // 功能引导 key
                           icon: const Icon(Icons.tune),
-                          tooltip: '筛选/排序',
+                          tooltip: l10n.filterAndSortTooltip,
                           onPressed: () {
                             showModalBottomSheet(
                               context: context,
