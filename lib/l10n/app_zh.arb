@@ -985,7 +985,7 @@
   "noteListEmptyTitle": "还没有笔记，开始记录吧！",
   "noteSearchEmptyTitle": "未找到相关笔记",
   "noteSearchEmptySubtitle": "尝试使用其他关键词或检查拼写",
-  "noteSearchTimeoutMessage": "搜索超时，请重试或检查网络连接",
+  "noteSearchTimeoutMessage": "搜索超时，请重试",
   "searchingLabel": "搜索中",
   "filterAndSortTooltip": "筛选/排序",
   "noNotesFound": "没有找到笔记，请先添加一些笔记",
@@ -2757,5 +2757,83 @@
   "annualReportMobileInstructions": "📱 手机端：",
   "annualReportDesktopInstructions": "💻 电脑端：",
   "annualReportSavedToLocal": "报告已保存到本地文件",
-  "annualReportCopiedToClipboard": "无法保存文件，内容已复制到剪贴板"
+  "annualReportCopiedToClipboard": "无法保存文件，内容已复制到剪贴板",
+  "fullscreenEditTooltip": "全屏编辑",
+  "fullscreenEditLongTextTip": "建议全屏编辑长文本",
+  "sourcePreviewFormat": "将显示为: {source}",
+  "@sourcePreviewFormat": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "addWeatherWithValue": "添加天气: {weather}",
+  "@addWeatherWithValue": {
+    "placeholders": {
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "addWeatherInfo": "添加天气信息",
+  "cardColorSet": "已设置卡片颜色",
+  "setCardColor": "设置卡片颜色",
+  "openFullEditorFailedSimple": "打开全屏编辑器失败",
+  "loadingLargeDocument": "正在加载大型文档...",
+  "documentLoadFailedRetry": "文档加载失败，请重新打开编辑器",
+  "contentCopiedToClipboard": "已复制到剪贴板",
+  "messageCopiedToClipboard": "消息已复制到剪贴板",
+  "fetchHitokotoFailed": "获取一言失败: {error}",
+  "@fetchHitokotoFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "copyMessage": "复制消息",
+  "shareMessage": "分享消息",
+  "shareFeatureInDevelopment": "分享功能开发中",
+  "cancelImport": "取消导入",
+  "enterMediaUrl": "输入{mediaType}网址",
+  "@enterMediaUrl": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "insertMediaFailed": "插入{mediaType}失败: {error}",
+  "@insertMediaFailed": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "audioFileNotFoundWithPath": "音频文件不存在: {path}",
+  "@audioFileNotFoundWithPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "audioLoadFailed": "音频加载失败: {error}",
+  "@audioLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "outOfMemoryVideoLoad": "内存不足，无法加载视频",
+  "codeCopiedToClipboard": "代码已复制到剪贴板",
+  "videoLoadTooLong": "视频加载时间过长，请尝试使用较小的视频文件",
+  "outOfMemorySuggestions": "建议：\n• 关闭其他应用释放内存\n• 重启应用后重试\n• 使用较小的视频文件",
+  "fullscreenEditorPlaceholder": "开始编写你的想法..."
 }

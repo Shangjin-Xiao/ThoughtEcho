@@ -985,7 +985,7 @@
   "noteListEmptyTitle": "No notes yet, start journaling!",
   "noteSearchEmptyTitle": "No related notes found",
   "noteSearchEmptySubtitle": "Try other keywords or check your spelling",
-  "noteSearchTimeoutMessage": "Search timed out, please retry or check your connection",
+  "noteSearchTimeoutMessage": "Search timed out, please retry",
   "searchingLabel": "Searching",
   "filterAndSortTooltip": "Filter/Sort",
   "noNotesFound": "No notes found, please add some notes first",
@@ -2757,5 +2757,83 @@
   "annualReportMobileInstructions": "📱 Mobile:",
   "annualReportDesktopInstructions": "💻 Desktop:",
   "annualReportSavedToLocal": "Report saved to local file",
-  "annualReportCopiedToClipboard": "Cannot save file, content copied to clipboard"
+  "annualReportCopiedToClipboard": "Cannot save file, content copied to clipboard",
+  "fullscreenEditTooltip": "Fullscreen Edit",
+  "fullscreenEditLongTextTip": "Fullscreen edit recommended for long text",
+  "sourcePreviewFormat": "Will display as: {source}",
+  "@sourcePreviewFormat": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "addWeatherWithValue": "Add weather: {weather}",
+  "@addWeatherWithValue": {
+    "placeholders": {
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "addWeatherInfo": "Add weather info",
+  "cardColorSet": "Card color set",
+  "setCardColor": "Set card color",
+  "openFullEditorFailedSimple": "Failed to open fullscreen editor",
+  "loadingLargeDocument": "Loading large document...",
+  "documentLoadFailedRetry": "Document load failed, please reopen the editor",
+  "contentCopiedToClipboard": "Copied to clipboard",
+  "messageCopiedToClipboard": "Message copied to clipboard",
+  "fetchHitokotoFailed": "Failed to fetch quote: {error}",
+  "@fetchHitokotoFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "copyMessage": "Copy message",
+  "shareMessage": "Share message",
+  "shareFeatureInDevelopment": "Share feature in development",
+  "cancelImport": "Cancel import",
+  "enterMediaUrl": "Enter {mediaType} URL",
+  "@enterMediaUrl": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "insertMediaFailed": "Failed to insert {mediaType}: {error}",
+  "@insertMediaFailed": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "audioFileNotFoundWithPath": "Audio file not found: {path}",
+  "@audioFileNotFoundWithPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "audioLoadFailed": "Audio load failed: {error}",
+  "@audioLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "outOfMemoryVideoLoad": "Out of memory, cannot load video",
+  "codeCopiedToClipboard": "Code copied to clipboard",
+  "videoLoadTooLong": "Video loading time is too long, please try using a smaller video file",
+  "outOfMemorySuggestions": "Suggestions:\n• Close other apps to free memory\n• Restart the app and try again\n• Use a smaller video file",
+  "fullscreenEditorPlaceholder": "Start writing your thoughts..."
 }

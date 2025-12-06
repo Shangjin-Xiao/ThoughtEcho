@@ -317,11 +317,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                       ? const SizedBox(
                           width: 16,
                           height: 16,
-                          child: EnhancedLottieAnimation(
-                            type: LottieAnimationType.loading,
-                            width: 16,
-                            height: 16,
-                          ),
+                          child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.my_location),
                   label: Text(l10n.useCurrentLocation),

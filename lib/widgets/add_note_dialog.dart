@@ -927,7 +927,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                             ),
                           IconButton(
                             key: _fullscreenButtonKey,
-                            tooltip: isLongContent ? '建议全屏编辑长文本' : '全屏编辑',
+                            tooltip: isLongContent ? l10n.fullscreenEditLongTextTip : l10n.fullscreenEditTooltip,
                             icon: Icon(
                               Icons.fullscreen,
                               color: theme.colorScheme.primary,
@@ -1058,7 +1058,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                 if (mounted && context.mounted) {
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     SnackBar(
-                                      content: Text('打开全屏编辑器失败: $e'),
+                                      content: Text('${l10n.openFullEditorFailedSimple}: $e'),
                                       backgroundColor: Colors.red,
                                       duration: const Duration(seconds: 3),
                                     ),
@@ -1110,7 +1110,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
             Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                '将显示为: ${_formatSource(_authorController.text, _workController.text)}',
+                l10n.sourcePreviewFormat(_formatSource(_authorController.text, _workController.text)),
                 style: TextStyle(
                   fontSize: 12,
                   fontStyle: FontStyle.italic,
@@ -1194,8 +1194,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                 // 天气信息按钮
                 Tooltip(
                   message: weather != null && weatherService != null
-                      ? '添加天气: ${formattedWeather ?? weather}'
-                      : '添加天气信息',
+                      ? l10n.addWeatherWithValue(formattedWeather ?? weather)
+                      : l10n.addWeatherInfo,
                   child: FilterChip(
                     avatar: Icon(
                       weather != null && weatherService != null
@@ -1224,7 +1224,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                 const SizedBox(width: 8),
                 // 颜色选择按钮
                 Tooltip(
-                  message: _selectedColorHex != null ? '已设置卡片颜色' : '设置卡片颜色',
+                  message: _selectedColorHex != null ? l10n.cardColorSet : l10n.setCardColor,
                   child: FilterChip(
                     avatar: _selectedColorHex != null
                         ? Container(

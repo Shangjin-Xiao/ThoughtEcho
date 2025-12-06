@@ -1431,15 +1431,13 @@ class NoteListViewState extends State<NoteListView> {
                           theme.brightness,
                         ),
                         prefixIcon: searchController.isSearching
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: Padding(
-                                  padding: EdgeInsets.all(12.0),
-                                  child: EnhancedLottieAnimation(
-                                    type: LottieAnimationType.searchLoading,
-                                    width: 16,
-                                    height: 16,
+                            ? const Padding(
+                                padding: EdgeInsets.all(12.0),
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
                                   ),
                                 ),
                               )
