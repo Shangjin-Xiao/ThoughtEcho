@@ -23,6 +23,7 @@ class AIAnnualReportWebView extends StatefulWidget {
 
 class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
     with TickerProviderStateMixin {
+  AppLocalizations get l10n => AppLocalizations.of(context);
   bool _isLoading = false;
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
@@ -63,7 +64,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
     return Scaffold(
       backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.yearAIAnnualReport.replaceAll('{year}', widget.year.toString())),
+        title: Text(l10n.yearAIAnnualReport(widget.year.toString())),
         backgroundColor: colorScheme.primary,
         foregroundColor: colorScheme.onPrimary,
         elevation: 0,
@@ -71,17 +72,17 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
           IconButton(
             icon: const Icon(Icons.open_in_browser),
             onPressed: _openInBrowser,
-            tooltip: AppLocalizations.of(context)!.openInBrowser,
+            tooltip: l10n.openInBrowser,
           ),
           IconButton(
             icon: const Icon(Icons.share),
             onPressed: _shareReport,
-            tooltip: AppLocalizations.of(context)!.shareReport,
+            tooltip: l10n.shareReport,
           ),
           IconButton(
             icon: const Icon(Icons.save_alt),
             onPressed: _saveReport,
-            tooltip: AppLocalizations.of(context)!.saveReport,
+            tooltip: l10n.saveReport,
           ),
         ],
       ),
@@ -93,7 +94,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
                   CircularProgressIndicator(color: colorScheme.primary),
                   const SizedBox(height: 16),
                   Text(
-                    AppLocalizations.of(context)!.processingReport,
+                    l10n.processingReport,
                     style: TextStyle(
                       color: colorScheme.onSurface.withValues(alpha: 0.7),
                       fontSize: 16,
@@ -170,7 +171,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        AppLocalizations.of(context)!.yearAIAnnualReport.replaceAll('{year}', widget.year.toString()),
+                        l10n.yearAIAnnualReport(widget.year.toString()),
                         style: TextStyle(
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
@@ -179,7 +180,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        AppLocalizations.of(context)!.personalizedSummaryByAI,
+                        l10n.personalizedSummaryByAI,
                         style: TextStyle(
                           fontSize: 16,
                           color: colorScheme.onPrimary.withValues(alpha: 0.9),
@@ -207,7 +208,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      AppLocalizations.of(context)!.aiGeneratedReview,
+                      l10n.aiGeneratedReview,
                       style: TextStyle(
                         fontSize: 14,
                         color: colorScheme.onPrimary.withValues(alpha: 0.9),
@@ -239,7 +240,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
                 Icon(Icons.preview, color: colorScheme.primary, size: 24),
                 const SizedBox(width: 12),
                 Text(
-                  AppLocalizations.of(context)!.reportPreview,
+                  l10n.reportPreview,
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -288,7 +289,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      AppLocalizations.of(context)!.fullReportViewInBrowser,
+                      l10n.fullReportViewInBrowser,
                       style: TextStyle(
                         fontSize: 13,
                         color: colorScheme.onPrimaryContainer,
@@ -312,7 +313,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
           child: FilledButton.icon(
             onPressed: _openInBrowser,
             icon: const Icon(Icons.open_in_browser),
-            label: Text(AppLocalizations.of(context)!.openFullReportInBrowser),
+            label: Text(l10n.openFullReportInBrowser),
             style: FilledButton.styleFrom(
               backgroundColor: colorScheme.primary,
               foregroundColor: colorScheme.onPrimary,
@@ -330,7 +331,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
               child: OutlinedButton.icon(
                 onPressed: _shareReport,
                 icon: const Icon(Icons.share),
-                label: Text(AppLocalizations.of(context)!.shareBtn),
+                label: Text(l10n.shareBtn),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
@@ -344,7 +345,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
               child: OutlinedButton.icon(
                 onPressed: _saveReport,
                 icon: const Icon(Icons.save_alt),
-                label: Text(AppLocalizations.of(context)!.saveBtn),
+                label: Text(l10n.saveBtn),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
@@ -366,10 +367,10 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
       try {
         // 简单清理JSON格式的显示
         String cleanJson = content
-            .replaceAll('"author":', AppLocalizations.of(context)!.author)
-            .replaceAll('"work":', AppLocalizations.of(context)!.work)
-            .replaceAll('"confidence":', AppLocalizations.of(context)!.confidence)
-            .replaceAll('"explanation":', AppLocalizations.of(context)!.explanation)
+            .replaceAll('"author":', l10n.author)
+            .replaceAll('"work":', l10n.work)
+            .replaceAll('"confidence":', l10n.confidence)
+            .replaceAll('"explanation":', l10n.explanation)
             .replaceAll(RegExp(r'[{}",]'), '')
             .replaceAll(RegExp(r'\s+'), ' ')
             .trim();
@@ -438,7 +439,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
       text = '${text.substring(0, 800)}...';
     }
 
-    return text.isEmpty ? AppLocalizations.of(context)!.generatingReportContent : text;
+    return text.isEmpty ? l10n.generatingReportContent : text;
   }
 
   void _openInBrowser() async {
@@ -527,11 +528,11 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: const Row(
+                  content: Row(
                     children: [
-                      Icon(Icons.check_circle, color: Colors.white),
-                      SizedBox(width: 8),
-                      Text(AppLocalizations.of(context)!.reportOpenedInBrowser),
+                      const Icon(Icons.check_circle, color: Colors.white),
+                      const SizedBox(width: 8),
+                      Text(l10n.reportOpenedInBrowser),
                     ],
                   ),
                   backgroundColor: Theme.of(context).colorScheme.primary,
@@ -602,7 +603,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${AppLocalizations.of(context)!.cannotGetFilePath}: $e'),
+            content: Text('${l10n.cannotGetFilePath}: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
             duration: AppConstants.snackBarDurationError,
           ),
@@ -672,7 +673,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
             backgroundColor: Theme.of(context).colorScheme.primary,
             duration: const Duration(seconds: 4),
             action: SnackBarAction(
-              label: AppLocalizations.of(context)!.shareBtn,
+              label: l10n.shareBtn,
               textColor: Colors.white,
               onPressed: () => _shareReportFile(htmlFile.path),
             ),
@@ -705,7 +706,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${AppLocalizations.of(context)!.shareReport}: $e'),
+            content: Text('${l10n.shareReport}: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
             duration: AppConstants.snackBarDurationError,
           ),
@@ -731,10 +732,10 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(AppLocalizations.of(context)!.reportFileSavedInstructions),
+            Text(l10n.reportFileSavedInstructions),
             const SizedBox(height: 16),
-            Text(AppLocalizations.of(context)!.step1OpenFileManager),
-            Text(AppLocalizations.of(context)!.step2NavigateToPath),
+            Text(l10n.step1OpenFileManager),
+            Text(l10n.step2NavigateToPath),
             Container(
               margin: const EdgeInsets.symmetric(vertical: 8),
               padding: const EdgeInsets.all(8),
@@ -747,14 +748,14 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
                 style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
               ),
             ),
-            Text(AppLocalizations.of(context)!.step3TapHtmlFile),
-            Text(AppLocalizations.of(context)!.step4SelectBrowser),
+            Text(l10n.step3TapHtmlFile),
+            Text(l10n.step4SelectBrowser),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(AppLocalizations.of(context)!.gotIt),
+            child: Text(l10n.gotIt),
           ),
           FilledButton(
             onPressed: () {
@@ -763,12 +764,12 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
               Clipboard.setData(ClipboardData(text: filePath));
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(AppLocalizations.of(context)!.pathCopied),
+                  content: Text(l10n.pathCopied),
                   duration: AppConstants.snackBarDurationImportant,
                 ),
               );
             },
-            child: Text(AppLocalizations.of(context)!.copyPath),
+            child: Text(l10n.copyPath),
           ),
         ],
       ),
@@ -809,7 +810,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(AppLocalizations.of(context)!.gotIt),
+            child: Text(l10n.gotIt),
           ),
           FilledButton(
             onPressed: () {
@@ -817,12 +818,12 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
               Clipboard.setData(const ClipboardData(text: 'data:text/html,'));
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(AppLocalizations.of(context)!.addressBarPrefixCopied),
+                  content: Text(l10n.addressBarPrefixCopied),
                   duration: Duration(seconds: 3),
                 ),
               );
             },
-            child: Text(AppLocalizations.of(context)!.copyPrefix),
+            child: Text(l10n.copyPrefix),
           ),
         ],
       ),
@@ -902,8 +903,8 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
       // 使用系统分享功能
       await SharePlus.instance.share(
         ShareParams(
-          text: AppLocalizations.of(context)!.yearAIAnnualReport.replaceAll('{year}', widget.year.toString()),
-          subject: AppLocalizations.of(context)!.yearAIAnnualReport.replaceAll('{year}', widget.year.toString()),
+          text: l10n.yearAIAnnualReport(widget.year.toString()),
+          subject: l10n.yearAIAnnualReport(widget.year.toString()),
           files: [XFile(htmlFile.path)],
         ),
       );
@@ -911,11 +912,11 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Row(
+            content: Row(
               children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 8),
-                Text(AppLocalizations.of(context)!.reportShared),
+                const Icon(Icons.check_circle, color: Colors.white),
+                const SizedBox(width: 8),
+                Text(l10n.reportShared),
               ],
             ),
             backgroundColor: Theme.of(context).colorScheme.primary,
@@ -927,7 +928,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${AppLocalizations.of(context)!.shareReport}: $e'),
+            content: Text('${l10n.shareReport}: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
             duration: AppConstants.snackBarDurationError,
           ),
@@ -1007,7 +1008,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${AppLocalizations.of(context)!.saveReport}: $e'),
+            content: Text('${l10n.saveReport}: $e'),
             backgroundColor: Theme.of(context).colorScheme.error,
             duration: AppConstants.snackBarDurationError,
           ),

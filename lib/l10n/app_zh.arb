@@ -10,6 +10,9 @@
   "settings": "设置",
   "loading": "加载中...",
   "retry": "重试",
+  "refresh": "刷新",
+  "annualReport": "年度报告",
+  "clearRecords": "清空记录",
   "home": "首页",
   "notes": "记录",
   "aiFeatures": "AI",
@@ -2598,6 +2601,18 @@
   "featureInDevelopment": "分享功能开发中...",
   "selectFromFiles": "从文件选择",
   "supportsLargeFiles": "支持大文件，内存安全处理",
+  "unifiedMediaImportImportMedia": "导入{mediaType}",
+  "@unifiedMediaImportImportMedia": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "mediaTypeImage": "图片",
+  "mediaTypeVideo": "视频",
+  "mediaTypeAudio": "音频",
+  "mediaTypeMedia": "媒体",
   "takePhoto": "拍照",
   "recordVideo": "录制视频",
   "recordAudio": "录制音频",
