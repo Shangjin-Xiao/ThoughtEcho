@@ -194,24 +194,22 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
       });
 
       // 使用内存保护的文件选择
-      final FilePickerResult? result =
-          await lfm.LargeFileManager.executeWithMemoryProtection<
-            FilePickerResult?
-          >(() async {
-            switch (widget.mediaType) {
-              case 'image':
-                return await StreamFileSelector.selectImageFile();
-              case 'video':
-                return await StreamFileSelector.selectVideoFile();
-              case 'audio':
-                return await StreamFileSelector.selectFile(
-                  extensions: ['mp3', 'wav', 'aac', 'm4a', 'ogg', 'flac'],
-                  description: 'Audio Files',
-                );
-              default:
-                throw Exception('不支持的媒体类型: ${widget.mediaType}');
-            }
-          }, operationName: '选择${_getMediaTypeName(widget.mediaType)}文件');
+      final FilePickerResult? result = await lfm.LargeFileManager
+          .executeWithMemoryProtection<FilePickerResult?>(() async {
+        switch (widget.mediaType) {
+          case 'image':
+            return await StreamFileSelector.selectImageFile();
+          case 'video':
+            return await StreamFileSelector.selectVideoFile();
+          case 'audio':
+            return await StreamFileSelector.selectFile(
+              extensions: ['mp3', 'wav', 'aac', 'm4a', 'ogg', 'flac'],
+              description: 'Audio Files',
+            );
+          default:
+            throw Exception('不支持的媒体类型: ${widget.mediaType}');
+        }
+      }, operationName: '选择${_getMediaTypeName(widget.mediaType)}文件');
 
       if (result == null || result.files.isEmpty) {
         _resetState();
@@ -280,33 +278,33 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
       // 使用内存保护的文件保存（直接保存到媒体目录）
       final String? savedPath =
           await lfm.LargeFileManager.executeWithMemoryProtection<String?>(
-            () async {
-              switch (widget.mediaType) {
-                case 'image':
-                  return await MediaFileService.saveImage(
-                    filePath,
-                    onProgress: _updateProgress,
-                    cancelToken: _cancelToken,
-                  );
-                case 'video':
-                  return await MediaFileService.saveVideo(
-                    filePath,
-                    onProgress: _updateProgress,
-                    onStatusUpdate: _updateStatus,
-                    cancelToken: _cancelToken,
-                  );
-                case 'audio':
-                  return await MediaFileService.saveAudio(
-                    filePath,
-                    onProgress: _updateProgress,
-                    cancelToken: _cancelToken,
-                  );
-                default:
-                  throw Exception('不支持的媒体类型: ${widget.mediaType}');
-              }
-            },
-            operationName: '保存${_getMediaTypeName(widget.mediaType)}文件',
-          );
+        () async {
+          switch (widget.mediaType) {
+            case 'image':
+              return await MediaFileService.saveImage(
+                filePath,
+                onProgress: _updateProgress,
+                cancelToken: _cancelToken,
+              );
+            case 'video':
+              return await MediaFileService.saveVideo(
+                filePath,
+                onProgress: _updateProgress,
+                onStatusUpdate: _updateStatus,
+                cancelToken: _cancelToken,
+              );
+            case 'audio':
+              return await MediaFileService.saveAudio(
+                filePath,
+                onProgress: _updateProgress,
+                cancelToken: _cancelToken,
+              );
+            default:
+              throw Exception('不支持的媒体类型: ${widget.mediaType}');
+          }
+        },
+        operationName: '保存${_getMediaTypeName(widget.mediaType)}文件',
+      );
 
       if (savedPath != null && mounted) {
         setState(() {
@@ -376,18 +374,18 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
       // 保存文件（直接保存到媒体目录）
       final String? savedPath =
           await lfm.LargeFileManager.executeWithMemoryProtection<String?>(
-            () async {
-              switch (widget.mediaType) {
-                case 'image':
-                  return await MediaFileService.saveImage(file!.path);
-                case 'video':
-                  return await MediaFileService.saveVideo(file!.path);
-                default:
-                  throw Exception('不支持的媒体类型');
-              }
-            },
-            operationName: '保存${_getMediaTypeName(widget.mediaType)}',
-          );
+        () async {
+          switch (widget.mediaType) {
+            case 'image':
+              return await MediaFileService.saveImage(file!.path);
+            case 'video':
+              return await MediaFileService.saveVideo(file!.path);
+            default:
+              throw Exception('不支持的媒体类型');
+          }
+        },
+        operationName: '保存${_getMediaTypeName(widget.mediaType)}',
+      );
 
       if (savedPath != null && mounted) {
         setState(() {
@@ -453,11 +451,11 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
       // 使用内存保护下载文件
       final String? savedPath =
           await lfm.LargeFileManager.executeWithMemoryProtection<String?>(
-            () async {
-              return await _downloadMediaFromUrl(url);
-            },
-            operationName: '下载${_getMediaTypeName(widget.mediaType)}',
-          );
+        () async {
+          return await _downloadMediaFromUrl(url);
+        },
+        operationName: '下载${_getMediaTypeName(widget.mediaType)}',
+      );
 
       if (savedPath != null && mounted) {
         setState(() {

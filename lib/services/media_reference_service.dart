@@ -244,11 +244,9 @@ class MediaReferenceService {
       final storedVariants = snapshot.storedIndex[canonicalKey];
       final quoteVariants = snapshot.quoteIndex[canonicalKey];
 
-      final hasStoredRefs =
-          storedVariants != null &&
+      final hasStoredRefs = storedVariants != null &&
           storedVariants.values.any((refs) => refs.isNotEmpty);
-      final hasQuoteRefs =
-          quoteVariants != null &&
+      final hasQuoteRefs = quoteVariants != null &&
           quoteVariants.values.any((refs) => refs.isNotEmpty);
 
       if (hasQuoteRefs) {
@@ -287,7 +285,7 @@ class MediaReferenceService {
   }
 
   static Future<Map<String, Map<String, Set<String>>>>
-  _fetchStoredReferenceIndex() async {
+      _fetchStoredReferenceIndex() async {
     final db = await database;
     final rows = await db.query(_tableName, columns: ['file_path', 'quote_id']);
 
@@ -312,7 +310,7 @@ class MediaReferenceService {
   }
 
   static Future<Map<String, Map<String, Set<String>>>>
-  _collectQuoteReferenceIndex() async {
+      _collectQuoteReferenceIndex() async {
     final databaseService = DatabaseService();
     final quotes = await databaseService.getAllQuotes();
 
@@ -415,11 +413,9 @@ class MediaReferenceService {
       final storedVariants = snapshot.storedIndex[canonicalKey];
       final quoteVariants = snapshot.quoteIndex[canonicalKey];
 
-      final hasStoredRefs =
-          storedVariants != null &&
+      final hasStoredRefs = storedVariants != null &&
           storedVariants.values.any((refs) => refs.isNotEmpty);
-      final hasQuoteRefs =
-          quoteVariants != null &&
+      final hasQuoteRefs = quoteVariants != null &&
           quoteVariants.values.any((refs) => refs.isNotEmpty);
 
       // 如果在笔记内容中找到引用，先尝试修复缺失的引用记录

@@ -78,7 +78,7 @@ class MediaCleanupService {
       // 2. 清理所有临时文件
       final tempFiles = dryRun
           ? (await TemporaryMediaService.getTemporaryFilesStats())['totalFiles']
-                as int
+              as int
           : await TemporaryMediaService.cleanupAllTemporaryFiles();
       results['tempFilesCleared'] = tempFiles;
 

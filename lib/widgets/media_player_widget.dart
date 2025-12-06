@@ -570,18 +570,18 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
                     Text(
                       _getFileName(widget.filePath),
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      ),
+                            fontWeight: FontWeight.w500,
+                          ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       _formatDuration(_duration),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withValues(alpha: 0.6),
-                      ),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withValues(alpha: 0.6),
+                          ),
                     ),
                   ],
                 ),
@@ -657,9 +657,9 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
                   child: Slider(
                     value: _position.inMilliseconds.toDouble(),
                     max: _duration.inMilliseconds.toDouble().clamp(
-                      1.0,
-                      double.infinity,
-                    ),
+                          1.0,
+                          double.infinity,
+                        ),
                     onChanged: _onAudioSeek,
                     activeColor: Theme.of(context).colorScheme.primary,
                     inactiveColor: Theme.of(

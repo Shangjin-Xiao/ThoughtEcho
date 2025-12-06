@@ -54,8 +54,7 @@ class VersionInfo {
       downloadUrl: json['html_url'] as String? ?? '',
       apkDownloadUrl: apkDownloadUrl,
       releaseNotes: json['body'] as String? ?? '',
-      publishedAt:
-          DateTime.tryParse(json['published_at'] as String? ?? '') ??
+      publishedAt: DateTime.tryParse(json['published_at'] as String? ?? '') ??
           DateTime.now(),
       hasUpdate: hasUpdate,
     );
@@ -72,9 +71,8 @@ class VersionInfo {
     final v2Parts = v2.split('.').map((e) => int.tryParse(e) ?? 0).toList();
 
     // 确保两个版本号有相同的长度
-    final maxLength = v1Parts.length > v2Parts.length
-        ? v1Parts.length
-        : v2Parts.length;
+    final maxLength =
+        v1Parts.length > v2Parts.length ? v1Parts.length : v2Parts.length;
     while (v1Parts.length < maxLength) {
       v1Parts.add(0);
     }

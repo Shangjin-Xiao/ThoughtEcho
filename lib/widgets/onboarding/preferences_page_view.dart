@@ -189,8 +189,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
     OnboardingPreference<dynamic> preference,
     ThemeData theme,
   ) {
-    final value =
-        widget.state.getPreference<bool>(preference.key) ??
+    final value = widget.state.getPreference<bool>(preference.key) ??
         preference.defaultValue as bool;
 
     return Card(
@@ -206,8 +205,8 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
             );
 
             // 请求位置权限
-            final hasPermission = await locationService
-                .requestLocationPermission();
+            final hasPermission =
+                await locationService.requestLocationPermission();
             if (!hasPermission) {
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -299,14 +298,12 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
 
     // 根据默认值类型判断是 int 还是 String
     if (preference.defaultValue is int) {
-      final value =
-          widget.state.getPreference<int>(preference.key) ??
+      final value = widget.state.getPreference<int>(preference.key) ??
           preference.defaultValue as int;
       return _buildRadioPreferenceInt(preference, theme, value, options);
     } else {
       // String 类型的 radio（例如语言选择）
-      final value =
-          widget.state.getPreference<String>(preference.key) ??
+      final value = widget.state.getPreference<String>(preference.key) ??
           preference.defaultValue as String;
       return _buildRadioPreferenceString(preference, theme, value, options);
     }
@@ -438,8 +435,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
     OnboardingPreference<dynamic> preference,
     ThemeData theme,
   ) {
-    final value =
-        widget.state.getPreference<String>(preference.key) ??
+    final value = widget.state.getPreference<String>(preference.key) ??
         preference.defaultValue as String;
     final selectedValues = value.split(',').where((v) => v.isNotEmpty).toSet();
     final options = preference.options ?? [];
@@ -472,9 +468,8 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () {
-                      final allValues = options
-                          .map((o) => o.value as String)
-                          .join(',');
+                      final allValues =
+                          options.map((o) => o.value as String).join(',');
                       widget.onPreferenceChanged(preference.key, allValues);
                     },
                     icon: const Icon(Icons.select_all, size: 16),
@@ -543,9 +538,8 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
                     color: isSelected
                         ? theme.colorScheme.onPrimaryContainer
                         : theme.colorScheme.onSurface,
-                    fontWeight: isSelected
-                        ? FontWeight.w600
-                        : FontWeight.normal,
+                    fontWeight:
+                        isSelected ? FontWeight.w600 : FontWeight.normal,
                   ),
                   side: BorderSide(
                     color: isSelected

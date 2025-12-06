@@ -41,11 +41,11 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
     );
     _slideAnimation =
         Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _animationController,
-            curve: Curves.easeOutCubic,
-          ),
-        );
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeOutCubic,
+      ),
+    );
 
     _animationController.forward();
   }
@@ -454,8 +454,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
       // 如果不是HTML格式，包装成HTML
       if (!widget.htmlContent.trim().toLowerCase().startsWith('<!doctype') &&
           !widget.htmlContent.trim().toLowerCase().startsWith('<html')) {
-        contentToWrite =
-            '''
+        contentToWrite = '''
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -794,14 +793,16 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
           children: [
             const Text('HTML报告内容已复制到剪贴板。请按以下步骤操作：'),
             const SizedBox(height: 16),
-            Text(l10n.annualReportMobileInstructions, style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(l10n.annualReportMobileInstructions,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
             const Text('1. 打开浏览器（Chrome/Safari等）'),
             const Text('2. 新建空白页面或新标签页'),
             const Text('3. 在地址栏输入：data:text/html,'),
             const Text('4. 粘贴复制的内容'),
             const Text('5. 回车查看报告'),
             const SizedBox(height: 12),
-            Text(l10n.annualReportDesktopInstructions, style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(l10n.annualReportDesktopInstructions,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
             const Text('1. 新建文本文件，粘贴内容'),
             const Text('2. 将文件保存为 .html 格式'),
             const Text('3. 双击文件在浏览器中打开'),
@@ -849,8 +850,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
       String contentToShare = widget.htmlContent;
       if (!widget.htmlContent.trim().toLowerCase().startsWith('<!doctype') &&
           !widget.htmlContent.trim().toLowerCase().startsWith('<html')) {
-        contentToShare =
-            '''
+        contentToShare = '''
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>

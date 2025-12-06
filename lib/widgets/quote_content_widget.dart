@@ -26,16 +26,16 @@ class QuoteContent extends StatelessWidget {
   // 性能优化:提取为静态常量,避免每次 build 创建
   static final quill.QuillEditorConfig _staticEditorConfig =
       quill.QuillEditorConfig(
-        enableInteractiveSelection: false,
-        enableSelectionToolbar: false,
-        showCursor: false,
-        embedBuilders: QuillEditorExtensions.getEmbedBuilders(
-          optimizedImages: true,
-        ),
-        padding: EdgeInsets.zero,
-        expands: false,
-        scrollable: false,
-      );
+    enableInteractiveSelection: false,
+    enableSelectionToolbar: false,
+    showCursor: false,
+    embedBuilders: QuillEditorExtensions.getEmbedBuilders(
+      optimizedImages: true,
+    ),
+    padding: EdgeInsets.zero,
+    expands: false,
+    scrollable: false,
+  );
 
   static const double collapsedContentMaxHeight = 160.0;
   static const double _estimatedLineHeight = 24.0;
@@ -64,9 +64,9 @@ class QuoteContent extends StatelessWidget {
 
   @visibleForTesting
   static Map<String, dynamic> debugCacheStats() => {
-    'document': _QuoteDocumentCache.stats,
-    'controller': _QuoteContentControllerCache.stats,
-  };
+        'document': _QuoteDocumentCache.stats,
+        'controller': _QuoteContentControllerCache.stats,
+      };
 
   /// 检查是否为媒体软连接或其他应该过滤的内容
   bool _shouldFilterBoldContent(String content) {
@@ -325,18 +325,18 @@ class QuoteContent extends StatelessWidget {
 
       final _CachedControllerSet controllerSet =
           _QuoteContentControllerCache.getOrCreate(
-            quoteId: cacheQuoteId,
-            contentSignature: contentSignature,
-            variant: contentVariant,
-            documentBuilder: () => _QuoteDocumentCache.getOrCreate(
-              deltaContent: quote.deltaContent!,
-              prioritizeBold: usePrioritizedDoc,
-              builder: () => _buildRichTextDocument(
-                quote.deltaContent!,
-                usePrioritizedDoc,
-              ),
-            ),
-          );
+        quoteId: cacheQuoteId,
+        contentSignature: contentSignature,
+        variant: contentVariant,
+        documentBuilder: () => _QuoteDocumentCache.getOrCreate(
+          deltaContent: quote.deltaContent!,
+          prioritizeBold: usePrioritizedDoc,
+          builder: () => _buildRichTextDocument(
+            quote.deltaContent!,
+            usePrioritizedDoc,
+          ),
+        ),
+      );
 
       Widget richTextEditor = quill.QuillEditor(
         controller: controllerSet.quillController,
@@ -527,7 +527,7 @@ class _DocumentCacheEntry {
 
 class _QuoteContentControllerCache {
   static final LinkedHashMap<_ControllerCacheKey, _ControllerCacheEntry>
-  _cache = LinkedHashMap<_ControllerCacheKey, _ControllerCacheEntry>();
+      _cache = LinkedHashMap<_ControllerCacheKey, _ControllerCacheEntry>();
 
   static const int _maxCacheSize = 50;
   static const int _pruneBatchSize = 10;
@@ -642,9 +642,8 @@ class _QuoteContentControllerCache {
 
   /// 修复问题1：清理特定笔记的所有缓存（用于笔记删除/更新）
   static void removeByQuoteId(String quoteId) {
-    final keysToRemove = _cache.keys
-        .where((key) => key.quoteId == quoteId)
-        .toList();
+    final keysToRemove =
+        _cache.keys.where((key) => key.quoteId == quoteId).toList();
 
     for (final key in keysToRemove) {
       final entry = _cache.remove(key);
@@ -682,7 +681,7 @@ class _ControllerCacheKey {
 
 class _ControllerCacheEntry {
   _ControllerCacheEntry({required this.controllers})
-    : lastAccess = DateTime.now();
+      : lastAccess = DateTime.now();
 
   final _CachedControllerSet controllers;
   DateTime lastAccess;

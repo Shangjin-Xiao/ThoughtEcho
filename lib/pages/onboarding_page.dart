@@ -447,11 +447,9 @@ class _OnboardingPageState extends State<OnboardingPage>
         );
         final currentValue =
             controller.state.getPreference<String>('hitokotoTypes') ??
-            hitokotoPreference.defaultValue as String;
-        final selectedValues = currentValue
-            .split(',')
-            .where((v) => v.isNotEmpty)
-            .toSet();
+                hitokotoPreference.defaultValue as String;
+        final selectedValues =
+            currentValue.split(',').where((v) => v.isNotEmpty).toSet();
         final options = hitokotoPreference.options ?? [];
 
         return SingleChildScrollView(
@@ -738,9 +736,8 @@ class _OnboardingPageState extends State<OnboardingPage>
             // 下一步/完成按钮
             if (OnboardingConfig.isLastPage(state.currentPageIndex))
               FilledButton.icon(
-                onPressed: state.isCompleting
-                    ? null
-                    : controller.completeOnboarding,
+                onPressed:
+                    state.isCompleting ? null : controller.completeOnboarding,
                 icon: state.isCompleting
                     ? const SizedBox(
                         width: 18,

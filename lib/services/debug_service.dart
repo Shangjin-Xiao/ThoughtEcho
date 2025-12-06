@@ -283,10 +283,13 @@ class WindowsStartupDebugService {
 
       for (final key in vcRedistKeys) {
         try {
-          final result = await Process.run('reg', [
-            'query',
-            'HKEY_LOCAL_MACHINE\\$key',
-          ], runInShell: true);
+          final result = await Process.run(
+              'reg',
+              [
+                'query',
+                'HKEY_LOCAL_MACHINE\\$key',
+              ],
+              runInShell: true);
           await recordDebugInfo(
             'vcredist_$key',
             result.exitCode == 0 ? 'found' : 'not_found',
@@ -367,8 +370,7 @@ class WindowsStartupDebugService {
         path.join(desktop.path, 'ThoughtEcho_启动问题解决指南.txt'),
       );
 
-      final guide =
-          '''
+      final guide = '''
 === ThoughtEcho 启动问题解决指南 ===
 生成时间: ${DateTime.now().toLocal()}
 

@@ -55,9 +55,8 @@ class AIProviderSettings implements AIConfig {
       temperature: map['temperature'] != null
           ? (map['temperature'] as num).toDouble()
           : 0.7,
-      maxTokens: map['maxTokens'] != null
-          ? (map['maxTokens'] as num).toInt()
-          : 1000,
+      maxTokens:
+          map['maxTokens'] != null ? (map['maxTokens'] as num).toInt() : 1000,
       hostOverride: map['hostOverride'],
       isEnabled: map['isEnabled'] ?? true,
     );

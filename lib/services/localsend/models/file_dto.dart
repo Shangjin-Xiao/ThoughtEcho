@@ -109,7 +109,7 @@ class FileDto {
       // parse legacy enum to internal internal enum
       fileType =
           FileType.values.firstWhereOrNull((e) => e.name == rawFileType) ??
-          FileType.other;
+              FileType.other;
     }
 
     return FileDto(

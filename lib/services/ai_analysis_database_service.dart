@@ -374,9 +374,8 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
   Future<int> restoreFromJson(String jsonStr) async {
     try {
       final List<dynamic> jsonList = json.decode(jsonStr);
-      final analyses = jsonList
-          .map((item) => item as Map<String, dynamic>)
-          .toList();
+      final analyses =
+          jsonList.map((item) => item as Map<String, dynamic>).toList();
       return await importAnalysesFromList(analyses);
     } catch (e) {
       AppLogger.e('从JSON恢复AI分析失败: $e', error: e, source: 'AIAnalysisDB');

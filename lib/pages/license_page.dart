@@ -739,9 +739,8 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
         final preview = entry.paragraphs.isNotEmpty
             ? entry.paragraphs.first.text
             : l10n.noLicenseContent;
-        final initials = packages.isNotEmpty
-            ? packages.trim()[0].toUpperCase()
-            : 'P';
+        final initials =
+            packages.isNotEmpty ? packages.trim()[0].toUpperCase() : 'P';
         final isExpanded = _expanded.contains(entryIndex);
 
         return Card(
@@ -796,9 +795,8 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
                       tooltip: l10n.copyLicense,
                       onPressed: () async {
                         final messenger = ScaffoldMessenger.of(context);
-                        final paragraphs = entry.paragraphs
-                            .map((p) => p.text)
-                            .toList();
+                        final paragraphs =
+                            entry.paragraphs.map((p) => p.text).toList();
                         final full = await compute(_joinParagraphs, paragraphs);
                         if (!mounted) return;
                         await Clipboard.setData(ClipboardData(text: full));
@@ -865,21 +863,18 @@ class _ProgressiveSystemLicensesPageState
   void initState() {
     super.initState();
     // 一次性读取所有系统许可证条目，但不在列表中渲染完整文本
-    LicenseRegistry.licenses
-        .toList()
-        .then((list) {
-          setState(() {
-            _entries = list;
-            _loading = false;
-          });
-        })
-        .catchError((e) {
-          setState(() {
-            _entries = [];
-            _error = e.toString();
-            _loading = false;
-          });
-        });
+    LicenseRegistry.licenses.toList().then((list) {
+      setState(() {
+        _entries = list;
+        _loading = false;
+      });
+    }).catchError((e) {
+      setState(() {
+        _entries = [];
+        _error = e.toString();
+        _loading = false;
+      });
+    });
   }
 
   @override
@@ -913,9 +908,8 @@ class _ProgressiveSystemLicensesPageState
         final preview = entry.paragraphs.isNotEmpty
             ? entry.paragraphs.first.text
             : l10n.noLicenseContent;
-        final initials = packages.isNotEmpty
-            ? packages.trim()[0].toUpperCase()
-            : 'P';
+        final initials =
+            packages.isNotEmpty ? packages.trim()[0].toUpperCase() : 'P';
 
         return GestureDetector(
           onTap: () {
@@ -966,7 +960,10 @@ class _ProgressiveSystemLicensesPageState
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            color: Theme.of(context).textTheme.bodySmall?.color
+                            color: Theme.of(context)
+                                .textTheme
+                                .bodySmall
+                                ?.color
                                 ?.withValues(alpha: 0.85),
                           ),
                         ),

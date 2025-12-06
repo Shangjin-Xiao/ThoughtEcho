@@ -115,8 +115,7 @@ class LocationService extends ChangeNotifier {
       if (_isLocationServiceEnabled) {
         logDebug('位置服务已启用');
         final permission = await Geolocator.checkPermission();
-        _hasLocationPermission =
-            (permission == LocationPermission.whileInUse ||
+        _hasLocationPermission = (permission == LocationPermission.whileInUse ||
             permission == LocationPermission.always);
         logDebug('位置权限状态: $_hasLocationPermission');
 
@@ -170,8 +169,7 @@ class LocationService extends ChangeNotifier {
         return false;
       }
 
-      _hasLocationPermission =
-          (permission == LocationPermission.whileInUse ||
+      _hasLocationPermission = (permission == LocationPermission.whileInUse ||
           permission == LocationPermission.always);
 
       notifyListeners();
@@ -215,8 +213,7 @@ class LocationService extends ChangeNotifier {
     if (!_hasLocationPermission && !skipPermissionRequest) {
       // 检查权限，但不自动请求
       final permission = await Geolocator.checkPermission();
-      _hasLocationPermission =
-          (permission == LocationPermission.whileInUse ||
+      _hasLocationPermission = (permission == LocationPermission.whileInUse ||
           permission == LocationPermission.always);
 
       if (!_hasLocationPermission) {
@@ -236,16 +233,15 @@ class LocationService extends ChangeNotifier {
       logDebug('开始获取位置，使用${highAccuracy ? "高" : "低"}精度模式...');
 
       // 使用LocalGeocodingService获取位置，并添加超时控制
-      _currentPosition =
-          await LocalGeocodingService.getCurrentPosition(
-            highAccuracy: highAccuracy,
-          ).timeout(
-            const Duration(seconds: 15), // 15秒超时
-            onTimeout: () {
-              logDebug('位置获取超时');
-              throw Exception('位置获取超时，请重试');
-            },
-          );
+      _currentPosition = await LocalGeocodingService.getCurrentPosition(
+        highAccuracy: highAccuracy,
+      ).timeout(
+        const Duration(seconds: 15), // 15秒超时
+        onTimeout: () {
+          logDebug('位置获取超时');
+          throw Exception('位置获取超时，请重试');
+        },
+      );
 
       if (_currentPosition != null) {
         logDebug(
@@ -319,7 +315,8 @@ class LocationService extends ChangeNotifier {
         _province = null;
         _city = null;
         _district = null;
-        _currentAddress = _apiLanguageParam == 'en' ? 'Address resolution failed' : '地址解析失败';
+        _currentAddress =
+            _apiLanguageParam == 'en' ? 'Address resolution failed' : '地址解析失败';
         notifyListeners();
       }
     } catch (e) {
@@ -328,7 +325,8 @@ class LocationService extends ChangeNotifier {
       _province = null;
       _city = null;
       _district = null;
-      _currentAddress = _apiLanguageParam == 'en' ? 'Address resolution failed' : '地址解析失败';
+      _currentAddress =
+          _apiLanguageParam == 'en' ? 'Address resolution failed' : '地址解析失败';
       notifyListeners();
     }
   }
@@ -361,8 +359,7 @@ class LocationService extends ChangeNotifier {
           final address = data['address'];
           _country = address['country'];
           _province = address['state'] ?? address['province'];
-          _city =
-              address['city'] ??
+          _city = address['city'] ??
               address['county'] ??
               address['town'] ??
               address['village'];
@@ -475,9 +472,8 @@ class LocationService extends ChangeNotifier {
 
       // 根据输入语言和用户语言设置选择合适的语言参数
       // 如果输入包含中文，使用中文结果；否则根据用户语言设置
-      final String languageParam = _containsChinese(query)
-          ? 'zh'
-          : _apiLanguageParam;
+      final String languageParam =
+          _containsChinese(query) ? 'zh' : _apiLanguageParam;
 
       // OpenMeteo地理编码API - 使用URL编码的查询参数
       final url =
@@ -605,15 +601,13 @@ class LocationService extends ChangeNotifier {
 
           // 更灵活地处理地点名称
           String placeName = item['name'] ?? '';
-          String cityName =
-              address['city'] ??
+          String cityName = address['city'] ??
               address['town'] ??
               address['village'] ??
               address['municipality'] ??
               placeName;
           String country = address['country'] ?? '';
-          String state =
-              address['state'] ??
+          String state = address['state'] ??
               address['province'] ??
               address['county'] ??
               '';

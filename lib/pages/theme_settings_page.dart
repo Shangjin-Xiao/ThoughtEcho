@@ -178,8 +178,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                         ],
                       ),
                       Switch(
-                        value:
-                            appTheme.useDynamicColor &&
+                        value: appTheme.useDynamicColor &&
                             !appTheme.useCustomColor,
                         onChanged: (value) {
                           // 如果启用动态取色，需要禁用自定义主题色
@@ -397,8 +396,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
         child: isSelected
             ? Icon(
                 Icons.check,
-                color:
-                    ThemeData.estimateBrightnessForColor(color) ==
+                color: ThemeData.estimateBrightnessForColor(color) ==
                         Brightness.light
                     ? Colors.black
                     : Colors.white,

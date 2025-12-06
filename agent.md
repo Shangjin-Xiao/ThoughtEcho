@@ -11,7 +11,11 @@
 - AI/密钥相关逻辑严禁硬编码敏感信息，统一通过 `APIKeyManager` 与安全存储。
 - 文档或命令给出后应在实际环境验证；对用户或 CI 依赖的命令，保持与 `scripts/`、`test/all_tests.dart` 一致。
 - 非用户明确要求时，不主动运行全量 `flutter test`、`flutter run` 或构建命令，也不要生成额外总结文档。
-
+## 国际化规范
+- **严禁在 UI 代码中硬编码中文或任何用户可见文本**。所有用户界面文字必须通过 `AppLocalizations.of(context).keyName` 获取。
+- 新增 UI 文案时，先在 `lib/l10n/app_zh.arb`（中文）与 `lib/l10n/app_en.arb`（英文）中添加对应键值对，然后执行 `flutter gen-l10n` 生成代码后再使用。
+- 带占位符的翻译使用 ARB 的 `{placeholder}` 语法，并在 `@keyName` 中声明 `placeholders` 元数据。
+- 注释、日志、调试输出等非用户可见内容可使用中文，但 SnackBar、Dialog、Tooltip 等任何展示给用户的内容必须国际化。
 ## 架构总览
 - 启动阶段：`main()` 建立基础 Provider、主题、路由后，使用 microtask 初始化 `DatabaseService`、`AIService` 等重量组件，期间 UI 通过 `ValueListenableBuilder` 等方式等待完成。
 - 依赖注入：`lib/controllers` 将服务组合成 UI 可消费的控制器；Provider 使用 `ChangeNotifierProvider`、`ProxyProvider` 来串联服务与控制器。

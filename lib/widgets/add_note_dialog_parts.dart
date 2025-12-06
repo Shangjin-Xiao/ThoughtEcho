@@ -291,7 +291,8 @@ class SelectedTagsDisplay extends StatelessWidget {
             children: selectedTagIds.map((tagId) {
               final tag = allTags.firstWhere(
                 (t) => t.id == tagId,
-                orElse: () => NoteCategory(id: tagId, name: AppLocalizations.of(context).unknownTag),
+                orElse: () => NoteCategory(
+                    id: tagId, name: AppLocalizations.of(context).unknownTag),
               );
               return Chip(
                 label: IconUtils.isEmoji(tag.iconName)

@@ -3,8 +3,7 @@ import 'dart:io';
 import 'package:uuid/uuid.dart';
 // 条件导入：Web平台使用stub实现，其他平台使用gal
 import '../utils/stub_implementations.dart'
-    if (dart.library.io) 'package:gal/gal.dart'
-    as gal;
+    if (dart.library.io) 'package:gal/gal.dart' as gal;
 import '../models/quote_model.dart';
 import '../models/generated_card.dart';
 import '../constants/ai_card_prompts.dart';
@@ -383,8 +382,8 @@ class AICardGenerationService {
       // 先渲染图片（此时尚未出现 async gap，满足 use_build_context_synchronously 规范）
       final safeContext =
           (context != null && context is Element && !context.mounted)
-          ? null
-          : context;
+              ? null
+              : context;
 
       // 创建临时卡片对象用于渲染（使用标准化的SVG）
       final tempCard = GeneratedCard(
@@ -974,8 +973,9 @@ class AICardGenerationService {
 
     // 3) 如果根尺寸不可靠，尝试从首个rect推断（通常为背景矩形）
     if (w == null || h == null) {
-      final rectMatch = RegExp(r'<rect[^>]*width="([^"]+)"[^>]*height="([^"]+)"')
-          .firstMatch(svgContent);
+      final rectMatch =
+          RegExp(r'<rect[^>]*width="([^"]+)"[^>]*height="([^"]+)"')
+              .firstMatch(svgContent);
       if (rectMatch != null) {
         w = _parseNumericDimension(rectMatch.group(1)) ?? w;
         h = _parseNumericDimension(rectMatch.group(2)) ?? h;
@@ -992,7 +992,7 @@ class AICardGenerationService {
   double? _parseNumericDimension(String? raw) {
     if (raw == null || raw.trim().isEmpty) return null;
     if (raw.contains('%')) return null;
-    final cleaned = raw.replaceAll(RegExp('[^0-9.\-]'), '');
+    final cleaned = raw.replaceAll(RegExp('[^0-9.-]'), '');
     if (cleaned.isEmpty) return null;
     final parsed = double.tryParse(cleaned);
     if (parsed == null || parsed <= 0) return null;

@@ -235,8 +235,9 @@ class SvgToImageService {
 
     // 3) 如果根节点给的是百分比或0，尝试从第一个rect推断背景尺寸
     if (w == null || h == null) {
-      final rectMatch = RegExp(r'<rect[^>]*width="([^"]+)"[^>]*height="([^"]+)"')
-          .firstMatch(svgContent);
+      final rectMatch =
+          RegExp(r'<rect[^>]*width="([^"]+)"[^>]*height="([^"]+)"')
+              .firstMatch(svgContent);
       if (rectMatch != null) {
         w = _parseNumericDimension(rectMatch.group(1)) ?? w;
         h = _parseNumericDimension(rectMatch.group(2)) ?? h;
@@ -254,7 +255,7 @@ class SvgToImageService {
   static double? _parseNumericDimension(String? raw) {
     if (raw == null || raw.trim().isEmpty) return null;
     if (raw.contains('%')) return null;
-    final cleaned = raw.replaceAll(RegExp('[^0-9.\-]'), '');
+    final cleaned = raw.replaceAll(RegExp('[^0-9.-]'), '');
     if (cleaned.isEmpty) return null;
     final parsed = double.tryParse(cleaned);
     if (parsed == null || parsed <= 0) return null;
@@ -547,7 +548,8 @@ class SvgToImageService {
     String attributeKey = 'fill-opacity',
     double defaultOpacity = 1.0,
   }) {
-    final raw = attrs[attributeKey] ?? _parseStyleValue(attrs['style'], attributeKey);
+    final raw =
+        attrs[attributeKey] ?? _parseStyleValue(attrs['style'], attributeKey);
     final parsed = double.tryParse(raw ?? '');
     return parsed ?? defaultOpacity;
   }
@@ -557,8 +559,9 @@ class SvgToImageService {
     Map<String, String> attrs, {
     double defaultSize = 14.0,
   }) {
-    final raw = attrs['font-size'] ?? _parseStyleValue(attrs['style'], 'font-size');
-    final cleaned = raw?.replaceAll(RegExp('[^0-9.\-]'), '');
+    final raw =
+        attrs['font-size'] ?? _parseStyleValue(attrs['style'], 'font-size');
+    final cleaned = raw?.replaceAll(RegExp('[^0-9.-]'), '');
     final parsed = double.tryParse(cleaned ?? '');
     return parsed ?? defaultSize;
   }
@@ -574,7 +577,7 @@ class SvgToImageService {
   /// 将数值字符串转换为double，容忍%或px后缀
   static double _parseDimension(String? value) {
     if (value == null) return 0;
-    final cleaned = value.replaceAll(RegExp('[^0-9.\-]'), '');
+    final cleaned = value.replaceAll(RegExp('[^0-9.-]'), '');
     return double.tryParse(cleaned) ?? 0;
   }
 
@@ -720,7 +723,8 @@ class SvgToImageService {
     int width,
     int height,
   ) {
-    final textRegex = RegExp(r'<text[^>]*>.*?<\/text>', dotAll: true, caseSensitive: false);
+    final textRegex =
+        RegExp(r'<text[^>]*>.*?<\/text>', dotAll: true, caseSensitive: false);
 
     for (final match in textRegex.allMatches(svgContent)) {
       try {
@@ -728,12 +732,15 @@ class SvgToImageService {
         final attrs = _parseAttributes(rawTag);
         double x = _parseDimension(attrs['x']);
         final y = _parseDimension(attrs['y']);
-        final anchor = attrs['text-anchor'] ?? _parseStyleValue(attrs['style'], 'text-anchor') ?? 'start';
+        final anchor = attrs['text-anchor'] ??
+            _parseStyleValue(attrs['style'], 'text-anchor') ??
+            'start';
         final fill = _extractFill(attrs, defaultColor: '#000000');
         final fontSize = _extractFontSize(attrs, defaultSize: 14.0);
         final opacity = _extractOpacity(attrs, defaultOpacity: 1.0);
 
-        final contentMatch = RegExp(r'>\s*(.*?)\s*<\/text>', dotAll: true).firstMatch(rawTag);
+        final contentMatch =
+            RegExp(r'>\s*(.*?)\s*<\/text>', dotAll: true).firstMatch(rawTag);
         String text = contentMatch?.group(1) ?? '';
 
         // 解码HTML实体

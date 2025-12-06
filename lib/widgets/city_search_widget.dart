@@ -151,13 +151,13 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                     (weatherService.currentWeather == null &&
                             weatherService.temperature == null)
                         ? (locationService.currentAddress != null
-                              ? l10n.clickRefreshHint(
-                                  locationService.currentAddress!,
-                                )
-                              : l10n.cityNotSetHint)
+                            ? l10n.clickRefreshHint(
+                                locationService.currentAddress!,
+                              )
+                            : l10n.cityNotSetHint)
                         : (weatherService.currentWeather == '天气数据获取失败'
-                              ? l10n.weatherFetchFailed
-                              : '${WeatherService.getLocalizedWeatherDescription(AppLocalizations.of(context), weatherService.currentWeather ?? 'unknown')} ${weatherService.temperature ?? ""}'),
+                            ? l10n.weatherFetchFailed
+                            : '${WeatherService.getLocalizedWeatherDescription(AppLocalizations.of(context), weatherService.currentWeather ?? 'unknown')} ${weatherService.temperature ?? ""}'),
                     style: const TextStyle(fontSize: 12),
                   ),
                   trailing: IconButton(
@@ -169,8 +169,8 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                           )
                         : const Icon(Icons.refresh),
                     tooltip: l10n.refreshWeather,
-                    onPressed:
-                        (controller.isLoading || weatherService.isLoading)
+                    onPressed: (controller.isLoading ||
+                            weatherService.isLoading)
                         ? null
                         : () async {
                             final position = locationService.currentPosition;

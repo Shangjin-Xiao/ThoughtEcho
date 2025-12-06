@@ -71,8 +71,8 @@ void main() {
 
       // 使用导出接口重建tag_ids后校验
       final exported = await db.exportDataAsMap();
-      final exportedQuotes = (exported['quotes'] as List)
-          .cast<Map<String, dynamic>>();
+      final exportedQuotes =
+          (exported['quotes'] as List).cast<Map<String, dynamic>>();
       final eq1 = exportedQuotes.firstWhere((m) => m['id'] == 'quote-1');
       final eq2 = exportedQuotes.firstWhere((m) => m['id'] == 'quote-2');
 

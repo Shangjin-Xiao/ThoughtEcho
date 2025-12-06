@@ -12,12 +12,13 @@ import '../utils/app_logger.dart';
 class ApkDownloadService {
   static const String _notificationChannelId = 'apk_download_channel';
   static const String _notificationChannelName = 'APK Download';
-  static const String _notificationChannelDescription = 'APK file download progress notifications';
+  static const String _notificationChannelDescription =
+      'APK file download progress notifications';
 
   static Dio? _dio;
   static FlutterLocalNotificationsPlugin? _notificationsPlugin;
   static int? _currentNotificationId;
-  
+
   // 缓存的本地化字符串，用于通知（因为通知无法访问 BuildContext）
   static String? _cachedNotificationTitle;
   static String? _cachedDownloadStarted;
@@ -229,7 +230,7 @@ class ApkDownloadService {
     _cachedNotificationTitle = l10n.apkNotificationTitle;
     _cachedDownloadStarted = l10n.apkDownloadStarted(version);
     _cachedDownloadComplete = l10n.apkDownloadComplete;
-    
+
     try {
       // 创建通知渠道
       await _createNotificationChannel();
@@ -334,8 +335,7 @@ class ApkDownloadService {
 
     await notificationsPlugin
         .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >()
+            AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(androidChannel);
   }
 

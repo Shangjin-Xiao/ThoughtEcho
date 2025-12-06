@@ -104,9 +104,8 @@ class NetworkService {
         url,
         options: Options(
           headers: headers,
-          receiveTimeout: timeoutSeconds != null
-              ? Duration(seconds: timeoutSeconds)
-              : null,
+          receiveTimeout:
+              timeoutSeconds != null ? Duration(seconds: timeoutSeconds) : null,
           responseType: url.contains('hitokoto.cn')
               ? ResponseType.json
               : ResponseType.plain,
