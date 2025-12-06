@@ -2370,6 +2370,15 @@
   },
   "cannotGetLocationTitle": "无法获取位置",
   "cannotGetLocationDesc": "无法获取当前位置，请检查定位权限或网络状态。",
+  "getLocationFailedTitle": "获取位置失败",
+  "getLocationFailedDesc": "获取位置失败: {error}",
+  "@getLocationFailedDesc": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "cannotGetLocationPermissionShort": "无法获取位置权限",
   "savingNote": "正在保存",
   "saveComplete": "完成",

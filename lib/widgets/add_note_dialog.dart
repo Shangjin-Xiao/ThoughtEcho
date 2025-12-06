@@ -323,15 +323,16 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
           _includeLocation = false;
         });
         if (context.mounted) {
+          final l10n = AppLocalizations.of(context);
           showDialog(
             context: context,
             builder: (ctx) => AlertDialog(
-              title: const Text('无法获取位置'),
-              content: const Text('无法获取当前位置，请检查定位权限或网络状态。'),
+              title: Text(l10n.cannotGetLocationTitle),
+              content: Text(l10n.cannotGetLocationDesc),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx),
-                  child: const Text('我知道了'),
+                  child: Text(l10n.iKnow),
                 ),
               ],
             ),
@@ -341,18 +342,19 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     } catch (e) {
       logDebug('对话框获取位置失败: $e');
       if (mounted && context.mounted) {
+        final l10n = AppLocalizations.of(context);
         setState(() {
           _includeLocation = false;
         });
         showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
-            title: const Text('获取位置失败'),
-            content: Text('获取位置失败: $e'),
+            title: Text(l10n.getLocationFailedTitle),
+            content: Text(l10n.getLocationFailedDesc(e.toString())),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('我知道了'),
+                child: Text(l10n.iKnow),
               ),
             ],
           ),
@@ -396,6 +398,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     BuildContext context,
     ThemeData theme,
   ) async {
+    final l10n = AppLocalizations.of(context);
     final hasLocationData =
         _originalLocation != null ||
         (_originalLatitude != null && _originalLongitude != null);
@@ -409,34 +412,34 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
     if (!hasLocationData) {
       // 没有位置数据
-      title = '无法添加位置';
-      content = '此笔记首次保存时未记录位置信息，无法补充添加。\n\n如需记录位置，请在新建笔记时勾选位置选项。';
+      title = l10n.cannotAddLocation;
+      content = l10n.cannotAddLocationDesc;
       actions = [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('我知道了'),
+          child: Text(l10n.iKnow),
         ),
       ];
     } else {
       // 有位置数据
-      title = '位置信息';
+      title = l10n.locationInfo;
       content = hasOnlyCoordinates
-          ? '当前位置：${LocationService.formatCoordinates(_originalLatitude, _originalLongitude)}\n\n可以尝试更新为详细地址，或移除位置（移除后无法再次添加）。'
-          : '当前位置：${_originalLocation ?? ""}\n\n移除位置信息后将无法再次添加或更改。';
+          ? l10n.locationUpdateHint(LocationService.formatCoordinates(_originalLatitude, _originalLongitude))
+          : l10n.locationRemoveHint(_originalLocation ?? "");
       actions = [
         if (_includeLocation)
           TextButton(
             onPressed: () => Navigator.pop(context, 'remove'),
-            child: const Text('移除'),
+            child: Text(l10n.remove),
           ),
         if (hasOnlyCoordinates)
           TextButton(
             onPressed: () => Navigator.pop(context, 'update'),
-            child: const Text('更新位置'),
+            child: Text(l10n.updateLocation),
           ),
         TextButton(
           onPressed: () => Navigator.pop(context, 'cancel'),
-          child: const Text('取消'),
+          child: Text(l10n.cancel),
         ),
       ];
     }
@@ -453,10 +456,13 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     if (result == 'update' && hasCoordinates) {
       // 尝试用坐标更新地址
       try {
+        // 获取当前语言设置
+        final localeCode = _cachedLocationService?.currentLocaleCode;
         final addressInfo =
             await LocalGeocodingService.getAddressFromCoordinates(
               _originalLatitude!,
               _originalLongitude!,
+              localeCode: localeCode,
             );
         if (addressInfo != null && mounted) {
           final formattedAddress = addressInfo['formatted_address'];
@@ -465,25 +471,29 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
               _originalLocation = formattedAddress;
             });
             if (context.mounted) {
+              final l10n = AppLocalizations.of(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('位置已更新为: $formattedAddress')),
+                SnackBar(content: Text(l10n.locationUpdatedTo(formattedAddress))),
               );
             }
           } else if (context.mounted) {
+            final l10n = AppLocalizations.of(context);
             ScaffoldMessenger.of(
               context,
-            ).showSnackBar(const SnackBar(content: Text('无法获取地址，请检查网络')));
+            ).showSnackBar(SnackBar(content: Text(l10n.cannotGetAddress)));
           }
         } else if (mounted && context.mounted) {
+          final l10n = AppLocalizations.of(context);
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(const SnackBar(content: Text('无法获取地址，请检查网络')));
+          ).showSnackBar(SnackBar(content: Text(l10n.cannotGetAddress)));
         }
       } catch (e) {
         if (mounted && context.mounted) {
+          final l10n = AppLocalizations.of(context);
           ScaffoldMessenger.of(
             context,
-          ).showSnackBar(SnackBar(content: Text('更新失败: $e')));
+          ).showSnackBar(SnackBar(content: Text(l10n.updateFailed(e.toString()))));
         }
       }
     } else if (result == 'remove') {
@@ -495,6 +505,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
   /// 编辑模式下的天气对话框
   Future<void> _showWeatherDialog(BuildContext context, ThemeData theme) async {
+    final l10n = AppLocalizations.of(context);
     final hasWeatherData = _originalWeather != null;
 
     String title;
@@ -503,28 +514,28 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
     if (!hasWeatherData) {
       // 没有天气数据
-      title = '无法添加天气';
-      content = '此笔记首次保存时未记录天气信息，无法补充添加。\n\n如需记录天气，请在新建笔记时勾选天气选项。';
+      title = l10n.cannotAddWeather;
+      content = l10n.cannotAddWeatherDesc;
       actions = [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('我知道了'),
+          child: Text(l10n.iKnow),
         ),
       ];
     } else {
       // 有天气数据
-      title = '天气信息';
-      content =
-          '当前天气：$_originalWeather${_originalTemperature != null ? " $_originalTemperature" : ""}\n\n移除天气信息后将无法再次添加或更改。';
+      title = l10n.weatherInfo2;
+      final weatherDisplay = '$_originalWeather${_originalTemperature != null ? " $_originalTemperature" : ""}';
+      content = l10n.weatherRemoveHint(weatherDisplay);
       actions = [
         if (_includeWeather)
           TextButton(
             onPressed: () => Navigator.pop(context, 'remove'),
-            child: const Text('移除'),
+            child: Text(l10n.remove),
           ),
         TextButton(
           onPressed: () => Navigator.pop(context, 'cancel'),
-          child: const Text('取消'),
+          child: Text(l10n.cancel),
         ),
       ];
     }

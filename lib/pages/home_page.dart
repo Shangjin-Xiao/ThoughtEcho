@@ -149,6 +149,10 @@ class _HomePageState extends State<HomePage>
       logDebug('获取到 ${recentInsights.length} 条最近的周期洞察', source: 'HomePage');
 
       // Call the new stream method with environment context and historical insights
+      if (!mounted) {
+        return; // Ensure the widget is still in the tree after async work
+      }
+
       final l10n = AppLocalizations.of(context);
       final Stream<String> promptStream = aiService.streamGenerateDailyPrompt(
         l10n,
