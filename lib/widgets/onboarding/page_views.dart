@@ -231,16 +231,16 @@ class _WelcomePageViewState extends State<WelcomePageView>
         Icon(
           Icons.translate_rounded,
           color: theme.colorScheme.primary,
-          size: 22,
+          size: 24,
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 16),
         // 语言滚轮选择器
         SizedBox(
-          width: 140,
-          height: 100,
+          width: 200,
+          height: 120,
           child: ListWheelScrollView.useDelegate(
             controller: _languageScrollController,
-            itemExtent: 36,
+            itemExtent: 40,
             perspective: 0.003,
             diameterRatio: 1.5,
             physics: const FixedExtentScrollPhysics(),
@@ -253,14 +253,18 @@ class _WelcomePageViewState extends State<WelcomePageView>
                   child: AnimatedDefaultTextStyle(
                     duration: const Duration(milliseconds: 200),
                     style: TextStyle(
-                      fontSize: isSelected ? 17 : 14,
+                      fontSize: isSelected ? 18 : 15,
                       fontWeight:
                           isSelected ? FontWeight.bold : FontWeight.normal,
                       color: isSelected
                           ? theme.colorScheme.primary
                           : theme.colorScheme.onSurface.withValues(alpha: 0.45),
                     ),
-                    child: Text(_getLanguageLabel(_languageCodes[index])),
+                    child: Text(
+                      _getLanguageLabel(_languageCodes[index]),
+                      maxLines: 1,
+                      overflow: TextOverflow.visible,
+                    ),
                   ),
                 );
               },
