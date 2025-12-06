@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../models/generated_card.dart';
 import '../utils/app_logger.dart';
 
@@ -357,9 +358,11 @@ class SVGCardWidget extends StatelessWidget {
 class GeneratedCardWidget extends StatelessWidget {
   final GeneratedCard card;
   final VoidCallback? onTap;
-  final VoidCallback? onShare;
-  final VoidCallback? onSave;
+  final Future<void> Function(GeneratedCard card)? onShare;
+  final Future<void> Function(GeneratedCard card)? onSave;
+  final Future<void> Function()? onRegenerate;
   final bool showActions;
+  final bool actionsEnabled;
   final double? width;
   final double? height;
 
@@ -369,7 +372,9 @@ class GeneratedCardWidget extends StatelessWidget {
     this.onTap,
     this.onShare,
     this.onSave,
+    this.onRegenerate,
     this.showActions = true,
+    this.actionsEnabled = true,
     this.width,
     this.height,
   });
@@ -387,6 +392,8 @@ class GeneratedCardWidget extends StatelessWidget {
     }
 
     // 显示操作按钮时，使用Column包装
+    final l10n = AppLocalizations.of(context);
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -397,24 +404,31 @@ class GeneratedCardWidget extends StatelessWidget {
           height: height,
         ),
         const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 12,
+          runSpacing: 8,
           children: [
+            if (onRegenerate != null)
+              _ActionButton(
+                icon: Icons.refresh,
+                label: l10n.regenerateCard,
+                onPressed: () => onRegenerate?.call(),
+                enabled: actionsEnabled,
+              ),
             if (onShare != null)
-              Builder(
-                builder: (ctx) => _ActionButton(
-                  icon: Icons.share,
-                  label: '分享',
-                  onPressed: onShare!,
-                ),
+              _ActionButton(
+                icon: Icons.share,
+                label: l10n.shareBtn,
+                onPressed: () => onShare?.call(card),
+                enabled: actionsEnabled,
               ),
             if (onSave != null)
-              Builder(
-                builder: (ctx) => _ActionButton(
-                  icon: Icons.save_alt,
-                  label: '保存',
-                  onPressed: onSave!,
-                ),
+              _ActionButton(
+                icon: Icons.save_alt,
+                label: l10n.saveBtn,
+                onPressed: () => onSave?.call(card),
+                enabled: actionsEnabled,
               ),
           ],
         ),
@@ -428,17 +442,19 @@ class _ActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onPressed;
+  final bool enabled;
 
   const _ActionButton({
     required this.icon,
     required this.label,
     required this.onPressed,
+    this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context) {
     return ElevatedButton.icon(
-      onPressed: onPressed,
+      onPressed: enabled ? onPressed : null,
       icon: Icon(icon, size: 18),
       label: Text(label),
       style: ElevatedButton.styleFrom(

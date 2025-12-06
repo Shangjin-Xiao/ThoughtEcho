@@ -12,6 +12,9 @@ enum CardType {
   gradient, // 渐变卡片（新增）
   nature, // 自然卡片（新增）
   retro, // 复古卡片（新增）
+  ink, // 水墨卡片（新增）
+  cyberpunk, // 赛博朋克（新增）
+  geometric, // 几何抽象（新增）
 }
 
 /// AI生成的卡片模型
