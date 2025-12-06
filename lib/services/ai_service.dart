@@ -9,6 +9,7 @@ import '../utils/ai_network_manager.dart';
 import '../utils/ai_prompt_manager.dart';
 import '../utils/ai_request_helper.dart';
 import '../utils/app_logger.dart';
+import '../gen_l10n/app_localizations.dart';
 
 // 定义流式响应的回调类型
 typedef StreamingResponseCallback = void Function(String text);
@@ -381,7 +382,8 @@ class AIService extends ChangeNotifier {
   }
 
   // 新增：流式生成每日提示
-  Stream<String> streamGenerateDailyPrompt({
+  Stream<String> streamGenerateDailyPrompt(
+    AppLocalizations l10n, {
     String? city,
     String? weather,
     String? temperature,
@@ -396,7 +398,7 @@ class AIService extends ChangeNotifier {
         if (!await hasValidApiKeyAsync()) {
           logDebug('API Key无效，使用DailyPromptGenerator生成每日提示');
           // 使用默认提示生成器
-          controller.add(DailyPromptGenerator.getDefaultPrompt());
+          controller.add(DailyPromptGenerator.getDefaultPrompt(l10n));
           controller.close();
           return;
         }
@@ -457,7 +459,7 @@ class AIService extends ChangeNotifier {
           );
         } else {
           // 如果设置无效，使用默认提示生成器
-          controller.add(DailyPromptGenerator.getDefaultPrompt());
+          controller.add(DailyPromptGenerator.getDefaultPrompt(l10n));
           controller.close();
         }
       },
@@ -467,10 +469,11 @@ class AIService extends ChangeNotifier {
 
   // 保留旧的generateDailyPrompt方法，以防其他地方仍在使用
   // 它将直接返回DailyPromptGenerator的当前提示
-  String generateDailyPrompt() {
+  // 保留旧的generateDailyPrompt方法，但已弃用，需要 AppLocalizations 参数
+  @Deprecated('使用 streamGenerateDailyPrompt 替代')
+  String generateDailyPrompt(AppLocalizations l10n) {
     logDebug('调用了旧的generateDailyPrompt方法，建议切换到streamGenerateDailyPrompt');
-    // 旧方法仍然返回 DailyPromptGenerator 的默认提示
-    return DailyPromptGenerator.getDefaultPrompt();
+    return DailyPromptGenerator.getDefaultPrompt(l10n);
   }
 
   Future<String> generateInsights(

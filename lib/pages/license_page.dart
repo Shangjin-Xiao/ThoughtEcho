@@ -893,11 +893,15 @@ class _ProgressiveSystemLicensesPageState
 
   Widget _buildBody(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    if (_loading) return const Center(child: CircularProgressIndicator());
-    if (_error != null)
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_error != null) {
       return Center(child: Text(l10n.loadSystemLicensesFailed(_error!)));
-    if (_entries.isEmpty)
+    }
+    if (_entries.isEmpty) {
       return Center(child: Text(l10n.noSystemLicensesFound));
+    }
 
     return ListView.separated(
       padding: const EdgeInsets.all(12),

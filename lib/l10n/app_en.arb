@@ -2534,6 +2534,13 @@
   "selectFileError": "Failed to select file",
   "mergingDataProgress": "Merging data...",
   "yearAIAnnualReport": "{year} AI Annual Report",
+  "@yearAIAnnualReport": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
   "openInBrowser": "Open in Browser",
   "shareReport": "Share Report",
   "saveReport": "Save Report",
@@ -2650,5 +2657,73 @@
   "timeMorning": "Morning",
   "timeAfternoon": "Afternoon",
   "timeEvening": "Evening",
-  "timeLateNight": "Late Night"
+  "timeLateNight": "Late Night",
+  "promptDefault1": "What are you grateful for today?",
+  "promptDefault2": "What would you say to encourage your past self?",
+  "promptDefault3": "What exciting new thing did you learn today?",
+  "promptDefault4": "What beautiful idea is waiting to be realized?",
+  "promptDefault5": "What has made you happy and fulfilled recently?",
+  "promptDefault6": "What valuable insights did you gain from overcoming challenges?",
+  "promptDefault7": "If tomorrow were completely free, what meaningful thing would you most want to do?",
+  "promptDefault8": "What precious experience did today's challenge teach you?",
+  "promptDefault9": "What positive small habits are making you better?",
+  "promptDefault10": "What warm words do you want to say to your future self at this moment?",
+  "promptDefault11": "What small achievement today deserves your pride?",
+  "promptDefault12": "What warm memory makes you smile?",
+  "promptGeneric1": "At this moment, do you have any special thoughts or beautiful feelings you want to record?",
+  "promptGeneric2": "Looking back on today, what warm moment impressed you?",
+  "promptGeneric3": "Calm down and feel your current emotions, what beautiful message do they convey?",
+  "promptGeneric4": "What small progress or gain today makes you feel gratified?",
+  "promptGeneric5": "What makes you feel hopeful and motivated?",
+  "promptMorning1": "A new day begins, what beautiful expectations do you have for today?",
+  "promptMorning2": "How does the morning air smell? What warm memory does it remind you of?",
+  "promptMorning3": "Set an exciting small goal for today, what could it be?",
+  "promptMorning4": "In the morning light, what positive thoughts are sprouting in your heart?",
+  "promptAfternoon1": "What pleasant feelings does the afternoon sunshine or breeze bring you?",
+  "promptAfternoon2": "Halfway through the day, is there anything going well that satisfies you?",
+  "promptAfternoon3": "Take some time to relax and think about things that make you feel at ease and happy.",
+  "promptAfternoon4": "In the afternoon, what beautiful plans are brewing in your heart?",
+  "promptEvening1": "As night falls, looking back on today, what is worth celebrating or being grateful for?",
+  "promptEvening2": "This moment of tranquility is suitable for reflection, what beautiful scene emerges in your mind?",
+  "promptEvening3": "Make a hopeful plan or vision for tomorrow.",
+  "promptEvening4": "As the sun sets, which moment today made you feel especially warm?",
+  "promptLateNight1": "In the quiet of late night, what warm thoughts or beautiful inspiration quietly emerge?",
+  "promptLateNight2": "What precious memories does this silence make you think of?",
+  "promptLateNight3": "Before sleep, put aside distractions and record the peace and contentment in your heart.",
+  "promptLateNight4": "Under the starry sky, what beautiful wishes are shining in your heart?",
+  "promptClearMorning": "Morning sunlight fills the windowsill, how do you feel right now? Any beautiful plans?",
+  "promptRainMorning": "Listening to the gentle rain in the morning, is your heart especially peaceful? Any warm insights?",
+  "promptCloudyMorning": "A cloudy morning is perfect for slowly savoring and reflecting on recent beautiful gains.",
+  "promptClearAfternoon": "The warm afternoon sun is perfect for a short rest, record this moment of comfort and satisfaction.",
+  "promptRainAfternoon": "On a rainy afternoon, with rain pattering outside, it's suitable inside to read a book or write warm thoughts.",
+  "promptClearEvening": "As night falls, with starlight or moonlight just right, what beautiful wishes or warm memories do you have?",
+  "promptRainEvening": "On a rainy night, suitable for solitary reflection, what recently makes you feel gratified or expectant?",
+  "promptWindEvening": "On a night with gentle evening breeze, do your thoughts drift with the wind? Record this moment's beautiful inspiration.",
+  "promptClearWeather1": "On such a sunny day, what makes you feel happy and energetic?",
+  "promptClearWeather2": "With such good weather, what relaxing and joyful things are suitable to do?",
+  "promptRainWeather1": "Listening to the rain, is your mood especially calm and peaceful?",
+  "promptRainWeather2": "Rainy days are suitable for contemplation, what warm thoughts linger in your mind?",
+  "promptCloudyWeather1": "Under cloudy skies, where do your thoughts drift to?",
+  "promptCloudyWeather2": "Cloudy days sometimes have their own charm, what precious memories do they remind you of?",
+  "promptSnowWeather1": "What pure feelings does the snow scene outside bring you?",
+  "promptSnowWeather2": "On snowy days, what beautiful things are suitable to think about while nestled in warmth?",
+  "promptHotWeather": "It's a bit hot, what comfortable thing would you most like to do to enjoy summer time?",
+  "promptColdWeather": "It's a bit cold, while keeping warm, what heartwarming thoughts do you have?",
+  "promptCityContext": "Being in {city}, what inspiration has this city brought you today?",
+  "@promptCityContext": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      }
+    }
+  },
+  "promptFallback": "Today, what new insights or beautiful thoughts do you want to share?",
+  "annualReportOpenedInBrowser": "Report opened in browser",
+  "annualReportCannotOpenBrowser": "Cannot open browser directly, please use share to choose browser",
+  "annualReportOpenInBrowser": "Open in Browser",
+  "annualReportHowToView": "How to view in browser",
+  "annualReportMobileInstructions": "📱 Mobile:",
+  "annualReportDesktopInstructions": "💻 Desktop:",
+  "annualReportSavedToLocal": "Report saved to local file",
+  "annualReportCopiedToClipboard": "Cannot save file, content copied to clipboard"
 }
