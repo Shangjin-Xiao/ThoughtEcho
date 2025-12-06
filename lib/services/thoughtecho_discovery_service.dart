@@ -250,21 +250,46 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
               .join(', ');
           debugPrint('接口地址: $addresses');
 
-          // Windows 平台不使用 reusePort（可能不支持或导致问题）
-          final socket = Platform.isWindows
-              ? await RawDatagramSocket.bind(
-                  InternetAddress.anyIPv4,
-                  defaultMulticastPort,
-                  reuseAddress: true,
-                )
-              : await RawDatagramSocket.bind(
-                  InternetAddress.anyIPv4,
-                  defaultMulticastPort,
-                  reuseAddress: true,
-                  reusePort: true,
-                );
+          // iOS 平台需要绑定到特定接口地址，而不是 anyIPv4
+          // 这样才能正确接收组播消息并被其他设备发现
+          final RawDatagramSocket socket;
+          if (Platform.isIOS) {
+            // iOS: 获取接口的第一个 IPv4 地址并绑定到该地址
+            final ipv4Addresses = interface.addresses
+                .where((a) => a.type == InternetAddressType.IPv4)
+                .toList();
 
-          debugPrint('UDP套接字成功绑定到端口 ${socket.port}');
+            if (ipv4Addresses.isEmpty) {
+              debugPrint('⚠️  iOS: 接口 ${interface.name} 没有 IPv4 地址，跳过');
+              continue; // 跳过没有 IPv4 地址的接口
+            }
+
+            final ipv4Addr = ipv4Addresses.first;
+            socket = await RawDatagramSocket.bind(
+              ipv4Addr.address, // 绑定到具体的接口IP地址
+              defaultMulticastPort,
+              reuseAddress: true,
+              reusePort: true,
+            );
+            debugPrint('iOS: UDP套接字绑定到接口地址 ${ipv4Addr.address}:${socket.port}');
+          } else if (Platform.isWindows) {
+            // Windows 平台不使用 reusePort（可能不支持或导致问题）
+            socket = await RawDatagramSocket.bind(
+              InternetAddress.anyIPv4,
+              defaultMulticastPort,
+              reuseAddress: true,
+            );
+            debugPrint('Windows: UDP套接字成功绑定到端口 ${socket.port}');
+          } else {
+            // 其他平台使用 anyIPv4
+            socket = await RawDatagramSocket.bind(
+              InternetAddress.anyIPv4,
+              defaultMulticastPort,
+              reuseAddress: true,
+              reusePort: true,
+            );
+            debugPrint('UDP套接字成功绑定到端口 ${socket.port}');
+          }
 
           // 启用功能
           socket.readEventsEnabled = true;
