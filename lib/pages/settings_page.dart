@@ -918,6 +918,7 @@ class SettingsPageState extends State<SettingsPage> {
   // 构建语言设置项
   Widget _buildLanguageItem(BuildContext context) {
     final settingsService = Provider.of<SettingsService>(context);
+    final locationService = Provider.of<LocationService>(context, listen: false);
     final currentLocale = settingsService.localeCode;
 
     String getLanguageName(String? code) {
@@ -946,6 +947,8 @@ class SettingsPageState extends State<SettingsPage> {
                   groupValue: currentLocale,
                   onChanged: (value) async {
                     await settingsService.setLocale(value);
+                    // 同步更新位置服务的语言设置
+                    locationService.currentLocaleCode = value;
                     if (dialogContext.mounted) Navigator.pop(dialogContext);
                   },
                   child: Column(

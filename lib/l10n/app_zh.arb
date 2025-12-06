@@ -2724,6 +2724,23 @@
     }
   },
   "promptFallback": "今天，你有什么新的感悟或美好的想法想要分享呢？",
+  "citySuffix": "市",
+  "locationDisplayFormat": "{city}{suffix}",
+  "@locationDisplayFormat": {
+    "placeholders": {
+      "city": {"type": "String"},
+      "suffix": {"type": "String"}
+    }
+  },
+  "locationDisplayWithDistrict": "{city}·{district}",
+  "@locationDisplayWithDistrict": {
+    "placeholders": {
+      "city": {"type": "String"},
+      "district": {"type": "String"}
+    }
+  },
+  "noLocationInfo": "无位置信息",
+  "currentLocationLabel": "当前位置",
   "annualReportOpenedInBrowser": "报告已在浏览器中打开",
   "annualReportCannotOpenBrowser": "无法直接打开浏览器，请使用分享功能选择浏览器打开",
   "annualReportOpenInBrowser": "在浏览器中打开",
