@@ -35,6 +35,8 @@ class UnifiedMediaImportDialog extends StatefulWidget {
 }
 
 class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
+  AppLocalizations get l10n => AppLocalizations.of(context);
+
   bool _isImporting = false;
   double _progress = 0.0;
   String _statusMessage = '';
@@ -43,7 +45,11 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text('${AppLocalizations.of(context)!.unifiedMediaImport_importMedia.replaceAll('{mediaType}', _getMediaTypeName(widget.mediaType))}'),
+      title: Text(
+        l10n.unifiedMediaImportImportMedia(
+          _getMediaTypeName(widget.mediaType),
+        ),
+      ),
       content: SizedBox(
         width: 400,
         child: _isImporting ? _buildImportProgress() : _buildImportOptions(),
@@ -60,7 +66,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
         ListTile(
           leading: const Icon(Icons.folder_open),
           title: Text(_filePickTitle()),
-          subtitle: Text(AppLocalizations.of(context)!.supportsLargeFiles),
+          subtitle: Text(l10n.supportsLargeFiles),
           onTap: () => _importFromFile(),
         ),
 
@@ -77,8 +83,8 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
         // 网址导入选项
         ListTile(
           leading: const Icon(Icons.link),
-          title: Text('${AppLocalizations.of(context)!.enterUrlHint}'),
-          subtitle: Text(AppLocalizations.of(context)!.enterUrlHint),
+          title: Text(l10n.enterUrlHint),
+          subtitle: Text(l10n.enterUrlHint),
           onTap: () => _importFromUrl(),
         ),
 
@@ -526,13 +532,13 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
   String _getMediaTypeName(String type) {
     switch (type) {
       case 'image':
-        return '图片';
+        return l10n.mediaTypeImage;
       case 'video':
-        return '视频';
+        return l10n.mediaTypeVideo;
       case 'audio':
-        return '音频';
+        return l10n.mediaTypeAudio;
       default:
-        return '媒体';
+        return l10n.mediaTypeMedia;
     }
   }
 

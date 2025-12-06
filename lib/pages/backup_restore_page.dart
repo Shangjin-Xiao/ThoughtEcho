@@ -27,6 +27,7 @@ class BackupRestorePage extends StatefulWidget {
 class _BackupRestorePageState extends State<BackupRestorePage> {
   bool _isLoading = false;
   bool _includeMediaFiles = true; // 默认包含媒体文件
+    AppLocalizations get l10n => AppLocalizations.of(context);
   double _progress = 0.0;
   String _progressText = '';
   CancelToken? _cancelToken;

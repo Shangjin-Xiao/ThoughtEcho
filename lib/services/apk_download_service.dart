@@ -23,7 +23,7 @@ class ApkDownloadService {
   static String? _cachedDownloadStarted;
   static String? _cachedDownloadProgress;
   static String? _cachedDownloadComplete;
-  static String? _cachedDownloadFailed;
+  // Removed unused failed cache placeholder
 
   /// 获取Dio实例
   static Dio get dio {
@@ -229,7 +229,6 @@ class ApkDownloadService {
     _cachedNotificationTitle = l10n.apkNotificationTitle;
     _cachedDownloadStarted = l10n.apkDownloadStarted(version);
     _cachedDownloadComplete = l10n.apkDownloadComplete;
-    _cachedDownloadFailed = l10n.apkDownloadFailed('');
     
     try {
       // 创建通知渠道
@@ -304,7 +303,7 @@ class ApkDownloadService {
         // 安装失败
         logError('APK安装失败: ${result.message}');
         if (context.mounted) {
-          _showErrorDialog(context, l10n.apkOpenFailed(result.message ?? ''));
+          _showErrorDialog(context, l10n.apkOpenFailed(result.message));
         }
       }
     } catch (e) {

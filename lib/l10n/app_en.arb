@@ -10,6 +10,9 @@
   "settings": "Settings",
   "loading": "Loading...",
   "retry": "Retry",
+  "refresh": "Refresh",
+  "annualReport": "Annual Report",
+  "clearRecords": "Clear records",
   "home": "Home",
   "notes": "Notes",
   "aiFeatures": "AI",
@@ -2598,6 +2601,18 @@
   "featureInDevelopment": "Share feature in development...",
   "selectFromFiles": "Select from Files",
   "supportsLargeFiles": "Supports large files with memory-safe handling",
+  "unifiedMediaImportImportMedia": "Import {mediaType}",
+  "@unifiedMediaImportImportMedia": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "mediaTypeImage": "Image",
+  "mediaTypeVideo": "Video",
+  "mediaTypeAudio": "Audio",
+  "mediaTypeMedia": "Media",
   "takePhoto": "Take Photo",
   "recordVideo": "Record Video",
   "recordAudio": "Record Audio",

@@ -590,15 +590,18 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const AlertDialog(
-        content: Row(
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(width: 16),
-            Text(AppLocalizations.of(context).generatingAIAnnualReport),
-          ],
-        ),
-      ),
+      builder: (context) {
+        final l10n = AppLocalizations.of(context);
+        return AlertDialog(
+          content: Row(
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(width: 16),
+              Text(l10n.generatingAIAnnualReport),
+            ],
+          ),
+        );
+      },
     );
 
     try {
@@ -960,12 +963,12 @@ $positiveQuotesText
           IconButton(
             onPressed: _loadAnalyses,
             icon: const Icon(Icons.refresh),
-            tooltip: '刷新',
+            tooltip: AppLocalizations.of(context).refresh,
           ),
           IconButton(
             onPressed: _generateAnnualReport,
             icon: const Icon(Icons.analytics),
-            tooltip: '年度报告',
+            tooltip: AppLocalizations.of(context).annualReport,
           ),
           if (_analyses.isNotEmpty)
             PopupMenuButton<String>(
@@ -975,13 +978,13 @@ $positiveQuotesText
                 }
               },
               itemBuilder: (context) => [
-                const PopupMenuItem(
+                PopupMenuItem(
                   value: 'delete_all',
                   child: Row(
                     children: [
                       Icon(Icons.delete_sweep),
                       SizedBox(width: 8),
-                      Text('清空记录'),
+                      Text(AppLocalizations.of(context).clearRecords),
                     ],
                   ),
                 ),
@@ -1103,13 +1106,13 @@ $positiveQuotesText
                                         }
                                       },
                                       itemBuilder: (context) => [
-                                        const PopupMenuItem(
+                                        PopupMenuItem(
                                           value: 'delete',
                                           child: Row(
                                             children: [
                                               Icon(Icons.delete, size: 16),
                                               SizedBox(width: 8),
-                                              Text('删除'),
+                                              Text(AppLocalizations.of(context).delete),
                                             ],
                                           ),
                                         ),

@@ -30,6 +30,7 @@ class MediaPlayerWidget extends StatefulWidget {
 }
 
 class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
+  AppLocalizations get l10n => AppLocalizations.of(context);
   static final Set<VideoPlayerController> _activeVideoControllers =
       <VideoPlayerController>{};
   static final Set<AudioPlayer> _activeAudioPlayers = <AudioPlayer>{};
@@ -100,7 +101,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('${AppLocalizations.of(context)!.videoFileNotFound}: ${widget.filePath}'),
+              content: Text('${l10n.videoFileNotFound}: ${widget.filePath}'),
               duration: AppConstants.snackBarDurationError,
             ),
           );
@@ -187,9 +188,9 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
         ),
         // 自定义控制栏选项
         optionsTranslation: OptionsTranslation(
-          playbackSpeedButtonText: AppLocalizations.of(context)!.playbackSpeed,
-          subtitlesButtonText: AppLocalizations.of(context)!.subtitles,
-          cancelButtonText: AppLocalizations.of(context)!.cancel,
+          playbackSpeedButtonText: l10n.playbackSpeed,
+          subtitlesButtonText: l10n.subtitles,
+          cancelButtonText: l10n.cancel,
         ),
         hideControlsTimer: const Duration(seconds: 3),
         // 添加自定义操作
@@ -197,12 +198,12 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
           OptionItem(
             onTap: (context) => _shareVideo(),
             iconData: Icons.share,
-            title: AppLocalizations.of(context)!.shareVideo,
+            title: l10n.shareVideo,
           ),
           OptionItem(
             onTap: (context) => _showVideoInfo(),
             iconData: Icons.info,
-            title: AppLocalizations.of(context)!.videoInfo,
+            title: l10n.videoInfo,
           ),
         ],
       );
@@ -440,7 +441,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      AppLocalizations.of(context)!.clickToPlayVideo,
+                      l10n.clickToPlayVideo,
                       style: TextStyle(
                         color: Theme.of(
                           context,
@@ -511,7 +512,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
           ),
           const SizedBox(height: 16),
           Text(
-            AppLocalizations.of(context)!.loadingVideo,
+            l10n.loadingVideo,
             style: TextStyle(
               color: Theme.of(
                 context,
@@ -597,23 +598,23 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
                 ),
                 onSelected: (value) => _handleAudioMenuAction(value),
                 itemBuilder: (context) => [
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'share',
                     child: Row(
                       children: [
-                        Icon(Icons.share),
-                        SizedBox(width: 8),
-                        Text(AppLocalizations.of(context)!.shareAudio),
+                        const Icon(Icons.share),
+                        const SizedBox(width: 8),
+                        Text(l10n.shareAudio),
                       ],
                     ),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'info',
                     child: Row(
                       children: [
-                        Icon(Icons.info),
-                        SizedBox(width: 8),
-                        Text(AppLocalizations.of(context)!.fileInfo),
+                        const Icon(Icons.info),
+                        const SizedBox(width: 8),
+                        Text(l10n.fileInfo),
                       ],
                     ),
                   ),
@@ -753,7 +754,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(AppLocalizations.of(context)!.videoInfo),
+        title: Text(l10n.videoInfo),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -776,7 +777,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(AppLocalizations.of(context)!.confirm),
+            child: Text(l10n.confirm),
           ),
         ],
       ),
@@ -803,7 +804,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(AppLocalizations.of(context)!.audioInfo),
+        title: Text(l10n.audioInfo),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -816,7 +817,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: Text(AppLocalizations.of(context)!.confirm),
+            child: Text(l10n.confirm),
           ),
         ],
       ),
