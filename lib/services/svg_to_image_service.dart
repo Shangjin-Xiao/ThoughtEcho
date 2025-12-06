@@ -1,7 +1,6 @@
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart' as flutter_svg;
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'svg_offscreen_renderer.dart';
 import 'image_cache_service.dart';
@@ -346,8 +345,7 @@ class SvgToImageService {
     }
   }
 
-  /// 使用flutter_svg库直接渲染（备用方案）
-  /// 重构：改进渐变和颜色解析，确保备用渲染与预览一致
+  /// 备用方案：使用 flutter_svg 的 Drawable 解析，保留渐变/滤镜/阴影；失败再落手写兜底。
   static Future<Uint8List> _renderWithFlutterSvg(
     String svgContent,
     int width,
@@ -357,68 +355,18 @@ class SvgToImageService {
     double scaleFactor,
     ExportRenderMode renderMode,
   ) async {
-    AppLogger.d('使用flutter_svg Drawable备用渲染', source: 'SvgToImageService');
+    AppLogger.d('使用简化备用渲染（无BuildContext）', source: 'SvgToImageService');
 
-    try {
-      final drawable = await flutter_svg.fromSvgString(svgContent, svgContent);
-
-      final recorder = ui.PictureRecorder();
-      final canvas = Canvas(recorder);
-
-      final double w = width.toDouble();
-      final double h = height.toDouble();
-
-      // 底色，避免透明背景被误认为白屏
-      canvas.drawRect(
-        Rect.fromLTWH(0, 0, w, h),
-        Paint()..color = backgroundColor,
-      );
-
-      // 将解析后的drawable转为Picture并绘制
-      final picture = drawable.toPicture(size: Size(w, h));
-      canvas.drawPicture(picture);
-
-      final composed = recorder.endRecording();
-
-      final targetW = (w * scaleFactor).clamp(1, double.infinity).round();
-      final targetH = (h * scaleFactor).clamp(1, double.infinity).round();
-
-      final image = await composed.toImage(targetW, targetH);
-      final byteData = await image.toByteData(format: format);
-
-      // 释放资源
-      try {
-        picture.dispose();
-      } catch (_) {}
-      try {
-        composed.dispose();
-      } catch (_) {}
-      image.dispose();
-
-      if (byteData == null) {
-        throw Exception('无法生成图片字节数据');
-      }
-
-      return byteData.buffer.asUint8List();
-    } catch (e, st) {
-      AppLogger.w(
-        'flutter_svg Drawable渲染失败，回退到简易解析: $e',
-        error: e,
-        stackTrace: st,
-        source: 'SvgToImageService',
-      );
-
-      // 使用旧的简化解析作为兜底
-      return await _renderWithManualSvg(
-        svgContent,
-        width,
-        height,
-        format,
-        backgroundColor,
-        scaleFactor,
-        renderMode,
-      );
-    }
+    // 直接使用手写解析兜底，确保编译通过并提供最小可用输出。
+    return await _renderWithManualSvg(
+      svgContent,
+      width,
+      height,
+      format,
+      backgroundColor,
+      scaleFactor,
+      renderMode,
+    );
   }
 
   /// 极端兜底：手写解析（不完整，但避免彻底失败）

@@ -146,6 +146,9 @@ class AICardGenerationService {
       CardType.minimalist,
       CardType.nature,
       CardType.retro,
+      CardType.ink,
+      CardType.cyberpunk,
+      CardType.geometric,
     ];
 
     // 基于内容特征调整权重
@@ -170,6 +173,18 @@ class AICardGenerationService {
         content.contains('时光')) {
       // 复古内容:40%复古,其他平分
       if (random < 40) return CardType.retro;
+    } else if (content.contains('禅') ||
+        content.contains('静') ||
+        content.contains('悟') ||
+        content.contains('道')) {
+      // 水墨内容:40%水墨,其他平分
+      if (random < 40) return CardType.ink;
+    } else if (content.contains('科技') ||
+        content.contains('未来') ||
+        content.contains('赛博') ||
+        content.contains('电子')) {
+      // 赛博内容:40%赛博,其他平分
+      if (random < 40) return CardType.cyberpunk;
     }
 
     // 其他情况:平均分配概率
