@@ -1355,19 +1355,15 @@ class _HomePageState extends State<HomePage>
             ? null // 记录页不需要标题栏
             : _currentIndex == 0
             ? AppBar(
-                titleSpacing: 8, // 减小标题和 leading 之间的间距
+                titleSpacing: 0, // 让标题从最左边开始，最大化可用空间
                 title: Consumer<ConnectivityService>(
                   builder: (context, connectivityService, child) {
                     final locale = Localizations.localeOf(context);
                     final isEnglish = locale.languageCode == 'en';
-                    // 英文标题使用较小字体以避免被截断
-                    final titleStyle = isEnglish
-                        ? Theme.of(context).textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w500,
-                            )
-                        : null;
+                    
+                    Widget titleWidget;
                     if (!connectivityService.isConnected) {
-                      return Row(
+                      titleWidget = Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           const Icon(
@@ -1376,21 +1372,27 @@ class _HomePageState extends State<HomePage>
                             color: Colors.red,
                           ),
                           const SizedBox(width: 4),
-                          Flexible(
-                            child: Text(
-                              AppLocalizations.of(context).appTitleOffline,
-                              style: titleStyle,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                          Text(
+                            AppLocalizations.of(context).appTitleOffline,
                           ),
                         ],
                       );
+                    } else {
+                      titleWidget = Text(
+                        AppLocalizations.of(context).appTitle,
+                      );
                     }
-                    return Text(
-                      AppLocalizations.of(context).appTitle,
-                      style: titleStyle,
-                      overflow: TextOverflow.ellipsis,
-                    );
+                    
+                    // 英文标题使用 FittedBox 自动缩放以完整显示，不显示省略号
+                    // 中文标题本身很短，不需要特殊处理
+                    if (isEnglish) {
+                      return FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: titleWidget,
+                      );
+                    }
+                    return titleWidget;
                   },
                 ),
                 actions: [
