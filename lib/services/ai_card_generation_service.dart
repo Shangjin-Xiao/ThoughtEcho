@@ -935,45 +935,68 @@ class AICardGenerationService {
       );
     }
 
-    // 提取现有的viewBox或生成标准viewBox
-    final viewBoxMatch = RegExp(r'viewBox="([^"]+)"').firstMatch(normalized);
-    String viewBox;
-    if (viewBoxMatch != null) {
-      viewBox = viewBoxMatch.group(1)!;
-      // 验证viewBox格式是否正确(应该是4个数字)
-      final parts = viewBox.split(RegExp(r'[\s,]+'));
-      if (parts.length != 4 ||
-          !parts.every((p) => double.tryParse(p) != null)) {
-        viewBox = '0 0 400 600'; // 回退到标准尺寸
-      }
-    } else {
-      // 尝试从width/height推断viewBox
-      final widthMatch = RegExp(
-        r'width="(\d+(?:\.\d+)?)"',
-      ).firstMatch(normalized);
-      final heightMatch = RegExp(
-        r'height="(\d+(?:\.\d+)?)"',
-      ).firstMatch(normalized);
-      final w = widthMatch?.group(1) ?? '400';
-      final h = heightMatch?.group(1) ?? '600';
-      viewBox = '0 0 $w $h';
-    }
+    final inferredSize = _inferSvgIntrinsicSize(normalized);
 
-    // 移除现有的viewBox、width、height、preserveAspectRatio属性
+    // 移除现有的viewBox、width、height、preserveAspectRatio属性，避免AI返回的百分比尺寸导致错位
     normalized = normalized
         .replaceAll(RegExp(r'\s+viewBox="[^"]*"'), '')
         .replaceAll(RegExp(r'\s+width="[^"]*"'), '')
         .replaceAll(RegExp(r'\s+height="[^"]*"'), '')
         .replaceAll(RegExp(r'\s+preserveAspectRatio="[^"]*"'), '');
 
-    // 统一设置标准属性:只保留viewBox和preserveAspectRatio,不设置width/height
-    // 这样可以让外部渲染器完全控制实际渲染尺寸
+    // 统一设置标准属性: 仅设置viewBox与保留比例，不强制width/height，让预览与导出一致
     normalized = normalized.replaceFirst(
       '<svg',
-      '<svg viewBox="$viewBox" preserveAspectRatio="xMidYMid meet"',
+      '<svg viewBox="0 0 ${inferredSize.$1} ${inferredSize.$2}" preserveAspectRatio="xMidYMid meet"',
     );
 
     return normalized;
+  }
+
+  /// 推断SVG内在尺寸，忽略百分比/无效尺寸，防止viewBox被错误设置为100导致裁剪
+  (String, String) _inferSvgIntrinsicSize(String svgContent) {
+    // 1) 优先使用合法的viewBox
+    final viewBoxMatch = RegExp(r'viewBox="([^"]+)"').firstMatch(svgContent);
+    if (viewBoxMatch != null) {
+      final parts = viewBoxMatch.group(1)!.split(RegExp(r'[\s,]+'));
+      if (parts.length == 4 && parts.every((p) => double.tryParse(p) != null)) {
+        return (parts[2], parts[3]);
+      }
+    }
+
+    // 2) 解析根节点的width/height（忽略百分比）
+    double? w = _parseNumericDimension(
+      RegExp(r'width="([^"]+)"').firstMatch(svgContent)?.group(1),
+    );
+    double? h = _parseNumericDimension(
+      RegExp(r'height="([^"]+)"').firstMatch(svgContent)?.group(1),
+    );
+
+    // 3) 如果根尺寸不可靠，尝试从首个rect推断（通常为背景矩形）
+    if (w == null || h == null) {
+      final rectMatch = RegExp(r'<rect[^>]*width="([^"]+)"[^>]*height="([^"]+)"')
+          .firstMatch(svgContent);
+      if (rectMatch != null) {
+        w = _parseNumericDimension(rectMatch.group(1)) ?? w;
+        h = _parseNumericDimension(rectMatch.group(2)) ?? h;
+      }
+    }
+
+    // 4) 回退默认值
+    w ??= 400;
+    h ??= 600;
+
+    return (w.toString(), h.toString());
+  }
+
+  double? _parseNumericDimension(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return null;
+    if (raw.contains('%')) return null;
+    final cleaned = raw.replaceAll(RegExp('[^0-9.\-]'), '');
+    if (cleaned.isEmpty) return null;
+    final parsed = double.tryParse(cleaned);
+    if (parsed == null || parsed <= 0) return null;
+    return parsed;
   }
 
   /// 验证SVG内容安全性

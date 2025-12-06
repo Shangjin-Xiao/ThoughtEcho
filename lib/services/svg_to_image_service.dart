@@ -190,56 +190,75 @@ class SvgToImageService {
       );
     }
 
-    // 提取现有的viewBox或从width/height推断
-    String? existingViewBox;
-    final viewBoxMatch = RegExp(r'viewBox="([^"]+)"').firstMatch(normalized);
-    if (viewBoxMatch != null) {
-      existingViewBox = viewBoxMatch.group(1);
-      AppLogger.d('使用现有viewBox: $existingViewBox', source: 'SvgToImageService');
-    }
+    final inferredSize = _inferSvgIntrinsicSize(normalized);
 
-    // 提取SVG内在尺寸
-    final widthMatch = RegExp(
-      r'width="(\d+(?:\.\d+)?)"',
-    ).firstMatch(normalized);
-    final heightMatch = RegExp(
-      r'height="(\d+(?:\.\d+)?)"',
-    ).firstMatch(normalized);
+    AppLogger.d(
+      'SVG内在尺寸: ${inferredSize.$1}x${inferredSize.$2}',
+      source: 'SvgToImageService',
+    );
 
-    String svgWidth;
-    String svgHeight;
-
-    if (existingViewBox != null) {
-      // 有viewBox，从viewBox提取
-      final parts = existingViewBox.split(RegExp(r'[\s,]+'));
-      if (parts.length == 4) {
-        svgWidth = parts[2];
-        svgHeight = parts[3];
-      } else {
-        svgWidth = widthMatch?.group(1) ?? '400';
-        svgHeight = heightMatch?.group(1) ?? '600';
-      }
-    } else {
-      // 没有viewBox，从width/height提取或使用默认
-      svgWidth = widthMatch?.group(1) ?? '400';
-      svgHeight = heightMatch?.group(1) ?? '600';
-    }
-
-    AppLogger.d('SVG内在尺寸: ${svgWidth}x$svgHeight', source: 'SvgToImageService');
-
-    // 移除现有的width、height、viewBox属性
+    // 移除现有的width、height、viewBox属性（避免重复或无效值导致错位）
     normalized = normalized
         .replaceAll(RegExp(r'\s+width="[^"]*"'), '')
         .replaceAll(RegExp(r'\s+height="[^"]*"'), '')
-        .replaceAll(RegExp(r'\s+viewBox="[^"]*"'), '');
+        .replaceAll(RegExp(r'\s+viewBox="[^"]*"'), '')
+        .replaceAll(RegExp(r'\s+preserveAspectRatio="[^"]*"'), '');
 
-    // 重新设置标准化的属性：保持SVG内在尺寸作为viewBox，物理尺寸由外层容器控制
+    // 统一设置标准属性：使用推断的viewBox，并显式设置width/height防止百分比导致裁剪
     normalized = normalized.replaceFirst(
       '<svg',
-      '<svg viewBox="0 0 $svgWidth $svgHeight" width="$svgWidth" height="$svgHeight" preserveAspectRatio="xMidYMid meet"',
+      '<svg viewBox="0 0 ${inferredSize.$1} ${inferredSize.$2}" width="${inferredSize.$1}" height="${inferredSize.$2}" preserveAspectRatio="xMidYMid meet"',
     );
 
     return normalized;
+  }
+
+  /// 推断SVG的内在尺寸，优先使用合法viewBox，其次使用数值width/height，
+  /// 若为百分比或无效则从首个大矩形推断，最后回退到400x600。
+  static (String, String) _inferSvgIntrinsicSize(String svgContent) {
+    // 1) 优先使用合法的viewBox
+    final viewBoxMatch = RegExp(r'viewBox="([^"]+)"').firstMatch(svgContent);
+    if (viewBoxMatch != null) {
+      final parts = viewBoxMatch.group(1)!.split(RegExp(r'[\s,]+'));
+      if (parts.length == 4 && parts.every((p) => double.tryParse(p) != null)) {
+        return (parts[2], parts[3]);
+      }
+    }
+
+    // 2) 解析数值width/height（忽略百分比/空值）
+    double? w = _parseNumericDimension(
+      RegExp(r'width="([^"]+)"').firstMatch(svgContent)?.group(1),
+    );
+    double? h = _parseNumericDimension(
+      RegExp(r'height="([^"]+)"').firstMatch(svgContent)?.group(1),
+    );
+
+    // 3) 如果根节点给的是百分比或0，尝试从第一个rect推断背景尺寸
+    if (w == null || h == null) {
+      final rectMatch = RegExp(r'<rect[^>]*width="([^"]+)"[^>]*height="([^"]+)"')
+          .firstMatch(svgContent);
+      if (rectMatch != null) {
+        w = _parseNumericDimension(rectMatch.group(1)) ?? w;
+        h = _parseNumericDimension(rectMatch.group(2)) ?? h;
+      }
+    }
+
+    // 4) 仍然无效时使用默认值
+    w ??= 400;
+    h ??= 600;
+
+    return (w.toString(), h.toString());
+  }
+
+  /// 仅接受数值维度，忽略百分比/空/非数字，避免 100% 导致视窗被错置。
+  static double? _parseNumericDimension(String? raw) {
+    if (raw == null || raw.trim().isEmpty) return null;
+    if (raw.contains('%')) return null;
+    final cleaned = raw.replaceAll(RegExp('[^0-9.\-]'), '');
+    if (cleaned.isEmpty) return null;
+    final parsed = double.tryParse(cleaned);
+    if (parsed == null || parsed <= 0) return null;
+    return parsed;
   }
 
   /// 渲染SVG为字节数组
@@ -501,6 +520,64 @@ class SvgToImageService {
     return (double.tryParse(trimmed) ?? 0.0) / 100.0;
   }
 
+  /// 解析标签属性，兼容任意顺序及style内联写法
+  static Map<String, String> _parseAttributes(String tag) {
+    final attrs = <String, String>{};
+    final attrRegex = RegExp(r'([a-zA-Z_:][\w:.-]*)\s*=\s*"([^"]*)"');
+    for (final match in attrRegex.allMatches(tag)) {
+      attrs[match.group(1)!] = match.group(2)!;
+    }
+    return attrs;
+  }
+
+  /// 从属性或style中提取填充色
+  static String _extractFill(
+    Map<String, String> attrs, {
+    String defaultColor = '#000000',
+  }) {
+    String? fill = attrs['fill'];
+    fill ??= _parseStyleValue(attrs['style'], 'fill');
+    if (fill == null || fill.isEmpty) return defaultColor;
+    return fill.trim();
+  }
+
+  /// 从属性或style中提取透明度
+  static double _extractOpacity(
+    Map<String, String> attrs, {
+    String attributeKey = 'fill-opacity',
+    double defaultOpacity = 1.0,
+  }) {
+    final raw = attrs[attributeKey] ?? _parseStyleValue(attrs['style'], attributeKey);
+    final parsed = double.tryParse(raw ?? '');
+    return parsed ?? defaultOpacity;
+  }
+
+  /// 从属性或style中提取数值字体大小
+  static double _extractFontSize(
+    Map<String, String> attrs, {
+    double defaultSize = 14.0,
+  }) {
+    final raw = attrs['font-size'] ?? _parseStyleValue(attrs['style'], 'font-size');
+    final cleaned = raw?.replaceAll(RegExp('[^0-9.\-]'), '');
+    final parsed = double.tryParse(cleaned ?? '');
+    return parsed ?? defaultSize;
+  }
+
+  /// 从style中解析键值
+  static String? _parseStyleValue(String? style, String key) {
+    if (style == null) return null;
+    final regex = RegExp('$key\\s*:\\s*([^;]+)', caseSensitive: false);
+    final match = regex.firstMatch(style);
+    return match?.group(1)?.trim();
+  }
+
+  /// 将数值字符串转换为double，容忍%或px后缀
+  static double _parseDimension(String? value) {
+    if (value == null) return 0;
+    final cleaned = value.replaceAll(RegExp('[^0-9.\-]'), '');
+    return double.tryParse(cleaned) ?? 0;
+  }
+
   /// 绘制背景矩形
   static void _drawBackgroundRect(
     Canvas canvas,
@@ -509,19 +586,20 @@ class SvgToImageService {
     int height,
     Map<String, Gradient> gradients,
   ) {
-    // 查找第一个覆盖整个画布的矩形
-    final rectRegex = RegExp(
-      r'<rect[^>]*width="([^"]*)"[^>]*height="([^"]*)"[^>]*fill="([^"]*)"[^>]*(?:rx="([^"]*)")?',
-    );
+    // 查找可能的背景矩形，兼容属性顺序与style写法
+    final rectRegex = RegExp(r'<rect[^>]*>', caseSensitive: false);
 
     for (final match in rectRegex.allMatches(svgContent)) {
-      final w = double.tryParse(match.group(1) ?? '0') ?? 0;
-      final h = double.tryParse(match.group(2) ?? '0') ?? 0;
-      final fill = match.group(3) ?? '';
-      final rx = double.tryParse(match.group(4) ?? '0') ?? 0;
+      final tag = match.group(0) ?? '';
+      final attrs = _parseAttributes(tag);
 
-      // 检查是否是全尺寸背景
-      if (w >= width * 0.9 && h >= height * 0.9) {
+      final w = _parseDimension(attrs['width']);
+      final h = _parseDimension(attrs['height']);
+      final rx = _parseDimension(attrs['rx']);
+      final fill = _extractFill(attrs, defaultColor: '#ffffff');
+
+      // 检查是否是全尺寸背景(留10%容差，避免因缩放丢失背景)
+      if (w >= width * 0.8 && h >= height * 0.8) {
         final rect = RRect.fromRectAndRadius(
           Rect.fromLTWH(0, 0, w, h),
           Radius.circular(rx),
@@ -554,18 +632,17 @@ class SvgToImageService {
     int height,
     Map<String, Gradient> gradients,
   ) {
-    // 绘制圆形
-    final circleRegex = RegExp(
-      r'<circle[^>]*cx="([^"]*)"[^>]*cy="([^"]*)"[^>]*r="([^"]*)"[^>]*(?:fill="([^"]*)")?[^>]*(?:fill-opacity="([^"]*)")?',
-    );
+    // 绘制圆形（兼容style写法）
+    final circleRegex = RegExp(r'<circle[^>]*>', caseSensitive: false);
 
     for (final match in circleRegex.allMatches(svgContent)) {
       try {
-        final cx = double.parse(match.group(1) ?? '0');
-        final cy = double.parse(match.group(2) ?? '0');
-        final r = double.parse(match.group(3) ?? '0');
-        final fill = match.group(4) ?? '#000000';
-        final opacity = double.tryParse(match.group(5) ?? '1.0') ?? 1.0;
+        final attrs = _parseAttributes(match.group(0) ?? '');
+        final cx = _parseDimension(attrs['cx']);
+        final cy = _parseDimension(attrs['cy']);
+        final r = _parseDimension(attrs['r']);
+        final fill = _extractFill(attrs, defaultColor: '#000000');
+        final opacity = _extractOpacity(attrs, defaultOpacity: 1.0);
 
         final paint = Paint();
         if (fill.startsWith('url(#')) {
@@ -587,22 +664,25 @@ class SvgToImageService {
     }
 
     // 绘制矩形（跳过背景矩形）
-    final rectRegex = RegExp(
-      r'<rect[^>]*x="([^"]*)"[^>]*y="([^"]*)"[^>]*width="([^"]*)"[^>]*height="([^"]*)"[^>]*(?:fill="([^"]*)")?[^>]*(?:fill-opacity="([^"]*)")?[^>]*(?:rx="([^"]*)")?',
-    );
+    final rectRegex = RegExp(r'<rect[^>]*>', caseSensitive: false);
 
     for (final match in rectRegex.allMatches(svgContent)) {
       try {
-        final x = double.parse(match.group(1) ?? '0');
-        final y = double.parse(match.group(2) ?? '0');
-        final w = double.parse(match.group(3) ?? '0');
-        final h = double.parse(match.group(4) ?? '0');
-        final fill = match.group(5) ?? '#000000';
-        final opacity = double.tryParse(match.group(6) ?? '1.0') ?? 1.0;
-        final rx = double.tryParse(match.group(7) ?? '0') ?? 0;
+        final tag = match.group(0) ?? '';
+        final attrs = _parseAttributes(tag);
+
+        final x = _parseDimension(attrs['x']);
+        final y = _parseDimension(attrs['y']);
+        final w = _parseDimension(attrs['width']);
+        final h = _parseDimension(attrs['height']);
+        final fill = _extractFill(attrs, defaultColor: '#000000');
+        final opacity = _extractOpacity(attrs, defaultOpacity: 1.0);
+        final rx = _parseDimension(attrs['rx']);
 
         // 跳过全屏背景矩形
-        if (w >= width * 0.9 && h >= height * 0.9 && x < 10 && y < 10) continue;
+        if (w >= width * 0.8 && h >= height * 0.8 && x <= 10 && y <= 10) {
+          continue;
+        }
 
         final rect = rx > 0
             ? RRect.fromRectAndRadius(
@@ -640,19 +720,21 @@ class SvgToImageService {
     int width,
     int height,
   ) {
-    final textRegex = RegExp(
-      r'<text[^>]*x="([^"]*)"[^>]*y="([^"]*)"[^>]*(?:text-anchor="([^"]*)")?[^>]*(?:fill="([^"]*)")?[^>]*(?:font-size="([^"]*)")?[^>]*(?:fill-opacity="([^"]*)")?[^>]*>([^<]*)</text>',
-    );
+    final textRegex = RegExp(r'<text[^>]*>.*?<\/text>', dotAll: true, caseSensitive: false);
 
     for (final match in textRegex.allMatches(svgContent)) {
       try {
-        double x = double.parse(match.group(1) ?? '0');
-        final y = double.parse(match.group(2) ?? '0');
-        final anchor = match.group(3) ?? 'start';
-        final fill = match.group(4) ?? '#000000';
-        final fontSize = double.tryParse(match.group(5) ?? '14') ?? 14.0;
-        final opacity = double.tryParse(match.group(6) ?? '1.0') ?? 1.0;
-        String text = match.group(7) ?? '';
+        final rawTag = match.group(0) ?? '';
+        final attrs = _parseAttributes(rawTag);
+        double x = _parseDimension(attrs['x']);
+        final y = _parseDimension(attrs['y']);
+        final anchor = attrs['text-anchor'] ?? _parseStyleValue(attrs['style'], 'text-anchor') ?? 'start';
+        final fill = _extractFill(attrs, defaultColor: '#000000');
+        final fontSize = _extractFontSize(attrs, defaultSize: 14.0);
+        final opacity = _extractOpacity(attrs, defaultOpacity: 1.0);
+
+        final contentMatch = RegExp(r'>\s*(.*?)\s*<\/text>', dotAll: true).firstMatch(rawTag);
+        String text = contentMatch?.group(1) ?? '';
 
         // 解码HTML实体
         text = text
