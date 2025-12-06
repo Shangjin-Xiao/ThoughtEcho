@@ -37,6 +37,7 @@ import 'package:thoughtecho/services/version_check_service.dart';
 import 'package:thoughtecho/services/insight_history_service.dart';
 import 'package:thoughtecho/services/connectivity_service.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
+import 'package:thoughtecho/services/data_directory_service.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/utils/update_dialog_helper.dart';
 // import 'package:thoughtecho/services/debug_service.dart'; // 正式版已禁用
@@ -77,8 +78,19 @@ Future<void> initializeDatabasePlatform() async {
     }
 
     try {
-      final appDir = await getApplicationDocumentsDirectory();
-      final dbPath = join(appDir.path, 'databases');
+      // Windows 平台使用 Documents/ThoughtEcho 作为默认数据目录
+      // 其他平台继续使用 Documents 根目录
+      String basePath;
+      if (Platform.isWindows) {
+        // 检查并执行旧版数据迁移（从 Documents 根目录迁移到 Documents/ThoughtEcho）
+        await DataDirectoryService.checkAndMigrateLegacyData();
+        basePath = await DataDirectoryService.getCurrentDataDirectory();
+      } else {
+        final appDir = await getApplicationDocumentsDirectory();
+        basePath = appDir.path;
+      }
+
+      final dbPath = join(basePath, 'databases');
 
       await Directory(dbPath).create(recursive: true);
 
@@ -88,6 +100,7 @@ Future<void> initializeDatabasePlatform() async {
       }
 
       await databaseFactory.setDatabasesPath(dbPath);
+      logInfo('数据库路径设置为: $dbPath', source: 'DatabaseInit');
     } catch (e) {
       logError('创建数据库目录失败: $e', error: e, source: 'DatabaseInit');
       rethrow;

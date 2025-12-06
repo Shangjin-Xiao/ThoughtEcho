@@ -6,11 +6,19 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/app_logger.dart';
 import 'large_file_manager.dart';
 
-/// 数据目录管理服务（Windows专用）
+/// 数据目录管理服务（桌面平台专用）
 /// 允许用户自定义应用数据存储位置，并处理数据迁移
 class DataDirectoryService {
   static const String _customPathKey = 'custom_data_directory_path';
   static const String _isUsingCustomPathKey = 'is_using_custom_data_directory';
+  static const String _legacyMigrationDoneKey = 'legacy_data_migration_done';
+  static const String _appDataFolderName = 'ThoughtEcho';
+
+  /// 获取默认的应用数据目录（Documents/ThoughtEcho）
+  static Future<String> getDefaultDataDirectory() async {
+    final docsDir = await getApplicationDocumentsDirectory();
+    return path.join(docsDir.path, _appDataFolderName);
+  }
 
   /// 获取当前使用的数据目录
   static Future<String> getCurrentDataDirectory() async {
@@ -34,12 +42,115 @@ class DataDirectoryService {
         }
       }
 
-      // 使用默认路径
-      final appDir = await getApplicationDocumentsDirectory();
-      return appDir.path;
+      // 使用默认路径：Documents/ThoughtEcho
+      return await getDefaultDataDirectory();
     } catch (e) {
       logError('获取数据目录失败: $e', error: e);
       rethrow;
+    }
+  }
+
+  /// 检查并执行旧版数据迁移（从 Documents 根目录迁移到 Documents/ThoughtEcho）
+  /// 这是为了兼容旧版本用户，将数据从 Documents 根目录迁移到子文件夹
+  static Future<bool> checkAndMigrateLegacyData() async {
+    if (kIsWeb || !Platform.isWindows) {
+      return true; // 仅 Windows 需要此迁移
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+
+      // 检查是否已经完成迁移
+      if (prefs.getBool(_legacyMigrationDoneKey) ?? false) {
+        return true;
+      }
+
+      // 检查是否使用自定义路径（自定义路径用户不需要迁移）
+      if (prefs.getBool(_isUsingCustomPathKey) ?? false) {
+        await prefs.setBool(_legacyMigrationDoneKey, true);
+        return true;
+      }
+
+      final docsDir = await getApplicationDocumentsDirectory();
+      final legacyDbPath =
+          path.join(docsDir.path, 'databases', 'thoughtecho.db');
+      final legacyDbFile = File(legacyDbPath);
+
+      // 检查旧版数据是否存在于 Documents 根目录
+      if (!await legacyDbFile.exists()) {
+        // 没有旧版数据，标记迁移完成
+        await prefs.setBool(_legacyMigrationDoneKey, true);
+        logDebug('没有检测到旧版数据，跳过迁移');
+        return true;
+      }
+
+      // 新路径
+      final newDataDir = await getDefaultDataDirectory();
+      final newDbPath = path.join(newDataDir, 'databases', 'thoughtecho.db');
+      final newDbFile = File(newDbPath);
+
+      // 如果新路径已经有数据库，说明已经迁移过
+      if (await newDbFile.exists()) {
+        await prefs.setBool(_legacyMigrationDoneKey, true);
+        logDebug('新数据目录已存在数据，跳过迁移');
+        return true;
+      }
+
+      logInfo('检测到旧版数据，开始自动迁移到 $newDataDir');
+
+      // 创建新目录
+      await Directory(newDataDir).create(recursive: true);
+
+      // 迁移应用相关的文件和目录
+      final itemsToMigrate = [
+        'databases',
+        'media',
+        'ai_analyses.db',
+      ];
+
+      for (final item in itemsToMigrate) {
+        final sourcePath = path.join(docsDir.path, item);
+        final targetPath = path.join(newDataDir, item);
+
+        final sourceDir = Directory(sourcePath);
+        final sourceFile = File(sourcePath);
+
+        if (await sourceDir.exists()) {
+          // 复制目录
+          await _copyDirectory(sourceDir, Directory(targetPath));
+          logDebug('已迁移目录: $item');
+        } else if (await sourceFile.exists()) {
+          // 复制文件
+          await Directory(path.dirname(targetPath)).create(recursive: true);
+          await sourceFile.copy(targetPath);
+          logDebug('已迁移文件: $item');
+        }
+      }
+
+      // 标记迁移完成
+      await prefs.setBool(_legacyMigrationDoneKey, true);
+      logInfo('旧版数据迁移完成');
+      return true;
+    } catch (e, stackTrace) {
+      logError('旧版数据迁移失败: $e', error: e, stackTrace: stackTrace);
+      return false;
+    }
+  }
+
+  /// 复制目录及其内容
+  static Future<void> _copyDirectory(Directory source, Directory target) async {
+    if (!await target.exists()) {
+      await target.create(recursive: true);
+    }
+
+    await for (final entity in source.list(followLinks: false)) {
+      final newPath = path.join(target.path, path.basename(entity.path));
+
+      if (entity is File) {
+        await entity.copy(newPath);
+      } else if (entity is Directory) {
+        await _copyDirectory(entity, Directory(newPath));
+      }
     }
   }
 
@@ -138,36 +249,14 @@ class DataDirectoryService {
         throw Exception('当前数据目录不存在');
       }
 
-      // 3. 计算需要复制的文件
-      final filesToCopy = <FileSystemEntity>[];
-      try {
-        await for (final entity in currentDir.list(
-          recursive: true,
-          followLinks: false, // 不跟随符号链接，避免访问系统文件夹
-        )) {
-          try {
-            if (entity is File) {
-              // 排除 Windows 特殊文件夹（My Music, My Videos 等）
-              final relativePath = path.relative(
-                entity.path,
-                from: currentPath,
-              );
-              if (!_isSystemFolder(relativePath)) {
-                filesToCopy.add(entity);
-              }
-            }
-          } catch (e) {
-            // 跳过无法访问的单个文件
-            logDebug('跳过无法访问的文件: ${entity.path}, 错误: $e');
-          }
-        }
-      } catch (e) {
-        // 如果整个目录遍历失败，记录错误但继续
-        logError('遍历目录时遇到错误: $e', error: e);
-        // 如果没有收集到任何文件，抛出错误
-        if (filesToCopy.isEmpty) {
-          throw Exception('无法读取当前数据目录中的文件: $e');
-        }
+      // 3. 只迁移应用相关的文件和目录
+      // 使用 isolate 避免阻塞 UI
+      final result = await compute(_collectAppFiles, currentPath);
+      final filesToCopy = result['files'] as List<String>;
+      final errors = result['errors'] as List<String>;
+
+      if (errors.isNotEmpty) {
+        logDebug('收集文件时遇到 ${errors.length} 个错误');
       }
 
       if (filesToCopy.isEmpty) {
@@ -178,46 +267,47 @@ class DataDirectoryService {
 
         // 4. 复制文件到新目录
         int copiedCount = 0;
-        for (final entity in filesToCopy) {
-          if (entity is! File) continue;
+        for (final filePath in filesToCopy) {
+          try {
+            final file = File(filePath);
+            final relativePath = path.relative(filePath, from: currentPath);
+            final targetPath = path.join(newPath, relativePath);
 
-          final file = entity;
-          final relativePath = path.relative(file.path, from: currentPath);
-          final targetPath = path.join(newPath, relativePath);
+            onStatusUpdate?.call('正在复制: $relativePath');
 
-          onStatusUpdate?.call('正在复制: $relativePath');
+            // 确保目标目录存在
+            final targetDir = Directory(path.dirname(targetPath));
+            if (!await targetDir.exists()) {
+              await targetDir.create(recursive: true);
+            }
 
-          // 确保目标目录存在
-          final targetDir = Directory(path.dirname(targetPath));
-          if (!await targetDir.exists()) {
-            await targetDir.create(recursive: true);
+            // 使用 LargeFileManager 复制文件（支持大文件）
+            await LargeFileManager.copyFileInChunks(
+              file.path,
+              targetPath,
+              onProgress: (current, total) {
+                if (onProgress != null && total > 0) {
+                  final fileProgress = current / total;
+                  final totalProgress =
+                      (copiedCount + fileProgress) / filesToCopy.length;
+                  onProgress(totalProgress);
+                }
+              },
+            );
+
+            copiedCount++;
+            onProgress?.call(copiedCount / filesToCopy.length);
+          } catch (e) {
+            logError('复制文件失败: $filePath, 错误: $e', error: e);
+            // 继续复制其他文件
           }
-
-          // 使用 LargeFileManager 复制文件（支持大文件）
-          await LargeFileManager.copyFileInChunks(
-            file.path,
-            targetPath,
-            onProgress: (current, total) {
-              if (onProgress != null && total > 0) {
-                final fileProgress = current / total;
-                final totalProgress =
-                    (copiedCount + fileProgress) / filesToCopy.length;
-                onProgress(totalProgress);
-              }
-            },
-          );
-
-          copiedCount++;
-          onProgress?.call(copiedCount / filesToCopy.length);
         }
 
         onStatusUpdate?.call('验证文件完整性...');
 
         // 5. 验证关键文件是否复制成功
         final criticalFiles = [
-          'databases/notes.db',
-          'databases/logs.db',
-          'ai_analyses.db',
+          'databases/thoughtecho.db',
         ];
 
         for (final relPath in criticalFiles) {
@@ -257,6 +347,69 @@ class DataDirectoryService {
       onStatusUpdate?.call('迁移失败: $e');
       return false;
     }
+  }
+
+  /// 在 isolate 中收集应用相关的文件（避免阻塞 UI）
+  static Future<Map<String, dynamic>> _collectAppFiles(
+      String currentPath) async {
+    final filesToCopy = <String>[];
+    final errors = <String>[];
+
+    // 只迁移应用相关的目录和文件
+    final appItems = [
+      'databases', // 数据库目录
+      'media', // 媒体文件目录
+      'ai_analyses.db', // AI 分析数据库
+      'backups', // 备份目录
+    ];
+
+    for (final item in appItems) {
+      final itemPath = path.join(currentPath, item);
+      final itemDir = Directory(itemPath);
+      final itemFile = File(itemPath);
+
+      try {
+        if (await itemDir.exists()) {
+          // 遍历目录中的文件
+          await for (final entity in itemDir.list(
+            recursive: true,
+            followLinks: false,
+          )) {
+            try {
+              if (entity is File) {
+                final fileName = path.basename(entity.path).toLowerCase();
+                // 跳过系统文件
+                if (!_isWindowsSystemFile(fileName)) {
+                  filesToCopy.add(entity.path);
+                }
+              }
+            } catch (e) {
+              errors.add('无法访问: ${entity.path}');
+            }
+          }
+        } else if (await itemFile.exists()) {
+          filesToCopy.add(itemFile.path);
+        }
+      } catch (e) {
+        errors.add('无法访问目录: $itemPath');
+      }
+    }
+
+    return {
+      'files': filesToCopy,
+      'errors': errors,
+    };
+  }
+
+  /// 检查是否是 Windows 系统文件
+  static bool _isWindowsSystemFile(String fileName) {
+    final systemFiles = [
+      'desktop.ini',
+      'thumbs.db',
+      'ntuser.dat',
+      '.ds_store',
+    ];
+    return systemFiles.contains(fileName);
   }
 
   /// 重置到默认数据目录
@@ -335,7 +488,8 @@ class DataDirectoryService {
       }
 
       int totalSize = 0;
-      await for (final entity in dir.list(recursive: true)) {
+      await for (final entity
+          in dir.list(recursive: true, followLinks: false)) {
         if (entity is File) {
           try {
             totalSize += await entity.length();
@@ -350,22 +504,5 @@ class DataDirectoryService {
       logError('计算目录大小失败: $e', error: e);
       return 0;
     }
-  }
-
-  /// 检查是否是 Windows 系统文件夹（如 My Music, My Videos 等）
-  static bool _isSystemFolder(String relativePath) {
-    if (!Platform.isWindows) return false;
-
-    final lowerPath = relativePath.toLowerCase();
-    final systemFolders = [
-      'my music',
-      'my videos',
-      'my pictures',
-      'my documents',
-      'desktop.ini',
-      'thumbs.db',
-    ];
-
-    return systemFolders.any((folder) => lowerPath.contains(folder));
   }
 }
