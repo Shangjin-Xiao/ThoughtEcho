@@ -695,10 +695,14 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     if (result == 'update' && hasCoordinates) {
       // 尝试用坐标更新地址
       try {
+        // 获取当前语言设置
+        final locationService = Provider.of<LocationService>(context, listen: false);
+        final localeCode = locationService.currentLocaleCode;
         final addressInfo =
             await LocalGeocodingService.getAddressFromCoordinates(
               _originalLatitude!,
               _originalLongitude!,
+              localeCode: localeCode,
             );
         if (addressInfo != null && mounted) {
           final formattedAddress = addressInfo['formatted_address'];

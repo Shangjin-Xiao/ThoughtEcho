@@ -2370,6 +2370,15 @@
   },
   "cannotGetLocationTitle": "Cannot Get Location",
   "cannotGetLocationDesc": "Cannot get current location. Please check location permission or network status.",
+  "getLocationFailedTitle": "Get Location Failed",
+  "getLocationFailedDesc": "Get location failed: {error}",
+  "@getLocationFailedDesc": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "cannotGetLocationPermissionShort": "Cannot get location permission",
   "savingNote": "Saving",
   "saveComplete": "Complete",

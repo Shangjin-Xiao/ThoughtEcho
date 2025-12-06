@@ -105,39 +105,51 @@ class LocalGeocodingService {
   /// 通过经纬度获取地址信息
   /// [latitude]: 纬度
   /// [longitude]: 经度
+  /// [localeCode]: 语言代码，如 'zh' 或 'en'，用于返回对应语言的地址
   /// 返回包含地址信息的Map，如果失败返回null
   static Future<Map<String, String?>?> getAddressFromCoordinates(
     double latitude,
-    double longitude,
-  ) async {
+    double longitude, {
+    String? localeCode,
+  }) async {
     try {
+      final bool isEnglish = localeCode == 'en';
+      
       // Windows平台简化处理
       if (!kIsWeb && Platform.isWindows) {
         logDebug('Windows平台：使用在线地理编码服务');
-        // 只使用在线服务，不使用可能有问题的系统插件
+        // 返回对应语言的回退数据
         return {
-          'country': '中国',
-          'province': '未知省份',
-          'city': '未知城市',
+          'country': isEnglish ? 'China' : '中国',
+          'province': isEnglish ? 'Unknown Province' : '未知省份',
+          'city': isEnglish ? 'Unknown City' : '未知城市',
           'district': null,
           'street': null,
-          'formatted_address': '中国, 未知省份, 未知城市',
+          'formatted_address': isEnglish 
+              ? 'China, Unknown Province, Unknown City' 
+              : '中国, 未知省份, 未知城市',
           'source': 'fallback',
         };
       }
-      // 首先尝试从缓存读取
+      
+      // 英文环境：跳过系统地理编码（无法控制语言），返回 null 让调用者使用在线服务
+      if (isEnglish) {
+        logDebug('英文环境：跳过系统地理编码，使用在线服务');
+        return null;
+      }
+      
+      // 首先尝试从缓存读取（只对中文环境使用缓存）
       final cachedAddress = await _getFromCache(latitude, longitude);
       if (cachedAddress != null) {
         logDebug('使用缓存的地理编码数据');
         return cachedAddress;
       }
 
-      // 首先尝试使用系统提供的地理编码功能
+      // 中文环境：使用系统提供的地理编码功能
       try {
         final placemarks = await geocoding.placemarkFromCoordinates(
           latitude,
           longitude,
-          // 尝试使用中文
         );
 
         if (placemarks.isNotEmpty) {

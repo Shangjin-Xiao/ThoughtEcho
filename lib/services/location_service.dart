@@ -288,10 +288,11 @@ class LocationService extends ChangeNotifier {
     try {
       logDebug('开始通过经纬度获取地址信息...');
 
-      // 使用系统SDK获取地址信息
+      // 使用系统SDK获取地址信息，传入语言参数
       final addressInfo = await LocalGeocodingService.getAddressFromCoordinates(
         _currentPosition!.latitude,
         _currentPosition!.longitude,
+        localeCode: _apiLanguageParam,
       );
 
       // 如果本地解析成功
@@ -309,7 +310,7 @@ class LocationService extends ChangeNotifier {
         return;
       }
 
-      // 如果本地解析失败，总是尝试使用在线服务 (Nominatim)
+      // 如果本地解析失败（或英文环境跳过），使用在线服务 (Nominatim)
       try {
         await _getAddressFromLatLngOnline();
       } catch (e) {
@@ -318,7 +319,7 @@ class LocationService extends ChangeNotifier {
         _province = null;
         _city = null;
         _district = null;
-        _currentAddress = '地址解析失败';
+        _currentAddress = _apiLanguageParam == 'en' ? 'Address resolution failed' : '地址解析失败';
         notifyListeners();
       }
     } catch (e) {
@@ -327,7 +328,7 @@ class LocationService extends ChangeNotifier {
       _province = null;
       _city = null;
       _district = null;
-      _currentAddress = '地址解析失败';
+      _currentAddress = _apiLanguageParam == 'en' ? 'Address resolution failed' : '地址解析失败';
       notifyListeners();
     }
   }
