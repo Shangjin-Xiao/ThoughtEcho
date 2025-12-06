@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import '../models/generated_card.dart';
 
 /// 卡片模板常量 - 优化版
@@ -9,7 +11,6 @@ class CardTemplates {
   // ============ 核心常量 ============
   static const double _viewBoxWidth = 400.0;
   static const double _viewBoxHeight = 600.0;
-  static const int _maxContentLines = 11; // 内容最大行数（增加以避免截断）
   static const double _contentFontSize = 18.0;
   static const double _lineHeight = 1.6;
 
@@ -25,14 +26,14 @@ class CardTemplates {
     String? temperature,
     String? dayPeriod,
   }) {
-    // 增加宽度利用率：18字符
-    final textLines = _wrapText(content, 18, _maxContentLines);
+    const contentAreaTop = 160.0;
+    const contentAreaHeight = 300.0;
+    final maxLines = _calculateMaxLines(contentAreaHeight);
+    final textLines = _wrapText(content, 18, maxLines);
     final metaText = _buildMetaText(date: date, location: location, weather: weather, temperature: temperature);
     final brandText = _buildBrandText(author: author, source: source);
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    const contentAreaTop = 160.0;
-    const contentAreaHeight = 300.0;
     final contentStartY = contentAreaTop + (contentAreaHeight - contentHeight) / 2 + _contentFontSize;
 
     return '''
@@ -98,15 +99,14 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#1e293b')
     String? temperature,
     String? dayPeriod,
   }) {
-    // 优化：增加宽度到18字符，增加行数限制
-    final textLines = _wrapText(content, 18, 10);
+    const contentAreaTop = 140.0;
+    const contentAreaHeight = 340.0;
+    final maxLines = _calculateMaxLines(contentAreaHeight);
+    final textLines = _wrapText(content, 18, maxLines);
     final metaText = _buildMetaText(date: date, location: location, weather: weather, temperature: temperature);
     final authorDisplay = author ?? source ?? '';
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    // 优化布局：扩大内容区域
-    const contentAreaTop = 160.0;
-    const contentAreaHeight = 300.0;
     final contentStartY = contentAreaTop + (contentAreaHeight - contentHeight) / 2 + _contentFontSize;
 
     return '''
@@ -158,14 +158,14 @@ ${authorDisplay.isNotEmpty ? '''
     String? temperature,
     String? dayPeriod,
   }) {
-    // 增加宽度利用率：18字符
-    final textLines = _wrapText(content, 18, _maxContentLines);
+    const contentAreaTop = 180.0;
+    const contentAreaHeight = 280.0;
+    final maxLines = _calculateMaxLines(contentAreaHeight);
+    final textLines = _wrapText(content, 18, maxLines);
     final metaText = _buildMetaText(date: date, location: location, weather: weather, temperature: temperature);
     final brandText = _buildBrandText(author: author, source: source);
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    const contentAreaTop = 180.0;
-    const contentAreaHeight = 280.0;
     final contentStartY = contentAreaTop + (contentAreaHeight - contentHeight) / 2 + _contentFontSize;
 
     return '''
@@ -225,14 +225,14 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#ffffff',
     String? temperature,
     String? dayPeriod,
   }) {
-    // 保持16字符，因为内容区域较窄 (320px)
-    final textLines = _wrapText(content, 16, _maxContentLines);
+    const contentAreaTop = 160.0;
+    const contentAreaHeight = 300.0;
+    final maxLines = _calculateMaxLines(contentAreaHeight);
+    final textLines = _wrapText(content, 16, maxLines);
     final metaText = _buildMetaText(date: date, location: location, weather: weather, temperature: temperature);
     final brandText = _buildBrandText(author: author, source: source);
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    const contentAreaTop = 160.0;
-    const contentAreaHeight = 300.0;
     final contentStartY = contentAreaTop + (contentAreaHeight - contentHeight) / 2 + _contentFontSize;
 
     return '''
@@ -281,14 +281,14 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#0f172a')
     String? temperature,
     String? dayPeriod,
   }) {
-    // 增加宽度利用率：18字符
-    final textLines = _wrapText(content, 18, _maxContentLines);
+    const contentAreaTop = 160.0;
+    const contentAreaHeight = 300.0;
+    final maxLines = _calculateMaxLines(contentAreaHeight);
+    final textLines = _wrapText(content, 18, maxLines);
     final metaText = _buildMetaText(date: date, location: location, weather: weather, temperature: temperature);
     final brandText = _buildBrandText(author: author, source: source);
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    const contentAreaTop = 160.0;
-    const contentAreaHeight = 300.0;
     final contentStartY = contentAreaTop + (contentAreaHeight - contentHeight) / 2 + _contentFontSize;
 
     return '''
@@ -335,14 +335,14 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#14532d')
     String? temperature,
     String? dayPeriod,
   }) {
-    // 17字符，适应边框
-    final textLines = _wrapText(content, 17, _maxContentLines);
+    const contentAreaTop = 160.0;
+    const contentAreaHeight = 300.0;
+    final maxLines = _calculateMaxLines(contentAreaHeight);
+    final textLines = _wrapText(content, 17, maxLines);
     final metaText = _buildMetaText(date: date, location: location, weather: weather, temperature: temperature);
     final brandText = _buildBrandText(author: author, source: source);
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    const contentAreaTop = 160.0;
-    const contentAreaHeight = 300.0;
     final contentStartY = contentAreaTop + (contentAreaHeight - contentHeight) / 2 + _contentFontSize;
 
     return '''
@@ -392,14 +392,14 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#451a03',
     String? temperature,
     String? dayPeriod,
   }) {
-    // 保持16字符，避免与水墨装饰重叠
-    final textLines = _wrapText(content, 16, _maxContentLines);
+    const contentAreaTop = 160.0;
+    const contentAreaHeight = 300.0;
+    final maxLines = _calculateMaxLines(contentAreaHeight);
+    final textLines = _wrapText(content, 16, maxLines);
     final metaText = _buildMetaText(date: date, location: location, weather: weather, temperature: temperature);
     final brandText = _buildBrandText(author: author, source: source);
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    const contentAreaTop = 160.0;
-    const contentAreaHeight = 300.0;
     final contentStartY = contentAreaTop + (contentAreaHeight - contentHeight) / 2 + _contentFontSize;
 
     return '''
@@ -442,14 +442,14 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#1c1917',
     String? temperature,
     String? dayPeriod,
   }) {
-    // 18字符，全宽
-    final textLines = _wrapText(content, 18, _maxContentLines);
+    const contentAreaTop = 160.0;
+    const contentAreaHeight = 300.0;
+    final maxLines = _calculateMaxLines(contentAreaHeight);
+    final textLines = _wrapText(content, 18, maxLines);
     final metaText = _buildMetaText(date: date, location: location, weather: weather, temperature: temperature);
     final brandText = _buildBrandText(author: author, source: source);
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    const contentAreaTop = 160.0;
-    const contentAreaHeight = 300.0;
     final contentStartY = contentAreaTop + (contentAreaHeight - contentHeight) / 2 + _contentFontSize;
 
     return '''
@@ -501,14 +501,14 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#e2e8f0',
     String? temperature,
     String? dayPeriod,
   }) {
-    // 17字符，适应内容框
-    final textLines = _wrapText(content, 17, _maxContentLines);
+    const contentAreaTop = 160.0;
+    const contentAreaHeight = 300.0;
+    final maxLines = _calculateMaxLines(contentAreaHeight);
+    final textLines = _wrapText(content, 17, maxLines);
     final metaText = _buildMetaText(date: date, location: location, weather: weather, temperature: temperature);
     final brandText = _buildBrandText(author: author, source: source);
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    const contentAreaTop = 160.0;
-    const contentAreaHeight = 300.0;
     final contentStartY = contentAreaTop + (contentAreaHeight - contentHeight) / 2 + _contentFontSize;
 
     return '''
@@ -659,70 +659,106 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#111827',
 
   // ============ 工具方法 ============
 
-  /// 文本换行处理 (支持中英文混合排版)
+  /// 根据内容区域高度动态计算可容纳的最大行数
+  static int _calculateMaxLines(double contentAreaHeight) {
+    final lineSpacing = _contentFontSize * _lineHeight;
+    return math.max(2, (contentAreaHeight / lineSpacing).floor());
+  }
+
+  /// 文本换行处理 (支持中英文混合排版，并保留手动换行)
   static List<String> _wrapText(
     String text,
     int maxCharsPerLine,
     int maxLines,
   ) {
-    String cleanText = text.trim().replaceAll(RegExp(r'\s+'), ' ');
-    if (cleanText.isEmpty) return [''];
-
-    final lines = <String>[];
-    // 设定总宽度单位：中文字符宽2，英文字符宽1
-    // maxCharsPerLine 是以中文字符为标准的，所以总宽度 = maxCharsPerLine * 2
-    final double maxWidth = maxCharsPerLine * 2.0;
-    
-    int currentStart = 0;
-    
-    while (currentStart < cleanText.length && lines.length < maxLines) {
-      double currentWidth = 0;
-      int currentEnd = currentStart;
-      
-      // 寻找当前行的结束位置
-      while (currentEnd < cleanText.length) {
-        final char = cleanText[currentEnd];
-        // 简单判断：ASCII字符宽1，其他宽2
-        final charWidth = char.codeUnitAt(0) <= 255 ? 1.0 : 2.0;
-        
-        if (currentWidth + charWidth > maxWidth) {
-          break;
-        }
-        currentWidth += charWidth;
-        currentEnd++;
-      }
-      
-      // 如果一行都放不下一个字符（理论上不应该），强制放一个
-      if (currentEnd == currentStart && currentStart < cleanText.length) {
-        currentEnd++;
-      }
-
-      String line = cleanText.substring(currentStart, currentEnd);
-      
-      // 简单的单词断行处理（仅针对英文环境优化）
-      // 如果当前行截断了单词（末尾不是空格，且下一行开头不是空格），且当前行包含空格
-      if (currentEnd < cleanText.length && 
-          cleanText[currentEnd] != ' ' && 
-          line.contains(' ') &&
-          line.lastIndexOf(' ') > line.length * 0.6) { // 只有空格靠后才折行，避免过早折行
-         
-         int lastSpaceIndex = line.lastIndexOf(' ');
-         line = line.substring(0, lastSpaceIndex);
-         currentEnd = currentStart + lastSpaceIndex + 1; // +1 跳过空格
-      }
-
-      lines.add(line.trim());
-      currentStart = currentEnd;
+    final normalized = text.replaceAll('\r\n', '\n').replaceAll('\r', '\n').trimRight();
+    if (normalized.trim().isEmpty) {
+      return [''];
     }
 
-    // 处理截断省略号
-    if (currentStart < cleanText.length && lines.isNotEmpty) {
-      String lastLine = lines.last;
-      // 简单处理：移除最后两个字符加省略号
-      if (lastLine.length > 2) {
-        lines[lines.length - 1] = '${lastLine.substring(0, lastLine.length - 2)}...';
-      } else {
-        lines[lines.length - 1] = '$lastLine...';
+    final paragraphs = normalized.split('\n');
+    final lines = <String>[];
+    final double maxWidth = maxCharsPerLine * 2.0;
+    bool truncated = false;
+
+    for (final rawParagraph in paragraphs) {
+      if (lines.length >= maxLines) {
+        truncated = true;
+        break;
+      }
+
+      final paragraph = rawParagraph.trim();
+      if (paragraph.isEmpty) {
+        if (lines.isNotEmpty && lines.last.isNotEmpty && lines.length < maxLines) {
+          lines.add('');
+        }
+        continue;
+      }
+
+      final segment = paragraph.replaceAll(RegExp(r'\s+'), ' ');
+      int currentStart = 0;
+
+      while (currentStart < segment.length && lines.length < maxLines) {
+        double currentWidth = 0;
+        int currentEnd = currentStart;
+
+        while (currentEnd < segment.length) {
+          final char = segment[currentEnd];
+          final charWidth = char.codeUnitAt(0) <= 255 ? 1.0 : 2.0;
+          if (currentWidth + charWidth > maxWidth) {
+            break;
+          }
+          currentWidth += charWidth;
+          currentEnd++;
+        }
+
+        if (currentEnd == currentStart) {
+          currentEnd++;
+        }
+
+        String line = segment.substring(currentStart, currentEnd);
+
+        if (currentEnd < segment.length &&
+            segment[currentEnd] != ' ' &&
+            line.contains(' ')) {
+          final lastSpaceIndex = line.lastIndexOf(' ');
+          if (lastSpaceIndex >= 0 && lastSpaceIndex >= (line.length * 0.4).floor()) {
+            line = line.substring(0, lastSpaceIndex);
+            currentEnd = currentStart + lastSpaceIndex + 1;
+          }
+        }
+
+        lines.add(line.trim());
+        currentStart = currentEnd;
+      }
+
+      if (currentStart < segment.length) {
+        truncated = true;
+        break;
+      }
+    }
+
+    if (lines.isEmpty) {
+      return [''];
+    }
+
+    while (lines.length > 1 && lines.last.trim().isEmpty) {
+      lines.removeLast();
+    }
+
+    if (truncated && lines.isNotEmpty) {
+      for (int i = lines.length - 1; i >= 0; i--) {
+        if (lines[i].trim().isEmpty) {
+          lines.removeAt(i);
+          continue;
+        }
+        final line = lines[i];
+        final cutIndex = line.length > 3 ? line.length - 3 : 0;
+        lines[i] = '${line.substring(0, cutIndex)}...';
+        if (i < lines.length - 1) {
+          lines.removeRange(i + 1, lines.length);
+        }
+        break;
       }
     }
 

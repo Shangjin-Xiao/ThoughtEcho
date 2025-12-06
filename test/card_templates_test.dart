@@ -42,6 +42,20 @@ void main() {
       expect(svg, contains(testDate));
     });
 
+    test('引用模板应自动多行换行', () {
+      const longQuoteContent =
+          '这是一段非常长的引用内容，用来测试在没有手动换行的情况下，系统是否能够自动将文本拆分成多行显示，从而避免只显示两行就出现省略号的问题。我们希望这个逻辑能够智能地利用粉色卡片中留白充足的版面，让长笔记按照中文和英文混排的规则自然地折行，直到达到可用空间上限。';
+
+      final svg = CardTemplates.quoteTemplate(
+        content: longQuoteContent,
+        author: testAuthor,
+        date: testDate,
+      );
+
+      final italicLineCount = RegExp('font-style="italic"').allMatches(svg).length;
+      expect(italicLineCount, greaterThanOrEqualTo(4));
+    });
+
     test('哲学思考卡片模板生成', () {
       final svg = CardTemplates.philosophicalTemplate(
         content: testContent,
