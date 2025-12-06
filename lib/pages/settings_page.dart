@@ -935,7 +935,7 @@ class SettingsPageState extends State<SettingsPage> {
     return ListTile(
       title: const Text('语言 / Language'),
       subtitle: Text(getLanguageName(currentLocale)),
-      leading: const Icon(Icons.language),
+      leading: const Icon(Icons.translate),
       onTap: () {
         showDialog(
           context: context,
