@@ -1,6 +1,7 @@
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart' as flutter_svg;
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'svg_offscreen_renderer.dart';
 import 'image_cache_service.dart';
@@ -76,9 +77,12 @@ class SvgToImageService {
         height,
       );
 
-      // 优先使用真实Flutter渲染（与预览完全一致）
+      // 预览-导出一致性：有 BuildContext 时优先用原始SVG走真实渲染；
+      // 备用/无 context 渠道使用标准化后版本，避免百分比尺寸导致裁剪。
+      final primarySvg = context != null ? svgContent : normalizedSvg;
+
       final imageBytes = await _renderSvgToBytes(
-        normalizedSvg,
+        primarySvg,
         width,
         height,
         format,
@@ -87,6 +91,7 @@ class SvgToImageService {
         scaleFactor,
         renderMode,
         context,
+        normalizedForFallback: normalizedSvg,
       );
 
       // 缓存结果
@@ -272,7 +277,9 @@ class SvgToImageService {
     bool maintainAspectRatio,
     double scaleFactor,
     ExportRenderMode renderMode,
-    BuildContext? buildContext,
+    BuildContext? buildContext, {
+    String? normalizedForFallback,
+  }
   ) async {
     // 策略：优先使用真实Flutter渲染，确保与预览一致
     if (buildContext != null) {
@@ -314,7 +321,7 @@ class SvgToImageService {
     try {
       AppLogger.d('使用flutter_svg备用渲染', source: 'SvgToImageService');
       return await _renderWithFlutterSvg(
-        svgContent,
+        normalizedForFallback ?? svgContent,
         width,
         height,
         format,
@@ -330,7 +337,7 @@ class SvgToImageService {
       );
       // 最终回退方案
       return await _renderFallbackImage(
-        svgContent,
+        normalizedForFallback ?? svgContent,
         width,
         height,
         format,
@@ -350,32 +357,108 @@ class SvgToImageService {
     double scaleFactor,
     ExportRenderMode renderMode,
   ) async {
-    AppLogger.d('使用改进的备用SVG渲染', source: 'SvgToImageService');
+    AppLogger.d('使用flutter_svg Drawable备用渲染', source: 'SvgToImageService');
+
+    try {
+      final drawable = await flutter_svg.fromSvgString(svgContent, svgContent);
+
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+
+      final double w = width.toDouble();
+      final double h = height.toDouble();
+
+      // 底色，避免透明背景被误认为白屏
+      canvas.drawRect(
+        Rect.fromLTWH(0, 0, w, h),
+        Paint()..color = backgroundColor,
+      );
+
+      // 将解析后的drawable转为Picture并绘制
+      final picture = drawable.toPicture(size: Size(w, h));
+      canvas.drawPicture(picture);
+
+      final composed = recorder.endRecording();
+
+      final targetW = (w * scaleFactor).clamp(1, double.infinity).round();
+      final targetH = (h * scaleFactor).clamp(1, double.infinity).round();
+
+      final image = await composed.toImage(targetW, targetH);
+      final byteData = await image.toByteData(format: format);
+
+      // 释放资源
+      try {
+        picture.dispose();
+      } catch (_) {}
+      try {
+        composed.dispose();
+      } catch (_) {}
+      image.dispose();
+
+      if (byteData == null) {
+        throw Exception('无法生成图片字节数据');
+      }
+
+      return byteData.buffer.asUint8List();
+    } catch (e, st) {
+      AppLogger.w(
+        'flutter_svg Drawable渲染失败，回退到简易解析: $e',
+        error: e,
+        stackTrace: st,
+        source: 'SvgToImageService',
+      );
+
+      // 使用旧的简化解析作为兜底
+      return await _renderWithManualSvg(
+        svgContent,
+        width,
+        height,
+        format,
+        backgroundColor,
+        scaleFactor,
+        renderMode,
+      );
+    }
+  }
+
+  /// 极端兜底：手写解析（不完整，但避免彻底失败）
+  static Future<Uint8List> _renderWithManualSvg(
+    String svgContent,
+    int width,
+    int height,
+    ui.ImageByteFormat format,
+    Color backgroundColor,
+    double scaleFactor,
+    ExportRenderMode renderMode,
+  ) async {
+    AppLogger.d('使用手写解析兜底渲染', source: 'SvgToImageService');
 
     final pictureRecorder = ui.PictureRecorder();
     final canvas = Canvas(pictureRecorder);
 
-    final scaledWidth = (width * scaleFactor).round();
-    final scaledHeight = (height * scaleFactor).round();
+    final scaledWidth = (width * scaleFactor).round().clamp(1, 10000);
+    final scaledHeight = (height * scaleFactor).round().clamp(1, 10000);
 
     // 应用缩放
     canvas.scale(scaleFactor);
 
-    // 绘制白色背景作为基础
+    // 绘制背景
     final bgPaint = Paint()..color = backgroundColor;
     canvas.drawRect(
       Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
       bgPaint,
     );
 
-    // 解析并绘制SVG内容
+    // 解析并绘制基础元素
     await _drawSvgContentImproved(canvas, svgContent, width, height);
 
     final picture = pictureRecorder.endRecording();
     final image = await picture.toImage(scaledWidth, scaledHeight);
     final byteData = await image.toByteData(format: format);
 
-    picture.dispose();
+    try {
+      picture.dispose();
+    } catch (_) {}
     image.dispose();
 
     if (byteData == null) {
