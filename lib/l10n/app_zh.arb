@@ -2534,6 +2534,13 @@
   "selectFileError": "选择文件失败",
   "mergingDataProgress": "正在合并数据...",
   "yearAIAnnualReport": "{year} AI年度报告",
+  "@yearAIAnnualReport": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
   "openInBrowser": "在浏览器中打开",
   "shareReport": "分享报告",
   "saveReport": "保存报告",
@@ -2650,5 +2657,73 @@
   "timeMorning": "早上",
   "timeAfternoon": "下午",
   "timeEvening": "晚上",
-  "timeLateNight": "深夜"
+  "timeLateNight": "深夜",
+  "promptDefault1": "今天有什么值得感恩的事？",
+  "promptDefault2": "给过去的自己一句鼓励的话，会说什么？",
+  "promptDefault3": "今天学到了什么让你感到兴奋的新东西？",
+  "promptDefault4": "什么美好的想法正在等待你去实现？",
+  "promptDefault5": "最近什么让你感到快乐和满足？",
+  "promptDefault6": "克服困难后有什么值得庆祝的感悟？",
+  "promptDefault7": "如果明天完全自由，你最想做什么有意义的事？",
+  "promptDefault8": "今天遇到的挑战教会了你什么宝贵经验？",
+  "promptDefault9": "哪些积极的小习惯正在让你变得更好？",
+  "promptDefault10": "此刻，你想对未来的自己说什么温暖的话？",
+  "promptDefault11": "今天有什么小小的成就值得为自己骄傲？",
+  "promptDefault12": "什么温暖的回忆让你嘴角不禁上扬？",
+  "promptGeneric1": "此刻，你有什么特别的想法或美好感受想要记录下来吗？",
+  "promptGeneric2": "回顾今天，有什么让你印象深刻的温暖瞬间？",
+  "promptGeneric3": "静下心来，感受一下当下的情绪，它想告诉你什么美好的信息？",
+  "promptGeneric4": "今天有什么小小的进步或收获让你感到欣慰？",
+  "promptGeneric5": "什么事物让你感到充满希望和动力？",
+  "promptMorning1": "新的一天开始了，你对今天有什么美好的期待？",
+  "promptMorning2": "早晨的空气闻起来怎么样？它让你想起了什么温馨的回忆？",
+  "promptMorning3": "为今天设定一个让你兴奋的小目标吧，可以是什么呢？",
+  "promptMorning4": "晨光中，什么积极的想法正在你心中萌芽？",
+  "promptAfternoon1": "午后的阳光或微风，让你有什么愉悦的感触？",
+  "promptAfternoon2": "今天过半，有什么进展顺利让你感到满意的事情吗？",
+  "promptAfternoon3": "花点时间放松一下，想想让你感到安心和快乐的事物。",
+  "promptAfternoon4": "午后时光，什么美好的计划正在你心中酝酿？",
+  "promptEvening1": "夜幕降临，回顾今天，有什么值得庆祝或感恩的事？",
+  "promptEvening2": "此刻的宁静适合思考，你脑海中浮现了什么美好的画面？",
+  "promptEvening3": "为明天做个充满希望的计划或设想吧。",
+  "promptEvening4": "夕阳西下，今天的哪个时刻让你感到特别温暖？",
+  "promptLateNight1": "夜深人静，有什么温馨的想法或美好的灵感悄然浮现？",
+  "promptLateNight2": "此刻的寂静让你想到了什么珍贵的回忆？",
+  "promptLateNight3": "睡前放下杂念，记录下此刻内心的平静和满足。",
+  "promptLateNight4": "繁星点点，什么美好的愿望正在你心中闪耀？",
+  "promptClearMorning": "清晨的阳光洒满窗台，此刻你的心情如何？有什么美好的计划吗？",
+  "promptRainMorning": "听着清晨温柔的雨声，内心是否格外宁静？有什么温暖的感悟？",
+  "promptCloudyMorning": "云层微厚的早晨，正适合慢慢品味，思考一下最近的美好收获。",
+  "promptClearAfternoon": "午后暖阳正好，适合小憩片刻，记录下此刻的惬意和满足。",
+  "promptRainAfternoon": "雨天的午后，窗外滴答作响，屋内适合读一本书或写下温暖的想法。",
+  "promptClearEvening": "夜幕降临，星光或月色正好，此刻有什么美好的心愿或温暖的回忆？",
+  "promptRainEvening": "雨夜漫漫，适合独处思考，最近有什么让你感到欣慰或期待的事？",
+  "promptWindEvening": "晚风轻拂的夜晚，思绪是否也随风飘远？记录下此刻美好的灵感吧。",
+  "promptClearWeather1": "阳光明媚的日子，有什么让你感到开心和充满活力？",
+  "promptClearWeather2": "这样的好天气，适合做些什么让你放松和快乐的事情？",
+  "promptRainWeather1": "听着雨声，你的心情是否格外宁静和平和？",
+  "promptRainWeather2": "雨天适合沉思，有什么温暖的想法在脑海中萦绕？",
+  "promptCloudyWeather1": "多云的天空下，你的思绪飘向了什么美好的地方？",
+  "promptCloudyWeather2": "阴天有时也别有韵味，它让你想起了什么珍贵的回忆？",
+  "promptSnowWeather1": "窗外的雪景给你带来了怎样的纯净感受？",
+  "promptSnowWeather2": "下雪天，适合窝在温暖的地方思考些什么美好的事？",
+  "promptHotWeather": "天气有点热，此刻你最想做什么舒适的事来享受夏日时光？",
+  "promptColdWeather": "天气有点冷，注意保暖的同时，有什么温暖人心的想法吗？",
+  "promptCityContext": "身在 {city}，这座城市今天给你带来了什么灵感？",
+  "@promptCityContext": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      }
+    }
+  },
+  "promptFallback": "今天，你有什么新的感悟或美好的想法想要分享呢？",
+  "annualReportOpenedInBrowser": "报告已在浏览器中打开",
+  "annualReportCannotOpenBrowser": "无法直接打开浏览器，请使用分享功能选择浏览器打开",
+  "annualReportOpenInBrowser": "在浏览器中打开",
+  "annualReportHowToView": "如何在浏览器中查看",
+  "annualReportMobileInstructions": "📱 手机端：",
+  "annualReportDesktopInstructions": "💻 电脑端：",
+  "annualReportSavedToLocal": "报告已保存到本地文件",
+  "annualReportCopiedToClipboard": "无法保存文件，内容已复制到剪贴板"
 }

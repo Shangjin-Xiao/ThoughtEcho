@@ -125,7 +125,9 @@ class _HomePageState extends State<HomePage>
 
       if (!aiEnabledForToday || !aiService.hasValidApiKey()) {
         // 使用本地的每日提示生成器
+        final l10n = AppLocalizations.of(context);
         final localPrompt = DailyPromptGenerator.generatePromptBasedOnContext(
+          l10n,
           city: city,
           weather: weather,
           temperature: temperature,
@@ -147,7 +149,9 @@ class _HomePageState extends State<HomePage>
       logDebug('获取到 ${recentInsights.length} 条最近的周期洞察', source: 'HomePage');
 
       // Call the new stream method with environment context and historical insights
+      final l10n = AppLocalizations.of(context);
       final Stream<String> promptStream = aiService.streamGenerateDailyPrompt(
+        l10n,
         city: city,
         weather: weather,
         temperature: temperature,
@@ -176,8 +180,10 @@ class _HomePageState extends State<HomePage>
           logDebug('获取每日提示流出错: $error，使用本地生成的提示');
           if (mounted) {
             // 生成本地提示作为降级
+            final l10n = AppLocalizations.of(context);
             final fallbackPrompt =
                 DailyPromptGenerator.generatePromptBasedOnContext(
+                  l10n,
                   city: city,
                   weather: weather,
                   temperature: temperature,
@@ -210,9 +216,11 @@ class _HomePageState extends State<HomePage>
         // 使用本地生成的提示作为降级策略
         final locationService = context.read<LocationService>();
         final weatherService = context.read<WeatherService>();
+        final l10n = AppLocalizations.of(context);
 
         final fallbackPrompt =
             DailyPromptGenerator.generatePromptBasedOnContext(
+              l10n,
               city: locationService.city,
               weather: weatherService.currentWeather,
               temperature: weatherService.temperature,

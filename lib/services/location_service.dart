@@ -54,9 +54,11 @@ class LocationService extends ChangeNotifier {
   /// 获取当前语言代码（用于 API 调用）
   String? get currentLocaleCode => _currentLocaleCode;
 
-  /// 设置当前语言代码
+  /// 设置当前语言代码并通知监听者（避免不必要重复刷新）
   set currentLocaleCode(String? code) {
+    if (_currentLocaleCode == code) return;
     _currentLocaleCode = code;
+    notifyListeners();
   }
 
   /// 获取 API 调用使用的语言参数

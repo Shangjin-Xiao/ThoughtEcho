@@ -242,6 +242,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         })
         .join('\n');
 
+    if (!mounted) return;
+
     // 本地化资源
     final l10n = AppLocalizations.of(context);
 

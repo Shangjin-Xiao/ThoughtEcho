@@ -565,11 +565,11 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: const Row(
+                content: Row(
                   children: [
-                    Icon(Icons.check_circle, color: Colors.white),
-                    SizedBox(width: 8),
-                    Text('报告已在浏览器中打开'),
+                    const Icon(Icons.check_circle, color: Colors.white),
+                    const SizedBox(width: 8),
+                    Text(l10n.annualReportOpenedInBrowser),
                   ],
                 ),
                 backgroundColor: Theme.of(context).colorScheme.primary,
@@ -663,11 +663,11 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Row(
+            content: Row(
               children: [
-                Icon(Icons.info, color: Colors.white),
-                SizedBox(width: 8),
-                Expanded(child: Text('无法直接打开浏览器，请使用分享功能选择浏览器打开')),
+                const Icon(Icons.info, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(child: Text(l10n.annualReportCannotOpenBrowser)),
               ],
             ),
             backgroundColor: Theme.of(context).colorScheme.primary,
@@ -721,11 +721,11 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.info_outline, color: Colors.blue),
-            SizedBox(width: 8),
-            Text('在浏览器中打开'),
+            const Icon(Icons.info_outline, color: Colors.blue),
+            const SizedBox(width: 8),
+            Text(l10n.annualReportOpenInBrowser),
           ],
         ),
         content: Column(
@@ -781,30 +781,30 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.info_outline, color: Colors.orange),
-            SizedBox(width: 8),
-            Text('如何在浏览器中查看'),
+            const Icon(Icons.info_outline, color: Colors.orange),
+            const SizedBox(width: 8),
+            Text(l10n.annualReportHowToView),
           ],
         ),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('HTML报告内容已复制到剪贴板。请按以下步骤操作：'),
-            SizedBox(height: 16),
-            Text('📱 手机端：', style: TextStyle(fontWeight: FontWeight.bold)),
-            Text('1. 打开浏览器（Chrome/Safari等）'),
-            Text('2. 新建空白页面或新标签页'),
-            Text('3. 在地址栏输入：data:text/html,'),
-            Text('4. 粘贴复制的内容'),
-            Text('5. 回车查看报告'),
-            SizedBox(height: 12),
-            Text('💻 电脑端：', style: TextStyle(fontWeight: FontWeight.bold)),
-            Text('1. 新建文本文件，粘贴内容'),
-            Text('2. 将文件保存为 .html 格式'),
-            Text('3. 双击文件在浏览器中打开'),
+            const Text('HTML报告内容已复制到剪贴板。请按以下步骤操作：'),
+            const SizedBox(height: 16),
+            Text(l10n.annualReportMobileInstructions, style: const TextStyle(fontWeight: FontWeight.bold)),
+            const Text('1. 打开浏览器（Chrome/Safari等）'),
+            const Text('2. 新建空白页面或新标签页'),
+            const Text('3. 在地址栏输入：data:text/html,'),
+            const Text('4. 粘贴复制的内容'),
+            const Text('5. 回车查看报告'),
+            const SizedBox(height: 12),
+            Text(l10n.annualReportDesktopInstructions, style: const TextStyle(fontWeight: FontWeight.bold)),
+            const Text('1. 新建文本文件，粘贴内容'),
+            const Text('2. 将文件保存为 .html 格式'),
+            const Text('3. 双击文件在浏览器中打开'),
           ],
         ),
         actions: [
@@ -819,7 +819,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(l10n.addressBarPrefixCopied),
-                  duration: Duration(seconds: 3),
+                  duration: const Duration(seconds: 3),
                 ),
               );
             },
@@ -972,11 +972,11 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Row(
+              content: Row(
                 children: [
-                  Icon(Icons.check_circle, color: Colors.white),
-                  SizedBox(width: 8),
-                  Expanded(child: Text('报告已保存到本地文件')),
+                  const Icon(Icons.check_circle, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(l10n.annualReportSavedToLocal)),
                 ],
               ),
               backgroundColor: Theme.of(context).colorScheme.primary,
@@ -991,11 +991,11 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Row(
+              content: Row(
                 children: [
-                  Icon(Icons.content_copy, color: Colors.white),
-                  SizedBox(width: 8),
-                  Expanded(child: Text('无法保存文件，内容已复制到剪贴板')),
+                  const Icon(Icons.content_copy, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(l10n.annualReportCopiedToClipboard)),
                 ],
               ),
               backgroundColor: Theme.of(context).colorScheme.primary,
