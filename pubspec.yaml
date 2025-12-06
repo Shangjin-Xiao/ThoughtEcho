@@ -102,6 +102,9 @@ flutter_launcher_icons:
   image_path: "icon.png"
   adaptive_icon_background: "#FFFFFF"
   adaptive_icon_foreground: "icon.png"
+  # iOS 特定配置
+  remove_alpha_ios: true  # 移除 iOS 图标的 alpha 通道，防止黑边
+  background_color_ios: "#FFFFFF"  # iOS 图标背景色
 
 # MSIX Windows 安装包配置
 # Microsoft Store 提交要求的精确配置
