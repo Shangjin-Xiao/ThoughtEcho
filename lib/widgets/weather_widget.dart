@@ -14,20 +14,15 @@ class WeatherWidget extends StatelessWidget {
     final locationService = Provider.of<LocationService>(context);
     final theme = Theme.of(context);
 
-    // 构建位置显示文本
-    String locationText = l10n.unknownLocation;
-    if (locationService.city != null) {
-      // 使用城市名作为主要显示
-      locationText = locationService.city!;
-
-      // 如果有区县信息，添加到显示中
-      if (locationService.district != null &&
-          locationService.district!.isNotEmpty) {
-        locationText = '${locationService.city} · ${locationService.district}';
+    // 构建位置显示文本 - 使用 LocationService 的统一方法
+    String locationText = locationService.getDisplayLocation();
+    if (locationText.isEmpty) {
+      if (locationService.province != null) {
+        // 如果没有城市但有省份
+        locationText = locationService.province!;
+      } else {
+        locationText = l10n.unknownLocation;
       }
-    } else if (locationService.province != null) {
-      // 如果没有城市但有省份
-      locationText = locationService.province!;
     }
 
     return Card(

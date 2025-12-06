@@ -362,7 +362,10 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   }
 
   /// 获取位置提示文本（支持坐标显示）
-  String _getLocationTooltipText(String? currentAddress, String? location) {
+  /// 修复：新建模式只显示实时获取的位置，而不是从 LocationService 获取的缓存位置
+  String _getLocationTooltipText(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    
     // 编辑模式：显示原始位置
     if (widget.initialQuote != null) {
       if (_originalLocation != null && _originalLocation!.isNotEmpty) {
@@ -374,23 +377,18 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
           _originalLongitude,
         );
       }
-      return '无位置信息';
+      return l10n.noLocationInfo;
     }
 
-    // 新建模式：显示实时获取的位置
+    // 新建模式：只显示实时获取的位置
     if (_newLocation != null && _newLocation!.isNotEmpty) {
       return _newLocation!;
     }
     if (_newLatitude != null && _newLongitude != null) {
       return LocationService.formatCoordinates(_newLatitude, _newLongitude);
     }
-    if (currentAddress != null && currentAddress.isNotEmpty) {
-      return currentAddress;
-    }
-    if (location != null && location.isNotEmpty) {
-      return location;
-    }
-    return '当前位置';
+    // 未获取位置时显示"当前位置"提示
+    return l10n.currentLocationLabel;
   }
 
   /// 编辑模式下的位置对话框
@@ -857,7 +855,6 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     final String? location = (locationValue != null && locationValue.isNotEmpty)
         ? locationValue
         : null;
-    final String? currentAddress = locationService?.currentAddress;
 
     final String? weather = weatherService?.currentWeather;
     final String? temperature = weatherService?.temperature;
@@ -1130,7 +1127,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                 // 位置信息按钮
                 Tooltip(
                   message: locationService != null
-                      ? '${l10n.addLocationPrefix}: ${_getLocationTooltipText(currentAddress, location)}'
+                      ? '${l10n.addLocationPrefix}: ${_getLocationTooltipText(context)}'
                       : l10n.locationServiceUnavailable,
                   child: Stack(
                     children: [

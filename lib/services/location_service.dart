@@ -338,10 +338,15 @@ class LocationService extends ChangeNotifier {
       final url =
           'https://nominatim.openstreetmap.org/reverse?format=json&lat=${_currentPosition!.latitude}&lon=${_currentPosition!.longitude}&zoom=18&addressdetails=1';
 
+      // 根据语言设置构建 Accept-Language 头
+      final acceptLanguage = _apiLanguageParam == 'zh'
+          ? 'zh-CN,zh;q=0.9,en;q=0.8'
+          : 'en-US,en;q=0.9,zh;q=0.8';
+
       final response = await NetworkService.instance.get(
         url,
         headers: {
-          'Accept-Language': 'zh-CN,zh;q=0.9',
+          'Accept-Language': acceptLanguage,
           'User-Agent': 'ThoughtEcho App',
         },
         timeoutSeconds: 15,
@@ -732,16 +737,26 @@ class LocationService extends ChangeNotifier {
     return '$_country,$_province,$_city${_district != null ? ',$_district' : ''}';
   }
 
-  // 获取显示格式的位置，如"广州市·天河区"
+  // 获取显示格式的位置，如"广州市·天河区"（中文）或 "Guangzhou · Tianhe"（英文）
   String getDisplayLocation() {
     if (_city == null) return '';
 
-    // 如果城市名已经包含"市"，不再添加
-    String cityDisplay = _city!.endsWith('市') ? _city! : '$_city市';
+    // 根据语言设置决定显示格式
+    final bool isChinese = _apiLanguageParam == 'zh';
+    String cityDisplay;
 
-    // 如果有区县信息，添加中文中间点和区县名称
+    if (isChinese) {
+      // 中文：如果城市名已经包含"市"，不再添加
+      cityDisplay = _city!.endsWith('市') ? _city! : '$_city市';
+    } else {
+      // 英文：不添加后缀
+      cityDisplay = _city!;
+    }
+
+    // 如果有区县信息，添加分隔符和区县名称
     if (_district != null && _district!.isNotEmpty) {
-      return '$cityDisplay·$_district';
+      final separator = isChinese ? '·' : ' · ';
+      return '$cityDisplay$separator$_district';
     } else {
       return cityDisplay;
     }

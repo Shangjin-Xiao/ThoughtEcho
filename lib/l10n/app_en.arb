@@ -2724,6 +2724,23 @@
     }
   },
   "promptFallback": "Today, what new insights or beautiful thoughts do you want to share?",
+  "citySuffix": "",
+  "locationDisplayFormat": "{city}{suffix}",
+  "@locationDisplayFormat": {
+    "placeholders": {
+      "city": {"type": "String"},
+      "suffix": {"type": "String"}
+    }
+  },
+  "locationDisplayWithDistrict": "{city} · {district}",
+  "@locationDisplayWithDistrict": {
+    "placeholders": {
+      "city": {"type": "String"},
+      "district": {"type": "String"}
+    }
+  },
+  "noLocationInfo": "No location info",
+  "currentLocationLabel": "Current location",
   "annualReportOpenedInBrowser": "Report opened in browser",
   "annualReportCannotOpenBrowser": "Cannot open browser directly, please use share to choose browser",
   "annualReportOpenInBrowser": "Open in Browser",
