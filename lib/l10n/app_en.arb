@@ -2866,5 +2866,9 @@
   "codeCopiedToClipboard": "Code copied to clipboard",
   "videoLoadTooLong": "Video loading time is too long, please try using a smaller video file",
   "outOfMemorySuggestions": "Suggestions:\n• Close other apps to free memory\n• Restart the app and try again\n• Use a smaller video file",
-  "fullscreenEditorPlaceholder": "Start writing your thoughts..."
+  "fullscreenEditorPlaceholder": "Start writing your thoughts...",
+  "unsavedChangesTitle": "Unsaved Changes",
+  "unsavedChangesDesc": "You have unsaved edits. Do you want to discard these changes?",
+  "continueEditing": "Continue Editing",
+  "discardChanges": "Discard Changes"
 }

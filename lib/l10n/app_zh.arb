@@ -2866,5 +2866,9 @@
   "codeCopiedToClipboard": "代码已复制到剪贴板",
   "videoLoadTooLong": "视频加载时间过长，请尝试使用较小的视频文件",
   "outOfMemorySuggestions": "建议：\n• 关闭其他应用释放内存\n• 重启应用后重试\n• 使用较小的视频文件",
-  "fullscreenEditorPlaceholder": "开始编写你的想法..."
+  "fullscreenEditorPlaceholder": "开始编写你的想法...",
+  "unsavedChangesTitle": "未保存的内容",
+  "unsavedChangesDesc": "您有未保存的编辑内容，是否要放弃这些更改？",
+  "continueEditing": "继续编辑",
+  "discardChanges": "放弃更改"
 }
