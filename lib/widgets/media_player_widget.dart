@@ -139,9 +139,8 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
           });
 
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('视频加载时间过长，请尝试使用较小的视频文件'),
-              // 归一化为错误信息时长
+            SnackBar(
+              content: Text(l10n.videoLoadTooLong),
               duration: AppConstants.snackBarDurationError,
             ),
           );
@@ -221,22 +220,22 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
       debugPrint('视频初始化失败: $e');
 
       if (mounted) {
-        String errorMessage = '视频加载失败';
+        String errorMessage = l10n.videoLoadFailed;
         String suggestion = '';
 
         if (e.toString().contains('timeout') || e.toString().contains('超时')) {
-          errorMessage = '视频加载超时';
-          suggestion = '文件可能过大，请稍后重试或使用较小的视频文件';
+          errorMessage = l10n.videoLoadTimeout;
+          suggestion = l10n.fileTooLargeUseSmaller;
         } else if (e.toString().contains('format') ||
             e.toString().contains('格式')) {
-          errorMessage = '不支持的视频格式';
-          suggestion = '请使用MP4、MOV等常见格式';
+          errorMessage = l10n.unsupportedVideoFormat;
+          suggestion = l10n.useCommonFormats;
         } else if (e.toString().contains('permission') ||
             e.toString().contains('权限')) {
-          errorMessage = '无法访问视频文件';
-          suggestion = '请检查文件权限';
+          errorMessage = l10n.cannotAccessVideoFile;
+          suggestion = l10n.checkFilePermissions;
         } else {
-          suggestion = '请检查文件是否完整或尝试重新导入';
+          suggestion = l10n.checkFileIntegrity;
         }
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -258,7 +257,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
             duration: AppConstants.snackBarDurationError,
             backgroundColor: Colors.red,
             action: SnackBarAction(
-              label: '重试',
+              label: l10n.retry,
               onPressed: () => _retryVideoInitialization(),
             ),
           ),
@@ -299,22 +298,22 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Column(
+          content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('内存不足，无法加载视频'),
-              SizedBox(height: 4),
+              Text(l10n.outOfMemoryVideoLoad),
+              const SizedBox(height: 4),
               Text(
-                '建议：\n• 关闭其他应用释放内存\n• 重启应用后重试\n• 使用较小的视频文件',
-                style: TextStyle(fontSize: 12, color: Colors.white70),
+                l10n.outOfMemorySuggestions,
+                style: const TextStyle(fontSize: 12, color: Colors.white70),
               ),
             ],
           ),
           duration: AppConstants.snackBarDurationError,
           backgroundColor: Colors.orange,
           action: SnackBarAction(
-            label: '重试',
+            label: l10n.retry,
             onPressed: () => _retryVideoInitialization(),
           ),
         ),
@@ -350,7 +349,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('音频文件不存在: ${widget.filePath}'),
+              content: Text(l10n.audioFileNotFoundWithPath(widget.filePath)),
               duration: AppConstants.snackBarDurationError,
             ),
           );
@@ -390,7 +389,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('音频加载失败: $e'),
+            content: Text(l10n.audioLoadFailed(e.toString())),
             duration: AppConstants.snackBarDurationError,
           ),
         );
@@ -741,8 +740,8 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
   void _shareVideo() {
     // 实现视频分享功能
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('分享功能开发中...'),
+      SnackBar(
+        content: Text(l10n.shareFeatureInDevelopment),
         duration: AppConstants.snackBarDurationNormal,
       ),
     );
@@ -759,9 +758,9 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildInfoRow('文件名', _getFileName(widget.filePath)),
+            _buildInfoRow(l10n.fileName, _getFileName(widget.filePath)),
             _buildInfoRow(
-              '时长',
+              l10n.duration,
               _formatDuration(_videoController!.value.duration),
             ),
             _buildInfoRow(
@@ -788,8 +787,8 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
     switch (action) {
       case 'share':
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('分享功能开发中...'),
+          SnackBar(
+            content: Text(l10n.shareFeatureInDevelopment),
             duration: AppConstants.snackBarDurationNormal,
           ),
         );
@@ -809,8 +808,8 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildInfoRow('文件名', _getFileName(widget.filePath)),
-            _buildInfoRow('时长', _formatDuration(_duration)),
+            _buildInfoRow(l10n.fileName, _getFileName(widget.filePath)),
+            _buildInfoRow(l10n.duration, _formatDuration(_duration)),
             _buildInfoRow('路径', widget.filePath),
           ],
         ),

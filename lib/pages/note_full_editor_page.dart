@@ -1510,7 +1510,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                             : QuillEditorExtensions.getEmbedBuilders(
                                 optimizedImages: false,
                               ),
-                        placeholder: '开始编写你的想法...',
+                        placeholder: AppLocalizations.of(context).fullscreenEditorPlaceholder,
                         padding: const EdgeInsets.all(16),
                         autoFocus: false,
                         expands: false,

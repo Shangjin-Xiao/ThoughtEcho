@@ -125,13 +125,14 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
         });
 
         logDebug('获取一言失败: $e');
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('获取一言失败: $e'),
+            content: Text(l10n.fetchHitokotoFailed(e.toString())),
             duration: AppConstants.snackBarDurationError,
             backgroundColor: Colors.red,
             action: SnackBarAction(
-              label: '重试',
+              label: l10n.retry,
               onPressed: _loadDailyQuote,
               textColor: Colors.white,
             ),
@@ -237,9 +238,10 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
 
           // 复制到剪贴板
           Clipboard.setData(ClipboardData(text: formattedQuote));
+          final l10n = AppLocalizations.of(context);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('已复制到剪贴板'),
+            SnackBar(
+              content: Text(l10n.contentCopiedToClipboard),
               duration: AppConstants.snackBarDurationNormal,
             ),
           );

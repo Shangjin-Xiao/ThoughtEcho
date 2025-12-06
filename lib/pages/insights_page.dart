@@ -7,7 +7,6 @@ import '../services/ai_service.dart';
 import '../services/ai_analysis_database_service.dart';
 import '../widgets/app_empty_view.dart';
 import '../widgets/app_loading_view.dart';
-import '../utils/lottie_animation_manager.dart';
 import '../models/ai_analysis_model.dart';
 import '../models/quote_model.dart';
 import 'ai_analysis_history_page_clean.dart';
@@ -570,11 +569,7 @@ class _InsightsPageState extends State<InsightsPage> {
                   ? const SizedBox(
                       width: 18,
                       height: 18,
-                      child: EnhancedLottieAnimation(
-                        type: LottieAnimationType.aiThinking,
-                        width: 18,
-                        height: 18,
-                      ),
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : const Icon(Icons.auto_awesome),
             )

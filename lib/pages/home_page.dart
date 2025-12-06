@@ -24,7 +24,6 @@ import '../theme/app_theme.dart';
 import 'note_full_editor_page.dart'; // 添加全屏编辑页面导入
 import '../services/settings_service.dart'; // Import SettingsService
 import '../services/insight_history_service.dart'; // Import InsightHistoryService
-import '../utils/lottie_animation_manager.dart';
 import '../constants/app_constants.dart';
 import '../utils/app_logger.dart';
 import '../utils/color_utils.dart';
@@ -1402,12 +1401,7 @@ class _HomePageState extends State<HomePage>
                       child: SizedBox(
                         width: 20,
                         height: 20,
-                        child: EnhancedLottieAnimation(
-                          type: LottieAnimationType.pulseLoading,
-                          width: 20,
-                          height: 20,
-                          semanticLabel: '初始化服务',
-                        ),
+                        child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                     ),
 

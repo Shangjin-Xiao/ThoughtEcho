@@ -280,9 +280,9 @@ class SelectedTagsDisplay extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '已选标签',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+          Text(
+            AppLocalizations.of(context).selectedTags,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 4),
           Wrap(
@@ -291,7 +291,7 @@ class SelectedTagsDisplay extends StatelessWidget {
             children: selectedTagIds.map((tagId) {
               final tag = allTags.firstWhere(
                 (t) => t.id == tagId,
-                orElse: () => NoteCategory(id: tagId, name: '未知标签'),
+                orElse: () => NoteCategory(id: tagId, name: AppLocalizations.of(context).unknownTag),
               );
               return Chip(
                 label: IconUtils.isEmoji(tag.iconName)
