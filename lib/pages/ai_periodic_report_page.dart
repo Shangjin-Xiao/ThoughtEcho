@@ -434,7 +434,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
   /// 根据时间范围筛选笔记
   List<Quote> _filterQuotesByPeriod(List<Quote> quotes) {
-    final now = _selectedDate;
+    // 归一化选中日期为当天开始时间（去除时间分量）
+    final now = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
     DateTime startDate;
     DateTime endDate;
 
@@ -448,7 +449,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       case 'month':
         // 本月
         startDate = DateTime(now.year, now.month, 1);
-        endDate = DateTime(now.year, now.month + 1, 0);
+        endDate = DateTime(now.year, now.month + 1, 0); // 下个月第0天 = 当月最后一天
         break;
       case 'year':
         // 本年
@@ -460,9 +461,11 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     }
 
     return quotes.where((quote) {
-      final quoteDate = DateTime.parse(quote.date);
-      return quoteDate.isAfter(startDate.subtract(const Duration(days: 1))) &&
-          quoteDate.isBefore(endDate.add(const Duration(days: 1)));
+      final quoteDateTime = DateTime.parse(quote.date);
+      // 归一化笔记日期为当天开始时间，只比较日期部分
+      final quoteDate = DateTime(quoteDateTime.year, quoteDateTime.month, quoteDateTime.day);
+      // 使用 >= startDate 且 <= endDate 的逻辑
+      return !quoteDate.isBefore(startDate) && !quoteDate.isAfter(endDate);
     }).toList();
   }
 
