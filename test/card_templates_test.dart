@@ -52,7 +52,7 @@ void main() {
       expect(svg, isNotNull);
       expect(svg, contains('<svg'));
       expect(svg, contains('</svg>'));
-      expect(svg, contains('PhiloBg'));
+      expect(svg, contains('philoBg'));
       expect(svg, contains(testAuthor));
       expect(svg, contains(testDate));
     });
@@ -68,6 +68,36 @@ void main() {
       expect(svg, contains('<svg'));
       expect(svg, contains('</svg>'));
       expect(svg, contains('minimalistBg'));
+      expect(svg, contains(testAuthor));
+      expect(svg, contains(testDate));
+    });
+
+    test('自然卡片模板生成', () {
+      final svg = CardTemplates.natureTemplate(
+        content: testContent,
+        author: testAuthor,
+        date: testDate,
+      );
+
+      expect(svg, isNotNull);
+      expect(svg, contains('<svg'));
+      expect(svg, contains('</svg>'));
+      expect(svg, contains('natureBg'));
+      expect(svg, contains(testAuthor));
+      expect(svg, contains(testDate));
+    });
+
+    test('复古卡片模板生成', () {
+      final svg = CardTemplates.retroTemplate(
+        content: testContent,
+        author: testAuthor,
+        date: testDate,
+      );
+
+      expect(svg, isNotNull);
+      expect(svg, contains('<svg'));
+      expect(svg, contains('</svg>'));
+      expect(svg, contains('noise'));
       expect(svg, contains(testAuthor));
       expect(svg, contains(testDate));
     });
@@ -98,7 +128,7 @@ void main() {
         author: testAuthor,
         date: testDate,
       );
-      expect(philoSvg, contains('PhiloBg'));
+      expect(philoSvg, contains('philoBg')); // 注意大小写变化
 
       // 测试简约卡片
       final minimalistSvg = CardTemplates.getTemplateByType(
@@ -108,6 +138,24 @@ void main() {
         date: testDate,
       );
       expect(minimalistSvg, contains('minimalistBg'));
+
+      // 测试自然卡片
+      final natureSvg = CardTemplates.getTemplateByType(
+        type: CardType.nature,
+        content: testContent,
+        author: testAuthor,
+        date: testDate,
+      );
+      expect(natureSvg, contains('natureBg'));
+
+      // 测试复古卡片
+      final retroSvg = CardTemplates.getTemplateByType(
+        type: CardType.retro,
+        content: testContent,
+        author: testAuthor,
+        date: testDate,
+      );
+      expect(retroSvg, contains('noise'));
     });
 
     test('长文本处理', () {
@@ -174,10 +222,10 @@ void main() {
         date: testDate,
       );
 
-      // 验证现代化配色
-      expect(svg, contains('#4f46e5')); // 现代蓝色
-      expect(svg, contains('#7c3aed')); // 现代紫色
-      expect(svg, contains('#db2777')); // 现代粉色
+      // 验证现代化配色 (更新后的颜色)
+      expect(svg, contains('#6366f1')); // Indigo
+      expect(svg, contains('#8b5cf6')); // Violet
+      expect(svg, contains('#d946ef')); // Fuchsia
       expect(svg, contains('stop-opacity'));
       expect(svg, contains('fill-opacity'));
     });
