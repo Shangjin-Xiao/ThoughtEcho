@@ -102,9 +102,15 @@ flutter_launcher_icons:
   image_path: "icon.png"
   adaptive_icon_background: "#FFFFFF"
   adaptive_icon_foreground: "icon.png"
-  # iOS 特定配置 - 完整显示图标，无边框
-  remove_alpha_ios: false  # 保留 alpha 通道，保留透明部分
-  # 不设置 background_color_ios，让图标完整显示
+  # iOS 特定配置
+  # iOS 图标不支持透明通道，必须填充背景。
+  # 为了消除"白边"或"黑边"，我们需要将背景色设置为与图标背景一致的蓝色。
+  # 这里预设为 #90CAF9 (Flutter Blue 200)，如果颜色有色差，请修改此 Hex 代码为图标背景的确切颜色。
+  remove_alpha_ios: true
+  background_color_ios: "#9ACDF7"
+  # 尝试使用 image_path_ios 单独指定 iOS 图标，如果 icon.png 有透明度，这里会自动填充背景色
+  # 如果想要图标撑满，需要确保 icon.png 本身就是撑满的，或者使用 scale 参数（flutter_launcher_icons 不直接支持 scale，但可以通过 image_path_ios 指定一个裁剪好的图片）
+  # 这里保持默认，但明确背景色为白色，这是 iOS 上展示透明 PNG 的唯一正确方式（除了黑色）。
 
 # MSIX Windows 安装包配置
 # Microsoft Store 提交要求的精确配置
