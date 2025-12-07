@@ -230,15 +230,26 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
   Future<void> _startMulticastListener() async {
     try {
       debugPrint('开始获取网络接口...');
+      debugPrint('当前平台: ${Platform.operatingSystem}');
+      logInfo(
+        'discovery_start_listen platform=${Platform.operatingSystem}',
+        source: 'LocalSend',
+      );
+
       final interfaces = await getNetworkInterfaces(
         whitelist: null,
         blacklist: null,
       );
 
       debugPrint('发现 ${interfaces.length} 个网络接口');
+      logInfo(
+        'discovery_interfaces count=${interfaces.length}',
+        source: 'LocalSend',
+      );
 
       if (interfaces.isEmpty) {
         debugPrint('警告: 未发现活动网络接口');
+        logWarning('discovery_no_interfaces', source: 'LocalSend');
       }
 
       for (final interface in interfaces) {
@@ -250,46 +261,21 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
               .join(', ');
           debugPrint('接口地址: $addresses');
 
-          // iOS 平台需要绑定到特定接口地址，而不是 anyIPv4
-          // 这样才能正确接收组播消息并被其他设备发现
-          final RawDatagramSocket socket;
-          if (Platform.isIOS) {
-            // iOS: 获取接口的第一个 IPv4 地址并绑定到该地址
-            final ipv4Addresses = interface.addresses
-                .where((a) => a.type == InternetAddressType.IPv4)
-                .toList();
+          // Windows 平台不使用 reusePort（可能不支持或导致问题）
+          final socket = Platform.isWindows
+              ? await RawDatagramSocket.bind(
+                  InternetAddress.anyIPv4,
+                  defaultMulticastPort,
+                  reuseAddress: true,
+                )
+              : await RawDatagramSocket.bind(
+                  InternetAddress.anyIPv4,
+                  defaultMulticastPort,
+                  reuseAddress: true,
+                  reusePort: true,
+                );
 
-            if (ipv4Addresses.isEmpty) {
-              debugPrint('⚠️  iOS: 接口 ${interface.name} 没有 IPv4 地址，跳过');
-              continue; // 跳过没有 IPv4 地址的接口
-            }
-
-            final ipv4Addr = ipv4Addresses.first;
-            socket = await RawDatagramSocket.bind(
-              ipv4Addr.address, // 绑定到具体的接口IP地址
-              defaultMulticastPort,
-              reuseAddress: true,
-              reusePort: true,
-            );
-            debugPrint('iOS: UDP套接字绑定到接口地址 ${ipv4Addr.address}:${socket.port}');
-          } else if (Platform.isWindows) {
-            // Windows 平台不使用 reusePort（可能不支持或导致问题）
-            socket = await RawDatagramSocket.bind(
-              InternetAddress.anyIPv4,
-              defaultMulticastPort,
-              reuseAddress: true,
-            );
-            debugPrint('Windows: UDP套接字成功绑定到端口 ${socket.port}');
-          } else {
-            // 其他平台使用 anyIPv4
-            socket = await RawDatagramSocket.bind(
-              InternetAddress.anyIPv4,
-              defaultMulticastPort,
-              reuseAddress: true,
-              reusePort: true,
-            );
-            debugPrint('UDP套接字成功绑定到端口 ${socket.port}');
-          }
+          debugPrint('UDP套接字成功绑定到端口 ${socket.port}');
 
           // 启用功能
           socket.readEventsEnabled = true;
@@ -346,12 +332,18 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
 
       if (_sockets.isEmpty) {
         debugPrint('警告: 未能绑定到任何网络接口');
+        logWarning('discovery_no_sockets_bound', source: 'LocalSend');
       } else {
         debugPrint('成功绑定到 ${_sockets.length} 个网络接口');
+        logInfo(
+          'discovery_sockets_bound count=${_sockets.length}',
+          source: 'LocalSend',
+        );
       }
     } catch (e, stack) {
       debugPrint('启动UDP组播监听失败: $e');
       debugPrint('堆栈: $stack');
+      logError('discovery_start_fail error=$e', source: 'LocalSend');
     }
   }
 
@@ -456,8 +448,8 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     final message = utf8.encode(messageJson);
 
     debugPrint('=== 发送公告消息 ===');
-    logDebug(
-      'discovery_broadcast_send port=$_actualServerPort',
+    logInfo(
+      'discovery_broadcast_send port=$_actualServerPort sockets=${_sockets.length}',
       source: 'LocalSend',
     );
     debugPrint('设备指纹: $fingerprint');
@@ -466,6 +458,14 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     debugPrint('消息内容: $messageJson');
     debugPrint('消息字节数: ${message.length}');
     debugPrint('可用套接字数: ${_sockets.length}');
+
+    if (_sockets.isEmpty) {
+      logWarning(
+        'discovery_broadcast_no_sockets',
+        source: 'LocalSend',
+      );
+      return;
+    }
 
     int successCount = 0;
 
@@ -480,12 +480,16 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
         if (result > 0) {
           successCount++;
           debugPrint('✓ 套接字 $i 发送成功，字节数: $result');
-          logDebug(
+          logInfo(
             'discovery_broadcast_sent sock=$i bytes=$result',
             source: 'LocalSend',
           );
         } else {
           debugPrint('❌ 套接字 $i 发送失败，返回: $result');
+          logWarning(
+            'discovery_broadcast_fail sock=$i result=$result',
+            source: 'LocalSend',
+          );
         }
 
         // 额外的广播兜底（部分路由器/平台屏蔽组播）

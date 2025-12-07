@@ -98,19 +98,18 @@
 	</array>
 	
 	<!-- Bonjour 服务配置（用于本地网络设备发现）-->
+	<!-- 注意：UDP 组播发现需要声明 _udp 服务类型来触发本地网络权限对话框 -->
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_thoughtecho._tcp</string>
+		<string>_thoughtecho._udp</string>
 		<string>_localsend._tcp</string>
+		<string>_localsend._udp</string>
 		<string>_http._tcp</string>
 	</array>
 	
-	<!-- 本地网络使用描述 -->
+	<!-- 本地网络使用描述 - 用户会在首次使用时看到此说明 -->
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>需要访问本地网络以发现和同步其他设备上的数据</string>
-	
-	<!-- 网络客户端权限（确保组播可用）-->
-	<key>com.apple.developer.networking.multicast</key>
-	<true/>
 </dict>
 </plist>
