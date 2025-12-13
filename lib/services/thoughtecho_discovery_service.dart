@@ -291,21 +291,14 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
           bool joinedAnyGroup = false;
           for (final group in _multicastGroups) {
             try {
-              bool joined = false;
-              try {
-                socket.joinMulticast(
-                  InternetAddress(group),
-                  interface,
-                );
-                joined = true;
-              } finally {
-                if (joined) {
-                  joinedAnyGroup = true;
-                  debugPrint(
-                    '✓ 成功加入组播组 $group (接口: ${interface.name})',
-                  );
-                }
-              }
+              socket.joinMulticast(
+                InternetAddress(group),
+                interface,
+              );
+              joinedAnyGroup = true;
+              debugPrint(
+                '✓ 成功加入组播组 $group (接口: ${interface.name})',
+              );
             } catch (e) {
               debugPrint('❌ 加入组播组失败 ($group): $e');
             }
@@ -697,7 +690,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
 
   /// Derives the LocalSend device type based on the runtime platform.
   /// Mapping (kept aligned with LocalSend expectations):
-  /// - Web → desktop (matches LocalSend web client behavior)
+  /// - Web → desktop (aligned with LocalSend web client behavior)
   /// - Android/iOS → mobile
   /// - Other platforms (macOS/Windows/Linux/others) → desktop
   DeviceType _currentDeviceType() {
