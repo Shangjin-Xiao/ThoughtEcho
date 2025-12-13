@@ -671,6 +671,9 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     return _deviceFingerprint;
   }
 
+  /// Derives the LocalSend device type based on the runtime platform.
+  /// Web is intentionally mapped to `desktop` to stay aligned with LocalSend's
+  /// own web client behavior, while mobile platforms are marked as `mobile`.
   DeviceType _currentDeviceType() {
     if (kIsWeb) return DeviceType.desktop;
     if (Platform.isAndroid || Platform.isIOS) return DeviceType.mobile;
