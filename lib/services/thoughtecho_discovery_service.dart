@@ -23,6 +23,8 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     defaultMulticastGroup,
     localsendCompatibilityMulticastGroup,
   ];
+  static final List<InternetAddress> _multicastAddresses =
+      _multicastGroups.map(InternetAddress.new).toList();
   static const Duration _socketInactivityRestart = Duration(
     seconds: 25,
   ); // 超过该时间未收到消息则重启监听
@@ -290,10 +292,11 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
           // 加入组播组
           bool joinedAnyGroup = false;
           int joinSuccess = 0;
-          for (final group in _multicastGroups) {
+          for (final address in _multicastAddresses) {
+            final group = address.address;
             try {
               socket.joinMulticast(
-                InternetAddress(group),
+                address,
                 interface,
               );
               joinedAnyGroup = true;
@@ -309,10 +312,9 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
             socket.close();
             continue; // 跳过这个接口
           } else if (joinSuccess > 0 && joinSuccess < _multicastGroups.length) {
-            logWarning(
-              'discovery_partial_multicast_join success=$joinSuccess total=${_multicastGroups.length}',
-              source: 'LocalSend',
-            );
+            final partialMsg =
+                'discovery_partial_multicast_join success=$joinSuccess total=${_multicastAddresses.length}';
+            logWarning(partialMsg, source: 'LocalSend');
           }
 
           // 设置监听
@@ -489,11 +491,12 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     for (int i = 0; i < _sockets.length; i++) {
       final socket = _sockets[i];
       bool socketSent = false;
-      for (final group in _multicastGroups) {
+      for (final address in _multicastAddresses) {
+        final group = address.address;
         try {
           final result = socket.send(
             message,
-            InternetAddress(group),
+            address,
             defaultMulticastPort,
           );
           if (result > 0) {
@@ -628,8 +631,6 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
 
       final message = jsonEncode(announcement.toJson());
       final messageBytes = utf8.encode(message);
-      final multicastAddresses =
-          _multicastGroups.map(InternetAddress.new).toList();
 
       debugPrint('设备公告内容长度: ${message.length} 字符');
 
@@ -647,7 +648,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
       int sentCount = 0;
       // 向所有套接字发送公告
       for (final socket in _sockets) {
-        for (final address in multicastAddresses) {
+        for (final address in _multicastAddresses) {
           try {
             final result = socket.send(
               messageBytes,
