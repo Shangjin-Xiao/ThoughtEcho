@@ -289,6 +289,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
 
           // 加入组播组
           bool joinedAnyGroup = false;
+          int joinSuccess = 0;
           for (final group in _multicastGroups) {
             try {
               socket.joinMulticast(
@@ -296,6 +297,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
                 interface,
               );
               joinedAnyGroup = true;
+              joinSuccess++;
               debugPrint(
                 '✓ 成功加入组播组 $group (接口: ${interface.name})',
               );
@@ -306,6 +308,11 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
           if (!joinedAnyGroup) {
             socket.close();
             continue; // 跳过这个接口
+          } else if (joinSuccess > 0 && joinSuccess < _multicastGroups.length) {
+            logWarning(
+              'discovery_partial_multicast_join success=$joinSuccess total=${_multicastGroups.length}',
+              source: 'LocalSend',
+            );
           }
 
           // 设置监听
@@ -477,10 +484,11 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
       return;
     }
 
-    int successCount = 0;
+    int successSocketCount = 0;
 
     for (int i = 0; i < _sockets.length; i++) {
       final socket = _sockets[i];
+      bool socketSent = false;
       for (final group in _multicastGroups) {
         try {
           final result = socket.send(
@@ -489,7 +497,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
             defaultMulticastPort,
           );
           if (result > 0) {
-            successCount++;
+            socketSent = true;
             debugPrint('✓ 套接字 $i 发送成功，组: $group，字节数: $result');
             logInfo(
               'discovery_broadcast_sent sock=$i group=$group bytes=$result',
@@ -505,6 +513,9 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
         } catch (e) {
           debugPrint('❌ 套接字 $i 发送异常(组: $group): $e');
         }
+      }
+      if (socketSent) {
+        successSocketCount++;
       }
 
       // 额外的广播兜底（部分路由器/平台屏蔽组播）
@@ -527,10 +538,10 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
 
     _lastAnnouncementSend = now;
 
-    if (successCount > 0) {
-      debugPrint('✓ 成功通过 $successCount/${_sockets.length} 个套接字发送公告');
+    if (successSocketCount > 0) {
+      debugPrint('✓ 成功通过 $successSocketCount/${_sockets.length} 个套接字发送公告');
       logInfo(
-        'discovery_broadcast_summary success=$successCount total=${_sockets.length}',
+        'discovery_broadcast_summary successSockets=$successSocketCount totalSockets=${_sockets.length}',
         source: 'LocalSend',
       );
     } else {
