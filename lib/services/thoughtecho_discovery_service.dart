@@ -677,8 +677,12 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
   /// - Android/iOS → mobile
   /// - Other platforms (macOS/Windows/Linux/others) → desktop
   DeviceType _currentDeviceType() {
-    if (kIsWeb) return DeviceType.desktop;
-    if (Platform.isAndroid || Platform.isIOS) return DeviceType.mobile;
+    if (kIsWeb) return DeviceType.desktop; // avoid Platform.* on web
+    try {
+      if (Platform.isAndroid || Platform.isIOS) return DeviceType.mobile;
+    } catch (_) {
+      // Platform.* may throw on unsupported targets; fall through to desktop
+    }
     return DeviceType.desktop;
   }
 
