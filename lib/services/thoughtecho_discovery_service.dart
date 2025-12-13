@@ -435,7 +435,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
       alias: 'ThoughtEcho-${Platform.localHostname}',
       version: protocolVersion,
       deviceModel: _deviceModel,
-      deviceType: DeviceType.mobile,
+      deviceType: _currentDeviceType(),
       fingerprint: fingerprint,
       port: _actualServerPort, // 使用实际服务器端口
       protocol: ProtocolType.http,
@@ -594,7 +594,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
         alias: 'ThoughtEcho-${Platform.localHostname}',
         version: protocolVersion,
         deviceModel: _deviceModel,
-        deviceType: DeviceType.mobile,
+        deviceType: _currentDeviceType(),
         fingerprint: fingerprint,
         port: _actualServerPort, // 使用实际服务器端口
         protocol: ProtocolType.http,
@@ -671,6 +671,12 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
   /// 获取设备指纹
   String _getDeviceFingerprint() {
     return _deviceFingerprint;
+  }
+
+  DeviceType _currentDeviceType() {
+    if (kIsWeb) return DeviceType.desktop;
+    if (Platform.isAndroid || Platform.isIOS) return DeviceType.mobile;
+    return DeviceType.desktop;
   }
 
   @override
