@@ -535,13 +535,11 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     if (!_fingerprintReady) {
       await _ensureFingerprint();
     }
-    final deviceType =
-        (Platform.isAndroid || Platform.isIOS) ? DeviceType.mobile : DeviceType.desktop;
     final dto = MulticastDto(
       alias: 'ThoughtEcho-${Platform.localHostname}',
       version: protocolVersion,
       deviceModel: _deviceModel,
-      deviceType: deviceType,
+      deviceType: _currentDeviceType(),
       fingerprint: _getDeviceFingerprint(),
       port: _actualServerPort,
       protocol: ProtocolType.http,
