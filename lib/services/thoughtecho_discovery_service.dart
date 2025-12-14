@@ -19,12 +19,6 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
   Timer? _healthTimer; // 周期性健康检查
   DateTime _lastMessageTime = DateTime.fromMillisecondsSinceEpoch(0);
   DateTime _lastAnnouncementSend = DateTime.fromMillisecondsSinceEpoch(0);
-  static const List<String> _multicastGroups = [
-    defaultMulticastGroup,
-    localsendCompatibilityMulticastGroup,
-  ];
-  static final List<InternetAddress> _multicastAddresses =
-      _multicastGroups.map(InternetAddress.new).toList();
   static const Duration _socketInactivityRestart = Duration(
     seconds: 25,
   ); // 超过该时间未收到消息则重启监听
@@ -290,31 +284,18 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
           debugPrint('套接字功能已启用: readEvents, broadcast, multicastLoopback');
 
           // 加入组播组
-          bool joinedAnyGroup = false;
-          int joinSuccess = 0;
-          for (final address in _multicastAddresses) {
-            final group = address.address;
-            try {
-              socket.joinMulticast(
-                address,
-                interface,
-              );
-              joinedAnyGroup = true;
-              joinSuccess++;
-              debugPrint(
-                '✓ 成功加入组播组 $group (接口: ${interface.name})',
-              );
-            } catch (e) {
-              debugPrint('❌ 加入组播组失败 ($group): $e');
-            }
-          }
-          if (!joinedAnyGroup) {
+          try {
+            socket.joinMulticast(
+              InternetAddress(defaultMulticastGroup),
+              interface,
+            );
+            debugPrint(
+              '✓ 成功加入组播组 $defaultMulticastGroup (接口: ${interface.name})',
+            );
+          } catch (e) {
+            debugPrint('❌ 加入组播组失败: $e');
             socket.close();
             continue; // 跳过这个接口
-          } else if (joinSuccess > 0 && joinSuccess < _multicastGroups.length) {
-            final partialMsg =
-                'discovery_partial_multicast_join success=$joinSuccess total=${_multicastAddresses.length}';
-            logWarning(partialMsg, source: 'LocalSend');
           }
 
           // 设置监听
@@ -454,7 +435,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
       alias: 'ThoughtEcho-${Platform.localHostname}',
       version: protocolVersion,
       deviceModel: _deviceModel,
-      deviceType: _currentDeviceType(),
+      deviceType: DeviceType.mobile,
       fingerprint: fingerprint,
       port: _actualServerPort, // 使用实际服务器端口
       protocol: ProtocolType.http,
@@ -486,65 +467,58 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
       return;
     }
 
-    int successSocketCount = 0;
+    int successCount = 0;
 
     for (int i = 0; i < _sockets.length; i++) {
       final socket = _sockets[i];
-      bool socketSent = false;
-      for (final address in _multicastAddresses) {
-        final group = address.address;
+      try {
+        final result = socket.send(
+          message,
+          InternetAddress(defaultMulticastGroup),
+          defaultMulticastPort,
+        );
+        if (result > 0) {
+          successCount++;
+          debugPrint('✓ 套接字 $i 发送成功，字节数: $result');
+          logInfo(
+            'discovery_broadcast_sent sock=$i bytes=$result',
+            source: 'LocalSend',
+          );
+        } else {
+          debugPrint('❌ 套接字 $i 发送失败，返回: $result');
+          logWarning(
+            'discovery_broadcast_fail sock=$i result=$result',
+            source: 'LocalSend',
+          );
+        }
+
+        // 额外的广播兜底（部分路由器/平台屏蔽组播）
         try {
-          final result = socket.send(
+          final br = socket.send(
             message,
-            address,
+            InternetAddress('255.255.255.255'),
             defaultMulticastPort,
           );
-          if (result > 0) {
-            socketSent = true;
-            debugPrint('✓ 套接字 $i 发送成功，组: $group，字节数: $result');
-            logInfo(
-              'discovery_broadcast_sent sock=$i group=$group bytes=$result',
-              source: 'LocalSend',
-            );
-          } else {
-            debugPrint('❌ 套接字 $i 发送失败，组: $group，返回: $result');
-            logWarning(
-              'discovery_broadcast_fail sock=$i group=$group result=$result',
+          if (br > 0) {
+            logDebug(
+              'discovery_broadcast_fallback sock=$i bytes=$br',
               source: 'LocalSend',
             );
           }
         } catch (e) {
-          debugPrint('❌ 套接字 $i 发送异常(组: $group): $e');
-        }
-      }
-      if (socketSent) {
-        successSocketCount++;
-      }
-
-      // 额外的广播兜底（部分路由器/平台屏蔽组播）
-      try {
-        final br = socket.send(
-          message,
-          InternetAddress('255.255.255.255'),
-          defaultMulticastPort,
-        );
-        if (br > 0) {
-          logDebug(
-            'discovery_broadcast_fallback sock=$i bytes=$br',
-            source: 'LocalSend',
-          );
+          debugPrint('广播兜底发送失败: $e');
         }
       } catch (e) {
-        debugPrint('广播兜底发送失败: $e');
+        debugPrint('❌ 套接字 $i 发送异常: $e');
       }
     }
 
     _lastAnnouncementSend = now;
 
-    if (successSocketCount > 0) {
-      debugPrint('✓ 成功通过 $successSocketCount/${_sockets.length} 个套接字发送公告');
+    if (successCount > 0) {
+      debugPrint('✓ 成功通过 $successCount/${_sockets.length} 个套接字发送公告');
       logInfo(
-        'discovery_broadcast_summary successSockets=$successSocketCount totalSockets=${_sockets.length}',
+        'discovery_broadcast_summary success=$successCount total=${_sockets.length}',
         source: 'LocalSend',
       );
     } else {
@@ -565,9 +539,9 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
       alias: 'ThoughtEcho-${Platform.localHostname}',
       version: protocolVersion,
       deviceModel: _deviceModel,
-      deviceType: _currentDeviceType(),
+      deviceType: DeviceType.desktop,
       fingerprint: _getDeviceFingerprint(),
-      port: _actualServerPort,
+      port: defaultPort,
       protocol: ProtocolType.http,
       download: true,
       announcement: false,
@@ -577,16 +551,14 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     final message = utf8.encode(jsonEncode(dto.toJson()));
 
     for (final socket in _sockets) {
-      for (final group in _multicastGroups) {
-        try {
-          socket.send(
-            message,
-            InternetAddress(group),
-            defaultMulticastPort,
-          );
-        } catch (e) {
-          debugPrint('回应公告失败(组:$group): $e');
-        }
+      try {
+        socket.send(
+          message,
+          InternetAddress(defaultMulticastGroup),
+          defaultMulticastPort,
+        );
+      } catch (e) {
+        debugPrint('回应公告失败: $e');
       }
     }
   }
@@ -620,7 +592,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
         alias: 'ThoughtEcho-${Platform.localHostname}',
         version: protocolVersion,
         deviceModel: _deviceModel,
-        deviceType: _currentDeviceType(),
+        deviceType: DeviceType.mobile,
         fingerprint: fingerprint,
         port: _actualServerPort, // 使用实际服务器端口
         protocol: ProtocolType.http,
@@ -631,6 +603,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
 
       final message = jsonEncode(announcement.toJson());
       final messageBytes = utf8.encode(message);
+      final multicastAddress = InternetAddress(defaultMulticastGroup);
 
       debugPrint('设备公告内容长度: ${message.length} 字符');
 
@@ -648,39 +621,37 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
       int sentCount = 0;
       // 向所有套接字发送公告
       for (final socket in _sockets) {
-        for (final address in _multicastAddresses) {
+        try {
+          final result = socket.send(
+            messageBytes,
+            multicastAddress,
+            defaultMulticastPort,
+          );
+          if (result > 0) {
+            sentCount++;
+            debugPrint(
+              '发送设备公告到 ${multicastAddress.address}:$defaultMulticastPort, 发送字节: $result',
+            );
+          }
+
+          // 额外的广播兜底
           try {
-            final result = socket.send(
+            final br = socket.send(
               messageBytes,
-              address,
+              InternetAddress('255.255.255.255'),
               defaultMulticastPort,
             );
-            if (result > 0) {
-              sentCount++;
-              debugPrint(
-                '发送设备公告到 ${address.address}:$defaultMulticastPort, 发送字节: $result',
+            if (br > 0) {
+              logDebug(
+                'discovery_broadcast_fallback bytes=$br',
+                source: 'LocalSend',
               );
             }
           } catch (e) {
-            debugPrint('发送公告失败(${address.address}): $e');
-          }
-        }
-
-        // 额外的广播兜底
-        try {
-          final br = socket.send(
-            messageBytes,
-            InternetAddress('255.255.255.255'),
-            defaultMulticastPort,
-          );
-          if (br > 0) {
-            logDebug(
-              'discovery_broadcast_fallback bytes=$br',
-              source: 'LocalSend',
-            );
+            debugPrint('广播兜底失败: $e');
           }
         } catch (e) {
-          debugPrint('广播兜底失败: $e');
+          debugPrint('发送公告失败: $e');
         }
       }
 
@@ -698,21 +669,6 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
   /// 获取设备指纹
   String _getDeviceFingerprint() {
     return _deviceFingerprint;
-  }
-
-  /// Derives the LocalSend device type based on the runtime platform.
-  /// Mapping (kept aligned with LocalSend expectations):
-  /// - Web → desktop (aligned with LocalSend web client behavior)
-  /// - Android/iOS → mobile
-  /// - Other platforms (macOS/Windows/Linux/others) → desktop
-  DeviceType _currentDeviceType() {
-    if (kIsWeb) return DeviceType.desktop; // avoid Platform.* on web
-    try {
-      if (Platform.isAndroid || Platform.isIOS) return DeviceType.mobile;
-    } catch (_) {
-      // Platform.* may throw on unsupported targets; fall through to desktop
-    }
-    return DeviceType.desktop;
   }
 
   @override
