@@ -103,10 +103,9 @@ flutter_launcher_icons:
   adaptive_icon_background: "#FFFFFF"
   adaptive_icon_foreground: "icon.png"
   # iOS 特定配置
-  # 使用裁剪后的图标（去除透明边距，使图标尽可能大）
-  image_path_ios: "icon_ios_full.png"
+  # 使用优化后的大图标（去除多余背景，放大主体）
+  image_path_ios: "icon_ios_large.png"
   # 仍然需要背景色来填充图标内部或角落的透明区域
-  # 建议使用图标的主色调，这里使用之前检测到的蓝色 #90CAF9
   remove_alpha_ios: true
   background_color_ios: "#9ACDF7"
   # 尝试使用 image_path_ios 单独指定 iOS 图标，如果 icon.png 有透明度，这里会自动填充背景色
