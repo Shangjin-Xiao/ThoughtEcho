@@ -36,7 +36,3 @@ const defaultDiscoveryTimeout = 30000;
 /// that can receive UDP multicast messages.
 /// Using 224.0.0.170 for ThoughtEcho multicast discovery
 const defaultMulticastGroup = '224.0.0.170';
-
-/// Compatibility multicast group used by upstream LocalSend implementations.
-/// We broadcast/join both groups to maximize cross-platform discovery.
-const localsendCompatibilityMulticastGroup = '224.0.0.167';
