@@ -1,9 +1,82 @@
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flex_color_scheme/flex_color_scheme.dart';
 import '../utils/mmkv_ffi_fix.dart'; // 导入MMKV安全包装类
 import 'package:thoughtecho/utils/app_logger.dart';
 
 class AppTheme with ChangeNotifier {
+  // Windows 平台字体配置
+  // 使用 Microsoft YaHei UI 作为首选字体，它在 Windows 上对各种字重支持更好
+  static const List<String> _windowsFontFamilyFallback = [
+    'Microsoft YaHei UI', // Windows 10/11 优化的雅黑字体
+    'Microsoft YaHei', // 标准微软雅黑
+    'PingFang SC', // macOS 苹方（兼容性）
+    'Noto Sans SC', // Google 思源黑体
+    'sans-serif',
+  ];
+
+  // 获取当前平台的字体回退列表
+  static List<String>? get platformFontFamilyFallback {
+    if (kIsWeb) return null;
+    if (Platform.isWindows) return _windowsFontFamilyFallback;
+    return null; // 其他平台使用系统默认
+  }
+
+  // 创建适配 Windows 的 TextTheme
+  // Windows 上中文字体的字重渲染可能不一致，通过统一配置解决
+  static TextTheme _createPlatformTextTheme(TextTheme base) {
+    if (kIsWeb || !Platform.isWindows) return base;
+
+    // Windows 平台：为所有文本样式添加字体回退
+    return base.copyWith(
+      displayLarge: base.displayLarge?.copyWith(
+        fontFamilyFallback: _windowsFontFamilyFallback,
+      ),
+      displayMedium: base.displayMedium?.copyWith(
+        fontFamilyFallback: _windowsFontFamilyFallback,
+      ),
+      displaySmall: base.displaySmall?.copyWith(
+        fontFamilyFallback: _windowsFontFamilyFallback,
+      ),
+      headlineLarge: base.headlineLarge?.copyWith(
+        fontFamilyFallback: _windowsFontFamilyFallback,
+      ),
+      headlineMedium: base.headlineMedium?.copyWith(
+        fontFamilyFallback: _windowsFontFamilyFallback,
+      ),
+      headlineSmall: base.headlineSmall?.copyWith(
+        fontFamilyFallback: _windowsFontFamilyFallback,
+      ),
+      titleLarge: base.titleLarge?.copyWith(
+        fontFamilyFallback: _windowsFontFamilyFallback,
+      ),
+      titleMedium: base.titleMedium?.copyWith(
+        fontFamilyFallback: _windowsFontFamilyFallback,
+      ),
+      titleSmall: base.titleSmall?.copyWith(
+        fontFamilyFallback: _windowsFontFamilyFallback,
+      ),
+      bodyLarge: base.bodyLarge?.copyWith(
+        fontFamilyFallback: _windowsFontFamilyFallback,
+      ),
+      bodyMedium: base.bodyMedium?.copyWith(
+        fontFamilyFallback: _windowsFontFamilyFallback,
+      ),
+      bodySmall: base.bodySmall?.copyWith(
+        fontFamilyFallback: _windowsFontFamilyFallback,
+      ),
+      labelLarge: base.labelLarge?.copyWith(
+        fontFamilyFallback: _windowsFontFamilyFallback,
+      ),
+      labelMedium: base.labelMedium?.copyWith(
+        fontFamilyFallback: _windowsFontFamilyFallback,
+      ),
+      labelSmall: base.labelSmall?.copyWith(
+        fontFamilyFallback: _windowsFontFamilyFallback,
+      ),
+    );
+  }
   static const String _customColorKey = 'custom_color';
   static const String _useCustomColorKey = 'use_custom_color';
   static const String _themeModeKey = 'theme_mode';
@@ -426,6 +499,10 @@ class AppTheme with ChangeNotifier {
       listTileTheme: baseTheme.listTileTheme.copyWith(
         tileColor: Colors.transparent,
       ),
+
+      // Windows 平台字体优化
+      textTheme: _createPlatformTextTheme(baseTheme.textTheme),
+      primaryTextTheme: _createPlatformTextTheme(baseTheme.primaryTextTheme),
     );
   }
 
@@ -651,6 +728,10 @@ class AppTheme with ChangeNotifier {
         circularTrackColor: colorScheme.primary.withValues(alpha: 0.2),
         linearTrackColor: colorScheme.primary.withValues(alpha: 0.2),
       ),
+
+      // Windows 平台字体优化
+      textTheme: _createPlatformTextTheme(baseTheme.textTheme),
+      primaryTextTheme: _createPlatformTextTheme(baseTheme.primaryTextTheme),
     );
   }
 }
