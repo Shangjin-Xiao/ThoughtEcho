@@ -72,8 +72,8 @@ class AIActionButtons extends StatelessWidget {
     if (!context.mounted) return;
 
     // Mock: 假设未识别到来源
-    String? author;
-    String? work;
+    const String? author = null;
+    const String? work = null;
 
     if (author == null && work == null) {
       ScaffoldMessenger.of(context).showSnackBar(

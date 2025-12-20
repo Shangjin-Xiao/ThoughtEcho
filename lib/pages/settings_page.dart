@@ -557,8 +557,8 @@ class SettingsPageState extends State<SettingsPage> {
                   },
                 ),
                 ListTile(
-                  title: Text(l10n.localAISettings),
-                  subtitle: Text(l10n.localAISettingsDesc),
+                  title: Text(l10n.localAiFeatures),
+                  subtitle: Text(l10n.localAiFeaturesDesc),
                   leading: const Icon(Icons.device_hub),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () {
