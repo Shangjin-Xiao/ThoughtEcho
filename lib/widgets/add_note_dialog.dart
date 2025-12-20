@@ -20,6 +20,8 @@ import 'package:thoughtecho/utils/app_logger.dart';
 import '../constants/app_constants.dart';
 import 'add_note_dialog_parts.dart'; // 导入拆分的组件
 import '../utils/feature_guide_helper.dart';
+import '../services/settings_service.dart';
+import '../utils/icon_utils.dart';
 
 class AddNoteDialog extends StatefulWidget {
   final Quote? initialQuote; // 如果是编辑笔记，则传入初始值
@@ -97,8 +99,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   bool _isLoadingHitokotoTags = false;
 
   // AI推荐标签相关状态
-  List<String> _recommendedTagIds = [];
-  bool _isLoadingRecommendations = false;
+  // 预留：后续接入本地 embedding/标签推荐时使用
 
   // 优化：缓存过滤结果，避免重复计算
   final Map<String, List<NoteCategory>> _filterCache = {};
@@ -1757,7 +1758,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(l10n.smartTagsRecommendation),
+        title: Text(l10n.recommendedTags),
         content: Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -1767,13 +1768,14 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
               orElse: () => NoteCategory(
                 id: tagId,
                 name: tagId,
-                icon: 'label',
-                color: null,
+                iconName: 'label',
               ),
             );
             return FilterChip(
               label: Text(tag.name),
-              avatar: Icon(IconUtils.getIconData(tag.icon)),
+              avatar: IconUtils.isEmoji(tag.iconName)
+                  ? IconUtils.getDisplayIcon(tag.iconName)
+                  : Icon(IconUtils.getIconData(tag.iconName), size: 18),
               onSelected: (selected) {
                 // 应用推荐标签
                 setState(() {
@@ -1802,7 +1804,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
               });
               Navigator.pop(context);
             },
-            child: Text(l10n.smartTagsApply),
+            child: Text(l10n.applyToEditor),
           ),
         ],
       ),

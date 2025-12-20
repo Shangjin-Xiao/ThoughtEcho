@@ -17,6 +17,9 @@ import '../models/quote_model.dart';
 import '../widgets/daily_quote_view.dart';
 import '../widgets/note_list_view.dart';
 import '../widgets/add_note_dialog.dart';
+import '../widgets/local_ai/ocr_capture_page.dart';
+import '../widgets/local_ai/ocr_result_sheet.dart';
+import '../widgets/local_ai/voice_input_overlay.dart';
 import 'ai_features_page.dart';
 import 'settings_page.dart';
 import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
@@ -860,11 +863,79 @@ class _HomePageState extends State<HomePage>
       return;
     }
 
-    // TODO: 显示语音录制浮层 - 后端实现后添加
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(AppLocalizations.of(context).featureComingSoon),
+    _showVoiceInputOverlay();
+  }
+
+  Future<void> _showVoiceInputOverlay() async {
+    if (!mounted) return;
+
+    await showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'voice_input_overlay',
+      barrierColor: Colors.transparent,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return VoiceInputOverlay(
+          transcribedText: null,
+          onSwipeUpForOCR: () async {
+            Navigator.of(context).pop();
+            await _openOCRFlow();
+          },
+          onRecordComplete: () {
+            Navigator.of(context).pop();
+            ScaffoldMessenger.of(this.context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  AppLocalizations.of(this.context).featureComingSoon,
+                ),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          },
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(parent: animation, curve: Curves.easeOut);
+        return FadeTransition(
+          opacity: curved,
+          child: child,
+        );
+      },
+      transitionDuration: const Duration(milliseconds: 180),
+    );
+  }
+
+  Future<void> _openOCRFlow() async {
+    if (!mounted) return;
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) => const OCRCapturePage(),
       ),
+    );
+
+    if (!mounted) return;
+
+    final l10n = AppLocalizations.of(context);
+    String resultText = l10n.featureComingSoon;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (context) {
+        return OCRResultSheet(
+          recognizedText: resultText,
+          onTextChanged: (text) {
+            resultText = text;
+          },
+          onInsertToEditor: () {
+            Navigator.of(context).pop();
+            _showAddQuoteDialog(prefilledContent: resultText);
+          },
+          onRecognizeSource: () {},
+        );
+      },
     );
   }
 

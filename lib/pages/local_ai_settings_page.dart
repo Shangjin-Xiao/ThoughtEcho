@@ -27,7 +27,7 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(l10n.localAISettings),
+            Text(l10n.localAiFeatures),
             const SizedBox(width: 8),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -36,7 +36,7 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
-                l10n.localAIPreviewBadge,
+                l10n.localAiFeaturesPreview,
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.bold,
@@ -49,10 +49,39 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
       ),
       body: ListView(
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+            child: Card(
+              elevation: 0,
+              color: theme.colorScheme.surfaceContainerHighest,
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        l10n.localAiPreviewNote,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
           // 主开关
           SwitchListTile(
-            title: Text(l10n.localAIEnabled),
-            subtitle: Text(l10n.localAIEnabledDesc),
+            title: Text(l10n.enableLocalAi),
+            subtitle: Text(l10n.enableLocalAiDesc),
             value: localAISettings.enabled,
             onChanged: (value) {
               _updateSettings(
@@ -79,8 +108,8 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
               },
             ),
             SwitchListTile(
-              title: Text(l10n.localAIOCR),
-              subtitle: Text(l10n.localAIOCRDesc),
+              title: Text(l10n.ocrRecognition),
+              subtitle: Text(l10n.ocrRecognitionDesc),
               value: localAISettings.ocrEnabled,
               onChanged: (value) {
                 _updateSettings(
@@ -90,8 +119,8 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
               },
             ),
             SwitchListTile(
-              title: Text(l10n.localAICorrection),
-              subtitle: Text(l10n.localAICorrectionDesc),
+              title: Text(l10n.aiCorrection),
+              subtitle: Text(l10n.aiCorrectionDesc),
               value: localAISettings.aiCorrectionEnabled,
               onChanged: (value) {
                 _updateSettings(
@@ -116,8 +145,8 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
             // 搜索与发现组
             _buildSectionHeader(l10n.localAISearchDiscovery, theme),
             SwitchListTile(
-              title: Text(l10n.localAISemanticSearch),
-              subtitle: Text(l10n.localAISemanticSearchDesc),
+              title: Text(l10n.aiSearch),
+              subtitle: Text(l10n.aiSearchDesc),
               value: localAISettings.aiSearchEnabled,
               onChanged: (value) {
                 _updateSettings(
@@ -142,8 +171,8 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
             // 内容分析组
             _buildSectionHeader(l10n.localAIContentAnalysis, theme),
             SwitchListTile(
-              title: Text(l10n.localAISmartTags),
-              subtitle: Text(l10n.localAISmartTagsDesc),
+              title: Text(l10n.smartTags),
+              subtitle: Text(l10n.smartTagsDesc),
               value: localAISettings.smartTagsEnabled,
               onChanged: (value) {
                 _updateSettings(
