@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../gen_l10n/app_localizations.dart';
 
 /// OCR 拍照页面
-/// 
+///
 /// 提供相机预览和拍照功能
 class OCRCapturePage extends StatefulWidget {
   const OCRCapturePage({super.key});
@@ -16,6 +17,8 @@ class _OCRCapturePageState extends State<OCRCapturePage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
+
+    final primary = theme.colorScheme.primary;
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -81,22 +84,61 @@ class _OCRCapturePageState extends State<OCRCapturePage> {
             right: 0,
             bottom: 40,
             child: Center(
-              child: GestureDetector(
-                onTap: () {
-                  // TODO: 拍照逻辑 - 后端实现后添加
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(l10n.featureComingSoon)),
-                  );
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.85, end: 1.0),
+                duration: const Duration(milliseconds: 600),
+                curve: Curves.easeOut,
+                builder: (context, value, child) {
+                  return Transform.scale(scale: value, child: child);
                 },
-                child: Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white,
-                    border: Border.all(
-                      color: theme.colorScheme.primary,
-                      width: 4,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkResponse(
+                    radius: 48,
+                    splashColor: Colors.white.withOpacity(0.15),
+                    highlightColor: Colors.white.withOpacity(0.06),
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      // TODO: 拍照逻辑 - 后端实现后添加
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(l10n.featureComingSoon),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                    child: Container(
+                      width: 78,
+                      height: 78,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white,
+                        border: Border.all(
+                          color: primary,
+                          width: 4,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: primary.withOpacity(0.35),
+                            blurRadius: 22,
+                            spreadRadius: 1,
+                          ),
+                        ],
+                      ),
+                      child: Center(
+                        child: Container(
+                          width: 54,
+                          height: 54,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.black.withOpacity(0.06),
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
