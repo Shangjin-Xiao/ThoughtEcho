@@ -305,8 +305,16 @@ class StorageManagementService {
   }
 
   /// Isolate 版本：获取缓存大小
+  /// 注意：Windows 平台的临时目录是系统共享的，无法准确统计应用缓存
+  /// 因此 Windows 平台返回 0，避免误导用户
   static Future<int> _getCacheSizeIsolate(String tempDirPath) async {
     try {
+      // Windows 平台的临时目录 (如 %TEMP%) 是系统共享的
+      // 包含了所有应用的临时文件，无法准确统计心迹自己的缓存
+      // 为避免显示几百兆的虚假缓存数据，Windows 平台直接返回 0
+      if (Platform.isWindows) {
+        return 0;
+      }
       final tempStats = await _getDirectorySizeIsolate(tempDirPath);
       return tempStats['size'] as int;
     } catch (e) {
@@ -389,7 +397,9 @@ class StorageManagementService {
       }
 
       // 5. 清理临时文件
-      if (!kIsWeb) {
+      // 注意：Windows 平台的临时目录是系统共享的，包含其他应用的临时文件
+      // 清理可能会误删其他应用数据，因此 Windows 平台跳过此步骤
+      if (!kIsWeb && !Platform.isWindows) {
         try {
           final tempDir = await getTemporaryDirectory();
           final beforeSize =
