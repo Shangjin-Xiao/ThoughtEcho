@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../gen_l10n/app_localizations.dart';
+import 'ai_action_buttons.dart'; // 导入 AI 操作按钮组件
 
 /// OCR 识别结果编辑底部弹出组件
 /// 
@@ -95,27 +96,18 @@ class _OCRResultSheetState extends State<OCRResultSheet> {
             ),
           ),
 
-          // 操作按钮
+          // AI操作按钮
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: widget.onApplyCorrection,
-                    icon: const Icon(Icons.auto_fix_high),
-                    label: Text(l10n.voiceApplyCorrection),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: widget.onRecognizeSource,
-                    icon: const Icon(Icons.search),
-                    label: Text(l10n.voiceRecognizeSource),
-                  ),
-                ),
-              ],
+            child: AIActionButtons(
+              text: _textController.text,
+              onCorrectionResult: widget.onTextChanged,
+              onSourceResult: (author, work) {
+                // 识别来源结果回调
+                if (author != null || work != null) {
+                  widget.onRecognizeSource?.call();
+                }
+              },
             ),
           ),
 
