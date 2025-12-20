@@ -635,13 +635,17 @@ class BackupService {
       if (toRelative) {
         // 备份时：绝对路径 -> 相对路径
         if (originalPath.startsWith(appPath)) {
-          return path.relative(originalPath, from: appPath);
+          // 生成相对路径，并统一使用正斜杠以确保跨平台兼容
+          final relativePath = path.relative(originalPath, from: appPath);
+          return relativePath.replaceAll(r'\', '/');
         }
         return originalPath; // 如果不是应用内路径，保持不变
       } else {
         // 还原时：相对路径 -> 绝对路径
         if (!path.isAbsolute(originalPath)) {
-          return path.join(appPath, originalPath);
+          // 将路径中的正斜杠转换为当前平台的路径分隔符
+          final normalizedPath = originalPath.replaceAll('/', path.separator);
+          return path.join(appPath, normalizedPath);
         }
         return originalPath; // 如果已经是绝对路径，保持不变
       }

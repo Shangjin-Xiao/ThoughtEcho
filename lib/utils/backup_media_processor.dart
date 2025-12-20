@@ -151,7 +151,9 @@ class BackupMediaProcessor {
 
         // 检查文件是否可以处理（使用缓存的结果）
         if (await _canProcessFileQuickly(filePath)) {
-          final relativePath = path.relative(filePath, from: appDirPath);
+          // 生成相对路径，并统一使用正斜杠以确保 ZIP 跨平台兼容
+          final relativePath = path.relative(filePath, from: appDirPath)
+              .replaceAll(r'\', '/');
           return MapEntry(relativePath, filePath);
         }
 
