@@ -48,82 +48,103 @@ class _OCRResultSheetState extends State<OCRResultSheet> {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
 
-    return Container(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // 标题栏
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              border: Border(
-                bottom: BorderSide(
-                  color: theme.dividerColor,
-                ),
-              ),
-            ),
-            child: Row(
+    return SafeArea(
+      top: false,
+      child: DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.72,
+        minChildSize: 0.45,
+        maxChildSize: 0.95,
+        builder: (context, scrollController) {
+          return Material(
+            color: theme.colorScheme.surface,
+            child: Column(
               children: [
-                Text(
-                  l10n.ocrResultTitle,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+                // 拖拽条
+                Padding(
+                  padding: const EdgeInsets.only(top: 10, bottom: 4),
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.onSurfaceVariant.withOpacity(0.35),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
                   ),
                 ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.of(context).pop(),
+
+                // 标题栏
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+                  child: Row(
+                    children: [
+                      Text(
+                        l10n.ocrResultTitle,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 主体内容：可滚动
+                Expanded(
+                  child: ListView(
+                    controller: scrollController,
+                    padding: EdgeInsets.fromLTRB(
+                      16,
+                      8,
+                      16,
+                      16 + MediaQuery.of(context).viewInsets.bottom,
+                    ),
+                    children: [
+                      TextField(
+                        controller: _textController,
+                        minLines: 6,
+                        maxLines: 12,
+                        textInputAction: TextInputAction.newline,
+                        decoration: InputDecoration(
+                          hintText: l10n.voiceEditResult,
+                          border: const OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+
+                      AIActionButtons(
+                        text: _textController.text,
+                        onCorrectionResult: widget.onTextChanged,
+                        onSourceResult: (author, work) {
+                          if (author != null || work != null) {
+                            widget.onRecognizeSource?.call();
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 底部主按钮固定
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: widget.onInsertToEditor,
+                      icon: const Icon(Icons.check),
+                      label: Text(l10n.voiceInsertToEditor),
+                    ),
+                  ),
                 ),
               ],
             ),
-          ),
-
-          // 可编辑文本区域
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _textController,
-              maxLines: 8,
-              decoration: InputDecoration(
-                hintText: l10n.voiceEditResult,
-                border: const OutlineInputBorder(),
-              ),
-            ),
-          ),
-
-          // AI操作按钮
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: AIActionButtons(
-              text: _textController.text,
-              onCorrectionResult: widget.onTextChanged,
-              onSourceResult: (author, work) {
-                // 识别来源结果回调
-                if (author != null || work != null) {
-                  widget.onRecognizeSource?.call();
-                }
-              },
-            ),
-          ),
-
-          // 填入编辑器按钮
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: widget.onInsertToEditor,
-                icon: const Icon(Icons.check),
-                label: Text(l10n.voiceInsertToEditor),
-              ),
-            ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../gen_l10n/app_localizations.dart';
 
 /// 语音录制浮层组件
@@ -24,6 +25,7 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
     with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   double _swipeOffset = 0.0;
+  bool _ocrTriggered = false;
 
   @override
   void initState() {
@@ -50,14 +52,21 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
       onVerticalDragUpdate: (details) {
         setState(() {
           _swipeOffset += details.delta.dy;
-          if (_swipeOffset < -100) {
-            // 触发 OCR 模式
+          if (_swipeOffset < -100 && !_ocrTriggered) {
+            // 触发 OCR 模式（只触发一次）
+            _ocrTriggered = true;
+            HapticFeedback.selectionClick();
             widget.onSwipeUpForOCR?.call();
           }
         });
       },
       onVerticalDragEnd: (details) {
-        if (_swipeOffset > -100) {
+        final shouldCompleteRecord = !_ocrTriggered && _swipeOffset > -100;
+        setState(() {
+          _swipeOffset = 0.0;
+          _ocrTriggered = false;
+        });
+        if (shouldCompleteRecord) {
           widget.onRecordComplete?.call();
         }
       },
@@ -69,6 +78,19 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      onPressed: () => Navigator.of(context).maybePop(),
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+                    ),
+                  ],
+                ),
+              ),
               // 波形动画或麦克风图标
               AnimatedBuilder(
                 animation: _animationController,
@@ -128,21 +150,25 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                     fontSize: 14,
                   ),
                 ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 28),
 
-              // 上划提示
-              Icon(
-                Icons.arrow_upward,
-                color: Colors.white.withOpacity(0.7),
-                size: 32,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                l10n.voiceRecordingHint,
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 14,
-                ),
+              // 手势提示（更明确，且不会额外新增 l10n 文案）
+              Column(
+                children: [
+                  Icon(
+                    Icons.arrow_upward,
+                    color: Colors.white.withOpacity(0.75),
+                    size: 28,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.voiceRecordingHint,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
