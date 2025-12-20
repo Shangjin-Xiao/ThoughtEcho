@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/ai_settings.dart';
 import '../models/app_settings.dart';
 import '../models/multi_ai_settings.dart'; // 新增 MultiAISettings 导入
+import '../models/local_ai_settings.dart'; // 新增 LocalAISettings 导入
 import 'package:thoughtecho/utils/app_logger.dart';
 
 import '../services/mmkv_service.dart';
@@ -11,6 +12,7 @@ import '../services/mmkv_service.dart';
 class SettingsService extends ChangeNotifier {
   static const String _aiSettingsKey = 'ai_settings';
   static const String _multiAiSettingsKey = 'multi_ai_settings'; // 新增
+  static const String _localAiSettingsKey = 'local_ai_settings'; // 新增本地AI设置
   static const String _appSettingsKey = 'app_settings';
   static const String _themeModeKey = 'theme_mode';
   // 旧Key，用于迁移检查，迁移完成后可以考虑移除
@@ -28,6 +30,7 @@ class SettingsService extends ChangeNotifier {
   late AppSettings _appSettings;
   late ThemeMode _themeMode;
   late MultiAISettings _multiAISettings; // 新增多provider设置
+  late LocalAISettings _localAISettings; // 新增本地AI设置
 
   // 迁移标志，只执行一次数据迁移
   static const String _migrationCompleteKey = 'mmkv_migration_complete';
@@ -41,6 +44,7 @@ class SettingsService extends ChangeNotifier {
   AppSettings get appSettings => _appSettings;
   ThemeMode get themeMode => _themeMode;
   MultiAISettings get multiAISettings => _multiAISettings; // 新增getter
+  LocalAISettings get localAISettings => _localAISettings; // 新增本地AI设置getter
   bool get syncSkipConfirm => _mmkv.getBool(_syncSkipConfirmKey) ?? false;
   bool get syncDefaultIncludeMedia =>
       _mmkv.getBool(_syncDefaultIncludeMediaKey) ?? true;
@@ -178,6 +182,7 @@ class SettingsService extends ChangeNotifier {
     // 继续加载其他设置
     await _loadAISettings();
     await _loadMultiAISettings(); // 新增
+    await _loadLocalAISettings(); // 新增本地AI设置加载
     _loadAppSettings();
     _loadThemeMode();
 
@@ -462,11 +467,45 @@ class SettingsService extends ChangeNotifier {
     await saveMultiAISettings(settings);
   }
 
+  /// 加载本地AI设置
+  Future<void> _loadLocalAISettings() async {
+    final String? localAiSettingsJson = _mmkv.getString(_localAiSettingsKey);
+
+    if (localAiSettingsJson != null) {
+      try {
+        final Map<String, dynamic> settingsMap = json.decode(
+          localAiSettingsJson,
+        );
+        _localAISettings = LocalAISettings.fromJson(settingsMap);
+      } catch (e) {
+        logDebug('加载本地AI设置失败: $e');
+        _localAISettings = LocalAISettings.defaultSettings();
+        await saveLocalAISettings(_localAISettings);
+      }
+    } else {
+      _localAISettings = LocalAISettings.defaultSettings();
+      await saveLocalAISettings(_localAISettings);
+    }
+  }
+
+  /// 保存本地AI设置
+  Future<void> saveLocalAISettings(LocalAISettings settings) async {
+    _localAISettings = settings;
+    await _mmkv.setString(_localAiSettingsKey, json.encode(settings.toJson()));
+    notifyListeners();
+  }
+
+  /// 更新本地AI设置
+  Future<void> updateLocalAISettings(LocalAISettings settings) async {
+    await saveLocalAISettings(settings);
+  }
+
   /// 获取所有设置数据用于备份
   Map<String, dynamic> getAllSettingsForBackup() {
     return {
       'ai_settings': _aiSettings.toJson(),
       'multi_ai_settings': _multiAISettings.toJson(),
+      'local_ai_settings': _localAISettings.toJson(),
       'app_settings': _appSettings.toJson(),
       'theme_mode': _themeMode.index,
       'device_id': getOrCreateDeviceId(),
@@ -492,6 +531,14 @@ class SettingsService extends ChangeNotifier {
             backupData['multi_ai_settings'] as Map<String, dynamic>;
         final multiAiSettings = MultiAISettings.fromJson(multiAiSettingsJson);
         await saveMultiAISettings(multiAiSettings);
+      }
+
+      // 恢复本地AI设置
+      if (backupData.containsKey('local_ai_settings')) {
+        final localAiSettingsJson =
+            backupData['local_ai_settings'] as Map<String, dynamic>;
+        final localAiSettings = LocalAISettings.fromJson(localAiSettingsJson);
+        await saveLocalAISettings(localAiSettings);
       }
 
       // 恢复应用设置
