@@ -413,11 +413,14 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                 _buildMediaStorageCard(colorScheme, l10n),
                 const SizedBox(height: 16),
 
-                // 缓存占用
-                _buildSectionTitle(l10n.cacheUsage),
-                const SizedBox(height: 8),
-                _buildCacheStorageCard(colorScheme, l10n),
-                const SizedBox(height: 24),
+                // 缓存占用（Windows 平台临时目录是系统共享的，无法准确统计，因此隐藏）
+                if (!Platform.isWindows) ...[
+                  _buildSectionTitle(l10n.cacheUsage),
+                  const SizedBox(height: 8),
+                  _buildCacheStorageCard(colorScheme, l10n),
+                  const SizedBox(height: 24),
+                ] else
+                  const SizedBox(height: 8),
 
                 // 操作按钮
                 _buildActionButtons(colorScheme, l10n),
@@ -690,7 +693,14 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
   }
 
   /// 构建操作按钮
+  /// Windows 平台临时目录是系统共享的，无法准确统计和清理应用缓存
+  /// 因此 Windows 端隐藏清理缓存、清理无用媒体文件和数据库维护优化功能
   Widget _buildActionButtons(ColorScheme colorScheme, AppLocalizations l10n) {
+    // Windows 平台不显示操作按钮
+    if (Platform.isWindows) {
+      return const SizedBox.shrink();
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
