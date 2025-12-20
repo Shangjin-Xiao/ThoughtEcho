@@ -20,6 +20,7 @@ import '../services/weather_service.dart'; // 导入天气服务
 import '../utils/time_utils.dart'; // 导入时间工具
 import '../controllers/search_controller.dart';
 import '../constants/app_constants.dart'; // 导入应用常量
+import '../services/settings_service.dart'; // 导入设置服务
 
 class NoteListView extends StatefulWidget {
   final List<NoteCategory> tags;
@@ -81,6 +82,9 @@ class NoteListViewState extends State<NoteListView> {
   final Map<String, GlobalKey> _itemKeys = {}; // 保存每个笔记的GlobalKey
   final Map<String, ValueNotifier<bool>> _expansionNotifiers = {};
   // 移除AnimatedList相关的Key，改用ListView.builder
+
+  // AI搜索模式标志
+  bool _isAISearchMode = false;
 
   // 分页和懒加载状态
   final List<Quote> _quotes = [];
@@ -1422,11 +1426,41 @@ class NoteListViewState extends State<NoteListView> {
                                 ),
                               )
                             : const Icon(Icons.search),
-                        suffixIcon: IconButton(
-                          key: widget.filterButtonKey, // 功能引导 key
-                          icon: const Icon(Icons.tune),
-                          tooltip: l10n.filterAndSortTooltip,
-                          onPressed: () {
+                        suffixIcon: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // AI搜索切换按钮
+                            Consumer<SettingsService>(
+                              builder: (context, settings, _) {
+                                final localAI = settings.localAISettings;
+                                // 只有启用了本地AI和AI搜索功能才显示
+                                if (localAI.enabled && localAI.aiSearchEnabled) {
+                                  return IconButton(
+                                    icon: Icon(
+                                      _isAISearchMode ? Icons.auto_awesome : Icons.search,
+                                      color: _isAISearchMode ? theme.colorScheme.primary : null,
+                                    ),
+                                    tooltip: _isAISearchMode ? l10n.aiSearchMode : l10n.normalSearchMode,
+                                    onPressed: () {
+                                      setState(() {
+                                        _isAISearchMode = !_isAISearchMode;
+                                      });
+                                      // 如果有搜索词，重新搜索
+                                      if (_searchController.text.isNotEmpty) {
+                                        _onSearchChanged(_searchController.text);
+                                      }
+                                    },
+                                  );
+                                }
+                                return const SizedBox.shrink();
+                              },
+                            ),
+                            // 筛选按钮
+                            IconButton(
+                              key: widget.filterButtonKey, // 功能引导 key
+                              icon: const Icon(Icons.tune),
+                              tooltip: l10n.filterAndSortTooltip,
+                              onPressed: () {
                             showModalBottomSheet(
                               context: context,
                               isScrollControlled: true,
@@ -1466,6 +1500,8 @@ class NoteListViewState extends State<NoteListView> {
                               ),
                             );
                           },
+                            ),
+                          ],
                         ),
                         contentPadding: const EdgeInsets.symmetric(
                           vertical: 10,

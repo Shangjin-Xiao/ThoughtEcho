@@ -831,6 +831,43 @@ class _HomePageState extends State<HomePage>
     });
   }
 
+  // FAB 短按处理
+  void _onFABTap() {
+    _showAddQuoteDialog();
+  }
+
+  // FAB 长按处理 - 显示语音录制浮层
+  void _onFABLongPress() {
+    final settingsService = Provider.of<SettingsService>(context, listen: false);
+    final localAISettings = settingsService.localAISettings;
+
+    // 检查是否启用了本地AI和语音转文字功能
+    if (!localAISettings.enabled || !localAISettings.speechToTextEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).localAiNotEnabled),
+          action: SnackBarAction(
+            label: AppLocalizations.of(context).enableInSettings,
+            onPressed: () {
+              // 跳转到设置页面
+              setState(() {
+                _currentIndex = 2; // 切换到设置页
+              });
+            },
+          ),
+        ),
+      );
+      return;
+    }
+
+    // TODO: 显示语音录制浮层 - 后端实现后添加
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context).featureComingSoon),
+      ),
+    );
+  }
+
   // 显示编辑笔记对话框
   void _showEditQuoteDialog(Quote quote) {
     // 检查笔记是否来自全屏编辑器
@@ -1665,23 +1702,26 @@ class _HomePageState extends State<HomePage>
             SettingsPage(key: _settingsPageKey),
           ],
         ),
-        floatingActionButton: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: AppTheme.accentShadow,
-          ),
-          child: FloatingActionButton(
-            heroTag: 'homePageFAB',
-            onPressed: () => _showAddQuoteDialog(),
-            elevation: 0,
-            backgroundColor:
-                theme.floatingActionButtonTheme.backgroundColor, // 使用主题定义的颜色
-            foregroundColor:
-                theme.floatingActionButtonTheme.foregroundColor, // 使用主题定义的颜色
-            shape: RoundedRectangleBorder(
+        floatingActionButton: GestureDetector(
+          onLongPressStart: (_) => _onFABLongPress(),
+          child: Container(
+            decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
+              boxShadow: AppTheme.accentShadow,
             ),
-            child: const Icon(Icons.add, size: 28),
+            child: FloatingActionButton(
+              heroTag: 'homePageFAB',
+              onPressed: _onFABTap,
+              elevation: 0,
+              backgroundColor:
+                  theme.floatingActionButtonTheme.backgroundColor, // 使用主题定义的颜色
+              foregroundColor:
+                  theme.floatingActionButtonTheme.foregroundColor, // 使用主题定义的颜色
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(Icons.add, size: 28),
+            ),
           ),
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
