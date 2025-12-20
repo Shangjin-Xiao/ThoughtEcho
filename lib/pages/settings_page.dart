@@ -30,6 +30,7 @@ import 'license_page.dart' as license;
 import 'preferences_detail_page.dart';
 import '../utils/feature_guide_helper.dart';
 import 'storage_management_page.dart';
+import 'local_ai_settings_page.dart'; // 导入本地 AI 设置页面
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -551,6 +552,20 @@ class SettingsPageState extends State<SettingsPage> {
                       context,
                       MaterialPageRoute(
                         builder: (context) => const AISettingsPage(),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  title: Text(l10n.localAISettings),
+                  subtitle: Text(l10n.localAISettingsDesc),
+                  leading: const Icon(Icons.device_hub),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const LocalAISettingsPage(),
                       ),
                     );
                   },
