@@ -2998,5 +2998,17 @@
   "noteTypeDetected": "检测到笔记类型",
   "emotionDetectedLabel": "情绪分析",
   "relatedNotesTitle": "相关笔记",
-  "relatedNotesEmpty": "暂无相关笔记"
+  "relatedNotesEmpty": "暂无相关笔记",
+  "hiddenNotesFeature": "隐藏笔记",
+  "hiddenNotesFeatureDesc": "开启后将显示「隐藏」标签，带有此标签的笔记会从主列表中隐藏",
+  "requireBiometricForHidden": "访问隐藏笔记需要验证",
+  "requireBiometricForHiddenDesc": "查看隐藏笔记时需要进行生物识别验证",
+  "hiddenTag": "隐藏",
+  "hiddenTagDesc": "带有此标签的笔记将从主列表中隐藏",
+  "biometricAuthRequired": "需要身份验证",
+  "biometricAuthReason": "请验证身份以查看隐藏笔记",
+  "biometricAuthFailed": "身份验证失败",
+  "biometricNotAvailable": "设备不支持生物识别验证",
+  "biometricNotSetup": "请先在系统设置中设置指纹或面容识别",
+  "privacyAndSecurity": "隐私与安全"
 }

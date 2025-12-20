@@ -2998,5 +2998,17 @@
   "noteTypeDetected": "Note type detected",
   "emotionDetectedLabel": "Emotion Analysis",
   "relatedNotesTitle": "Related Notes",
-  "relatedNotesEmpty": "No related notes"
+  "relatedNotesEmpty": "No related notes",
+  "hiddenNotesFeature": "Hidden Notes",
+  "hiddenNotesFeatureDesc": "When enabled, a \"Hidden\" tag will appear. Notes with this tag will be hidden from the main list",
+  "requireBiometricForHidden": "Require Authentication for Hidden Notes",
+  "requireBiometricForHiddenDesc": "Biometric authentication is required to view hidden notes",
+  "hiddenTag": "Hidden",
+  "hiddenTagDesc": "Notes with this tag will be hidden from the main list",
+  "biometricAuthRequired": "Authentication Required",
+  "biometricAuthReason": "Please verify your identity to view hidden notes",
+  "biometricAuthFailed": "Authentication failed",
+  "biometricNotAvailable": "Biometric authentication is not available on this device",
+  "biometricNotSetup": "Please set up fingerprint or face recognition in system settings first",
+  "privacyAndSecurity": "Privacy & Security"
 }

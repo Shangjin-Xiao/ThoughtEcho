@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/note_category.dart';
 import '../utils/icon_utils.dart'; // Import IconUtils
 import '../services/weather_service.dart'; // Import WeatherService
+import '../services/biometric_service.dart'; // Import BiometricService
+import '../services/database_service.dart'; // Import DatabaseService
 import '../utils/time_utils.dart'; // Import TimeUtils
 import '../gen_l10n/app_localizations.dart';
 
@@ -12,6 +14,8 @@ class NoteFilterSortSheet extends StatefulWidget {
   final bool sortAscending;
   final List<String>? selectedWeathers;
   final List<String>? selectedDayPeriods;
+  final bool enableHiddenNotes; // 是否启用隐藏笔记功能
+  final bool requireBiometricForHidden; // 是否需要生物识别验证
   final void Function(
     List<String> tagIds,
     String sortType,
@@ -28,6 +32,8 @@ class NoteFilterSortSheet extends StatefulWidget {
     required this.sortAscending,
     this.selectedWeathers,
     this.selectedDayPeriods,
+    this.enableHiddenNotes = false,
+    this.requireBiometricForHidden = false,
     required this.onApply,
   });
 
@@ -66,6 +72,10 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
   // 性能优化：缓存天气图标和时间段图标映射，避免build过程中重复计算
   late final Map<String, IconData> _weatherIconCache;
   late final Map<String, IconData> _dayPeriodIconCache;
+
+  // 隐藏标签验证状态
+  bool _hiddenTagUnlocked = false;
+  final BiometricService _biometricService = BiometricService();
 
   @override
   void initState() {
@@ -297,13 +307,28 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
       );
     }
 
-    final chips = widget.allTags.map((tag) {
+    // 对标签进行排序，隐藏标签始终显示在最后
+    final sortedTags = List<NoteCategory>.from(widget.allTags);
+    sortedTags.sort((a, b) {
+      final aIsHidden = a.id == DatabaseService.hiddenTagId;
+      final bIsHidden = b.id == DatabaseService.hiddenTagId;
+      if (aIsHidden && !bIsHidden) return 1;
+      if (!aIsHidden && bIsHidden) return -1;
+      return 0;
+    });
+
+    final chips = sortedTags.map((tag) {
+      final isHiddenTag = tag.id == DatabaseService.hiddenTagId;
       final isSelected = _tempSelectedTagIds.contains(tag.id);
+      
       // Use IconUtils to get the icon
       final bool isEmoji = IconUtils.isEmoji(tag.iconName);
       final dynamic tagIcon = IconUtils.getIconData(
         tag.iconName,
       ); // getIconData handles null/empty and returns default
+
+      // 隐藏标签使用本地化名称
+      final tagName = isHiddenTag ? l10n.hiddenTag : tag.name;
 
       return FilterChip(
         selected: isSelected,
@@ -313,34 +338,73 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
             if (tag.iconName != null && tag.iconName!.isNotEmpty)
               isEmoji
                   ? Text(tag.iconName!, style: const TextStyle(fontSize: 16))
-                  // Use the IconData from IconUtils
-                  : (tagIcon is IconData) // Check if it's IconData
+                  : (tagIcon is IconData)
                       ? Icon(tagIcon, size: 16)
-                      : const SizedBox
-                          .shrink(), // Fallback if not IconData (though getIconData should return a default)                if (tag.iconName != null && tag.iconName!.isNotEmpty)
+                      : const SizedBox.shrink(),
             const SizedBox(width: 4),
             Flexible(
               child: Text(
-                tag.name,
+                tagName,
                 style: theme.textTheme.bodyMedium,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
+            // 如果是隐藏标签且需要验证，显示锁图标
+            if (isHiddenTag && widget.requireBiometricForHidden && !_hiddenTagUnlocked) ...[
+              const SizedBox(width: 4),
+              Icon(
+                Icons.lock_outline,
+                size: 14,
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ],
           ],
         ),
-        onSelected: (selected) {
-          setState(() {
-            if (selected) {
-              _tempSelectedTagIds.add(tag.id);
-            } else {
-              _tempSelectedTagIds.remove(tag.id);
-            }
-          });
-        },
+        onSelected: (selected) => _handleTagSelection(tag, selected, l10n),
       );
     }).toList();
 
     return _buildHorizontalScrollableFilter(children: chips, theme: theme);
+  }
+
+  /// 处理标签选择，隐藏标签需要特殊处理
+  Future<void> _handleTagSelection(
+    NoteCategory tag,
+    bool selected,
+    AppLocalizations l10n,
+  ) async {
+    final isHiddenTag = tag.id == DatabaseService.hiddenTagId;
+
+    // 如果是隐藏标签且需要验证
+    if (isHiddenTag && selected && widget.requireBiometricForHidden && !_hiddenTagUnlocked) {
+      // 执行生物识别验证
+      final authenticated = await _biometricService.authenticate(
+        localizedReason: l10n.biometricAuthReason,
+      );
+
+      if (!authenticated) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.biometricAuthFailed)),
+          );
+        }
+        return;
+      }
+
+      // 验证成功，标记为已解锁
+      setState(() {
+        _hiddenTagUnlocked = true;
+      });
+    }
+
+    // 更新选择状态
+    setState(() {
+      if (selected) {
+        _tempSelectedTagIds.add(tag.id);
+      } else {
+        _tempSelectedTagIds.remove(tag.id);
+      }
+    });
   }
 
   /// 构建天气筛选器

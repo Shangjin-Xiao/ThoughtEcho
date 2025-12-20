@@ -114,6 +114,22 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 隐藏笔记功能设置
+  bool get enableHiddenNotes => _appSettings.enableHiddenNotes;
+  Future<void> setEnableHiddenNotes(bool enabled) async {
+    _appSettings = _appSettings.copyWith(enableHiddenNotes: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  // 访问隐藏笔记是否需要生物识别验证
+  bool get requireBiometricForHidden => _appSettings.requireBiometricForHidden;
+  Future<void> setRequireBiometricForHidden(bool enabled) async {
+    _appSettings = _appSettings.copyWith(requireBiometricForHidden: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
   SettingsService(this._prefs);
 
   /// 创建SettingsService实例的静态工厂方法

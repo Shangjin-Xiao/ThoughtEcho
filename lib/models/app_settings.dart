@@ -11,6 +11,8 @@ class AppSettings {
   final bool useLocalQuotesOnly; // 新增：仅使用本地笔记作为一言，不请求API
   final String? localeCode; // 新增：语言代码，null 表示跟随系统
   final bool showExactTime; // 新增：是否在笔记中显示精确时间（时:分）
+  final bool enableHiddenNotes; // 新增：是否启用隐藏笔记功能
+  final bool requireBiometricForHidden; // 新增：访问隐藏笔记是否需要生物识别验证
 
   AppSettings({
     this.hitokotoType = 'a,b,c,d,e,f,g,h,i,j,k', // 默认全选所有类型
@@ -25,6 +27,8 @@ class AppSettings {
     this.useLocalQuotesOnly = false, // 默认允许请求一言API
     this.localeCode, // 默认跟随系统
     this.showExactTime = false, // 默认不显示精确时间
+    this.enableHiddenNotes = false, // 默认不启用隐藏笔记功能
+    this.requireBiometricForHidden = false, // 默认不需要生物识别验证
   });
 
   Map<String, dynamic> toJson() {
@@ -41,6 +45,8 @@ class AppSettings {
       'useLocalQuotesOnly': useLocalQuotesOnly,
       'localeCode': localeCode,
       'showExactTime': showExactTime,
+      'enableHiddenNotes': enableHiddenNotes,
+      'requireBiometricForHidden': requireBiometricForHidden,
     };
   }
 
@@ -59,6 +65,8 @@ class AppSettings {
       useLocalQuotesOnly: map['useLocalQuotesOnly'] ?? false,
       localeCode: map['localeCode'] as String?,
       showExactTime: map['showExactTime'] ?? false,
+      enableHiddenNotes: map['enableHiddenNotes'] ?? false,
+      requireBiometricForHidden: map['requireBiometricForHidden'] ?? false,
     );
   }
 
@@ -75,6 +83,8 @@ class AppSettings {
         useLocalQuotesOnly: false,
         localeCode: null, // 默认跟随系统
         showExactTime: false, // 默认不显示精确时间
+        enableHiddenNotes: false, // 默认不启用隐藏笔记功能
+        requireBiometricForHidden: false, // 默认不需要生物识别验证
       );
 
   /// 使用特殊标记来区分"未指定"和"设置为null（跟随系统）"
@@ -92,6 +102,8 @@ class AppSettings {
     String? localeCode,
     bool clearLocale = false, // 新增：是否清除 localeCode（设置为跟随系统）
     bool? showExactTime,
+    bool? enableHiddenNotes,
+    bool? requireBiometricForHidden,
   }) {
     return AppSettings(
       hitokotoType: hitokotoType ?? this.hitokotoType,
@@ -110,6 +122,9 @@ class AppSettings {
       useLocalQuotesOnly: useLocalQuotesOnly ?? this.useLocalQuotesOnly,
       localeCode: clearLocale ? null : (localeCode ?? this.localeCode),
       showExactTime: showExactTime ?? this.showExactTime,
+      enableHiddenNotes: enableHiddenNotes ?? this.enableHiddenNotes,
+      requireBiometricForHidden:
+          requireBiometricForHidden ?? this.requireBiometricForHidden,
     );
   }
 }
