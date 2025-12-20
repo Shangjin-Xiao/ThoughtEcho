@@ -79,6 +79,7 @@ dependencies:
   open_file: ^3.5.10 # 用于打开文件，包括APK安装
   flutter_local_notifications: ^19.5.0 # 下载进度通知
   flutter_chat_core: ^2.8.0
+  local_auth: ^2.3.0 # 生物识别验证（指纹、面容识别等）
 
 dev_dependencies:
   flutter_test:

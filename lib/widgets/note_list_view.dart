@@ -1461,6 +1461,7 @@ class NoteListViewState extends State<NoteListView> {
                               icon: const Icon(Icons.tune),
                               tooltip: l10n.filterAndSortTooltip,
                               onPressed: () {
+                            final settings = context.read<SettingsService>();
                             showModalBottomSheet(
                               context: context,
                               isScrollControlled: true,
@@ -1479,6 +1480,8 @@ class NoteListViewState extends State<NoteListView> {
                                 sortAscending: widget.sortAscending,
                                 selectedWeathers: widget.selectedWeathers,
                                 selectedDayPeriods: widget.selectedDayPeriods,
+                                enableHiddenNotes: settings.enableHiddenNotes,
+                                requireBiometricForHidden: settings.requireBiometricForHidden,
                                 onApply: (
                                   tagIds,
                                   sortType,

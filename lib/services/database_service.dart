@@ -52,6 +52,9 @@ class DatabaseService extends ChangeNotifier {
   static const String defaultCategoryIdPhilosophy = 'default_philosophy';
   static const String defaultCategoryIdJoke = 'default_joke';
 
+  // 隐藏笔记特殊标签 ID
+  static const String hiddenTagId = 'system_hidden_tag';
+
   // 新增：流式分页加载笔记
   StreamController<List<Quote>>? _quotesController;
   List<Quote> _quotesCache = [];
@@ -2340,6 +2343,145 @@ class DatabaseService extends ChangeNotifier {
     }
   }
 
+  /// 获取或创建隐藏标签
+  /// 当启用隐藏笔记功能时，确保隐藏标签存在
+  Future<NoteCategory?> getOrCreateHiddenTag() async {
+    try {
+      // 先尝试获取现有的隐藏标签
+      final categories = await getCategories();
+      final existingHiddenTag = categories.where((c) => c.id == hiddenTagId);
+      if (existingHiddenTag.isNotEmpty) {
+        return existingHiddenTag.first;
+      }
+
+      // 如果不存在，创建隐藏标签
+      if (kIsWeb) {
+        final hiddenTag = NoteCategory(
+          id: hiddenTagId,
+          name: '隐藏', // 这里会在 UI 层根据语言显示本地化名称
+          isDefault: false,
+          iconName: 'visibility_off',
+        );
+        _categoryStore.add(hiddenTag);
+        _categoriesController.add(_categoryStore);
+        notifyListeners();
+        return hiddenTag;
+      }
+
+      final db = database;
+      final categoryMap = {
+        'id': hiddenTagId,
+        'name': '隐藏',
+        'is_default': 0,
+        'icon_name': 'visibility_off',
+        'last_modified': DateTime.now().toUtc().toIso8601String(),
+      };
+
+      await db.insert(
+        'categories',
+        categoryMap,
+        conflictAlgorithm: ConflictAlgorithm.ignore,
+      );
+      await _updateCategoriesStream();
+      notifyListeners();
+
+      return NoteCategory(
+        id: hiddenTagId,
+        name: '隐藏',
+        isDefault: false,
+        iconName: 'visibility_off',
+      );
+    } catch (e) {
+      logDebug('获取或创建隐藏标签错误: $e');
+      return null;
+    }
+  }
+
+  /// 检查标签是否是隐藏标签
+  bool isHiddenTag(String tagId) {
+    return tagId == hiddenTagId;
+  }
+
+  /// 删除隐藏标签（当关闭隐藏笔记功能时）
+  Future<void> removeHiddenTag() async {
+    try {
+      if (kIsWeb) {
+        _categoryStore.removeWhere((c) => c.id == hiddenTagId);
+        _categoriesController.add(_categoryStore);
+        notifyListeners();
+        return;
+      }
+
+      final db = database;
+      // 先删除所有笔记与隐藏标签的关联
+      await db.delete(
+        'quote_tags',
+        where: 'tag_id = ?',
+        whereArgs: [hiddenTagId],
+      );
+      // 再删除隐藏标签本身
+      await db.delete(
+        'categories',
+        where: 'id = ?',
+        whereArgs: [hiddenTagId],
+      );
+      await _updateCategoriesStream();
+      notifyListeners();
+    } catch (e) {
+      logDebug('删除隐藏标签错误: $e');
+    }
+  }
+
+  /// 检查笔记是否被隐藏（是否带有隐藏标签）
+  Future<bool> isQuoteHidden(String quoteId) async {
+    try {
+      if (kIsWeb) {
+        final quote = _memoryStore.where((q) => q.id == quoteId);
+        if (quote.isNotEmpty) {
+          return quote.first.tagIds.contains(hiddenTagId);
+        }
+        return false;
+      }
+
+      final db = database;
+      final result = await db.query(
+        'quote_tags',
+        where: 'quote_id = ? AND tag_id = ?',
+        whereArgs: [quoteId, hiddenTagId],
+        limit: 1,
+      );
+      return result.isNotEmpty;
+    } catch (e) {
+      logDebug('检查笔记是否隐藏错误: $e');
+      return false;
+    }
+  }
+
+  /// 获取所有隐藏笔记的ID列表
+  Future<List<String>> getHiddenQuoteIds() async {
+    try {
+      if (kIsWeb) {
+        return _memoryStore
+            .where((q) => q.tagIds.contains(hiddenTagId))
+            .map((q) => q.id ?? '')
+            .where((id) => id.isNotEmpty)
+            .toList();
+      }
+
+      final db = database;
+      final result = await db.query(
+        'quote_tags',
+        columns: ['quote_id'],
+        where: 'tag_id = ?',
+        whereArgs: [hiddenTagId],
+      );
+      return result.map((row) => row['quote_id'] as String).toList();
+    } catch (e) {
+      logDebug('获取隐藏笔记ID列表错误: $e');
+      return [];
+    }
+  }
+
   /// 修复：添加一条分类，统一名称唯一性检查
   Future<void> addCategory(String name, {String? iconName}) async {
     // 统一的参数验证
@@ -2758,6 +2900,7 @@ class DatabaseService extends ChangeNotifier {
     String? searchQuery,
     List<String>? selectedWeathers, // 天气筛选
     List<String>? selectedDayPeriods, // 时间段筛选
+    bool excludeHiddenNotes = true, // 默认排除隐藏笔记
   }) async {
     try {
       // 修复：确保数据库已完全初始化
@@ -2773,9 +2916,22 @@ class DatabaseService extends ChangeNotifier {
       // 优化：定期清理缓存而不是每次查询都清理
       _scheduleCacheCleanup();
 
+      // 判断是否正在查询隐藏标签
+      final isQueryingHiddenTag = tagIds != null && tagIds.contains(hiddenTagId);
+      // 如果正在查询隐藏标签，则不排除隐藏笔记
+      final shouldExcludeHidden = excludeHiddenNotes && !isQueryingHiddenTag;
+
       if (kIsWeb) {
         // Web平台的完整筛选逻辑
         var filtered = _memoryStore;
+        
+        // 排除隐藏笔记（除非正在查询隐藏标签）
+        if (shouldExcludeHidden) {
+          filtered = filtered
+              .where((q) => !q.tagIds.contains(hiddenTagId))
+              .toList();
+        }
+        
         if (tagIds != null && tagIds.isNotEmpty) {
           filtered = filtered
               .where((q) => q.tagIds.any((tag) => tagIds.contains(tag)))
@@ -2865,6 +3021,7 @@ class DatabaseService extends ChangeNotifier {
           orderBy: orderBy,
           limit: limit,
           offset: offset,
+          excludeHiddenNotes: shouldExcludeHidden,
         );
       });
     } catch (e) {
@@ -2967,6 +3124,7 @@ class DatabaseService extends ChangeNotifier {
     required String orderBy,
     required int limit,
     required int offset,
+    bool excludeHiddenNotes = true,
   }) async {
     // 修复：添加数据库连接状态检查
     if (!db.isOpen) {
@@ -2979,6 +3137,18 @@ class DatabaseService extends ChangeNotifier {
     String joinClause = '';
     String groupByClause = '';
     String havingClause = '';
+
+    // 排除隐藏笔记（如果需要）
+    if (excludeHiddenNotes) {
+      conditions.add('''
+        NOT EXISTS (
+          SELECT 1 FROM quote_tags qt_hidden
+          WHERE qt_hidden.quote_id = q.id
+          AND qt_hidden.tag_id = ?
+        )
+      ''');
+      args.add(hiddenTagId);
+    }
 
     // 分类筛选
     if (categoryId != null && categoryId.isNotEmpty) {

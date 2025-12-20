@@ -2,13 +2,38 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../gen_l10n/app_localizations.dart';
+import '../services/biometric_service.dart';
 import '../services/clipboard_service.dart';
+import '../services/database_service.dart';
 import '../services/settings_service.dart';
 import 'ai_settings_page.dart';
 
 /// 二级设置页：整合常用偏好与AI快捷开关
-class PreferencesDetailPage extends StatelessWidget {
+class PreferencesDetailPage extends StatefulWidget {
   const PreferencesDetailPage({super.key});
+
+  @override
+  State<PreferencesDetailPage> createState() => _PreferencesDetailPageState();
+}
+
+class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
+  final BiometricService _biometricService = BiometricService();
+  bool _biometricAvailable = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBiometricAvailability();
+  }
+
+  Future<void> _checkBiometricAvailability() async {
+    final available = await _biometricService.isBiometricAvailable();
+    if (mounted) {
+      setState(() {
+        _biometricAvailable = available;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -227,11 +252,94 @@ class PreferencesDetailPage extends StatelessWidget {
               ],
             ),
 
+            const SizedBox(height: 24),
+
+            // 隐私与安全
+            _buildSectionHeader(
+              context,
+              l10n.privacyAndSecurity,
+              Icons.security_outlined,
+            ),
+            const SizedBox(height: 12),
+            _buildPreferenceCard(
+              context,
+              children: [
+                _buildSwitchTile(
+                  context: context,
+                  title: l10n.hiddenNotesFeature,
+                  subtitle: l10n.hiddenNotesFeatureDesc,
+                  icon: Icons.visibility_off_outlined,
+                  value: settings.enableHiddenNotes,
+                  onChanged: (v) => _handleHiddenNotesToggle(context, v),
+                ),
+                if (settings.enableHiddenNotes) ...[
+                  _buildDivider(),
+                  _buildSwitchTile(
+                    context: context,
+                    title: l10n.requireBiometricForHidden,
+                    subtitle: _biometricAvailable
+                        ? l10n.requireBiometricForHiddenDesc
+                        : l10n.biometricNotAvailable,
+                    icon: Icons.fingerprint,
+                    value: settings.requireBiometricForHidden,
+                    onChanged: _biometricAvailable
+                        ? (v) => _handleBiometricToggle(context, v)
+                        : null,
+                  ),
+                ],
+              ],
+            ),
+
             const SizedBox(height: 32),
           ],
         ),
       ),
     );
+  }
+
+  /// 处理隐藏笔记功能开关
+  Future<void> _handleHiddenNotesToggle(
+    BuildContext context,
+    bool enabled,
+  ) async {
+    final settings = context.read<SettingsService>();
+    final databaseService = context.read<DatabaseService>();
+
+    if (enabled) {
+      // 启用时创建隐藏标签
+      await databaseService.getOrCreateHiddenTag();
+    } else {
+      // 关闭时删除隐藏标签
+      await databaseService.removeHiddenTag();
+      // 同时关闭生物识别验证
+      await settings.setRequireBiometricForHidden(false);
+    }
+    await settings.setEnableHiddenNotes(enabled);
+  }
+
+  /// 处理生物识别验证开关
+  Future<void> _handleBiometricToggle(BuildContext context, bool enabled) async {
+    final settings = context.read<SettingsService>();
+    final l10n = AppLocalizations.of(context);
+
+    if (enabled) {
+      // 启用前先验证一次，确保用户有能力通过验证
+      final authenticated = await _biometricService.authenticate(
+        localizedReason: l10n.biometricAuthReason,
+      );
+
+      if (authenticated) {
+        await settings.setRequireBiometricForHidden(true);
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.biometricAuthFailed)),
+          );
+        }
+      }
+    } else {
+      await settings.setRequireBiometricForHidden(false);
+    }
   }
 
   Widget _buildSectionHeader(
@@ -288,22 +396,23 @@ class PreferencesDetailPage extends StatelessWidget {
     required String subtitle,
     required IconData icon,
     required bool value,
-    required ValueChanged<bool> onChanged,
+    required ValueChanged<bool>? onChanged,
   }) {
     final theme = Theme.of(context);
+    final isEnabled = onChanged != null;
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: value
+          color: value && isEnabled
               ? theme.colorScheme.primaryContainer
               : theme.colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Icon(
           icon,
-          color: value
+          color: value && isEnabled
               ? theme.colorScheme.onPrimaryContainer
               : theme.colorScheme.onSurfaceVariant,
           size: 20,
@@ -313,12 +422,13 @@ class PreferencesDetailPage extends StatelessWidget {
         title,
         style: theme.textTheme.titleSmall?.copyWith(
           fontWeight: FontWeight.w500,
+          color: isEnabled ? null : theme.colorScheme.onSurface.withValues(alpha: 0.5),
         ),
       ),
       subtitle: Text(
         subtitle,
         style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+          color: theme.colorScheme.onSurface.withValues(alpha: isEnabled ? 0.7 : 0.4),
         ),
       ),
       trailing: Switch(
@@ -326,7 +436,7 @@ class PreferencesDetailPage extends StatelessWidget {
         onChanged: onChanged,
         materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
-      onTap: () => onChanged(!value),
+      onTap: isEnabled ? () => onChanged(!value) : null,
     );
   }
 
