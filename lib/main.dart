@@ -40,6 +40,7 @@ import 'package:thoughtecho/services/feature_guide_service.dart';
 import 'package:thoughtecho/services/data_directory_service.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/utils/update_dialog_helper.dart';
+import 'package:thoughtecho/services/smart_push_service.dart'; // Add import
 // import 'package:thoughtecho/services/debug_service.dart'; // 正式版已禁用
 import 'controllers/search_controller.dart';
 import 'utils/app_logger.dart';
@@ -296,6 +297,14 @@ Future<void> main() async {
         final aiAnalysisDbService = AIAnalysisDatabaseService();
         final connectivityService = ConnectivityService();
         final featureGuideService = FeatureGuideService(SafeMMKV());
+
+        // 创建智能推送服务实例
+        final smartPushService = SmartPushService(
+          databaseService: databaseService,
+          locationService: locationService,
+          mmkvService: mmkvService,
+        );
+
         // 不再这里强制设置级别，让UnifiedLogService从用户配置中加载
 
         final appTheme = AppTheme();
@@ -320,6 +329,7 @@ Future<void> main() async {
               ChangeNotifierProvider(create: (_) => aiAnalysisDbService),
               ChangeNotifierProvider(create: (_) => connectivityService),
               ChangeNotifierProvider(create: (_) => featureGuideService),
+              ChangeNotifierProvider(create: (_) => smartPushService),
               ChangeNotifierProvider(create: (_) => NoteSearchController()),
               ChangeNotifierProxyProvider<SettingsService,
                   InsightHistoryService>(
@@ -408,8 +418,13 @@ Future<void> main() async {
             locationService.currentLocaleCode = settingsService.localeCode;
             await locationService.init();
             logDebug('位置服务预初始化完成');
+
+            // 初始化智能推送服务
+            logDebug('开始初始化智能推送服务...');
+            await smartPushService.initialize();
+            logDebug('智能推送服务初始化完成');
           } catch (e) {
-            logDebug('预初始化位置服务失败: $e');
+            logDebug('预初始化服务失败: $e');
           }
         }); // 首屏UI显示后，异步初始化其他服务
         // Windows平台减少延迟，优先显示UI
