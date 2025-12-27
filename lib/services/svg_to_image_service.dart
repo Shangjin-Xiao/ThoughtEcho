@@ -1,6 +1,8 @@
 import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter_svg/flutter_svg.dart' as flutter_svg;
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'svg_offscreen_renderer.dart';
 import 'image_cache_service.dart';
@@ -355,21 +357,118 @@ class SvgToImageService {
     double scaleFactor,
     ExportRenderMode renderMode,
   ) async {
-    AppLogger.d('使用简化备用渲染（无BuildContext）', source: 'SvgToImageService');
-
-    // 直接使用手写解析兜底，确保编译通过并提供最小可用输出。
-    return await _renderWithManualSvg(
-      svgContent,
-      width,
-      height,
-      format,
-      backgroundColor,
-      scaleFactor,
-      renderMode,
+    AppLogger.d(
+      '使用flutter_svg Drawable 渲染（无BuildContext）: ${width}x$height, 缩放: $scaleFactor, 模式: $renderMode',
+      source: 'SvgToImageService',
     );
+
+    // flutter_svg 备用渲染：在没有 BuildContext 时，构建一个“最小渲染树”离屏渲染 SvgPicture。
+    // 这样可以复用 flutter_svg 的解析与绘制能力（支持 rgb()/rgba()/style/CSS 等），避免手写解析导致的颜色缺失。
+    //
+    // 注意：为了快速定位“导出颜色问题到底来自 flutter_svg 还是手写兜底”，这里【默认禁用】
+    // _renderWithManualSvg 的回退。flutter_svg 离屏渲染若失败，将抛出异常并由上层生成占位/错误图片。
+    try {
+      final safeScale = scaleFactor.isFinite && scaleFactor > 0
+          ? scaleFactor
+          : 1.0;
+
+      final outputSize = Size(width.toDouble(), height.toDouble());
+      final fit = switch (renderMode) {
+        ExportRenderMode.contain => BoxFit.contain,
+        ExportRenderMode.cover => BoxFit.cover,
+        ExportRenderMode.stretch => BoxFit.fill,
+      };
+
+      // 确保绑定初始化（在单元测试/后台调用中尤为重要）。
+      final binding = WidgetsFlutterBinding.ensureInitialized();
+      final views = binding.platformDispatcher.views;
+      if (views.isEmpty) {
+        throw StateError('无可用 FlutterView，无法进行离屏渲染');
+      }
+      final flutterView = views.first;
+
+      final repaintBoundary = RenderRepaintBoundary();
+
+      // 通过 RenderView + PipelineOwner 驱动一次 layout/paint。
+      final renderView = RenderView(
+        view: flutterView,
+        configuration: ViewConfiguration(
+          logicalConstraints: BoxConstraints.tight(outputSize),
+          physicalConstraints: BoxConstraints.tight(outputSize),
+          devicePixelRatio: 1.0,
+        ),
+        child: RenderPositionedBox(
+          alignment: Alignment.center,
+          child: repaintBoundary,
+        ),
+      );
+
+      final pipelineOwner = PipelineOwner();
+      pipelineOwner.rootNode = renderView;
+      renderView.prepareInitialFrame();
+
+      final focusManager = FocusManager();
+      final buildOwner = BuildOwner(focusManager: focusManager);
+
+      final rootWidget = Directionality(
+        textDirection: ui.TextDirection.ltr,
+        child: SizedBox(
+          width: outputSize.width,
+          height: outputSize.height,
+          child: ColoredBox(
+            color: backgroundColor,
+            child: flutter_svg.SvgPicture.string(
+              svgContent,
+              width: outputSize.width,
+              height: outputSize.height,
+              fit: fit,
+              allowDrawingOutsideViewBox: false,
+            ),
+          ),
+        ),
+      );
+
+      final element = RenderObjectToWidgetAdapter<RenderBox>(
+        container: repaintBoundary,
+        child: rootWidget,
+      ).attachToRenderTree(buildOwner);
+
+      // build -> layout -> paint
+      buildOwner.buildScope(element);
+      buildOwner.finalizeTree();
+      pipelineOwner.flushLayout();
+      pipelineOwner.flushCompositingBits();
+      pipelineOwner.flushPaint();
+
+      // 通过 pixelRatio 控制最终清晰度
+      final image = await repaintBoundary.toImage(pixelRatio: safeScale);
+      final byteData = await image.toByteData(format: format);
+      image.dispose();
+
+      focusManager.dispose();
+
+      if (byteData == null) {
+        throw StateError('无法生成图片字节数据');
+      }
+      return byteData.buffer.asUint8List();
+    } catch (e, st) {
+      // 为了定位问题来源：不再回退手写解析，直接抛出，让上层走最终占位/错误图。
+      AppLogger.w(
+        'flutter_svg 离屏渲染失败（已禁用手写兜底），将交由上层处理: $e',
+        error: e,
+        stackTrace: st,
+        source: 'SvgToImageService',
+      );
+      Error.throwWithStackTrace(e, st);
+    }
   }
 
   /// 极端兜底：手写解析（不完整，但避免彻底失败）
+  ///
+  /// 当前默认不再被调用：我们优先用 flutter_svg 离屏渲染来保证与预览一致。
+  /// 若你需要对比验证，可临时恢复调用点。
+  @Deprecated('仅用于调试/回滚对比：默认不启用手写渲染兜底')
+  // ignore: unused_element
   static Future<Uint8List> _renderWithManualSvg(
     String svgContent,
     int width,
@@ -485,7 +584,7 @@ class SvgToImageService {
         Color color = _parseColor(colorStr);
         if (opacityStr != null) {
           final opacity = double.tryParse(opacityStr) ?? 1.0;
-          color = color.withValues(alpha: opacity);
+          color = _applyOpacityMultiplier(color, opacity);
         }
         colors.add(color);
       }
@@ -529,7 +628,7 @@ class SvgToImageService {
         Color color = _parseColor(colorStr);
         if (opacityStr != null) {
           final opacity = double.tryParse(opacityStr) ?? 1.0;
-          color = color.withValues(alpha: opacity);
+          color = _applyOpacityMultiplier(color, opacity);
         }
         colors.add(color);
       }
@@ -688,7 +787,7 @@ class SvgToImageService {
             );
           }
         } else {
-          paint.color = _parseColor(fill).withValues(alpha: opacity);
+          paint.color = _applyOpacityMultiplier(_parseColor(fill), opacity);
         }
 
         canvas.drawCircle(Offset(cx, cy), r, paint);
@@ -733,7 +832,7 @@ class SvgToImageService {
             paint.shader = gradient.createShader(Rect.fromLTWH(x, y, w, h));
           }
         } else {
-          paint.color = _parseColor(fill).withValues(alpha: opacity);
+          paint.color = _applyOpacityMultiplier(_parseColor(fill), opacity);
         }
 
         if (rect != null) {
@@ -786,7 +885,7 @@ class SvgToImageService {
         if (text.isEmpty) continue;
 
         final textStyle = TextStyle(
-          color: _parseColor(fill).withValues(alpha: opacity),
+          color: _applyOpacityMultiplier(_parseColor(fill), opacity),
           fontSize: fontSize,
         );
 
@@ -847,33 +946,109 @@ class SvgToImageService {
 
   /// 解析颜色
   static Color _parseColor(String colorString) {
-    try {
-      if (colorString.startsWith('#')) {
-        final hex = colorString.substring(1);
-        if (hex.length == 6) {
-          return Color(int.parse('FF$hex', radix: 16));
-        } else if (hex.length == 8) {
-          return Color(int.parse(hex, radix: 16));
-        }
-      }
-      // 简单的颜色名称映射
-      switch (colorString.toLowerCase()) {
-        case 'white':
-          return Colors.white;
-        case 'black':
-          return Colors.black;
-        case 'red':
-          return Colors.red;
-        case 'blue':
-          return Colors.blue;
-        case 'green':
-          return Colors.green;
-        default:
-          return Colors.black;
-      }
-    } catch (e) {
-      return Colors.black;
+    final raw = colorString.trim();
+    if (raw.isEmpty) return Colors.black;
+
+    final lower = raw.toLowerCase();
+
+    // 常见无填充/透明写法
+    if (lower == 'none' || lower == 'transparent') {
+      return Colors.transparent;
     }
+
+    // rgb()/rgba()
+    // 兼容：rgb(255,0,0) / rgb(100%,0%,0%) / rgba(255,0,0,0.5)
+    final rgbaMatch = RegExp(r'^rgba?\(([^)]+)\)$').firstMatch(lower);
+    if (rgbaMatch != null) {
+      final parts = rgbaMatch.group(1)!.split(',').map((e) => e.trim());
+      final list = parts.toList(growable: false);
+      if (list.length >= 3) {
+        int parseChannel(String v) {
+          if (v.endsWith('%')) {
+            final p = double.tryParse(v.replaceAll('%', '')) ?? 0;
+            return (p.clamp(0, 100) * 2.55).round();
+          }
+          final n = double.tryParse(v) ?? 0;
+          return n.round().clamp(0, 255);
+        }
+
+        double parseAlpha(String v) {
+          if (v.endsWith('%')) {
+            final p = double.tryParse(v.replaceAll('%', '')) ?? 100;
+            return (p / 100.0).clamp(0.0, 1.0);
+          }
+          final n = double.tryParse(v);
+          if (n == null) return 1.0;
+          if (n <= 1.0) return n.clamp(0.0, 1.0);
+          // 容忍 0-255 的 alpha
+          if (n <= 255.0) return (n / 255.0).clamp(0.0, 1.0);
+          return 1.0;
+        }
+
+        final r = parseChannel(list[0]);
+        final g = parseChannel(list[1]);
+        final b = parseChannel(list[2]);
+        final a = list.length >= 4 ? parseAlpha(list[3]) : 1.0;
+        return Color.fromRGBO(r, g, b, a);
+      }
+    }
+
+    // 十六进制：#RGB/#RGBA/#RRGGBB/#RRGGBBAA
+    if (lower.startsWith('#')) {
+      final hex = lower.substring(1);
+
+      String expand(String s) => s.split('').map((c) => '$c$c').join();
+
+      try {
+        if (hex.length == 3) {
+          final rrggbb = expand(hex);
+          return Color(int.parse('ff$rrggbb', radix: 16));
+        }
+        if (hex.length == 4) {
+          final rrggbb = expand(hex.substring(0, 3));
+          final aa = expand(hex.substring(3, 4));
+          return Color(int.parse('$aa$rrggbb', radix: 16));
+        }
+        if (hex.length == 6) {
+          return Color(int.parse('ff$hex', radix: 16));
+        }
+        if (hex.length == 8) {
+          // CSS/SVG 更常见的是 #RRGGBBAA，这里转换成 Flutter 的 #AARRGGBB
+          final rrggbb = hex.substring(0, 6);
+          final aa = hex.substring(6, 8);
+          return Color(int.parse('$aa$rrggbb', radix: 16));
+        }
+      } catch (_) {
+        // fallthrough
+      }
+    }
+
+    // 简单的颜色名称映射（按需扩展）
+    switch (lower) {
+      case 'white':
+        return Colors.white;
+      case 'black':
+        return Colors.black;
+      case 'red':
+        return Colors.red;
+      case 'blue':
+        return Colors.blue;
+      case 'green':
+        return Colors.green;
+      case 'gray':
+      case 'grey':
+        return Colors.grey;
+      default:
+        return Colors.black;
+    }
+  }
+
+  /// 将外部 opacity（如 fill-opacity/stop-opacity）与颜色本身 alpha 合并（乘法），而不是直接覆盖。
+  static Color _applyOpacityMultiplier(Color color, double opacity) {
+    final safeOpacity = opacity.isFinite ? opacity.clamp(0.0, 1.0) : 1.0;
+    final base = color.alpha / 255.0;
+    final combined = (base * safeOpacity).clamp(0.0, 1.0);
+    return color.withValues(alpha: combined);
   }
 
   /// 绘制占位符内容
