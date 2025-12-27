@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:thoughtecho/services/svg_to_image_service.dart';
 import 'package:thoughtecho/services/image_cache_service.dart';
 
@@ -33,6 +34,41 @@ void main() {
 
       expect(imageBytes, isNotNull);
       expect(imageBytes.length, greaterThan(0));
+    });
+
+    test('支持 rgb() 颜色导出（避免颜色丢失）', () async {
+      // 手写解析兜底路径不支持 rgb()，会导致颜色变黑；
+      // 该用例用于确保无 BuildContext 时也能正确导出颜色。
+      const rgbSvg = '''
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <rect width="100" height="100" fill="#ffffff"/>
+  <rect x="10" y="10" width="80" height="80" fill="rgb(255,0,0)"/>
+</svg>
+''';
+
+      final bytes = await SvgToImageService.convertSvgToImage(
+        rgbSvg,
+        width: 100,
+        height: 100,
+        format: ui.ImageByteFormat.png,
+        useCache: false,
+      );
+
+      expect(bytes, isNotNull);
+      expect(bytes.length, greaterThan(0));
+
+      final decoded = img.decodePng(bytes);
+      expect(decoded, isNotNull);
+
+      // 取中心像素，应该接近红色（考虑抗锯齿与色彩空间，做宽松阈值）。
+      final pixel = decoded!.getPixel(50, 50);
+      final r = pixel.r.toInt();
+      final g = pixel.g.toInt();
+      final b = pixel.b.toInt();
+
+      expect(r, greaterThan(200));
+      expect(g, lessThan(80));
+      expect(b, lessThan(80));
     });
 
     test('缓存功能测试', () async {
