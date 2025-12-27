@@ -715,7 +715,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                   const SizedBox(height: 4),
                   Text(
                     isHiddenTag
-                        ? l10n.hiddenTagDesc
+                        ? l10n.hiddenTagUsageHint
                         : (isDefault
                             ? l10n.systemDefaultTag
                             : l10n.tapToEditLongPressToDelete),
@@ -725,19 +725,9 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                           ? Theme.of(context).colorScheme.primary
                           : Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
+                    maxLines: isHiddenTag ? 2 : 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  if (isHiddenTag) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      l10n.hiddenTagUsageHint,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
                 ],
               ),
             ),
