@@ -168,7 +168,6 @@ class AppTheme with ChangeNotifier {
   ColorScheme get lightColorScheme {
     if (_useCustomColor && _customColor != null) {
       // 直接使用用户选择的颜色，减少不必要的调整
-      logDebug('使用自定义颜色(浅色模式): ${_customColor!.toARGB32().toRadixString(16)}');
       return ColorScheme.fromSeed(
         seedColor: _customColor!,
         brightness: Brightness.light,
@@ -176,10 +175,8 @@ class AppTheme with ChangeNotifier {
     }
     // 只有在启用动态取色且有可用的动态颜色方案时才使用
     if (_useDynamicColor && _lightDynamicColorScheme != null) {
-      logDebug('使用动态颜色(浅色模式)');
       return _lightDynamicColorScheme!;
     }
-    logDebug('使用默认蓝色(浅色模式)');
     return ColorScheme.fromSeed(
       seedColor: Colors.blue,
       brightness: Brightness.light,
@@ -189,7 +186,6 @@ class AppTheme with ChangeNotifier {
   // 获取当前暗色主题的颜色方案
   ColorScheme get darkColorScheme {
     if (_useCustomColor && _customColor != null) {
-      logDebug('使用自定义颜色(深色模式): ${_customColor!.toARGB32().toRadixString(16)}');
       // 使用与浅色模式一致的方法，确保自定义颜色正确应用
       return ColorScheme.fromSeed(
         seedColor: _customColor!,
@@ -198,11 +194,9 @@ class AppTheme with ChangeNotifier {
     }
 
     if (_useDynamicColor && _darkDynamicColorScheme != null) {
-      logDebug('使用动态颜色(深色模式)');
       return _darkDynamicColorScheme!;
     }
 
-    logDebug('使用默认蓝色(深色模式)');
     return _buildModernDarkScheme();
   }
 
@@ -217,14 +211,6 @@ class AppTheme with ChangeNotifier {
   bool get useCustomColor => _useCustomColor;
   Color? get customColor => _customColor;
   ThemeMode get themeMode => _themeMode;
-
-  // 强制刷新主题，确保所有UI组件正确更新
-  void forceRefreshTheme() {
-    logDebug(
-      '强制刷新主题: 自定义颜色=$_useCustomColor, 动态取色=$_useDynamicColor, 主题模式=$_themeMode',
-    );
-    notifyListeners();
-  }
 
   // 判断当前是否为深色模式
   bool get isDarkMode {
@@ -333,33 +319,74 @@ class AppTheme with ChangeNotifier {
 
   // 设置自定义颜色
   Future<void> setCustomColor(Color color) async {
+    if (_customColor == color) return;
     _customColor = color;
-    await _storage?.setInt(
-      _customColorKey,
-      color.toARGB32(),
-    ); // MODIFIED (reverted as .value is correct for ARGB)
+    // 先刷新UI，避免持久化卡住导致“怎么点都没反应”
     notifyListeners();
+
+    final storage = _storage;
+    if (storage == null) return;
+    try {
+      await storage
+          .setInt(_customColorKey, color.toARGB32())
+          .timeout(const Duration(seconds: 2));
+    } catch (e) {
+      logWarning('保存自定义主题色失败: $e', source: 'AppTheme');
+    }
   }
 
   // 切换是否使用自定义颜色
   Future<void> setUseCustomColor(bool value) async {
+    if (_useCustomColor == value) return;
     _useCustomColor = value;
-    await _storage?.setBool(_useCustomColorKey, value);
+    // 先刷新UI，避免持久化卡住导致无响应
     notifyListeners();
+
+    final storage = _storage;
+    if (storage == null) return;
+    try {
+      await storage
+          .setBool(_useCustomColorKey, value)
+          .timeout(const Duration(seconds: 2));
+    } catch (e) {
+      logWarning('保存“使用自定义主题色”开关失败: $e', source: 'AppTheme');
+    }
   }
 
   // 设置主题模式
   Future<void> setThemeMode(ThemeMode mode) async {
+    if (_themeMode == mode) return;
     _themeMode = mode;
-    await _storage?.setString(_themeModeKey, mode.name);
+    // 先刷新UI，避免存储层偶发卡顿/异常导致“怎么点都没反应”
     notifyListeners();
+
+    final storage = _storage;
+    if (storage == null) return;
+    try {
+      await storage
+          .setString(_themeModeKey, mode.name)
+          .timeout(const Duration(seconds: 2));
+    } catch (e) {
+      logWarning('保存主题模式失败: $e', source: 'AppTheme');
+    }
   }
 
   // 设置是否使用动态取色
   Future<void> setUseDynamicColor(bool value) async {
+    if (_useDynamicColor == value) return;
     _useDynamicColor = value;
-    await _storage?.setBool(_useDynamicColorKey, value);
+    // 先刷新UI，避免持久化卡住导致无响应
     notifyListeners();
+
+    final storage = _storage;
+    if (storage == null) return;
+    try {
+      await storage
+          .setBool(_useDynamicColorKey, value)
+          .timeout(const Duration(seconds: 2));
+    } catch (e) {
+      logWarning('保存“动态取色”开关失败: $e', source: 'AppTheme');
+    }
   }
 
   // 从持久化存储加载自定义颜色设置

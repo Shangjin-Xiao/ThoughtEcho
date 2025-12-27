@@ -260,57 +260,6 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
               ),
             ),
           ),
-          Card(
-            margin: const EdgeInsets.all(16),
-            elevation: 1,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-              side: BorderSide(
-                color: Theme.of(context).colorScheme.outline,
-                width: 1,
-              ),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.themeTools,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    l10n.themeToolsDesc,
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        appTheme.forceRefreshTheme();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(l10n.themeRefreshed),
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.refresh),
-                      label: Text(l10n.refreshTheme),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
     );
