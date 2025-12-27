@@ -1480,7 +1480,6 @@ class NoteListViewState extends State<NoteListView> {
                                 sortAscending: widget.sortAscending,
                                 selectedWeathers: widget.selectedWeathers,
                                 selectedDayPeriods: widget.selectedDayPeriods,
-                                enableHiddenNotes: settings.enableHiddenNotes,
                                 requireBiometricForHidden: settings.requireBiometricForHidden,
                                 onApply: (
                                   tagIds,

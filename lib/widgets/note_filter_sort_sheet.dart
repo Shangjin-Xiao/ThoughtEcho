@@ -14,7 +14,6 @@ class NoteFilterSortSheet extends StatefulWidget {
   final bool sortAscending;
   final List<String>? selectedWeathers;
   final List<String>? selectedDayPeriods;
-  final bool enableHiddenNotes; // 是否启用隐藏笔记功能
   final bool requireBiometricForHidden; // 是否需要生物识别验证
   final void Function(
     List<String> tagIds,
@@ -32,7 +31,6 @@ class NoteFilterSortSheet extends StatefulWidget {
     required this.sortAscending,
     this.selectedWeathers,
     this.selectedDayPeriods,
-    this.enableHiddenNotes = false,
     this.requireBiometricForHidden = false,
     required this.onApply,
   });

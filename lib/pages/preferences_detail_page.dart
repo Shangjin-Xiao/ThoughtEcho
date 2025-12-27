@@ -4,7 +4,6 @@ import 'package:provider/provider.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../services/biometric_service.dart';
 import '../services/clipboard_service.dart';
-import '../services/database_service.dart';
 import '../services/settings_service.dart';
 import 'ai_settings_page.dart';
 
@@ -266,27 +265,16 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
               children: [
                 _buildSwitchTile(
                   context: context,
-                  title: l10n.hiddenNotesFeature,
-                  subtitle: l10n.hiddenNotesFeatureDesc,
-                  icon: Icons.visibility_off_outlined,
-                  value: settings.enableHiddenNotes,
-                  onChanged: (v) => _handleHiddenNotesToggle(context, v),
+                  title: l10n.requireBiometricForHidden,
+                  subtitle: _biometricAvailable
+                      ? l10n.requireBiometricForHiddenDesc
+                      : l10n.biometricNotAvailable,
+                  icon: Icons.fingerprint,
+                  value: settings.requireBiometricForHidden,
+                  onChanged: _biometricAvailable
+                      ? (v) => _handleBiometricToggle(context, v)
+                      : null,
                 ),
-                if (settings.enableHiddenNotes) ...[
-                  _buildDivider(),
-                  _buildSwitchTile(
-                    context: context,
-                    title: l10n.requireBiometricForHidden,
-                    subtitle: _biometricAvailable
-                        ? l10n.requireBiometricForHiddenDesc
-                        : l10n.biometricNotAvailable,
-                    icon: Icons.fingerprint,
-                    value: settings.requireBiometricForHidden,
-                    onChanged: _biometricAvailable
-                        ? (v) => _handleBiometricToggle(context, v)
-                        : null,
-                  ),
-                ],
               ],
             ),
 
@@ -295,26 +283,6 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
         ),
       ),
     );
-  }
-
-  /// 处理隐藏笔记功能开关
-  Future<void> _handleHiddenNotesToggle(
-    BuildContext context,
-    bool enabled,
-  ) async {
-    final settings = context.read<SettingsService>();
-    final databaseService = context.read<DatabaseService>();
-
-    if (enabled) {
-      // 启用时创建隐藏标签
-      await databaseService.getOrCreateHiddenTag();
-    } else {
-      // 关闭时删除隐藏标签
-      await databaseService.removeHiddenTag();
-      // 同时关闭生物识别验证
-      await settings.setRequireBiometricForHidden(false);
-    }
-    await settings.setEnableHiddenNotes(enabled);
   }
 
   /// 处理生物识别验证开关

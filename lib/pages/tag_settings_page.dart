@@ -428,10 +428,44 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                           // 隐藏标签使用国际化名称
                           final String displayName =
                               isHiddenTag ? l10n.hiddenTag : tag.name;
-                          // 隐藏标签的副标题显示使用说明
-                          final String? subtitleText = isHiddenTag
-                              ? l10n.hiddenTagUsageHint
-                              : (tag.isDefault ? l10n.systemDefaultTag : null);
+                          final Widget? subtitleWidget = isHiddenTag
+                              ? Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      l10n.hiddenTagDesc,
+                                      style:
+                                          theme.textTheme.bodySmall?.copyWith(
+                                        color: colorScheme.onSurfaceVariant,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      l10n.hiddenTagUsageHint,
+                                      style:
+                                          theme.textTheme.bodySmall?.copyWith(
+                                        color: colorScheme.onSurfaceVariant,
+                                      ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                )
+                              : (tag.isDefault
+                                  ? Text(
+                                      l10n.systemDefaultTag,
+                                      style:
+                                          theme.textTheme.bodySmall?.copyWith(
+                                        color: colorScheme.primary.withAlpha(
+                                          150,
+                                        ),
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    )
+                                  : null);
 
                           return Container(
                             margin: const EdgeInsets.symmetric(
@@ -490,21 +524,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                       : colorScheme.onSurface,
                                 ),
                               ),
-                              subtitle: subtitleText != null
-                                  ? Text(
-                                      subtitleText,
-                                      style:
-                                          theme.textTheme.bodySmall?.copyWith(
-                                        color: isHiddenTag
-                                            ? colorScheme.onSurfaceVariant
-                                            : colorScheme.primary.withAlpha(
-                                                150,
-                                              ),
-                                      ),
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    )
-                                  : null,
+                              subtitle: subtitleWidget,
                               trailing: tag.isDefault
                                   ? Container(
                                       padding: const EdgeInsets.symmetric(

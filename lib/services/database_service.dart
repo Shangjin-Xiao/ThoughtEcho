@@ -54,6 +54,8 @@ class DatabaseService extends ChangeNotifier {
 
   // 隐藏笔记特殊标签 ID
   static const String hiddenTagId = 'system_hidden_tag';
+  // 隐藏标签图标：使用 emoji 小锁
+  static const String hiddenTagIconName = '🔒';
 
   // 新增：流式分页加载笔记
   StreamController<List<Quote>>? _quotesController;
@@ -308,6 +310,9 @@ class DatabaseService extends ChangeNotifier {
         );
       }
 
+      // 隐藏标签：系统标签，始终确保存在（Web内存存储）
+      await getOrCreateHiddenTag();
+
       // 触发更新
       _categoriesController.add(_categoryStore);
       _isInitialized = true; // 标记为已初始化
@@ -370,6 +375,9 @@ class DatabaseService extends ChangeNotifier {
       // 初始化默认分类/标签
       await initDefaultHitokotoCategories();
       logDebug('默认分类初始化检查完成');
+
+      // 隐藏标签：系统标签，始终确保存在
+      await getOrCreateHiddenTag();
 
       // 更新分类流数据
       await _updateCategoriesStream();
@@ -2354,7 +2362,7 @@ class DatabaseService extends ChangeNotifier {
       if (existingHiddenTag.isNotEmpty) {
         // 检查并更新旧版隐藏标签（如果需要）
         final existing = existingHiddenTag.first;
-        if (!existing.isDefault || existing.iconName != 'lock') {
+        if (!existing.isDefault || existing.iconName != hiddenTagIconName) {
           // 更新为新的系统标签格式
           await _updateHiddenTagFormat();
           // 返回更新后的标签
@@ -2362,7 +2370,7 @@ class DatabaseService extends ChangeNotifier {
             id: hiddenTagId,
             name: '隐藏',
             isDefault: true,
-            iconName: 'lock',
+            iconName: hiddenTagIconName,
           );
         }
         return existing;
@@ -2374,7 +2382,7 @@ class DatabaseService extends ChangeNotifier {
           id: hiddenTagId,
           name: '隐藏', // UI层会根据语言显示本地化名称
           isDefault: true, // 系统标签，不可删除/编辑
-          iconName: 'lock', // 使用锁图标
+          iconName: hiddenTagIconName, // 使用 emoji 小锁
         );
         _categoryStore.add(hiddenTag);
         _categoriesController.add(_categoryStore);
@@ -2387,7 +2395,7 @@ class DatabaseService extends ChangeNotifier {
         'id': hiddenTagId,
         'name': '隐藏',
         'is_default': 1, // 系统标签
-        'icon_name': 'lock', // 锁图标
+        'icon_name': hiddenTagIconName, // emoji 小锁
         'last_modified': DateTime.now().toUtc().toIso8601String(),
       };
 
@@ -2403,7 +2411,7 @@ class DatabaseService extends ChangeNotifier {
         id: hiddenTagId,
         name: '隐藏',
         isDefault: true,
-        iconName: 'lock',
+        iconName: hiddenTagIconName,
       );
     } catch (e) {
       logDebug('获取或创建隐藏标签错误: $e');
@@ -2421,7 +2429,7 @@ class DatabaseService extends ChangeNotifier {
             id: hiddenTagId,
             name: '隐藏',
             isDefault: true,
-            iconName: 'lock',
+            iconName: hiddenTagIconName,
           );
           _categoriesController.add(_categoryStore);
           notifyListeners();
@@ -2434,7 +2442,7 @@ class DatabaseService extends ChangeNotifier {
         'categories',
         {
           'is_default': 1,
-          'icon_name': 'lock',
+          'icon_name': hiddenTagIconName,
           'last_modified': DateTime.now().toUtc().toIso8601String(),
         },
         where: 'id = ?',
