@@ -2357,8 +2357,15 @@ class DatabaseService extends ChangeNotifier {
         if (!existing.isDefault || existing.iconName != 'lock') {
           // 更新为新的系统标签格式
           await _updateHiddenTagFormat();
+          // 返回更新后的标签
+          return NoteCategory(
+            id: hiddenTagId,
+            name: '隐藏',
+            isDefault: true,
+            iconName: 'lock',
+          );
         }
-        return existingHiddenTag.first;
+        return existing;
       }
 
       // 如果不存在，创建隐藏标签（系统标签，使用锁图标）
@@ -2761,6 +2768,11 @@ class DatabaseService extends ChangeNotifier {
 
   /// 修复：删除指定分类，增加级联删除和孤立数据清理
   Future<void> deleteCategory(String id) async {
+    // 系统标签（如隐藏标签）不允许删除
+    if (id == hiddenTagId) {
+      throw Exception('系统标签不允许删除');
+    }
+
     if (kIsWeb) {
       _categoryStore.removeWhere((category) => category.id == id);
       _categoriesController.add(_categoryStore);
@@ -3608,12 +3620,28 @@ class DatabaseService extends ChangeNotifier {
 
     try {
       final db = database;
-      final List<Map<String, dynamic>> maps = await db.query('quotes');
-      var result = maps.map((m) => Quote.fromJson(m)).toList();
-      if (excludeHiddenNotes) {
-        result = result.where((q) => !q.tagIds.contains(hiddenTagId)).toList();
-      }
-      return result;
+      
+      // 修复：使用 LEFT JOIN 获取笔记及其关联的标签
+      // 这样可以正确获取每个笔记的 tagIds
+      final String query = '''
+        SELECT q.*, GROUP_CONCAT(qt.tag_id) as tag_ids
+        FROM quotes q
+        LEFT JOIN quote_tags qt ON q.id = qt.quote_id
+        ${excludeHiddenNotes ? '''
+        WHERE NOT EXISTS (
+          SELECT 1 FROM quote_tags qt_hidden
+          WHERE qt_hidden.quote_id = q.id
+          AND qt_hidden.tag_id = ?
+        )
+        ''' : ''}
+        GROUP BY q.id
+      ''';
+      
+      final List<Map<String, dynamic>> maps = excludeHiddenNotes
+          ? await db.rawQuery(query, [hiddenTagId])
+          : await db.rawQuery(query);
+      
+      return maps.map((m) => Quote.fromJson(m)).toList();
     } catch (e) {
       logDebug('获取所有笔记失败: $e');
       return [];
@@ -4634,6 +4662,11 @@ class DatabaseService extends ChangeNotifier {
     String name, {
     String? iconName,
   }) async {
+    // 系统标签（如隐藏标签）不允许修改
+    if (id == hiddenTagId) {
+      throw Exception('系统标签不允许修改');
+    }
+
     // 检查参数
     if (name.trim().isEmpty) {
       throw Exception('分类名称不能为空');
