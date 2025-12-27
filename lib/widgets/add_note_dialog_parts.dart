@@ -252,11 +252,11 @@ class _TagListItem extends StatelessWidget {
       ),
       subtitle: isHiddenTag
           ? Text(
-              l10n.hiddenTagDesc,
+              l10n.hiddenTagUsageHint,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
-              maxLines: 1,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
             )
           : null,
