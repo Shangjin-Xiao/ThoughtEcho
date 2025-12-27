@@ -52,6 +52,11 @@ void main() {
         height: 100,
         format: ui.ImageByteFormat.png,
         useCache: false,
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          fail('SVG转换超时（可能是离屏渲染在测试环境下无法初始化FlutterView）');
+        },
       );
 
       expect(bytes, isNotNull);
@@ -69,7 +74,7 @@ void main() {
       expect(r, greaterThan(200));
       expect(g, lessThan(80));
       expect(b, lessThan(80));
-    });
+    }, timeout: const Timeout(Duration(seconds: 15)));
 
     test('缓存功能测试', () async {
       final cacheService = ImageCacheService();
