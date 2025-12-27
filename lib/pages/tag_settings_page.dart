@@ -1,3 +1,9 @@
+// ============================================================================
+// 开发者模式专用页面
+// 这是标签设置的新版 UI 设计，仅在开发者模式下可访问用于预览
+// 实际生产环境使用 category_settings_page.dart
+// ============================================================================
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/database_service.dart';

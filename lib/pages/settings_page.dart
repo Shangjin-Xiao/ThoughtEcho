@@ -50,6 +50,10 @@ class SettingsPageState extends State<SettingsPage> {
   bool _isCheckingUpdate = false;
   String? _updateCheckMessage;
 
+  // --- 开发者模式相关 ---
+  int _logoTapCount = 0;
+  DateTime? _lastLogoTap;
+
   // 功能引导 keys
   final GlobalKey _preferencesGuideKey = GlobalKey();
   final GlobalKey _startupPageGuideKey = GlobalKey();
@@ -778,29 +782,32 @@ class SettingsPageState extends State<SettingsPage> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Image.asset(
-                                'assets/icon.png',
-                                width: 64,
-                                height: 64,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    width: 64,
-                                    height: 64,
-                                    decoration: BoxDecoration(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.primary,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: const Center(
-                                      child: Icon(
-                                        Icons.apps,
-                                        color: Colors.white,
-                                        size: 36,
+                              GestureDetector(
+                                onTap: _handleLogoTap,
+                                child: Image.asset(
+                                  'assets/icon.png',
+                                  width: 64,
+                                  height: 64,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      width: 64,
+                                      height: 64,
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primary,
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
-                                    ),
-                                  );
-                                },
+                                      child: const Center(
+                                        child: Icon(
+                                          Icons.apps,
+                                          color: Colors.white,
+                                          size: 36,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
                               ),
                               const SizedBox(height: 12),
                               Text(l10n.settingsAboutSlogan),
@@ -896,6 +903,47 @@ class SettingsPageState extends State<SettingsPage> {
         ],
       ),
     );
+  }
+
+  // --- 处理 Logo 三击激活开发者模式 ---
+  void _handleLogoTap() async {
+    final now = DateTime.now();
+    
+    // 如果距离上次点击超过2秒，重置计数
+    if (_lastLogoTap != null && now.difference(_lastLogoTap!).inSeconds > 2) {
+      _logoTapCount = 0;
+    }
+    
+    _lastLogoTap = now;
+    _logoTapCount++;
+    
+    if (_logoTapCount >= 3) {
+      _logoTapCount = 0;
+      final settingsService = context.read<SettingsService>();
+      final currentSettings = settingsService.appSettings;
+      final newDeveloperMode = !currentSettings.developerMode;
+      
+      await settingsService.updateAppSettings(
+        currentSettings.copyWith(developerMode: newDeveloperMode),
+      );
+      
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            newDeveloperMode 
+                ? '🎉 开发者模式已开启！Developer Mode Enabled!'
+                : '✅ 开发者模式已关闭 Developer Mode Disabled',
+          ),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      
+      // 关闭对话框
+      Navigator.of(context).pop();
+    }
   }
 
   // --- 新增：构建关于对话框中链接的辅助方法 ---
