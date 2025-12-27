@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/database_service.dart';
+import '../services/settings_service.dart';
 import '../models/note_category.dart';
 import '../utils/icon_utils.dart';
 import '../theme/app_theme.dart';
 import '../constants/app_constants.dart';
 import '../gen_l10n/app_localizations.dart';
+import 'tag_settings_page.dart';
 
 class CategorySettingsPage extends StatefulWidget {
   const CategorySettingsPage({super.key});
@@ -30,8 +32,28 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final settingsService = Provider.of<SettingsService>(context);
+    final developerMode = settingsService.appSettings.developerMode;
+    
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.tagManagement)),
+      appBar: AppBar(
+        title: Text(l10n.tagManagement),
+        actions: [
+          if (developerMode)
+            IconButton(
+              icon: const Icon(Icons.code),
+              tooltip: '查看新版UI (开发者模式)',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const TagSettingsPage(),
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -647,9 +669,14 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
   Widget _buildCategoryItem(NoteCategory category, int index, int total) {
     final isDefault = category.isDefault;
     final l10n = AppLocalizations.of(context);
+    // 检查是否是隐藏标签
+    final bool isHiddenTag = category.id == DatabaseService.hiddenTagId;
+    // 隐藏标签使用国际化名称
+    final String displayName = isHiddenTag ? l10n.hiddenTag : category.name;
+    
     return InkWell(
-      onTap: () => _editCategory(context, category),
-      onLongPress: isDefault ? null : () => _deleteCategory(context, category),
+      onTap: isHiddenTag ? null : () => _editCategory(context, category),
+      onLongPress: (isDefault || isHiddenTag) ? null : () => _deleteCategory(context, category),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(
@@ -674,7 +701,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                     children: [
                       Expanded(
                         child: Text(
-                          category.name,
+                          displayName,
                           style: const TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w500,
@@ -695,7 +722,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            l10n.defaultTag,
+                            isHiddenTag ? l10n.systemTag : l10n.defaultTag,
                             style: TextStyle(
                               fontSize: 11,
                               color: Theme.of(
@@ -708,26 +735,41 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    isDefault
-                        ? l10n.systemDefaultTag
-                        : l10n.tapToEditLongPressToDelete,
+                    isHiddenTag
+                        ? l10n.hiddenTagDesc
+                        : (isDefault
+                            ? l10n.systemDefaultTag
+                            : l10n.tapToEditLongPressToDelete),
                     style: TextStyle(
                       fontSize: 11,
-                      color: isDefault
+                      color: isDefault || isHiddenTag
                           ? Theme.of(context).colorScheme.primary
                           : Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
+                  if (isHiddenTag) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      l10n.hiddenTagUsageHint,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
                 ],
               ),
             ),
             const SizedBox(width: 8),
-            IconButton(
-              icon: const Icon(Icons.edit_outlined, size: 20),
-              tooltip: l10n.edit,
-              onPressed: () => _editCategory(context, category),
-            ),
-            if (!isDefault)
+            if (!isHiddenTag)
+              IconButton(
+                icon: const Icon(Icons.edit_outlined, size: 20),
+                tooltip: l10n.edit,
+                onPressed: () => _editCategory(context, category),
+              ),
+            if (!isDefault && !isHiddenTag)
               IconButton(
                 icon: const Icon(Icons.delete_outline, size: 20),
                 tooltip: l10n.delete,

@@ -13,6 +13,7 @@ class AppSettings {
   final bool showExactTime; // 新增：是否在笔记中显示精确时间（时:分）
   final bool enableHiddenNotes; // 新增：是否启用隐藏笔记功能
   final bool requireBiometricForHidden; // 新增：访问隐藏笔记是否需要生物识别验证
+  final bool developerMode; // 新增：开发者模式
 
   AppSettings({
     this.hitokotoType = 'a,b,c,d,e,f,g,h,i,j,k', // 默认全选所有类型
@@ -29,6 +30,7 @@ class AppSettings {
     this.showExactTime = false, // 默认不显示精确时间
     this.enableHiddenNotes = false, // 默认不启用隐藏笔记功能
     this.requireBiometricForHidden = false, // 默认不需要生物识别验证
+    this.developerMode = false, // 默认关闭开发者模式
   });
 
   Map<String, dynamic> toJson() {
@@ -47,6 +49,7 @@ class AppSettings {
       'showExactTime': showExactTime,
       'enableHiddenNotes': enableHiddenNotes,
       'requireBiometricForHidden': requireBiometricForHidden,
+      'developerMode': developerMode,
     };
   }
 
@@ -67,6 +70,7 @@ class AppSettings {
       showExactTime: map['showExactTime'] ?? false,
       enableHiddenNotes: map['enableHiddenNotes'] ?? false,
       requireBiometricForHidden: map['requireBiometricForHidden'] ?? false,
+      developerMode: map['developerMode'] ?? false,
     );
   }
 
@@ -85,6 +89,7 @@ class AppSettings {
         showExactTime: false, // 默认不显示精确时间
         enableHiddenNotes: false, // 默认不启用隐藏笔记功能
         requireBiometricForHidden: false, // 默认不需要生物识别验证
+        developerMode: false, // 默认关闭开发者模式
       );
 
   /// 使用特殊标记来区分"未指定"和"设置为null（跟随系统）"
@@ -104,6 +109,7 @@ class AppSettings {
     bool? showExactTime,
     bool? enableHiddenNotes,
     bool? requireBiometricForHidden,
+    bool? developerMode,
   }) {
     return AppSettings(
       hitokotoType: hitokotoType ?? this.hitokotoType,
@@ -125,6 +131,7 @@ class AppSettings {
       enableHiddenNotes: enableHiddenNotes ?? this.enableHiddenNotes,
       requireBiometricForHidden:
           requireBiometricForHidden ?? this.requireBiometricForHidden,
+      developerMode: developerMode ?? this.developerMode,
     );
   }
 }
