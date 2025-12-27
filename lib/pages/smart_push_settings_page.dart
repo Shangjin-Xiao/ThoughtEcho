@@ -59,6 +59,10 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage> {
     try {
       final smartPushService = context.read<SmartPushService>();
       await smartPushService.saveSettings(_settings);
+
+      // 显式触发一次计划更新（虽然 saveSettings 内部可能已经做了，但为了保险起见）
+      // 注意：saveSettings 已经在 SmartPushService 中实现了 scheduleNextPush 调用
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
