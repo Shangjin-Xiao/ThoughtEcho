@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/database_service.dart';
-import '../services/settings_service.dart';
 import '../models/note_category.dart';
 import '../utils/icon_utils.dart';
 import '../theme/app_theme.dart';
 import '../constants/app_constants.dart';
 import '../gen_l10n/app_localizations.dart';
-import 'tag_settings_page.dart';
 
 class CategorySettingsPage extends StatefulWidget {
   const CategorySettingsPage({super.key});
@@ -32,28 +30,9 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final settingsService = Provider.of<SettingsService>(context);
-    final developerMode = settingsService.appSettings.developerMode;
     
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.tagManagement),
-        actions: [
-          if (developerMode)
-            IconButton(
-              icon: const Icon(Icons.code),
-              tooltip: '查看新版UI (开发者模式)',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const TagSettingsPage(),
-                  ),
-                );
-              },
-            ),
-        ],
-      ),
+      appBar: AppBar(title: Text(l10n.tagManagement)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
