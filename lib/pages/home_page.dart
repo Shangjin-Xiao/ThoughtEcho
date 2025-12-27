@@ -844,22 +844,8 @@ class _HomePageState extends State<HomePage>
     final settingsService = Provider.of<SettingsService>(context, listen: false);
     final localAISettings = settingsService.localAISettings;
 
-    // 检查是否启用了本地AI和语音转文字功能
+    // 检查是否启用了本地AI和语音转文字功能，未启用则直接返回无反应
     if (!localAISettings.enabled || !localAISettings.speechToTextEnabled) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).localAiNotEnabled),
-          action: SnackBarAction(
-            label: AppLocalizations.of(context).enableInSettings,
-            onPressed: () {
-              // 跳转到设置页面
-              setState(() {
-                _currentIndex = 2; // 切换到设置页
-              });
-            },
-          ),
-        ),
-      );
       return;
     }
 
