@@ -122,7 +122,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
     try {
       final databaseService = context.read<DatabaseService>();
-      // 修复：使用 getAllQuotes() 获取所有笔记，而非 getUserQuotes() 的默认 limit=10
+      // 获取所有笔记（排除隐藏笔记，隐藏笔记不参与AI分析统计）
       final quotes = await databaseService.getAllQuotes();
 
       // 调试：打印获取到的所有笔记数量

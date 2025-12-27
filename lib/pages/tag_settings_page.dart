@@ -422,6 +422,17 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                         itemBuilder: (context, index) {
                           final NoteCategory tag =
                               tags[index]; // 替换 NoteTag 为 NoteCategory
+                          // 检查是否是隐藏标签
+                          final bool isHiddenTag =
+                              tag.id == DatabaseService.hiddenTagId;
+                          // 隐藏标签使用国际化名称
+                          final String displayName =
+                              isHiddenTag ? l10n.hiddenTag : tag.name;
+                          // 隐藏标签的副标题显示使用说明
+                          final String? subtitleText = isHiddenTag
+                              ? l10n.hiddenTagUsageHint
+                              : (tag.isDefault ? l10n.systemDefaultTag : null);
+
                           return Container(
                             margin: const EdgeInsets.symmetric(
                               horizontal: 8,
@@ -469,7 +480,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                 ),
                               ),
                               title: Text(
-                                tag.name,
+                                displayName,
                                 style: theme.textTheme.titleMedium?.copyWith(
                                   fontWeight: tag.isDefault
                                       ? FontWeight.w600
@@ -479,14 +490,19 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                       : colorScheme.onSurface,
                                 ),
                               ),
-                              subtitle: tag.isDefault
+                              subtitle: subtitleText != null
                                   ? Text(
-                                      l10n.systemDefaultTag,
+                                      subtitleText,
                                       style:
                                           theme.textTheme.bodySmall?.copyWith(
-                                        color:
-                                            colorScheme.primary.withAlpha(150),
+                                        color: isHiddenTag
+                                            ? colorScheme.onSurfaceVariant
+                                            : colorScheme.primary.withAlpha(
+                                                150,
+                                              ),
                                       ),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
                                     )
                                   : null,
                               trailing: tag.isDefault
@@ -507,7 +523,9 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                         ),
                                       ),
                                       child: Text(
-                                        l10n.defaultTag,
+                                        isHiddenTag
+                                            ? l10n.systemTag
+                                            : l10n.defaultTag,
                                         style: theme.textTheme.labelSmall
                                             ?.copyWith(
                                           color: colorScheme.primary,

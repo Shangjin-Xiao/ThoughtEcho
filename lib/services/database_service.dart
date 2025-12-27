@@ -2345,22 +2345,29 @@ class DatabaseService extends ChangeNotifier {
 
   /// 获取或创建隐藏标签
   /// 当启用隐藏笔记功能时，确保隐藏标签存在
+  /// 隐藏标签是系统标签，不可编辑或删除
   Future<NoteCategory?> getOrCreateHiddenTag() async {
     try {
       // 先尝试获取现有的隐藏标签
       final categories = await getCategories();
       final existingHiddenTag = categories.where((c) => c.id == hiddenTagId);
       if (existingHiddenTag.isNotEmpty) {
+        // 检查并更新旧版隐藏标签（如果需要）
+        final existing = existingHiddenTag.first;
+        if (!existing.isDefault || existing.iconName != 'lock') {
+          // 更新为新的系统标签格式
+          await _updateHiddenTagFormat();
+        }
         return existingHiddenTag.first;
       }
 
-      // 如果不存在，创建隐藏标签
+      // 如果不存在，创建隐藏标签（系统标签，使用锁图标）
       if (kIsWeb) {
         final hiddenTag = NoteCategory(
           id: hiddenTagId,
-          name: '隐藏', // 这里会在 UI 层根据语言显示本地化名称
-          isDefault: false,
-          iconName: 'visibility_off',
+          name: '隐藏', // UI层会根据语言显示本地化名称
+          isDefault: true, // 系统标签，不可删除/编辑
+          iconName: 'lock', // 使用锁图标
         );
         _categoryStore.add(hiddenTag);
         _categoriesController.add(_categoryStore);
@@ -2372,8 +2379,8 @@ class DatabaseService extends ChangeNotifier {
       final categoryMap = {
         'id': hiddenTagId,
         'name': '隐藏',
-        'is_default': 0,
-        'icon_name': 'visibility_off',
+        'is_default': 1, // 系统标签
+        'icon_name': 'lock', // 锁图标
         'last_modified': DateTime.now().toUtc().toIso8601String(),
       };
 
@@ -2388,12 +2395,48 @@ class DatabaseService extends ChangeNotifier {
       return NoteCategory(
         id: hiddenTagId,
         name: '隐藏',
-        isDefault: false,
-        iconName: 'visibility_off',
+        isDefault: true,
+        iconName: 'lock',
       );
     } catch (e) {
       logDebug('获取或创建隐藏标签错误: $e');
       return null;
+    }
+  }
+
+  /// 更新旧版隐藏标签为新格式（系统标签+锁图标）
+  Future<void> _updateHiddenTagFormat() async {
+    try {
+      if (kIsWeb) {
+        final index = _categoryStore.indexWhere((c) => c.id == hiddenTagId);
+        if (index >= 0) {
+          _categoryStore[index] = NoteCategory(
+            id: hiddenTagId,
+            name: '隐藏',
+            isDefault: true,
+            iconName: 'lock',
+          );
+          _categoriesController.add(_categoryStore);
+          notifyListeners();
+        }
+        return;
+      }
+
+      final db = database;
+      await db.update(
+        'categories',
+        {
+          'is_default': 1,
+          'icon_name': 'lock',
+          'last_modified': DateTime.now().toUtc().toIso8601String(),
+        },
+        where: 'id = ?',
+        whereArgs: [hiddenTagId],
+      );
+      await _updateCategoriesStream();
+      notifyListeners();
+    } catch (e) {
+      logDebug('更新隐藏标签格式错误: $e');
     }
   }
 
@@ -3551,16 +3594,26 @@ class DatabaseService extends ChangeNotifier {
     }
   }
 
-  /// 获取所有笔记（用于媒体引用迁移）
-  Future<List<Quote>> getAllQuotes() async {
+  /// 获取所有笔记
+  /// [excludeHiddenNotes] 是否排除隐藏笔记，默认为 true
+  /// 注意：媒体引用迁移等需要访问全部数据的场景应传入 false
+  Future<List<Quote>> getAllQuotes({bool excludeHiddenNotes = true}) async {
     if (kIsWeb) {
-      return List.from(_memoryStore);
+      var result = List<Quote>.from(_memoryStore);
+      if (excludeHiddenNotes) {
+        result = result.where((q) => !q.tagIds.contains(hiddenTagId)).toList();
+      }
+      return result;
     }
 
     try {
       final db = database;
       final List<Map<String, dynamic>> maps = await db.query('quotes');
-      return maps.map((m) => Quote.fromJson(m)).toList();
+      var result = maps.map((m) => Quote.fromJson(m)).toList();
+      if (excludeHiddenNotes) {
+        result = result.where((q) => !q.tagIds.contains(hiddenTagId)).toList();
+      }
+      return result;
     } catch (e) {
       logDebug('获取所有笔记失败: $e');
       return [];
@@ -3568,16 +3621,30 @@ class DatabaseService extends ChangeNotifier {
   }
 
   /// 获取笔记总数，用于分页
+  /// [excludeHiddenNotes] 是否排除隐藏笔记，默认为 true
   Future<int> getQuotesCount({
     List<String>? tagIds,
     String? categoryId,
     String? searchQuery,
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
+    bool excludeHiddenNotes = true,
   }) async {
+    // 判断是否正在查询隐藏标签
+    final isQueryingHiddenTag = tagIds != null && tagIds.contains(hiddenTagId);
+    // 如果正在查询隐藏标签，则不排除隐藏笔记
+    final shouldExcludeHidden = excludeHiddenNotes && !isQueryingHiddenTag;
+
     if (kIsWeb) {
       // 优化：Web平台直接在内存中应用筛选逻辑计算数量，避免加载大量数据
       var filtered = _memoryStore;
+
+      // 排除隐藏笔记
+      if (shouldExcludeHidden) {
+        filtered = filtered
+            .where((q) => !q.tagIds.contains(hiddenTagId))
+            .toList();
+      }
 
       if (tagIds != null && tagIds.isNotEmpty) {
         filtered = filtered
@@ -3626,6 +3693,17 @@ class DatabaseService extends ChangeNotifier {
       final db = database;
       List<String> conditions = [];
       List<dynamic> args = [];
+
+      // 排除隐藏笔记（通过 NOT EXISTS 子查询排除带有隐藏标签的笔记）
+      if (shouldExcludeHidden) {
+        conditions.add('''
+          NOT EXISTS (
+            SELECT 1 FROM quote_tags ht 
+            WHERE ht.quote_id = q.id AND ht.tag_id = ?
+          )
+        ''');
+        args.add(hiddenTagId);
+      }
 
       // 分类筛选
       if (categoryId != null && categoryId.isNotEmpty) {

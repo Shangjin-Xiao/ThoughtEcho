@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/note_category.dart';
+import '../services/database_service.dart';
 import '../utils/icon_utils.dart';
 
 /// 标签选择区域 - 独立组件，避免AddNoteDialog重建时重复构建
@@ -225,7 +226,13 @@ class _TagListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final bool isEmoji = IconUtils.isEmoji(tag.iconName);
+    // 检查是否是隐藏标签
+    final bool isHiddenTag = tag.id == DatabaseService.hiddenTagId;
+    // 隐藏标签使用国际化名称
+    final String displayName = isHiddenTag ? l10n.hiddenTag : tag.name;
+
     final Widget leading = isEmoji
         ? Text(
             IconUtils.getDisplayIcon(tag.iconName),
@@ -238,9 +245,21 @@ class _TagListItem extends StatelessWidget {
         children: [
           leading,
           const SizedBox(width: 8),
-          Flexible(child: Text(tag.name, overflow: TextOverflow.ellipsis)),
+          Flexible(
+            child: Text(displayName, overflow: TextOverflow.ellipsis),
+          ),
         ],
       ),
+      subtitle: isHiddenTag
+          ? Text(
+              l10n.hiddenTagDesc,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            )
+          : null,
       value: isSelected,
       dense: true,
       controlAffinity: ListTileControlAffinity.trailing,
@@ -269,6 +288,7 @@ class SelectedTagsDisplay extends StatelessWidget {
     }
 
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Container(
       margin: const EdgeInsets.only(top: 8),
@@ -281,7 +301,7 @@ class SelectedTagsDisplay extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            AppLocalizations.of(context).selectedTags,
+            l10n.selectedTags,
             style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 4),
@@ -292,8 +312,13 @@ class SelectedTagsDisplay extends StatelessWidget {
               final tag = allTags.firstWhere(
                 (t) => t.id == tagId,
                 orElse: () => NoteCategory(
-                    id: tagId, name: AppLocalizations.of(context).unknownTag),
+                    id: tagId, name: l10n.unknownTag),
               );
+              // 检查是否是隐藏标签
+              final bool isHiddenTag = tagId == DatabaseService.hiddenTagId;
+              // 隐藏标签使用国际化名称
+              final String displayName = isHiddenTag ? l10n.hiddenTag : tag.name;
+
               return Chip(
                 label: IconUtils.isEmoji(tag.iconName)
                     ? Row(
@@ -304,10 +329,10 @@ class SelectedTagsDisplay extends StatelessWidget {
                             style: const TextStyle(fontSize: 20),
                           ),
                           const SizedBox(width: 4),
-                          Text(tag.name, style: const TextStyle(fontSize: 12)),
+                          Text(displayName, style: const TextStyle(fontSize: 12)),
                         ],
                       )
-                    : Text(tag.name),
+                    : Text(displayName),
                 avatar: !IconUtils.isEmoji(tag.iconName)
                     ? Icon(IconUtils.getIconData(tag.iconName), size: 18)
                     : null,

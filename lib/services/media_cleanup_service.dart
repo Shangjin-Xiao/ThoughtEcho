@@ -233,7 +233,8 @@ class MediaCleanupService {
 
       // 1. 检查引用表中的文件是否存在
       final databaseService = DatabaseService();
-      final quotes = await databaseService.getAllQuotes();
+      // 媒体清理需要检查所有笔记（包括隐藏笔记）以避免误删隐藏笔记的媒体文件
+      final quotes = await databaseService.getAllQuotes(excludeHiddenNotes: false);
 
       int checkedReferences = 0;
       int missingFiles = 0;
