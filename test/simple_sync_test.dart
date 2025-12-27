@@ -126,7 +126,7 @@ class MockBackupService implements BackupService {
 
 class MockDatabaseService implements DatabaseService {
   @override
-  Future<List<Quote>> getAllQuotes() async {
+  Future<List<Quote>> getAllQuotes({bool excludeHiddenNotes = true}) async {
     return [];
   }
 

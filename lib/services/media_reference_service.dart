@@ -312,7 +312,8 @@ class MediaReferenceService {
   static Future<Map<String, Map<String, Set<String>>>>
       _collectQuoteReferenceIndex() async {
     final databaseService = DatabaseService();
-    final quotes = await databaseService.getAllQuotes();
+    // 媒体引用索引需要包含所有笔记（包括隐藏笔记）
+    final quotes = await databaseService.getAllQuotes(excludeHiddenNotes: false);
 
     final index = <String, Map<String, Set<String>>>{};
 
@@ -641,7 +642,8 @@ class MediaReferenceService {
       logDebug('开始迁移现有笔记的媒体文件引用...');
 
       final databaseService = DatabaseService();
-      final quotes = await databaseService.getAllQuotes();
+      // 媒体引用迁移需要处理所有笔记（包括隐藏笔记）
+      final quotes = await databaseService.getAllQuotes(excludeHiddenNotes: false);
 
       int migratedCount = 0;
 
