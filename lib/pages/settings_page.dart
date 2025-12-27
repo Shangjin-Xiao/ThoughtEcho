@@ -31,6 +31,7 @@ import 'preferences_detail_page.dart';
 import '../utils/feature_guide_helper.dart';
 import 'storage_management_page.dart';
 import 'local_ai_settings_page.dart'; // 导入本地 AI 设置页面
+import 'smart_push_settings_page.dart'; // 导入智能推送设置页面
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -560,17 +561,89 @@ class SettingsPageState extends State<SettingsPage> {
                     );
                   },
                 ),
-                ListTile(
-                  title: Text(l10n.localAiFeatures),
-                  subtitle: Text(l10n.localAiFeaturesDesc),
-                  leading: const Icon(Icons.device_hub),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const LocalAISettingsPage(),
+                // 本地AI功能 - 仅在开发者模式下显示
+                Consumer<SettingsService>(
+                  builder: (context, settingsService, _) {
+                    if (!settingsService.appSettings.developerMode) {
+                      return const SizedBox.shrink();
+                    }
+                    return ListTile(
+                      title: Row(
+                        children: [
+                          Text(l10n.localAiFeatures),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.tertiary.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: theme.colorScheme.tertiary.withOpacity(0.5)),
+                            ),
+                            child: Text(
+                              'Preview',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.tertiary,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
+                      subtitle: Text(l10n.localAiFeaturesDesc),
+                      leading: const Icon(Icons.device_hub),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const LocalAISettingsPage(),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+                // 智能推送 - 仅在开发者模式下显示
+                Consumer<SettingsService>(
+                  builder: (context, settingsService, _) {
+                    if (!settingsService.appSettings.developerMode) {
+                      return const SizedBox.shrink();
+                    }
+                    return ListTile(
+                      title: Row(
+                        children: [
+                          Text(l10n.smartPushTitle),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.tertiary.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: theme.colorScheme.tertiary.withOpacity(0.5)),
+                            ),
+                            child: Text(
+                              'Preview',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: theme.colorScheme.tertiary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      subtitle: Text(l10n.smartPushDesc),
+                      leading: const Icon(Icons.notifications_active_outlined),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SmartPushSettingsPage(),
+                          ),
+                        );
+                      },
                     );
                   },
                 ),
