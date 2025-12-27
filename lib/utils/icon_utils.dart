@@ -36,6 +36,8 @@ class IconUtils {
     'bookmark': Icons.bookmark,
     'label': Icons.label,
     'brush': Icons.brush,
+    // 系统/特殊用途图标
+    'lock': Icons.lock_outline,
   };
 
   // 常用emoji分类 - 与笔记和思考相关的emoji
