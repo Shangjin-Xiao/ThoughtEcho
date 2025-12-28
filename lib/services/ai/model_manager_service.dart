@@ -9,7 +9,6 @@ class ModelManagerService {
   static const String _embeddingModelName = "onnx/model_quantized.onnx";
   static const String _vocabName = "vocab.txt";
 
-  // Sherpa Onnx models (Whisper tiny) - using a known reliable source
   static const String _sherpaBaseUrl = "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models";
   static const String _sherpaModelTar = "sherpa-onnx-whisper-tiny.tar.bz2";
 
@@ -56,7 +55,6 @@ class ModelManagerService {
 
   Future<bool> areAsrModelsDownloaded() async {
     final path = await _localPath;
-    // Check key files for whisper tiny
     final encoder = File('$path/sherpa-onnx-whisper-tiny/tiny-encoder.int8.onnx');
     return await encoder.exists();
   }
@@ -64,41 +62,74 @@ class ModelManagerService {
   Future<void> downloadEmbeddingModels({Function(double)? onProgress}) async {
     final path = await _localPath;
 
-    // Download Model
     await _downloadFile(
       '$_hfBaseUrl/$_embeddingModelName',
       '$path/model_quantized.onnx',
-      onProgress: (p) => onProgress?.call(p * 0.8), // 80% weight
+      onProgress: (p) => onProgress?.call(p * 0.8),
     );
 
-    // Download Vocab
     await _downloadFile(
       '$_hfBaseUrl/$_vocabName',
       '$path/vocab.txt',
-      onProgress: (p) => onProgress?.call(0.8 + p * 0.2), // 20% weight
+      onProgress: (p) => onProgress?.call(0.8 + p * 0.2),
     );
   }
 
-  // Note: Unzipping/Untarring logic is needed for Sherpa models usually distributed as tar.bz2
-  // For simplicity in this environment, we might download individual files if possible,
-  // or implement a basic tar extractor. For now, I'll assume individual file downloads for embedding
-  // and placeholder for ASR since unpacking tar.bz2 might require native libs or complex dart logic.
-  // Actually, let's use a direct link to a zip or individual files if available.
-  // Xenova's repo has individual files. Sherpa usually has tar.bz2.
-  // I will implement a simplified downloader that just mocks the "complex" unzip for now
-  // or tries to download raw files if I can find a raw file source.
-  // I'll stick to downloading the embedding model first as it's critical for the Vector Search.
+  Future<void> downloadSherpaModels({Function(double)? onProgress}) async {
+    final path = await _localPath;
+    final tarPath = '$path/$_sherpaModelTar';
+
+    // 1. Download
+    await _downloadFile(
+      '$_sherpaBaseUrl/$_sherpaModelTar',
+      tarPath,
+      onProgress: (p) => onProgress?.call(p * 0.7),
+    );
+
+    // 2. Extract
+    onProgress?.call(0.75); // Start extraction
+    try {
+        final tarFile = File(tarPath);
+        final bytes = await tarFile.readAsBytes();
+
+        // BZip2 Decode
+        final archive = TarDecoder().decodeBytes(BZip2Decoder().decodeBytes(bytes));
+
+        // Extract
+        for (final file in archive) {
+            final filename = file.name;
+            if (file.isFile) {
+                final outFile = File('$path/$filename');
+                // Ensure parent exists
+                await outFile.parent.create(recursive: true);
+                final data = file.content as List<int>;
+                await outFile.writeAsBytes(data);
+            }
+        }
+
+        // Clean up tar file
+        await tarFile.delete();
+
+    } catch (e) {
+        logError("Failed to extract Sherpa models: $e", source: "ModelManager");
+        rethrow;
+    }
+
+    onProgress?.call(1.0);
+  }
 
   Future<void> _downloadFile(String url, String savePath, {Function(double)? onProgress}) async {
     final file = File(savePath);
-    if (await file.exists()) return;
+    if (await file.exists()) {
+        onProgress?.call(1.0);
+        return;
+    }
 
     final request = http.Request('GET', Uri.parse(url));
     final response = await http.Client().send(request);
     final contentLength = response.contentLength;
 
     if (contentLength == null) {
-        // Fallback if no content length
         final bytes = await http.readBytes(Uri.parse(url));
         await file.writeAsBytes(bytes);
         onProgress?.call(1.0);

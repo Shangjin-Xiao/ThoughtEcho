@@ -86,6 +86,15 @@ class _AiSearchPageState extends State<AiSearchPage> {
       appBar: AppBar(title: const Text("AI Semantic Search")),
       body: Column(
         children: [
+          Container(
+            color: Colors.amber.withValues(alpha: 0.2),
+            padding: const EdgeInsets.all(8.0),
+            width: double.infinity,
+            child: const Text(
+                "Note: Semantic search requires running `dart run build_runner build` locally to generate the ObjectBox database code. Without it, search will return empty results.",
+                style: TextStyle(fontSize: 12),
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: TextField(

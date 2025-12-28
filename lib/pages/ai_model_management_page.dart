@@ -59,6 +59,31 @@ class _AiModelManagementPageState extends State<AiModelManagementPage> {
     }
   }
 
+  Future<void> _downloadAsr() async {
+    setState(() {
+        _isDownloading = true;
+        _status = "Downloading ASR Models (This involves decompressing, please wait)...";
+        _progress = 0.0;
+    });
+
+    try {
+        final manager = Provider.of<ModelManagerService>(context, listen: false);
+        await manager.downloadSherpaModels(onProgress: (p) {
+            if (mounted) setState(() => _progress = p);
+        });
+        await _checkStatus();
+    } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
+    } finally {
+        if (mounted) {
+            setState(() {
+                _isDownloading = false;
+                _status = "";
+            });
+        }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -95,8 +120,8 @@ class _AiModelManagementPageState extends State<AiModelManagementPage> {
             trailing: _asrDownloaded
                 ? const Icon(Icons.check_circle, color: Colors.green)
                 : ElevatedButton(
-                    onPressed: null, // Placeholder as we didn't implement full ASR download logic yet
-                    child: const Text("Download (Manual)")
+                    onPressed: _isDownloading ? null : _downloadAsr,
+                    child: const Text("Download")
                   ),
           ),
         ],
