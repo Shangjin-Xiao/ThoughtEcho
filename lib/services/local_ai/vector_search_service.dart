@@ -168,11 +168,11 @@ class VectorSearchService extends ChangeNotifier {
           modelVersion: modelVersion,
         );
         _vectorBox!.put(noteVector);
-        logDebug('索引新笔记向量: ${note.id}', source: 'VectorSearchService');
+        logDebug('索引新笔记向量: $noteId', source: 'VectorSearchService');
       }
     } catch (e, stackTrace) {
       logError(
-        '索引笔记失败: ${note.id}, $e',
+        '索引笔记失败: $noteId, $e',
         error: e,
         stackTrace: stackTrace,
         source: 'VectorSearchService',
