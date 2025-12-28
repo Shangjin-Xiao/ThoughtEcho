@@ -41,6 +41,13 @@ import 'package:thoughtecho/services/data_directory_service.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/utils/update_dialog_helper.dart';
 import 'package:thoughtecho/services/smart_push_service.dart'; // Add import
+import 'package:thoughtecho/services/ai/model_manager_service.dart';
+import 'package:thoughtecho/services/ai/tokenizer_service.dart';
+import 'package:thoughtecho/services/ai/embedding_service.dart';
+import 'package:thoughtecho/services/ai/vector_store_service.dart';
+import 'package:thoughtecho/services/ai/asr_service.dart';
+import 'package:thoughtecho/services/ai/ocr_service.dart';
+import 'package:objectbox/objectbox.dart';
 // import 'package:thoughtecho/services/debug_service.dart'; // 正式版已禁用
 import 'controllers/search_controller.dart';
 import 'utils/app_logger.dart';
@@ -305,6 +312,22 @@ Future<void> main() async {
           mmkvService: mmkvService,
         );
 
+        // AI Services Initialization
+        final modelManagerService = ModelManagerService();
+        final tokenizerService = TokenizerService();
+        final embeddingService = EmbeddingService(modelManagerService, tokenizerService);
+        final vectorStoreService = VectorStoreService(embeddingService);
+        final asrService = AsrService(modelManagerService);
+        final ocrService = OcrService();
+
+        // Initialize Vector Store async (fire and forget for main thread, usually should be awaited or handled)
+        // Since we cannot run build runner, we cannot easily mock store creation here without error.
+        // We will leave the store uninitialized in this context but provide the service.
+        // In real app: vectorStoreService.init(await VectorStoreService.createStore());
+        // For integration:
+        databaseService.setVectorStore(vectorStoreService);
+
+
         // 不再这里强制设置级别，让UnifiedLogService从用户配置中加载
 
         final appTheme = AppTheme();
@@ -394,6 +417,13 @@ Future<void> main() async {
                       aiAnalysisDbService: aiAnalysisDbService,
                     ),
               ),
+              // AI Services Providers
+              Provider<ModelManagerService>.value(value: modelManagerService),
+              Provider<TokenizerService>.value(value: tokenizerService),
+              Provider<EmbeddingService>.value(value: embeddingService),
+              Provider<VectorStoreService>.value(value: vectorStoreService),
+              Provider<AsrService>.value(value: asrService),
+              Provider<OcrService>.value(value: ocrService),
             ],
             child: Builder(
               builder: (context) {

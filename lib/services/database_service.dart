@@ -8,6 +8,7 @@ import 'package:flutter/widgets.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
+import 'ai/vector_store_service.dart';
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
 import 'package:uuid/uuid.dart';
@@ -30,6 +31,9 @@ class DatabaseService extends ChangeNotifier {
   final List<Quote> _memoryStore = [];
   // 内存存储分类数据
   final List<NoteCategory> _categoryStore = [];
+
+  // Vector Store reference (injected or lazy loaded)
+  VectorStoreService? _vectorStoreService;
 
   // 标记是否已经dispose，避免重复操作
   bool _isDisposed = false;
@@ -56,6 +60,10 @@ class DatabaseService extends ChangeNotifier {
   static const String hiddenTagId = 'system_hidden_tag';
   // 隐藏标签图标：使用 emoji 小锁
   static const String hiddenTagIconName = '🔒';
+
+  void setVectorStore(VectorStoreService service) {
+    _vectorStoreService = service;
+  }
 
   // 新增：流式分页加载笔记
   StreamController<List<Quote>>? _quotesController;
@@ -2914,6 +2922,13 @@ class DatabaseService extends ChangeNotifier {
           }
         });
 
+      // Update Vector Index (Fire and Forget)
+      if (_vectorStoreService != null) {
+          _vectorStoreService!.updateIndex(newQuoteId, quoteWithId.content).catchError((e) {
+              logDebug('Vector index update failed: $e');
+          });
+      }
+
         logDebug('笔记已成功保存到数据库，ID: ${quoteWithId.id}');
 
         // 同步媒体文件引用
@@ -3877,6 +3892,13 @@ class DatabaseService extends ChangeNotifier {
         // 移除媒体文件引用（CASCADE会自动删除，但为了确保一致性）
         await MediaReferenceService.removeAllReferencesForQuote(id);
 
+        // Remove from Vector Index
+        if (_vectorStoreService != null) {
+             _vectorStoreService!.removeIndex(id).catchError((e) {
+                 logDebug('Vector index remove failed: $e');
+             });
+        }
+
         // 使用轻量级检查机制清理孤儿媒体文件（合并来源：引用表 + 内容提取）
         // 注：removeAllReferencesForQuote 已经清理了引用表，这里只需查引用计数
         for (final storedPath in mediaPathsToCheck) {
@@ -4009,6 +4031,13 @@ class DatabaseService extends ChangeNotifier {
             }
           }
         });
+
+        // Update Vector Index
+        if (_vectorStoreService != null) {
+            _vectorStoreService!.updateIndex(quote.id!, quote.content).catchError((e) {
+                logDebug('Vector index update failed: $e');
+            });
+        }
 
         logDebug('笔记已成功更新，ID: ${quote.id}');
 
