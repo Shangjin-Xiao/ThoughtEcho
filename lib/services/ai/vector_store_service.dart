@@ -32,27 +32,39 @@ class VectorStoreService {
         final embedding = await _embeddingService.getEmbedding(content);
 
         // 2. Check if vector exists for this quoteId
-        // Requires a query.
+        // Note: The ideal implementation requires generated code (objectbox.g.dart) to query by quoteId.
         // Query<NoteVector> query = _box.query(NoteVector_.quoteId.equals(quoteId)).build();
-        // Since we don't have generated code for NoteVector_, we can't write type-safe queries here easily
-        // without the build step. We will assume the generated code allows:
-        // final existing = query.findFirst();
+        // Since we don't have generated code for NoteVector_ available in this environment,
+        // we cannot write type-safe queries here.
+        // The active code below creates a NEW entity. If quoteId is unique, this will throw a constraint error
+        // if an entity with the same quoteId exists.
 
-        // MOCK LOGIC for "find existing":
-        // In a real scenario with generated code:
-        // final query = _box.query(NoteVector_.quoteId.equals(quoteId)).build();
-        // final existing = query.findFirst();
-        // query.close();
+        // TEMPORARY FIX: We wrap this in a try-catch to ignore unique constraint violations for now.
+        // In a real build, you MUST uncomment the query logic below to find the existing entity ID.
+
+        /* UNCOMMENT AFTER RUNNING BUILD_RUNNER:
+        final query = _box.query(NoteVector_.quoteId.equals(quoteId)).build();
+        final existing = query.findFirst();
+        query.close();
 
         NoteVector vectorEntity;
-        // if (existing != null) {
-        //   vectorEntity = existing;
-        //   vectorEntity.embedding = embedding;
-        // } else {
+        if (existing != null) {
+          vectorEntity = existing;
+          vectorEntity.embedding = embedding;
+        } else {
            vectorEntity = NoteVector(quoteId: quoteId, embedding: embedding);
-        // }
-
+        }
         _box.put(vectorEntity);
+        */
+
+        // Mock Implementation (Safe for compilation, potentially unsafe for data without unique check):
+        try {
+           final vectorEntity = NoteVector(quoteId: quoteId, embedding: embedding);
+           _box.put(vectorEntity);
+        } catch (dbError) {
+           // Ignore unique constraint error for now since we can't query properly without generated code
+           print("Vector index update failed (likely duplicate): $dbError");
+        }
 
     } catch (e) {
         print("Error updating vector index: $e");
@@ -61,6 +73,7 @@ class VectorStoreService {
 
   Future<void> removeIndex(String quoteId) async {
       if (!_initialized) return;
+      // UNCOMMENT AFTER BUILD_RUNNER:
       // final query = _box.query(NoteVector_.quoteId.equals(quoteId)).build();
       // _box.remove(query.findIds());
       // query.close();
@@ -73,10 +86,12 @@ class VectorStoreService {
         final queryEmbedding = await _embeddingService.getEmbedding(queryText);
 
         // Perform Nearest Neighbor Search
+        // UNCOMMENT AFTER BUILD_RUNNER:
         // Query<NoteVector> query = _box.query(
         //   NoteVector_.embedding.nearestNeighbors(queryEmbedding, topK)
         // ).build();
         // final results = query.findWithScores();
+        // return results.map((r) => {'id': r.item.quoteId, 'score': r.score}).toList();
 
         // Mock return for now since we can't compile the query
         return [];
