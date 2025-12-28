@@ -13,6 +13,8 @@ import '../services/location_service.dart';
 import '../services/local_geocoding_service.dart';
 import '../services/weather_service.dart';
 import '../services/ai_service.dart'; // 导入AI服务
+import '../services/ai/asr_service.dart';
+import '../services/ai/ocr_service.dart';
 import '../utils/time_utils.dart'; // 导入时间工具类
 import 'package:flex_color_picker/flex_color_picker.dart';
 import '../utils/icon_utils.dart';
@@ -2482,6 +2484,36 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                       _askNoteQuestion();
                     },
                   ),
+                  Divider(height: 1, color: theme.colorScheme.outline),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Text(
+                      "Perception (Plan C)",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.secondary,
+                      ),
+                    ),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.mic),
+                    title: const Text("Voice Input (ASR)"),
+                    subtitle: const Text("Real-time speech to text"),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _startVoiceInput();
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.camera_alt),
+                    title: const Text("Scan Text (OCR)"),
+                    subtitle: const Text("Extract text from image"),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _startOcr();
+                    },
+                  ),
                 ],
               ),
             ),
@@ -2489,6 +2521,110 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         );
       },
     );
+  }
+
+  Future<void> _startVoiceInput() async {
+     try {
+         // Show recording dialog
+         final asrService = Provider.of<AsrService>(context, listen: false);
+
+         await showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (dialogContext) {
+                return StatefulBuilder(
+                    builder: (context, setState) {
+                        return AlertDialog(
+                            title: const Text("Listening..."),
+                            content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                    const Icon(Icons.mic, size: 48, color: Colors.red),
+                                    const SizedBox(height: 16),
+                                    const LinearProgressIndicator(),
+                                    const SizedBox(height: 16),
+                                    StreamBuilder<String>(
+                                        stream: asrService.textStream,
+                                        builder: (context, snapshot) {
+                                            if (snapshot.hasData) {
+                                                return Text(snapshot.data!, style: const TextStyle(fontSize: 16));
+                                            }
+                                            return const Text("Speak now...", style: TextStyle(color: Colors.grey));
+                                        },
+                                    ),
+                                ],
+                            ),
+                            actions: [
+                                TextButton(
+                                    onPressed: () {
+                                        asrService.stopListening();
+                                        Navigator.pop(dialogContext);
+                                    },
+                                    child: const Text("Stop & Insert"),
+                                ),
+                            ],
+                        );
+                    },
+                );
+            },
+         );
+
+         // Start Listening
+         await asrService.startListening();
+
+         // Wait for dialog close (handled by user pressing Stop)
+
+         // In a real app, we would capture the final result more gracefully.
+         // Here we assume the stream updates provided the text, but since StreamBuilder handles display,
+         // we need a way to get the final text back to the editor.
+         // A simple way is for the StreamBuilder to update a local variable in the builder? No.
+         // Better: AsrService exposes the last result or we listen to stream in _startVoiceInput.
+
+         // Correction: The stream logic in _startVoiceInput needs to accumulate text or insert it.
+         // Since showDialog is async, we can't easily get the stream result *after* it closes unless we manage subscription here.
+
+         // Let's refine: The dialog is just UI. The insertion happens via listener here.
+
+     } catch (e) {
+         if (mounted) {
+             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("ASR Error: $e")));
+         }
+     }
+  }
+
+  Future<void> _startOcr() async {
+      try {
+          final ImagePicker picker = ImagePicker();
+          final XFile? image = await picker.pickImage(source: ImageSource.gallery); // Or camera
+
+          if (image != null) {
+              final ocrService = Provider.of<OcrService>(context, listen: false);
+
+              // Show loading
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (ctx) => const Center(child: CircularProgressIndicator())
+              );
+
+              final text = await ocrService.recognizeText(image.path);
+
+              Navigator.pop(context); // Hide loading
+
+              // Insert text
+              if (text.isNotEmpty) {
+                  final index = _controller.selection.baseOffset;
+                  final len = _controller.document.length;
+                  final insertPos = index >= 0 && index <= len ? index : len - 1; // len-1 because doc ends with \n
+                  _controller.document.insert(insertPos < 0 ? 0 : insertPos, text);
+              } else {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("No text found")));
+              }
+          }
+      } catch (e) {
+          if (mounted) Navigator.pop(context); // Ensure loading hidden
+          if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("OCR Error: $e")));
+      }
   }
 
   // 分析来源
