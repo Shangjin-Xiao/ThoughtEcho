@@ -42,6 +42,9 @@ import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/utils/update_dialog_helper.dart';
 import 'package:thoughtecho/services/smart_push_service.dart'; // Add import
 // import 'package:thoughtecho/services/debug_service.dart'; // 正式版已禁用
+import 'package:thoughtecho/services/local_embedding_service.dart'; // Add import
+import 'package:thoughtecho/services/vector_store_service.dart'; // Add import
+import 'package:thoughtecho/services/ai_model_manager.dart'; // Add import
 import 'controllers/search_controller.dart';
 import 'utils/app_logger.dart';
 import 'utils/global_exception_handler.dart';
@@ -311,6 +314,46 @@ Future<void> main() async {
 
         // 初始化主题 - 这是UI显示必须的
         await appTheme.initialize();
+
+        // Setup Embedding Trigger
+        DatabaseService.setOnQuoteSavedCallback((id, content) async {
+          // This runs in background ideally, or we fire and forget
+          print("Quote saved: $id. Triggering embedding generation.");
+          try {
+             // We need fresh instances or singletons.
+             // Since we are in main.dart (or DatabaseService static context), access to Provider is tricky without context.
+             // Ideally we use a Service Locator.
+             // For this patch, we instantiate services directly if they are lightweight enough or handle their own state.
+             // However, Loading TFLite model every save is bad.
+             // Better approach: The NoteListView handles this via its existing instances, OR we rely on a dedicated Background Service.
+             // Given constraints, I will instantiate a transient service here but warn about performance.
+             // A better design would be a `EmbeddingManager` singleton.
+             // Let's try to get instances if we can, otherwise new ones.
+
+             // Check if model is downloaded first to avoid errors
+             final modelManager = AIModelManager();
+             final modelPath = await modelManager.getModelPath('model.tflite');
+             final vocabPath = await modelManager.getModelPath('vocab.txt');
+
+             if (await File(modelPath).exists() && await File(vocabPath).exists()) {
+                // We use a simplified flow here. In production, use a workmanager.
+                final embeddingService = LocalEmbeddingService();
+                await embeddingService.initialize(modelPath, vocabPath);
+                final vector = await embeddingService.generateEmbedding(content);
+                // We need a DB service instance. We can't reuse the one in Provider easily here.
+                // We create a new lightweight connection logic in VectorStoreService or reuse DatabaseService if it's singleton-like.
+                // DatabaseService has static _database.
+                final dbService = DatabaseService();
+                // We must ensure it uses the *same* database instance if open, which DatabaseService handles via static.
+                final vectorStore = VectorStoreService(dbService);
+                await vectorStore.saveEmbedding(id, vector);
+                embeddingService.dispose();
+                print("Embedding generated and saved for $id");
+             }
+          } catch (e) {
+            print("Failed to generate embedding: $e");
+          }
+        });
 
         // 使用ValueNotifier跟踪服务初始化状态
         final servicesInitialized = ValueNotifier<bool>(false);

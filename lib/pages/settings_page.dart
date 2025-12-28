@@ -32,6 +32,7 @@ import '../utils/feature_guide_helper.dart';
 import 'storage_management_page.dart';
 import 'local_ai_settings_page.dart'; // 导入本地 AI 设置页面
 import 'smart_push_settings_page.dart'; // 导入智能推送设置页面
+import 'settings/offline_ai_settings_page.dart'; // Import OfflineAISettingsPage
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -524,6 +525,20 @@ class SettingsPageState extends State<SettingsPage> {
                       context,
                       MaterialPageRoute(
                         builder: (context) => const PreferencesDetailPage(),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  title: const Text('离线 AI 模型'),
+                  subtitle: const Text('管理本地 Embedding/ASR 模型'),
+                  leading: const Icon(Icons.sd_storage),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const OfflineAISettingsPage(),
                       ),
                     );
                   },
