@@ -3048,5 +3048,78 @@
   "smartPushTestSent": "测试推送已发送，请查看通知",
   "smartPushNoMatchingNotes": "没有符合条件的笔记可推送",
   "smartPushNotice": "功能说明",
-  "smartPushNoticeDesc": "• 推送功能需要通知权限\n• 应用在后台时推送可能延迟\n• 建议保持应用在后台运行以获得最佳体验\n• 未来将支持真正的后台定时推送"
+  "smartPushNoticeDesc": "• 推送功能需要通知权限\n• 应用在后台时推送可能延迟\n• 建议保持应用在后台运行以获得最佳体验\n• 未来将支持真正的后台定时推送",
+
+  "modelManagement": "模型管理",
+  "modelManagementDesc": "下载和管理本地 AI 模型",
+  "modelDownload": "下载模型",
+  "modelDownloading": "下载中...",
+  "modelDownloadProgress": "下载进度：{progress}%",
+  "@modelDownloadProgress": {
+    "placeholders": {
+      "progress": {
+        "type": "int"
+      }
+    }
+  },
+  "modelDownloadComplete": "下载完成",
+  "modelDownloadFailed": "下载失败：{error}",
+  "@modelDownloadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "modelImport": "导入模型",
+  "modelImportHint": "从本地文件导入模型",
+  "modelDelete": "删除模型",
+  "modelDeleteConfirm": "确定要删除此模型吗？删除后需要重新下载。",
+  "modelSize": "大小：{size}",
+  "@modelSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "modelVersion": "版本：{version}",
+  "@modelVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "modelNotDownloaded": "未下载",
+  "modelDownloaded": "已下载",
+  "modelLoaded": "已加载",
+  "modelLoading": "加载中",
+  "modelError": "错误",
+  "modelTypeLLM": "语言模型",
+  "modelTypeEmbedding": "嵌入模型",
+  "modelTypeASR": "语音识别",
+  "modelTypeOCR": "文字识别",
+  "modelStorageUsage": "模型存储占用：{size}",
+  "@modelStorageUsage": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "modelClearAll": "清除所有模型",
+  "modelClearAllConfirm": "确定要删除所有已下载的模型吗？",
+  "modelDownloadSource": "下载源",
+  "modelDownloadSourceHint": "模型将从 HuggingFace/GitHub 下载",
+  "modelRequiresDownload": "此功能需要先下载相应的模型",
+  "modelMemoryWarning": "此模型需要约 {memory} 内存，请确保设备有足够的可用内存",
+  "@modelMemoryWarning": {
+    "placeholders": {
+      "memory": {
+        "type": "String"
+      }
+    }
+  }
+}
 }
