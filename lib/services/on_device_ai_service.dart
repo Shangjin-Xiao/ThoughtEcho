@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import '../models/local_ai_settings.dart';
@@ -45,9 +44,9 @@ class OnDeviceAIService extends ChangeNotifier {
   /// 模型文件路径
   String? _modelPath;
 
-  /// Cactus 会话（当 cactus 包可用时启用）
+  /// Cactus 功能可用性标记
   /// 注意：cactus 包许可证待确认，暂时禁用 LLM 功能
-  // CactusSession? _cactusSession;
+  /// TODO: 许可证确认后，添加 CactusSession 实例
   bool _cactusAvailable = false;
 
   /// 获取当前设置
@@ -157,6 +156,11 @@ class OnDeviceAIService extends ChangeNotifier {
   /// ⚠️ 重要提示：
   /// cactus 许可证不明确，商业使用前请确认许可证状态。
   /// 源码包含 telemetry/ProKey 代码，不建议在商业发布前使用。
+  /// 
+  /// TODO: 许可证确认后实现以下功能：
+  /// - 检查模型路径有效性
+  /// - 创建 CactusSession 实例
+  /// - 调用 initialize(modelPath: path) 初始化模型
   Future<void> _initializeCactus() async {
     try {
       // Web 平台不支持本地模型
@@ -166,27 +170,7 @@ class OnDeviceAIService extends ChangeNotifier {
         return;
       }
 
-      // ⚠️ Cactus 许可证待确认，暂时禁用
-      // 以下代码在确认许可证后启用：
-      // 
-      // if (_modelPath == null || _modelPath!.isEmpty) {
-      //   logDebug('OnDeviceAIService: 未指定模型路径，跳过 Cactus 初始化');
-      //   _cactusAvailable = false;
-      //   return;
-      // }
-      // 
-      // final modelFile = File(_modelPath!);
-      // if (!await modelFile.exists()) {
-      //   logDebug('OnDeviceAIService: 模型文件不存在: $_modelPath');
-      //   _cactusAvailable = false;
-      //   return;
-      // }
-      // 
-      // _cactusSession = CactusSession();
-      // await _cactusSession!.initialize(modelPath: _modelPath!);
-      // _cactusAvailable = true;
-      // logDebug('OnDeviceAIService: Cactus 已初始化，模型: $_modelPath');
-
+      // ⚠️ Cactus 许可证待确认，暂时禁用所有 LLM/ASR/Embedding 功能
       logDebug('OnDeviceAIService: Cactus 功能暂时禁用（许可证待确认）');
       _cactusAvailable = false;
     } catch (e) {
@@ -306,6 +290,8 @@ class OnDeviceAIService extends ChangeNotifier {
   /// ⚠️ 此功能依赖 cactus，许可证待确认
   /// 商业使用前请确认许可证状态
   /// 
+  /// TODO: 许可证确认后调用 _cactusSession.chat(message)
+  /// 
   /// [message] 用户消息
   /// 返回 AI 回复
   Future<String> chat(String message) async {
@@ -318,15 +304,6 @@ class OnDeviceAIService extends ChangeNotifier {
 
     try {
       // ⚠️ Cactus 许可证待确认，暂时禁用
-      // 以下代码在确认许可证后启用：
-      // 
-      // final response = await _cactusSession!.chat(message);
-      // 
-      // _status = OnDeviceAIStatus.ready;
-      // notifyListeners();
-      // 
-      // return response;
-
       throw Exception('LLM 功能暂时禁用（cactus 许可证待确认）');
     } catch (e) {
       _status = OnDeviceAIStatus.ready;
@@ -342,6 +319,8 @@ class OnDeviceAIService extends ChangeNotifier {
   /// ⚠️ 此功能依赖 cactus，许可证待确认
   /// 商业使用前请确认许可证状态
   /// 
+  /// TODO: 许可证确认后调用 _cactusSession.transcribe(audioPath: path)
+  /// 
   /// [audioPath] 音频文件路径
   /// 返回转录文本
   Future<String> transcribe(String audioPath) async {
@@ -354,15 +333,6 @@ class OnDeviceAIService extends ChangeNotifier {
 
     try {
       // ⚠️ Cactus 许可证待确认，暂时禁用
-      // 以下代码在确认许可证后启用：
-      // 
-      // final text = await _cactusSession!.transcribe(audioPath: audioPath);
-      // 
-      // _status = OnDeviceAIStatus.ready;
-      // notifyListeners();
-      // 
-      // return text;
-
       throw Exception('ASR 功能暂时禁用（cactus 许可证待确认）');
     } catch (e) {
       _status = OnDeviceAIStatus.ready;
@@ -378,6 +348,8 @@ class OnDeviceAIService extends ChangeNotifier {
   /// ⚠️ 此功能依赖 cactus，许可证待确认
   /// 商业使用前请确认许可证状态
   /// 
+  /// TODO: 许可证确认后调用 _cactusSession.embed(text)
+  /// 
   /// [text] 要嵌入的文本
   /// 返回嵌入向量
   Future<List<double>> embed(String text) async {
@@ -390,15 +362,6 @@ class OnDeviceAIService extends ChangeNotifier {
 
     try {
       // ⚠️ Cactus 许可证待确认，暂时禁用
-      // 以下代码在确认许可证后启用：
-      // 
-      // final embedding = await _cactusSession!.embed(text);
-      // 
-      // _status = OnDeviceAIStatus.ready;
-      // notifyListeners();
-      // 
-      // return embedding;
-
       throw Exception('嵌入功能暂时禁用（cactus 许可证待确认）');
     } catch (e) {
       _status = OnDeviceAIStatus.ready;
@@ -437,11 +400,12 @@ cactus 库的许可证状态未明确，源码中包含 telemetry/ProKey 相关�
   }
 
   /// 释放资源
+  /// 
+  /// TODO: 许可证确认后，添加 _cactusSession?.dispose()
   @override
   void dispose() {
     _chineseRecognizer?.close();
     _latinRecognizer?.close();
-    // _cactusSession?.dispose(); // 许可证确认后启用
     super.dispose();
   }
 }
