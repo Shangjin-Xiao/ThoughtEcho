@@ -31,8 +31,11 @@ target 'Runner' do
   use_frameworks!
   use_modular_headers!
 
-  # ML Kit Text Recognition for Chinese
+  # ML Kit Text Recognition for Chinese, Devanagari, Japanese, Korean
   pod 'GoogleMLKit/TextRecognitionChinese'
+  pod 'GoogleMLKit/TextRecognitionDevanagari'
+  pod 'GoogleMLKit/TextRecognitionJapanese'
+  pod 'GoogleMLKit/TextRecognitionKorean'
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   
