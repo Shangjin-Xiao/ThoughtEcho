@@ -31,6 +31,9 @@ target 'Runner' do
   use_frameworks!
   use_modular_headers!
 
+  # ML Kit Text Recognition for Chinese
+  pod 'GoogleMLKit/TextRecognitionChinese'
+
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   
   target 'RunnerTests' do
