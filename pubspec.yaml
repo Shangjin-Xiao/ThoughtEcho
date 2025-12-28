@@ -83,8 +83,8 @@ dependencies:
   android_alarm_manager_plus: ^4.0.0
   timezone: ^0.10.0
   # 本地 AI 功能依赖 (Local AI dependencies)
-  record: ^5.1.0 # 录音功能，用于语音转文字
-  camera: ^0.11.0 # 相机功能，用于 OCR 拍照
+  # Note: flutter_gemma, sherpa_onnx, flutter_tesseract_ocr 将在实际集成时添加
+  # record 和 camera 包暂不添加以避免编译问题，待实际实现时再集成
 
 dev_dependencies:
   flutter_test:
