@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' show Rect, Size;
 import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import '../../utils/app_logger.dart';
@@ -149,22 +150,22 @@ class OCRService extends ChangeNotifier {
       return _recognizers[script]!;
     }
 
-    final TextRecognizerScript mlScript;
+    final TextRecognitionScript mlScript;
     switch (script) {
       case OCRScript.latin:
-        mlScript = TextRecognizerScript.latin;
+        mlScript = TextRecognitionScript.latin;
         break;
       case OCRScript.chinese:
-        mlScript = TextRecognizerScript.chinese;
+        mlScript = TextRecognitionScript.chinese;
         break;
       case OCRScript.japanese:
-        mlScript = TextRecognizerScript.japanese;
+        mlScript = TextRecognitionScript.japanese;
         break;
       case OCRScript.korean:
-        mlScript = TextRecognizerScript.korean;
+        mlScript = TextRecognitionScript.korean;
         break;
       case OCRScript.devanagari:
-        mlScript = TextRecognizerScript.devanagari;
+        mlScript = TextRecognitionScript.devanagiri; // Note: package uses 'devanagiri' spelling
         break;
     }
 

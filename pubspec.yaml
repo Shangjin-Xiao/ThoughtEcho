@@ -83,7 +83,7 @@ dependencies:
   android_alarm_manager_plus: ^4.0.0
   timezone: ^0.10.0
   # 端侧 AI 功能 (方案 C: ONNX Runtime + ObjectBox)
-  onnxruntime: ^1.16.0  # ONNX 模型推理引擎 (MIT)
+  onnxruntime: ^1.4.1  # ONNX 模型推理引擎 (MIT)
   objectbox: ^4.0.0  # 向量数据库 (Apache-2.0)
   objectbox_flutter_libs: ^4.0.0  # ObjectBox Flutter 平台库
   sherpa_onnx: ^1.11.3  # 端侧 ASR 语音识别 (Apache-2.0)

@@ -7,11 +7,7 @@ import '../../models/objectbox/note_vector.dart';
 import '../../models/quote_model.dart';
 import '../../utils/app_logger.dart';
 import 'embedding_service.dart';
-
-// 注意: ObjectBox 需要运行 build_runner 生成 objectbox.g.dart
-// 执行: dart run build_runner build
-// 生成的文件会自动包含 openStore 函数
-// import '../../objectbox.g.dart';
+import '../../objectbox.g.dart';
 
 /// 向量搜索结果
 class VectorSearchResult {

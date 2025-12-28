@@ -445,12 +445,13 @@ class EmbeddingService extends ChangeNotifier {
   }
 
   /// 释放资源
+  @override
   void dispose() {
     if (_currentConfig != null) {
       _onnxService.unloadModel(_currentConfig!.modelId);
     }
     _tokenizer.clear();
     _currentConfig = null;
-    notifyListeners();
+    super.dispose();
   }
 }
