@@ -2,6 +2,8 @@
 ///
 /// 用于语义搜索和相关笔记推荐
 
+import 'dart:math' as math;
+
 /// 嵌入向量
 class Embedding {
   /// 向量数据
@@ -50,7 +52,7 @@ class Embedding {
 
     if (normA == 0 || normB == 0) return 0.0;
 
-    return dotProduct / (sqrt(normA) * sqrt(normB));
+    return dotProduct / (math.sqrt(normA) * math.sqrt(normB));
   }
 
   /// 从 JSON 创建
@@ -199,16 +201,4 @@ class RelatedNote {
       'reason': reason,
     };
   }
-}
-
-/// 简单的平方根实现
-double sqrt(double x) {
-  if (x < 0) return double.nan;
-  if (x == 0) return 0;
-
-  double guess = x / 2;
-  for (int i = 0; i < 20; i++) {
-    guess = (guess + x / guess) / 2;
-  }
-  return guess;
 }

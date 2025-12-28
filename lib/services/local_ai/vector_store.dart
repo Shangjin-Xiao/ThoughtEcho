@@ -78,8 +78,8 @@ class VectorStore extends ChangeNotifier {
       _embeddings[noteId] = embedding.copyWith(noteId: noteId);
       notifyListeners();
 
-      // 异步保存到磁盘（使用 unawaited 明确表示不等待）
-      unawaited(_saveToDisk());
+      // 异步保存到磁盘（不等待完成）
+      _saveToDisk().ignore();
 
       logDebug('已更新笔记 $noteId 的嵌入向量', source: 'VectorStore');
     } catch (e) {
@@ -92,7 +92,7 @@ class VectorStore extends ChangeNotifier {
   Future<void> deleteNote(String noteId) async {
     if (_embeddings.remove(noteId) != null) {
       notifyListeners();
-      unawaited(_saveToDisk());
+      _saveToDisk().ignore();
       logDebug('已删除笔记 $noteId 的嵌入向量', source: 'VectorStore');
     }
   }
@@ -212,7 +212,7 @@ class VectorStore extends ChangeNotifier {
       }
 
       notifyListeners();
-      unawaited(_saveToDisk());
+      _saveToDisk().ignore();
 
       logInfo('批量更新 ${notes.length} 个嵌入向量', source: 'VectorStore');
     } catch (e) {
@@ -225,7 +225,7 @@ class VectorStore extends ChangeNotifier {
   Future<void> clear() async {
     _embeddings.clear();
     notifyListeners();
-    unawaited(_saveToDisk());
+    _saveToDisk().ignore();
 
     logInfo('已清空向量存储', source: 'VectorStore');
   }
