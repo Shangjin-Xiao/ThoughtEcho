@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:thoughtecho/services/ai_model_manager.dart';
-import 'package:thoughtecho/services/local_embedding_service.dart';
-import 'package:thoughtecho/services/local_asr_service.dart';
-import 'package:thoughtecho/services/local_ocr_service.dart';
 
 class OfflineAISettingsPage extends StatefulWidget {
   const OfflineAISettingsPage({super.key});

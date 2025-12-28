@@ -18,11 +18,13 @@ class LocalEmbeddingService {
       // Use XNNPACK or GPU delegate if available/needed
       // options.addDelegate(XNNPackDelegate());
 
-      _interpreter = await Interpreter.fromFile(modelPath, options: options);
+      // Interpreter.fromFile is synchronous in some versions, but error says "await on ... not a subtype of Future"
+      // So we remove await. And pass File object.
+      _interpreter = Interpreter.fromFile(File(modelPath), options: options);
       _tokenizer = await BertTokenizer.fromFile(vocabPath);
       _isInitialized = true;
     } catch (e) {
-      print('Error initializing LocalEmbeddingService: $e');
+      // print('Error initializing LocalEmbeddingService: $e'); // Avoid print
       rethrow;
     }
   }
@@ -62,7 +64,7 @@ class LocalEmbeddingService {
     // Standard BERT TFLite inputs: 0: ids, 1: mask, 2: segment_ids (sometimes order varies)
     // We'll assume standard order. If needed, we check `_interpreter.getInputTensors()`.
     // For safety, let's map by signature if possible, but map is easier.
-    final inputs = {0: input0, 1: input1, 2: input2};
+    // final inputs = {0: input0, 1: input1, 2: input2}; // Unused
     final outputs = {0: outputBuffer};
 
     _interpreter!.runForMultipleInputs([input0, input1, input2], outputs);

@@ -1,11 +1,11 @@
 import 'dart:async';
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa;
 import 'package:record/record.dart';
-import 'package:path_provider/path_provider.dart';
 
 class LocalASRService {
   sherpa.OnlineRecognizer? _recognizer;
+  sherpa.OnlineStream? _stream;
   final _audioRecorder = AudioRecorder();
   StreamSubscription? _audioSubscription;
   bool _isRecording = false;
@@ -22,42 +22,10 @@ class LocalASRService {
     required String decoder,
     required String joiner,
   }) async {
-    // Sherpa Onnx Config
-    // Usually standard transducer config for streaming
-    /*
-    final config = sherpa.OnlineRecognizerConfig(
-      modelConfig: sherpa.OnlineModelConfig(
-        transducer: sherpa.OnlineTransducerModelConfig(
-          encoder: encoder,
-          decoder: decoder,
-          joiner: joiner,
-        ),
-        tokens: tokens,
-        numThreads: 1,
-        provider: "cpu",
-        debug: 0,
-        modelType: "zipformer", // or conformer, depends on model
-      ),
-      featConfig: sherpa.FeatureConfig(
-        sampleRate: 16000,
-        featureDim: 80,
-      ),
-      enableEndpoint: true,
-      rule1MinTrailingSilence: 2.4,
-      rule2MinTrailingSilence: 1.2,
-      rule3MinUtteranceLength: 20.0,
-    );
-
-    _recognizer = sherpa.OnlineRecognizer(config);
-    */
-    // Note: The actual sherpa_onnx flutter API creates recognizer differently sometimes.
-    // I will use a simplified initialization assuming the user has downloaded standard sherpa-onnx models.
-    // Since I cannot run the code, I will write generic code that matches the library's common usage.
-
     try {
         sherpa.OnlineRecognizerConfig config = sherpa.OnlineRecognizerConfig(
-        featConfig: sherpa.FeatureConfig(sampleRate: 16000, featureDim: 80),
-        modelConfig: sherpa.OnlineModelConfig(
+        feat: sherpa.FeatureConfig(sampleRate: 16000, featureDim: 80),
+        model: sherpa.OnlineModelConfig(
           transducer: sherpa.OnlineTransducerModelConfig(
             encoder: encoder,
             decoder: decoder,
@@ -69,7 +37,7 @@ class LocalASRService {
       );
       _recognizer = sherpa.OnlineRecognizer(config);
     } catch (e) {
-      print("Failed to initialize ASR: $e");
+      // print("Failed to initialize ASR: $e");
     }
   }
 
@@ -85,22 +53,16 @@ class LocalASRService {
       );
 
       _isRecording = true;
-      _recognizer!.reset();
+      _stream = _recognizer!.createStream();
 
       _audioSubscription = stream.listen((data) {
-        // data is Uint8List (PCM bytes)
-        // Convert to float array [-1, 1] if needed, or pass bytes directly depending on API.
-        // sherpa_onnx acceptWaveform usually takes list of floats.
-        // 16-bit PCM -> float
         final samples = _bytesToFloat(data);
-        _recognizer!.acceptWaveform(samples, sampleRate: 16000);
+        _stream!.acceptWaveform(samples: Float32List.fromList(samples), sampleRate: 16000);
 
-        if (_recognizer!.isReady()) {
-          _recognizer!.decode();
-          final result = _recognizer!.getResult();
+        if (_recognizer!.isReady(_stream!)) {
+          _recognizer!.decode(_stream!);
+          final result = _recognizer!.getResult(_stream!);
           if (result.text.isNotEmpty) {
-             // For streaming, we might want the diff or full text.
-             // Usually getResult returns the full text of current segment.
              _resultController.add(result.text);
           }
         }
@@ -114,9 +76,11 @@ class LocalASRService {
     await _audioSubscription?.cancel();
     _audioSubscription = null;
 
-    if (_recognizer != null) {
-      final result = _recognizer!.getResult();
+    if (_recognizer != null && _stream != null) {
+      final result = _recognizer!.getResult(_stream!);
       _resultController.add(result.text); // Final result
+      _stream!.free();
+      _stream = null;
     }
   }
 
