@@ -58,13 +58,13 @@ class LocalAIService extends ChangeNotifier {
     switch (feature) {
       case 'asr':
         return _settings.speechToTextEnabled &&
-               (ModelManager.instance.getStatus(ModelType.whisperTiny) == ModelStatus.ready ||
-                ModelManager.instance.getStatus(ModelType.whisperBase) == ModelStatus.ready);
+               (ModelManager.instance.getStatus(AppModelType.whisperTiny) == ModelStatus.ready ||
+                ModelManager.instance.getStatus(AppModelType.whisperBase) == ModelStatus.ready);
       case 'ocr':
         return _settings.ocrEnabled &&
-               ModelManager.instance.getStatus(ModelType.tesseractEng) == ModelStatus.ready; // Simplified check
+               ModelManager.instance.getStatus(AppModelType.tesseractEng) == ModelStatus.ready; // Simplified check
       case 'llm':
-        return ModelManager.instance.getStatus(ModelType.gemma) == ModelStatus.ready;
+        return ModelManager.instance.getStatus(AppModelType.gemma) == ModelStatus.ready;
       default:
         return false;
     }

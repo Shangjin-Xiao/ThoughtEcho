@@ -22,7 +22,7 @@ class ModelManagementPage extends StatelessWidget {
                 _buildModelItem(
                   context,
                   manager,
-                  ModelType.gemma,
+                  AppModelType.gemma,
                   "Gemma 2B (LLM)",
                   "~1.5GB",
                   "Core intelligence for text processing"
@@ -30,7 +30,7 @@ class ModelManagementPage extends StatelessWidget {
                 _buildModelItem(
                   context,
                   manager,
-                  ModelType.whisperTiny,
+                  AppModelType.whisperTiny,
                   "Whisper Tiny (ASR)",
                   "~39MB",
                   "Fast speech recognition"
@@ -38,7 +38,7 @@ class ModelManagementPage extends StatelessWidget {
                 _buildModelItem(
                   context,
                   manager,
-                  ModelType.whisperBase,
+                  AppModelType.whisperBase,
                   "Whisper Base (ASR)",
                   "~74MB",
                   "Better accuracy speech recognition"
@@ -46,7 +46,7 @@ class ModelManagementPage extends StatelessWidget {
                 _buildModelItem(
                   context,
                   manager,
-                  ModelType.tesseractChi,
+                  AppModelType.tesseractChi,
                   "Tesseract Chinese (OCR)",
                   "~50MB",
                   "Chinese text recognition"
@@ -54,7 +54,7 @@ class ModelManagementPage extends StatelessWidget {
                  _buildModelItem(
                   context,
                   manager,
-                  ModelType.tesseractEng,
+                  AppModelType.tesseractEng,
                   "Tesseract English (OCR)",
                   "~20MB",
                   "English text recognition"
@@ -70,7 +70,7 @@ class ModelManagementPage extends StatelessWidget {
   Widget _buildModelItem(
     BuildContext context,
     ModelManager manager,
-    ModelType type,
+    AppModelType type,
     String title,
     String size,
     String description
@@ -172,7 +172,7 @@ class ModelManagementPage extends StatelessWidget {
     );
   }
 
-  Future<void> _importModel(BuildContext context, ModelManager manager, ModelType type) async {
+  Future<void> _importModel(BuildContext context, ModelManager manager, AppModelType type) async {
     final result = await FilePicker.platform.pickFiles();
     if (result != null && result.files.single.path != null) {
       try {

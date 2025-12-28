@@ -5,7 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:archive/archive.dart';
 import 'package:thoughtecho/services/unified_log_service.dart';
 
-enum ModelType {
+enum AppModelType {
   gemma,
   whisperTiny,
   whisperBase,
@@ -26,30 +26,30 @@ class ModelManager extends ChangeNotifier {
 
   ModelManager._internal();
 
-  final Map<ModelType, ModelStatus> _statuses = {
-    ModelType.gemma: ModelStatus.notDownloaded,
-    ModelType.whisperTiny: ModelStatus.notDownloaded,
-    ModelType.whisperBase: ModelStatus.notDownloaded,
-    ModelType.tesseractChi: ModelStatus.notDownloaded,
-    ModelType.tesseractEng: ModelStatus.notDownloaded,
+  final Map<AppModelType, ModelStatus> _statuses = {
+    AppModelType.gemma: ModelStatus.notDownloaded,
+    AppModelType.whisperTiny: ModelStatus.notDownloaded,
+    AppModelType.whisperBase: ModelStatus.notDownloaded,
+    AppModelType.tesseractChi: ModelStatus.notDownloaded,
+    AppModelType.tesseractEng: ModelStatus.notDownloaded,
   };
 
-  final Map<ModelType, double> _progress = {};
+  final Map<AppModelType, double> _progress = {};
 
-  final Map<ModelType, String> _modelUrls = {
+  final Map<AppModelType, String> _modelUrls = {
     // Placeholder URLs - in real implementation, replace with actual direct download links
-    ModelType.gemma: 'https://huggingface.co/rahulSyd/gemma-2b-it-gpu-int4/resolve/main/gemma-2b-it-gpu-int4.bin',
-    ModelType.whisperTiny: 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-tiny.tar.bz2',
-    ModelType.whisperBase: 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-base.tar.bz2',
-    ModelType.tesseractChi: 'https://github.com/tesseract-ocr/tessdata_fast/raw/main/chi_sim.traineddata',
-    ModelType.tesseractEng: 'https://github.com/tesseract-ocr/tessdata_fast/raw/main/eng.traineddata',
+    AppModelType.gemma: 'https://huggingface.co/rahulSyd/gemma-2b-it-gpu-int4/resolve/main/gemma-2b-it-gpu-int4.bin',
+    AppModelType.whisperTiny: 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-tiny.tar.bz2',
+    AppModelType.whisperBase: 'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-base.tar.bz2',
+    AppModelType.tesseractChi: 'https://github.com/tesseract-ocr/tessdata_fast/raw/main/chi_sim.traineddata',
+    AppModelType.tesseractEng: 'https://github.com/tesseract-ocr/tessdata_fast/raw/main/eng.traineddata',
   };
 
-  ModelStatus getStatus(ModelType type) => _statuses[type] ?? ModelStatus.notDownloaded;
-  double getProgress(ModelType type) => _progress[type] ?? 0.0;
+  ModelStatus getStatus(AppModelType type) => _statuses[type] ?? ModelStatus.notDownloaded;
+  double getProgress(AppModelType type) => _progress[type] ?? 0.0;
 
   Future<void> initialize() async {
-    for (var type in ModelType.values) {
+    for (var type in AppModelType.values) {
       if (await isModelReady(type)) {
         _statuses[type] = ModelStatus.ready;
       }
@@ -57,7 +57,7 @@ class ModelManager extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<String> getModelPath(ModelType type) async {
+  Future<String> getModelPath(AppModelType type) async {
     final dir = await getApplicationSupportDirectory();
     final modelDir = Directory('${dir.path}/models/${type.name}');
     if (!await modelDir.exists()) {
@@ -66,30 +66,30 @@ class ModelManager extends ChangeNotifier {
 
     // Return specific filenames based on type
     switch (type) {
-      case ModelType.gemma:
+      case AppModelType.gemma:
         return '${modelDir.path}/gemma-2b-it-gpu-int4.bin';
-      case ModelType.whisperTiny:
+      case AppModelType.whisperTiny:
         return '${modelDir.path}/sherpa-onnx-whisper-tiny/tiny-encoder.onnx'; // Assuming extracted structure
-      case ModelType.whisperBase:
+      case AppModelType.whisperBase:
         return '${modelDir.path}/sherpa-onnx-whisper-base/base-encoder.onnx';
-      case ModelType.tesseractChi:
+      case AppModelType.tesseractChi:
         return '${modelDir.path}/chi_sim.traineddata';
-      case ModelType.tesseractEng:
+      case AppModelType.tesseractEng:
         return '${modelDir.path}/eng.traineddata';
     }
   }
 
-  Future<String> getModelDir(ModelType type) async {
+  Future<String> getModelDir(AppModelType type) async {
     final dir = await getApplicationSupportDirectory();
     return '${dir.path}/models/${type.name}';
   }
 
-  Future<bool> isModelReady(ModelType type) async {
+  Future<bool> isModelReady(AppModelType type) async {
     final path = await getModelPath(type);
     return File(path).exists();
   }
 
-  Future<void> downloadModel(ModelType type) async {
+  Future<void> downloadModel(AppModelType type) async {
     if (_statuses[type] == ModelStatus.downloading) return;
 
     try {
@@ -158,7 +158,7 @@ class ModelManager extends ChangeNotifier {
     }
   }
 
-  Future<void> importModel(ModelType type, String sourcePath) async {
+  Future<void> importModel(AppModelType type, String sourcePath) async {
     try {
       final destPath = await getModelPath(type);
       final sourceFile = File(sourcePath);

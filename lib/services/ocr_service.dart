@@ -46,18 +46,22 @@ class OCRService {
       // Fix: We should ideally copy them to a 'tessdata' folder.
 
       // Let's create a temp tessdata dir
-      final dir = Directory((await ModelManager.instance.getModelDir(ModelType.tesseractEng)).replaceAll('tesseractEng', 'tessdata'));
+      final dir = Directory((await ModelManager.instance.getModelDir(AppModelType.tesseractEng)).replaceAll('tesseractEng', 'tessdata'));
       if (!dir.exists()) dir.createSync(recursive: true);
 
       // Symlink or copy required models
-      final chiPath = await ModelManager.instance.getModelPath(ModelType.tesseractChi);
-      final engPath = await ModelManager.instance.getModelPath(ModelType.tesseractEng);
+      final chiPath = await ModelManager.instance.getModelPath(AppModelType.tesseractChi);
+      final engPath = await ModelManager.instance.getModelPath(AppModelType.tesseractEng);
 
       final chiLink = File('${dir.path}/chi_sim.traineddata');
       final engLink = File('${dir.path}/eng.traineddata');
 
-      if (!chiLink.existsSync() && File(chiPath).existsSync()) File(chiPath).copySync(chiLink.path);
-      if (!engLink.existsSync() && File(engPath).existsSync()) File(engPath).copySync(engLink.path);
+      if (chiLink.existsSync() == false && File(chiPath).existsSync()) {
+        File(chiPath).copySync(chiLink.path);
+      }
+      if (engLink.existsSync() == false && File(engPath).existsSync()) {
+        File(engPath).copySync(engLink.path);
+      }
 
       final text = await FlutterTesseractOcr.extractText(
         imagePath,
