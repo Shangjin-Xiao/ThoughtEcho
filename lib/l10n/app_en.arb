@@ -3048,5 +3048,113 @@
   "smartPushTestSent": "Test notification sent, please check notifications",
   "smartPushNoMatchingNotes": "No matching notes to push",
   "smartPushNotice": "Notice",
-  "smartPushNoticeDesc": "• Push notifications require notification permission\n• Notifications may be delayed when app is in background\n• Keep the app running in background for best experience\n• True background scheduling coming soon"
+  "smartPushNoticeDesc": "• Push notifications require notification permission\n• Notifications may be delayed when app is in background\n• Keep the app running in background for best experience\n• True background scheduling coming soon",
+
+  "localAiModelManagement": "Local Model Management",
+  "localAiModelManagementDesc": "Import and manage on-device AI models",
+  "embeddingModel": "Embedding Model",
+  "embeddingModelDesc": "TFLite model for semantic search and related notes",
+  "asrModel": "Speech Recognition Model",
+  "asrModelDesc": "Whisper ONNX model for speech-to-text",
+  "ocrModel": "OCR Model",
+  "ocrModelDesc": "Tesseract or PaddleOCR model for text recognition",
+  "modelNotInstalled": "Not installed",
+  "modelReady": "Ready",
+  "modelDownloading": "Downloading",
+  "modelInvalid": "Invalid",
+  "importModel": "Import Model",
+  "deleteModel": "Delete Model",
+  "deleteModelConfirm": "Are you sure you want to delete this model? You will need to re-import it.",
+  "modelDeleted": "Model deleted",
+  "modelDeleteFailed": "Failed to delete model: {error}",
+  "@modelDeleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "importingModel": "Importing model...",
+  "modelImported": "Model imported successfully",
+  "modelImportFailed": "Model import failed: {error}",
+  "@modelImportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "modelImportCancelled": "Model import cancelled",
+  "selectTfliteFile": "Select TFLite model file (.tflite)",
+  "selectVocabFile": "Select vocabulary file (vocab.txt)",
+  "selectWhisperDir": "Select Whisper ONNX model directory",
+  "selectTessdataFiles": "Select Tesseract language files (.traineddata)",
+  "selectPaddleOcrDir": "Select PaddleOCR model directory",
+  "recommendedModels": "Recommended Models",
+  "modelFileSize": "File size: {size}",
+  "@modelFileSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "modelLastUpdated": "Updated: {time}",
+  "@modelLastUpdated": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "modelStorageUsage": "Model Storage Usage",
+  "totalModelSize": "Total: {size}",
+  "@totalModelSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "embeddingModelRecommendation": "Recommended: paraphrase-multilingual-MiniLM-L12-v2 (TFLite)\n• ~25MB, 384 dimensions\n• Supports 50+ languages",
+  "asrModelRecommendation": "Recommended: Whisper ONNX\n• tiny version ~39MB (fast)\n• base version ~74MB (more accurate)",
+  "ocrModelRecommendation": "Recommended:\n• Tesseract chi_sim+eng (~30MB)\n• PaddleOCR Lite (~8MB, optimized for Chinese)",
+  "ocrEngineType": "OCR Engine Type",
+  "useTesseract": "Use Tesseract",
+  "usePaddleOCR": "Use PaddleOCR",
+  "vectorStorageStats": "Vector Storage Statistics",
+  "embeddingCount": "Stored embeddings: {count}",
+  "@embeddingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clearEmbeddings": "Clear All Embeddings",
+  "clearEmbeddingsConfirm": "Are you sure you want to clear all stored note embeddings? This will affect semantic search but won't delete your notes.",
+  "embeddingsCleared": "All embeddings cleared",
+  "rebuildEmbeddings": "Rebuild Embeddings",
+  "rebuildEmbeddingsDesc": "Regenerate semantic embeddings for all notes (may take a while)",
+  "rebuildingEmbeddings": "Rebuilding embeddings...",
+  "embeddingsRebuilt": "Embeddings rebuilt: {count} notes",
+  "@embeddingsRebuilt": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "localAiStatus": "Local AI Status",
+  "modelPath": "Model path: {path}",
+  "@modelPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "viewDownloadLinks": "View Download Links",
+  "copyDownloadLink": "Copy Download Link",
+  "downloadLinkCopied": "Download link copied to clipboard"
 }

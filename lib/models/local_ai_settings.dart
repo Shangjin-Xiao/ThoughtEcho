@@ -1,3 +1,5 @@
+import 'local_ai_model_config.dart';
+
 /// 本地 AI 功能设置模型
 /// 
 /// 控制设备端 AI 功能的各项开关设置
@@ -32,6 +34,9 @@ class LocalAISettings {
   /// 相关笔记推荐开关
   final bool relatedNotesEnabled;
 
+  /// 本地 AI 模型配置
+  final LocalAIModelConfig modelConfig;
+
   const LocalAISettings({
     this.enabled = false,
     this.speechToTextEnabled = true,
@@ -43,6 +48,7 @@ class LocalAISettings {
     this.noteClassificationEnabled = true,
     this.emotionDetectionEnabled = true,
     this.relatedNotesEnabled = true,
+    this.modelConfig = const LocalAIModelConfig(),
   });
 
   /// 默认设置
@@ -61,6 +67,9 @@ class LocalAISettings {
       noteClassificationEnabled: json['noteClassificationEnabled'] as bool? ?? true,
       emotionDetectionEnabled: json['emotionDetectionEnabled'] as bool? ?? true,
       relatedNotesEnabled: json['relatedNotesEnabled'] as bool? ?? true,
+      modelConfig: json['modelConfig'] != null
+          ? LocalAIModelConfig.fromJson(json['modelConfig'] as Map<String, dynamic>)
+          : const LocalAIModelConfig(),
     );
   }
 
@@ -77,6 +86,7 @@ class LocalAISettings {
       'noteClassificationEnabled': noteClassificationEnabled,
       'emotionDetectionEnabled': emotionDetectionEnabled,
       'relatedNotesEnabled': relatedNotesEnabled,
+      'modelConfig': modelConfig.toJson(),
     };
   }
 
@@ -92,6 +102,7 @@ class LocalAISettings {
     bool? noteClassificationEnabled,
     bool? emotionDetectionEnabled,
     bool? relatedNotesEnabled,
+    LocalAIModelConfig? modelConfig,
   }) {
     return LocalAISettings(
       enabled: enabled ?? this.enabled,
@@ -104,6 +115,7 @@ class LocalAISettings {
       noteClassificationEnabled: noteClassificationEnabled ?? this.noteClassificationEnabled,
       emotionDetectionEnabled: emotionDetectionEnabled ?? this.emotionDetectionEnabled,
       relatedNotesEnabled: relatedNotesEnabled ?? this.relatedNotesEnabled,
+      modelConfig: modelConfig ?? this.modelConfig,
     );
   }
 
@@ -120,7 +132,8 @@ class LocalAISettings {
         other.smartTagsEnabled == smartTagsEnabled &&
         other.noteClassificationEnabled == noteClassificationEnabled &&
         other.emotionDetectionEnabled == emotionDetectionEnabled &&
-        other.relatedNotesEnabled == relatedNotesEnabled;
+        other.relatedNotesEnabled == relatedNotesEnabled &&
+        other.modelConfig == modelConfig;
   }
 
   @override
@@ -136,6 +149,7 @@ class LocalAISettings {
       noteClassificationEnabled,
       emotionDetectionEnabled,
       relatedNotesEnabled,
+      modelConfig,
     );
   }
 
@@ -151,6 +165,7 @@ class LocalAISettings {
         'smartTagsEnabled: $smartTagsEnabled, '
         'noteClassificationEnabled: $noteClassificationEnabled, '
         'emotionDetectionEnabled: $emotionDetectionEnabled, '
-        'relatedNotesEnabled: $relatedNotesEnabled)';
+        'relatedNotesEnabled: $relatedNotesEnabled, '
+        'modelConfig: $modelConfig)';
   }
 }
