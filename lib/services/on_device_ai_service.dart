@@ -100,19 +100,20 @@ class OnDeviceAIService extends ChangeNotifier {
         return;
       }
 
-      // 初始化 OCR 识别器
+      // 初始化 OCR 识别器 (ML Kit - MIT 许可证, 可用)
       if (settings.ocrEnabled) {
         await _initializeOCR();
       }
 
-      // 初始化 Cactus (LLM/ASR/Embedding)
-      // ⚠️ 注意：cactus 许可证待确认，暂时禁用
-      // 商业使用前请确认许可证状态
-      if (settings.speechToTextEnabled || 
-          settings.aiSearchEnabled || 
-          settings.aiCorrectionEnabled) {
-        await _initializeCactus();
-      }
+      // ⚠️ Cactus 许可证待确认，暂时跳过初始化
+      // TODO: 许可证确认后取消注释以下代码启用 LLM/ASR/Embedding 功能
+      // if (settings.speechToTextEnabled || 
+      //     settings.aiSearchEnabled || 
+      //     settings.aiCorrectionEnabled) {
+      //   await _initializeCactus();
+      // }
+      _cactusAvailable = false;
+      logDebug('OnDeviceAIService: Cactus 功能暂时禁用（许可证待确认）');
 
       _status = OnDeviceAIStatus.ready;
       logDebug('OnDeviceAIService: 初始化完成');
@@ -151,33 +152,30 @@ class OnDeviceAIService extends ChangeNotifier {
     }
   }
 
-  /// 初始化 Cactus (LLM/ASR/Embedding)
+  /// 初始化 Cactus (LLM/ASR/Embedding) - 当前未使用
   /// 
   /// ⚠️ 重要提示：
   /// cactus 许可证不明确，商业使用前请确认许可证状态。
   /// 源码包含 telemetry/ProKey 代码，不建议在商业发布前使用。
   /// 
   /// TODO: 许可证确认后实现以下功能：
-  /// - 检查模型路径有效性
+  /// - 检查模型路径有效性 (使用 dart:io File)
   /// - 创建 CactusSession 实例
   /// - 调用 initialize(modelPath: path) 初始化模型
-  Future<void> _initializeCactus() async {
-    try {
-      // Web 平台不支持本地模型
-      if (kIsWeb) {
-        logDebug('OnDeviceAIService: Web 平台不支持 Cactus');
-        _cactusAvailable = false;
-        return;
-      }
-
-      // ⚠️ Cactus 许可证待确认，暂时禁用所有 LLM/ASR/Embedding 功能
-      logDebug('OnDeviceAIService: Cactus 功能暂时禁用（许可证待确认）');
-      _cactusAvailable = false;
-    } catch (e) {
-      logDebug('OnDeviceAIService: Cactus 初始化失败: $e');
-      _cactusAvailable = false;
-    }
-  }
+  /// - 设置 _cactusAvailable = true
+  /// 
+  /// 示例实现（许可证确认后启用）:
+  /// ```dart
+  /// Future<void> _initializeCactus() async {
+  ///   if (kIsWeb) { _cactusAvailable = false; return; }
+  ///   if (_modelPath == null) { _cactusAvailable = false; return; }
+  ///   final modelFile = File(_modelPath!);
+  ///   if (!await modelFile.exists()) { _cactusAvailable = false; return; }
+  ///   _cactusSession = CactusSession();
+  ///   await _cactusSession!.initialize(modelPath: _modelPath!);
+  ///   _cactusAvailable = true;
+  /// }
+  /// ```
 
   /// 更新设置
   Future<void> updateSettings(LocalAISettings newSettings) async {
@@ -372,21 +370,11 @@ class OnDeviceAIService extends ChangeNotifier {
 
   // ========== 辅助功能 ==========
 
-  /// 获取许可证警告信息
-  String get licenseWarning => '''
-⚠️ 许可证警告
-
-本地AI功能使用了以下第三方库：
-• cactus: 许可证不明确
-• google_mlkit_text_recognition: MIT 许可证
-
-cactus 库的许可证状态未明确，源码中包含 telemetry/ProKey 相关代码。
-在商业发布前，请务必确认 cactus 的许可证状态。
-
-当前建议：
-• 仅用于快速原型测试和个人使用
-• 商业发布请选择其他方案或等待许可证确认
-''';
+  /// 获取许可证警告的本地化键名
+  /// 
+  /// 使用方式: l10n.onDeviceAILicenseDetails
+  /// 实际文案应从 AppLocalizations 获取以支持多语言
+  static const String licenseWarningKey = 'onDeviceAILicenseDetails';
 
   /// 获取功能状态摘要
   Map<String, bool> getFeatureStatus() {

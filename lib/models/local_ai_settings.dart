@@ -95,6 +95,8 @@ class LocalAISettings {
   }
 
   /// 复制并修改
+  /// 
+  /// 注意: 要清除 modelPath，请使用 clearModelPath() 方法
   LocalAISettings copyWith({
     bool? enabled,
     bool? speechToTextEnabled,
@@ -107,7 +109,6 @@ class LocalAISettings {
     bool? emotionDetectionEnabled,
     bool? relatedNotesEnabled,
     String? modelPath,
-    bool clearModelPath = false,
   }) {
     return LocalAISettings(
       enabled: enabled ?? this.enabled,
@@ -120,7 +121,24 @@ class LocalAISettings {
       noteClassificationEnabled: noteClassificationEnabled ?? this.noteClassificationEnabled,
       emotionDetectionEnabled: emotionDetectionEnabled ?? this.emotionDetectionEnabled,
       relatedNotesEnabled: relatedNotesEnabled ?? this.relatedNotesEnabled,
-      modelPath: clearModelPath ? null : (modelPath ?? this.modelPath),
+      modelPath: modelPath ?? this.modelPath,
+    );
+  }
+
+  /// 清除模型路径
+  LocalAISettings clearModelPath() {
+    return LocalAISettings(
+      enabled: enabled,
+      speechToTextEnabled: speechToTextEnabled,
+      ocrEnabled: ocrEnabled,
+      aiSearchEnabled: aiSearchEnabled,
+      aiCorrectionEnabled: aiCorrectionEnabled,
+      sourceRecognitionEnabled: sourceRecognitionEnabled,
+      smartTagsEnabled: smartTagsEnabled,
+      noteClassificationEnabled: noteClassificationEnabled,
+      emotionDetectionEnabled: emotionDetectionEnabled,
+      relatedNotesEnabled: relatedNotesEnabled,
+      modelPath: null,
     );
   }
 
