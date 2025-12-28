@@ -84,7 +84,7 @@ dependencies:
   timezone: ^0.10.0
   # 本地AI功能 (Preview) - 方案B: cactus + ML Kit
   # ⚠️ 注意: cactus 许可证未明确，商业使用前请确认
-  cactus: ^0.0.5                              # 本地LLM/ASR/嵌入 (许可证待确认⚠️)
+  cactus: ^0.1.4                              # 本地LLM/ASR/嵌入 (许可证待确认⚠️)
   google_mlkit_text_recognition: ^0.13.0      # OCR文字识别 (MIT)
   record: ^5.1.0                              # 音频录制
   camera: ^0.11.0                             # 相机拍照
