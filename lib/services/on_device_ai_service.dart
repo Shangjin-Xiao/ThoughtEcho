@@ -209,7 +209,7 @@ class OnDeviceAIService extends ChangeNotifier {
     TextRecognitionScript preferredScript = TextRecognitionScript.chinese,
   }) async {
     if (!isOCRAvailable) {
-      throw Exception('OCR 功能未启用或不可用');
+      throw Exception('OCR feature not enabled or unavailable');
     }
 
     _status = OnDeviceAIStatus.processing;
@@ -224,7 +224,7 @@ class OnDeviceAIService extends ChangeNotifier {
           : _latinRecognizer;
 
       if (recognizer == null) {
-        throw Exception('OCR 识别器未初始化');
+        throw Exception('OCR recognizer not initialized');
       }
 
       final result = await recognizer.processImage(inputImage);
@@ -250,7 +250,7 @@ class OnDeviceAIService extends ChangeNotifier {
     TextRecognitionScript preferredScript = TextRecognitionScript.chinese,
   }) async {
     if (!isOCRAvailable) {
-      throw Exception('OCR 功能未启用或不可用');
+      throw Exception('OCR feature not enabled or unavailable');
     }
 
     _status = OnDeviceAIStatus.processing;
@@ -264,7 +264,7 @@ class OnDeviceAIService extends ChangeNotifier {
           : _latinRecognizer;
 
       if (recognizer == null) {
-        throw Exception('OCR 识别器未初始化');
+        throw Exception('OCR recognizer not initialized');
       }
 
       final result = await recognizer.processImage(inputImage);
@@ -294,7 +294,7 @@ class OnDeviceAIService extends ChangeNotifier {
   /// 返回 AI 回复
   Future<String> chat(String message) async {
     if (!isLLMAvailable) {
-      throw Exception('LLM 功能未启用或不可用（许可证待确认）');
+      throw Exception('LLM feature not enabled or unavailable (license pending)');
     }
 
     _status = OnDeviceAIStatus.processing;
@@ -302,7 +302,7 @@ class OnDeviceAIService extends ChangeNotifier {
 
     try {
       // ⚠️ Cactus 许可证待确认，暂时禁用
-      throw Exception('LLM 功能暂时禁用（cactus 许可证待确认）');
+      throw Exception('LLM feature temporarily disabled (cactus license pending)');
     } catch (e) {
       _status = OnDeviceAIStatus.ready;
       notifyListeners();
@@ -323,7 +323,7 @@ class OnDeviceAIService extends ChangeNotifier {
   /// 返回转录文本
   Future<String> transcribe(String audioPath) async {
     if (!isASRAvailable) {
-      throw Exception('ASR 功能未启用或不可用（许可证待确认）');
+      throw Exception('ASR feature not enabled or unavailable (license pending)');
     }
 
     _status = OnDeviceAIStatus.processing;
@@ -331,7 +331,7 @@ class OnDeviceAIService extends ChangeNotifier {
 
     try {
       // ⚠️ Cactus 许可证待确认，暂时禁用
-      throw Exception('ASR 功能暂时禁用（cactus 许可证待确认）');
+      throw Exception('ASR feature temporarily disabled (cactus license pending)');
     } catch (e) {
       _status = OnDeviceAIStatus.ready;
       notifyListeners();
@@ -352,7 +352,7 @@ class OnDeviceAIService extends ChangeNotifier {
   /// 返回嵌入向量
   Future<List<double>> embed(String text) async {
     if (!isEmbeddingAvailable) {
-      throw Exception('嵌入功能未启用或不可用（许可证待确认）');
+      throw Exception('Embedding feature not enabled or unavailable (license pending)');
     }
 
     _status = OnDeviceAIStatus.processing;
@@ -360,7 +360,7 @@ class OnDeviceAIService extends ChangeNotifier {
 
     try {
       // ⚠️ Cactus 许可证待确认，暂时禁用
-      throw Exception('嵌入功能暂时禁用（cactus 许可证待确认）');
+      throw Exception('Embedding feature temporarily disabled (cactus license pending)');
     } catch (e) {
       _status = OnDeviceAIStatus.ready;
       notifyListeners();
