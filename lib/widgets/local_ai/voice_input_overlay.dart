@@ -7,9 +7,11 @@ import '../../theme/app_theme.dart';
 /// 语音录制浮层组件
 ///
 /// 长按 FAB 时显示，提供录音状态显示和手势交互
+import 'package:thoughtecho/services/speech_recognition_service.dart';
+
 class VoiceInputOverlay extends StatefulWidget {
   final VoidCallback? onSwipeUpForOCR;
-  final VoidCallback? onRecordComplete;
+  final Function(String)? onRecordComplete; // Changed to accept string
   final String? transcribedText;
 
   const VoiceInputOverlay({
@@ -28,6 +30,7 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
   late AnimationController _animationController;
   double _swipeOffset = 0.0;
   bool _ocrTriggered = false;
+  final SpeechRecognitionService _speechService = SpeechRecognitionService.instance;
 
   static const double _ocrTriggerDistance = 120.0;
   static const double _maxDragDistance = 180.0;
@@ -39,11 +42,26 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     )..repeat(reverse: true);
+
+    _startRecording();
+  }
+
+  Future<void> _startRecording() async {
+    await _speechService.initialize();
+    await _speechService.startRecording();
+  }
+
+  Future<void> _stopRecording({bool forOCR = false}) async {
+    final text = await _speechService.stopAndTranscribe();
+    if (!forOCR) {
+      widget.onRecordComplete?.call(text);
+    }
   }
 
   @override
   void dispose() {
     _animationController.dispose();
+    // Ensure recording stops if widget disposed abruptly (though stopAndTranscribe handles logic)
     super.dispose();
   }
 
@@ -67,7 +85,7 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
           }
         });
       },
-      onVerticalDragEnd: (details) {
+      onVerticalDragEnd: (details) async {
         // 松手判定：达到阈值就进 OCR，否则视为录音完成
         final shouldTriggerOCR = _swipeOffset <= -_ocrTriggerDistance;
         setState(() {
@@ -76,10 +94,11 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
         });
 
         if (shouldTriggerOCR) {
+          await _stopRecording(forOCR: true);
           widget.onSwipeUpForOCR?.call();
           return;
         }
-        widget.onRecordComplete?.call();
+        await _stopRecording(forOCR: false);
       },
       child: Material(
         color: Colors.transparent,

@@ -1,5 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:camera/camera.dart';
+import 'package:thoughtecho/services/ocr_service.dart';
+import 'package:thoughtecho/widgets/local_ai/ocr_result_sheet.dart';
 import '../../gen_l10n/app_localizations.dart';
 
 /// OCR 拍照页面
@@ -13,11 +17,40 @@ class OCRCapturePage extends StatefulWidget {
 }
 
 class _OCRCapturePageState extends State<OCRCapturePage> {
+  CameraController? _controller;
+  Future<void>? _initializeControllerFuture;
+  bool _isProcessing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initCamera();
+  }
+
+  Future<void> _initCamera() async {
+    final cameras = await availableCameras();
+    final firstCamera = cameras.first;
+
+    _controller = CameraController(
+      firstCamera,
+      ResolutionPreset.high,
+      enableAudio: false,
+    );
+
+    _initializeControllerFuture = _controller!.initialize();
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
-
     final primary = theme.colorScheme.primary;
 
     return Scaffold(
@@ -33,34 +66,22 @@ class _OCRCapturePageState extends State<OCRCapturePage> {
       ),
       body: Stack(
         children: [
-          // TODO: 相机预览 - 后端实现后添加
-          Center(
-            child: Container(
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.camera_alt,
-                    size: 64,
-                    color: Colors.white.withOpacity(0.7),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    l10n.featureComingSoon,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          FutureBuilder<void>(
+            future: _initializeControllerFuture,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.done) {
+                return Center(child: CameraPreview(_controller!));
+              } else {
+                return const Center(child: CircularProgressIndicator());
+              }
+            },
           ),
+
+          if (_isProcessing)
+             Container(
+                color: Colors.black54,
+                child: const Center(child: CircularProgressIndicator()),
+             ),
 
           // 拍照提示
           Positioned(
@@ -73,6 +94,7 @@ class _OCRCapturePageState extends State<OCRCapturePage> {
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
+                  shadows: [Shadow(blurRadius: 2, color: Colors.black)],
                 ),
               ),
             ),
@@ -97,15 +119,64 @@ class _OCRCapturePageState extends State<OCRCapturePage> {
                     radius: 48,
                     splashColor: Colors.white.withOpacity(0.15),
                     highlightColor: Colors.white.withOpacity(0.06),
-                    onTap: () {
+                    onTap: _isProcessing ? null : () async {
                       HapticFeedback.selectionClick();
-                      // TODO: 拍照逻辑 - 后端实现后添加
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(l10n.featureComingSoon),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
+                      try {
+                        setState(() => _isProcessing = true);
+
+                        await _initializeControllerFuture;
+                        final image = await _controller!.takePicture();
+
+                        if (!mounted) return;
+
+                        final text = await OCRService.instance.recognizeFromFile(image.path);
+
+                        if (!mounted) return;
+                        setState(() => _isProcessing = false);
+
+                        Navigator.of(context).pop(); // Close camera
+
+                        // Show result sheet
+                        // We need a way to show result sheet from here or pass back result.
+                        // Currently HomePage handles opening OCRResultSheet.
+                        // Ideally we should push a result page or return result.
+                        // Let's modify logic to return the text to the caller, OR show sheet here.
+                        // Showing sheet here might be weird if we popped.
+                        // But wait, the previous flow was Home -> OCRFlow -> ResultSheet.
+                        // Home calls: await Navigator.of(context).push(OCRPage)
+                        // then shows sheet.
+                        // So we should pop with result?
+                        // But `_openOCRFlow` in home_page uses showModalBottomSheet AFTER push returns?
+                        // Actually let's look at `home_page.dart` again.
+                        // It pushes OCRCapturePage, then shows OCRResultSheet with "Feature Coming Soon".
+                        // So I should probably return the text when popping.
+
+                        // Wait, home_page currently ignores the pop result.
+                        // I need to update home_page to use the result.
+                        // But here, I can pop with result.
+                        // However, let's just show the sheet here for better UX flow?
+                        // Or stick to home_page logic?
+                        // Let's pop(text).
+
+                        // Wait, I can't easily change home_page signature expectation without checking it.
+                        // In home_page:
+                        // await Navigator.of(context).push(...)
+                        // final l10n = ...
+                        // String resultText = l10n.featureComingSoon;
+
+                        // So home_page doesn't read result.
+                        // I will update home_page to read the result.
+
+                        Navigator.of(context).pop(text);
+
+                      } catch (e) {
+                        if (mounted) {
+                          setState(() => _isProcessing = false);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Error: $e')),
+                          );
+                        }
+                      }
                     },
                     child: Container(
                       width: 78,

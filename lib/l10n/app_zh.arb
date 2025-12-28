@@ -2945,6 +2945,8 @@
   "enableInSettings": "请在设置中启用",
   "featureNotAvailable": "功能暂不可用",
   "featureComingSoon": "功能即将推出",
+  "processingPleaseWait": "正在处理，请稍候...",
+  "modelManagementTitle": "模型管理",
   "localAISettings": "本地 AI 功能",
   "localAISettingsDesc": "设备端 AI 功能设置 (Preview)",
   "localAIPreviewBadge": "Preview",

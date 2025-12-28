@@ -867,16 +867,11 @@ class _HomePageState extends State<HomePage>
             Navigator.of(context).pop();
             await _openOCRFlow();
           },
-          onRecordComplete: () {
+          onRecordComplete: (text) {
             Navigator.of(context).pop();
-            ScaffoldMessenger.of(this.context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  AppLocalizations.of(this.context).featureComingSoon,
-                ),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
+            if (text.isNotEmpty) {
+              _showAddQuoteDialog(prefilledContent: text);
+            }
           },
         );
       },
@@ -894,16 +889,16 @@ class _HomePageState extends State<HomePage>
   Future<void> _openOCRFlow() async {
     if (!mounted) return;
 
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute<dynamic>(
         builder: (context) => const OCRCapturePage(),
       ),
     );
 
-    if (!mounted) return;
+    if (!mounted || result == null || result is! String) return;
 
     final l10n = AppLocalizations.of(context);
-    String resultText = l10n.featureComingSoon;
+    String resultText = result;
 
     await showModalBottomSheet<void>(
       context: context,
