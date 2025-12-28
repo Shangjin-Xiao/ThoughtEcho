@@ -307,4 +307,28 @@ class LocalAIModelRecommendations {
       'size': '~8MB',
     },
   ];
+
+  /// Get download URL for a specific model type
+  static String? getDownloadUrl(LocalAIModelType type) {
+    switch (type) {
+      case LocalAIModelType.embedding:
+        return embeddingModels.isNotEmpty ? embeddingModels.first['url'] : null;
+      case LocalAIModelType.asr:
+        return asrModels.isNotEmpty ? asrModels.first['url'] : null;
+      case LocalAIModelType.ocr:
+        return ocrModels.isNotEmpty ? ocrModels.first['url'] : null;
+    }
+  }
+
+  /// Get recommendations for a specific model type
+  static List<Map<String, String>> getRecommendations(LocalAIModelType type) {
+    switch (type) {
+      case LocalAIModelType.embedding:
+        return embeddingModels;
+      case LocalAIModelType.asr:
+        return asrModels;
+      case LocalAIModelType.ocr:
+        return ocrModels;
+    }
+  }
 }

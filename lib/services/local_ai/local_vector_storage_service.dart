@@ -1,4 +1,4 @@
-import 'dart:convert';
+import 'dart:async';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
@@ -389,7 +389,9 @@ class LocalVectorStorageService extends ChangeNotifier {
 
   @override
   void dispose() {
-    disposeService();
+    // Use unawaited to explicitly indicate that we're intentionally not awaiting
+    // This is acceptable because database close is not critical for app shutdown
+    unawaited(disposeService());
     super.dispose();
   }
 }

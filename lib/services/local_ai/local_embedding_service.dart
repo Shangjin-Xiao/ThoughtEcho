@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math' as math;
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:tflite_flutter/tflite_flutter.dart';
@@ -13,6 +14,7 @@ import '../../utils/app_logger.dart';
 class LocalEmbeddingService extends ChangeNotifier {
   Interpreter? _interpreter;
   List<String>? _vocabulary;
+  Map<String, int>? _vocabMap;  // Cached vocabulary map for O(1) lookups
   bool _isInitialized = false;
   bool _isInitializing = false;
   String? _error;
@@ -59,6 +61,12 @@ class LocalEmbeddingService extends ChangeNotifier {
       final vocabFile = File(vocabPath);
       final vocabContent = await vocabFile.readAsString();
       _vocabulary = vocabContent.split('\n').map((e) => e.trim()).toList();
+      
+      // Build vocabulary map for O(1) lookups
+      _vocabMap = {};
+      for (int i = 0; i < _vocabulary!.length; i++) {
+        _vocabMap![_vocabulary![i]] = i;
+      }
       logDebug('Loaded vocabulary with ${_vocabulary!.length} tokens');
 
       // Load TFLite model
@@ -89,7 +97,7 @@ class LocalEmbeddingService extends ChangeNotifier {
   /// 
   /// Returns a 384-dimensional vector or null if service not initialized
   Future<List<double>?> generateEmbedding(String text) async {
-    if (!_isInitialized || _interpreter == null || _vocabulary == null) {
+    if (!_isInitialized || _interpreter == null || _vocabMap == null) {
       logDebug('Embedding service not initialized');
       return null;
     }
@@ -99,18 +107,25 @@ class LocalEmbeddingService extends ChangeNotifier {
       final inputIds = _tokenize(text);
       final attentionMask = List.filled(maxSequenceLength, 1);
       
-      // Pad or truncate to maxSequenceLength
-      while (inputIds.length < maxSequenceLength) {
-        inputIds.add(0); // PAD token
-        attentionMask[inputIds.length - 1] = 0;
-      }
+      // Handle padding and truncation
+      final effectiveLength = inputIds.length > maxSequenceLength 
+          ? maxSequenceLength 
+          : inputIds.length;
+      
+      // Truncate if needed
       if (inputIds.length > maxSequenceLength) {
         inputIds.length = maxSequenceLength;
+      }
+      
+      // Pad if needed and set attention mask for padding tokens
+      for (int i = effectiveLength; i < maxSequenceLength; i++) {
+        inputIds.add(0); // PAD token
+        attentionMask[i] = 0;
       }
 
       // Prepare input tensors
       final inputIdsBuffer = Int32List.fromList(inputIds);
-      final attentionMaskBuffer = Int32List.fromList(attentionMask.take(maxSequenceLength).toList());
+      final attentionMaskBuffer = Int32List.fromList(attentionMask);
       
       // Prepare output buffer
       final outputBuffer = List.filled(embeddingDimension, 0.0);
@@ -162,7 +177,7 @@ class LocalEmbeddingService extends ChangeNotifier {
       return 0.0;
     }
     
-    return dotProduct / (sqrt(normA) * sqrt(normB));
+    return dotProduct / (math.sqrt(normA) * math.sqrt(normB));
   }
 
   /// Simple tokenization using vocabulary
@@ -170,31 +185,33 @@ class LocalEmbeddingService extends ChangeNotifier {
   /// Note: This is a simplified tokenizer. For production use,
   /// you should implement proper subword tokenization (e.g., SentencePiece)
   List<int> _tokenize(String text) {
-    if (_vocabulary == null) return [];
+    if (_vocabMap == null) return [];
 
     final tokens = <int>[];
     
-    // Add [CLS] token
-    final clsIndex = _vocabulary!.indexOf('[CLS]');
-    if (clsIndex >= 0) tokens.add(clsIndex);
+    // Add [CLS] token using cached map lookup
+    final clsIndex = _vocabMap!['[CLS]'];
+    if (clsIndex != null) tokens.add(clsIndex);
+
+    // Get [UNK] token index once for efficiency
+    final unkIndex = _vocabMap!['[UNK]'];
 
     // Simple whitespace tokenization
     // In production, use proper subword tokenization
     final words = text.toLowerCase().split(RegExp(r'\s+'));
     for (final word in words) {
-      final index = _vocabulary!.indexOf(word);
-      if (index >= 0) {
+      final index = _vocabMap![word];
+      if (index != null) {
         tokens.add(index);
-      } else {
+      } else if (unkIndex != null) {
         // Add [UNK] token for unknown words
-        final unkIndex = _vocabulary!.indexOf('[UNK]');
-        if (unkIndex >= 0) tokens.add(unkIndex);
+        tokens.add(unkIndex);
       }
     }
 
-    // Add [SEP] token
-    final sepIndex = _vocabulary!.indexOf('[SEP]');
-    if (sepIndex >= 0) tokens.add(sepIndex);
+    // Add [SEP] token using cached map lookup
+    final sepIndex = _vocabMap!['[SEP]'];
+    if (sepIndex != null) tokens.add(sepIndex);
 
     return tokens;
   }
@@ -205,7 +222,7 @@ class LocalEmbeddingService extends ChangeNotifier {
     for (final v in vector) {
       norm += v * v;
     }
-    norm = sqrt(norm);
+    norm = math.sqrt(norm);
     
     if (norm == 0.0) return vector;
     
@@ -217,6 +234,7 @@ class LocalEmbeddingService extends ChangeNotifier {
     _interpreter?.close();
     _interpreter = null;
     _vocabulary = null;
+    _vocabMap = null;
     _isInitialized = false;
     notifyListeners();
   }
@@ -226,18 +244,4 @@ class LocalEmbeddingService extends ChangeNotifier {
     disposeService();
     super.dispose();
   }
-}
-
-/// Simple square root function to avoid dart:math import conflicts
-double sqrt(double x) {
-  if (x < 0) return double.nan;
-  if (x == 0 || x == 1) return x;
-  
-  double guess = x / 2;
-  for (int i = 0; i < 50; i++) {
-    final newGuess = (guess + x / guess) / 2;
-    if ((newGuess - guess).abs() < 1e-10) break;
-    guess = newGuess;
-  }
-  return guess;
 }

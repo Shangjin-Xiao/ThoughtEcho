@@ -482,6 +482,7 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
                   title: l10n.embeddingModel,
                   subtitle: l10n.embeddingModelDesc,
                   recommendation: l10n.embeddingModelRecommendation,
+                  modelType: LocalAIModelType.embedding,
                   modelInfo: localAISettings.modelConfig.embeddingModel,
                   onImport: () => _importEmbeddingModel(settingsService, localAISettings),
                   onDelete: localAISettings.modelConfig.embeddingModel != null
@@ -499,6 +500,7 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
                   title: l10n.asrModel,
                   subtitle: l10n.asrModelDesc,
                   recommendation: l10n.asrModelRecommendation,
+                  modelType: LocalAIModelType.asr,
                   modelInfo: localAISettings.modelConfig.asrModel,
                   onImport: () => _importASRModel(settingsService, localAISettings),
                   onDelete: localAISettings.modelConfig.asrModel != null
@@ -516,6 +518,7 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
                   title: l10n.ocrModel,
                   subtitle: l10n.ocrModelDesc,
                   recommendation: l10n.ocrModelRecommendation,
+                  modelType: LocalAIModelType.ocr,
                   modelInfo: localAISettings.modelConfig.ocrModel,
                   onImport: () => _showOCRImportDialog(context, settingsService, localAISettings),
                   onDelete: localAISettings.modelConfig.ocrModel != null
@@ -545,6 +548,7 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
     required String title,
     required String subtitle,
     required String recommendation,
+    required LocalAIModelType modelType,
     LocalAIModelInfo? modelInfo,
     required VoidCallback onImport,
     VoidCallback? onDelete,
@@ -631,7 +635,12 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
               color: theme.colorScheme.onSurfaceVariant,
             ),
             tooltip: l10n.recommendedModels,
-            onPressed: () => _showRecommendationDialog(context, title, recommendation),
+            onPressed: () => _showRecommendationDialog(
+              context, 
+              title, 
+              recommendation,
+              modelType: modelType,
+            ),
           ),
           // 导入/删除按钮
           if (isInstalled && onDelete != null)
@@ -956,9 +965,15 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
   void _showRecommendationDialog(
     BuildContext context,
     String title,
-    String recommendation,
-  ) {
+    String recommendation, {
+    LocalAIModelType? modelType,
+  }) {
     final l10n = AppLocalizations.of(context);
+    
+    // Get the appropriate download URL using helper method
+    final downloadUrl = modelType != null 
+        ? LocalAIModelRecommendations.getDownloadUrl(modelType)
+        : null;
     
     showDialog(
       context: context,
@@ -974,20 +989,18 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
             ),
             const SizedBox(height: 8),
             Text(recommendation),
-            const SizedBox(height: 16),
-            OutlinedButton.icon(
-              icon: const Icon(Icons.copy_rounded, size: 18),
-              label: Text(l10n.viewDownloadLinks),
-              onPressed: () {
-                // 复制下载链接到剪贴板
-                final recommendations = LocalAIModelRecommendations.embeddingModels;
-                if (recommendations.isNotEmpty) {
-                  Clipboard.setData(ClipboardData(text: recommendations.first['url'] ?? ''));
+            if (downloadUrl != null) ...[
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                icon: const Icon(Icons.copy_rounded, size: 18),
+                label: Text(l10n.copyDownloadLink),
+                onPressed: () {
+                  Clipboard.setData(ClipboardData(text: downloadUrl));
                   _showSnackBar(l10n.downloadLinkCopied);
-                }
-                Navigator.of(context).pop();
-              },
-            ),
+                  Navigator.of(context).pop();
+                },
+              ),
+            ],
           ],
         ),
         actions: [
