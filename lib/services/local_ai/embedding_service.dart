@@ -271,11 +271,17 @@ class EmbeddingService extends ChangeNotifier {
   }
 
   /// 批量生成嵌入向量
-  Future<List<EmbeddingResult>> embedBatch(List<String> texts) async {
+  /// 
+  /// 注意: 当前实现为顺序处理，大量文本时可考虑使用 isolate 并行处理
+  Future<List<EmbeddingResult>> embedBatch(
+    List<String> texts, {
+    void Function(int completed, int total)? onProgress,
+  }) async {
     final results = <EmbeddingResult>[];
     
-    for (final text in texts) {
-      results.add(await embed(text));
+    for (var i = 0; i < texts.length; i++) {
+      results.add(await embed(texts[i]));
+      onProgress?.call(i + 1, texts.length);
     }
     
     return results;
@@ -289,21 +295,33 @@ class EmbeddingService extends ChangeNotifier {
   }
 
   /// 在文本列表中搜索最相似的项
+  /// 
+  /// 优化: 先批量生成所有候选文本的嵌入，避免重复计算
   Future<List<(String, double)>> search(
     String query,
     List<String> candidates, {
     int topK = 10,
     double threshold = 0.0,
+    void Function(int completed, int total)? onProgress,
   }) async {
+    if (candidates.isEmpty) return [];
+    
+    // 生成查询嵌入
     final queryEmbedding = await embed(query);
+    
+    // 批量生成候选文本嵌入
+    final candidateEmbeddings = await embedBatch(
+      candidates,
+      onProgress: onProgress,
+    );
+    
+    // 计算相似度
     final results = <(String, double)>[];
-
-    for (final candidate in candidates) {
-      final candidateEmbedding = await embed(candidate);
-      final score = queryEmbedding.cosineSimilarity(candidateEmbedding);
+    for (var i = 0; i < candidates.length; i++) {
+      final score = queryEmbedding.cosineSimilarity(candidateEmbeddings[i]);
       
       if (score >= threshold) {
-        results.add((candidate, score));
+        results.add((candidates[i], score));
       }
     }
 
@@ -311,6 +329,46 @@ class EmbeddingService extends ChangeNotifier {
     results.sort((a, b) => b.$2.compareTo(a.$2));
 
     // 返回 top-K
+    return results.take(topK).toList();
+  }
+
+  /// 使用预计算的嵌入进行搜索 (更高效)
+  /// 
+  /// [queryEmbedding] 查询文本的嵌入向量
+  /// [candidateEmbeddings] 预计算的候选嵌入列表
+  /// [candidateIds] 候选项 ID 列表，与 candidateEmbeddings 一一对应
+  List<(String, double)> searchWithEmbeddings(
+    List<double> queryEmbedding,
+    List<List<double>> candidateEmbeddings,
+    List<String> candidateIds, {
+    int topK = 10,
+    double threshold = 0.0,
+  }) {
+    if (candidateEmbeddings.length != candidateIds.length) {
+      throw ArgumentError('candidateEmbeddings 和 candidateIds 长度必须相同');
+    }
+    
+    final queryResult = EmbeddingResult(
+      embedding: queryEmbedding,
+      text: '',
+      processingTimeMs: 0,
+    );
+    
+    final results = <(String, double)>[];
+    for (var i = 0; i < candidateEmbeddings.length; i++) {
+      final candidateResult = EmbeddingResult(
+        embedding: candidateEmbeddings[i],
+        text: '',
+        processingTimeMs: 0,
+      );
+      final score = queryResult.cosineSimilarity(candidateResult);
+      
+      if (score >= threshold) {
+        results.add((candidateIds[i], score));
+      }
+    }
+
+    results.sort((a, b) => b.$2.compareTo(a.$2));
     return results.take(topK).toList();
   }
 
@@ -323,7 +381,28 @@ class EmbeddingService extends ChangeNotifier {
   ) {
     // 获取模型输出 (通常名为 'last_hidden_state' 或类似)
     final outputValue = outputs.values.first;
-    final outputData = outputValue.value as List<List<List<double>>>;
+    
+    // 安全地提取输出数据
+    final rawData = outputValue.value;
+    if (rawData == null) {
+      throw StateError('ONNX 模型输出为空');
+    }
+    
+    // 验证输出格式 (应为 3D 张量: [batch, seq_len, hidden_size])
+    List<List<List<double>>> outputData;
+    try {
+      outputData = (rawData as List).map((batch) => 
+        (batch as List).map((seq) => 
+          (seq as List).map((v) => (v as num).toDouble()).toList()
+        ).toList()
+      ).toList();
+    } catch (e) {
+      throw StateError('ONNX 模型输出格式不正确，预期 3D 张量: $e');
+    }
+    
+    if (outputData.isEmpty || outputData[0].isEmpty || outputData[0][0].isEmpty) {
+      throw StateError('ONNX 模型输出维度为空');
+    }
     
     final seqLength = outputData[0].length;
     final hiddenSize = outputData[0][0].length;

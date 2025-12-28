@@ -90,9 +90,22 @@ class VectorSearchService extends ChangeNotifier {
   }
 
   /// 初始化 ObjectBox
+  /// 
+  /// **重要**: 在使用向量搜索功能前，需要先执行以下步骤:
+  /// 
+  /// 1. 运行 `dart run build_runner build` 生成 objectbox.g.dart
+  /// 2. 在 lib/objectbox.g.dart 中会生成 openStore 函数
+  /// 3. 取消下面代码的注释并导入生成的文件
+  /// 
+  /// 生成的文件会根据 lib/models/objectbox/ 下的实体自动创建。
   Future<void> _initObjectBox() async {
-    // 注意: 需要先运行 build_runner 生成 objectbox.g.dart
-    // 这里使用延迟初始化，等待生成文件后可以取消注释
+    // ==========================================================
+    // TODO: ObjectBox 初始化代码
+    // 
+    // 在运行 `dart run build_runner build` 后:
+    // 1. 取消下面的注释
+    // 2. 在文件顶部添加: import '../../objectbox.g.dart';
+    // ==========================================================
     
     // final appDir = await getApplicationDocumentsDirectory();
     // final dbPath = path.join(appDir.path, 'objectbox_vectors');
@@ -102,16 +115,23 @@ class VectorSearchService extends ChangeNotifier {
     // _searchHistoryBox = _store!.box<SearchHistory>();
     // _similarCacheBox = _store!.box<SimilarNotesCache>();
     
-    logDebug(
-      'ObjectBox 初始化跳过 - 需要先运行 dart run build_runner build',
+    logWarning(
+      'ObjectBox 未初始化 - 请先运行 dart run build_runner build 生成代码，'
+      '然后取消 _initObjectBox 方法中的注释',
       source: 'VectorSearchService',
     );
   }
 
   /// 为笔记生成并存储嵌入向量
+  /// 
+  /// [note] 必须包含有效的 id，否则会抛出 ArgumentError
   Future<void> indexNote(Quote note) async {
     if (!_isInitialized) {
       throw StateError('向量搜索服务未初始化');
+    }
+
+    if (note.id == null || note.id!.isEmpty) {
+      throw ArgumentError('笔记必须包含有效的 ID 才能索引');
     }
 
     if (_vectorBox == null) {
@@ -119,13 +139,15 @@ class VectorSearchService extends ChangeNotifier {
       return;
     }
 
+    final noteId = note.id!;
+
     try {
       // 生成嵌入向量
       final embeddingResult = await _embeddingService.embed(note.content);
 
       // 检查是否已存在
       final existing = _vectorBox!
-          .query(NoteVector_.noteId.equals(note.id!))
+          .query(NoteVector_.noteId.equals(noteId))
           .build()
           .findFirst();
 
@@ -134,11 +156,11 @@ class VectorSearchService extends ChangeNotifier {
         existing.updateEmbedding(embeddingResult.embedding, modelVersion);
         existing.updatePreview(note.content);
         _vectorBox!.put(existing);
-        logDebug('更新笔记向量: ${note.id}', source: 'VectorSearchService');
+        logDebug('更新笔记向量: $noteId', source: 'VectorSearchService');
       } else {
         // 创建新记录
         final noteVector = NoteVector(
-          noteId: note.id!,
+          noteId: noteId,
           embedding: embeddingResult.embedding,
           contentPreview: note.content.length > 200 
               ? '${note.content.substring(0, 200)}...' 

@@ -5,6 +5,18 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import '../../utils/app_logger.dart';
 
+// =============================================================================
+// **重要说明**: ASR 服务当前为占位实现
+// 
+// sherpa_onnx 集成需要以下步骤:
+// 1. 下载 sherpa_onnx 模型文件 (Whisper tiny ~39MB 或 Paraformer)
+// 2. 将模型放置到 assets/models/ 目录
+// 3. 取消下面 sherpa_onnx 导入的注释
+// 4. 实现 recognizeFile/recognizeAudioData 中的实际推理代码
+// 
+// 模型下载: https://github.com/k2-fsa/sherpa-onnx/releases
+// =============================================================================
+
 // sherpa_onnx 将在运行时动态导入
 // import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa;
 

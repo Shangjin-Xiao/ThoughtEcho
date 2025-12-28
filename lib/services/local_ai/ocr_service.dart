@@ -61,6 +61,37 @@ class OCRTextBlock {
   });
 }
 
+/// 引文信息提取结果
+class QuoteInfo {
+  /// 引文内容
+  final String? content;
+  
+  /// 作者
+  final String? author;
+  
+  /// 出处/来源
+  final String? source;
+
+  const QuoteInfo({
+    this.content,
+    this.author,
+    this.source,
+  });
+
+  /// 检查是否提取到任何信息
+  bool get hasAnyInfo => content != null || author != null || source != null;
+
+  /// 转换为 Map
+  Map<String, String?> toMap() => {
+    'content': content,
+    'author': author,
+    'source': source,
+  };
+
+  @override
+  String toString() => 'QuoteInfo(author: $author, source: $source)';
+}
+
 /// OCR 识别语言脚本
 enum OCRScript {
   /// 拉丁字母 (英语、法语等)
@@ -282,12 +313,10 @@ class OCRService extends ChangeNotifier {
   /// 智能提取引文信息
   /// 
   /// 尝试从 OCR 文本中提取作者、作品等信息
-  Map<String, String?> extractQuoteInfo(String text) {
-    final result = <String, String?>{
-      'content': null,
-      'author': null,
-      'source': null,
-    };
+  /// 返回结构化的 [QuoteInfo] 对象
+  QuoteInfo extractQuoteInfo(String text) {
+    String? author;
+    String? source;
 
     // 尝试提取作者 (常见格式: "—— 作者名" 或 "-- 作者名")
     final authorPatterns = [
@@ -299,7 +328,7 @@ class OCRService extends ChangeNotifier {
     for (final pattern in authorPatterns) {
       final match = pattern.firstMatch(text);
       if (match != null) {
-        result['author'] = match.group(1)?.trim();
+        author = match.group(1)?.trim();
         break;
       }
     }
@@ -308,20 +337,23 @@ class OCRService extends ChangeNotifier {
     final sourcePattern = RegExp(r'[《「【]([^》」】]+)[》」】]');
     final sourceMatch = sourcePattern.firstMatch(text);
     if (sourceMatch != null) {
-      result['source'] = sourceMatch.group(1);
+      source = sourceMatch.group(1);
     }
 
     // 提取引文内容 (去除作者和出处后的主体文本)
     var content = text;
-    if (result['author'] != null) {
+    if (author != null) {
       content = content.replaceAll(
-        RegExp(r'[—–-]{1,2}\s*' + RegExp.escape(result['author']!)),
+        RegExp(r'[—–-]{1,2}\s*' + RegExp.escape(author)),
         '',
       );
     }
-    result['content'] = content.trim();
 
-    return result;
+    return QuoteInfo(
+      content: content.trim().isNotEmpty ? content.trim() : null,
+      author: author,
+      source: source,
+    );
   }
 
   /// 设置默认脚本

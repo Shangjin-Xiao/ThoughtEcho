@@ -1,8 +1,23 @@
 import 'package:objectbox/objectbox.dart';
 
+// =============================================================================
+// 嵌入向量维度配置
+// 
+// 当前配置为 paraphrase-multilingual-MiniLM-L12-v2 模型 (384 维)
+// 如果切换到其他模型，需要:
+// 1. 修改下面的 embeddingDimension 常量
+// 2. 修改 NoteVector.embedding 的 @HnswIndex(dimensions: xxx) 注解
+// 3. 重新运行 dart run build_runner build
+// 4. 清除旧的向量数据（维度不同无法兼容）
+// =============================================================================
+const int embeddingDimension = 384;
+
 /// 笔记向量实体
 /// 
 /// 用于存储笔记的嵌入向量，支持 HNSW 向量搜索
+/// 
+/// **维度配置**: 当前为 384 维 (paraphrase-multilingual-MiniLM-L12-v2)
+/// 如需支持其他维度，请参考文件顶部的配置说明
 @Entity()
 class NoteVector {
   @Id()
@@ -13,8 +28,11 @@ class NoteVector {
   @Index()
   String noteId;
 
-  /// 嵌入向量 (384 维 - paraphrase-multilingual-MiniLM-L12-v2)
-  @HnswIndex(dimensions: 384)
+  /// 嵌入向量
+  /// 
+  /// 维度由 embeddingDimension 常量定义，当前为 384
+  /// 注意: @HnswIndex 的 dimensions 参数必须与实际向量维度匹配
+  @HnswIndex(dimensions: 384) // 对应 embeddingDimension
   @Property(type: PropertyType.floatVector)
   List<double> embedding;
 
@@ -32,6 +50,9 @@ class NoteVector {
   /// 嵌入模型版本 (用于模型升级时重新计算向量)
   String modelVersion;
 
+  /// 嵌入向量维度 (用于验证)
+  int dimension;
+
   NoteVector({
     this.id = 0,
     required this.noteId,
@@ -40,11 +61,17 @@ class NoteVector {
     DateTime? createdAt,
     DateTime? updatedAt,
     this.modelVersion = '1.0.0',
+    this.dimension = embeddingDimension,
   })  : createdAt = createdAt ?? DateTime.now(),
         updatedAt = updatedAt ?? DateTime.now();
 
   /// 更新嵌入向量
   void updateEmbedding(List<double> newEmbedding, String newModelVersion) {
+    if (newEmbedding.length != dimension) {
+      throw ArgumentError(
+        '嵌入向量维度不匹配: 预期 $dimension, 实际 ${newEmbedding.length}',
+      );
+    }
     embedding = newEmbedding;
     modelVersion = newModelVersion;
     updatedAt = DateTime.now();
@@ -57,6 +84,9 @@ class NoteVector {
         : content;
     updatedAt = DateTime.now();
   }
+
+  /// 验证向量维度是否正确
+  bool get isValidDimension => embedding.length == dimension;
 
   @override
   String toString() {
