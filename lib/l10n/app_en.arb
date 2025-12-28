@@ -3048,5 +3048,21 @@
   "smartPushTestSent": "Test notification sent, please check notifications",
   "smartPushNoMatchingNotes": "No matching notes to push",
   "smartPushNotice": "Notice",
-  "smartPushNoticeDesc": "• Push notifications require notification permission\n• Notifications may be delayed when app is in background\n• Keep the app running in background for best experience\n• True background scheduling coming soon"
+  "smartPushNoticeDesc": "• Push notifications require notification permission\n• Notifications may be delayed when app is in background\n• Keep the app running in background for best experience\n• True background scheduling coming soon",
+
+  "onDeviceAITitle": "On-Device AI",
+  "onDeviceAITitlePreview": "On-Device AI (Preview)",
+  "onDeviceAILicenseWarningTitle": "License Warning",
+  "onDeviceAILicenseWarning": "⚠️ The cactus library license is unclear, and the source code contains telemetry/ProKey related code. Please verify the license status before commercial release.",
+  "onDeviceAILicenseDetails": "On-device AI uses the following third-party libraries:\n• cactus: License unclear ⚠️\n• google_mlkit_text_recognition: MIT License\n\nRecommendation: Use only for rapid prototyping and personal use.",
+  "onDeviceAIRecommendedModels": "Recommended Models",
+  "onDeviceAIRecommendedModelsDesc": "• Qwen2.5-1.5B-Q4 (1.1GB)\n• Phi-3.5-mini-Q4 (2.4GB)",
+  "onDeviceAIFeatureDisabled": "This feature is temporarily disabled (license pending)",
+  "onDeviceAIOCRReady": "OCR text recognition is ready",
+  "onDeviceAILLMDisabled": "LLM chat feature temporarily disabled",
+  "onDeviceAIASRDisabled": "Speech-to-text feature temporarily disabled",
+  "onDeviceAIEmbeddingDisabled": "Semantic search feature temporarily disabled",
+  "onDeviceAIInitializing": "Initializing on-device AI service...",
+  "onDeviceAIInitFailed": "On-device AI initialization failed",
+  "onDeviceAINotSupported": "On-device AI is not supported on this platform"
 }
