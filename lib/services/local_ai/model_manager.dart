@@ -5,6 +5,7 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
@@ -24,6 +25,9 @@ class ModelManager extends ChangeNotifier {
 
   ModelManager._();
 
+  /// HTTP 客户端
+  final Dio _dio = Dio();
+
   /// 模型存储目录
   String? _modelsDirectory;
 
@@ -32,6 +36,9 @@ class ModelManager extends ChangeNotifier {
 
   /// 下载任务
   final Map<String, _DownloadTask> _downloadTasks = {};
+
+  /// 取消令牌
+  final Map<String, CancelToken> _cancelTokens = {};
 
   /// 是否已初始化
   bool _initialized = false;
@@ -199,12 +206,9 @@ class ModelManager extends ChangeNotifier {
 
       _downloadTasks[modelId] = task;
 
-      // 注意：实际下载需要集成具体的下载库
-      // 这里提供占位实现，等待后续集成 flutter_gemma 等库
-      logInfo('开始下载模型 $modelId (占位实现)', source: 'ModelManager');
-
-      // 模拟下载进度（实际实现时替换为真实下载逻辑）
-      await _simulateDownload(task);
+      // 执行实际下载
+      logInfo('开始下载模型 $modelId', source: 'ModelManager');
+      await _executeDownload(task);
     } catch (e) {
       _updateModelState(
         modelId,
@@ -217,16 +221,121 @@ class ModelManager extends ChangeNotifier {
     }
   }
 
-  /// 模拟下载（占位实现）
-  Future<void> _simulateDownload(_DownloadTask task) async {
-    // 实际实现时，这里应该使用 HTTP 客户端下载文件
-    // 目前仅作为占位，返回错误提示需要集成具体的模型库
-    // Note: Error message intentionally in English for logging - UI should use localization
-    task.onError('Model download requires flutter_gemma, sherpa_onnx integration');
+  /// 执行实际的模型下载
+  Future<void> _executeDownload(_DownloadTask task) async {
+    // 检查是否是由特定包管理的模型
+    if (task.url.startsWith('managed://')) {
+      // 这些模型需要通过特定包（如 flutter_gemma）下载
+      // 目前提供友好的提示信息
+      final managedInfo = task.url.replaceFirst('managed://', '');
+      task.onError(
+        '此模型需要通过专用包下载。\n'
+        '模型: $managedInfo\n'
+        '请等待后续版本集成 flutter_gemma 包后使用。',
+      );
+      return;
+    }
+
+    final cancelToken = CancelToken();
+    _cancelTokens[task.modelId] = cancelToken;
+
+    try {
+      // 确保保存目录存在
+      final saveDir = Directory(path.dirname(task.savePath));
+      if (!await saveDir.exists()) {
+        await saveDir.create(recursive: true);
+      }
+
+      logInfo('开始下载模型: ${task.url}', source: 'ModelManager');
+
+      // 使用 Dio 下载文件
+      await _dio.download(
+        task.url,
+        task.savePath,
+        cancelToken: cancelToken,
+        onReceiveProgress: (received, total) {
+          if (task.isCancelled) {
+            cancelToken.cancel('用户取消下载');
+            return;
+          }
+          if (total > 0) {
+            final progress = received / total;
+            task.onProgress?.call(progress);
+          }
+        },
+        options: Options(
+          responseType: ResponseType.bytes,
+          followRedirects: true,
+          receiveTimeout: const Duration(hours: 2), // 大文件可能需要较长时间
+        ),
+      );
+
+      if (!task.isCancelled) {
+        // 验证下载的文件
+        final downloadedFile = File(task.savePath);
+        if (await downloadedFile.exists()) {
+          final fileSize = await downloadedFile.length();
+          if (fileSize > 0) {
+            task.onComplete?.call();
+          } else {
+            throw Exception('下载的文件为空');
+          }
+        } else {
+          throw Exception('下载的文件不存在');
+        }
+      }
+    } on DioException catch (e) {
+      if (CancelToken.isCancel(e)) {
+        logInfo('模型下载已取消: ${task.modelId}', source: 'ModelManager');
+        task.onError('下载已取消');
+      } else {
+        final errorMsg = _getDioErrorMessage(e);
+        logError('模型下载失败: $errorMsg', source: 'ModelManager');
+        task.onError(errorMsg);
+      }
+    } catch (e) {
+      logError('模型下载失败: $e', source: 'ModelManager');
+      task.onError(e.toString());
+    } finally {
+      _cancelTokens.remove(task.modelId);
+    }
+  }
+
+  /// 获取 Dio 错误信息
+  String _getDioErrorMessage(DioException e) {
+    switch (e.type) {
+      case DioExceptionType.connectionTimeout:
+        return '连接超时，请检查网络';
+      case DioExceptionType.sendTimeout:
+        return '发送超时，请检查网络';
+      case DioExceptionType.receiveTimeout:
+        return '接收超时，请检查网络';
+      case DioExceptionType.badResponse:
+        final statusCode = e.response?.statusCode;
+        if (statusCode == 404) {
+          return '模型文件不存在 (404)';
+        } else if (statusCode == 403) {
+          return '无权访问模型文件 (403)';
+        }
+        return '服务器错误: $statusCode';
+      case DioExceptionType.cancel:
+        return '下载已取消';
+      case DioExceptionType.connectionError:
+        return '网络连接失败，请检查网络';
+      default:
+        return e.message ?? '下载失败';
+    }
   }
 
   /// 取消下载
   Future<void> cancelDownload(String modelId) async {
+    // 取消 Dio 下载
+    final cancelToken = _cancelTokens[modelId];
+    if (cancelToken != null && !cancelToken.isCancelled) {
+      cancelToken.cancel('用户取消下载');
+    }
+    _cancelTokens.remove(modelId);
+
     final task = _downloadTasks[modelId];
     if (task != null) {
       task.cancel();

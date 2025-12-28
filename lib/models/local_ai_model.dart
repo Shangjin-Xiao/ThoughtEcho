@@ -190,13 +190,15 @@ class LocalAIModelInfo {
 /// 预定义的模型配置
 class LocalAIModels {
   /// Gemma 2B LLM 模型
+  /// 注意：这些模型需要通过 flutter_gemma 包进行下载和管理
+  /// 此处的 URL 是信息性的，实际下载由 flutter_gemma 处理
   static const gemma2b = LocalAIModelInfo(
     id: 'gemma-2b',
     name: 'Gemma 2B',
     type: LocalAIModelType.llm,
-    description: 'Google Gemma 2B 语言模型，用于文本纠错、来源识别、标签推荐等',
+    description: 'Google Gemma 2B 语言模型，用于文本纠错、来源识别、标签推荐等。需要通过flutter_gemma下载。',
     sizeBytes: 1500 * 1024 * 1024, // ~1.5GB
-    downloadUrl: 'https://huggingface.co/google/gemma-2b',
+    downloadUrl: 'managed://flutter_gemma/gemma-2b', // 由 flutter_gemma 管理
     fileName: 'gemma-2b.bin',
     version: '2.0',
     isRequired: false,
@@ -207,15 +209,15 @@ class LocalAIModels {
     id: 'gecko-384',
     name: 'Gecko 384D',
     type: LocalAIModelType.embedding,
-    description: 'Google Gecko 384维嵌入模型，用于语义搜索和相关笔记推荐',
+    description: 'Google Gecko 384维嵌入模型，用于语义搜索和相关笔记推荐。需要通过flutter_gemma下载。',
     sizeBytes: 150 * 1024 * 1024, // ~150MB
-    downloadUrl: 'https://huggingface.co/google/gecko-embedding',
+    downloadUrl: 'managed://flutter_gemma/gecko-384', // 由 flutter_gemma 管理
     fileName: 'gecko-384.bin',
     version: '1.0',
     isRequired: false,
   );
 
-  /// Whisper Tiny ASR 模型
+  /// Whisper Tiny ASR 模型 - sherpa-onnx 预编译模型
   static const whisperTiny = LocalAIModelInfo(
     id: 'whisper-tiny',
     name: 'Whisper Tiny',
@@ -223,13 +225,13 @@ class LocalAIModels {
     description: 'OpenAI Whisper Tiny 语音识别模型，轻量快速',
     sizeBytes: 39 * 1024 * 1024, // ~39MB
     downloadUrl:
-        'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/whisper-tiny.onnx',
-    fileName: 'whisper-tiny.onnx',
+        'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-tiny.tar.bz2',
+    fileName: 'sherpa-onnx-whisper-tiny.tar.bz2',
     version: '1.0',
     isRequired: false,
   );
 
-  /// Whisper Base ASR 模型
+  /// Whisper Base ASR 模型 - sherpa-onnx 预编译模型
   static const whisperBase = LocalAIModelInfo(
     id: 'whisper-base',
     name: 'Whisper Base',
@@ -237,21 +239,23 @@ class LocalAIModels {
     description: 'OpenAI Whisper Base 语音识别模型，准确率更高',
     sizeBytes: 74 * 1024 * 1024, // ~74MB
     downloadUrl:
-        'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/whisper-base.onnx',
-    fileName: 'whisper-base.onnx',
+        'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-base.tar.bz2',
+    fileName: 'sherpa-onnx-whisper-base.tar.bz2',
     version: '1.0',
     isRequired: false,
   );
 
   /// Tesseract OCR 模型（中文简体 + 英文）
+  /// tessdata_fast 是优化过的较小模型
   static const tesseractChiSimEng = LocalAIModelInfo(
     id: 'tesseract-chi-sim-eng',
     name: 'Tesseract (中文+英文)',
     type: LocalAIModelType.ocr,
     description: 'Tesseract OCR 模型，支持中文简体和英文识别',
     sizeBytes: 55 * 1024 * 1024, // ~55MB
-    downloadUrl: 'https://github.com/tesseract-ocr/tessdata',
-    fileName: 'tessdata',
+    downloadUrl:
+        'https://github.com/tesseract-ocr/tessdata_fast/raw/main/chi_sim.traineddata',
+    fileName: 'chi_sim.traineddata',
     version: '4.0',
     isRequired: false,
   );
