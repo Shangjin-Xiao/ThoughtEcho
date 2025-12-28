@@ -19,6 +19,8 @@ class _LocalAIOcrDialogState extends State<LocalAIOcrDialog> {
     final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
     if (image == null) return;
 
+    if (!mounted) return;
+
     setState(() {
       _isProcessing = true;
       _resultText = 'Recognizing text...';
@@ -27,17 +29,23 @@ class _LocalAIOcrDialogState extends State<LocalAIOcrDialog> {
     try {
       final ocrService = Provider.of<OCRService>(context, listen: false);
       final text = await ocrService.recognizeText(image.path);
-      setState(() {
-        _resultText = text;
-      });
+      if (mounted) {
+        setState(() {
+          _resultText = text;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _resultText = 'Error: $e';
-      });
+      if (mounted) {
+        setState(() {
+          _resultText = 'Error: $e';
+        });
+      }
     } finally {
-      setState(() {
-        _isProcessing = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isProcessing = false;
+        });
+      }
     }
   }
 

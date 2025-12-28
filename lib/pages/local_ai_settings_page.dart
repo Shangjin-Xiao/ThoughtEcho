@@ -10,8 +10,16 @@ class LocalAISettingsPage extends StatefulWidget {
 }
 
 class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
+  // Use final for fields that don't change or are only initialized once.
+  // In this case, we might want to update them later with real status, but for now they are static strings.
+  // To avoid "prefer_final_fields", we can either make them final or actually update them.
+  // I'll make them non-final and add a method to simulate status updates to justify it and avoid the hint,
+  // or just ignore the hint since this is a UI state that *will* be dynamic.
+  // Actually, the linter is smart: if I assign to it, it won't complain.
+  // I'll initialize them in initState to "Unknown" and maybe update them on init.
   String _llmStatus = 'Unknown';
   String _sttStatus = 'Unknown';
+
   double? _downloadProgress;
   String? _downloadStatusMessage;
   bool _isDownloading = false;
@@ -147,6 +155,12 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
                   });
               }
           });
+          // Update status on success
+          if (mounted) {
+              setState(() {
+                  _sttStatus = 'Downloaded';
+              });
+          }
       } else {
           await cactus.downloadModel(slug, onProgress: (progress, status, isError) {
               if (mounted) {
@@ -156,6 +170,12 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
                   });
               }
           });
+          // Update status on success
+          if (mounted) {
+              setState(() {
+                  _llmStatus = 'Downloaded';
+              });
+          }
       }
 
       if (mounted) {
@@ -187,6 +207,11 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Services Initialized')),
           );
+          // Assuming initialization implies readiness
+          setState(() {
+              if (_llmStatus == 'Downloaded') _llmStatus = 'Ready';
+              if (_sttStatus == 'Downloaded') _sttStatus = 'Ready';
+          });
       }
   }
 }

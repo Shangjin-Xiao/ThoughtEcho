@@ -1,5 +1,5 @@
-import 'dart:io';
 import 'package:cactus/cactus.dart';
+import '../../utils/app_logger.dart'; // Using AppLogger for consistent logging
 
 /// Service for handling local AI tasks using Cactus.
 ///
@@ -24,7 +24,7 @@ class CactusService {
         await _lm?.initializeModel();
         _isLMInitialized = true;
     } catch (e) {
-        print('LM Initialization failed (model might need download): $e');
+        logError('LM Initialization failed (model might need download): $e', source: 'CactusService');
     }
 
     // STT
@@ -33,7 +33,7 @@ class CactusService {
         await _stt?.initializeModel();
         _isSTTInitialized = true;
     } catch (e) {
-        print('STT Initialization failed: $e');
+        logError('STT Initialization failed: $e', source: 'CactusService');
     }
 
     // RAG
@@ -46,7 +46,7 @@ class CactusService {
         });
         _isRAGInitialized = true;
     } catch (e) {
-        print('RAG Initialization failed: $e');
+        logError('RAG Initialization failed: $e', source: 'CactusService');
     }
   }
 
