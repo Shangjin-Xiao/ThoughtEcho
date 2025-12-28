@@ -380,7 +380,6 @@ class SmartPushService extends ChangeNotifier {
       scheduledDate,
       details,
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
       payload: payload,
       matchDateTimeComponents: DateTimeComponents.time, // 每天同一时间触发
     );
