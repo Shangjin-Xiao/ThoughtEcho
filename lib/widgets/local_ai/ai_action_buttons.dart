@@ -77,7 +77,7 @@ class _AIActionButtonsState extends State<AIActionButtons> {
       if (!localAI.isFeatureEnabled(LocalAIFeature.aiCorrection)) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.localAiNotEnabled)),
+          SnackBar(content: Text(l10n.featureNotAvailable)),
         );
         return;
       }
@@ -131,7 +131,7 @@ class _AIActionButtonsState extends State<AIActionButtons> {
       if (!localAI.isFeatureEnabled(LocalAIFeature.sourceRecognition)) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.localAiNotEnabled)),
+          SnackBar(content: Text(l10n.featureNotAvailable)),
         );
         return;
       }

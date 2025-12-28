@@ -13,15 +13,18 @@ class Embedding {
   /// 关联的笔记 ID
   final String? noteId;
 
-  /// 创建时间
-  final DateTime createdAt;
+  /// 创建时间（可为空，在使用时提供默认值）
+  final DateTime? _createdAt;
+
+  /// 获取创建时间（如果为空则返回当前时间）
+  DateTime get createdAt => _createdAt ?? DateTime.now();
 
   const Embedding({
     required this.vector,
     required this.sourceText,
     this.noteId,
     DateTime? createdAt,
-  }) : createdAt = createdAt ?? const _DefaultDateTime();
+  }) : _createdAt = createdAt;
 
   /// 向量维度
   int get dimension => vector.length;
@@ -32,7 +35,7 @@ class Embedding {
   /// 计算与另一个嵌入的余弦相似度
   double cosineSimilarity(Embedding other) {
     if (vector.length != other.vector.length) {
-      throw ArgumentError('向量维度不匹配: ${vector.length} vs ${other.vector.length}');
+      throw ArgumentError('Vector dimensions mismatch: ${vector.length} vs ${other.vector.length}');
     }
 
     double dotProduct = 0.0;
@@ -63,7 +66,7 @@ class Embedding {
       createdAt:
           json['createdAt'] != null
               ? DateTime.parse(json['createdAt'] as String)
-              : DateTime.now(),
+              : null,
     );
   }
 
@@ -88,7 +91,7 @@ class Embedding {
       vector: vector ?? this.vector,
       sourceText: sourceText ?? this.sourceText,
       noteId: noteId ?? this.noteId,
-      createdAt: createdAt ?? this.createdAt,
+      createdAt: createdAt ?? _createdAt,
     );
   }
 }
@@ -208,12 +211,4 @@ double sqrt(double x) {
     guess = (guess + x / guess) / 2;
   }
   return guess;
-}
-
-/// 默认时间类（用于 const 构造函数）
-class _DefaultDateTime implements DateTime {
-  const _DefaultDateTime();
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => DateTime.now();
 }

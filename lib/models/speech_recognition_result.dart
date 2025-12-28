@@ -19,8 +19,11 @@ class SpeechRecognitionResult {
   /// 识别时长（毫秒）
   final int? durationMs;
 
-  /// 时间戳
-  final DateTime timestamp;
+  /// 时间戳（可为空，在使用时提供默认值）
+  final DateTime? _timestamp;
+
+  /// 获取时间戳（如果为空则返回当前时间）
+  DateTime get timestamp => _timestamp ?? DateTime.now();
 
   const SpeechRecognitionResult({
     required this.text,
@@ -29,7 +32,7 @@ class SpeechRecognitionResult {
     this.isFinal = true,
     this.durationMs,
     DateTime? timestamp,
-  }) : timestamp = timestamp ?? const _DefaultDateTime();
+  }) : _timestamp = timestamp;
 
   /// 空结果
   static const empty = SpeechRecognitionResult(text: '');
@@ -51,7 +54,7 @@ class SpeechRecognitionResult {
       timestamp:
           json['timestamp'] != null
               ? DateTime.parse(json['timestamp'] as String)
-              : DateTime.now(),
+              : null,
     );
   }
 
@@ -82,7 +85,7 @@ class SpeechRecognitionResult {
       languageCode: languageCode ?? this.languageCode,
       isFinal: isFinal ?? this.isFinal,
       durationMs: durationMs ?? this.durationMs,
-      timestamp: timestamp ?? this.timestamp,
+      timestamp: timestamp ?? _timestamp,
     );
   }
 
@@ -90,14 +93,6 @@ class SpeechRecognitionResult {
   String toString() {
     return 'SpeechRecognitionResult(text: $text, confidence: $confidence, isFinal: $isFinal)';
   }
-}
-
-/// 默认时间类（用于 const 构造函数）
-class _DefaultDateTime implements DateTime {
-  const _DefaultDateTime();
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => DateTime.now();
 }
 
 /// 语音录制状态
@@ -166,3 +161,4 @@ class RecordingStatus {
     );
   }
 }
+

@@ -97,11 +97,14 @@ class OCRResult {
   /// 识别耗时（毫秒）
   final int? processingTimeMs;
 
-  /// 时间戳
-  final DateTime timestamp;
+  /// 时间戳（可为空，在使用时提供默认值）
+  final DateTime? _timestamp;
 
   /// 识别语言
   final List<String> languages;
+
+  /// 获取时间戳（如果为空则返回当前时间）
+  DateTime get timestamp => _timestamp ?? DateTime.now();
 
   const OCRResult({
     required this.fullText,
@@ -110,7 +113,7 @@ class OCRResult {
     this.processingTimeMs,
     DateTime? timestamp,
     this.languages = const ['chi_sim', 'eng'],
-  }) : timestamp = timestamp ?? const _DefaultDateTime();
+  }) : _timestamp = timestamp;
 
   /// 空结果
   static const empty = OCRResult(fullText: '');
@@ -142,7 +145,7 @@ class OCRResult {
       timestamp:
           json['timestamp'] != null
               ? DateTime.parse(json['timestamp'] as String)
-              : DateTime.now(),
+              : null,
       languages:
           (json['languages'] as List<dynamic>?)?.cast<String>() ??
           const ['chi_sim', 'eng'],
@@ -175,7 +178,7 @@ class OCRResult {
       blocks: blocks ?? this.blocks,
       imagePath: imagePath ?? this.imagePath,
       processingTimeMs: processingTimeMs ?? this.processingTimeMs,
-      timestamp: timestamp ?? this.timestamp,
+      timestamp: timestamp ?? _timestamp,
       languages: languages ?? this.languages,
     );
   }
@@ -184,14 +187,6 @@ class OCRResult {
   String toString() {
     return 'OCRResult(fullText: ${fullText.length} chars, blocks: ${blocks.length}, languages: $languages)';
   }
-}
-
-/// 默认时间类（用于 const 构造函数）
-class _DefaultDateTime implements DateTime {
-  const _DefaultDateTime();
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => DateTime.now();
 }
 
 /// OCR 处理状态

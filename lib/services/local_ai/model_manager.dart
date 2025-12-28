@@ -221,7 +221,8 @@ class ModelManager extends ChangeNotifier {
   Future<void> _simulateDownload(_DownloadTask task) async {
     // 实际实现时，这里应该使用 HTTP 客户端下载文件
     // 目前仅作为占位，返回错误提示需要集成具体的模型库
-    task.onError('模型下载功能需要集成 flutter_gemma、sherpa_onnx 等库后实现');
+    // Note: Error message intentionally in English for logging - UI should use localization
+    task.onError('Model download requires flutter_gemma, sherpa_onnx integration');
   }
 
   /// 取消下载
