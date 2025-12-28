@@ -1,13 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../gen_l10n/app_localizations.dart';
-import '../models/local_ai_settings.dart';
-import '../services/settings_service.dart';
-import '../theme/app_theme.dart';
+import '../services/ai/cactus_service.dart';
 
-/// 本地 AI 功能设置页面
-/// 
-/// 显示并管理所有设备端 AI 功能的开关设置
 class LocalAISettingsPage extends StatefulWidget {
   const LocalAISettingsPage({super.key});
 
@@ -16,483 +10,249 @@ class LocalAISettingsPage extends StatefulWidget {
 }
 
 class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
+  String _llmStatus = 'Unknown';
+  String _sttStatus = 'Unknown';
+  double? _downloadProgress;
+  String? _downloadStatusMessage;
+  bool _isDownloading = false;
+
+  final String _defaultLLMModel = 'qwen3-0.6';
+  final String _defaultVoiceModel = 'whisper-tiny';
+
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final settingsService = Provider.of<SettingsService>(context);
-    final localAISettings = settingsService.localAISettings;
-    final theme = Theme.of(context);
-
     return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
       appBar: AppBar(
-        elevation: 0,
-        scrolledUnderElevation: 1,
-        backgroundColor: theme.colorScheme.surface,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
+        title: const Text('Local AI Settings'),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.localAiFeatures),
-            const SizedBox(width: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    theme.colorScheme.primaryContainer,
-                    theme.colorScheme.secondaryContainer,
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.science_rounded,
-                    size: 12,
-                    color: theme.colorScheme.onPrimaryContainer,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    l10n.localAiFeaturesPreview,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.onPrimaryContainer,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ],
-              ),
+            const Text(
+              'Local AI Models (Cactus)',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-          ],
-        ),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        children: [
-          // 顶部说明卡片
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    theme.colorScheme.primaryContainer.withOpacity(0.3),
-                    theme.colorScheme.secondaryContainer.withOpacity(0.3),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                border: Border.all(
-                  color: theme.colorScheme.primary.withOpacity(0.2),
-                  width: 1.5,
-                ),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Icons.info_rounded,
-                        color: theme.colorScheme.primary,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            l10n.localAiPreviewNote,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurface,
-                              height: 1.5,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+            const SizedBox(height: 8),
+            const Text(
+              'Manage on-device AI models for Chat and Voice transcription.',
+              style: TextStyle(color: Colors.grey),
             ),
-          ),
-
-          // 主开关卡片
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                side: BorderSide(
-                  color: theme.colorScheme.outline.withOpacity(0.2),
-                ),
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: localAISettings.enabled
-                      ? LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            theme.colorScheme.primaryContainer.withOpacity(0.5),
-                            theme.colorScheme.surface,
-                          ],
-                        )
-                      : null,
-                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                ),
-                child: SwitchListTile(
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 8,
-                  ),
-                  secondary: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: localAISettings.enabled
-                          ? theme.colorScheme.primary.withOpacity(0.15)
-                          : theme.colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      localAISettings.enabled
-                          ? Icons.psychology_rounded
-                          : Icons.psychology_outlined,
-                      color: localAISettings.enabled
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.onSurfaceVariant,
-                      size: 28,
-                    ),
-                  ),
-                  title: Text(
-                    l10n.enableLocalAi,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  subtitle: Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Text(
-                      l10n.enableLocalAiDesc,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        height: 1.4,
-                      ),
-                    ),
-                  ),
-                  value: localAISettings.enabled,
-                  onChanged: (value) {
-                    _updateSettings(
-                      settingsService,
-                      localAISettings.copyWith(enabled: value),
-                    );
-                  },
-                ),
-              ),
-            ),
-          ),
-
-          // 功能分组
-          if (localAISettings.enabled) ...[
-            const SizedBox(height: 16),
-            
-            // 输入增强组
-            _buildFeatureGroup(
-              context: context,
-              theme: theme,
-              title: l10n.localAIInputEnhancement,
-              icon: Icons.input_rounded,
-              iconColor: Colors.blue,
-              children: [
-                _buildFeatureTile(
-                  context: context,
-                  theme: theme,
-                  icon: Icons.mic_rounded,
-                  title: l10n.localAISpeechToText,
-                  subtitle: l10n.localAISpeechToTextDesc,
-                  value: localAISettings.speechToTextEnabled,
-                  onChanged: (value) => _updateSettings(
-                    settingsService,
-                    localAISettings.copyWith(speechToTextEnabled: value),
-                  ),
-                ),
-                _buildFeatureTile(
-                  context: context,
-                  theme: theme,
-                  icon: Icons.document_scanner_rounded,
-                  title: l10n.ocrRecognition,
-                  subtitle: l10n.ocrRecognitionDesc,
-                  value: localAISettings.ocrEnabled,
-                  onChanged: (value) => _updateSettings(
-                    settingsService,
-                    localAISettings.copyWith(ocrEnabled: value),
-                  ),
-                ),
-                _buildFeatureTile(
-                  context: context,
-                  theme: theme,
-                  icon: Icons.auto_fix_high_rounded,
-                  title: l10n.aiCorrection,
-                  subtitle: l10n.aiCorrectionDesc,
-                  value: localAISettings.aiCorrectionEnabled,
-                  onChanged: (value) => _updateSettings(
-                    settingsService,
-                    localAISettings.copyWith(aiCorrectionEnabled: value),
-                  ),
-                ),
-                _buildFeatureTile(
-                  context: context,
-                  theme: theme,
-                  icon: Icons.source_rounded,
-                  title: l10n.localAISourceRecognition,
-                  subtitle: l10n.localAISourceRecognitionDesc,
-                  value: localAISettings.sourceRecognitionEnabled,
-                  onChanged: (value) => _updateSettings(
-                    settingsService,
-                    localAISettings.copyWith(sourceRecognitionEnabled: value),
-                  ),
-                  isLast: true,
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-
-            // 搜索与发现组
-            _buildFeatureGroup(
-              context: context,
-              theme: theme,
-              title: l10n.localAISearchDiscovery,
-              icon: Icons.explore_rounded,
-              iconColor: Colors.purple,
-              children: [
-                _buildFeatureTile(
-                  context: context,
-                  theme: theme,
-                  icon: Icons.search_rounded,
-                  title: l10n.aiSearch,
-                  subtitle: l10n.aiSearchDesc,
-                  value: localAISettings.aiSearchEnabled,
-                  onChanged: (value) => _updateSettings(
-                    settingsService,
-                    localAISettings.copyWith(aiSearchEnabled: value),
-                  ),
-                ),
-                _buildFeatureTile(
-                  context: context,
-                  theme: theme,
-                  icon: Icons.link_rounded,
-                  title: l10n.localAIRelatedNotes,
-                  subtitle: l10n.localAIRelatedNotesDesc,
-                  value: localAISettings.relatedNotesEnabled,
-                  onChanged: (value) => _updateSettings(
-                    settingsService,
-                    localAISettings.copyWith(relatedNotesEnabled: value),
-                  ),
-                  isLast: true,
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-
-            // 内容分析组
-            _buildFeatureGroup(
-              context: context,
-              theme: theme,
-              title: l10n.localAIContentAnalysis,
-              icon: Icons.analytics_rounded,
-              iconColor: Colors.orange,
-              children: [
-                _buildFeatureTile(
-                  context: context,
-                  theme: theme,
-                  icon: Icons.label_rounded,
-                  title: l10n.smartTags,
-                  subtitle: l10n.smartTagsDesc,
-                  value: localAISettings.smartTagsEnabled,
-                  onChanged: (value) => _updateSettings(
-                    settingsService,
-                    localAISettings.copyWith(smartTagsEnabled: value),
-                  ),
-                ),
-                _buildFeatureTile(
-                  context: context,
-                  theme: theme,
-                  icon: Icons.category_rounded,
-                  title: l10n.localAINoteClassification,
-                  subtitle: l10n.localAINoteClassificationDesc,
-                  value: localAISettings.noteClassificationEnabled,
-                  onChanged: (value) => _updateSettings(
-                    settingsService,
-                    localAISettings.copyWith(noteClassificationEnabled: value),
-                  ),
-                ),
-                _buildFeatureTile(
-                  context: context,
-                  theme: theme,
-                  icon: Icons.sentiment_satisfied_rounded,
-                  title: l10n.localAIEmotionDetection,
-                  subtitle: l10n.localAIEmotionDetectionDesc,
-                  value: localAISettings.emotionDetectionEnabled,
-                  onChanged: (value) => _updateSettings(
-                    settingsService,
-                    localAISettings.copyWith(emotionDetectionEnabled: value),
-                  ),
-                  isLast: true,
-                ),
-              ],
-            ),
-
             const SizedBox(height: 24),
+
+            // LLM Section
+            _buildModelCard(
+              title: 'LLM (Chat Model)',
+              modelName: _defaultLLMModel,
+              status: _llmStatus,
+              onDownload: () => _downloadModel(_defaultLLMModel, isVoice: false),
+            ),
+
+            const SizedBox(height: 16),
+
+            // STT Section
+            _buildModelCard(
+              title: 'Speech-to-Text (Whisper)',
+              modelName: _defaultVoiceModel,
+              status: _sttStatus,
+              onDownload: () => _downloadModel(_defaultVoiceModel, isVoice: true),
+            ),
+
+            if (_isDownloading) ...[
+                const SizedBox(height: 24),
+                LinearProgressIndicator(value: _downloadProgress),
+                const SizedBox(height: 8),
+                Text(_downloadStatusMessage ?? 'Downloading...'),
+            ],
+
+            const SizedBox(height: 32),
+            const Divider(),
+            const SizedBox(height: 16),
+
+            const Text(
+              'Test Local AI',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+                onPressed: () {
+                     // Initializer
+                     _initializeServices();
+                },
+                icon: const Icon(Icons.bolt),
+                label: const Text('Initialize Services')
+            ),
+             const SizedBox(height: 16),
+             OutlinedButton(
+                onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => const LocalAIChatTestPage()));
+                },
+                child: const Text('Open Test Chat'),
+            ),
           ],
-        ],
+        ),
       ),
     );
   }
 
-  /// 构建功能分组
-  Widget _buildFeatureGroup({
-    required BuildContext context,
-    required ThemeData theme,
+  Widget _buildModelCard({
     required String title,
-    required IconData icon,
-    required Color iconColor,
-    required List<Widget> children,
+    required String modelName,
+    required String status,
+    required VoidCallback onDownload,
   }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-            child: Row(
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text('Model: $modelName'),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: iconColor.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Icon(
-                    icon,
-                    size: 18,
-                    color: iconColor,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Text(
-                  title,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.onSurface,
-                    letterSpacing: 0.5,
-                  ),
+                Text('Status: $status'), // Real status check needed in future
+                ElevatedButton(
+                  onPressed: _isDownloading ? null : onDownload,
+                  child: const Text('Download'),
                 ),
               ],
             ),
-          ),
-          Card(
-            elevation: 0,
-            margin: EdgeInsets.zero,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-              side: BorderSide(
-                color: theme.colorScheme.outline.withOpacity(0.2),
-              ),
-            ),
-            child: Column(
-              children: children,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  /// 构建功能开关项
-  Widget _buildFeatureTile({
-    required BuildContext context,
-    required ThemeData theme,
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-    bool isLast = false,
-  }) {
-    return Column(
-      children: [
-        SwitchListTile(
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 4,
-          ),
-          secondary: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: value
-                  ? theme.colorScheme.primaryContainer.withOpacity(0.5)
-                  : theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              icon,
-              color: value
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.onSurfaceVariant,
-              size: 22,
-            ),
-          ),
-          title: Text(
-            title,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          subtitle: Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text(
-              subtitle,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-                height: 1.3,
-              ),
-            ),
-          ),
-          value: value,
-          onChanged: onChanged,
-        ),
-        if (!isLast)
-          Divider(
-            height: 1,
-            indent: 72,
-            endIndent: 16,
-            color: theme.colorScheme.outline.withOpacity(0.1),
-          ),
-      ],
-    );
+  Future<void> _downloadModel(String slug, {required bool isVoice}) async {
+    setState(() {
+      _isDownloading = true;
+      _downloadProgress = 0;
+      _downloadStatusMessage = 'Starting download for $slug...';
+    });
+
+    final cactus = Provider.of<CactusService>(context, listen: false);
+
+    try {
+      if (isVoice) {
+          await cactus.downloadVoiceModel(slug, onProgress: (progress, status, isError) {
+              if (mounted) {
+                  setState(() {
+                      _downloadProgress = progress;
+                      _downloadStatusMessage = status;
+                  });
+              }
+          });
+      } else {
+          await cactus.downloadModel(slug, onProgress: (progress, status, isError) {
+              if (mounted) {
+                  setState(() {
+                      _downloadProgress = progress;
+                      _downloadStatusMessage = status;
+                  });
+              }
+          });
+      }
+
+      if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Download complete for $slug')),
+          );
+      }
+    } catch (e) {
+      if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Download failed: $e'), backgroundColor: Colors.red),
+          );
+      }
+    } finally {
+        if (mounted) {
+            setState(() {
+                _isDownloading = false;
+                _downloadProgress = null;
+                _downloadStatusMessage = null;
+            });
+        }
+    }
   }
 
-  /// 更新设置
-  Future<void> _updateSettings(
-    SettingsService service,
-    LocalAISettings settings,
-  ) async {
-    await service.updateLocalAISettings(settings);
+  Future<void> _initializeServices() async {
+      final cactus = Provider.of<CactusService>(context, listen: false);
+      await cactus.initialize();
+      if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Services Initialized')),
+          );
+      }
   }
+}
+
+class LocalAIChatTestPage extends StatefulWidget {
+  const LocalAIChatTestPage({super.key});
+
+  @override
+  State<LocalAIChatTestPage> createState() => _LocalAIChatTestPageState();
+}
+
+class _LocalAIChatTestPageState extends State<LocalAIChatTestPage> {
+    final TextEditingController _controller = TextEditingController();
+    String _response = '';
+    bool _loading = false;
+
+    @override
+    Widget build(BuildContext context) {
+        return Scaffold(
+            appBar: AppBar(title: const Text('Local AI Chat Test')),
+            body: Column(
+                children: [
+                    Expanded(
+                        child: SingleChildScrollView(
+                            padding: const EdgeInsets.all(16),
+                            child: Text(_response.isEmpty ? 'Say something...' : _response),
+                        ),
+                    ),
+                    if (_loading) const LinearProgressIndicator(),
+                    Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Row(
+                            children: [
+                                Expanded(child: TextField(controller: _controller, decoration: const InputDecoration(hintText: 'Enter message'))),
+                                IconButton(icon: const Icon(Icons.send), onPressed: _sendMessage),
+                            ],
+                        ),
+                    )
+                ],
+            ),
+        );
+    }
+
+    Future<void> _sendMessage() async {
+        if (_controller.text.isEmpty) return;
+        final msg = _controller.text;
+        _controller.clear();
+        setState(() {
+            _loading = true;
+            _response = 'Thinking...';
+        });
+
+        try {
+            final cactus = Provider.of<CactusService>(context, listen: false);
+            final res = await cactus.chat(msg);
+            setState(() {
+                _response = res;
+            });
+        } catch (e) {
+            setState(() {
+                _response = 'Error: $e';
+            });
+        } finally {
+            setState(() {
+                _loading = false;
+            });
+        }
+    }
 }

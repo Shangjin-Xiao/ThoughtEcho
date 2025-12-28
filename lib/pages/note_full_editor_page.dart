@@ -32,6 +32,7 @@ import '../constants/app_constants.dart';
 import '../services/media_file_service.dart';
 import '../services/media_reference_service.dart';
 import '../utils/feature_guide_helper.dart';
+import '../widgets/local_ai_dialogs.dart'; // Import OCR Dialog
 
 class NoteFullEditorPage extends StatefulWidget {
   final String initialContent;
@@ -2482,6 +2483,15 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                       _askNoteQuestion();
                     },
                   ),
+                  ListTile(
+                    leading: const Icon(Icons.document_scanner),
+                    title: const Text('Local OCR'),
+                    subtitle: const Text('Extract text from image (Offline)'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _showOCRDialog();
+                    },
+                  ),
                 ],
               ),
             ),
@@ -2815,6 +2825,20 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     );
     // showDialog 返回后，如果用户点击了应用按钮，复制逻辑已经在onApply中处理了
     // 如果用户点击了取消或关闭对话框，这里不需要做额外处理
+  }
+
+  // Local OCR Function
+  Future<void> _showOCRDialog() async {
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => const LocalAIOcrDialog(),
+    );
+
+    if (result != null && result.isNotEmpty && mounted) {
+      final int length = _controller.document.length;
+      // Insert at end or cursor position
+      _controller.document.insert(length - 1, '\n$result');
+    }
   }
 
   // 问笔记功能
