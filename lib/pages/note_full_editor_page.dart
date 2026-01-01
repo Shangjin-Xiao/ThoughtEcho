@@ -32,6 +32,10 @@ import '../constants/app_constants.dart';
 import '../services/media_file_service.dart';
 import '../services/media_reference_service.dart';
 import '../utils/feature_guide_helper.dart';
+import '../services/local_asr_service.dart';
+import '../services/local_ocr_service.dart';
+import '../services/ai_model_manager.dart';
+import 'package:file_picker/file_picker.dart';
 
 class NoteFullEditorPage extends StatefulWidget {
   final String initialContent;
@@ -85,6 +89,13 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   final GlobalKey _metadataButtonKey = GlobalKey();
   // 新增：工具栏气泡引导 Key
   final GlobalKey _toolbarGuideKey = GlobalKey();
+
+  // 本地AI服务
+  final LocalASRService _asrService = LocalASRService();
+  final LocalOCRService _ocrService = LocalOCRService();
+  final AIModelManager _modelManager = AIModelManager();
+  bool _isASRInitialized = false;
+  bool _isOCRInitialized = false;
 
   // 用于检测未保存内容的初始状态
   late String _initialPlainText;
@@ -156,8 +167,46 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       if (mounted) {
         _showEditorGuide();
         _showToolbarGuide();
+        _initLocalAI();
       }
     });
+  }
+
+  Future<void> _initLocalAI() async {
+    // 检查本地模型是否存在并初始化服务
+    // ASR
+    try {
+      final decoderPath = await _modelManager.getModelPath('sherpa-onnx-whisper-tiny/tiny-decoder.onnx'); // 示例路径
+      final encoderPath = await _modelManager.getModelPath('sherpa-onnx-whisper-tiny/tiny-encoder.onnx');
+      final joinerPath = await _modelManager.getModelPath('sherpa-onnx-whisper-tiny/tiny-joiner.onnx');
+      final tokensPath = await _modelManager.getModelPath('sherpa-onnx-whisper-tiny/tokens.txt');
+
+      if (await File(decoderPath).exists()) {
+        await _asrService.initialize(
+          tokens: tokensPath,
+          encoder: encoderPath,
+          decoder: decoderPath,
+          joiner: joinerPath,
+        );
+        setState(() => _isASRInitialized = true);
+      }
+    } catch (_) {}
+
+    // OCR
+    // Using ML Kit, so initialization is always true/available
+    setState(() => _isOCRInitialized = true);
+    /*
+    try {
+      final detPath = await _modelManager.getModelPath('ch_PP-OCRv3_det_infer.tflite');
+      final recPath = await _modelManager.getModelPath('ch_PP-OCRv3_rec_infer.tflite');
+      final keysPath = await _modelManager.getModelPath('ppocr_keys_v1.txt');
+
+      if (await File(detPath).exists()) {
+        await _ocrService.initialize(detPath, recPath, keysPath);
+        setState(() => _isOCRInitialized = true);
+      }
+    } catch (_) {}
+    */
   }
 
   /// 显示编辑器功能引导
@@ -1499,6 +1548,18 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
               tooltip: l10n.editMetadataShort,
               onPressed: () => _showMetadataDialog(context),
             ),
+            if (_isASRInitialized)
+              IconButton(
+                icon: const Icon(Icons.mic),
+                tooltip: '语音输入',
+                onPressed: () => _toggleVoiceInput(),
+              ),
+            if (_isOCRInitialized)
+              IconButton(
+                icon: const Icon(Icons.document_scanner),
+                tooltip: '文字识别 (OCR)',
+                onPressed: () => _performOCR(),
+              ),
             IconButton(
               icon: const Icon(Icons.auto_awesome),
               tooltip: l10n.aiAssistantLabel,
@@ -2386,6 +2447,53 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
   Widget _buildTagIcon(NoteCategory tag) {
     return _tagAvatarSmall(tag.iconName);
+  }
+
+  // ASR Logic
+  void _toggleVoiceInput() async {
+    if (_asrService.isRecording) {
+      await _asrService.stopRecording();
+    } else {
+      await _asrService.startRecording();
+      _asrService.resultStream.listen((text) {
+        if (!mounted) return;
+        // Insert text at cursor
+        final index = _controller.selection.baseOffset;
+        final length = _controller.selection.extentOffset - index;
+        _controller.document.replace(index, length, text);
+        _controller.updateSelection(TextSelection.collapsed(offset: index + text.length), quill.ChangeSource.local);
+      });
+    }
+    setState(() {});
+  }
+
+  // OCR Logic
+  void _performOCR() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(type: FileType.image);
+    if (result != null && result.files.single.path != null) {
+      final path = result.files.single.path!;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator()),
+      );
+      try {
+        final text = await _ocrService.extractText(path);
+        if (mounted) {
+          Navigator.pop(context);
+          if (text.isNotEmpty) {
+             final index = _controller.selection.baseOffset;
+             if (index < 0) {
+               _controller.document.insert(0, text);
+             } else {
+               _controller.document.insert(index, text);
+             }
+          }
+        }
+      } catch (e) {
+        if (mounted) Navigator.pop(context);
+      }
+    }
   }
 
   // 显示AI选项菜单

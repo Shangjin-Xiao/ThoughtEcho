@@ -34,6 +34,12 @@ class DatabaseService extends ChangeNotifier {
   // 标记是否已经dispose，避免重复操作
   bool _isDisposed = false;
 
+  // Embedding Trigger Callback
+  static Function(String id, String content)? _onQuoteSaved;
+  static void setOnQuoteSavedCallback(Function(String, String) callback) {
+    _onQuoteSaved = callback;
+  }
+
   // 提供访问_watchHasMore状态的getter
   bool get hasMoreQuotes => _watchHasMore;
 
@@ -2918,6 +2924,12 @@ class DatabaseService extends ChangeNotifier {
 
         // 同步媒体文件引用
         await MediaReferenceService.syncQuoteMediaReferences(quoteWithId);
+
+        // 触发 Embedding 生成 (Background)
+        // 使用简单的回调通知外部 (通过 broadcast stream 或 callback)
+        // 这里我们选择通过回调机制，或者假设 UI 层会在 addQuote 后手动调用。
+        // 为了确保逻辑完整，我们添加一个静态回调入口，供外部注入。
+        _onQuoteSaved?.call(newQuoteId, quoteWithId.content);
 
         // 优化：数据变更后清空缓存
         _clearAllCache();

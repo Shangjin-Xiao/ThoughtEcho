@@ -446,6 +446,8 @@ class _HomePageState extends State<HomePage>
   // 刷新标签列表
   Future<void> _refreshTags() async {
     logDebug('刷新标签列表');
+    // 如果mounted为false，直接返回，避免在dispose后调用setState
+    if (!mounted) return;
     setState(() {
       _isLoadingTags = true;
     });

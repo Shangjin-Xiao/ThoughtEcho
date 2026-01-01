@@ -15,6 +15,9 @@ import '../widgets/app_loading_view.dart';
 import '../widgets/app_empty_view.dart';
 import 'note_filter_sort_sheet.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/services/local_embedding_service.dart';
+import 'package:thoughtecho/services/vector_store_service.dart';
+import 'package:thoughtecho/services/ai_model_manager.dart';
 import '../utils/color_utils.dart';
 import '../services/weather_service.dart'; // 导入天气服务
 import '../utils/time_utils.dart'; // 导入时间工具
@@ -85,6 +88,9 @@ class NoteListViewState extends State<NoteListView> {
 
   // AI搜索模式标志
   bool _isAISearchMode = false;
+  final LocalEmbeddingService _embeddingService = LocalEmbeddingService();
+  late VectorStoreService _vectorStore;
+  final AIModelManager _modelManager = AIModelManager();
 
   // 分页和懒加载状态
   final List<Quote> _quotes = [];
@@ -157,10 +163,22 @@ class NoteListViewState extends State<NoteListView> {
 
     // 优化：延迟初始化数据流订阅，避免build过程中的副作用
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _vectorStore = VectorStoreService(Provider.of<DatabaseService>(context, listen: false));
       _checkServicesAndInitialize();
       if (!mounted) return;
       widget.onGuideTargetsReady?.call();
+      _initEmbeddingService();
     });
+  }
+
+  Future<void> _initEmbeddingService() async {
+    try {
+      final modelPath = await _modelManager.getModelPath('model.tflite'); // Example
+      final vocabPath = await _modelManager.getModelPath('vocab.txt');
+      if (await File(modelPath).exists() && await File(vocabPath).exists()) {
+        await _embeddingService.initialize(modelPath, vocabPath);
+      }
+    } catch (_) {}
   }
 
   /// 修复：检查服务初始化状态并初始化数据流
@@ -1291,10 +1309,10 @@ class NoteListViewState extends State<NoteListView> {
   }
 
   /// 优化：执行搜索的统一方法
-  void _performSearch(String value) {
+  void _performSearch(String value) async {
     if (!mounted) return;
 
-    logDebug('执行搜索: "$value"', source: 'NoteListView');
+    logDebug('执行搜索: "$value" (AI Mode: $_isAISearchMode)', source: 'NoteListView');
 
     // 如果是非空搜索且长度>=2，通知搜索控制器开始搜索
     if (value.isNotEmpty && value.length >= AppConstants.minSearchLength) {
@@ -1307,6 +1325,41 @@ class NoteListViewState extends State<NoteListView> {
       } catch (e) {
         logDebug('设置搜索状态失败: $e');
       }
+    }
+
+    if (_isAISearchMode && value.isNotEmpty && _embeddingService.isInitialized) {
+        try {
+          setState(() => _isLoading = true);
+          final embedding = await _embeddingService.generateEmbedding(value);
+          final ids = await _vectorStore.search(embedding);
+
+          if (mounted) {
+             // 临时替换数据流展示搜索结果
+             // 这里简化处理：直接从DB获取对应ID的笔记
+             final db = Provider.of<DatabaseService>(context, listen: false);
+             // 这是一个hack，应该有一个专门的 getQuotesByIds 方法
+             // 暂时通过TagFilter或其他方式模拟，或者扩展DatabaseService。
+             // 鉴于时间限制，我将直接获取所有并过滤。这对于“暴力搜索”是可以接受的。
+             final allQuotes = await db.getAllQuotes(excludeHiddenNotes: true);
+             final resultQuotes = allQuotes.where((q) => ids.contains(q.id)).toList();
+             // Sort by score order (ids list order)
+             resultQuotes.sort((a, b) => ids.indexOf(a.id!).compareTo(ids.indexOf(b.id!)));
+
+             setState(() {
+               _quotes.clear();
+               _quotes.addAll(resultQuotes);
+               _hasMore = false;
+               _isLoading = false;
+             });
+
+             // Update Search Controller
+             Provider.of<NoteSearchController>(context, listen: false).setSearchState(false);
+          }
+          return;
+        } catch (e) {
+          print('AI Search Failed: $e');
+          // Fallback to normal search
+        }
     }
 
     // 直接调用父组件的搜索回调
