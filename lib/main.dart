@@ -41,6 +41,7 @@ import 'package:thoughtecho/services/data_directory_service.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/utils/update_dialog_helper.dart';
 import 'package:thoughtecho/services/smart_push_service.dart'; // Add import
+import 'package:thoughtecho/services/on_device_ai_service.dart';
 // import 'package:thoughtecho/services/debug_service.dart'; // 正式版已禁用
 import 'controllers/search_controller.dart';
 import 'utils/app_logger.dart';
@@ -393,6 +394,27 @@ Future<void> main() async {
                       settingsService: settingsService,
                       aiAnalysisDbService: aiAnalysisDbService,
                     ),
+              ),
+              // OnDeviceAIService for local AI功能
+              ChangeNotifierProxyProvider<SettingsService, OnDeviceAIService>(
+                create: (context) => OnDeviceAIService(),
+                update: (context, settingsService, previous) {
+                  if (previous == null) {
+                    final service = OnDeviceAIService();
+                    // 异步初始化服务，不阻塞UI
+                    Future.microtask(() async {
+                      try {
+                        await service.initialize(
+                          settings: settingsService.localAISettings,
+                        );
+                      } catch (e) {
+                        logDebug('OnDeviceAIService 初始化失败: $e');
+                      }
+                    });
+                    return service;
+                  }
+                  return previous;
+                },
               ),
             ],
             child: Builder(

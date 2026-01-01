@@ -11,6 +11,7 @@ import '../services/weather_service.dart';
 import '../services/ai_service.dart';
 import '../services/clipboard_service.dart';
 import '../services/connectivity_service.dart';
+import '../services/on_device_ai_service.dart';
 import '../controllers/search_controller.dart'; // 导入搜索控制器
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
@@ -872,7 +873,7 @@ class _HomePageState extends State<HomePage>
             ScaffoldMessenger.of(this.context).showSnackBar(
               SnackBar(
                 content: Text(
-                  AppLocalizations.of(this.context).featureComingSoon,
+                  AppLocalizations.of(this.context).voiceRecordingNotYetImplemented,
                 ),
                 behavior: SnackBarBehavior.floating,
               ),
@@ -894,17 +895,46 @@ class _HomePageState extends State<HomePage>
   Future<void> _openOCRFlow() async {
     if (!mounted) return;
 
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
+    // 打开拍照/选择图片页面，获取图片路径
+    final String? imagePath = await Navigator.of(context).push<String>(
+      MaterialPageRoute<String>(
         builder: (context) => const OCRCapturePage(),
       ),
     );
 
-    if (!mounted) return;
+    if (!mounted || imagePath == null) return;
 
     final l10n = AppLocalizations.of(context);
-    String resultText = l10n.featureComingSoon;
+    String resultText = '';
 
+    // 显示处理中提示
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.ocrProcessingImage),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+
+    try {
+      // 获取OnDeviceAIService并执行OCR
+      final onDeviceAIService = Provider.of<OnDeviceAIService>(context, listen: false);
+      
+      if (onDeviceAIService.isOCRAvailable) {
+        resultText = await onDeviceAIService.recognizeText(imagePath: imagePath);
+      } else {
+        resultText = l10n.ocrNoTextDetected;
+      }
+    } catch (e) {
+      logDebug('OCR识别失败: $e');
+      resultText = l10n.ocrNoTextDetected;
+    }
+
+    if (!mounted) return;
+
+    // 显示识别结果
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
