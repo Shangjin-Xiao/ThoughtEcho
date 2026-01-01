@@ -88,7 +88,7 @@ dependencies:
   objectbox_flutter_libs: ^4.0.0  # ObjectBox Flutter 平台库
   sherpa_onnx: ^1.11.3  # 端侧 ASR 语音识别 (Apache-2.0)
   google_mlkit_text_recognition: ^0.13.0  # OCR 文字识别 (MIT)
-  record: ^5.1.0  # 音频录制
+  record: ^6.1.0  # 音频录制
   camera: ^0.11.0  # 相机控制
 
 dev_dependencies:
