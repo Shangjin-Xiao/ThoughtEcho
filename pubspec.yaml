@@ -88,7 +88,6 @@ dependencies:
   timezone: ^0.10.0
   # Local AI dependencies (TFLite lightweight solution)
   tflite_flutter: ^0.10.4 # TFLite inference for embedding models
-  record: ^5.1.0 # Audio recording for ASR
 
 dev_dependencies:
   flutter_test:
