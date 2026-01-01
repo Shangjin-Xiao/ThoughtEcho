@@ -24,7 +24,7 @@ dependencies:
   uuid: ^4.5.1 # UUID生成器
   shared_preferences: ^2.2.2
   flutter_markdown: ^0.7.1
-  intl: ^0.19.0
+  intl: ">=0.19.0 <0.21.0"
   url_launcher: ^6.2.6 # URL启动器
   file_picker: ^10.3.3 # 更安全的文件选择器，支持 withData: false 参数
   file_selector: ^1.0.4 # 文件选择器
