@@ -20,6 +20,7 @@ import '../widgets/add_note_dialog.dart';
 import '../widgets/local_ai/ocr_capture_page.dart';
 import '../widgets/local_ai/ocr_result_sheet.dart';
 import '../widgets/local_ai/voice_input_overlay.dart';
+import '../widgets/local_ai/voice_record_dialog.dart';
 import 'ai_features_page.dart';
 import 'settings_page.dart';
 import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
@@ -855,40 +856,16 @@ class _HomePageState extends State<HomePage>
   Future<void> _showVoiceInputOverlay() async {
     if (!mounted) return;
 
-    await showGeneralDialog<void>(
+    // Use new VoiceRecordDialog for immediate functionality
+    final text = await showDialog<String>(
       context: context,
-      barrierDismissible: true,
-      barrierLabel: 'voice_input_overlay',
-      barrierColor: Colors.transparent,
-      pageBuilder: (context, animation, secondaryAnimation) {
-        return VoiceInputOverlay(
-          transcribedText: null,
-          onSwipeUpForOCR: () async {
-            Navigator.of(context).pop();
-            await _openOCRFlow();
-          },
-          onRecordComplete: () {
-            Navigator.of(context).pop();
-            ScaffoldMessenger.of(this.context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  AppLocalizations.of(this.context).featureComingSoon,
-                ),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          },
-        );
-      },
-      transitionBuilder: (context, animation, secondaryAnimation, child) {
-        final curved = CurvedAnimation(parent: animation, curve: Curves.easeOut);
-        return FadeTransition(
-          opacity: curved,
-          child: child,
-        );
-      },
-      transitionDuration: const Duration(milliseconds: 180),
+      builder: (context) => const VoiceRecordDialog(),
     );
+
+    if (text != null && text.isNotEmpty && mounted) {
+      // Open add note dialog with transcribed text
+      _showAddQuoteDialog(prefilledContent: text);
+    }
   }
 
   Future<void> _openOCRFlow() async {
