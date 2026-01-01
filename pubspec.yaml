@@ -68,12 +68,11 @@ dependencies:
   basic_utils: ^5.7.0 # localsend基础工具包
   convert: ^3.1.2 # 数据转换工具
   dart_mappable: ^4.6.1 # Dart对象映射
-  mime: ^1.0.6 # MIME类型处理
+  mime: ^2.0.0 # MIME类型处理
   path_provider_foundation: ^2.4.3 # iOS/macOS路径提供
   rhttp: ^0.14.0 # Rust实现的HTTP客户端
   pasteboard: ^0.4.0 # 剪贴板操作
   http: ^1.2.2 # HTTP客户端库
-  http_server: ^1.0.0 # for MimeMultipartTransformer and HttpMultipartFormData
   collection: ^1.18.0
   refena_flutter: ^3.2.0
   open_file: ^3.5.10 # 用于打开文件，包括APK安装
