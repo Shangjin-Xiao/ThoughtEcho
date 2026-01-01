@@ -58,6 +58,10 @@ dependencies:
   archive: ^4.0.7
   flutter_chat_ui: ^2.9.1
   flutter_chat_types: ^3.6.2
+  # 本地 AI 功能依赖
+  speech_to_text: ^7.0.0 # 设备端语音识别
+  google_mlkit_text_recognition: ^0.14.0 # 设备端 OCR 文字识别
+  camera: ^0.11.0+2 # 相机功能用于 OCR
   image: ^4.1.3 # 图片处理库
   gal: ^2.3.0 # 替换image_gallery_saver，保存图片到相册，支持最新Android
   vector_graphics: ^1.1.19

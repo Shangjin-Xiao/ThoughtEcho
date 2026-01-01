@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import '../../utils/app_logger.dart';
@@ -18,6 +19,7 @@ class LocalSpeechRecognitionService extends ChangeNotifier {
   bool _isInitializing = false;
   bool _isRecognizing = false;
   String? _error;
+  String? _modelPath;
   String _lastRecognizedWords = '';
   double _confidence = 0.0;
 
@@ -32,6 +34,9 @@ class LocalSpeechRecognitionService extends ChangeNotifier {
 
   /// Error message if initialization failed
   String? get error => _error;
+
+  /// Path to the current loaded model (not used, kept for compatibility)
+  String? get modelPath => _modelPath;
   
   /// Last recognized words
   String get lastRecognizedWords => _lastRecognizedWords;
@@ -148,9 +153,173 @@ class LocalSpeechRecognitionService extends ChangeNotifier {
     return await _speech.locales();
   }
 
+  /// Supported audio formats
+  static const List<String> supportedFormats = ['wav', 'mp3', 'm4a', 'flac'];
+
+  /// Initialize the speech recognition service with a Whisper ONNX model
+  /// 
+  /// [modelPath] - Path to the Whisper ONNX model directory
+  /// The directory should contain:
+  /// - encoder.onnx
+  /// - decoder.onnx  
+  /// - tokens.txt
+  Future<void> initialize(String modelPath) async {
+    if (_isInitializing) {
+      logDebug('Speech recognition service is already initializing');
+      return;
+    }
+
+    _isInitializing = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      // Validate model path
+      final modelDir = Directory(modelPath);
+      if (!await modelDir.exists()) {
+        throw Exception('Model directory not found: $modelPath');
+      }
+
+      // Check for required files (Whisper ONNX model structure)
+      final requiredFiles = ['encoder.onnx', 'decoder.onnx', 'tokens.txt'];
+      final optionalStructure = ['model.onnx', 'config.json']; // Alternative structure
+      
+      bool hasRequiredFiles = true;
+      for (final file in requiredFiles) {
+        final filePath = File('$modelPath/$file');
+        if (!await filePath.exists()) {
+          hasRequiredFiles = false;
+          break;
+        }
+      }
+
+      // Check for alternative single-model structure
+      if (!hasRequiredFiles) {
+        final modelFile = File('$modelPath/model.onnx');
+        if (!await modelFile.exists()) {
+          // Also check for other common patterns
+          final entries = await modelDir.list().toList();
+          final onnxFiles = entries.where((e) => e.path.endsWith('.onnx')).toList();
+          if (onnxFiles.isEmpty) {
+            throw Exception(
+              'No valid Whisper ONNX model found in: $modelPath\n'
+              'Expected files: ${requiredFiles.join(", ")} or model.onnx'
+            );
+          }
+        }
+      }
+
+      _modelPath = modelPath;
+      _isInitialized = true;
+      logDebug('Speech recognition service initialized with model at: $modelPath');
+      
+      // Note: Actual sherpa_onnx initialization would happen here
+      // For now, we just validate the model structure
+      
+    } catch (e) {
+      _error = e.toString();
+      logDebug('Failed to initialize speech recognition service: $e');
+      _isInitialized = false;
+    } finally {
+      _isInitializing = false;
+      notifyListeners();
+    }
+  }
+
+  /// Transcribe an audio file to text
+  /// 
+  /// [audioPath] - Path to the audio file
+  /// Returns the transcribed text or null if failed
+  /// 
+  /// Note: This is a placeholder implementation.
+  /// Full implementation requires sherpa_onnx runtime.
+  Future<String?> transcribeFile(String audioPath) async {
+    if (!_isInitialized) {
+      logDebug('Speech recognition service not initialized');
+      return null;
+    }
+
+    // Validate audio file
+    final audioFile = File(audioPath);
+    if (!await audioFile.exists()) {
+      logDebug('Audio file not found: $audioPath');
+      return null;
+    }
+
+    // Check file extension
+    final extension = audioPath.split('.').last.toLowerCase();
+    if (!supportedFormats.contains(extension)) {
+      logDebug('Unsupported audio format: $extension');
+      return null;
+    }
+
+    _isRecognizing = true;
+    notifyListeners();
+
+    try {
+      // Placeholder for actual transcription
+      // In production, this would use sherpa_onnx to transcribe
+      logDebug('Transcription would happen here with sherpa_onnx');
+      logDebug('Audio file: $audioPath');
+      logDebug('Model path: $_modelPath');
+      
+      // Return placeholder message indicating ASR is not yet implemented
+      return null;
+      
+    } catch (e) {
+      logDebug('Error during transcription: $e');
+      return null;
+    } finally {
+      _isRecognizing = false;
+      notifyListeners();
+    }
+  }
+
+  /// Start real-time streaming recognition
+  /// 
+  /// Returns a stream of transcription results
+  /// Note: This is a placeholder for streaming ASR
+  Stream<String>? startStreamingRecognition() {
+    if (!_isInitialized) {
+      logDebug('Speech recognition service not initialized');
+      return null;
+    }
+
+    // Placeholder for streaming recognition
+    logDebug('Streaming recognition not yet implemented');
+    return null;
+  }
+
+  /// Stop streaming recognition
+  void stopStreamingRecognition() {
+    _isRecognizing = false;
+    notifyListeners();
+  }
+
+  /// Get model information
+  Map<String, dynamic>? getModelInfo() {
+    if (!_isInitialized || _modelPath == null) {
+      return null;
+    }
+
+    return {
+      'path': _modelPath,
+      'type': 'Whisper ONNX',
+      'status': 'ready',
+    };
+  }
+
+  /// Dispose resources
+  void disposeService() {
+    _isInitialized = false;
+    _modelPath = null;
+    _isRecognizing = false;
+    notifyListeners();
+  }
+
   @override
   void dispose() {
-    _speech.cancel();
+    disposeService();
     super.dispose();
   }
 }

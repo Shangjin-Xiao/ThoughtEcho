@@ -1,23 +1,24 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import '../../utils/app_logger.dart';
 
-/// Service for local OCR text recognition using user-imported models
+/// Service for local OCR text recognition using Google ML Kit
 /// 
-/// Supports:
-/// - Tesseract traineddata files for multi-language OCR
-/// - PaddleOCR Lite models (~8MB, optimized for Chinese)
+/// Uses google_mlkit_text_recognition which provides on-device OCR:
+/// - iOS: Uses MLKit text recognition
+/// - Android: Uses ML Kit text recognition
 /// 
-/// Note: flutter_tesseract_ocr or paddle_ocr_flutter is not added as a direct 
-/// dependency. Users need to import their own model files for offline OCR.
+/// Supports multiple scripts: Latin, Chinese, Devanagari, Japanese, Korean
+/// No model downloads required - models are built into the package.
 class LocalOCRService extends ChangeNotifier {
+  TextRecognizer? _textRecognizer;
+  
   bool _isInitialized = false;
   bool _isInitializing = false;
   bool _isRecognizing = false;
   String? _error;
-  String? _tessdataPath;
-  List<String> _availableLanguages = [];
-  OCREngineType _engineType = OCREngineType.tesseract;
+  TextRecognitionScript _script = TextRecognitionScript.chinese;
 
   /// Whether the service is initialized and ready
   bool get isInitialized => _isInitialized;
@@ -31,14 +32,8 @@ class LocalOCRService extends ChangeNotifier {
   /// Error message if initialization failed
   String? get error => _error;
 
-  /// Path to tessdata directory
-  String? get tessdataPath => _tessdataPath;
-
-  /// Available language codes
-  List<String> get availableLanguages => List.unmodifiable(_availableLanguages);
-
-  /// Current OCR engine type
-  OCREngineType get engineType => _engineType;
+  /// Current recognition script
+  TextRecognitionScript get script => _script;
 
   /// Supported image formats
   static const List<String> supportedFormats = [
@@ -46,18 +41,13 @@ class LocalOCRService extends ChangeNotifier {
     'jpeg',
     'png',
     'bmp',
-    'gif',
     'webp'
   ];
 
-  /// Initialize OCR service with Tesseract traineddata
+  /// Initialize OCR service
   /// 
-  /// [tessdataPath] - Path to the tessdata directory containing .traineddata files
-  /// [languages] - List of language codes to use (e.g., ['chi_sim', 'eng'])
-  Future<void> initializeTesseract(
-    String tessdataPath, {
-    List<String> languages = const ['chi_sim', 'eng'],
-  }) async {
+  /// [script] - Text recognition script (default: Chinese)
+  Future<void> initialize([TextRecognitionScript? script]) async {
     if (_isInitializing) {
       logDebug('OCR service is already initializing');
       return;
@@ -68,105 +58,12 @@ class LocalOCRService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Validate tessdata path
-      final tessdataDir = Directory(tessdataPath);
-      if (!await tessdataDir.exists()) {
-        throw Exception('Tessdata directory not found: $tessdataPath');
-      }
-
-      // Check for traineddata files
-      final files = await tessdataDir.list().toList();
-      final traineddataFiles = files
-          .where((f) => f.path.endsWith('.traineddata'))
-          .map((f) => f.path.split('/').last.replaceAll('.traineddata', ''))
-          .toList();
-
-      if (traineddataFiles.isEmpty) {
-        throw Exception('No .traineddata files found in: $tessdataPath');
-      }
-
-      // Validate requested languages
-      final missingLanguages = <String>[];
-      for (final lang in languages) {
-        if (!traineddataFiles.contains(lang)) {
-          missingLanguages.add(lang);
-        }
-      }
-
-      if (missingLanguages.isNotEmpty) {
-        logDebug('Warning: Some requested languages not found: ${missingLanguages.join(", ")}');
-      }
-
-      _tessdataPath = tessdataPath;
-      _availableLanguages = traineddataFiles;
-      _engineType = OCREngineType.tesseract;
+      _script = script ?? TextRecognitionScript.chinese;
+      _textRecognizer = TextRecognizer(script: _script);
+      
       _isInitialized = true;
-
-      logDebug('OCR service initialized with Tesseract');
-      logDebug('Available languages: ${traineddataFiles.join(", ")}');
-
-    } catch (e) {
-      _error = e.toString();
-      logDebug('Failed to initialize OCR service: $e');
-      _isInitialized = false;
-    } finally {
-      _isInitializing = false;
-      notifyListeners();
-    }
-  }
-
-  /// Initialize OCR service with PaddleOCR model
-  /// 
-  /// [modelPath] - Path to the PaddleOCR model directory
-  Future<void> initializePaddleOCR(String modelPath) async {
-    if (_isInitializing) {
-      logDebug('OCR service is already initializing');
-      return;
-    }
-
-    _isInitializing = true;
-    _error = null;
-    notifyListeners();
-
-    try {
-      // Validate model path
-      final modelDir = Directory(modelPath);
-      if (!await modelDir.exists()) {
-        throw Exception('PaddleOCR model directory not found: $modelPath');
-      }
-
-      // Check for required PaddleOCR model files
-      final requiredFiles = [
-        'det.nb',  // Detection model
-        'cls.nb',  // Classification model
-        'rec.nb',  // Recognition model
-        'ppocr_keys_v1.txt',  // Dictionary
-      ];
-
-      // Also check for alternative file patterns
-      final entries = await modelDir.list().toList();
-      final hasDetModel = entries.any((e) => 
-        e.path.contains('det') && (e.path.endsWith('.nb') || e.path.endsWith('.onnx'))
-      );
-      final hasRecModel = entries.any((e) => 
-        e.path.contains('rec') && (e.path.endsWith('.nb') || e.path.endsWith('.onnx'))
-      );
-
-      if (!hasDetModel || !hasRecModel) {
-        throw Exception(
-          'Invalid PaddleOCR model structure at: $modelPath\n'
-          'Expected detection and recognition models'
-        );
-      }
-
-      _tessdataPath = modelPath;
-      _availableLanguages = ['chinese', 'english'];  // PaddleOCR default
-      _engineType = OCREngineType.paddleOCR;
-      _isInitialized = true;
-
-      logDebug('OCR service initialized with PaddleOCR');
-      logDebug('Model path: $modelPath');
-
+      logDebug('OCR service initialized successfully with script: $_script');
+      
     } catch (e) {
       _error = e.toString();
       logDebug('Failed to initialize OCR service: $e');
@@ -180,17 +77,11 @@ class LocalOCRService extends ChangeNotifier {
   /// Recognize text from an image file
   /// 
   /// [imagePath] - Path to the image file
-  /// [languages] - Language codes for Tesseract (ignored for PaddleOCR)
-  /// 
-  /// Note: This is a placeholder implementation.
-  /// Full implementation requires flutter_tesseract_ocr or paddle_ocr_flutter.
-  Future<OCRResult?> recognizeText(
-    String imagePath, {
-    List<String>? languages,
-  }) async {
+  /// Returns the recognized text or null if failed
+  Future<RecognizedText?> recognizeFromFile(String imagePath) async {
     if (!_isInitialized) {
-      logDebug('OCR service not initialized');
-      return null;
+      logDebug('OCR service not initialized, initializing now...');
+      await initialize();
     }
 
     // Validate image file
@@ -211,30 +102,15 @@ class LocalOCRService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final stopwatch = Stopwatch()..start();
-
-      // Placeholder for actual OCR
-      // In production, this would use flutter_tesseract_ocr or paddle_ocr_flutter
-      logDebug('OCR would happen here with ${_engineType.name}');
-      logDebug('Image: $imagePath');
-      logDebug('Tessdata/Model path: $_tessdataPath');
+      final inputImage = InputImage.fromFilePath(imagePath);
+      final recognizedText = await _textRecognizer!.processImage(inputImage);
       
-      if (_engineType == OCREngineType.tesseract) {
-        logDebug('Languages: ${languages?.join("+") ?? _availableLanguages.join("+")}');
-      }
-
-      stopwatch.stop();
-
-      // Return placeholder result
-      return OCRResult(
-        text: '',
-        confidence: 0.0,
-        processingTimeMs: stopwatch.elapsedMilliseconds,
-        blocks: [],
-      );
-
+      logDebug('OCR completed. Recognized ${recognizedText.blocks.length} text blocks');
+      return recognizedText;
+      
     } catch (e) {
       logDebug('Error during OCR: $e');
+      _error = e.toString();
       return null;
     } finally {
       _isRecognizing = false;
@@ -244,124 +120,126 @@ class LocalOCRService extends ChangeNotifier {
 
   /// Recognize text from image bytes
   /// 
-  /// [imageBytes] - Raw image bytes
-  /// [languages] - Language codes for Tesseract
-  Future<OCRResult?> recognizeTextFromBytes(
-    Uint8List imageBytes, {
-    List<String>? languages,
+  /// [bytes] - Image data as bytes
+  /// Returns the recognized text or null if failed
+  Future<RecognizedText?> recognizeFromBytes(
+    Uint8List bytes, {
+    required int width,
+    required int height,
   }) async {
     if (!_isInitialized) {
-      logDebug('OCR service not initialized');
-      return null;
+      logDebug('OCR service not initialized, initializing now...');
+      await initialize();
     }
 
-    // Save to temp file and process
-    // This is a workaround for engines that don't support direct byte input
-    final tempDir = Directory.systemTemp;
-    final tempFile = File('${tempDir.path}/ocr_temp_${DateTime.now().millisecondsSinceEpoch}.png');
-    
-    try {
-      await tempFile.writeAsBytes(imageBytes);
-      return await recognizeText(tempFile.path, languages: languages);
-    } finally {
-      // Cleanup temp file
-      if (await tempFile.exists()) {
-        await tempFile.delete();
-      }
-    }
-  }
-
-  /// Get model/engine information
-  Map<String, dynamic>? getModelInfo() {
-    if (!_isInitialized) {
-      return null;
-    }
-
-    return {
-      'engine': _engineType.name,
-      'path': _tessdataPath,
-      'languages': _availableLanguages,
-      'status': 'ready',
-    };
-  }
-
-  /// Dispose resources
-  void disposeService() {
-    _isInitialized = false;
-    _tessdataPath = null;
-    _availableLanguages = [];
-    _isRecognizing = false;
+    _isRecognizing = true;
     notifyListeners();
+
+    try {
+      final inputImage = InputImage.fromBytes(
+        bytes: bytes,
+        metadata: InputImageMetadata(
+          size: Size(width.toDouble(), height.toDouble()),
+          rotation: InputImageRotation.rotation0deg,
+          format: InputImageFormat.nv21,
+          bytesPerRow: width,
+        ),
+      );
+      
+      final recognizedText = await _textRecognizer!.processImage(inputImage);
+      
+      logDebug('OCR completed. Recognized ${recognizedText.blocks.length} text blocks');
+      return recognizedText;
+      
+    } catch (e) {
+      logDebug('Error during OCR: $e');
+      _error = e.toString();
+      return null;
+    } finally {
+      _isRecognizing = false;
+      notifyListeners();
+    }
+  }
+
+  /// Extract plain text from OCR result
+  String extractPlainText(RecognizedText recognizedText) {
+    return recognizedText.text;
+  }
+
+  /// Extract text by blocks with coordinates
+  List<TextBlock> extractTextBlocks(RecognizedText recognizedText) {
+    return recognizedText.blocks;
+  }
+
+  /// Change recognition script
+  /// 
+  /// Note: Requires reinitialization
+  Future<void> changeScript(TextRecognitionScript newScript) async {
+    if (_script == newScript) {
+      return;
+    }
+
+    await dispose();
+    await initialize(newScript);
   }
 
   @override
   void dispose() {
-    disposeService();
+    _textRecognizer?.close();
+    _textRecognizer = null;
+    _isInitialized = false;
     super.dispose();
   }
 }
 
-/// OCR engine type
-enum OCREngineType {
-  /// Tesseract OCR engine
-  tesseract,
-  /// PaddleOCR engine
-  paddleOCR,
-}
-
-/// Result of an OCR operation
+/// OCR Result with structured information
 class OCRResult {
-  /// The recognized text
-  final String text;
+  /// Full recognized text
+  final String fullText;
   
-  /// Overall confidence score (0.0 - 1.0)
-  final double confidence;
-  
-  /// Processing time in milliseconds
-  final int processingTimeMs;
-  
-  /// Individual text blocks with bounding boxes
+  /// Individual text blocks with positions
   final List<OCRTextBlock> blocks;
+  
+  /// Confidence score (0.0 - 1.0) if available
+  final double? confidence;
 
   const OCRResult({
-    required this.text,
-    this.confidence = 1.0,
-    this.processingTimeMs = 0,
-    this.blocks = const [],
+    required this.fullText,
+    required this.blocks,
+    this.confidence,
   });
 
   Map<String, dynamic> toJson() {
     return {
-      'text': text,
-      'confidence': confidence,
-      'processingTimeMs': processingTimeMs,
+      'fullText': fullText,
       'blocks': blocks.map((b) => b.toJson()).toList(),
+      'confidence': confidence,
     };
   }
 }
 
-/// A block of text with position information
+/// Individual text block with position
 class OCRTextBlock {
-  /// The text content
+  /// Text content
   final String text;
   
-  /// Confidence score for this block
-  final double confidence;
+  /// Bounding box (left, top, right, bottom)
+  final List<double> boundingBox;
   
-  /// Bounding box [x, y, width, height]
-  final List<int> boundingBox;
+  /// Confidence score (0.0 - 1.0) if available
+  final double? confidence;
 
   const OCRTextBlock({
     required this.text,
-    this.confidence = 1.0,
-    this.boundingBox = const [0, 0, 0, 0],
+    required this.boundingBox,
+    this.confidence,
   });
 
   Map<String, dynamic> toJson() {
     return {
       'text': text,
-      'confidence': confidence,
       'boundingBox': boundingBox,
+      'confidence': confidence,
     };
   }
 }
