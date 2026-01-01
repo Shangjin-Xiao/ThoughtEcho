@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:cactus/cactus.dart';
 import '../models/local_ai_settings.dart';
 import '../utils/app_logger.dart';
 
@@ -15,14 +17,10 @@ enum OnDeviceAIStatus {
 
 /// 本地AI服务
 /// 
-/// 实现方案B: cactus + ML Kit
-/// - LLM/嵌入/ASR: cactus (许可证未知⚠️)
+/// 实现方案: cactus + ML Kit
+/// - LLM/嵌入: cactus
 /// - OCR: google_mlkit_text_recognition (MIT)
-/// 
-/// ⚠️ 重要提示：
-/// cactus 许可证不明确，商业使用前请确认许可证状态。
-/// 源码包含 telemetry/ProKey 代码，不建议在商业发布前使用。
-/// 此功能目前处于 Preview 阶段。
+/// - ASR: 待集成（可使用 speech_to_text 或其他方案）
 class OnDeviceAIService extends ChangeNotifier {
   /// 服务状态
   OnDeviceAIStatus _status = OnDeviceAIStatus.uninitialized;
@@ -44,9 +42,10 @@ class OnDeviceAIService extends ChangeNotifier {
   /// 模型文件路径
   String? _modelPath;
 
+  /// Cactus LM 实例
+  CactusLM? _cactusLM;
+  
   /// Cactus 功能可用性标记
-  /// 注意：cactus 包许可证待确认，暂时禁用 LLM 功能
-  /// TODO: 许可证确认后，添加 CactusSession 实例
   bool _cactusAvailable = false;
 
   /// 获取当前设置
@@ -61,17 +60,15 @@ class OnDeviceAIService extends ChangeNotifier {
       (_chineseRecognizer != null || _latinRecognizer != null);
 
   /// 检查 LLM 功能是否可用
-  /// 注意：cactus 许可证待确认，此功能暂时禁用
   bool get isLLMAvailable => 
       _settings?.enabled == true && _cactusAvailable;
 
   /// 检查 ASR (语音转文字) 功能是否可用
-  /// 注意：cactus 许可证待确认，此功能暂时禁用
+  /// 注意：ASR 功能需要使用第三方服务或其他包实现
   bool get isASRAvailable => 
-      _settings?.speechToTextEnabled == true && _cactusAvailable;
+      _settings?.speechToTextEnabled == true && false; // ASR not yet implemented
 
   /// 检查嵌入功能是否可用
-  /// 注意：cactus 许可证待确认，此功能暂时禁用
   bool get isEmbeddingAvailable => 
       _settings?.aiSearchEnabled == true && _cactusAvailable;
 
@@ -105,15 +102,10 @@ class OnDeviceAIService extends ChangeNotifier {
         await _initializeOCR();
       }
 
-      // ⚠️ Cactus 许可证待确认，暂时跳过初始化
-      // TODO: 许可证确认后取消注释以下代码启用 LLM/ASR/Embedding 功能
-      // if (settings.speechToTextEnabled || 
-      //     settings.aiSearchEnabled || 
-      //     settings.aiCorrectionEnabled) {
-      //   await _initializeCactus();
-      // }
-      _cactusAvailable = false;
-      logDebug('OnDeviceAIService: Cactus 功能暂时禁用（许可证待确认）');
+      // 初始化 Cactus LLM/Embedding 功能
+      if (settings.aiSearchEnabled || settings.aiCorrectionEnabled) {
+        await _initializeCactus();
+      }
 
       _status = OnDeviceAIStatus.ready;
       logDebug('OnDeviceAIService: 初始化完成');
@@ -152,30 +144,69 @@ class OnDeviceAIService extends ChangeNotifier {
     }
   }
 
-  /// 初始化 Cactus (LLM/ASR/Embedding) - 当前未使用
-  /// 
-  /// ⚠️ 重要提示：
-  /// cactus 许可证不明确，商业使用前请确认许可证状态。
-  /// 源码包含 telemetry/ProKey 代码，不建议在商业发布前使用。
-  /// 
-  /// TODO: 许可证确认后实现以下功能：
-  /// - 检查模型路径有效性 (使用 dart:io File)
-  /// - 创建 CactusSession 实例
-  /// - 调用 initialize(modelPath: path) 初始化模型
-  /// - 设置 _cactusAvailable = true
-  /// 
-  /// 示例实现（许可证确认后启用）:
-  /// ```dart
-  /// Future<void> _initializeCactus() async {
-  ///   if (kIsWeb) { _cactusAvailable = false; return; }
-  ///   if (_modelPath == null) { _cactusAvailable = false; return; }
-  ///   final modelFile = File(_modelPath!);
-  ///   if (!await modelFile.exists()) { _cactusAvailable = false; return; }
-  ///   _cactusSession = CactusSession();
-  ///   await _cactusSession!.initialize(modelPath: _modelPath!);
-  ///   _cactusAvailable = true;
-  /// }
-  /// ```
+  /// 初始化 Cactus (LLM/Embedding)
+  Future<void> _initializeCactus() async {
+    try {
+      // Web 平台不支持 Cactus
+      if (kIsWeb) {
+        logDebug('OnDeviceAIService: Web 平台不支持 Cactus');
+        _cactusAvailable = false;
+        return;
+      }
+
+      // 检查模型路径
+      if (_modelPath == null || _modelPath!.isEmpty) {
+        logDebug('OnDeviceAIService: 未提供 Cactus 模型路径，使用默认模型');
+        
+        // 使用默认的轻量级模型 URL
+        // 这是一个小型的 600M 参数模型，适合移动设备
+        const defaultModelUrl = 'https://huggingface.co/Cactus-Compute/Qwen3-600m-Instruct-GGUF/resolve/main/Qwen3-0.6B-Q8_0.gguf';
+        
+        _cactusLM = await CactusLM.init(
+          modelUrl: defaultModelUrl,
+          contextSize: 2048,
+          threads: 4,
+          generateEmbeddings: _settings?.aiSearchEnabled ?? false,
+          onProgress: (progress, message, isError) {
+            if (isError) {
+              logDebug('OnDeviceAIService: Cactus 初始化错误: $message');
+            } else {
+              logDebug('OnDeviceAIService: Cactus 初始化进度: ${(progress ?? 0) * 100}% - $message');
+            }
+          },
+        );
+      } else {
+        // 使用用户指定的本地模型文件
+        final modelFile = File(_modelPath!);
+        if (!await modelFile.exists()) {
+          logDebug('OnDeviceAIService: 模型文件不存在: $_modelPath');
+          _cactusAvailable = false;
+          return;
+        }
+        
+        _cactusLM = await CactusLM.init(
+          modelUrl: _modelPath!,
+          contextSize: 2048,
+          threads: 4,
+          generateEmbeddings: _settings?.aiSearchEnabled ?? false,
+          onProgress: (progress, message, isError) {
+            if (isError) {
+              logDebug('OnDeviceAIService: Cactus 初始化错误: $message');
+            } else {
+              logDebug('OnDeviceAIService: Cactus 初始化进度: ${(progress ?? 0) * 100}% - $message');
+            }
+          },
+        );
+      }
+      
+      _cactusAvailable = true;
+      logDebug('OnDeviceAIService: Cactus LM 已初始化');
+    } catch (e, stackTrace) {
+      _cactusAvailable = false;
+      logDebug('OnDeviceAIService: Cactus 初始化失败: $e\n$stackTrace');
+      // Cactus 初始化失败不阻塞其他功能
+    }
+  }
 
   /// 更新设置
   Future<void> updateSettings(LocalAISettings newSettings) async {
@@ -281,28 +312,78 @@ class OnDeviceAIService extends ChangeNotifier {
     }
   }
 
-  // ========== LLM 功能（许可证待确认，暂时禁用）==========
+  // ========== LLM 功能 ==========
 
   /// 与本地 LLM 对话
   /// 
-  /// ⚠️ 此功能依赖 cactus，许可证待确认
-  /// 商业使用前请确认许可证状态
-  /// 
-  /// TODO: 许可证确认后调用 _cactusSession.chat(message)
-  /// 
   /// [message] 用户消息
+  /// [onToken] 可选的流式回调，每生成一个token时调用
   /// 返回 AI 回复
-  Future<String> chat(String message) async {
+  Future<String> chat(String message, {CactusTokenCallback? onToken}) async {
     if (!isLLMAvailable) {
-      throw Exception('LLM feature not enabled or unavailable (license pending)');
+      throw Exception('LLM feature not enabled or unavailable');
+    }
+
+    if (_cactusLM == null) {
+      throw Exception('Cactus LM not initialized');
     }
 
     _status = OnDeviceAIStatus.processing;
     notifyListeners();
 
     try {
-      // ⚠️ Cactus 许可证待确认，暂时禁用
-      throw Exception('LLM feature temporarily disabled (cactus license pending)');
+      final result = await _cactusLM!.completion(
+        [ChatMessage(role: 'user', content: message)],
+        maxTokens: 256,
+        temperature: 0.7,
+        onToken: onToken,
+      );
+      
+      _status = OnDeviceAIStatus.ready;
+      notifyListeners();
+      
+      logDebug('OnDeviceAIService: LLM 生成完成，生成了 ${result.tokensPredicted} 个token');
+      return result.text;
+    } catch (e) {
+      _status = OnDeviceAIStatus.ready;
+      notifyListeners();
+      logDebug('OnDeviceAIService: LLM 生成失败: $e');
+      rethrow;
+    }
+  }
+
+  /// 与本地 LLM 进行多轮对话
+  /// 
+  /// [messages] 对话历史
+  /// [onToken] 可选的流式回调
+  /// 返回 AI 回复
+  Future<String> chatWithHistory(
+    List<ChatMessage> messages, {
+    CactusTokenCallback? onToken,
+  }) async {
+    if (!isLLMAvailable) {
+      throw Exception('LLM feature not enabled or unavailable');
+    }
+
+    if (_cactusLM == null) {
+      throw Exception('Cactus LM not initialized');
+    }
+
+    _status = OnDeviceAIStatus.processing;
+    notifyListeners();
+
+    try {
+      final result = await _cactusLM!.completion(
+        messages,
+        maxTokens: 256,
+        temperature: 0.7,
+        onToken: onToken,
+      );
+      
+      _status = OnDeviceAIStatus.ready;
+      notifyListeners();
+      
+      return result.text;
     } catch (e) {
       _status = OnDeviceAIStatus.ready;
       notifyListeners();
@@ -310,28 +391,27 @@ class OnDeviceAIService extends ChangeNotifier {
     }
   }
 
-  // ========== ASR 功能（许可证待确认，暂时禁用）==========
+  // ========== ASR 功能（需要额外的语音识别包）==========
 
   /// 语音转文字
   /// 
-  /// ⚠️ 此功能依赖 cactus，许可证待确认
-  /// 商业使用前请确认许可证状态
-  /// 
-  /// TODO: 许可证确认后调用 _cactusSession.transcribe(audioPath: path)
+  /// 注意：Cactus v0.1.4 不包含 ASR 功能
+  /// 需要使用其他包如 speech_to_text 或云服务
   /// 
   /// [audioPath] 音频文件路径
   /// 返回转录文本
   Future<String> transcribe(String audioPath) async {
     if (!isASRAvailable) {
-      throw Exception('ASR feature not enabled or unavailable (license pending)');
+      throw Exception('ASR feature not yet implemented');
     }
 
     _status = OnDeviceAIStatus.processing;
     notifyListeners();
 
     try {
-      // ⚠️ Cactus 许可证待确认，暂时禁用
-      throw Exception('ASR feature temporarily disabled (cactus license pending)');
+      // TODO: 集成语音识别功能
+      // 可以使用 speech_to_text 包或其他方案
+      throw Exception('ASR feature not yet implemented - needs speech recognition package');
     } catch (e) {
       _status = OnDeviceAIStatus.ready;
       notifyListeners();
@@ -339,42 +419,41 @@ class OnDeviceAIService extends ChangeNotifier {
     }
   }
 
-  // ========== 嵌入功能（许可证待确认，暂时禁用）==========
+  // ========== 嵌入功能 ==========
 
   /// 生成文本嵌入向量
-  /// 
-  /// ⚠️ 此功能依赖 cactus，许可证待确认
-  /// 商业使用前请确认许可证状态
-  /// 
-  /// TODO: 许可证确认后调用 _cactusSession.embed(text)
   /// 
   /// [text] 要嵌入的文本
   /// 返回嵌入向量
   Future<List<double>> embed(String text) async {
     if (!isEmbeddingAvailable) {
-      throw Exception('Embedding feature not enabled or unavailable (license pending)');
+      throw Exception('Embedding feature not enabled or unavailable');
+    }
+
+    if (_cactusLM == null) {
+      throw Exception('Cactus LM not initialized');
     }
 
     _status = OnDeviceAIStatus.processing;
     notifyListeners();
 
     try {
-      // ⚠️ Cactus 许可证待确认，暂时禁用
-      throw Exception('Embedding feature temporarily disabled (cactus license pending)');
+      final embedding = _cactusLM!.embedding(text);
+      
+      _status = OnDeviceAIStatus.ready;
+      notifyListeners();
+      
+      logDebug('OnDeviceAIService: 生成了 ${embedding.length} 维嵌入向量');
+      return embedding;
     } catch (e) {
       _status = OnDeviceAIStatus.ready;
       notifyListeners();
+      logDebug('OnDeviceAIService: 嵌入生成失败: $e');
       rethrow;
     }
   }
 
   // ========== 辅助功能 ==========
-
-  /// 获取许可证警告的本地化键名
-  /// 
-  /// 使用方式: l10n.onDeviceAILicenseDetails
-  /// 实际文案应从 AppLocalizations 获取以支持多语言
-  static const String licenseWarningKey = 'onDeviceAILicenseDetails';
 
   /// 获取功能状态摘要
   Map<String, bool> getFeatureStatus() {
@@ -388,12 +467,11 @@ class OnDeviceAIService extends ChangeNotifier {
   }
 
   /// 释放资源
-  /// 
-  /// TODO: 许可证确认后，添加 _cactusSession?.dispose()
   @override
   void dispose() {
     _chineseRecognizer?.close();
     _latinRecognizer?.close();
+    _cactusLM?.dispose();
     super.dispose();
   }
 }
