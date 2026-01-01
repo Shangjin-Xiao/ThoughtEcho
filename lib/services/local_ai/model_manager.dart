@@ -226,13 +226,8 @@ class ModelManager extends ChangeNotifier {
     // 检查是否是由特定包管理的模型
     if (task.url.startsWith('managed://')) {
       // 这些模型需要通过特定包（如 flutter_gemma）下载
-      // 目前提供友好的提示信息
-      final managedInfo = task.url.replaceFirst('managed://', '');
-      task.onError(
-        '此模型需要通过专用包下载。\n'
-        '模型: $managedInfo\n'
-        '请等待后续版本集成 flutter_gemma 包后使用。',
-      );
+      // 返回错误代码，让 UI 显示本地化信息
+      task.onError(errorManagedModel);
       return;
     }
 
@@ -287,43 +282,55 @@ class ModelManager extends ChangeNotifier {
     } on DioException catch (e) {
       if (CancelToken.isCancel(e)) {
         logInfo('模型下载已取消: ${task.modelId}', source: 'ModelManager');
-        task.onError('下载已取消');
+        task.onError(errorCancelled);
       } else {
-        final errorMsg = _getDioErrorMessage(e);
-        logError('模型下载失败: $errorMsg', source: 'ModelManager');
-        task.onError(errorMsg);
+        final errorCode = _getDioErrorCode(e);
+        logError('模型下载失败: $errorCode', source: 'ModelManager');
+        task.onError(errorCode);
       }
     } catch (e) {
       logError('模型下载失败: $e', source: 'ModelManager');
-      task.onError(e.toString());
+      task.onError(errorDownloadFailed);
     } finally {
       _cancelTokens.remove(task.modelId);
     }
   }
 
-  /// 获取 Dio 错误信息
-  String _getDioErrorMessage(DioException e) {
+  /// 下载错误代码
+  static const String errorConnectionTimeout = 'connection_timeout';
+  static const String errorSendTimeout = 'send_timeout';
+  static const String errorReceiveTimeout = 'receive_timeout';
+  static const String errorModelNotFound = 'model_not_found';
+  static const String errorAccessDenied = 'access_denied';
+  static const String errorServerError = 'server_error';
+  static const String errorCancelled = 'download_cancelled';
+  static const String errorConnectionFailed = 'connection_failed';
+  static const String errorDownloadFailed = 'download_failed';
+  static const String errorManagedModel = 'managed_model';
+
+  /// 获取 Dio 错误代码
+  String _getDioErrorCode(DioException e) {
     switch (e.type) {
       case DioExceptionType.connectionTimeout:
-        return '连接超时，请检查网络';
+        return errorConnectionTimeout;
       case DioExceptionType.sendTimeout:
-        return '发送超时，请检查网络';
+        return errorSendTimeout;
       case DioExceptionType.receiveTimeout:
-        return '接收超时，请检查网络';
+        return errorReceiveTimeout;
       case DioExceptionType.badResponse:
         final statusCode = e.response?.statusCode;
         if (statusCode == 404) {
-          return '模型文件不存在 (404)';
+          return errorModelNotFound;
         } else if (statusCode == 403) {
-          return '无权访问模型文件 (403)';
+          return errorAccessDenied;
         }
-        return '服务器错误: $statusCode';
+        return '$errorServerError:$statusCode';
       case DioExceptionType.cancel:
-        return '下载已取消';
+        return errorCancelled;
       case DioExceptionType.connectionError:
-        return '网络连接失败，请检查网络';
+        return errorConnectionFailed;
       default:
-        return e.message ?? '下载失败';
+        return errorDownloadFailed;
     }
   }
 
@@ -332,7 +339,7 @@ class ModelManager extends ChangeNotifier {
     // 取消 Dio 下载
     final cancelToken = _cancelTokens[modelId];
     if (cancelToken != null && !cancelToken.isCancelled) {
-      cancelToken.cancel('用户取消下载');
+      cancelToken.cancel('cancelled');
     }
     _cancelTokens.remove(modelId);
 

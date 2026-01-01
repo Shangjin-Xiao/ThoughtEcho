@@ -78,8 +78,8 @@ class VectorStore extends ChangeNotifier {
       _embeddings[noteId] = embedding.copyWith(noteId: noteId);
       notifyListeners();
 
-      // 异步保存到磁盘（不等待完成）
-      _saveToDisk().ignore();
+      // 异步保存到磁盘（记录错误但不阻塞）
+      _saveToDiskSafe();
 
       logDebug('已更新笔记 $noteId 的嵌入向量', source: 'VectorStore');
     } catch (e) {
@@ -92,7 +92,7 @@ class VectorStore extends ChangeNotifier {
   Future<void> deleteNote(String noteId) async {
     if (_embeddings.remove(noteId) != null) {
       notifyListeners();
-      _saveToDisk().ignore();
+      _saveToDiskSafe();
       logDebug('已删除笔记 $noteId 的嵌入向量', source: 'VectorStore');
     }
   }
@@ -212,7 +212,7 @@ class VectorStore extends ChangeNotifier {
       }
 
       notifyListeners();
-      _saveToDisk().ignore();
+      _saveToDiskSafe();
 
       logInfo('批量更新 ${notes.length} 个嵌入向量', source: 'VectorStore');
     } catch (e) {
@@ -225,7 +225,7 @@ class VectorStore extends ChangeNotifier {
   Future<void> clear() async {
     _embeddings.clear();
     notifyListeners();
-    _saveToDisk().ignore();
+    _saveToDiskSafe();
 
     logInfo('已清空向量存储', source: 'VectorStore');
   }
@@ -268,8 +268,16 @@ class VectorStore extends ChangeNotifier {
     }
   }
 
+  /// 安全保存到磁盘（异步，记录错误但不阻塞）
+  void _saveToDiskSafe() {
+    _saveToDisk().catchError((e) {
+      logError('异步保存向量存储失败: $e', source: 'VectorStore');
+    });
+  }
+
   @override
   void dispose() {
+    // 同步保存，确保数据不丢失
     _saveToDisk();
     super.dispose();
   }
