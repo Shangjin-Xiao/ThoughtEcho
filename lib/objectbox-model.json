@@ -1,0 +1,151 @@
+{
+  "_note1": "KEEP THIS FILE! Check it into a version control system (VCS) like git.",
+  "_note2": "ObjectBox manages crucial IDs for your object model. See docs for details.",
+  "_note3": "If you have VCS merge conflicts, you must resolve them according to ObjectBox docs.",
+  "entities": [
+    {
+      "id": "1:4873036037937112007",
+      "lastPropertyId": "8:5223954551422734137",
+      "name": "NoteVector",
+      "properties": [
+        {
+          "id": "1:583031982135149259",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:5658189281937610282",
+          "name": "noteId",
+          "indexId": "1:4741312224834442472",
+          "type": 9,
+          "flags": 2080
+        },
+        {
+          "id": "3:5955391040079459657",
+          "name": "embedding",
+          "indexId": "2:3465174967330679272",
+          "type": 28,
+          "flags": 8
+        },
+        {
+          "id": "4:6339491108681561377",
+          "name": "contentPreview",
+          "type": 9
+        },
+        {
+          "id": "5:4861150728252972701",
+          "name": "createdAt",
+          "type": 10
+        },
+        {
+          "id": "6:5254111361204892039",
+          "name": "updatedAt",
+          "type": 10
+        },
+        {
+          "id": "7:7378933207199825717",
+          "name": "modelVersion",
+          "type": 9
+        },
+        {
+          "id": "8:5223954551422734137",
+          "name": "dimension",
+          "type": 6
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "2:2292889071168205162",
+      "lastPropertyId": "6:3673540137133467596",
+      "name": "SearchHistory",
+      "properties": [
+        {
+          "id": "1:7391343541600706259",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:4396780360493048535",
+          "name": "query",
+          "type": 9
+        },
+        {
+          "id": "3:2469274343896026857",
+          "name": "queryEmbedding",
+          "type": 28
+        },
+        {
+          "id": "4:559155495213804399",
+          "name": "searchedAt",
+          "type": 10
+        },
+        {
+          "id": "5:3381511221066225534",
+          "name": "resultCount",
+          "type": 6
+        },
+        {
+          "id": "6:3673540137133467596",
+          "name": "hasClicked",
+          "type": 1
+        }
+      ],
+      "relations": []
+    },
+    {
+      "id": "3:7063434601830221067",
+      "lastPropertyId": "6:4211624706151040871",
+      "name": "SimilarNotesCache",
+      "properties": [
+        {
+          "id": "1:3451870795145100349",
+          "name": "id",
+          "type": 6,
+          "flags": 1
+        },
+        {
+          "id": "2:6280352458237904014",
+          "name": "sourceNoteId",
+          "indexId": "3:6440255065087885933",
+          "type": 9,
+          "flags": 2048
+        },
+        {
+          "id": "3:2383116664870755875",
+          "name": "similarNoteIdsJson",
+          "type": 9
+        },
+        {
+          "id": "4:6667572752515274521",
+          "name": "similarityScoresJson",
+          "type": 9
+        },
+        {
+          "id": "5:2070608722898331945",
+          "name": "cachedAt",
+          "type": 10
+        },
+        {
+          "id": "6:4211624706151040871",
+          "name": "validHours",
+          "type": 6
+        }
+      ],
+      "relations": []
+    }
+  ],
+  "lastEntityId": "3:7063434601830221067",
+  "lastIndexId": "3:6440255065087885933",
+  "lastRelationId": "0:0",
+  "lastSequenceId": "0:0",
+  "modelVersion": 5,
+  "modelVersionParserMinimum": 5,
+  "retiredEntityUids": [],
+  "retiredIndexUids": [],
+  "retiredPropertyUids": [],
+  "retiredRelationUids": [],
+  "version": 1
+}

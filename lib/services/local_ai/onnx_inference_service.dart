@@ -196,9 +196,13 @@ class ONNXInferenceService extends ChangeNotifier {
       
       // 转换结果为 Map
       final outputMap = <String, OrtValue>{};
-      for (var i = 0; i < results.length; i++) {
-        final outputName = session.outputNames[i];
-        outputMap[outputName] = results[i]!;
+      if (results != null) {
+        for (var i = 0; i < results.length; i++) {
+          final outputName = session.outputNames[i];
+          if (results[i] != null) {
+            outputMap[outputName] = results[i]!;
+          }
+        }
       }
       
       return outputMap;
