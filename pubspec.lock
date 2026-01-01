@@ -1848,10 +1848,10 @@ packages:
     dependency: "direct main"
     description:
       name: record
-      sha256: "6bad72fb3ea6708d724cf8b6c97c4e236cf9f43a52259b654efeb6fd9b737f1f"
+      sha256: daeb3f9b3fea9797094433fe6e49a879d8e4ca4207740bc6dc7e4a58764f0817
       url: "https://pub.dev"
     source: hosted
-    version: "6.1.2"
+    version: "6.0.0"
   record_android:
     dependency: transitive
     description:
