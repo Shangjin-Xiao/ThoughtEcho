@@ -277,8 +277,8 @@ class VectorStore extends ChangeNotifier {
 
   @override
   void dispose() {
-    // 同步保存，确保数据不丢失
-    _saveToDisk();
+    // 异步保存，确保数据不丢失但不阻塞 UI
+    _saveToDiskSafe();
     super.dispose();
   }
 }
