@@ -3130,5 +3130,16 @@
         "type": "String"
       }
     }
-  }
+  },
+  "similarityHighlyRelated": "Highly related content",
+  "similarityTopicSimilar": "Similar topic",
+  "similaritySomewhatRelated": "Somewhat related",
+  "similarityPossiblyRelated": "Possibly related",
+  "positiveEmotionDetected": "Positive emotion detected",
+  "negativeEmotionDetected": "Negative emotion detected",
+  "containsDateKeywords": "Contains date-related keywords",
+  "containsQuoteFormat": "Contains quote format",
+  "containsInsightKeywords": "Contains insight-related keywords",
+  "pleaseSwitchToAsrModel": "Please download speech recognition model first",
+  "pleaseSwitchToOcrModel": "Please download OCR model first"
 }

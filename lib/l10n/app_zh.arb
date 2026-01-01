@@ -3130,5 +3130,16 @@
         "type": "String"
       }
     }
-  }
+  },
+  "similarityHighlyRelated": "内容高度相关",
+  "similarityTopicSimilar": "主题相似",
+  "similaritySomewhatRelated": "有一定关联",
+  "similarityPossiblyRelated": "可能相关",
+  "positiveEmotionDetected": "检测到积极情绪",
+  "negativeEmotionDetected": "检测到消极情绪",
+  "containsDateKeywords": "包含日期相关词汇",
+  "containsQuoteFormat": "包含引用格式",
+  "containsInsightKeywords": "包含感悟相关词汇",
+  "pleaseSwitchToAsrModel": "请先下载语音识别模型",
+  "pleaseSwitchToOcrModel": "请先下载 OCR 模型"
 }
