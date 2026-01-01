@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:thoughtecho/pages/model_management_page.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/local_ai_settings.dart';
 import '../services/settings_service.dart';
@@ -125,6 +126,43 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
                     ),
                   ],
                 ),
+              ),
+            ),
+          ),
+
+          // 模型管理入口
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                side: BorderSide(
+                  color: theme.colorScheme.outline.withOpacity(0.2),
+                ),
+              ),
+              child: ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.secondaryContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.download_rounded,
+                    color: theme.colorScheme.onSecondaryContainer,
+                  ),
+                ),
+                title: Text(l10n.modelManagementTitle),
+                subtitle: Text(l10n.localAiFeaturesDesc),
+                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const ModelManagementPage(),
+                    ),
+                  );
+                },
               ),
             ),
           ),

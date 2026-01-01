@@ -51,7 +51,7 @@ android {
 
     defaultConfig {
         applicationId "com.shangjin.thoughtecho"
-        minSdkVersion 23
+        minSdkVersion 24
         targetSdkVersion 35
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName

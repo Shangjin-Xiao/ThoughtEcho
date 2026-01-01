@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:thoughtecho/services/text_processing_service.dart';
 import '../../gen_l10n/app_localizations.dart';
 
 /// AI 操作按钮组件
@@ -45,15 +46,19 @@ class AIActionButtons extends StatelessWidget {
   Future<void> _applyCorrection(BuildContext context) async {
     final l10n = AppLocalizations.of(context);
 
-    // TODO: 调用本地 AI 模型进行纠错 - 后端实现后添加
-    // 目前返回 mock 数据
-    await Future.delayed(const Duration(milliseconds: 500));
+    // Check if model is available
+    // For now we assume LocalAIService check was done before entering this screen or button enabled state
+    // but good to show loading.
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.processingPleaseWait ?? 'Processing...')),
+    );
+
+    final correctedText = await TextProcessingService.instance.correctText(text);
 
     if (!context.mounted) return;
 
-    // Mock: 假设纠错结果
-    final correctedText = text; // 实际应该是 AI 纠错后的文本
-
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(l10n.aiCorrectionApplied)),
     );
@@ -65,15 +70,17 @@ class AIActionButtons extends StatelessWidget {
   Future<void> _recognizeSource(BuildContext context) async {
     final l10n = AppLocalizations.of(context);
 
-    // TODO: 调用本地 AI 模型识别来源 - 后端实现后添加
-    // 目前返回 mock 数据
-    await Future.delayed(const Duration(milliseconds: 500));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.processingPleaseWait ?? 'Processing...')),
+    );
+
+    final result = await TextProcessingService.instance.extractSourceDetails(text);
+    final author = result.$1;
+    final work = result.$2;
 
     if (!context.mounted) return;
 
-    // Mock: 假设未识别到来源
-    const String? author = null;
-    const String? work = null;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
     if (author == null && work == null) {
       ScaffoldMessenger.of(context).showSnackBar(

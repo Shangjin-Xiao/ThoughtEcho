@@ -2945,6 +2945,8 @@
   "enableInSettings": "Please enable in settings",
   "featureNotAvailable": "Feature not available",
   "featureComingSoon": "Feature coming soon",
+  "processingPleaseWait": "Processing, please wait...",
+  "modelManagementTitle": "Model Management",
   "localAISettings": "Local AI Features",
   "localAISettingsDesc": "On-device AI features (Preview)",
   "localAIPreviewBadge": "Preview",
