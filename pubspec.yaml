@@ -85,7 +85,7 @@ dependencies:
   flutter_gemma: ^0.11.14 # Gemma LLM 本地推理
   sherpa_onnx: ^1.12.20 # 语音识别 (Whisper)
   flutter_tesseract_ocr: ^0.4.30 # OCR 文字识别
-  record: 6.0.0 # 录音功能
+  record: '>=6.0.0 <6.1.0' # 录音功能
   camera: ^0.11.0+2 # 相机功能
 
 dev_dependencies:
