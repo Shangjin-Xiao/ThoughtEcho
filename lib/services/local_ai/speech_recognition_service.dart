@@ -9,6 +9,7 @@ import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:record/record.dart';
 
 import '../../models/speech_recognition_result.dart';
 import '../../utils/app_logger.dart';
@@ -44,6 +45,12 @@ class SpeechRecognitionService extends ChangeNotifier {
 
   /// sherpa_onnx 识别器
   sherpa.OfflineRecognizer? _recognizer;
+
+  /// 录音器（record 插件）
+  final AudioRecorder _recorder = AudioRecorder();
+
+  /// 当前录音文件路径（WAV）
+  String? _recordingFilePath;
 
   /// 音频缓冲
   final List<double> _audioBuffer = [];
@@ -181,6 +188,28 @@ class SpeechRecognitionService extends ChangeNotifier {
     }
 
     try {
+      // 权限检查
+      final hasPermission = await _recorder.hasPermission();
+      if (!hasPermission) {
+        throw Exception('record_permission_denied');
+      }
+
+      // 录制为 16kHz 单声道 WAV，便于直接喂给 sherpa_onnx
+      final tempDir = await getTemporaryDirectory();
+      _recordingFilePath = path.join(
+        tempDir.path,
+        'local_asr_${DateTime.now().millisecondsSinceEpoch}.wav',
+      );
+
+      await _recorder.start(
+        const RecordConfig(
+          encoder: AudioEncoder.wav,
+          sampleRate: 16000,
+          numChannels: 1,
+        ),
+        path: _recordingFilePath!,
+      );
+
       _status = const RecordingStatus(state: RecordingState.recording);
       _currentTranscription = '';
       _audioBuffer.clear();
@@ -212,11 +241,21 @@ class SpeechRecognitionService extends ChangeNotifier {
       _status = _status.copyWith(state: RecordingState.processing);
       notifyListeners();
 
+      // 先停止录音，拿到文件路径
+      final recordedPath = await _recorder.stop();
+      final audioPath = recordedPath ?? _recordingFilePath;
+
       String transcribedText = '';
 
-      if (_recognizer != null && _audioBuffer.isNotEmpty) {
-        // 使用 sherpa_onnx 进行转写
-        transcribedText = await _transcribeAudio(_audioBuffer);
+      if (_recognizer != null) {
+        // 优先使用录音文件（WAV）进行转写
+        if (audioPath != null && audioPath.isNotEmpty) {
+          final samples = await _decodeAudioFile(audioPath);
+          transcribedText = samples.isNotEmpty ? await _transcribeAudio(samples) : '';
+        } else if (_audioBuffer.isNotEmpty) {
+          // 兼容旧路径：如果外部注入了 waveform（例如未来接入流式采样）
+          transcribedText = await _transcribeAudio(_audioBuffer);
+        }
       } else if (_recognizer == null) {
         // 没有识别器，提示用户下载模型
         transcribedText = _currentTranscription.isNotEmpty 
@@ -232,6 +271,8 @@ class SpeechRecognitionService extends ChangeNotifier {
 
       _status = const RecordingStatus(state: RecordingState.completed);
       notifyListeners();
+
+      _recordingFilePath = null;
 
       logInfo('转写完成: ${transcribedText.length} 字符', source: 'SpeechRecognitionService');
       return result;
@@ -328,7 +369,6 @@ class SpeechRecognitionService extends ChangeNotifier {
         text: text,
         isFinal: true,
         timestamp: DateTime.now(),
-        audioPath: audioPath,
       );
 
       _status = const RecordingStatus(state: RecordingState.completed);
@@ -348,11 +388,91 @@ class SpeechRecognitionService extends ChangeNotifier {
 
   /// 解码音频文件为 PCM 采样数据
   Future<List<double>> _decodeAudioFile(String audioPath) async {
-    // TODO: 实现音频解码
-    // 这里需要使用音频解码库将文件转换为 16kHz 单声道 float32 PCM 数据
-    // 暂时返回空数组
-    logInfo('解码音频文件（需要实现）', source: 'SpeechRecognitionService');
-    return [];
+    // 当前实现仅支持 record 输出的 WAV(PCM16, 16kHz, mono)
+    final file = File(audioPath);
+    final bytes = await file.readAsBytes();
+    return _decodeWavPcm16MonoToFloat32(bytes);
+  }
+
+  /// 解码 WAV(PCM16, mono) 为 Float32 waveform。
+  ///
+  /// - 仅支持 little-endian RIFF/WAVE
+  /// - 仅支持 16-bit PCM
+  /// - 支持任意 sampleRate，但 sherpa_onnx 通常要求 16000Hz（不做重采样）
+  List<double> _decodeWavPcm16MonoToFloat32(Uint8List wavBytes) {
+    if (wavBytes.lengthInBytes < 44) {
+      throw Exception('wav_too_short');
+    }
+
+    String _fourCC(int offset) {
+      return String.fromCharCodes(wavBytes.sublist(offset, offset + 4));
+    }
+
+    if (_fourCC(0) != 'RIFF' || _fourCC(8) != 'WAVE') {
+      throw Exception('wav_invalid_header');
+    }
+
+    final bd = ByteData.sublistView(wavBytes);
+
+    int? numChannels;
+    int? sampleRate;
+    int? bitsPerSample;
+    int? audioFormat;
+    int dataOffset = -1;
+    int dataSize = -1;
+
+    // chunk scan from 12
+    int offset = 12;
+    while (offset + 8 <= wavBytes.lengthInBytes) {
+      final id = _fourCC(offset);
+      final size = bd.getUint32(offset + 4, Endian.little);
+      final chunkDataStart = offset + 8;
+
+      if (id == 'fmt ') {
+        audioFormat = bd.getUint16(chunkDataStart, Endian.little);
+        numChannels = bd.getUint16(chunkDataStart + 2, Endian.little);
+        sampleRate = bd.getUint32(chunkDataStart + 4, Endian.little);
+        bitsPerSample = bd.getUint16(chunkDataStart + 14, Endian.little);
+      } else if (id == 'data') {
+        dataOffset = chunkDataStart;
+        dataSize = size;
+        break;
+      }
+
+      // chunks are word-aligned
+      offset = chunkDataStart + size;
+      if (offset.isOdd) offset += 1;
+    }
+
+    if (dataOffset < 0 || dataSize <= 0) {
+      throw Exception('wav_missing_data');
+    }
+    if (audioFormat != 1) {
+      // 1 = PCM
+      throw Exception('wav_unsupported_format:$audioFormat');
+    }
+    if (numChannels != 1) {
+      throw Exception('wav_unsupported_channels:$numChannels');
+    }
+    if (bitsPerSample != 16) {
+      throw Exception('wav_unsupported_bps:$bitsPerSample');
+    }
+    if (sampleRate != 16000) {
+      // 不做重采样，避免引入额外依赖；用日志提示即可
+      logInfo('WAV 采样率为 $sampleRate，建议使用 16000Hz', source: 'SpeechRecognitionService');
+    }
+
+    final bytesPerSample = (bitsPerSample! ~/ 8);
+    final sampleCount = dataSize ~/ bytesPerSample;
+
+    final samples = List<double>.filled(sampleCount, 0.0, growable: false);
+    int p = dataOffset;
+    for (int i = 0; i < sampleCount; i++) {
+      final s = bd.getInt16(p, Endian.little);
+      samples[i] = s / 32768.0;
+      p += 2;
+    }
+    return samples;
   }
 
   /// 重置状态
@@ -392,6 +512,7 @@ class SpeechRecognitionService extends ChangeNotifier {
   @override
   void dispose() {
     _recordingTimer?.cancel();
+    _recorder.dispose();
     _recognizer?.free();
     _recognizer = null;
     super.dispose();

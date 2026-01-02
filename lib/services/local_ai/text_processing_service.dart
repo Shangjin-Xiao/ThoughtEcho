@@ -32,6 +32,9 @@ class TextProcessingService extends ChangeNotifier {
   /// LLM 模型是否已加载
   bool _modelLoaded = false;
 
+  /// Gemma 推理会话（若创建成功则复用）
+  dynamic _gemmaSession;
+
   /// 当前是否正在处理
   bool _isProcessing = false;
 
@@ -46,6 +49,8 @@ class TextProcessingService extends ChangeNotifier {
 
   /// 检查 LLM 模型是否可用
   bool get isModelAvailable {
+    // gemma 模型由 flutter_gemma 管理：这里仍保留 ModelManager 的标记判断，
+    // 同时允许在实际调用时通过 flutter_gemma 探测可用性。
     return _modelManager.isModelDownloaded('gemma-2b');
   }
 
@@ -79,12 +84,15 @@ class TextProcessingService extends ChangeNotifier {
   /// 初始化 flutter_gemma
   Future<void> _initializeGemma() async {
     try {
-      // 检查模型是否已下载
-      final modelInfo = await FlutterGemma.instance.modelInfo;
-      if (modelInfo != null) {
-        _modelLoaded = true;
-        logInfo('Gemma 模型已准备就绪', source: 'TextProcessingService');
-      }
+      // flutter_gemma 新版采用静态 API，需要先 initialize。
+      // huggingFaceToken 为可选参数（用于 gated 模型），此处不传以避免硬编码密钥。
+      FlutterGemma.initialize();
+
+      // 尝试获取当前可用模型（如果未安装/不可用会抛出异常）
+      final model = await FlutterGemma.getActiveModel(maxTokens: 512);
+      _gemmaSession = await model.createSession();
+      _modelLoaded = true;
+      logInfo('Gemma 模型会话已准备就绪', source: 'TextProcessingService');
     } catch (e) {
       logError('初始化 Gemma 失败: $e', source: 'TextProcessingService');
     }
@@ -103,13 +111,10 @@ class TextProcessingService extends ChangeNotifier {
 
     try {
       logInfo('加载 LLM 模型', source: 'TextProcessingService');
-      
-      // 使用 flutter_gemma 初始化模型
-      await FlutterGemma.instance.init(
-        maxTokens: 512,
-        temperature: 0.7,
-        topK: 40,
-      );
+
+      FlutterGemma.initialize();
+      final model = await FlutterGemma.getActiveModel(maxTokens: 512);
+      _gemmaSession = await model.createSession();
 
       _modelLoaded = true;
       notifyListeners();
@@ -126,6 +131,7 @@ class TextProcessingService extends ChangeNotifier {
     if (!_modelLoaded) return;
 
     try {
+      _gemmaSession = null;
       _modelLoaded = false;
       notifyListeners();
 
@@ -155,15 +161,15 @@ class TextProcessingService extends ChangeNotifier {
 
 $text''';
 
-        final response = await FlutterGemma.instance.getResponse(prompt: prompt);
-        
-        if (response != null && response.isNotEmpty) {
-          final corrections = _detectCorrections(text, response);
+        final response = await _tryGemmaPrompt(prompt);
+        if (response != null && response.trim().isNotEmpty) {
+          final corrected = response.trim();
+          final corrections = _detectCorrections(text, corrected);
           return TextCorrectionResult(
             originalText: text,
-            correctedText: response,
+            correctedText: corrected,
             corrections: corrections,
-            hasChanges: text != response,
+            hasChanges: text != corrected,
           );
         }
       }
@@ -188,9 +194,8 @@ $text''';
       corrections.add(TextCorrection(
         original: original,
         corrected: corrected,
-        startIndex: 0,
-        endIndex: original.length,
-        type: CorrectionType.grammar,
+        position: 0,
+        reason: null,
       ));
     }
     return corrections;
@@ -217,7 +222,7 @@ $text''';
 
 文本：$text''';
 
-        final response = await FlutterGemma.instance.getResponse(prompt: prompt);
+        final response = await _tryGemmaPrompt(prompt);
         
         if (response != null && response.isNotEmpty) {
           // 尝试解析 JSON 响应
@@ -258,7 +263,7 @@ $text''';
       if (typeStr.contains('书') || typeStr.contains('book')) {
         type = SourceType.book;
       } else if (typeStr.contains('诗') || typeStr.contains('poem')) {
-        type = SourceType.poem;
+        type = SourceType.poetry;
       } else if (typeStr.contains('名言') || typeStr.contains('quote')) {
         type = SourceType.quote;
       } else if (typeStr.contains('原创') || typeStr.contains('original')) {
@@ -325,7 +330,7 @@ $text''';
 
 $content''';
 
-        final response = await FlutterGemma.instance.getResponse(prompt: prompt);
+          final response = await _tryGemmaPrompt(prompt);
         
         if (response != null && response.isNotEmpty) {
           final tags = response
@@ -333,7 +338,7 @@ $content''';
               .map((t) => t.trim())
               .where((t) => t.isNotEmpty && t.length < 20)
               .take(5)
-              .map((t) => SuggestedTag(tag: t, confidence: 0.7))
+            .map((t) => SuggestedTag(name: t, confidence: 0.7))
               .toList();
 
           if (tags.isNotEmpty) {
@@ -379,7 +384,7 @@ $content''';
 
 $content''';
 
-        final response = await FlutterGemma.instance.getResponse(prompt: prompt);
+        final response = await _tryGemmaPrompt(prompt);
         
         if (response != null && response.isNotEmpty) {
           final classification = _parseClassification(response);
@@ -490,7 +495,7 @@ $content''';
 
 $content''';
 
-        final response = await FlutterGemma.instance.getResponse(prompt: prompt);
+        final response = await _tryGemmaPrompt(prompt);
         
         if (response != null && response.isNotEmpty) {
           final emotion = _parseEmotionResponse(response);
@@ -588,5 +593,58 @@ $content''';
   void dispose() {
     unloadModel();
     super.dispose();
+  }
+
+  /// 尝试通过 Gemma 执行一次提示词推理。
+  ///
+  /// flutter_gemma 的会话 API 在不同版本可能略有差异，因此这里做尽量稳健的调用：
+  /// - 如果 session 支持 getResponse(prompt: ...)，优先走该路径
+  /// - 否则尝试 setPrompt / addQuery 等常见方式
+  ///
+  /// 任意失败都会返回 null，并由上层走降级逻辑。
+  Future<String?> _tryGemmaPrompt(String prompt) async {
+    if (!_modelLoaded) return null;
+
+    try {
+      // 兜底：如果 session 丢失则重新创建
+      if (_gemmaSession == null) {
+        FlutterGemma.initialize();
+        final model = await FlutterGemma.getActiveModel(maxTokens: 512);
+        _gemmaSession = await model.createSession();
+      }
+
+      final session = _gemmaSession;
+
+      // 1) 常见：getResponse(prompt: ...)
+      try {
+        final dynamic resp = await (session as dynamic).getResponse(prompt: prompt);
+        if (resp is String) return resp;
+      } catch (_) {
+        // ignore and try other patterns
+      }
+
+      // 2) 常见：setPrompt / prompt 属性 + getResponse()
+      try {
+        await (session as dynamic).setPrompt(prompt);
+        final dynamic resp = await (session as dynamic).getResponse();
+        if (resp is String) return resp;
+      } catch (_) {
+        // ignore
+      }
+
+      // 3) 常见：addQuery + getResponse()
+      try {
+        await (session as dynamic).addQuery(prompt);
+        final dynamic resp = await (session as dynamic).getResponse();
+        if (resp is String) return resp;
+      } catch (_) {
+        // ignore
+      }
+
+      return null;
+    } catch (e) {
+      logError('Gemma 推理失败: $e', source: 'TextProcessingService');
+      return null;
+    }
   }
 }

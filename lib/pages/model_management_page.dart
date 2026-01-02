@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../gen_l10n/app_localizations.dart';
 import '../models/local_ai_model.dart';
-import '../services/local_ai/local_ai_service.dart';
 import '../services/local_ai/model_manager.dart';
 import '../theme/app_theme.dart';
 
