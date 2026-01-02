@@ -1,11 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
 import '../../gen_l10n/app_localizations.dart';
-import '../../theme/app_theme.dart';
 import '../../services/local_ai/local_speech_recognition_service.dart';
-import '../../services/settings_service.dart';
 
 /// 语音录制浮层组件 - 集成实际语音识别功能
 ///

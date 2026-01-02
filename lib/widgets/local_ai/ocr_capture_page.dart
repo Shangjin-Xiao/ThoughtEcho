@@ -1,8 +1,6 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:camera/camera.dart';
-import 'package:path_provider/path_provider.dart';
 import '../../gen_l10n/app_localizations.dart';
 import '../../services/local_ai/local_ocr_service.dart';
 import '../../utils/app_logger.dart';

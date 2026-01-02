@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import '../../utils/app_logger.dart';
@@ -139,7 +140,7 @@ class LocalOCRService extends ChangeNotifier {
       final inputImage = InputImage.fromBytes(
         bytes: bytes,
         metadata: InputImageMetadata(
-          size: Size(width.toDouble(), height.toDouble()),
+          size: ui.Size(width.toDouble(), height.toDouble()),
           rotation: InputImageRotation.rotation0deg,
           format: InputImageFormat.nv21,
           bytesPerRow: width,
@@ -179,7 +180,9 @@ class LocalOCRService extends ChangeNotifier {
       return;
     }
 
-    await dispose();
+    _textRecognizer?.close();
+    _textRecognizer = null;
+    _isInitialized = false;
     await initialize(newScript);
   }
 

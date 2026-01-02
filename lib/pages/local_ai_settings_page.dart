@@ -824,7 +824,6 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
     LocalAISettings currentSettings,
   ) async {
     final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
     
     final result = await showDialog<bool>(
       context: context,
