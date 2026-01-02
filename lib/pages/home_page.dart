@@ -19,7 +19,6 @@ import '../widgets/note_list_view.dart';
 import '../widgets/add_note_dialog.dart';
 import '../widgets/local_ai/ocr_capture_page.dart';
 import '../widgets/local_ai/ocr_result_sheet.dart';
-import '../widgets/local_ai/voice_input_overlay.dart';
 import '../widgets/local_ai/voice_record_dialog.dart';
 import 'ai_features_page.dart';
 import 'settings_page.dart';
@@ -868,7 +867,16 @@ class _HomePageState extends State<HomePage>
     }
   }
 
+  // OCR功能触发方法（可通过添加按钮或手势调用）
   Future<void> _openOCRFlow() async {
+    final settingsService = Provider.of<SettingsService>(context, listen: false);
+    final localAISettings = settingsService.localAISettings;
+
+    // 检查是否启用了本地AI和OCR功能
+    if (!localAISettings.enabled || !localAISettings.ocrEnabled) {
+      return;
+    }
+
     if (!mounted) return;
 
     await Navigator.of(context).push(
@@ -1737,7 +1745,8 @@ class _HomePageState extends State<HomePage>
           ],
         ),
         floatingActionButton: GestureDetector(
-          onLongPressStart: (_) => _onFABLongPress(),
+          onDoubleTap: _openOCRFlow, // 双击触发OCR功能
+          onLongPressStart: (_) => _onFABLongPress(), // 长按触发语音输入
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),

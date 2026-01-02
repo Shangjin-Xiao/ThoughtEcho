@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:record/record.dart';
 import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
-import 'dart:io';
 import '../../services/ai/cactus_service.dart';
 
 class VoiceRecordDialog extends StatefulWidget {
@@ -105,7 +104,7 @@ class _VoiceRecordDialogState extends State<VoiceRecordDialog> {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  _isRecording ? Colors.stop : Colors.mic,
+                  _isRecording ? Icons.stop : Icons.mic,
                   color: Colors.white,
                   size: 40,
                 ),
