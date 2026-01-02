@@ -127,6 +127,9 @@ android {
     packagingOptions {
         pickFirst '**/libc++_shared.so'
         pickFirst '**/libjsc.so'
+        // onnxruntime 与 sherpa_onnx_android 都可能携带相同的 JNI so，
+        // Release 合并 native libs 时会因重复路径失败；这里选择保留第一份。
+        pickFirst '**/libonnxruntime.so'
         exclude 'META-INF/DEPENDENCIES'
         exclude 'META-INF/LICENSE'
         exclude 'META-INF/LICENSE.txt'
