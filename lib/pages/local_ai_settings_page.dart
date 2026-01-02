@@ -7,7 +7,7 @@ import '../theme/app_theme.dart';
 import 'model_management_page.dart';
 
 /// 本地 AI 功能设置页面
-/// 
+///
 /// 显示并管理所有设备端 AI 功能的开关设置
 class LocalAISettingsPage extends StatefulWidget {
   const LocalAISettingsPage({super.key});
@@ -209,7 +209,7 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
           // 功能分组
           if (localAISettings.enabled) ...[
             const SizedBox(height: 16),
-            
+
             // 模型管理入口
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -229,7 +229,8 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
                   leading: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.primaryContainer.withOpacity(0.5),
+                      color:
+                          theme.colorScheme.primaryContainer.withOpacity(0.5),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
@@ -269,8 +270,64 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
               ),
             ),
 
+            // 自动加载开关（默认关闭：采用手动触发/懒加载）
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                  side: BorderSide(
+                    color: theme.colorScheme.outline.withOpacity(0.2),
+                  ),
+                ),
+                child: SwitchListTile(
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 8,
+                  ),
+                  secondary: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color:
+                          theme.colorScheme.primaryContainer.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.autorenew_rounded,
+                      color: theme.colorScheme.primary,
+                      size: 24,
+                    ),
+                  ),
+                  title: Text(
+                    l10n.localAiAutoLoadOnStartup,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      l10n.localAiAutoLoadOnStartupDesc,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                  value: localAISettings.autoLoadOnStartup,
+                  onChanged: (value) {
+                    _updateSettings(
+                      settingsService,
+                      localAISettings.copyWith(autoLoadOnStartup: value),
+                    );
+                  },
+                ),
+              ),
+            ),
+
             const SizedBox(height: 8),
-            
+
             // 输入增强组
             _buildFeatureGroup(
               context: context,

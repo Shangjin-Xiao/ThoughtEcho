@@ -53,8 +53,20 @@ class OCRService extends ChangeNotifier {
   List<String> get supportedLanguages => List.unmodifiable(_supportedLanguages);
 
   /// 检查 OCR 模型是否可用
+  /// 只要有任意一个语言模型可用即返回 true
   bool get isModelAvailable {
-    return _modelManager.isModelDownloaded('tesseract-chi-sim-eng');
+    return _modelManager.isModelDownloaded('tesseract-chi-sim') ||
+        _modelManager.isModelDownloaded('tesseract-eng');
+  }
+
+  /// 检查特定语言是否可用
+  bool isLanguageAvailable(String lang) {
+    if (lang == 'chi_sim') {
+      return _modelManager.isModelDownloaded('tesseract-chi-sim');
+    } else if (lang == 'eng') {
+      return _modelManager.isModelDownloaded('tesseract-eng');
+    }
+    return false;
   }
 
   /// 初始化服务

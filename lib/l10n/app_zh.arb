@@ -2892,6 +2892,8 @@
   "localAiFeaturesDesc": "使用设备端 AI 能力增强笔记体验",
   "enableLocalAi": "启用本地 AI",
   "enableLocalAiDesc": "开启后将启用设备端 AI 功能",
+  "localAiAutoLoadOnStartup": "启动后自动加载",
+  "localAiAutoLoadOnStartupDesc": "开启后将在应用启动后后台初始化本地 AI（可能增加耗电与占用）",
   "localAiPreviewNote": "此功能目前处于预览阶段，部分功能可能不稳定",
 
   "inputEnhancement": "输入增强",
@@ -3083,6 +3085,19 @@
   },
   "modelImport": "导入模型",
   "modelImportHint": "从本地文件导入模型",
+  "modelImportASR": "选择语音识别模型文件",
+  "modelImportOCR": "选择 OCR 模型文件",
+  "modelImporting": "正在导入模型...",
+  "modelImportSuccess": "模型导入成功",
+  "modelImportFailed": "模型导入失败: {error}",
+  "@modelImportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "modelManagedByPackage": "此模型需要通过专用包管理，暂不支持手动导入",
   "modelDelete": "删除模型",
   "modelDeleteConfirm": "确定要删除此模型吗？删除后需要重新下载。",
   "modelSize": "大小：{size}",

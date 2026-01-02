@@ -12,6 +12,7 @@ import 'package:path/path.dart' as path;
 
 import '../../models/local_ai_model.dart';
 import '../../utils/app_logger.dart';
+import 'model_extractor.dart';
 
 /// 模型管理器
 class ModelManager extends ChangeNotifier {
@@ -31,6 +32,9 @@ class ModelManager extends ChangeNotifier {
   /// 模型存储目录
   String? _modelsDirectory;
 
+  /// 解压后的模型目录（例如 Whisper 解压后的文件夹）
+  final Map<String, String> _extractedModelPaths = {};
+
   /// 当前模型状态
   final Map<String, LocalAIModelInfo> _modelStates = {};
 
@@ -48,6 +52,9 @@ class ModelManager extends ChangeNotifier {
 
   /// 获取模型目录
   String? get modelsDirectory => _modelsDirectory;
+  
+  /// 获取解压后的模型路径
+  String? getExtractedModelPath(String modelId) => _extractedModelPaths[modelId];
 
   /// 获取所有模型状态
   List<LocalAIModelInfo> get models => _modelStates.values.toList();
@@ -87,6 +94,11 @@ class ModelManager extends ChangeNotifier {
       for (final model in LocalAIModels.all) {
         final status = await _checkModelStatus(model);
         _modelStates[model.id] = model.copyWith(status: status);
+        
+        // 如果模型已下载且需要解压，检查解压后的路径
+        if (status == LocalAIModelStatus.downloaded) {
+          await _checkExtractedPath(model);
+        }
       }
 
       _initialized = true;
@@ -98,6 +110,31 @@ class ModelManager extends ChangeNotifier {
     }
   }
 
+  /// 检查并记录已解压的模型路径
+  Future<void> _checkExtractedPath(LocalAIModelInfo model) async {
+    if (_modelsDirectory == null) return;
+    
+    final fileName = model.fileName;
+    // 检查是否是压缩文件
+    if (fileName.endsWith('.tar.bz2') || fileName.endsWith('.tar.gz')) {
+      // 解压目录名：去掉扩展名
+      String extractDirName = fileName;
+      if (fileName.endsWith('.tar.bz2')) {
+        extractDirName = fileName.replaceAll('.tar.bz2', '');
+      } else if (fileName.endsWith('.tar.gz')) {
+        extractDirName = fileName.replaceAll('.tar.gz', '');
+      }
+      
+      final extractedPath = path.join(_modelsDirectory!, extractDirName);
+      final extractedDir = Directory(extractedPath);
+      
+      if (await extractedDir.exists()) {
+        _extractedModelPaths[model.id] = extractedPath;
+        logInfo('找到已解压的模型: ${model.id} -> $extractedPath', source: 'ModelManager');
+      }
+    }
+  }
+
   /// 检查模型状态
   Future<LocalAIModelStatus> _checkModelStatus(LocalAIModelInfo model) async {
     if (_modelsDirectory == null) return LocalAIModelStatus.notDownloaded;
@@ -106,6 +143,25 @@ class ModelManager extends ChangeNotifier {
     final file = File(modelPath);
 
     if (await file.exists()) {
+      // 如果是压缩文件，还需要检查是否已解压
+      if (model.fileName.endsWith('.tar.bz2') || model.fileName.endsWith('.tar.gz')) {
+        String extractDirName = model.fileName;
+        if (model.fileName.endsWith('.tar.bz2')) {
+          extractDirName = model.fileName.replaceAll('.tar.bz2', '');
+        } else if (model.fileName.endsWith('.tar.gz')) {
+          extractDirName = model.fileName.replaceAll('.tar.gz', '');
+        }
+        
+        final extractedPath = path.join(_modelsDirectory!, extractDirName);
+        final extractedDir = Directory(extractedPath);
+        
+        // 如果解压目录存在，才算真正下载完成
+        if (await extractedDir.exists()) {
+          return LocalAIModelStatus.downloaded;
+        }
+        // 压缩文件存在但未解压，需要解压
+        return LocalAIModelStatus.downloaded; // 仍然返回 downloaded，因为文件已存在
+      }
       return LocalAIModelStatus.downloaded;
     }
 
@@ -254,7 +310,8 @@ class ModelManager extends ChangeNotifier {
             return;
           }
           if (total > 0) {
-            final progress = received / total;
+            // 下载占 80%，解压占 20%
+            final progress = received / total * 0.8;
             task.onProgress?.call(progress);
           }
         },
@@ -271,6 +328,32 @@ class ModelManager extends ChangeNotifier {
         if (await downloadedFile.exists()) {
           final fileSize = await downloadedFile.length();
           if (fileSize > 0) {
+            // 检查是否需要解压
+            if (task.savePath.endsWith('.tar.bz2') || task.savePath.endsWith('.tar.gz')) {
+              logInfo('开始解压模型: ${task.savePath}', source: 'ModelManager');
+              task.onProgress?.call(0.85);
+              
+              try {
+                final extractedPath = await ModelExtractor.extract(
+                  task.savePath,
+                  path.dirname(task.savePath),
+                  onProgress: (progress) {
+                    // 解压进度占 80%-100%
+                    task.onProgress?.call(0.8 + progress * 0.2);
+                  },
+                );
+                
+                // 记录解压后的路径
+                _extractedModelPaths[task.modelId] = extractedPath;
+                logInfo('模型解压完成: $extractedPath', source: 'ModelManager');
+              } catch (e) {
+                logError('模型解压失败: $e', source: 'ModelManager');
+                // 解压失败，删除下载的文件
+                await downloadedFile.delete();
+                throw Exception('extract_failed');
+              }
+            }
+            
             task.onComplete?.call();
           } else {
             throw Exception('下载的文件为空');
@@ -307,6 +390,7 @@ class ModelManager extends ChangeNotifier {
   static const String errorConnectionFailed = 'connection_failed';
   static const String errorDownloadFailed = 'download_failed';
   static const String errorManagedModel = 'managed_model';
+  static const String errorExtractFailed = 'extract_failed';
 
   /// 获取 Dio 错误代码
   String _getDioErrorCode(DioException e) {
@@ -375,6 +459,16 @@ class ModelManager extends ChangeNotifier {
       if (await file.exists()) {
         await file.delete();
       }
+      
+      // 删除解压后的目录（如果存在）
+      final extractedPath = _extractedModelPaths[modelId];
+      if (extractedPath != null) {
+        final extractedDir = Directory(extractedPath);
+        if (await extractedDir.exists()) {
+          await extractedDir.delete(recursive: true);
+        }
+        _extractedModelPaths.remove(modelId);
+      }
 
       _updateModelState(
         modelId,
@@ -406,6 +500,17 @@ class ModelManager extends ChangeNotifier {
 
       final targetPath = path.join(_modelsDirectory!, model.fileName);
       await sourceFile.copy(targetPath);
+      
+      // 如果是压缩文件，需要解压
+      if (targetPath.endsWith('.tar.bz2') || targetPath.endsWith('.tar.gz')) {
+        logInfo('开始解压导入的模型: $targetPath', source: 'ModelManager');
+        final extractedPath = await ModelExtractor.extract(
+          targetPath,
+          _modelsDirectory!,
+        );
+        _extractedModelPaths[modelId] = extractedPath;
+        logInfo('模型解压完成: $extractedPath', source: 'ModelManager');
+      }
 
       _updateModelState(
         modelId,
@@ -420,13 +525,53 @@ class ModelManager extends ChangeNotifier {
   }
 
   /// 获取模型文件路径
+  /// 
+  /// 对于压缩文件类型的模型（如 Whisper），返回解压后的目录路径
+  /// 对于单文件模型（如 Tesseract traineddata），返回文件路径
   String? getModelPath(String modelId) {
     final model = _modelStates[modelId];
     if (model == null || _modelsDirectory == null) return null;
 
     if (!isModelDownloaded(modelId)) return null;
 
+    // 如果有解压后的路径，优先返回
+    final extractedPath = _extractedModelPaths[modelId];
+    if (extractedPath != null) {
+      return extractedPath;
+    }
+
     return path.join(_modelsDirectory!, model.fileName);
+  }
+
+  /// 手动触发模型解压（用于已下载但未解压的模型）
+  Future<void> extractModelIfNeeded(String modelId) async {
+    final model = _modelStates[modelId];
+    if (model == null || _modelsDirectory == null) return;
+    
+    // 已有解压路径，跳过
+    if (_extractedModelPaths.containsKey(modelId)) return;
+    
+    final modelPath = path.join(_modelsDirectory!, model.fileName);
+    
+    // 检查是否是压缩文件
+    if (modelPath.endsWith('.tar.bz2') || modelPath.endsWith('.tar.gz')) {
+      final file = File(modelPath);
+      if (!await file.exists()) return;
+      
+      logInfo('手动解压模型: $modelPath', source: 'ModelManager');
+      try {
+        final extractedPath = await ModelExtractor.extract(
+          modelPath,
+          _modelsDirectory!,
+        );
+        _extractedModelPaths[modelId] = extractedPath;
+        logInfo('模型解压完成: $extractedPath', source: 'ModelManager');
+        notifyListeners();
+      } catch (e) {
+        logError('模型解压失败: $e', source: 'ModelManager');
+        rethrow;
+      }
+    }
   }
 
   /// 更新模型状态

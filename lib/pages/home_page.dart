@@ -17,9 +17,7 @@ import '../models/quote_model.dart';
 import '../widgets/daily_quote_view.dart';
 import '../widgets/note_list_view.dart';
 import '../widgets/add_note_dialog.dart';
-import '../widgets/local_ai/ocr_capture_page.dart';
-import '../widgets/local_ai/ocr_result_sheet.dart';
-import '../widgets/local_ai/voice_input_overlay.dart';
+import '../widgets/local_ai/local_ai_fab.dart';
 import 'ai_features_page.dart';
 import 'settings_page.dart';
 import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
@@ -839,92 +837,6 @@ class _HomePageState extends State<HomePage>
     _showAddQuoteDialog();
   }
 
-  // FAB 长按处理 - 显示语音录制浮层
-  void _onFABLongPress() {
-    final settingsService = Provider.of<SettingsService>(context, listen: false);
-    final localAISettings = settingsService.localAISettings;
-
-    // 检查是否启用了本地AI和语音转文字功能，未启用则直接返回无反应
-    if (!localAISettings.enabled || !localAISettings.speechToTextEnabled) {
-      return;
-    }
-
-    _showVoiceInputOverlay();
-  }
-
-  Future<void> _showVoiceInputOverlay() async {
-    if (!mounted) return;
-
-    await showGeneralDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: 'voice_input_overlay',
-      barrierColor: Colors.transparent,
-      pageBuilder: (context, animation, secondaryAnimation) {
-        return VoiceInputOverlay(
-          transcribedText: null,
-          onSwipeUpForOCR: () async {
-            Navigator.of(context).pop();
-            await _openOCRFlow();
-          },
-          onRecordComplete: () {
-            Navigator.of(context).pop();
-            ScaffoldMessenger.of(this.context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  AppLocalizations.of(this.context).featureComingSoon,
-                ),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          },
-        );
-      },
-      transitionBuilder: (context, animation, secondaryAnimation, child) {
-        final curved = CurvedAnimation(parent: animation, curve: Curves.easeOut);
-        return FadeTransition(
-          opacity: curved,
-          child: child,
-        );
-      },
-      transitionDuration: const Duration(milliseconds: 180),
-    );
-  }
-
-  Future<void> _openOCRFlow() async {
-    if (!mounted) return;
-
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => const OCRCapturePage(),
-      ),
-    );
-
-    if (!mounted) return;
-
-    final l10n = AppLocalizations.of(context);
-    String resultText = l10n.featureComingSoon;
-
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      builder: (context) {
-        return OCRResultSheet(
-          recognizedText: resultText,
-          onTextChanged: (text) {
-            resultText = text;
-          },
-          onInsertToEditor: () {
-            Navigator.of(context).pop();
-            _showAddQuoteDialog(prefilledContent: resultText);
-          },
-          onRecognizeSource: () {},
-        );
-      },
-    );
-  }
-
   // 显示编辑笔记对话框
   void _showEditQuoteDialog(Quote quote) {
     // 检查笔记是否来自全屏编辑器
@@ -1448,10 +1360,10 @@ class _HomePageState extends State<HomePage>
             ? null // 记录页不需要标题栏
             : _currentIndex == 0
                 ? AppBar(
-                  automaticallyImplyLeading: false,
-                  leadingWidth: NavigationToolbar.kMiddleSpacing,
-                  leading: const SizedBox.shrink(),
-                  titleSpacing: 0, // 左侧保留默认留白，且让标题充分利用空间
+                    automaticallyImplyLeading: false,
+                    leadingWidth: NavigationToolbar.kMiddleSpacing,
+                    leading: const SizedBox.shrink(),
+                    titleSpacing: 0, // 左侧保留默认留白，且让标题充分利用空间
                     title: Consumer<ConnectivityService>(
                       builder: (context, connectivityService, child) {
                         final locale = Localizations.localeOf(context);
@@ -1759,27 +1671,12 @@ class _HomePageState extends State<HomePage>
             SettingsPage(key: _settingsPageKey),
           ],
         ),
-        floatingActionButton: GestureDetector(
-          onLongPressStart: (_) => _onFABLongPress(),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: AppTheme.accentShadow,
-            ),
-            child: FloatingActionButton(
-              heroTag: 'homePageFAB',
-              onPressed: _onFABTap,
-              elevation: 0,
-              backgroundColor:
-                  theme.floatingActionButtonTheme.backgroundColor, // 使用主题定义的颜色
-              foregroundColor:
-                  theme.floatingActionButtonTheme.foregroundColor, // 使用主题定义的颜色
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Icon(Icons.add, size: 28),
-            ),
-          ),
+        floatingActionButton: LocalAIFab(
+          heroTag: 'homePageFAB',
+          onTap: _onFABTap,
+          onInsertText: (text) {
+            _showAddQuoteDialog(prefilledContent: text);
+          },
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
         bottomNavigationBar: ClipRect(

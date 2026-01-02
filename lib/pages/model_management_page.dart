@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../gen_l10n/app_localizations.dart';
@@ -596,13 +597,95 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
     );
   }
 
-  void _importModel(LocalAIModelInfo model) {
-    // TODO: 使用 file_picker 选择文件并导入
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(AppLocalizations.of(context).featureComingSoon),
-      ),
-    );
+  Future<void> _importModel(LocalAIModelInfo model) async {
+    final l10n = AppLocalizations.of(context);
+    
+    // 根据模型类型确定允许的文件扩展名
+    List<String> allowedExtensions;
+    String dialogTitle;
+    
+    switch (model.type) {
+      case LocalAIModelType.asr:
+        // Whisper 模型是 tar.bz2 压缩包
+        allowedExtensions = ['bz2', 'gz', 'tar'];
+        dialogTitle = l10n.modelImportASR;
+        break;
+      case LocalAIModelType.ocr:
+        // Tesseract 模型是 traineddata 文件
+        allowedExtensions = ['traineddata'];
+        dialogTitle = l10n.modelImportOCR;
+        break;
+      case LocalAIModelType.llm:
+      case LocalAIModelType.embedding:
+        // LLM 和嵌入模型需要通过 flutter_gemma 管理
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.modelManagedByPackage),
+          ),
+        );
+        return;
+    }
+    
+    try {
+      // 使用 file_picker 选择文件
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: allowedExtensions,
+        dialogTitle: dialogTitle,
+      );
+      
+      if (result == null || result.files.isEmpty) {
+        return; // 用户取消
+      }
+      
+      final filePath = result.files.single.path;
+      if (filePath == null) {
+        throw Exception('无法获取文件路径');
+      }
+      
+      // 显示导入进度
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 16),
+                Text(l10n.modelImporting),
+              ],
+            ),
+            duration: const Duration(seconds: 30),
+          ),
+        );
+      }
+      
+      // 导入模型
+      await _modelManager.importModel(model.id, filePath);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.modelImportSuccess),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.modelImportFailed(e.toString())),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    }
   }
 
   void _showDeleteConfirmDialog(LocalAIModelInfo model) {

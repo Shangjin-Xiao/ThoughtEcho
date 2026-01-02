@@ -217,13 +217,14 @@ class LocalAIModels {
     isRequired: false,
   );
 
-  /// Whisper Tiny ASR 模型 - sherpa-onnx 预编译模型
+  /// Whisper Tiny ASR 模型 - sherpa-onnx 预编译模型（中文优化）
+  /// 使用多语言模型支持中文识别
   static const whisperTiny = LocalAIModelInfo(
     id: 'whisper-tiny',
-    name: 'Whisper Tiny',
+    name: 'Whisper Tiny (多语言)',
     type: LocalAIModelType.asr,
-    description: 'OpenAI Whisper Tiny 语音识别模型，轻量快速',
-    sizeBytes: 39 * 1024 * 1024, // ~39MB
+    description: 'OpenAI Whisper Tiny 多语言语音识别模型，轻量快速，支持中文',
+    sizeBytes: 75 * 1024 * 1024, // ~75MB (包含3个文件)
     downloadUrl:
         'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-tiny.tar.bz2',
     fileName: 'sherpa-onnx-whisper-tiny.tar.bz2',
@@ -231,13 +232,13 @@ class LocalAIModels {
     isRequired: false,
   );
 
-  /// Whisper Base ASR 模型 - sherpa-onnx 预编译模型
+  /// Whisper Base ASR 模型 - sherpa-onnx 预编译模型（中文优化）
   static const whisperBase = LocalAIModelInfo(
     id: 'whisper-base',
-    name: 'Whisper Base',
+    name: 'Whisper Base (多语言)',
     type: LocalAIModelType.asr,
-    description: 'OpenAI Whisper Base 语音识别模型，准确率更高',
-    sizeBytes: 74 * 1024 * 1024, // ~74MB
+    description: 'OpenAI Whisper Base 多语言语音识别模型，准确率更高，支持中文',
+    sizeBytes: 145 * 1024 * 1024, // ~145MB
     downloadUrl:
         'https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/sherpa-onnx-whisper-base.tar.bz2',
     fileName: 'sherpa-onnx-whisper-base.tar.bz2',
@@ -245,17 +246,31 @@ class LocalAIModels {
     isRequired: false,
   );
 
-  /// Tesseract OCR 模型（中文简体 + 英文）
+  /// Tesseract OCR 模型（中文简体）
   /// tessdata_fast 是优化过的较小模型
-  static const tesseractChiSimEng = LocalAIModelInfo(
-    id: 'tesseract-chi-sim-eng',
-    name: 'Tesseract (中文+英文)',
+  static const tesseractChiSim = LocalAIModelInfo(
+    id: 'tesseract-chi-sim',
+    name: 'Tesseract 中文简体',
     type: LocalAIModelType.ocr,
-    description: 'Tesseract OCR 模型，支持中文简体和英文识别',
-    sizeBytes: 55 * 1024 * 1024, // ~55MB
+    description: 'Tesseract OCR 中文简体识别模型',
+    sizeBytes: 18 * 1024 * 1024, // ~18MB
     downloadUrl:
         'https://github.com/tesseract-ocr/tessdata_fast/raw/main/chi_sim.traineddata',
     fileName: 'chi_sim.traineddata',
+    version: '4.0',
+    isRequired: false,
+  );
+
+  /// Tesseract OCR 模型（英文）
+  static const tesseractEng = LocalAIModelInfo(
+    id: 'tesseract-eng',
+    name: 'Tesseract 英文',
+    type: LocalAIModelType.ocr,
+    description: 'Tesseract OCR 英文识别模型',
+    sizeBytes: 4 * 1024 * 1024, // ~4MB
+    downloadUrl:
+        'https://github.com/tesseract-ocr/tessdata_fast/raw/main/eng.traineddata',
+    fileName: 'eng.traineddata',
     version: '4.0',
     isRequired: false,
   );
@@ -266,7 +281,8 @@ class LocalAIModels {
         gecko384,
         whisperTiny,
         whisperBase,
-        tesseractChiSimEng,
+        tesseractChiSim,
+        tesseractEng,
       ];
 
   /// 按类型获取模型

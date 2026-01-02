@@ -7,13 +7,14 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:record/record.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../models/speech_recognition_result.dart';
 import '../../utils/app_logger.dart';
 import 'model_manager.dart';
+import 'model_extractor.dart';
 
 // sherpa_onnx imports - conditional import for platform support
 // ignore: depend_on_referenced_packages
@@ -111,19 +112,35 @@ class SpeechRecognitionService extends ChangeNotifier {
         return;
       }
 
-      // 解压模型文件（如果是压缩包）
-      final extractedPath = await _extractModelIfNeeded(modelPath);
+      // 确保模型已解压
+      await _ensureModelExtracted(modelPath);
+
+      // 获取解压后的模型路径
+      final extractedPath = await _getExtractedModelPath();
+      if (extractedPath == null) {
+        logError('无法找到解压后的 ASR 模型', source: 'SpeechRecognitionService');
+        return;
+      }
+
+      // 验证 Whisper 模型文件
+      final modelFiles = await ModelExtractor.validateWhisperModel(extractedPath);
+      if (modelFiles == null) {
+        logError('Whisper 模型文件不完整: $extractedPath', source: 'SpeechRecognitionService');
+        return;
+      }
+
+      logInfo('找到 Whisper 模型文件: $modelFiles', source: 'SpeechRecognitionService');
 
       // 配置 Whisper 模型
       final config = sherpa.OfflineRecognizerConfig(
         model: sherpa.OfflineModelConfig(
           whisper: sherpa.OfflineWhisperModelConfig(
-            encoder: path.join(extractedPath, 'encoder.onnx'),
-            decoder: path.join(extractedPath, 'decoder.onnx'),
+            encoder: modelFiles.encoder,
+            decoder: modelFiles.decoder,
             language: 'zh', // 中文
             task: 'transcribe',
           ),
-          tokens: path.join(extractedPath, 'tokens.txt'),
+          tokens: modelFiles.tokens,
           numThreads: 4,
           debug: false,
           modelType: 'whisper',
@@ -151,29 +168,37 @@ class SpeechRecognitionService extends ChangeNotifier {
     return null;
   }
 
-  /// 解压模型文件（如果需要）
-  Future<String> _extractModelIfNeeded(String modelPath) async {
-    // 如果模型是压缩包，需要解压
-    if (modelPath.endsWith('.tar.bz2') || modelPath.endsWith('.tar.gz')) {
-      final appDir = await getApplicationDocumentsDirectory();
-      final extractDir = path.join(
-        appDir.path,
-        'local_ai_models',
-        'whisper_extracted',
-      );
-
-      final dir = Directory(extractDir);
-      if (!await dir.exists()) {
-        await dir.create(recursive: true);
-        // TODO: 实现解压逻辑
-        logInfo('解压模型到: $extractDir', source: 'SpeechRecognitionService');
-      }
-
-      return extractDir;
+  /// 确保模型已解压
+  Future<void> _ensureModelExtracted(String modelPath) async {
+    // 获取当前使用的模型 ID
+    String? modelId;
+    if (_modelManager.isModelDownloaded('whisper-base')) {
+      modelId = 'whisper-base';
+    } else if (_modelManager.isModelDownloaded('whisper-tiny')) {
+      modelId = 'whisper-tiny';
     }
+    
+    if (modelId != null) {
+      await _modelManager.extractModelIfNeeded(modelId);
+    }
+  }
 
-    // 如果已经是目录，直接返回
-    return path.dirname(modelPath);
+  /// 获取解压后的模型路径
+  Future<String?> _getExtractedModelPath() async {
+    // 优先使用 whisper-base
+    if (_modelManager.isModelDownloaded('whisper-base')) {
+      final extractedPath = _modelManager.getExtractedModelPath('whisper-base');
+      if (extractedPath != null) return extractedPath;
+      // 如果没有解压记录，但模型已下载，尝试获取解压后的目录
+      return _modelManager.getModelPath('whisper-base');
+    }
+    // 其次使用 whisper-tiny
+    if (_modelManager.isModelDownloaded('whisper-tiny')) {
+      final extractedPath = _modelManager.getExtractedModelPath('whisper-tiny');
+      if (extractedPath != null) return extractedPath;
+      return _modelManager.getModelPath('whisper-tiny');
+    }
+    return null;
   }
 
   /// 开始录音
