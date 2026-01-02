@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/local_ai_settings.dart';
+import '../services/ai/cactus_service.dart';
 import '../services/settings_service.dart';
 import '../theme/app_theme.dart';
 
 /// 本地 AI 功能设置页面
-/// 
-/// 显示并管理所有设备端 AI 功能的开关设置
+///
+/// 显示并管理所有设备端 AI 功能的开关设置。
+///
+/// 注意：模型下载/管理仍在迭代中；当前页面的首要目标是恢复原有开关管理能力，
+/// 并在用户启用本地AI后尝试初始化本地服务，让语音识别/OCR/语义搜索入口可用。
 class LocalAISettingsPage extends StatefulWidget {
   const LocalAISettingsPage({super.key});
 
@@ -16,6 +20,8 @@ class LocalAISettingsPage extends StatefulWidget {
 }
 
 class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
+  bool _isInitializing = false;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -93,36 +99,51 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
-                child: Row(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Icon(
-                        Icons.info_rounded,
-                        color: theme.colorScheme.primary,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(
+                            Icons.info_rounded,
+                            color: theme.colorScheme.primary,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Text(
                             l10n.localAiPreviewNote,
                             style: theme.textTheme.bodyMedium?.copyWith(
                               color: theme.colorScheme.onSurface,
                               height: 1.5,
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
+                    if (_isInitializing) ...[
+                      const SizedBox(height: 14),
+                      LinearProgressIndicator(
+                        minHeight: 4,
+                        backgroundColor:
+                            theme.colorScheme.primary.withOpacity(0.12),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        l10n.onboardingInitializing,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -208,7 +229,7 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
           // 功能分组
           if (localAISettings.enabled) ...[
             const SizedBox(height: 16),
-            
+
             // 输入增强组
             _buildFeatureGroup(
               context: context,
@@ -233,8 +254,8 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
                   context: context,
                   theme: theme,
                   icon: Icons.document_scanner_rounded,
-                  title: l10n.ocrRecognition,
-                  subtitle: l10n.ocrRecognitionDesc,
+                  title: l10n.localAIOCR,
+                  subtitle: l10n.localAIOCRDesc,
                   value: localAISettings.ocrEnabled,
                   onChanged: (value) => _updateSettings(
                     settingsService,
@@ -245,8 +266,8 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
                   context: context,
                   theme: theme,
                   icon: Icons.auto_fix_high_rounded,
-                  title: l10n.aiCorrection,
-                  subtitle: l10n.aiCorrectionDesc,
+                  title: l10n.localAICorrection,
+                  subtitle: l10n.localAICorrectionDesc,
                   value: localAISettings.aiCorrectionEnabled,
                   onChanged: (value) => _updateSettings(
                     settingsService,
@@ -283,8 +304,8 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
                   context: context,
                   theme: theme,
                   icon: Icons.search_rounded,
-                  title: l10n.aiSearch,
-                  subtitle: l10n.aiSearchDesc,
+                  title: l10n.localAISemanticSearch,
+                  subtitle: l10n.localAISemanticSearchDesc,
                   value: localAISettings.aiSearchEnabled,
                   onChanged: (value) => _updateSettings(
                     settingsService,
@@ -356,8 +377,6 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
                 ),
               ],
             ),
-
-            const SizedBox(height: 24),
           ],
         ],
       ),
@@ -488,11 +507,53 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
     );
   }
 
-  /// 更新设置
+  /// 更新设置，并在必要时尝试初始化本地服务
   Future<void> _updateSettings(
     SettingsService service,
     LocalAISettings settings,
   ) async {
     await service.updateLocalAISettings(settings);
+
+    // 启用本地AI后，尽早尝试初始化本地模型服务。
+    // 初始化失败不阻塞开关保存，但会给出可诊断提示。
+    if (!mounted) return;
+    if (!settings.enabled) return;
+
+    // 如果只启用OCR，不强行初始化 Cactus；
+    // 语音识别/语义搜索依赖 Cactus。
+    final needCactus = settings.speechToTextEnabled ||
+        settings.aiSearchEnabled ||
+        settings.relatedNotesEnabled;
+    if (!needCactus) return;
+
+    final cactus = context.read<CactusService>();
+    if (_isInitializing) return;
+
+    setState(() {
+      _isInitializing = true;
+    });
+
+    try {
+      await cactus.ensureInitialized(
+        lm: true,
+        stt: settings.speechToTextEnabled,
+        rag: settings.aiSearchEnabled || settings.relatedNotesEnabled,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.startFailed(e.toString())),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isInitializing = false;
+      });
+    }
   }
 }

@@ -62,7 +62,7 @@ dependencies:
   gal: ^2.3.0 # 替换image_gallery_saver，保存图片到相册，支持最新Android
   vector_graphics: ^1.1.19
   crypto: ^3.0.3 # 用于文件校验和计算
-  device_info_plus: ^12.1.0 # 获取设备信息，用于localsend设备识别
+  device_info_plus: ^11.5.0 # 获取设备信息，用于localsend设备识别
   network_info_plus: ^7.0.0 # 获取网络信息，用于localsend网络发现
   multicast_dns: ^0.3.2+5 # mDNS服务发现，用于localsend设备发现
   basic_utils: ^5.7.0 # localsend基础工具包
@@ -82,6 +82,10 @@ dependencies:
   local_auth: ^2.3.0 # 生物识别验证（指纹、面容识别等）
   android_alarm_manager_plus: ^4.0.0
   timezone: ^0.10.0
+  cactus: ^1.3.0
+  google_mlkit_text_recognition: ^0.13.0
+  record: ^6.1.1
+  camera: ^0.11.0
 
 dev_dependencies:
   flutter_test:

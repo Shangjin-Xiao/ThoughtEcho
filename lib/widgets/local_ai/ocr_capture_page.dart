@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import '../../gen_l10n/app_localizations.dart';
 
 /// OCR 拍照页面
@@ -13,6 +15,62 @@ class OCRCapturePage extends StatefulWidget {
 }
 
 class _OCRCapturePageState extends State<OCRCapturePage> {
+  bool _isPicking = false;
+
+  Future<void> _captureImage() async {
+    if (_isPicking) return;
+    final l10n = AppLocalizations.of(context);
+
+    setState(() {
+      _isPicking = true;
+    });
+
+    try {
+      final picker = ImagePicker();
+      XFile? image;
+
+      // 在 Web/桌面端，相机能力可能不可用：优先相册；
+      // 在移动端优先相机，失败再回退相册。
+      if (kIsWeb) {
+        image = await picker.pickImage(
+          source: ImageSource.gallery,
+          imageQuality: 92,
+        );
+      } else {
+        try {
+          image = await picker.pickImage(
+            source: ImageSource.camera,
+            imageQuality: 92,
+          );
+        } catch (_) {
+          image = await picker.pickImage(
+            source: ImageSource.gallery,
+            imageQuality: 92,
+          );
+        }
+      }
+
+      if (!mounted) return;
+      if (image == null) return;
+
+      Navigator.of(context).pop(image.path);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.startFailed(e.toString())),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _isPicking = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -51,7 +109,7 @@ class _OCRCapturePageState extends State<OCRCapturePage> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    l10n.featureComingSoon,
+                    l10n.ocrCaptureHint,
                     style: const TextStyle(
                       color: Colors.white70,
                       fontSize: 16,
@@ -99,20 +157,14 @@ class _OCRCapturePageState extends State<OCRCapturePage> {
                     highlightColor: Colors.white.withOpacity(0.06),
                     onTap: () {
                       HapticFeedback.selectionClick();
-                      // TODO: 拍照逻辑 - 后端实现后添加
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(l10n.featureComingSoon),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
+                      _captureImage();
                     },
                     child: Container(
                       width: 78,
                       height: 78,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.white,
+                        color: _isPicking ? Colors.white70 : Colors.white,
                         border: Border.all(
                           color: primary,
                           width: 4,

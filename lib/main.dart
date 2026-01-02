@@ -41,6 +41,8 @@ import 'package:thoughtecho/services/data_directory_service.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/utils/update_dialog_helper.dart';
 import 'package:thoughtecho/services/smart_push_service.dart'; // Add import
+import 'package:thoughtecho/services/ai/cactus_service.dart';
+import 'package:thoughtecho/services/ai/ocr_service.dart';
 // import 'package:thoughtecho/services/debug_service.dart'; // 正式版已禁用
 import 'controllers/search_controller.dart';
 import 'utils/app_logger.dart';
@@ -331,6 +333,14 @@ Future<void> main() async {
               ChangeNotifierProvider(create: (_) => featureGuideService),
               ChangeNotifierProvider(create: (_) => smartPushService),
               ChangeNotifierProvider(create: (_) => NoteSearchController()),
+              Provider<CactusService>(
+                create: (_) => CactusService(),
+                dispose: (_, service) => service.dispose(),
+              ),
+              Provider<OCRService>(
+                create: (_) => OCRService(),
+                dispose: (_, service) => service.close(),
+              ),
               ChangeNotifierProxyProvider<SettingsService,
                   InsightHistoryService>(
                 create: (context) => InsightHistoryService(
