@@ -3048,5 +3048,113 @@
   "smartPushTestSent": "测试推送已发送，请查看通知",
   "smartPushNoMatchingNotes": "没有符合条件的笔记可推送",
   "smartPushNotice": "功能说明",
-  "smartPushNoticeDesc": "• 推送功能需要通知权限\n• 应用在后台时推送可能延迟\n• 建议保持应用在后台运行以获得最佳体验\n• 未来将支持真正的后台定时推送"
+  "smartPushNoticeDesc": "• 推送功能需要通知权限\n• 应用在后台时推送可能延迟\n• 建议保持应用在后台运行以获得最佳体验\n• 未来将支持真正的后台定时推送",
+
+  "localAiModelManagement": "本地模型管理",
+  "localAiModelManagementDesc": "导入和管理设备端 AI 模型",
+  "embeddingModel": "语义嵌入模型",
+  "embeddingModelDesc": "用于语义搜索和相关笔记推荐的 TFLite 模型",
+  "asrModel": "语音识别模型",
+  "asrModelDesc": "用于语音转文字的 Whisper ONNX 模型",
+  "ocrModel": "OCR 识别模型",
+  "ocrModelDesc": "用于图片文字识别的 Tesseract 或 PaddleOCR 模型",
+  "modelNotInstalled": "未安装",
+  "modelReady": "已就绪",
+  "modelDownloading": "下载中",
+  "modelInvalid": "无效",
+  "importModel": "导入模型",
+  "deleteModel": "删除模型",
+  "deleteModelConfirm": "确定要删除此模型吗？删除后需要重新导入。",
+  "modelDeleted": "模型已删除",
+  "modelDeleteFailed": "删除模型失败: {error}",
+  "@modelDeleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "importingModel": "正在导入模型...",
+  "modelImported": "模型导入成功",
+  "modelImportFailed": "模型导入失败: {error}",
+  "@modelImportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "modelImportCancelled": "模型导入已取消",
+  "selectTfliteFile": "选择 TFLite 模型文件 (.tflite)",
+  "selectVocabFile": "选择词表文件 (vocab.txt)",
+  "selectWhisperDir": "选择 Whisper ONNX 模型目录",
+  "selectTessdataFiles": "选择 Tesseract 语言文件 (.traineddata)",
+  "selectPaddleOcrDir": "选择 PaddleOCR 模型目录",
+  "recommendedModels": "推荐模型",
+  "modelFileSize": "文件大小: {size}",
+  "@modelFileSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "modelLastUpdated": "更新时间: {time}",
+  "@modelLastUpdated": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "modelStorageUsage": "模型占用空间",
+  "totalModelSize": "总计: {size}",
+  "@totalModelSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "embeddingModelRecommendation": "推荐: paraphrase-multilingual-MiniLM-L12-v2 (TFLite)\n• 约 25MB，384 维向量\n• 支持 50+ 语言",
+  "asrModelRecommendation": "推荐: Whisper ONNX\n• tiny 版本约 39MB（快速）\n• base 版本约 74MB（更准确）",
+  "ocrModelRecommendation": "推荐:\n• Tesseract chi_sim+eng（约 30MB）\n• PaddleOCR Lite（约 8MB，中文优化）",
+  "ocrEngineType": "OCR 引擎类型",
+  "useTesseract": "使用 Tesseract",
+  "usePaddleOCR": "使用 PaddleOCR",
+  "vectorStorageStats": "向量存储统计",
+  "embeddingCount": "已存储嵌入: {count}",
+  "@embeddingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clearEmbeddings": "清除所有嵌入",
+  "clearEmbeddingsConfirm": "确定要清除所有已存储的笔记嵌入吗？这将影响语义搜索功能，但不会删除笔记。",
+  "embeddingsCleared": "已清除所有嵌入",
+  "rebuildEmbeddings": "重建嵌入",
+  "rebuildEmbeddingsDesc": "为所有笔记重新生成语义嵌入（可能需要较长时间）",
+  "rebuildingEmbeddings": "正在重建嵌入...",
+  "embeddingsRebuilt": "嵌入重建完成: {count} 条笔记",
+  "@embeddingsRebuilt": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "localAiStatus": "本地 AI 状态",
+  "modelPath": "模型路径: {path}",
+  "@modelPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "viewDownloadLinks": "查看下载链接",
+  "copyDownloadLink": "复制下载链接",
+  "downloadLinkCopied": "下载链接已复制到剪贴板"
 }

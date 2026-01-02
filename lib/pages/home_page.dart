@@ -18,7 +18,6 @@ import '../widgets/daily_quote_view.dart';
 import '../widgets/note_list_view.dart';
 import '../widgets/add_note_dialog.dart';
 import '../widgets/local_ai/ocr_capture_page.dart';
-import '../widgets/local_ai/ocr_result_sheet.dart';
 import '../widgets/local_ai/voice_input_overlay.dart';
 import 'ai_features_page.dart';
 import 'settings_page.dart';
@@ -867,16 +866,12 @@ class _HomePageState extends State<HomePage>
             Navigator.of(context).pop();
             await _openOCRFlow();
           },
-          onRecordComplete: () {
+          onRecordComplete: (String text) {
             Navigator.of(context).pop();
-            ScaffoldMessenger.of(this.context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  AppLocalizations.of(this.context).featureComingSoon,
-                ),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
+            if (text.isNotEmpty) {
+              // 显示添加笔记对话框，预填充识别的文本
+              _showAddQuoteDialog(prefilledContent: text);
+            }
           },
         );
       },
@@ -894,35 +889,19 @@ class _HomePageState extends State<HomePage>
   Future<void> _openOCRFlow() async {
     if (!mounted) return;
 
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
+    // 打开 OCR 拍照页面并获取识别结果
+    final String? recognizedText = await Navigator.of(context).push<String>(
+      MaterialPageRoute<String>(
         builder: (context) => const OCRCapturePage(),
       ),
     );
 
     if (!mounted) return;
 
-    final l10n = AppLocalizations.of(context);
-    String resultText = l10n.featureComingSoon;
-
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      builder: (context) {
-        return OCRResultSheet(
-          recognizedText: resultText,
-          onTextChanged: (text) {
-            resultText = text;
-          },
-          onInsertToEditor: () {
-            Navigator.of(context).pop();
-            _showAddQuoteDialog(prefilledContent: resultText);
-          },
-          onRecognizeSource: () {},
-        );
-      },
-    );
+    // 如果识别到文字，显示添加笔记对话框
+    if (recognizedText != null && recognizedText.isNotEmpty) {
+      _showAddQuoteDialog(prefilledContent: recognizedText);
+    }
   }
 
   // 显示编辑笔记对话框
