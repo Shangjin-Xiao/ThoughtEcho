@@ -2485,8 +2485,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                   ),
                   ListTile(
                     leading: const Icon(Icons.document_scanner),
-                    title: const Text('Local OCR'),
-                    subtitle: const Text('Extract text from image (Offline)'),
+                    title: Text(AppLocalizations.of(context).localAIOCR),
+                    subtitle:
+                        Text(AppLocalizations.of(context).localAIOCRDesc),
                     onTap: () {
                       Navigator.pop(context);
                       _showOCRDialog();

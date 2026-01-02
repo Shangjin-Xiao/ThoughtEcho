@@ -11,6 +11,7 @@ import '../services/weather_service.dart';
 import '../services/ai_service.dart';
 import '../services/clipboard_service.dart';
 import '../services/connectivity_service.dart';
+import '../services/ai/ocr_service.dart';
 import '../controllers/search_controller.dart'; // 导入搜索控制器
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
@@ -879,16 +880,65 @@ class _HomePageState extends State<HomePage>
 
     if (!mounted) return;
 
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
+    final String? imagePath = await Navigator.of(context).push<String?>(
+      MaterialPageRoute<String?>(
         builder: (context) => const OCRCapturePage(),
       ),
     );
 
+    if (imagePath == null || imagePath.isEmpty) return;
+
     if (!mounted) return;
 
     final l10n = AppLocalizations.of(context);
-    String resultText = l10n.featureComingSoon;
+
+    // 先做OCR识别（显示进度），再打开结果编辑 Sheet
+    String resultText = '';
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          content: Row(
+            children: [
+              const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              const SizedBox(width: 14),
+              Expanded(child: Text(l10n.ocrProcessing)),
+            ],
+          ),
+        );
+      },
+    );
+
+    try {
+      final ocrService = Provider.of<OCRService>(context, listen: false);
+      resultText = await ocrService.recognizeText(imagePath);
+      resultText = resultText.trim();
+    } catch (e) {
+      resultText = '';
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.startFailed(e.toString())),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+    }
+
+    if (!mounted) return;
+    if (resultText.isEmpty) {
+      resultText = l10n.ocrNoTextDetected;
+    }
 
     await showModalBottomSheet<void>(
       context: context,

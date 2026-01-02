@@ -17,36 +17,78 @@ class CactusService {
   ///
   /// Requires models to be downloaded first via [downloadModel] and [downloadVoiceModel].
   Future<void> initialize() async {
-    // LM
-    _lm = CactusLM();
-    try {
-        // Initialize with default or previously downloaded model
-        await _lm?.initializeModel();
-        _isLMInitialized = true;
-    } catch (e) {
-        logError('LM Initialization failed (model might need download): $e', source: 'CactusService');
+    await ensureInitialized(lm: true, stt: true, rag: true);
+  }
+
+  /// Ensures requested Cactus components are initialized.
+  ///
+  /// This method is idempotent and can be called multiple times.
+  ///
+  /// - [lm]: initialize LLM for chat/embedding
+  /// - [stt]: initialize Speech-to-Text
+  /// - [rag]: initialize RAG/vector store (requires LM for embeddings)
+  Future<void> ensureInitialized({
+    bool lm = true,
+    bool stt = false,
+    bool rag = false,
+  }) async {
+    // RAG requires embedding -> LM.
+    if (rag) {
+      lm = true;
     }
 
-    // STT
-    _stt = CactusSTT();
-    try {
-        await _stt?.initializeModel();
-        _isSTTInitialized = true;
-    } catch (e) {
-        logError('STT Initialization failed: $e', source: 'CactusService');
+    if (lm) {
+      await _ensureLMInitialized();
     }
+    if (stt) {
+      await _ensureSTTInitialized();
+    }
+    if (rag) {
+      await _ensureRAGInitialized();
+    }
+  }
 
-    // RAG
-    _rag = CactusRAG();
+  Future<void> _ensureLMInitialized() async {
+    if (_isLMInitialized) return;
+    _lm ??= CactusLM();
     try {
-        await _rag?.initialize();
-        // Set embedding generator using our LM
-        _rag?.setEmbeddingGenerator((text) async {
-             return await embed(text);
-        });
-        _isRAGInitialized = true;
+      // Initialize with default or previously downloaded model
+      await _lm?.initializeModel();
+      _isLMInitialized = true;
     } catch (e) {
-        logError('RAG Initialization failed: $e', source: 'CactusService');
+      logError(
+        'LM Initialization failed (model might need download): $e',
+        source: 'CactusService',
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> _ensureSTTInitialized() async {
+    if (_isSTTInitialized) return;
+    _stt ??= CactusSTT();
+    try {
+      await _stt?.initializeModel();
+      _isSTTInitialized = true;
+    } catch (e) {
+      logError('STT Initialization failed: $e', source: 'CactusService');
+      rethrow;
+    }
+  }
+
+  Future<void> _ensureRAGInitialized() async {
+    if (_isRAGInitialized) return;
+    _rag ??= CactusRAG();
+    try {
+      await _rag?.initialize();
+      // Set embedding generator using our LM
+      _rag?.setEmbeddingGenerator((text) async {
+        return await embed(text);
+      });
+      _isRAGInitialized = true;
+    } catch (e) {
+      logError('RAG Initialization failed: $e', source: 'CactusService');
+      rethrow;
     }
   }
 
