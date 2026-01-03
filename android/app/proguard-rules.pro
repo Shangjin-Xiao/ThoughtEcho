@@ -99,6 +99,14 @@
 -keep class com.tencent.mmkv.** { *; }
 -dontwarn com.tencent.mmkv.**
 
+# flutter_gemma / MediaPipe
+# MediaPipe 的部分 profiling/graph 相关 API 会在字节码中引用 proto 生成类，但这些类在某些打包组合里并不会随库一起提供。
+# Release 模式启用 R8 时会因此报 "Missing class ... com.google.mediapipe.proto.*" 并直接失败。
+# 这些缺失类通常只影响可选的 profiler/调试路径；应用未使用时可以安全忽略。
+-dontwarn com.google.mediapipe.proto.**
+-dontwarn com.google.mediapipe.framework.GraphProfiler
+-dontwarn com.google.mediapipe.framework.Graph
+
 # 32位设备内存优化
 -dontoptimize
 -dontpreverify

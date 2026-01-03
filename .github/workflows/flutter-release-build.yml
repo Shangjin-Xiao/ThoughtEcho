@@ -16,6 +16,28 @@ jobs:
       - name: 检出代码
         uses: actions/checkout@v3
 
+      # GitHub Hosted Runner 的磁盘空间较紧张，而本项目在 Android 构建时会拉起
+      # Rust/CMake/多 ABI 的原生构建（例如 rhttp），很容易触发 "No space left on device"。
+      # 提前删除一些与 Flutter/Android 构建无关的大体积预装组件，避免随机失败。
+      - name: 释放磁盘空间（CI）
+        run: |
+          set -e
+          echo "Disk before:" && df -h
+
+          # .NET/ghc 通常占用数 GB，对 Flutter Android 构建无依赖
+          sudo rm -rf /usr/share/dotnet || true
+          sudo rm -rf /opt/ghc || true
+          sudo rm -rf /usr/local/.ghcup || true
+
+          # Android Emulator / system-images 对 APK 构建无依赖，但体积很大
+          sudo rm -rf /usr/local/lib/android/sdk/emulator || true
+          sudo rm -rf /usr/local/lib/android/sdk/system-images || true
+
+          # 释放一些临时目录空间
+          sudo rm -rf /tmp/* || true
+
+          echo "Disk after:" && df -h
+
       - name: 设置 Java 环境
         uses: actions/setup-java@v3
         with:
@@ -64,7 +86,10 @@ jobs:
           flutter --version
           flutter doctor -v
           flutter pub get
-          flutter pub upgrade
+          # ⚠️ 不在发布构建中执行 pub upgrade：
+          # 1) 会下载/更新大量依赖缓存，增加 CI 磁盘压力
+          # 2) 可能引入与当前约束不兼容的新版本，导致构建不稳定
+          # 如需升级依赖，请在专门的 PR 中更新 pubspec.lock 后再发布。
 
       - name: 构建发布版APK
         run: |
