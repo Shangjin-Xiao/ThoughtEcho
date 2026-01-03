@@ -10,8 +10,10 @@ list(APPEND FLUTTER_PLUGIN_LIST
   gal
   geolocator_windows
   local_auth_windows
+  objectbox_flutter_libs
   pasteboard
   permission_handler_windows
+  record_windows
   share_plus
   sqlite3_flutter_libs
   url_launcher_windows
@@ -19,7 +21,9 @@ list(APPEND FLUTTER_PLUGIN_LIST
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
   flutter_local_notifications_windows
+  onnxruntime
   rhttp
+  sherpa_onnx_windows
 )
 
 set(PLUGIN_BUNDLED_LIBRARIES)

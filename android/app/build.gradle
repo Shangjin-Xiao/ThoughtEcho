@@ -66,9 +66,11 @@ android {
 
 
 
-        // NDK配置 - 恢复原始配置以避免兼容性问题
+        // NDK配置
+        // 注意：Release 构建（CI/分发）通常只需要 arm/arm64；x86/x86_64 主要用于模拟器。
+        // 这里保留 defaultConfig 的最小集合，debug 再单独扩展。
         ndk {
-            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+            abiFilters 'armeabi-v7a', 'arm64-v8a'
         }
 
         // 内存和性能优化
@@ -101,6 +103,13 @@ android {
             shrinkResources true // 启用资源压缩
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
 
+            // 进一步减少 release 中间产物与磁盘占用：不生成/提取 native 符号表。
+            // 需要 Play Console Native Symbols 时再改回 'SYMBOL_TABLE' 或 'FULL'。
+            ndk {
+                debugSymbolLevel 'NONE'
+                abiFilters 'armeabi-v7a', 'arm64-v8a'
+            }
+
             // 大文件处理优化
             manifestPlaceholders = [
                 'enableCrashlytics': 'true'
@@ -116,6 +125,11 @@ android {
             shrinkResources false
             debuggable true
 
+            // debug 支持模拟器 ABI，便于本地调试。
+            ndk {
+                abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
+            }
+
             // 调试模式的内存优化
             manifestPlaceholders = [
                 'enableCrashlytics': 'false'
@@ -127,6 +141,9 @@ android {
     packagingOptions {
         pickFirst '**/libc++_shared.so'
         pickFirst '**/libjsc.so'
+        // onnxruntime 与 sherpa_onnx_android 都可能携带相同的 JNI so，
+        // Release 合并 native libs 时会因重复路径失败；这里选择保留第一份。
+        pickFirst '**/libonnxruntime.so'
         exclude 'META-INF/DEPENDENCIES'
         exclude 'META-INF/LICENSE'
         exclude 'META-INF/LICENSE.txt'
@@ -143,4 +160,24 @@ dependencies {
     implementation 'androidx.multidex:multidex:2.0.1'
     implementation 'com.tencent:mmkv:1.3.0'
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
+
+    // google_mlkit_text_recognition 在 Android 端会引用多语言的 *TextRecognizerOptions。
+    // Debug（未开启 R8）通常没问题，但 Release 开启 R8/fullMode 时如果缺少对应 AAR
+    // 会在 :app:minifyReleaseWithR8 阶段报 Missing class。
+    // 这里显式加入 ML Kit 文本识别的语言模块，确保 classpath 完整。
+    // 版本需与插件依赖兼容；如后续升级插件，可同步调整这些版本。
+    implementation 'com.google.mlkit:text-recognition:16.0.1'
+    implementation 'com.google.mlkit:text-recognition-chinese:16.0.1'
+    implementation 'com.google.mlkit:text-recognition-devanagari:16.0.1'
+    implementation 'com.google.mlkit:text-recognition-japanese:16.0.1'
+    implementation 'com.google.mlkit:text-recognition-korean:16.0.1'
+
+    // ML Kit Text Recognition
+    // google_mlkit_text_recognition 插件在 Android 侧会引用特定文字体系（脚本）选项类，
+    // 这些类分布在独立的 ML Kit artifacts 中；release 开启 R8 时若未引入会直接报 Missing class。
+    def mlkitTextRecognitionVersion = '16.0.0'
+    implementation "com.google.mlkit:text-recognition-chinese:${mlkitTextRecognitionVersion}"
+    implementation "com.google.mlkit:text-recognition-devanagari:${mlkitTextRecognitionVersion}"
+    implementation "com.google.mlkit:text-recognition-japanese:${mlkitTextRecognitionVersion}"
+    implementation "com.google.mlkit:text-recognition-korean:${mlkitTextRecognitionVersion}"
 }

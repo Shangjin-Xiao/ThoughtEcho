@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import '../../gen_l10n/app_localizations.dart';
 
@@ -23,6 +26,37 @@ class ImageTextSelector extends StatefulWidget {
 class _ImageTextSelectorState extends State<ImageTextSelector> {
   int? _selectedRegionIndex;
 
+  ui.Size? _imageSize;
+  bool _loadingImage = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadImageSize();
+  }
+
+  Future<void> _loadImageSize() async {
+    try {
+      final bytes = await File(widget.imagePath).readAsBytes();
+      final codec = await ui.instantiateImageCodec(bytes);
+      final frame = await codec.getNextFrame();
+      if (!mounted) return;
+      setState(() {
+        _imageSize = ui.Size(
+          frame.image.width.toDouble(),
+          frame.image.height.toDouble(),
+        );
+        _loadingImage = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _imageSize = null;
+        _loadingImage = false;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -45,69 +79,93 @@ class _ImageTextSelectorState extends State<ImageTextSelector> {
 
           // 图片和文字区域
           Expanded(
-            child: Stack(
-              children: [
-                // TODO: 显示图片 - 后端实现后添加
-                Center(
-                  child: Container(
-                    color: Colors.grey[300],
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.image,
-                          size: 64,
-                          color: Colors.grey[600],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          l10n.featureComingSoon,
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 16,
+            child: _loadingImage
+                ? const Center(child: CircularProgressIndicator())
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      final imageSize = _imageSize;
+                      if (imageSize == null ||
+                          imageSize.width <= 0 ||
+                          imageSize.height <= 0) {
+                        return Center(
+                          child: Text(l10n.getDataFailed),
+                        );
+                      }
+
+                      final maxW = constraints.maxWidth;
+                      final maxH = constraints.maxHeight;
+                      final scale =
+                          (maxW / imageSize.width).clamp(0.0, double.infinity);
+                      final scaleH =
+                          (maxH / imageSize.height).clamp(0.0, double.infinity);
+                      final s = scale < scaleH ? scale : scaleH;
+
+                      final displayW = imageSize.width * s;
+                      final displayH = imageSize.height * s;
+
+                      final dx = (maxW - displayW) / 2.0;
+                      final dy = (maxH - displayH) / 2.0;
+
+                      return Stack(
+                        children: [
+                          Positioned.fill(
+                            child: Center(
+                              child: SizedBox(
+                                width: displayW,
+                                height: displayH,
+                                child: Image.file(
+                                  File(widget.imagePath),
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
+
+                          // 文字区域高亮
+                          ...widget.detectedRegions.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final region = entry.value;
+                            final isSelected = _selectedRegionIndex == index;
+
+                            final left = dx + region.left * s;
+                            final top = dy + region.top * s;
+                            final width = region.width * s;
+                            final height = region.height * s;
+
+                            return Positioned(
+                              left: left,
+                              top: top,
+                              width: width,
+                              height: height,
+                              child: GestureDetector(
+                                behavior: HitTestBehavior.translucent,
+                                onTap: () {
+                                  setState(() {
+                                    _selectedRegionIndex = index;
+                                  });
+                                  widget.onRegionSelected?.call(region);
+                                },
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? theme.colorScheme.primary
+                                          : theme.colorScheme.outline,
+                                      width: 2,
+                                    ),
+                                    color: isSelected
+                                        ? theme.colorScheme.primary
+                                            .withOpacity(0.18)
+                                        : Colors.transparent,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }),
+                        ],
+                      );
+                    },
                   ),
-                ),
-
-                // TODO: 文字区域高亮 - 后端实现后添加
-                ...widget.detectedRegions.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final region = entry.value;
-                  final isSelected = _selectedRegionIndex == index;
-
-                  return Positioned(
-                    left: region.left,
-                    top: region.top,
-                    width: region.width,
-                    height: region.height,
-                    child: GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _selectedRegionIndex = index;
-                        });
-                        widget.onRegionSelected?.call(region);
-                      },
-                      child: Container(
-                        decoration: BoxDecoration(
-                          border: Border.all(
-                            color: isSelected
-                                ? theme.colorScheme.primary
-                                : theme.colorScheme.outline,
-                            width: 2,
-                          ),
-                          color: isSelected
-                              ? theme.colorScheme.primary.withOpacity(0.2)
-                              : Colors.transparent,
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ],
-            ),
           ),
 
           // 确认按钮

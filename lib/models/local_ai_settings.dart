@@ -33,7 +33,7 @@ class LocalAISettings {
   final bool relatedNotesEnabled;
 
   const LocalAISettings({
-    this.enabled = false,
+    this.enabled = true,
     this.speechToTextEnabled = true,
     this.ocrEnabled = true,
     this.aiSearchEnabled = true,
@@ -51,7 +51,7 @@ class LocalAISettings {
   /// 从 JSON 创建实例
   factory LocalAISettings.fromJson(Map<String, dynamic> json) {
     return LocalAISettings(
-      enabled: json['enabled'] as bool? ?? false,
+      enabled: json['enabled'] as bool? ?? true,
       speechToTextEnabled: json['speechToTextEnabled'] as bool? ?? true,
       ocrEnabled: json['ocrEnabled'] as bool? ?? true,
       aiSearchEnabled: json['aiSearchEnabled'] as bool? ?? true,
