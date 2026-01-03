@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../gen_l10n/app_localizations.dart';
 import '../../services/local_ai/ocr_service.dart';
+import 'image_text_selector.dart';
 
 /// OCR 拍照页面
 ///
@@ -40,13 +41,16 @@ class _OCRCapturePageState extends State<OCRCapturePage> {
 
       if (!mounted || file == null) return;
 
+      // 避免跨 async gap 访问可空变量（Dart 的类型提升不会跨 await 保持）
+      final imagePath = file.path;
+
       setState(() {
         _isProcessing = true;
       });
 
       final ocr = OCRService();
       await ocr.initialize();
-      final result = await ocr.recognizeFromFile(file.path);
+      final result = await ocr.recognizeFromFile(imagePath);
 
       if (!mounted) return;
 
@@ -61,6 +65,32 @@ class _OCRCapturePageState extends State<OCRCapturePage> {
           ),
         );
         return;
+      }
+
+        final selectableBlocks =
+          result.blocks.where((b) => b.boundingBox != null).toList();
+        final regions = selectableBlocks
+          .map((b) => b.boundingBox!)
+          .toList(growable: false);
+
+      // 有可用的 boundingBox 时，提供“点选文字区域”；否则回退为整图文本。
+      if (regions.isNotEmpty) {
+        final selectedIndex = await Navigator.of(context).push<int?>
+            (MaterialPageRoute<int?>(
+          builder: (context) => ImageTextSelector(
+            imagePath: imagePath,
+            detectedRegions: regions,
+          ),
+        ));
+
+        if (!mounted) return;
+
+        if (selectedIndex != null &&
+            selectedIndex >= 0 &&
+            selectedIndex < selectableBlocks.length) {
+          Navigator.of(context).pop(selectableBlocks[selectedIndex].text);
+          return;
+        }
       }
 
       Navigator.of(context).pop(result.text);
