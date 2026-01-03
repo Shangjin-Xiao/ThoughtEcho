@@ -84,7 +84,10 @@ class LocalAIService extends ChangeNotifier {
   TextProcessingService get textService => _textService;
 
   /// 初始化本地 AI 服务
-  Future<void> initialize(LocalAISettings settings) async {
+  Future<void> initialize(
+    LocalAISettings settings, {
+    bool eagerLoadModels = true,
+  }) async {
     if (_initialized) {
       // 更新设置
       _settings = settings;
@@ -101,7 +104,7 @@ class LocalAIService extends ChangeNotifier {
       // 根据设置初始化各个子服务
       if (settings.enabled) {
         if (settings.speechToTextEnabled) {
-          await _speechService.initialize();
+          await _speechService.initialize(eagerLoadModel: eagerLoadModels);
         }
         if (settings.ocrEnabled) {
           await _ocrService.initialize();
@@ -176,7 +179,9 @@ class LocalAIService extends ChangeNotifier {
         return _settings.ocrEnabled && _ocrService.isModelAvailable;
 
       case LocalAIFeature.aiCorrection:
-        return _settings.aiCorrectionEnabled && _textService.isModelAvailable;
+        // Gemma 模型由 flutter_gemma 管理，ModelManager 不一定能反映其可用性。
+        // 因此这里仅按“启用”判断；实际调用会自动降级或提示用户手动加载。
+        return _settings.aiCorrectionEnabled;
 
       case LocalAIFeature.sourceRecognition:
         return _settings.sourceRecognitionEnabled;
@@ -188,7 +193,7 @@ class LocalAIService extends ChangeNotifier {
         return _settings.relatedNotesEnabled && _embeddingService.isModelAvailable;
 
       case LocalAIFeature.smartTags:
-        return _settings.smartTagsEnabled && _textService.isModelAvailable;
+        return _settings.smartTagsEnabled;
 
       case LocalAIFeature.noteClassification:
         return _settings.noteClassificationEnabled;

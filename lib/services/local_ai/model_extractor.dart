@@ -3,7 +3,7 @@
 /// 负责解压 tar.bz2 等压缩格式的模型文件
 
 import 'dart:io';
-import 'dart:typed_data';
+import 'dart:isolate';
 
 import 'package:archive/archive.dart';
 import 'package:path/path.dart' as path;
@@ -27,65 +27,59 @@ class ModelExtractor {
     logInfo('开始解压: $archivePath -> $extractDir', source: 'ModelExtractor');
 
     try {
-      // 读取压缩文件
-      final file = File(archivePath);
-      if (!await file.exists()) {
-        throw Exception('压缩文件不存在: $archivePath');
-      }
+      // 进度回调仅用于 UI 提示；真正的解压会在后台 isolate 中完成。
+      onProgress?.call(0.05);
 
-      final bytes = await file.readAsBytes();
-      onProgress?.call(0.1);
-
-      // 解压 bzip2
-      logInfo('解压 bzip2...', source: 'ModelExtractor');
-      final bzip2Decoded = BZip2Decoder().decodeBytes(bytes);
-      onProgress?.call(0.4);
-
-      // 解压 tar
-      logInfo('解压 tar...', source: 'ModelExtractor');
-      final archive = TarDecoder().decodeBytes(bzip2Decoded);
-      onProgress?.call(0.6);
-
-      // 确保目标目录存在
-      final destDir = Directory(extractDir);
-      if (!await destDir.exists()) {
-        await destDir.create(recursive: true);
-      }
-
-      // 提取文件
-      String? rootDir;
-      final totalFiles = archive.files.length;
-      var processedFiles = 0;
-
-      for (final archiveFile in archive.files) {
-        final fileName = archiveFile.name;
-        
-        // 跳过目录条目
-        if (archiveFile.isFile) {
-          // 提取根目录名
-          final parts = fileName.split('/');
-          if (parts.isNotEmpty && rootDir == null) {
-            rootDir = parts[0];
-          }
-
-          final outputPath = path.join(extractDir, fileName);
-          final outputFile = File(outputPath);
-          
-          // 确保父目录存在
-          await outputFile.parent.create(recursive: true);
-          
-          // 写入文件
-          await outputFile.writeAsBytes(archiveFile.content as List<int>);
+      final extractedPath = await Isolate.run(() async {
+        // 读取压缩文件（注意：此处仍为一次性读入；但放在 isolate 中可避免阻塞 UI）
+        final file = File(archivePath);
+        if (!await file.exists()) {
+          throw Exception('archive_not_found');
         }
 
-        processedFiles++;
-        onProgress?.call(0.6 + 0.4 * processedFiles / totalFiles);
-      }
+        final bytes = await file.readAsBytes();
 
-      final extractedPath = rootDir != null 
-          ? path.join(extractDir, rootDir)
-          : extractDir;
+        // 解压 bzip2
+        final bzip2Decoded = BZip2Decoder().decodeBytes(bytes);
 
+        // 解压 tar
+        final archive = TarDecoder().decodeBytes(bzip2Decoded);
+
+        // 确保目标目录存在
+        final destDir = Directory(extractDir);
+        if (!await destDir.exists()) {
+          await destDir.create(recursive: true);
+        }
+
+        // 提取文件
+        String? rootDir;
+
+        for (final archiveFile in archive.files) {
+          final fileName = archiveFile.name;
+
+          // 跳过目录条目
+          if (archiveFile.isFile) {
+            // 提取根目录名
+            final parts = fileName.split('/');
+            if (parts.isNotEmpty && rootDir == null) {
+              rootDir = parts[0];
+            }
+
+            final outputPath = path.join(extractDir, fileName);
+            final outputFile = File(outputPath);
+
+            // 确保父目录存在
+            await outputFile.parent.create(recursive: true);
+
+            // 写入文件
+            await outputFile.writeAsBytes(archiveFile.content as List<int>);
+          }
+        }
+
+        return rootDir != null ? path.join(extractDir, rootDir) : extractDir;
+      });
+
+      onProgress?.call(1.0);
       logInfo('解压完成: $extractedPath', source: 'ModelExtractor');
       return extractedPath;
     } catch (e) {
@@ -103,59 +97,52 @@ class ModelExtractor {
     logInfo('开始解压: $archivePath -> $extractDir', source: 'ModelExtractor');
 
     try {
-      final file = File(archivePath);
-      if (!await file.exists()) {
-        throw Exception('压缩文件不存在: $archivePath');
-      }
+      onProgress?.call(0.05);
 
-      final bytes = await file.readAsBytes();
-      onProgress?.call(0.1);
-
-      // 解压 gzip
-      logInfo('解压 gzip...', source: 'ModelExtractor');
-      final gzipDecoded = GZipDecoder().decodeBytes(bytes);
-      onProgress?.call(0.4);
-
-      // 解压 tar
-      logInfo('解压 tar...', source: 'ModelExtractor');
-      final archive = TarDecoder().decodeBytes(gzipDecoded);
-      onProgress?.call(0.6);
-
-      // 确保目标目录存在
-      final destDir = Directory(extractDir);
-      if (!await destDir.exists()) {
-        await destDir.create(recursive: true);
-      }
-
-      // 提取文件
-      String? rootDir;
-      final totalFiles = archive.files.length;
-      var processedFiles = 0;
-
-      for (final archiveFile in archive.files) {
-        final fileName = archiveFile.name;
-        
-        if (archiveFile.isFile) {
-          final parts = fileName.split('/');
-          if (parts.isNotEmpty && rootDir == null) {
-            rootDir = parts[0];
-          }
-
-          final outputPath = path.join(extractDir, fileName);
-          final outputFile = File(outputPath);
-          
-          await outputFile.parent.create(recursive: true);
-          await outputFile.writeAsBytes(archiveFile.content as List<int>);
+      final extractedPath = await Isolate.run(() async {
+        final file = File(archivePath);
+        if (!await file.exists()) {
+          throw Exception('archive_not_found');
         }
 
-        processedFiles++;
-        onProgress?.call(0.6 + 0.4 * processedFiles / totalFiles);
-      }
+        final bytes = await file.readAsBytes();
 
-      final extractedPath = rootDir != null 
-          ? path.join(extractDir, rootDir)
-          : extractDir;
+        // 解压 gzip
+        final gzipDecoded = GZipDecoder().decodeBytes(bytes);
 
+        // 解压 tar
+        final archive = TarDecoder().decodeBytes(gzipDecoded);
+
+        // 确保目标目录存在
+        final destDir = Directory(extractDir);
+        if (!await destDir.exists()) {
+          await destDir.create(recursive: true);
+        }
+
+        // 提取文件
+        String? rootDir;
+
+        for (final archiveFile in archive.files) {
+          final fileName = archiveFile.name;
+
+          if (archiveFile.isFile) {
+            final parts = fileName.split('/');
+            if (parts.isNotEmpty && rootDir == null) {
+              rootDir = parts[0];
+            }
+
+            final outputPath = path.join(extractDir, fileName);
+            final outputFile = File(outputPath);
+
+            await outputFile.parent.create(recursive: true);
+            await outputFile.writeAsBytes(archiveFile.content as List<int>);
+          }
+        }
+
+        return rootDir != null ? path.join(extractDir, rootDir) : extractDir;
+      });
+
+      onProgress?.call(1.0);
       logInfo('解压完成: $extractedPath', source: 'ModelExtractor');
       return extractedPath;
     } catch (e) {

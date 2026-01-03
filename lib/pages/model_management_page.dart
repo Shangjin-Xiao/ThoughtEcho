@@ -3,7 +3,11 @@ import 'package:flutter/material.dart';
 
 import '../gen_l10n/app_localizations.dart';
 import '../models/local_ai_model.dart';
+import '../services/local_ai/embedding_service.dart';
 import '../services/local_ai/model_manager.dart';
+import '../services/local_ai/ocr_service.dart';
+import '../services/local_ai/speech_recognition_service.dart';
+import '../services/local_ai/text_processing_service.dart';
 import '../theme/app_theme.dart';
 
 /// 模型管理页面
@@ -20,6 +24,8 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
   late ModelManager _modelManager;
   bool _isInitialized = false;
   String? _initError;
+
+  bool _isPreparing = false;
 
   @override
   void initState() {
@@ -273,6 +279,7 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
     LocalAIModelInfo model,
   ) {
     final statusInfo = _getStatusInfo(l10n, model.status);
+    final needsPreparation = _needsPreparation(model);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -334,6 +341,14 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
                       Icons.tag,
                       'v${model.version}',
                     ),
+                    if (needsPreparation) ...[
+                      const SizedBox(width: 8),
+                      _buildInfoChip(
+                        theme,
+                        Icons.unarchive_outlined,
+                        l10n.modelPrepare,
+                      ),
+                    ],
                   ],
                 ),
                 // 下载进度
@@ -370,7 +385,7 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            model.errorMessage!,
+                            _localizeModelError(l10n, model.errorMessage!),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: theme.colorScheme.error,
                             ),
@@ -490,6 +505,10 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
 
   void _showModelActions(BuildContext context, AppLocalizations l10n, LocalAIModelInfo model) {
     final theme = Theme.of(context);
+    final isManaged = _isManagedModel(model);
+    final canPrepare = isManaged ||
+        model.status == LocalAIModelStatus.downloaded ||
+        model.status == LocalAIModelStatus.loaded;
 
     showModalBottomSheet(
       context: context,
@@ -521,13 +540,32 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
                 ),
               ),
               const Divider(height: 1),
+              if (canPrepare)
+                ListTile(
+                  leading: const Icon(Icons.play_circle_outline),
+                  title: Text(l10n.modelPrepare),
+                  subtitle: Text(l10n.modelPrepareHint),
+                  enabled: !_isPreparing,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _prepareModel(model);
+                  },
+                ),
               if (model.status == LocalAIModelStatus.notDownloaded ||
                   model.status == LocalAIModelStatus.error)
                 ListTile(
                   leading: const Icon(Icons.download),
                   title: Text(l10n.modelDownload),
+                  enabled: !isManaged,
+                  subtitle: isManaged ? Text(l10n.modelManagedByPackage) : null,
                   onTap: () {
                     Navigator.pop(context);
+                    if (isManaged) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(l10n.modelManagedByPackage)),
+                      );
+                      return;
+                    }
                     _downloadModel(model);
                   },
                 ),
@@ -569,7 +607,18 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
     );
   }
 
-  void _downloadModel(LocalAIModelInfo model) {
+  Future<void> _downloadModel(LocalAIModelInfo model) async {
+    // flutter_gemma 托管模型：需要先配置真实下载地址
+    if (_isManagedModel(model) && model.downloadUrl.startsWith('managed://flutter_gemma/')) {
+      final existingUrl = await _modelManager.getFlutterGemmaManagedModelUrl(model.id);
+      if (existingUrl == null || existingUrl.trim().isEmpty) {
+        final configured = await _promptAndSaveManagedModelUrl(model);
+        if (!configured) {
+          return;
+        }
+      }
+    }
+
     _modelManager.downloadModel(
       model.id,
       onProgress: (progress) {
@@ -583,18 +632,156 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
             ),
           );
         }
+
+        // OCR 模型下载完成后同步到 tessdata，避免“下载完仍不可用”。
+        if (model.type == LocalAIModelType.ocr) {
+          OCRService.instance.refreshModels();
+        }
       },
       onError: (error) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(AppLocalizations.of(context).modelDownloadFailed(error)),
+              content: Text(
+                AppLocalizations.of(context).modelDownloadFailed(
+                  _localizeModelError(AppLocalizations.of(context), error),
+                ),
+              ),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
         }
       },
     );
+  }
+
+  Future<bool> _promptAndSaveManagedModelUrl(LocalAIModelInfo model) async {
+    final l10n = AppLocalizations.of(context);
+    final existingUrl = await _modelManager.getFlutterGemmaManagedModelUrl(model.id) ?? '';
+    final controller = TextEditingController(text: existingUrl);
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(l10n.modelDownload),
+          content: TextField(
+            controller: controller,
+            decoration: InputDecoration(
+              labelText: l10n.apiUrlField,
+              hintText: l10n.apiUrlHint,
+              helperText: l10n.apiUrlHelper,
+            ),
+            keyboardType: TextInputType.url,
+            autofocus: true,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, controller.text.trim()),
+              child: Text(l10n.save),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result == null) return false;
+
+    final uri = Uri.tryParse(result);
+    final isValid = uri != null && (uri.scheme == 'http' || uri.scheme == 'https');
+    if (!isValid) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.invalidUrl),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+      return false;
+    }
+
+    await _modelManager.setFlutterGemmaManagedModelUrl(model.id, result);
+    return true;
+  }
+
+  Future<void> _prepareModel(LocalAIModelInfo model) async {
+    final l10n = AppLocalizations.of(context);
+
+    if (_isPreparing) return;
+
+    setState(() {
+      _isPreparing = true;
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              const SizedBox(width: 16),
+              Text(l10n.modelPreparing),
+            ],
+          ),
+          duration: const Duration(seconds: 30),
+        ),
+      );
+    }
+
+    try {
+      switch (model.type) {
+        case LocalAIModelType.asr:
+          await SpeechRecognitionService.instance.initialize(eagerLoadModel: false);
+          await SpeechRecognitionService.instance.prepareModel();
+          break;
+        case LocalAIModelType.ocr:
+          await OCRService.instance.refreshModels();
+          break;
+        case LocalAIModelType.llm:
+          await TextProcessingService.instance.initialize();
+          await TextProcessingService.instance.loadModel();
+          break;
+        case LocalAIModelType.embedding:
+          await EmbeddingService.instance.initialize();
+          await EmbeddingService.instance.loadModel();
+          break;
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.modelPrepareSuccess),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.modelPrepareFailed(_localizeModelError(l10n, e.toString()))),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isPreparing = false;
+        });
+      }
+    }
   }
 
   Future<void> _importModel(LocalAIModelInfo model) async {
@@ -617,13 +804,10 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
         break;
       case LocalAIModelType.llm:
       case LocalAIModelType.embedding:
-        // LLM 和嵌入模型需要通过 flutter_gemma 管理
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.modelManagedByPackage),
-          ),
-        );
-        return;
+        // flutter_gemma 托管模型：允许导入本地 .task（或 .bin）模型文件
+        allowedExtensions = ['task', 'bin'];
+        dialogTitle = l10n.modelImport;
+        break;
     }
     
     try {
@@ -665,6 +849,11 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
       
       // 导入模型
       await _modelManager.importModel(model.id, filePath);
+
+      // OCR 导入后同步 tessdata
+      if (model.type == LocalAIModelType.ocr) {
+        await OCRService.instance.refreshModels();
+      }
       
       if (mounted) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
@@ -812,6 +1001,54 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
           color: Colors.red,
         );
     }
+  }
+
+  bool _isManagedModel(LocalAIModelInfo model) {
+    return model.downloadUrl.startsWith('managed://');
+  }
+
+  bool _needsPreparation(LocalAIModelInfo model) {
+    if (model.status != LocalAIModelStatus.downloaded) return false;
+    if (model.fileName.endsWith('.tar.bz2') || model.fileName.endsWith('.tar.gz')) {
+      return _modelManager.getExtractedModelPath(model.id) == null;
+    }
+    // LLM/Embedding 由运行时加载；下载完成不代表已加载。
+    if (model.type == LocalAIModelType.llm) {
+      return !TextProcessingService.instance.isModelLoaded;
+    }
+    if (model.type == LocalAIModelType.embedding) {
+      return !EmbeddingService.instance.isModelLoaded;
+    }
+    return false;
+  }
+
+  String _localizeModelError(AppLocalizations l10n, String raw) {
+    // 统一把 error code 映射为用户可理解的本地化文案。
+    if (raw.contains(ModelManager.errorManagedModel)) {
+      return l10n.modelManagedByPackage;
+    }
+    if (raw.contains(ModelManager.errorManagedModelUrlMissing)) {
+      return l10n.modelManagedByPackage;
+    }
+    if (raw.contains(ModelManager.errorExtractFailed) || raw.contains('extract_failed')) {
+      return l10n.modelExtractFailed;
+    }
+    if (raw.contains('asr_model_required')) {
+      return l10n.pleaseSwitchToAsrModel;
+    }
+    if (raw.contains('ocr_model_required')) {
+      return l10n.pleaseSwitchToOcrModel;
+    }
+    if (raw.contains('embedding_model_required')) {
+      return l10n.modelRequiresDownload;
+    }
+    if (raw.contains('gemma_model_required')) {
+      return l10n.modelRequiresDownload;
+    }
+    if (raw.contains('service_not_initialized')) {
+      return l10n.featureNotAvailable;
+    }
+    return raw;
   }
 
   String _formatSize(int bytes) {

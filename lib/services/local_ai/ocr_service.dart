@@ -100,6 +100,20 @@ class OCRService extends ChangeNotifier {
     }
   }
 
+  /// 重新同步 traineddata 并刷新可用语言。
+  ///
+  /// 用于用户下载/导入模型后无需重启即可立刻使用 OCR。
+  Future<void> refreshModels() async {
+    if (!_initialized) {
+      await initialize();
+      return;
+    }
+
+    await _syncTrainedDataToTessdata();
+    await _refreshAvailableLanguages();
+    notifyListeners();
+  }
+
   /// 设置 tessdata 路径
   Future<void> _setupTessDataPath() async {
     final appDir = await getApplicationDocumentsDirectory();
@@ -182,8 +196,12 @@ class OCRService extends ChangeNotifier {
     List<String>? languages,
   }) async {
     if (!_initialized) {
-      throw Exception('服务未初始化');
+      throw Exception('service_not_initialized');
     }
+
+    // 确保模型下载后的语言文件能被立即发现
+    await _syncTrainedDataToTessdata();
+    await _refreshAvailableLanguages();
 
     final requestedLangs = languages ?? _supportedLanguages;
     final langs = await _filterAvailableLanguages(requestedLangs);
@@ -216,9 +234,8 @@ class OCRService extends ChangeNotifier {
         _status = _status.copyWith(progress: 0.9);
         notifyListeners();
       } else {
-        // 模型不可用，提示用户下载
-        recognizedText = '请先下载 OCR 模型';
-        logInfo('OCR 模型未下载', source: 'OCRService');
+        // 模型不可用：交给 UI 显示本地化提示
+        throw Exception('ocr_model_required');
       }
 
       final processingTime = DateTime.now().difference(startTime).inMilliseconds;
@@ -252,8 +269,12 @@ class OCRService extends ChangeNotifier {
     List<String>? languages,
   }) async {
     if (!_initialized) {
-      throw Exception('服务未初始化');
+      throw Exception('service_not_initialized');
     }
+
+    // 确保模型下载后的语言文件能被立即发现
+    await _syncTrainedDataToTessdata();
+    await _refreshAvailableLanguages();
 
     final requestedLangs = languages ?? _supportedLanguages;
     final langs = await _filterAvailableLanguages(requestedLangs);
@@ -293,7 +314,7 @@ class OCRService extends ChangeNotifier {
           ];
         }
       } else {
-        recognizedText = '请先下载 OCR 模型';
+        throw Exception('ocr_model_required');
       }
 
       final processingTime = DateTime.now().difference(startTime).inMilliseconds;
@@ -327,7 +348,7 @@ class OCRService extends ChangeNotifier {
     List<String>? languages,
   }) async {
     if (!_initialized) {
-      throw Exception('服务未初始化');
+      throw Exception('service_not_initialized');
     }
 
     try {

@@ -440,7 +440,10 @@ Future<void> main() async {
             final localAISettings = settingsService.localAISettings;
             if (localAISettings.enabled && localAISettings.autoLoadOnStartup) {
               try {
-                await LocalAIService.instance.initialize(localAISettings);
+                await LocalAIService.instance.initialize(
+                  localAISettings,
+                  eagerLoadModels: false,
+                );
                 logInfo('本地 AI 已按设置自动初始化', source: 'BackgroundInit');
               } catch (e) {
                 logWarning('本地 AI 自动初始化失败: $e', source: 'BackgroundInit');

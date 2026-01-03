@@ -84,15 +84,26 @@ class TextProcessingService extends ChangeNotifier {
   /// 初始化 flutter_gemma
   Future<void> _initializeGemma() async {
     try {
-      // flutter_gemma 新版采用静态 API，需要先 initialize。
-      // huggingFaceToken 为可选参数（用于 gated 模型），此处不传以避免硬编码密钥。
-      FlutterGemma.initialize();
+      // 优先走 FlutterGemmaPlugin + setModelPath 流程（更明确、可控）。
+      final modelPath = _modelManager.getModelPath('gemma-2b');
+      if (modelPath == null) {
+        logInfo('Gemma 模型文件不存在，跳过初始化', source: 'TextProcessingService');
+        return;
+      }
 
-      // 尝试获取当前可用模型（如果未安装/不可用会抛出异常）
-      final model = await FlutterGemma.getActiveModel(maxTokens: 512);
+      final gemma = FlutterGemmaPlugin.instance;
+      await gemma.modelManager.setModelPath(modelPath);
+
+      // 这里不强绑定具体 ModelType：不同版本/不同模型可能差异较大。
+      // 先尝试创建一个通用 model 并创建 session。
+      final model = await gemma.createModel(
+        modelType: ModelType.gemmaIt,
+        maxTokens: 512,
+      );
       _gemmaSession = await model.createSession();
+
       _modelLoaded = true;
-      logInfo('Gemma 模型会话已准备就绪', source: 'TextProcessingService');
+      logInfo('Gemma 模型会话已准备就绪（FlutterGemmaPlugin）', source: 'TextProcessingService');
     } catch (e) {
       logError('初始化 Gemma 失败: $e', source: 'TextProcessingService');
     }
@@ -101,7 +112,7 @@ class TextProcessingService extends ChangeNotifier {
   /// 加载 LLM 模型
   Future<void> loadModel() async {
     if (!_initialized) {
-      throw Exception('服务未初始化');
+      throw Exception('service_not_initialized');
     }
 
     if (_modelLoaded) {
@@ -112,9 +123,26 @@ class TextProcessingService extends ChangeNotifier {
     try {
       logInfo('加载 LLM 模型', source: 'TextProcessingService');
 
-      FlutterGemma.initialize();
-      final model = await FlutterGemma.getActiveModel(maxTokens: 512);
-      _gemmaSession = await model.createSession();
+      // 优先使用 FlutterGemmaPlugin（可配合模型管理页下载/导入的本地文件）
+      final modelPath = _modelManager.getModelPath('gemma-2b');
+      if (modelPath == null) {
+        throw Exception('gemma_model_required');
+      }
+
+      try {
+        final gemma = FlutterGemmaPlugin.instance;
+        await gemma.modelManager.setModelPath(modelPath);
+        final model = await gemma.createModel(
+          modelType: ModelType.gemmaIt,
+          maxTokens: 512,
+        );
+        _gemmaSession = await model.createSession();
+      } catch (e) {
+        // 兜底：兼容旧版静态 API（若插件版本仍提供该路径）
+        FlutterGemma.initialize();
+        final model = await FlutterGemma.getActiveModel(maxTokens: 512);
+        _gemmaSession = await model.createSession();
+      }
 
       _modelLoaded = true;
       notifyListeners();
@@ -144,7 +172,7 @@ class TextProcessingService extends ChangeNotifier {
   /// AI 文本纠错
   Future<TextCorrectionResult> correctText(String text) async {
     if (!_initialized) {
-      throw Exception('服务未初始化');
+      throw Exception('service_not_initialized');
     }
 
     if (text.trim().isEmpty) {
@@ -204,7 +232,7 @@ $text''';
   /// 识别文本来源
   Future<SourceRecognitionResult> recognizeSource(String text) async {
     if (!_initialized) {
-      throw Exception('服务未初始化');
+      throw Exception('service_not_initialized');
     }
 
     if (text.trim().isEmpty) {
@@ -608,12 +636,21 @@ $content''';
     try {
       // 兜底：如果 session 丢失则重新创建
       if (_gemmaSession == null) {
-        FlutterGemma.initialize();
-        final model = await FlutterGemma.getActiveModel(maxTokens: 512);
-        _gemmaSession = await model.createSession();
+        await loadModel();
       }
 
       final session = _gemmaSession;
+
+      // 0) 优先：flutter_gemma 新 API（Message + addQueryChunk + getResponse）
+      try {
+        await (session as dynamic).addQueryChunk(
+          Message.text(text: prompt, isUser: true),
+        );
+        final dynamic resp = await (session as dynamic).getResponse();
+        if (resp is String) return resp;
+      } catch (_) {
+        // ignore
+      }
 
       // 1) 常见：getResponse(prompt: ...)
       try {

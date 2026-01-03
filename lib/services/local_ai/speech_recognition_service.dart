@@ -78,7 +78,7 @@ class SpeechRecognitionService extends ChangeNotifier {
   }
 
   /// 初始化服务
-  Future<void> initialize() async {
+  Future<void> initialize({bool eagerLoadModel = true}) async {
     if (_initialized) return;
 
     try {
@@ -87,11 +87,10 @@ class SpeechRecognitionService extends ChangeNotifier {
         await _modelManager.initialize();
       }
 
-      // 尝试初始化 sherpa_onnx 识别器
-      if (isModelAvailable) {
-        await _initializeRecognizer();
-      } else {
-        logInfo('ASR 模型未下载，语音识别功能暂不可用', source: 'SpeechRecognitionService');
+      // 启动阶段不要强制加载/解压模型，否则容易卡死或触发 OOM。
+      // 模型准备会在真正开始识别时（或用户手动点击“加载/准备”）完成。
+      if (eagerLoadModel && isModelAvailable) {
+        await prepareModel();
       }
 
       _initialized = true;
@@ -100,6 +99,28 @@ class SpeechRecognitionService extends ChangeNotifier {
       logError('语音识别服务初始化失败: $e', source: 'SpeechRecognitionService');
       // 不抛出错误，允许服务继续运行（只是没有模型）
       _initialized = true;
+    }
+  }
+
+  /// 准备 ASR 模型：解压（若需要）并初始化识别器。
+  ///
+  /// 该过程可能耗时较长，应由 UI 在用户显式触发后调用。
+  Future<void> prepareModel() async {
+    // 确保模型管理器已初始化
+    if (!_modelManager.isInitialized) {
+      await _modelManager.initialize();
+    }
+
+    if (!isModelAvailable) {
+      throw Exception('asr_model_required');
+    }
+
+    // 识别器已存在则无需重复初始化
+    if (_recognizer != null) return;
+
+    await _initializeRecognizer();
+    if (_recognizer == null) {
+      throw Exception('asr_model_init_failed');
     }
   }
 
@@ -204,7 +225,7 @@ class SpeechRecognitionService extends ChangeNotifier {
   /// 开始录音
   Future<void> startRecording() async {
     if (!_initialized) {
-      throw Exception('服务未初始化');
+      throw Exception('service_not_initialized');
     }
 
     if (_status.isRecording) {
@@ -213,6 +234,11 @@ class SpeechRecognitionService extends ChangeNotifier {
     }
 
     try {
+      // 确保识别器可用（用户点击开始录音时再准备模型，避免启动阶段卡死）
+      if (_recognizer == null) {
+        await prepareModel();
+      }
+
       // 权限检查
       final hasPermission = await _recorder.hasPermission();
       if (!hasPermission) {
@@ -281,11 +307,9 @@ class SpeechRecognitionService extends ChangeNotifier {
           // 兼容旧路径：如果外部注入了 waveform（例如未来接入流式采样）
           transcribedText = await _transcribeAudio(_audioBuffer);
         }
-      } else if (_recognizer == null) {
-        // 没有识别器，提示用户下载模型
-        transcribedText = _currentTranscription.isNotEmpty 
-            ? _currentTranscription 
-            : '请先下载语音识别模型';
+      } else {
+        // 没有识别器：不要返回“提示文本”作为识别结果，交由 UI 进行本地化提示。
+        throw Exception('asr_model_required');
       }
 
       final result = SpeechRecognitionResult(
@@ -358,18 +382,11 @@ class SpeechRecognitionService extends ChangeNotifier {
   /// 从音频文件转写
   Future<SpeechRecognitionResult> transcribeFile(String audioPath) async {
     if (!_initialized) {
-      throw Exception('服务未初始化');
+      throw Exception('service_not_initialized');
     }
 
     if (_recognizer == null) {
-      // 尝试初始化识别器
-      if (isModelAvailable) {
-        await _initializeRecognizer();
-      }
-      
-      if (_recognizer == null) {
-        throw Exception('ASR 模型未下载或初始化失败，请先下载 Whisper 模型');
-      }
+      await prepareModel();
     }
 
     try {

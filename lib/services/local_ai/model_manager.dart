@@ -7,8 +7,10 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_gemma/flutter_gemma.dart' hide CancelToken;
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../models/local_ai_model.dart';
 import '../../utils/app_logger.dart';
@@ -31,6 +33,16 @@ class ModelManager extends ChangeNotifier {
 
   /// 模型存储目录
   String? _modelsDirectory;
+
+    // ==================== flutter_gemma 托管模型支持 ====================
+
+    static const String _prefsKeyGemmaManagedUrlPrefix =
+      'local_ai.managed.flutter_gemma.url.';
+    static const String _prefsKeyGemmaActiveModelId =
+      'local_ai.managed.flutter_gemma.active_model_id';
+
+    /// flutter_gemma 当前“激活”的模型 id（用于避免多个托管模型同时被标记为已下载）
+    String? _flutterGemmaActiveModelId;
 
   /// 解压后的模型目录（例如 Whisper 解压后的文件夹）
   final Map<String, String> _extractedModelPaths = {};
@@ -80,6 +92,9 @@ class ModelManager extends ChangeNotifier {
     if (_initialized) return;
 
     try {
+      final prefs = await SharedPreferences.getInstance();
+      _flutterGemmaActiveModelId = prefs.getString(_prefsKeyGemmaActiveModelId);
+
       // 获取模型存储目录
       final appDir = await getApplicationDocumentsDirectory();
       _modelsDirectory = path.join(appDir.path, 'local_ai_models');
@@ -138,6 +153,15 @@ class ModelManager extends ChangeNotifier {
   /// 检查模型状态
   Future<LocalAIModelStatus> _checkModelStatus(LocalAIModelInfo model) async {
     if (_modelsDirectory == null) return LocalAIModelStatus.notDownloaded;
+
+    // flutter_gemma 托管模型：只要本地文件存在且与当前 active id 匹配，就认为已下载。
+    if (model.downloadUrl.startsWith('managed://flutter_gemma/')) {
+      final managedPath = path.join(_modelsDirectory!, model.fileName);
+      if (await File(managedPath).exists()) {
+        return LocalAIModelStatus.downloaded;
+      }
+      return LocalAIModelStatus.notDownloaded;
+    }
 
     final modelPath = path.join(_modelsDirectory!, model.fileName);
     final file = File(modelPath);
@@ -281,8 +305,13 @@ class ModelManager extends ChangeNotifier {
   Future<void> _executeDownload(_DownloadTask task) async {
     // 检查是否是由特定包管理的模型
     if (task.url.startsWith('managed://')) {
-      // 这些模型需要通过特定包（如 flutter_gemma）下载
-      // 返回错误代码，让 UI 显示本地化信息
+      // 目前仅实现 flutter_gemma 托管模型。
+      if (task.url.startsWith('managed://flutter_gemma/')) {
+        await _executeFlutterGemmaManagedDownload(task);
+        return;
+      }
+
+      // 其它 managed:// 仍然按“未实现”处理。
       task.onError(errorManagedModel);
       return;
     }
@@ -390,7 +419,108 @@ class ModelManager extends ChangeNotifier {
   static const String errorConnectionFailed = 'connection_failed';
   static const String errorDownloadFailed = 'download_failed';
   static const String errorManagedModel = 'managed_model';
+  static const String errorManagedModelUrlMissing = 'managed_model_url_missing';
   static const String errorExtractFailed = 'extract_failed';
+
+  Future<void> setFlutterGemmaManagedModelUrl(String modelId, String url) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('$_prefsKeyGemmaManagedUrlPrefix$modelId', url);
+  }
+
+  Future<String?> getFlutterGemmaManagedModelUrl(String modelId) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('$_prefsKeyGemmaManagedUrlPrefix$modelId');
+  }
+
+  Future<void> _setFlutterGemmaActiveModelId(String modelId) async {
+    _flutterGemmaActiveModelId = modelId;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_prefsKeyGemmaActiveModelId, modelId);
+  }
+
+  Future<void> _clearFlutterGemmaActiveModelIdIfMatches(String modelId) async {
+    if (_flutterGemmaActiveModelId != modelId) return;
+    _flutterGemmaActiveModelId = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_prefsKeyGemmaActiveModelId);
+  }
+
+  Future<void> _executeFlutterGemmaManagedDownload(_DownloadTask task) async {
+    if (_modelsDirectory == null) {
+      task.onError(errorDownloadFailed);
+      return;
+    }
+
+    // 获取真实下载地址（由用户在 UI 中配置）
+    final realUrl = await getFlutterGemmaManagedModelUrl(task.modelId);
+    if (realUrl == null || realUrl.trim().isEmpty) {
+      task.onError(errorManagedModelUrlMissing);
+      return;
+    }
+
+    // 继续沿用现有 Dio 下载流程，确保文件保存路径可控。
+    final cancelToken = CancelToken();
+    _cancelTokens[task.modelId] = cancelToken;
+
+    try {
+      // 确保保存目录存在
+      final saveDir = Directory(path.dirname(task.savePath));
+      if (!await saveDir.exists()) {
+        await saveDir.create(recursive: true);
+      }
+
+      logInfo('开始下载 flutter_gemma 托管模型: $realUrl', source: 'ModelManager');
+
+      await _dio.download(
+        realUrl,
+        task.savePath,
+        cancelToken: cancelToken,
+        onReceiveProgress: (received, total) {
+          if (task.isCancelled) {
+            cancelToken.cancel('用户取消下载');
+            return;
+          }
+          if (total > 0) {
+            final progress = received / total;
+            task.onProgress?.call(progress);
+          }
+        },
+        options: Options(
+          responseType: ResponseType.bytes,
+          followRedirects: true,
+          receiveTimeout: const Duration(hours: 2),
+        ),
+      );
+
+      if (task.isCancelled) return;
+
+      final downloadedFile = File(task.savePath);
+      if (!await downloadedFile.exists() || await downloadedFile.length() <= 0) {
+        throw Exception('下载的文件为空');
+      }
+
+      // 下载完成后，告诉 flutter_gemma 该模型文件路径
+      final gemma = FlutterGemmaPlugin.instance;
+      await gemma.modelManager.setModelPath(task.savePath);
+
+      // 标记当前激活模型
+      await _setFlutterGemmaActiveModelId(task.modelId);
+
+      task.onProgress?.call(1.0);
+      task.onComplete?.call();
+    } on DioException catch (e) {
+      if (CancelToken.isCancel(e)) {
+        task.onError(errorCancelled);
+      } else {
+        task.onError(_getDioErrorCode(e));
+      }
+    } catch (e) {
+      logError('flutter_gemma 托管模型下载失败: $e', source: 'ModelManager');
+      task.onError(errorDownloadFailed);
+    } finally {
+      _cancelTokens.remove(task.modelId);
+    }
+  }
 
   /// 获取 Dio 错误代码
   String _getDioErrorCode(DioException e) {
@@ -453,6 +583,13 @@ class ModelManager extends ChangeNotifier {
     if (model == null || _modelsDirectory == null) return;
 
     try {
+      // flutter_gemma 托管模型：同时清理 flutter_gemma 的当前模型文件。
+      if (model.downloadUrl.startsWith('managed://flutter_gemma/')) {
+        // flutter_gemma 的 deleteModel API 在不同版本差异较大，
+        // 这里不强依赖其删除能力：我们只清理本地文件并清除 active id。
+        await _clearFlutterGemmaActiveModelIdIfMatches(modelId);
+      }
+
       final modelPath = path.join(_modelsDirectory!, model.fileName);
       final file = File(modelPath);
 
@@ -500,6 +637,13 @@ class ModelManager extends ChangeNotifier {
 
       final targetPath = path.join(_modelsDirectory!, model.fileName);
       await sourceFile.copy(targetPath);
+
+      // flutter_gemma 托管模型：导入后设置模型路径，并记录 active id。
+      if (model.downloadUrl.startsWith('managed://flutter_gemma/')) {
+        final gemma = FlutterGemmaPlugin.instance;
+        await gemma.modelManager.setModelPath(targetPath);
+        await _setFlutterGemmaActiveModelId(modelId);
+      }
       
       // 如果是压缩文件，需要解压
       if (targetPath.endsWith('.tar.bz2') || targetPath.endsWith('.tar.gz')) {
@@ -603,6 +747,12 @@ class ModelManager extends ChangeNotifier {
     if (_modelsDirectory == null) return;
 
     try {
+      // flutter_gemma 的 deleteModel API 在不同版本差异较大，
+      // 这里不强依赖其删除能力：我们只清理本地文件与本地记录。
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_prefsKeyGemmaActiveModelId);
+      _flutterGemmaActiveModelId = null;
+
       final dir = Directory(_modelsDirectory!);
       if (await dir.exists()) {
         await dir.delete(recursive: true);

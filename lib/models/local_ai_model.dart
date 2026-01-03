@@ -199,7 +199,7 @@ class LocalAIModels {
     description: 'Google Gemma 2B 语言模型，用于文本纠错、来源识别、标签推荐等。需要通过flutter_gemma下载。',
     sizeBytes: 1500 * 1024 * 1024, // ~1.5GB
     downloadUrl: 'managed://flutter_gemma/gemma-2b', // 由 flutter_gemma 管理
-    fileName: 'gemma-2b.bin',
+    fileName: 'gemma-2b.task',
     version: '2.0',
     isRequired: false,
   );
@@ -212,7 +212,7 @@ class LocalAIModels {
     description: 'Google Gecko 384维嵌入模型，用于语义搜索和相关笔记推荐。需要通过flutter_gemma下载。',
     sizeBytes: 150 * 1024 * 1024, // ~150MB
     downloadUrl: 'managed://flutter_gemma/gecko-384', // 由 flutter_gemma 管理
-    fileName: 'gecko-384.bin',
+    fileName: 'gecko-384.task',
     version: '1.0',
     isRequired: false,
   );

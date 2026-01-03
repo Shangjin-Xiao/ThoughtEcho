@@ -185,7 +185,6 @@
   "downloadCancelled": "下载已取消",
   "connectionFailed": "网络连接失败，请检查网络",
   "downloadFailed": "下载失败",
-  "modelManagedByPackage": "此模型需要通过专用包下载",
   "aiQuotaExceeded": "AI服务配额不足，请稍后重试",
   "generateAIReportFailed": "生成AI年度报告失败",
   "getDataFailed": "获取数据失败",
@@ -3097,7 +3096,20 @@
       }
     }
   },
-  "modelManagedByPackage": "此模型需要通过专用包管理，暂不支持手动导入",
+  "modelManagedByPackage": "此模型由 flutter_gemma 管理：请配置下载地址或导入 .task 模型文件",
+  "modelPrepare": "准备模型",
+  "modelPrepareHint": "解压/加载（可能需要一些时间）",
+  "modelPreparing": "正在准备模型...",
+  "modelPrepareSuccess": "模型已准备就绪",
+  "modelPrepareFailed": "模型准备失败：{error}",
+  "@modelPrepareFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "modelExtractFailed": "解压失败",
   "modelDelete": "删除模型",
   "modelDeleteConfirm": "确定要删除此模型吗？删除后需要重新下载。",
   "modelSize": "大小：{size}",

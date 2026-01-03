@@ -50,7 +50,10 @@ class _LocalAIFabState extends State<LocalAIFab> {
 
     // 懒初始化：仅在用户触发时初始化。
     try {
-      await LocalAIService.instance.initialize(localAISettings);
+      await LocalAIService.instance.initialize(
+        localAISettings,
+        eagerLoadModels: false,
+      );
     } catch (_) {
       // 初始化失败时不直接崩溃，交由后续 startRecording 抛错/提示
     }
@@ -88,11 +91,11 @@ class _LocalAIFabState extends State<LocalAIFab> {
 
       if (!mounted) return;
       await _showVoiceInputOverlay();
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(l10n.featureNotAvailable),
+          content: Text(_localizeLocalAIError(l10n, e)),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -161,12 +164,12 @@ class _LocalAIFabState extends State<LocalAIFab> {
           );
         },
       );
-    } catch (_) {
+    } catch (e) {
       _isVoiceRecording = false;
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(l10n.featureNotAvailable),
+          content: Text(_localizeLocalAIError(l10n, e)),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -224,7 +227,10 @@ class _LocalAIFabState extends State<LocalAIFab> {
     final l10n = AppLocalizations.of(context);
 
     try {
-      await LocalAIService.instance.initialize(localAISettings);
+      await LocalAIService.instance.initialize(
+        localAISettings,
+        eagerLoadModels: false,
+      );
     } catch (_) {
       // ignore
     }
@@ -265,7 +271,16 @@ class _LocalAIFabState extends State<LocalAIFab> {
     try {
       final result = await LocalAIService.instance.recognizeText(imagePath);
       resultText = result.fullText;
-    } catch (_) {
+    } catch (e) {
+      // OCR 模型缺失/不可用时给出明确提示
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(_localizeLocalAIError(l10n, e)),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
       resultText = '';
     }
 
@@ -326,5 +341,23 @@ class _LocalAIFabState extends State<LocalAIFab> {
         ),
       ),
     );
+  }
+
+  String _localizeLocalAIError(AppLocalizations l10n, Object error) {
+    final msg = error.toString();
+    if (msg.contains('asr_model_required')) {
+      return l10n.pleaseSwitchToAsrModel;
+    }
+    if (msg.contains('ocr_model_required')) {
+      return l10n.pleaseSwitchToOcrModel;
+    }
+    if (msg.contains('extract_failed')) {
+      return l10n.modelExtractFailed;
+    }
+    if (msg.contains('record_permission_denied')) {
+      // 项目当前缺少统一的“麦克风权限被拒绝”本地化文案，先退化为通用提示。
+      return l10n.featureNotAvailable;
+    }
+    return l10n.featureNotAvailable;
   }
 }

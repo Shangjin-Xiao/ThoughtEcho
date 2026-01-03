@@ -71,7 +71,7 @@ class EmbeddingService extends ChangeNotifier {
   /// 加载模型
   Future<void> loadModel() async {
     if (!_initialized) {
-      throw Exception('服务未初始化');
+      throw Exception('service_not_initialized');
     }
 
     if (_modelLoaded) {
@@ -80,7 +80,7 @@ class EmbeddingService extends ChangeNotifier {
     }
 
     if (!isModelAvailable) {
-      throw Exception('嵌入模型未下载，请先下载 Gecko 模型');
+      throw Exception('embedding_model_required');
     }
 
     try {
@@ -118,11 +118,11 @@ class EmbeddingService extends ChangeNotifier {
   /// 生成文本嵌入向量
   Future<Embedding> generateEmbedding(String text) async {
     if (!_initialized) {
-      throw Exception('服务未初始化');
+      throw Exception('service_not_initialized');
     }
 
     if (!isModelAvailable) {
-      throw Exception('嵌入模型未下载');
+      throw Exception('embedding_model_required');
     }
 
     try {
@@ -149,7 +149,7 @@ class EmbeddingService extends ChangeNotifier {
   /// 批量生成嵌入向量
   Future<List<Embedding>> generateEmbeddings(List<String> texts) async {
     if (!_initialized) {
-      throw Exception('服务未初始化');
+      throw Exception('service_not_initialized');
     }
 
     final results = <Embedding>[];
