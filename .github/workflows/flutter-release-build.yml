@@ -12,9 +12,24 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      # 将 Gradle 缓存放在 workspace 内，便于清理且避免占满默认磁盘分区
+      GRADLE_USER_HOME: ${{ github.workspace }}/.gradle
+      # 关闭 Gradle build cache，避免打包缓存树导致磁盘占用暴涨
+      ORG_GRADLE_PROJECT_org.gradle.caching: "false"
+      # 关闭文件系统 watcher，避免偶发 Already watching path
+      ORG_GRADLE_PROJECT_org.gradle.vfs.watch: "false"
     steps:
       - name: 检出代码
         uses: actions/checkout@v3
+
+      - name: 释放构建机磁盘空间
+        run: |
+          echo "Disk before cleanup:" && df -h
+          # 这些目录在 ubuntu-latest 上通常占用很大，移除后可释放数 GB
+          sudo rm -rf /usr/share/dotnet /opt/ghc || true
+          sudo apt-get clean || true
+          echo "Disk after cleanup:" && df -h
 
       - name: 设置 Java 环境
         uses: actions/setup-java@v3
@@ -69,6 +84,9 @@ jobs:
       - name: 构建发布版APK
         run: |
           flutter clean
+
+          # 清理可能遗留的 gradle 缓存/daemon 状态，降低磁盘与 watcher 冲突概率
+          rm -rf "$GRADLE_USER_HOME/caches" "$GRADLE_USER_HOME/daemon" "$GRADLE_USER_HOME/native" || true
           
           # 显示gradle.properties内容
           echo "gradle.properties内容:"

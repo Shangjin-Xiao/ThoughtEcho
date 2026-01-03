@@ -1,8 +1,6 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as path;
 import '../../utils/app_logger.dart';
 
 // =============================================================================
@@ -123,9 +121,6 @@ class ASRService extends ChangeNotifier {
   /// 当前模型配置
   ASRModelConfig? _currentConfig;
   ASRModelConfig? get currentConfig => _currentConfig;
-
-  /// 识别器实例 (sherpa_onnx 类型)
-  dynamic _recognizer;
 
   /// 是否已初始化
   bool _isInitialized = false;
@@ -367,7 +362,7 @@ class ASRService extends ChangeNotifier {
     _resultController.close();
     
     // TODO: 释放 sherpa_onnx 资源
-    // _recognizer?.free();
+    // (接入 sherpa_onnx 后在这里释放识别器/会话资源)
     
     _isInitialized = false;
     _isRecording = false;

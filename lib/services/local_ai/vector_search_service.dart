@@ -95,27 +95,22 @@ class VectorSearchService extends ChangeNotifier {
   /// 
   /// 生成的文件会根据 lib/models/objectbox/ 下的实体自动创建。
   Future<void> _initObjectBox() async {
-    // ==========================================================
-    // TODO: ObjectBox 初始化代码
-    // 
-    // 在运行 `dart run build_runner build` 后:
-    // 1. 取消下面的注释
-    // 2. 在文件顶部添加: import '../../objectbox.g.dart';
-    // ==========================================================
-    
-    // final appDir = await getApplicationDocumentsDirectory();
-    // final dbPath = path.join(appDir.path, 'objectbox_vectors');
-    // 
-    // _store = await openStore(directory: dbPath);
-    // _vectorBox = _store!.box<NoteVector>();
-    // _searchHistoryBox = _store!.box<SearchHistory>();
-    // _similarCacheBox = _store!.box<SimilarNotesCache>();
-    
-    logWarning(
-      'ObjectBox 未初始化 - 请先运行 dart run build_runner build 生成代码，'
-      '然后取消 _initObjectBox 方法中的注释',
-      source: 'VectorSearchService',
-    );
+    // Web 平台不支持 ObjectBox（依赖原生库），直接跳过并保持降级模式。
+    if (kIsWeb) {
+      logInfo('Web 平台跳过 ObjectBox 初始化，向量搜索将不可用', source: 'VectorSearchService');
+      return;
+    }
+
+    final appDir = await getApplicationDocumentsDirectory();
+    // 为避免与主数据库/其它 Store 冲突，单独建一个目录。
+    final dbPath = path.join(appDir.path, 'objectbox_vectors');
+
+    _store = await openStore(directory: dbPath);
+    _vectorBox = _store!.box<NoteVector>();
+    _searchHistoryBox = _store!.box<SearchHistory>();
+    _similarCacheBox = _store!.box<SimilarNotesCache>();
+
+    logInfo('ObjectBox 初始化完成: $dbPath', source: 'VectorSearchService');
   }
 
   /// 为笔记生成并存储嵌入向量

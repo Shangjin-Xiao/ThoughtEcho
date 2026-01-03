@@ -21,9 +21,6 @@ class ONNXInferenceService extends ChangeNotifier {
   /// 模型加载状态
   final Map<String, bool> _loadingStatus = {};
   
-  /// ONNX Runtime 环境
-  OrtEnv? _env;
-  
   /// 是否已初始化
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
@@ -33,7 +30,6 @@ class ONNXInferenceService extends ChangeNotifier {
     if (_isInitialized) return;
     
     try {
-      _env = OrtEnv.instance;
       _isInitialized = true;
       logInfo('ONNX Runtime 环境初始化成功', source: 'ONNXInferenceService');
     } catch (e, stackTrace) {

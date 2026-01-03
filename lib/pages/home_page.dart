@@ -894,16 +894,19 @@ class _HomePageState extends State<HomePage>
   Future<void> _openOCRFlow() async {
     if (!mounted) return;
 
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
+    final recognizedText = await Navigator.of(context).push<String?>(
+      MaterialPageRoute<String?>(
         builder: (context) => const OCRCapturePage(),
       ),
     );
 
+    if (recognizedText == null || recognizedText.trim().isEmpty) {
+      return;
+    }
+
     if (!mounted) return;
 
-    final l10n = AppLocalizations.of(context);
-    String resultText = l10n.featureComingSoon;
+    String resultText = recognizedText;
 
     await showModalBottomSheet<void>(
       context: context,
