@@ -182,4 +182,5 @@ flutter:
   assets:
     - assets/lottie/
     - assets/icon.png
+    - assets/tessdata_config.json
     - LICENSE

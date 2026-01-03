@@ -24,6 +24,9 @@ import 'package:sherpa_onnx/sherpa_onnx.dart' as sherpa;
 class SpeechRecognitionService extends ChangeNotifier {
   static SpeechRecognitionService? _instance;
 
+  /// sherpa_onnx 全局初始化标记
+  static bool _sherpaInitialized = false;
+
   /// 单例实例
   static SpeechRecognitionService get instance {
     _instance ??= SpeechRecognitionService._();
@@ -127,6 +130,8 @@ class SpeechRecognitionService extends ChangeNotifier {
   /// 初始化 sherpa_onnx 识别器
   Future<void> _initializeRecognizer() async {
     try {
+      await _ensureSherpaInitialized();
+
       final modelPath = _getAvailableModelPath();
       if (modelPath == null) {
         logError('无法找到可用的 ASR 模型', source: 'SpeechRecognitionService');
@@ -173,6 +178,24 @@ class SpeechRecognitionService extends ChangeNotifier {
     } catch (e) {
       logError('初始化 sherpa_onnx 识别器失败: $e', source: 'SpeechRecognitionService');
       _recognizer = null;
+    }
+  }
+
+  /// 确保 sherpa_onnx 已完成必要的全局初始化。
+  ///
+  /// 某些平台/构建模式下，未显式初始化会导致创建识别器时报：
+  /// `Please initialize sherpa-onnx first`。
+  Future<void> _ensureSherpaInitialized() async {
+    if (_sherpaInitialized) return;
+
+    try {
+      // sherpa_onnx 1.12.x 在部分平台需要先初始化绑定/加载 native assets。
+      sherpa.initBindings();
+      _sherpaInitialized = true;
+      logInfo('sherpa_onnx bindings 初始化完成', source: 'SpeechRecognitionService');
+    } catch (e) {
+      // 初始化失败不应直接阻断后续逻辑；真正创建 recognizer 时仍会抛出具体错误。
+      logError('sherpa_onnx bindings 初始化失败: $e', source: 'SpeechRecognitionService');
     }
   }
 
