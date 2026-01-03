@@ -160,4 +160,24 @@ dependencies {
     implementation 'androidx.multidex:multidex:2.0.1'
     implementation 'com.tencent:mmkv:1.3.0'
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.1.4'
+
+    // google_mlkit_text_recognition 在 Android 端会引用多语言的 *TextRecognizerOptions。
+    // Debug（未开启 R8）通常没问题，但 Release 开启 R8/fullMode 时如果缺少对应 AAR
+    // 会在 :app:minifyReleaseWithR8 阶段报 Missing class。
+    // 这里显式加入 ML Kit 文本识别的语言模块，确保 classpath 完整。
+    // 版本需与插件依赖兼容；如后续升级插件，可同步调整这些版本。
+    implementation 'com.google.mlkit:text-recognition:16.0.1'
+    implementation 'com.google.mlkit:text-recognition-chinese:16.0.1'
+    implementation 'com.google.mlkit:text-recognition-devanagari:16.0.1'
+    implementation 'com.google.mlkit:text-recognition-japanese:16.0.1'
+    implementation 'com.google.mlkit:text-recognition-korean:16.0.1'
+
+    // ML Kit Text Recognition
+    // google_mlkit_text_recognition 插件在 Android 侧会引用特定文字体系（脚本）选项类，
+    // 这些类分布在独立的 ML Kit artifacts 中；release 开启 R8 时若未引入会直接报 Missing class。
+    def mlkitTextRecognitionVersion = '16.0.0'
+    implementation "com.google.mlkit:text-recognition-chinese:${mlkitTextRecognitionVersion}"
+    implementation "com.google.mlkit:text-recognition-devanagari:${mlkitTextRecognitionVersion}"
+    implementation "com.google.mlkit:text-recognition-japanese:${mlkitTextRecognitionVersion}"
+    implementation "com.google.mlkit:text-recognition-korean:${mlkitTextRecognitionVersion}"
 }
