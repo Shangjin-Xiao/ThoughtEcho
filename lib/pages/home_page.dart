@@ -20,6 +20,8 @@ import '../widgets/add_note_dialog.dart';
 import '../widgets/local_ai/ocr_capture_page.dart';
 import '../widgets/local_ai/ocr_result_sheet.dart';
 import '../widgets/local_ai/voice_input_overlay.dart';
+import '../widgets/local_ai/voice_result_sheet.dart';
+import '../services/local_ai/asr_service.dart';
 import 'ai_features_page.dart';
 import 'settings_page.dart';
 import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
@@ -855,40 +857,133 @@ class _HomePageState extends State<HomePage>
   Future<void> _showVoiceInputOverlay() async {
     if (!mounted) return;
 
-    await showGeneralDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: 'voice_input_overlay',
-      barrierColor: Colors.transparent,
-      pageBuilder: (context, animation, secondaryAnimation) {
-        return VoiceInputOverlay(
-          transcribedText: null,
-          onSwipeUpForOCR: () async {
-            Navigator.of(context).pop();
-            await _openOCRFlow();
-          },
-          onRecordComplete: () {
-            Navigator.of(context).pop();
-            ScaffoldMessenger.of(this.context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  AppLocalizations.of(this.context).featureComingSoon,
-                ),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          },
+    final asrService = ASRService();
+    bool startRequested = false;
+
+    Future<void> ensureRecordingStarted() async {
+      if (startRequested) return;
+      startRequested = true;
+      await asrService.initialize();
+      await asrService.startRealtimeRecognition();
+    }
+
+    // 尽早启动初始化/录音（模型可能需要首次下载）
+    unawaited(() async {
+      try {
+        await ensureRecordingStarted();
+      } catch (e) {
+        if (!mounted) return;
+        // 若浮层还在，则关闭；并提示失败（使用已有通用文案，避免新增 i18n 键）
+        Navigator.of(context).maybePop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).getDataFailed),
+            behavior: SnackBarBehavior.floating,
+          ),
         );
-      },
-      transitionBuilder: (context, animation, secondaryAnimation, child) {
-        final curved = CurvedAnimation(parent: animation, curve: Curves.easeOut);
-        return FadeTransition(
-          opacity: curved,
-          child: child,
-        );
-      },
-      transitionDuration: const Duration(milliseconds: 180),
-    );
+      }
+    }());
+
+    try {
+      await showGeneralDialog<void>(
+        context: context,
+        barrierDismissible: true,
+        barrierLabel: 'voice_input_overlay',
+        barrierColor: Colors.transparent,
+        pageBuilder: (dialogContext, animation, secondaryAnimation) {
+          return VoiceInputOverlay(
+            transcribedText: null,
+            onSwipeUpForOCR: () {
+              unawaited(() async {
+                // 先关闭浮层（避免跨 async gap 使用 dialogContext）
+                if (dialogContext.mounted) {
+                  Navigator.of(dialogContext).pop();
+                }
+
+                await asrService.cancelRealtimeRecognition();
+                if (!mounted) return;
+                await _openOCRFlow();
+              }());
+            },
+            onRecordComplete: () {
+              unawaited(() async {
+                if (!mounted) return;
+                Navigator.of(dialogContext).pop();
+
+                if (!mounted) return;
+                final safeContext = context;
+                final l10n = AppLocalizations.of(safeContext);
+                ScaffoldMessenger.of(safeContext).showSnackBar(
+                  SnackBar(
+                    content: Text(l10n.voiceProcessing),
+                    behavior: SnackBarBehavior.floating,
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+
+                try {
+                  await ensureRecordingStarted();
+                  final result = await asrService.stopRealtimeRecognition();
+                  if (!mounted) return;
+
+                  final text = result?.text.trim() ?? '';
+                  if (text.isEmpty) {
+                    return;
+                  }
+
+                  String resultText = text;
+                  final sheetHostContext = context;
+                  if (!sheetHostContext.mounted) return;
+                  await showModalBottomSheet<void>(
+                    context: sheetHostContext,
+                    isScrollControlled: true,
+                    backgroundColor:
+                        Theme.of(sheetHostContext).colorScheme.surface,
+                    builder: (sheetContext) {
+                      return VoiceResultSheet(
+                        recognizedText: resultText,
+                        onTextChanged: (t) {
+                          resultText = t;
+                        },
+                        onInsertToEditor: () {
+                          Navigator.of(sheetContext).pop();
+                          _showAddQuoteDialog(prefilledContent: resultText);
+                        },
+                        onRecognizeSource: () {},
+                        onApplyCorrection: () {},
+                      );
+                    },
+                  );
+                } catch (e) {
+                  if (!mounted) return;
+                  final safeContext = context;
+                  if (!safeContext.mounted) return;
+                  final l10n = AppLocalizations.of(safeContext);
+                  ScaffoldMessenger.of(safeContext).showSnackBar(
+                    SnackBar(
+                      content: Text(l10n.getDataFailed),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              }());
+            },
+          );
+        },
+        transitionBuilder: (context, animation, secondaryAnimation, child) {
+          final curved =
+              CurvedAnimation(parent: animation, curve: Curves.easeOut);
+          return FadeTransition(
+            opacity: curved,
+            child: child,
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 180),
+      );
+    } finally {
+      // 浮层被关闭（含点击遮罩/右上角关闭）时兜底取消录音
+      await asrService.cancelRealtimeRecognition();
+    }
   }
 
   Future<void> _openOCRFlow() async {
