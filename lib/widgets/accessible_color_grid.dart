@@ -100,10 +100,6 @@ class AccessibleColorGrid extends StatelessWidget {
                     label = '${l10n.color} ${index + 1}';
                   }
 
-                  if (isSelected) {
-                    label += ', ${l10n.selectedTags}'; // Reuse "Selected" concept or just let 'selected' state handle it.
-                  }
-
                   return Semantics(
                     label: label,
                     selected: isSelected,
