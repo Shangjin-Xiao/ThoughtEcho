@@ -1134,6 +1134,7 @@
       }
     }
   },
+  "apiKeyNotRequired": "API Key not required",
   "connectionSuccess": "Connection successful",
   "responseFormatError": "Response format error",
   "connectionFailed": "Connection failed: {statusCode}",
@@ -1654,6 +1655,7 @@
   "aiProviderAnthropic": "Anthropic (Claude)",
   "aiProviderOllama": "Ollama",
   "aiProviderLMStudio": "LMStudio",
+  "aiProviderLocalGemma": "Local Gemma (offline)",
   "apiKeyStatusEmpty": "empty",
   "apiKeyStatusNotEmpty": "{length} characters",
   "@apiKeyStatusNotEmpty": {

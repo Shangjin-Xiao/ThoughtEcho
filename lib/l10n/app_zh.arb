@@ -1134,6 +1134,7 @@
       }
     }
   },
+  "apiKeyNotRequired": "无需 API Key",
   "connectionSuccess": "连接成功",
   "responseFormatError": "响应格式异常",
   "connectionFailed": "连接失败：{statusCode}",
@@ -1654,6 +1655,7 @@
   "aiProviderAnthropic": "Anthropic (Claude)",
   "aiProviderOllama": "Ollama",
   "aiProviderLMStudio": "LMStudio",
+  "aiProviderLocalGemma": "本地 Gemma（离线）",
   "apiKeyStatusEmpty": "空",
   "apiKeyStatusNotEmpty": "{length}字符",
   "@apiKeyStatusNotEmpty": {

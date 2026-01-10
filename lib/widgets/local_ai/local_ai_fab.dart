@@ -36,6 +36,7 @@ class _LocalAIFabState extends State<LocalAIFab> {
   bool _voiceOverlayOpen = false;
   bool _isVoiceRecording = false;
   bool _voiceFlowBusy = false;
+  bool _stopRequestedByOverlay = false;
 
   Future<void> _onLongPressStart() async {
     final settingsService =
@@ -183,6 +184,7 @@ class _LocalAIFabState extends State<LocalAIFab> {
     if (!mounted) return;
 
     _voiceOverlayOpen = true;
+    _stopRequestedByOverlay = false;
     await showGeneralDialog<void>(
       context: context,
       barrierDismissible: true,
@@ -197,8 +199,10 @@ class _LocalAIFabState extends State<LocalAIFab> {
             await _openOCRFlow();
           },
           onRecordComplete: () {
+            // 用户在浮层里完成录音（松手/结束手势）时，可能不会触发 FAB 的 onLongPressEnd。
+            // 因此这里标记一次“需要停止并转写”，在浮层关闭后由 _showVoiceInputOverlay 统一触发。
+            _stopRequestedByOverlay = true;
             Navigator.of(context).pop();
-            // 由 onLongPressEnd 负责真正的 stop/transcribe，这里只关闭浮层
           },
         );
       },
@@ -214,8 +218,19 @@ class _LocalAIFabState extends State<LocalAIFab> {
     );
 
     _voiceOverlayOpen = false;
-    // 如果用户点背景关闭了浮层，但录音还在，立即取消，避免后台继续录音
-    await _cancelVoiceRecording();
+
+    // 若浮层内触发了“录音完成”，这里主动走 stop+transcribe，避免被当作取消。
+    if (_stopRequestedByOverlay && _isVoiceRecording) {
+      _stopRequestedByOverlay = false;
+      await _stopVoiceRecordingAndShowResult();
+      return;
+    }
+
+    // 只有在“用户手动关闭浮层且未进入 stop/transcribe 流程”时才取消。
+    // 否则会与 onLongPressEnd 的 stopAndTranscribe 竞争，导致录音被提前置为 idle，最终无结果。
+    if (_isVoiceRecording && !_voiceFlowBusy) {
+      await _cancelVoiceRecording();
+    }
   }
 
   Future<void> _openOCRFlow() async {

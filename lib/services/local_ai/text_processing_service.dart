@@ -623,6 +623,43 @@ $content''';
     super.dispose();
   }
 
+  /// 使用本地 Gemma 执行一次通用生成（system + user）。
+  ///
+  /// 用于把本地模型接入到“AI 服务商”统一请求链路中。
+  ///
+  /// - 若模型未就绪，会抛出 `gemma_model_required`（交由 UI 做本地化提示）。
+  /// - 若推理失败，会抛出 `local_model_inference_failed`。
+  Future<String> generateFromPrompts({
+    required String systemPrompt,
+    required String userMessage,
+  }) async {
+    if (!_initialized) {
+      await initialize();
+    }
+
+    // 确保模型加载
+    if (!_modelLoaded) {
+      await loadModel();
+    }
+
+    if (!_modelLoaded) {
+      throw Exception('gemma_model_required');
+    }
+
+    final prompt = '''$systemPrompt
+
+用户：$userMessage
+
+助手：''';
+
+    final resp = await _tryGemmaPrompt(prompt);
+    if (resp == null || resp.trim().isEmpty) {
+      throw Exception('local_model_inference_failed');
+    }
+
+    return resp.trim();
+  }
+
   /// 尝试通过 Gemma 执行一次提示词推理。
   ///
   /// flutter_gemma 的会话 API 在不同版本可能略有差异，因此这里做尽量稳健的调用：

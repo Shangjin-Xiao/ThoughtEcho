@@ -28,6 +28,7 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
   late AnimationController _animationController;
   double _swipeOffset = 0.0;
   bool _ocrTriggered = false;
+  bool _completionHandled = false;
 
   static const double _ocrTriggerDistance = 120.0;
   static const double _maxDragDistance = 180.0;
@@ -56,19 +57,19 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
     final drag = (-_swipeOffset).clamp(0.0, _maxDragDistance);
     final willTriggerOCR = drag >= _ocrTriggerDistance;
 
-    return GestureDetector(
-      onVerticalDragUpdate: (details) {
-        setState(() {
-          _swipeOffset += details.delta.dy;
-          // 仅在跨过阈值时触发一次，让用户有“拉到位”的明确反馈
-          if (!_ocrTriggered && _swipeOffset <= -_ocrTriggerDistance) {
-            _ocrTriggered = true;
-            HapticFeedback.mediumImpact();
-          }
-        });
-      },
-      onVerticalDragEnd: (details) {
-        // 松手判定：达到阈值就进 OCR，否则视为录音完成
+    // 注意：浮层通过 showGeneralDialog 显示后，原 FAB 的 onLongPressEnd 有概率收不到。
+    // 因此这里在“手指抬起”时也触发一次完成逻辑，保证录音能进入 stop/transcribe。
+    return Listener(
+      onPointerUp: (event) {
+        if (_completionHandled) return;
+
+        // 避免点击右上角关闭按钮时误触发完成：简单按屏幕高度过滤顶部区域。
+        final size = MediaQuery.sizeOf(context);
+        final isInTopArea = event.position.dy <= size.height * 0.22;
+        if (isInTopArea) return;
+
+        _completionHandled = true;
+
         final shouldTriggerOCR = _swipeOffset <= -_ocrTriggerDistance;
         setState(() {
           _swipeOffset = 0.0;
@@ -77,13 +78,41 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
 
         if (shouldTriggerOCR) {
           widget.onSwipeUpForOCR?.call();
-          return;
+        } else {
+          widget.onRecordComplete?.call();
         }
-        widget.onRecordComplete?.call();
       },
-      child: Material(
-        color: Colors.transparent,
-        child: Stack(
+      child: GestureDetector(
+        onVerticalDragUpdate: (details) {
+          setState(() {
+            _swipeOffset += details.delta.dy;
+            // 仅在跨过阈值时触发一次，让用户有“拉到位”的明确反馈
+            if (!_ocrTriggered && _swipeOffset <= -_ocrTriggerDistance) {
+              _ocrTriggered = true;
+              HapticFeedback.mediumImpact();
+            }
+          });
+        },
+        onVerticalDragEnd: (details) {
+          if (_completionHandled) return;
+          _completionHandled = true;
+
+          // 松手判定：达到阈值就进 OCR，否则视为录音完成
+          final shouldTriggerOCR = _swipeOffset <= -_ocrTriggerDistance;
+          setState(() {
+            _swipeOffset = 0.0;
+            _ocrTriggered = false;
+          });
+
+          if (shouldTriggerOCR) {
+            widget.onSwipeUpForOCR?.call();
+            return;
+          }
+          widget.onRecordComplete?.call();
+        },
+        child: Material(
+          color: Colors.transparent,
+          child: Stack(
           children: [
             // 背景模糊
             Positioned.fill(
@@ -283,6 +312,7 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
             ),
           ],
         ),
+      ),
       ),
     );
   }

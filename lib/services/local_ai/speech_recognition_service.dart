@@ -390,6 +390,30 @@ class SpeechRecognitionService extends ChangeNotifier {
     }
 
     try {
+      // record 插件的录音必须显式 stop，否则会继续占用麦克风并导致下一次录音/转写异常。
+      try {
+        final isRec = await _recorder.isRecording();
+        if (isRec) {
+          await _recorder.stop();
+        }
+      } catch (_) {
+        // ignore: stop best-effort
+      }
+
+      // 清理临时录音文件
+      final audioPath = _recordingFilePath;
+      _recordingFilePath = null;
+      if (audioPath != null && audioPath.isNotEmpty) {
+        try {
+          final f = File(audioPath);
+          if (await f.exists()) {
+            await f.delete();
+          }
+        } catch (_) {
+          // ignore
+        }
+      }
+
       _recordingTimer?.cancel();
       _status = RecordingStatus.idle;
       _currentTranscription = '';

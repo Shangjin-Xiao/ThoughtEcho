@@ -14,6 +14,7 @@ import 'package:path/path.dart' as path;
 
 import '../../models/ocr_result.dart';
 import '../../utils/app_logger.dart';
+import 'model_extractor.dart';
 import 'model_manager.dart';
 
 /// OCR 服务
@@ -39,6 +40,9 @@ class OCRService extends ChangeNotifier {
 
   /// Tesseract 数据目录
   String? _tessDataPath;
+
+  /// tessdata 父目录（部分平台/插件版本可能需要传父目录而非 tessdata 目录本身）
+  String? _tessDataRootPath;
 
   /// 支持的语言
   final List<String> _supportedLanguages = ['chi_sim', 'eng'];
@@ -117,7 +121,11 @@ class OCRService extends ChangeNotifier {
   /// 设置 tessdata 路径
   Future<void> _setupTessDataPath() async {
     final appDir = await getApplicationDocumentsDirectory();
-    _tessDataPath = path.join(appDir.path, 'local_ai_models', 'tessdata');
+    // flutter_tesseract_ocr 在多数平台会默认使用 documents/tessdata 作为数据目录。
+    // 若我们把 traineddata 放在其它目录，插件可能仍会尝试从 assets/tessdata 加载并复制，
+    // 从而触发 "Unable to load asset: assets/tessdata/eng.traineddata"。
+    _tessDataRootPath = appDir.path;
+    _tessDataPath = path.join(appDir.path, 'tessdata');
     
     final dir = Directory(_tessDataPath!);
     if (!await dir.exists()) {
@@ -138,11 +146,8 @@ class OCRService extends ChangeNotifier {
       final dir = Directory(modelsDir);
       if (!await dir.exists()) return;
 
-      final trainedDataFiles = await dir
-          .list()
-          .where((e) => e is File && e.path.endsWith('.traineddata'))
-          .cast<File>()
-          .toList();
+        final trainedDataPaths = await ModelExtractor.findTrainedDataFiles(modelsDir);
+        final trainedDataFiles = trainedDataPaths.map(File.new).toList(growable: false);
 
       if (trainedDataFiles.isEmpty) return;
 
@@ -221,14 +226,13 @@ class OCRService extends ChangeNotifier {
         notifyListeners();
 
         // 调用 Tesseract OCR
-        recognizedText = await FlutterTesseractOcr.extractText(
-          imagePath,
-          language: langs.join('+'),
-          args: {
-            'tessdata': _tessDataPath!,
-            'psm': '3', // 自动页面分割
-            'oem': '1', // LSTM 引擎
-          },
+        // NOTE: flutter_tesseract_ocr 在不同平台/版本对 `tessdata` 参数的期望可能不同：
+        // - 有的版本期望传入“tessdata 目录本身”
+        // - 有的版本期望传入“父目录”，内部再拼接 /tessdata
+        // 若传错会回退去加载 assets/tessdata/*.traineddata，从而触发 Unable to load asset。
+        recognizedText = await _extractTextWithFallback(
+          imagePath: imagePath,
+          langs: langs,
         );
 
         _status = _status.copyWith(progress: 0.9);
@@ -290,15 +294,10 @@ class OCRService extends ChangeNotifier {
       if (isModelAvailable && _tessDataPath != null) {
         logInfo('开始 OCR 区域识别: $imagePath', source: 'OCRService');
 
-        // 使用 flutter_tesseract_ocr 进行识别
-        recognizedText = await FlutterTesseractOcr.extractText(
-          imagePath,
-          language: langs.join('+'),
-          args: {
-            'tessdata': _tessDataPath!,
-            'psm': '3',
-            'oem': '1',
-          },
+        // 使用 flutter_tesseract_ocr 进行识别（同 recognizeFromFile：带 fallback）
+        recognizedText = await _extractTextWithFallback(
+          imagePath: imagePath,
+          langs: langs,
         );
 
         // 将识别结果作为单个文本块
@@ -339,6 +338,43 @@ class OCRService extends ChangeNotifier {
       notifyListeners();
       logError('OCR 区域识别失败: $e', source: 'OCRService');
       rethrow;
+    }
+  }
+
+  /// 封装 OCR 调用，并在出现 assets 回退相关错误时自动尝试备用 tessdata 参数。
+  Future<String> _extractTextWithFallback({
+    required String imagePath,
+    required List<String> langs,
+  }) async {
+    if (_tessDataPath == null) {
+      throw Exception('tessdata_path_missing');
+    }
+
+    Future<String> _call(String tessdataValue) {
+      return FlutterTesseractOcr.extractText(
+        imagePath,
+        language: langs.join('+'),
+        args: {
+          'tessdata': tessdataValue,
+          'psm': '3', // 自动页面分割
+          'oem': '1', // LSTM 引擎
+        },
+      );
+    }
+
+    try {
+      return await _call(_tessDataPath!);
+    } catch (e) {
+      final msg = e.toString();
+      final shouldRetry = msg.contains('Unable to load asset') || msg.contains('traineddata');
+      final alt = _tessDataRootPath;
+
+      if (!shouldRetry || alt == null || alt.trim().isEmpty || alt == _tessDataPath) {
+        rethrow;
+      }
+
+      logInfo('OCR 首次调用失败，尝试备用 tessdata 路径: $alt', source: 'OCRService');
+      return await _call(alt);
     }
   }
 
