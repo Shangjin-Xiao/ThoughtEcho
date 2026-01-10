@@ -41,8 +41,14 @@ class OCRService extends ChangeNotifier {
   /// Tesseract 数据目录
   String? _tessDataPath;
 
+  /// tessdata 备用目录（用于兼容不同平台/插件版本的默认查找路径）
+  String? _tessDataFallbackPath;
+
   /// tessdata 父目录（部分平台/插件版本可能需要传父目录而非 tessdata 目录本身）
   String? _tessDataRootPath;
+
+  /// tessdata 备用父目录
+  String? _tessDataFallbackRootPath;
 
   /// 支持的语言
   final List<String> _supportedLanguages = ['chi_sim', 'eng'];
@@ -120,16 +126,29 @@ class OCRService extends ChangeNotifier {
 
   /// 设置 tessdata 路径
   Future<void> _setupTessDataPath() async {
-    final appDir = await getApplicationDocumentsDirectory();
-    // flutter_tesseract_ocr 在多数平台会默认使用 documents/tessdata 作为数据目录。
-    // 若我们把 traineddata 放在其它目录，插件可能仍会尝试从 assets/tessdata 加载并复制，
-    // 从而触发 "Unable to load asset: assets/tessdata/eng.traineddata"。
-    _tessDataRootPath = appDir.path;
-    _tessDataPath = path.join(appDir.path, 'tessdata');
-    
-    final dir = Directory(_tessDataPath!);
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
+    // flutter_tesseract_ocr 在不同平台/版本对默认 tessdata 位置的选择不完全一致：
+    // - 有的版本/平台使用 Application Support
+    // - 有的使用 Documents
+    // 若默认目录找不到 traineddata，它会回退尝试从 assets/tessdata 复制，
+    // 而我们不在 assets 中打包 traineddata（改为通过模型管理器下载），就会触发
+    // "Unable to load asset: assets/tessdata/eng.traineddata"。
+    //
+    // 为最大兼容性：同时准备 Support 与 Documents 下的 tessdata，并在调用时多路径回退。
+    final supportDir = await getApplicationSupportDirectory();
+    final documentsDir = await getApplicationDocumentsDirectory();
+
+    _tessDataRootPath = supportDir.path;
+    _tessDataPath = path.join(supportDir.path, 'tessdata');
+
+    _tessDataFallbackRootPath = documentsDir.path;
+    _tessDataFallbackPath = path.join(documentsDir.path, 'tessdata');
+
+    for (final p in <String?>[_tessDataPath, _tessDataFallbackPath]) {
+      if (p == null || p.trim().isEmpty) continue;
+      final dir = Directory(p);
+      if (!await dir.exists()) {
+        await dir.create(recursive: true);
+      }
     }
   }
 
@@ -146,24 +165,32 @@ class OCRService extends ChangeNotifier {
       final dir = Directory(modelsDir);
       if (!await dir.exists()) return;
 
-        final trainedDataPaths = await ModelExtractor.findTrainedDataFiles(modelsDir);
-        final trainedDataFiles = trainedDataPaths.map(File.new).toList(growable: false);
+      final trainedDataPaths = await ModelExtractor.findTrainedDataFiles(modelsDir);
+      final trainedDataFiles = trainedDataPaths.map(File.new).toList(growable: false);
 
       if (trainedDataFiles.isEmpty) return;
 
+      final destDirs = <String>{
+        if (_tessDataPath != null && _tessDataPath!.trim().isNotEmpty) _tessDataPath!,
+        if (_tessDataFallbackPath != null && _tessDataFallbackPath!.trim().isNotEmpty)
+          _tessDataFallbackPath!,
+      };
+
       for (final file in trainedDataFiles) {
         final fileName = path.basename(file.path);
-        final destPath = path.join(_tessDataPath!, fileName);
-        final destFile = File(destPath);
-
-        // 只有在目标不存在或大小不一致时才复制，减少 IO。
         final srcSize = await file.length();
-        final destExists = await destFile.exists();
-        final destSize = destExists ? await destFile.length() : -1;
 
-        if (!destExists || destSize != srcSize) {
-          await file.copy(destPath);
-          logInfo('同步 tessdata 文件: $fileName', source: 'OCRService');
+        for (final destDir in destDirs) {
+          final destPath = path.join(destDir, fileName);
+          final destFile = File(destPath);
+
+          // 只有在目标不存在或大小不一致时才复制，减少 IO。
+          final destExists = await destFile.exists();
+          final destSize = destExists ? await destFile.length() : -1;
+          if (!destExists || destSize != srcSize) {
+            await file.copy(destPath);
+            logInfo('同步 tessdata 文件: $fileName -> $destDir', source: 'OCRService');
+          }
         }
       }
     } catch (e) {
@@ -174,15 +201,21 @@ class OCRService extends ChangeNotifier {
 
   /// 刷新可用语言列表：仅保留 tessdata 下存在的 traineddata。
   Future<void> _refreshAvailableLanguages() async {
-    if (_tessDataPath == null) return;
+    if (_tessDataPath == null && _tessDataFallbackPath == null) return;
 
     try {
       final available = <String>[];
       for (final lang in ['chi_sim', 'eng']) {
-        final trainedData = File(path.join(_tessDataPath!, '$lang.traineddata'));
-        if (await trainedData.exists()) {
-          available.add(lang);
+        bool exists = false;
+        for (final p in <String?>[_tessDataPath, _tessDataFallbackPath]) {
+          if (p == null || p.trim().isEmpty) continue;
+          final trainedData = File(path.join(p, '$lang.traineddata'));
+          if (await trainedData.exists()) {
+            exists = true;
+            break;
+          }
         }
+        if (exists) available.add(lang);
       }
 
       if (available.isNotEmpty) {
@@ -346,7 +379,7 @@ class OCRService extends ChangeNotifier {
     required String imagePath,
     required List<String> langs,
   }) async {
-    if (_tessDataPath == null) {
+    if (_tessDataPath == null && _tessDataFallbackPath == null) {
       throw Exception('tessdata_path_missing');
     }
 
@@ -362,20 +395,43 @@ class OCRService extends ChangeNotifier {
       );
     }
 
-    try {
-      return await _call(_tessDataPath!);
-    } catch (e) {
-      final msg = e.toString();
-      final shouldRetry = msg.contains('Unable to load asset') || msg.contains('traineddata');
-      final alt = _tessDataRootPath;
+    // 尽量覆盖插件可能使用的默认目录/参数期望：
+    // 1) primary tessdata
+    // 2) primary root
+    // 3) fallback tessdata
+    // 4) fallback root
+    final candidates = <String>[
+      if (_tessDataPath != null && _tessDataPath!.trim().isNotEmpty) _tessDataPath!,
+      if (_tessDataRootPath != null && _tessDataRootPath!.trim().isNotEmpty) _tessDataRootPath!,
+      if (_tessDataFallbackPath != null && _tessDataFallbackPath!.trim().isNotEmpty)
+        _tessDataFallbackPath!,
+      if (_tessDataFallbackRootPath != null && _tessDataFallbackRootPath!.trim().isNotEmpty)
+        _tessDataFallbackRootPath!,
+    ];
 
-      if (!shouldRetry || alt == null || alt.trim().isEmpty || alt == _tessDataPath) {
-        rethrow;
+    String? lastError;
+    for (var i = 0; i < candidates.length; i++) {
+      final candidate = candidates[i];
+      // 去重：避免同一路径重复调用
+      if (candidates.indexOf(candidate) != i) continue;
+
+      try {
+        if (i > 0) {
+          logInfo('OCR 尝试备用 tessdata 路径: $candidate', source: 'OCRService');
+        }
+        return await _call(candidate);
+      } catch (e) {
+        lastError = e.toString();
+        final shouldRetry = lastError.contains('Unable to load asset') ||
+            lastError.contains('traineddata') ||
+            lastError.contains('tessdata');
+        if (!shouldRetry) {
+          rethrow;
+        }
       }
-
-      logInfo('OCR 首次调用失败，尝试备用 tessdata 路径: $alt', source: 'OCRService');
-      return await _call(alt);
     }
+
+    throw Exception(lastError ?? 'ocr_failed');
   }
 
   /// 从字节数据识别文字
@@ -425,15 +481,21 @@ class OCRService extends ChangeNotifier {
   ///
   /// 若全部不可用，则回退到当前 _supportedLanguages；若仍为空则保持原样，交由底层报错。
   Future<List<String>> _filterAvailableLanguages(List<String> langs) async {
-    if (_tessDataPath == null) return langs;
+    if (_tessDataPath == null && _tessDataFallbackPath == null) return langs;
 
     try {
       final filtered = <String>[];
       for (final lang in langs) {
-        final trainedData = File(path.join(_tessDataPath!, '$lang.traineddata'));
-        if (await trainedData.exists()) {
-          filtered.add(lang);
+        bool exists = false;
+        for (final p in <String?>[_tessDataPath, _tessDataFallbackPath]) {
+          if (p == null || p.trim().isEmpty) continue;
+          final trainedData = File(path.join(p, '$lang.traineddata'));
+          if (await trainedData.exists()) {
+            exists = true;
+            break;
+          }
         }
+        if (exists) filtered.add(lang);
       }
 
       if (filtered.isNotEmpty) return filtered;
