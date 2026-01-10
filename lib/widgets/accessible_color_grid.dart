@@ -31,13 +31,13 @@ class AccessibleColorGrid extends StatelessWidget {
     Color(0xFFCE93D8), // 紫色
     Color(0xFFF48FB1), // 粉色
 
-    Color(0xFFEF9A9A), // 深红色 (Duplicate in original, kept for consistency)
-    Color(0xFFFFCC80), // 深橙色
-    Color(0xFFFFF59D), // 深黄色
-    Color(0xFFA5D6A7), // 深绿色
-    Color(0xFF90CAF9), // 深蓝色
-    Color(0xFFCE93D8), // 深紫色
-    Color(0xFFF48FB1), // 深粉色
+    Color(0xFFD32F2F), // 深红色
+    Color(0xFFF57C00), // 深橙色
+    Color(0xFFFBC02D), // 深黄色
+    Color(0xFF388E3C), // 深绿色
+    Color(0xFF1976D2), // 深蓝色
+    Color(0xFF7B1FA2), // 深紫色
+    Color(0xFFC2185B), // 深粉色
   ];
 
   @override
