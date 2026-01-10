@@ -1115,6 +1115,10 @@ class NoteListViewState extends State<NoteListView> {
     var favoriteGuideAssigned = false;
     var foldGuideAssigned = false;
 
+    // 优化：提前创建标签映射，避免在 item builder 中重复计算
+    // 将整体复杂度从 O(L * T) 优化为 O(L + T)，其中构建映射为 O(L)，每次查找为 O(1)
+    final tagMap = {for (var t in _effectiveTags) t.id: t};
+
     return NotificationListener<ScrollNotification>(
       key: listKey,
       onNotification: (ScrollNotification notification) {
@@ -1199,7 +1203,7 @@ class NoteListViewState extends State<NoteListView> {
                 valueListenable: expansionNotifier,
                 builder: (context, isExpanded, child) => QuoteItemWidget(
                   quote: quote,
-                  tags: _effectiveTags,
+                  tagMap: tagMap,
                   selectedTagIds: widget.selectedTagIds,
                   isExpanded: isExpanded,
                   onToggleExpanded: (expanded) {
