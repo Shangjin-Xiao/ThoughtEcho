@@ -50,6 +50,9 @@ class SpeechRecognitionService extends ChangeNotifier {
   /// sherpa_onnx 识别器
   sherpa.OfflineRecognizer? _recognizer;
 
+  /// sherpa_onnx 离线识别流（用于“实时预览”与最终结果）
+  sherpa.OfflineStream? _asrStream;
+
   /// 录音器（record 插件）
   final AudioRecorder _recorder = AudioRecorder();
 
@@ -58,6 +61,27 @@ class SpeechRecognitionService extends ChangeNotifier {
 
   /// 音频缓冲
   final List<double> _audioBuffer = [];
+
+  /// 是否使用流式录音（移动端用 PCM stream，可做实时预览）
+  bool _useStreamRecording = false;
+
+  /// 流式录音订阅
+  StreamSubscription<Uint8List>? _audioStreamSub;
+
+  /// 实时预览解码定时器
+  Timer? _partialDecodeTimer;
+
+  /// 最近一次解码时的样本计数（用于节流）
+  int _samplesSinceLastDecode = 0;
+
+  /// 是否正在做一次预览解码（避免重入）
+  bool _partialDecodeInProgress = false;
+
+  /// 实时预览解码间隔（越小越实时，但越吃 CPU）
+  static const Duration _partialDecodeInterval = Duration(milliseconds: 900);
+
+  /// 每次触发预览解码前至少新增的样本数（避免过于频繁）
+  static const int _minNewSamplesForPartialDecode = 16000; // ~1s @16k
 
   /// 录音计时器
   Timer? _recordingTimer;
@@ -268,25 +292,83 @@ class SpeechRecognitionService extends ChangeNotifier {
         throw Exception('record_permission_denied');
       }
 
-      // 录制为 16kHz 单声道 WAV，便于直接喂给 sherpa_onnx
-      final tempDir = await getTemporaryDirectory();
-      _recordingFilePath = path.join(
-        tempDir.path,
-        'local_asr_${DateTime.now().millisecondsSinceEpoch}.wav',
-      );
+      // 交互目标：按住期间实时显示“转写预览”（类似微信/键盘）。
+      // 因此移动端优先使用 PCM stream 录音：边录边喂给 sherpa_onnx。
+      // 桌面端/不支持 stream 时回退到 WAV 文件录制。
+      _useStreamRecording = !kIsWeb &&
+          (defaultTargetPlatform == TargetPlatform.android ||
+              defaultTargetPlatform == TargetPlatform.iOS);
 
-      await _recorder.start(
-        const RecordConfig(
-          encoder: AudioEncoder.wav,
-          sampleRate: 16000,
-          numChannels: 1,
-        ),
-        path: _recordingFilePath!,
-      );
+      // 重置流/缓冲
+      _audioStreamSub?.cancel();
+      _audioStreamSub = null;
+      _partialDecodeTimer?.cancel();
+      _partialDecodeTimer = null;
+      _samplesSinceLastDecode = 0;
+      _partialDecodeInProgress = false;
+      _asrStream?.free();
+      _asrStream = null;
+
+      _audioBuffer.clear();
+      _currentTranscription = '';
+
+      if (_useStreamRecording && _recognizer != null) {
+        _asrStream = _recognizer!.createStream();
+
+        // 启动流式录音
+        final stream = await _recorder.startStream(
+          const RecordConfig(
+            encoder: AudioEncoder.pcm16bits,
+            sampleRate: 16000,
+            numChannels: 1,
+          ),
+        );
+
+        _audioStreamSub = stream.listen(
+          (bytes) {
+            // PCM16LE mono -> float samples
+            final samples = _decodePcm16LeMonoToFloat32(bytes);
+            if (samples.isEmpty) return;
+
+            // 喂给 sherpa 的 stream
+            final s = _asrStream;
+            if (s != null) {
+              s.acceptWaveform(
+                samples: Float32List.fromList(samples),
+                sampleRate: 16000,
+              );
+            }
+
+            _samplesSinceLastDecode += samples.length;
+          },
+          onError: (e) {
+            logError('录音流出错: $e', source: 'SpeechRecognitionService');
+          },
+          cancelOnError: false,
+        );
+
+        // 定时做一次增量 decode，更新 currentTranscription
+        _partialDecodeTimer =
+            Timer.periodic(_partialDecodeInterval, (_) => _tryPartialDecode());
+      } else {
+        // 录制为 16kHz 单声道 WAV，便于直接喂给 sherpa_onnx
+        final tempDir = await getTemporaryDirectory();
+        _recordingFilePath = path.join(
+          tempDir.path,
+          'local_asr_${DateTime.now().millisecondsSinceEpoch}.wav',
+        );
+
+        await _recorder.start(
+          const RecordConfig(
+            encoder: AudioEncoder.wav,
+            sampleRate: 16000,
+            numChannels: 1,
+          ),
+          path: _recordingFilePath!,
+        );
+      }
 
       _status = const RecordingStatus(state: RecordingState.recording);
-      _currentTranscription = '';
-      _audioBuffer.clear();
       notifyListeners();
 
       // 开始录制计时
@@ -312,27 +394,54 @@ class SpeechRecognitionService extends ChangeNotifier {
 
     try {
       _recordingTimer?.cancel();
+      _partialDecodeTimer?.cancel();
+      _partialDecodeTimer = null;
       _status = _status.copyWith(state: RecordingState.processing);
       notifyListeners();
 
-      // 先停止录音，拿到文件路径
-      final recordedPath = await _recorder.stop();
-      final audioPath = recordedPath ?? _recordingFilePath;
-
       String transcribedText = '';
 
-      if (_recognizer != null) {
-        // 优先使用录音文件（WAV）进行转写
-        if (audioPath != null && audioPath.isNotEmpty) {
-          final samples = await _decodeAudioFile(audioPath);
-          transcribedText = samples.isNotEmpty ? await _transcribeAudio(samples) : '';
-        } else if (_audioBuffer.isNotEmpty) {
-          // 兼容旧路径：如果外部注入了 waveform（例如未来接入流式采样）
-          transcribedText = await _transcribeAudio(_audioBuffer);
+      // 先停止录音
+      try {
+        await _audioStreamSub?.cancel();
+      } catch (_) {}
+      _audioStreamSub = null;
+
+      String? audioPath;
+      if (_useStreamRecording) {
+        // stream 模式：stop 仅为释放麦克风
+        try {
+          await _recorder.stop();
+        } catch (_) {
+          // ignore
         }
       } else {
-        // 没有识别器：不要返回“提示文本”作为识别结果，交由 UI 进行本地化提示。
+        // 文件模式：stop 返回最终文件路径（某些平台也可能返回 null）
+        final recordedPath = await _recorder.stop();
+        audioPath = recordedPath ?? _recordingFilePath;
+      }
+
+      if (_recognizer == null) {
         throw Exception('asr_model_required');
+      }
+
+      // 若使用流式录音：最终结果也从同一个 asrStream 获取
+      if (_useStreamRecording && _asrStream != null) {
+        try {
+          _recognizer!.decode(_asrStream!);
+          final result = _recognizer!.getResult(_asrStream!);
+          transcribedText = result.text;
+        } catch (e) {
+          logError('最终转写失败(流式): $e', source: 'SpeechRecognitionService');
+          transcribedText = '';
+        }
+      } else {
+        // WAV 文件路径转写
+        if (audioPath != null && audioPath.isNotEmpty) {
+          final samples = await _decodeAudioFile(audioPath);
+          transcribedText =
+              samples.isNotEmpty ? await _transcribeAudio(samples) : '';
+        }
       }
 
       final result = SpeechRecognitionResult(
@@ -342,9 +451,16 @@ class SpeechRecognitionService extends ChangeNotifier {
       );
 
       _status = const RecordingStatus(state: RecordingState.completed);
+      _currentTranscription = transcribedText;
       notifyListeners();
 
       _recordingFilePath = null;
+
+      // 释放 asr stream
+      try {
+        _asrStream?.free();
+      } catch (_) {}
+      _asrStream = null;
 
       logInfo('转写完成: ${transcribedText.length} 字符', source: 'SpeechRecognitionService');
       return result;
@@ -390,6 +506,19 @@ class SpeechRecognitionService extends ChangeNotifier {
     }
 
     try {
+      _partialDecodeTimer?.cancel();
+      _partialDecodeTimer = null;
+
+      try {
+        await _audioStreamSub?.cancel();
+      } catch (_) {}
+      _audioStreamSub = null;
+
+      try {
+        _asrStream?.free();
+      } catch (_) {}
+      _asrStream = null;
+
       // record 插件的录音必须显式 stop，否则会继续占用麦克风并导致下一次录音/转写异常。
       try {
         final isRec = await _recorder.isRecording();
@@ -418,6 +547,7 @@ class SpeechRecognitionService extends ChangeNotifier {
       _status = RecordingStatus.idle;
       _currentTranscription = '';
       _audioBuffer.clear();
+      _useStreamRecording = false;
       notifyListeners();
 
       logInfo('取消录音', source: 'SpeechRecognitionService');
@@ -567,10 +697,67 @@ class SpeechRecognitionService extends ChangeNotifier {
   /// 重置状态
   void reset() {
     _recordingTimer?.cancel();
+    _partialDecodeTimer?.cancel();
+    _partialDecodeTimer = null;
+    try {
+      _audioStreamSub?.cancel();
+    } catch (_) {}
+    _audioStreamSub = null;
+    try {
+      _asrStream?.free();
+    } catch (_) {}
+    _asrStream = null;
+    _useStreamRecording = false;
+    _samplesSinceLastDecode = 0;
+    _partialDecodeInProgress = false;
     _status = RecordingStatus.idle;
     _currentTranscription = '';
     _audioBuffer.clear();
     notifyListeners();
+  }
+
+  /// 尝试做一次“实时预览”解码（节流 + 防重入）。
+  void _tryPartialDecode() {
+    if (!_status.isRecording) return;
+    if (_recognizer == null || _asrStream == null) return;
+    if (_partialDecodeInProgress) return;
+    if (_samplesSinceLastDecode < _minNewSamplesForPartialDecode) return;
+
+    _partialDecodeInProgress = true;
+    _samplesSinceLastDecode = 0;
+
+    try {
+      _recognizer!.decode(_asrStream!);
+      final result = _recognizer!.getResult(_asrStream!);
+      final text = result.text;
+      if (text != _currentTranscription) {
+        _currentTranscription = text;
+        notifyListeners();
+      }
+    } catch (e) {
+      // 预览失败不影响最终 stop+transcribe
+      logDebug('预览转写失败(忽略): $e', source: 'SpeechRecognitionService');
+    } finally {
+      _partialDecodeInProgress = false;
+    }
+  }
+
+  /// PCM16LE mono -> Float32 samples (-1..1)
+  List<double> _decodePcm16LeMonoToFloat32(Uint8List pcmBytes) {
+    if (pcmBytes.isEmpty) return const [];
+    final byteLen = pcmBytes.lengthInBytes;
+    if (byteLen < 2) return const [];
+
+    final bd = ByteData.sublistView(pcmBytes);
+    final sampleCount = byteLen ~/ 2;
+    final samples = List<double>.filled(sampleCount, 0.0, growable: false);
+    int p = 0;
+    for (int i = 0; i < sampleCount; i++) {
+      final s = bd.getInt16(p, Endian.little);
+      samples[i] = s / 32768.0;
+      p += 2;
+    }
+    return samples;
   }
 
   /// 开始录音计时器
@@ -601,6 +788,15 @@ class SpeechRecognitionService extends ChangeNotifier {
   @override
   void dispose() {
     _recordingTimer?.cancel();
+    _partialDecodeTimer?.cancel();
+    try {
+      _audioStreamSub?.cancel();
+    } catch (_) {}
+    _audioStreamSub = null;
+    try {
+      _asrStream?.free();
+    } catch (_) {}
+    _asrStream = null;
     _recorder.dispose();
     _recognizer?.free();
     _recognizer = null;

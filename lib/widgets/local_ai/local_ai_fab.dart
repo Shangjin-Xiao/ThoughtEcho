@@ -242,18 +242,24 @@ class _LocalAIFabState extends State<LocalAIFab> {
       barrierLabel: 'voice_input_overlay',
       barrierColor: Colors.transparent,
       pageBuilder: (context, animation, secondaryAnimation) {
-        return VoiceInputOverlay(
-          transcribedText: null,
-          onSwipeUpForOCR: () async {
-            Navigator.of(context).pop();
-            await _cancelVoiceRecording();
-            await _openOCRFlow();
-          },
-          onRecordComplete: () {
-            // 用户在浮层里完成录音（松手/结束手势）时，可能不会触发 FAB 的 onLongPressEnd。
-            // 因此这里标记一次“需要停止并转写”，在浮层关闭后由 _showVoiceInputOverlay 统一触发。
-            _stopRequestedByOverlay = true;
-            Navigator.of(context).pop();
+        final speech = LocalAIService.instance.speechService;
+        return AnimatedBuilder(
+          animation: speech,
+          builder: (context, _) {
+            return VoiceInputOverlay(
+              transcribedText: speech.currentTranscription,
+              onSwipeUpForOCR: () async {
+                Navigator.of(context).pop();
+                await _cancelVoiceRecording();
+                await _openOCRFlow();
+              },
+              onRecordComplete: () {
+                // 用户在浮层里完成录音（松手/结束手势）时，可能不会触发 FAB 的 onLongPressEnd。
+                // 因此这里标记一次“需要停止并转写”，在浮层关闭后由 _showVoiceInputOverlay 统一触发。
+                _stopRequestedByOverlay = true;
+                Navigator.of(context).pop();
+              },
+            );
           },
         );
       },
