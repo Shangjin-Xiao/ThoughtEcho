@@ -15,7 +15,7 @@ import '../gen_l10n/app_localizations.dart';
 /// 优化：使用StatefulWidget以支持双击反馈动画，数据变化通过父组件管理
 class QuoteItemWidget extends StatefulWidget {
   final Quote quote;
-  final List<NoteCategory> tags;
+  final Map<String, NoteCategory> tagMap;
   final bool isExpanded;
   final Function(bool) onToggleExpanded;
   final Function() onEdit;
@@ -36,7 +36,7 @@ class QuoteItemWidget extends StatefulWidget {
   const QuoteItemWidget({
     super.key,
     required this.quote,
-    required this.tags,
+    required this.tagMap,
     required this.isExpanded,
     required this.onToggleExpanded,
     required this.onEdit,
@@ -596,13 +596,11 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                               itemCount: sortedTagIds.length,
                               itemBuilder: (context, index) {
                                 final tagId = sortedTagIds[index];
-                                final tag = widget.tags.firstWhere(
-                                  (t) => t.id == tagId,
-                                  orElse: () => NoteCategory(
-                                    id: tagId,
-                                    name: l10n.unknownTag,
-                                  ),
-                                );
+                                final tag = widget.tagMap[tagId] ??
+                                    NoteCategory(
+                                      id: tagId,
+                                      name: l10n.unknownTag,
+                                    );
 
                                 // 判断是否是筛选条件中的标签
                                 final isFilteredTag =
