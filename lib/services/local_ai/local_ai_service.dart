@@ -16,6 +16,7 @@ import '../../utils/app_logger.dart';
 import 'model_manager.dart';
 import 'speech_recognition_service.dart';
 import 'ocr_service.dart';
+import 'hybrid_ocr_service.dart';
 import 'embedding_service.dart';
 import 'vector_store.dart';
 import 'text_processing_service.dart';
@@ -49,6 +50,7 @@ class LocalAIService extends ChangeNotifier {
   final ModelManager _modelManager = ModelManager.instance;
   final SpeechRecognitionService _speechService = SpeechRecognitionService.instance;
   final OCRService _ocrService = OCRService.instance;
+  final HybridOCRService _hybridOCRService = HybridOCRService.instance;
   final EmbeddingService _embeddingService = EmbeddingService.instance;
   final VectorStore _vectorStore = VectorStore.instance;
   final TextProcessingService _textService = TextProcessingService.instance;
@@ -71,8 +73,11 @@ class LocalAIService extends ChangeNotifier {
   /// 获取语音识别服务
   SpeechRecognitionService get speechService => _speechService;
 
-  /// 获取 OCR 服务
+  /// 获取 OCR 服务（Tesseract）
   OCRService get ocrService => _ocrService;
+
+  /// 获取混合 OCR 服务（智能选择 Tesseract/VLM）
+  HybridOCRService get hybridOCRService => _hybridOCRService;
 
   /// 获取嵌入服务
   EmbeddingService get embeddingService => _embeddingService;
@@ -268,21 +273,49 @@ class LocalAIService extends ChangeNotifier {
 
   // ==================== OCR API ====================
 
-  /// 从图片识别文字
+  /// 从图片识别文字（智能选择引擎）
+  /// 
+  /// 默认使用混合 OCR 服务，自动选择 Tesseract（印刷体）或 VLM（手写）
+  /// 如果需要强制使用特定引擎，请使用 [recognizeTextWithEngine]
   Future<OCRResult> recognizeText(String imagePath) async {
     if (!isFeatureEnabled(LocalAIFeature.ocr)) {
       throw Exception('OCR 功能未启用');
     }
-    return await _ocrService.recognizeFromFile(imagePath);
+    // 使用混合 OCR 服务，自动选择最佳引擎
+    return await _hybridOCRService.recognizeFromFile(imagePath);
   }
 
-  /// 从图片识别文字（带区域信息）
+  /// 使用指定引擎识别文字
+  /// 
+  /// [engineType] OCR 引擎类型：tesseract（传统OCR）、vlm（视觉语言模型）、auto（自动选择）
+  Future<OCRResult> recognizeTextWithEngine(
+    String imagePath, {
+    OCREngineType engineType = OCREngineType.auto,
+  }) async {
+    if (!isFeatureEnabled(LocalAIFeature.ocr)) {
+      throw Exception('OCR 功能未启用');
+    }
+    return await _hybridOCRService.recognizeFromFile(
+      imagePath,
+      engineType: engineType,
+    );
+  }
+
+  /// 从图片识别文字（带区域信息）- 仅 Tesseract 支持
   Future<OCRResult> recognizeTextWithRegions(String imagePath) async {
     if (!isFeatureEnabled(LocalAIFeature.ocr)) {
       throw Exception('OCR 功能未启用');
     }
     return await _ocrService.recognizeWithRegions(imagePath);
   }
+
+  /// 设置 OCR 引擎偏好
+  void setOCREngine(OCREngineType engine) {
+    _hybridOCRService.setPreferredEngine(engine);
+  }
+
+  /// 获取当前 OCR 引擎
+  String get currentOCREngine => _hybridOCRService.getCurrentEngine();
 
   // ==================== 文本处理 API ====================
 

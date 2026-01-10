@@ -275,6 +275,23 @@ class LocalAIModels {
     isRequired: false,
   );
 
+  /// PaliGemma 视觉语言模型（推荐用于手写 OCR）
+  /// 通过 flutter_gemma 管理和加载
+  static const paliGemma3B = LocalAIModelInfo(
+    id: 'paligemma-3b',
+    name: 'PaliGemma 3B (手写识别)',
+    type: LocalAIModelType.ocr,
+    description: 'Google PaliGemma 视觉语言模型，专为图像理解和手写 OCR 优化，识别准确率远超传统 OCR。需要通过 flutter_gemma 下载。',
+    sizeBytes: 3000 * 1024 * 1024, // ~3GB
+    downloadUrl: 'managed://flutter_gemma/paligemma-3b-mix-224', // 由 flutter_gemma 管理
+    fileName: 'paligemma-3b.task',
+    version: '1.0',
+    isRequired: false,
+  );
+
+  // 注：其他 VLM 模型（Qwen-VL、MobileVLM）暂不支持 flutter_gemma
+  // 未来可以通过其他方式集成
+
   /// 获取所有预定义模型
   static List<LocalAIModelInfo> get all => [
         gemma2b,
@@ -283,6 +300,7 @@ class LocalAIModels {
         whisperBase,
         tesseractChiSim,
         tesseractEng,
+        paliGemma3B, // flutter_gemma 支持
       ];
 
   /// 按类型获取模型

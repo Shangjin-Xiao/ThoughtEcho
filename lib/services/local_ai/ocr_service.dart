@@ -16,6 +16,7 @@ import '../../models/ocr_result.dart';
 import '../../utils/app_logger.dart';
 import 'model_extractor.dart';
 import 'model_manager.dart';
+import 'image_preprocessor.dart';
 
 /// OCR 服务
 class OCRService extends ChangeNotifier {
@@ -232,6 +233,8 @@ class OCRService extends ChangeNotifier {
   Future<OCRResult> recognizeFromFile(
     String imagePath, {
     List<String>? languages,
+    bool enablePreprocess = true,
+    PreprocessConfig? preprocessConfig,
   }) async {
     if (!_initialized) {
       throw Exception('service_not_initialized');
@@ -249,22 +252,41 @@ class OCRService extends ChangeNotifier {
       _status = const OCRStatus(state: OCRState.processing, progress: 0.0);
       notifyListeners();
 
+      // 图像预处理
+      String processedImagePath = imagePath;
+      if (enablePreprocess) {
+        _status = _status.copyWith(progress: 0.1);
+        notifyListeners();
+
+        logInfo('开始图像预处理...', source: 'OCRService');
+        
+        // 如果未指定配置，自动检测图像类型
+        final config = preprocessConfig ?? await ImagePreprocessor.detectImageType(imagePath);
+        processedImagePath = await ImagePreprocessor.preprocessImage(
+          imagePath,
+          config: config,
+        );
+
+        _status = _status.copyWith(progress: 0.2);
+        notifyListeners();
+      }
+
       String recognizedText = '';
 
       if (isModelAvailable && _tessDataPath != null) {
         // 使用 flutter_tesseract_ocr 进行识别
-        logInfo('开始 OCR 识别: $imagePath, 语言: $langs', source: 'OCRService');
+        logInfo('开始 OCR 识别: $processedImagePath, 语言: $langs', source: 'OCRService');
         
         _status = _status.copyWith(progress: 0.3);
         notifyListeners();
 
-        // 调用 Tesseract OCR
+        // 调用 Tesseract OCR（使用预处理后的图像）
         // NOTE: flutter_tesseract_ocr 在不同平台/版本对 `tessdata` 参数的期望可能不同：
-        // - 有的版本期望传入“tessdata 目录本身”
-        // - 有的版本期望传入“父目录”，内部再拼接 /tessdata
+        // - 有的版本期望传入"tessdata 目录本身"
+        // - 有的版本期望传入"父目录"，内部再拼接 /tessdata
         // 若传错会回退去加载 assets/tessdata/*.traineddata，从而触发 Unable to load asset。
         recognizedText = await _extractTextWithFallback(
-          imagePath: imagePath,
+          imagePath: processedImagePath,
           langs: langs,
         );
 
