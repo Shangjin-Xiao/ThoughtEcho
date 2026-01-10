@@ -262,7 +262,8 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                     )
                   else
                     Text(
-                      l10n.voiceTranscribing,
+                      // 录音阶段：还未进入转写，展示“正在聆听...”更符合微信/键盘语音输入心智。
+                      l10n.listening,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: Colors.white.withOpacity(0.6),
                       ),

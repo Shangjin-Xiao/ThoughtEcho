@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 
 import '../../gen_l10n/app_localizations.dart';
@@ -8,7 +9,6 @@ import '../../theme/app_theme.dart';
 import 'ocr_capture_page.dart';
 import 'ocr_result_sheet.dart';
 import 'voice_input_overlay.dart';
-import 'voice_result_sheet.dart';
 
 /// Home 页 FAB 的本地 AI 增强交互（语音转文字 / 上滑 OCR）。
 ///
@@ -37,6 +37,7 @@ class _LocalAIFabState extends State<LocalAIFab> {
   bool _isVoiceRecording = false;
   bool _voiceFlowBusy = false;
   bool _stopRequestedByOverlay = false;
+  bool _stopRequestedBeforeRecordingStarted = false;
 
   Future<void> _onLongPressStart() async {
     final settingsService =
@@ -72,10 +73,19 @@ class _LocalAIFabState extends State<LocalAIFab> {
       return;
     }
 
+    _stopRequestedBeforeRecordingStarted = false;
     await _startVoiceRecordingAndShowOverlay();
   }
 
   Future<void> _onLongPressEnd() async {
+    // 手机端如果“开始录音”在准备模型/申请权限阶段耗时较久，
+    // 用户可能已经松手，此时 onLongPressEnd 会早于 startRecording 完成。
+    // 记录一次“松手请求”，等录音真正开始后自动 stop+transcribe，避免录音卡住或被当作取消。
+    if (_voiceFlowBusy && !_isVoiceRecording) {
+      _stopRequestedBeforeRecordingStarted = true;
+      return;
+    }
+
     await _stopVoiceRecordingAndShowResult();
   }
 
@@ -90,6 +100,13 @@ class _LocalAIFabState extends State<LocalAIFab> {
       await localAI.startRecording();
       _isVoiceRecording = true;
 
+      // 如果用户在录音真正开始前就已松手：直接走 stop+transcribe，不再强制展示浮层。
+      if (_stopRequestedBeforeRecordingStarted) {
+        _stopRequestedBeforeRecordingStarted = false;
+        await _stopVoiceRecordingAndShowResultWhileBusy();
+        return;
+      }
+
       if (!mounted) return;
       await _showVoiceInputOverlay();
     } catch (e) {
@@ -103,6 +120,52 @@ class _LocalAIFabState extends State<LocalAIFab> {
       await _cancelVoiceRecording();
     } finally {
       _voiceFlowBusy = false;
+    }
+  }
+
+  /// 在 `_voiceFlowBusy == true` 的前提下执行 stop+transcribe 并展示结果。
+  ///
+  /// 用于处理“startRecording 尚在进行，但用户已松手”的场景，避免被 `_stopVoiceRecordingAndShowResult` 的忙碌保护直接 return。
+  Future<void> _stopVoiceRecordingAndShowResultWhileBusy() async {
+    if (!_isVoiceRecording) return;
+
+    final localAI = LocalAIService.instance;
+    final l10n = AppLocalizations.of(context);
+
+    try {
+      // 若浮层已打开，先关掉
+      if (_voiceOverlayOpen && mounted) {
+        Navigator.of(context, rootNavigator: true).maybePop();
+      }
+
+      final result = await localAI.stopAndTranscribe();
+      _isVoiceRecording = false;
+
+      if (!mounted) return;
+
+      String resultText = result.text;
+      if (resultText.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.featureNotAvailable),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        return;
+      }
+
+      // 目标交互：像键盘/微信一样，松手就把识别结果直接插入。
+      widget.onInsertText(resultText);
+    } catch (e) {
+      _isVoiceRecording = false;
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_localizeLocalAIError(l10n, e)),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      await _cancelVoiceRecording();
     }
   }
 
@@ -147,24 +210,8 @@ class _LocalAIFabState extends State<LocalAIFab> {
         return;
       }
 
-      await showModalBottomSheet<void>(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        builder: (context) {
-          return VoiceResultSheet(
-            recognizedText: resultText,
-            onTextChanged: (text) {
-              resultText = text;
-            },
-            onInsertToEditor: () {
-              Navigator.of(context).pop();
-              widget.onInsertText(resultText);
-            },
-            onRecognizeSource: () {},
-          );
-        },
-      );
+      // 目标交互：松手即停止录音并直接插入文字。
+      widget.onInsertText(resultText);
     } catch (e) {
       _isVoiceRecording = false;
       if (!mounted) return;
@@ -187,7 +234,11 @@ class _LocalAIFabState extends State<LocalAIFab> {
     _stopRequestedByOverlay = false;
     await showGeneralDialog<void>(
       context: context,
-      barrierDismissible: true,
+      // 桌面端（鼠标/触控板）在长按结束抬起时，可能被系统识别为“点击 barrier”，
+      // 从而立刻关闭浮层并触发 cancelRecording。
+      // 移动端允许点空白区域取消；桌面端禁用以避免误触。
+      barrierDismissible: defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS,
       barrierLabel: 'voice_input_overlay',
       barrierColor: Colors.transparent,
       pageBuilder: (context, animation, secondaryAnimation) {
