@@ -14,6 +14,7 @@ import '../theme/app_theme.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter_markdown/flutter_markdown.dart'; // 导入 markdown 库
 import '../utils/color_utils.dart'; // Import color_utils
+import 'accessible_color_grid.dart'; // Import the new accessible color grid
 import 'add_note_ai_menu.dart'; // 导入 AI 菜单组件
 import '../pages/note_full_editor_page.dart'; // 导入全屏富文本编辑器
 import 'package:thoughtecho/utils/app_logger.dart';
@@ -1502,42 +1503,12 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
   // 自定义颜色选择器
   Future<void> _showCustomColorPicker(BuildContext context) async {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context);
     final Color initialColor = _selectedColorHex != null
         ? Color(
             int.parse(_selectedColorHex!.substring(1), radix: 16) | 0xFF000000,
           )
         : Colors.transparent;
-
-    // 预设颜色列表 - 更现代的轻柔色调
-    final List<Color> presetColors = [
-      Colors.transparent, // 透明/无
-      const Color(0xFFF9E4E4), // 轻红色
-      const Color(0xFFFFF0E1), // 轻橙色
-      const Color(0xFFFFFBE5), // 轻黄色
-      const Color(0xFFE8F5E9), // 轻绿色
-      const Color(0xFFE1F5FE), // 轻蓝色
-      const Color(0xFFF3E5F5), // 轻紫色
-      const Color(0xFFFCE4EC), // 轻粉色
-
-      const Color(0xFFEF9A9A), // 红色
-      const Color(0xFFFFCC80), // 橙色
-      const Color(0xFFFFF59D), // 黄色
-      const Color(0xFFA5D6A7), // 绿色
-      const Color(0xFF90CAF9), // 蓝色
-      const Color(0xFFCE93D8), // 紫色
-      const Color(0xFFF48FB1), // 粉色
-
-      const Color(0xFFEF9A9A), // 深红色
-      const Color(0xFFFFCC80), // 深橙色
-      const Color(0xFFFFF59D), // 深黄色
-      const Color(0xFFA5D6A7), // 深绿色
-      const Color(0xFF90CAF9), // 深蓝色
-      const Color(0xFFCE93D8), // 深紫色
-      const Color(0xFFF48FB1), // 深粉色
-    ];
 
     final Color? result = await showDialog<Color>(
       context: context,
@@ -1547,98 +1518,13 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 预设颜色网格
-              Container(
-                width: 280,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerLowest,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(left: 4, bottom: 8),
-                      child: Text(
-                        l10n.presetColors,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      alignment: WrapAlignment.start,
-                      children: presetColors.map((color) {
-                        String? colorHex;
-                        if (color != Colors.transparent) {
-                          colorHex =
-                              '#${color.toARGB32().toRadixString(16).substring(2)}';
-                        }
-
-                        final bool isSelected = color == Colors.transparent
-                            ? _selectedColorHex == null
-                            : _selectedColorHex == colorHex;
-
-                        return GestureDetector(
-                          onTap: () {
-                            if (!mounted) return;
-                            Navigator.of(context).pop(color);
-                          },
-                          child: Container(
-                            width: 42,
-                            height: 42,
-                            decoration: BoxDecoration(
-                              color: color,
-                              borderRadius: BorderRadius.circular(21),
-                              border: Border.all(
-                                color: isSelected
-                                    ? colorScheme.primary
-                                    : color == Colors.transparent
-                                        ? Colors.grey
-                                            .applyOpacity(0.5) // MODIFIED
-                                        : Colors.transparent,
-                                width: 2,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.applyOpacity(
-                                    0.05,
-                                  ), // MODIFIED
-                                  spreadRadius: 1,
-                                  blurRadius: 3,
-                                  offset: const Offset(0, 1),
-                                ),
-                              ],
-                            ),
-                            child: Center(
-                              child: isSelected
-                                  ? Icon(
-                                      Icons.check_circle,
-                                      color: color == Colors.transparent ||
-                                              color.computeLuminance() > 0.7
-                                          ? colorScheme.primary
-                                          : Colors.white,
-                                      size: 24,
-                                    )
-                                  : color == Colors.transparent
-                                      ? const Icon(
-                                          Icons.block,
-                                          color: Colors.grey,
-                                          size: 18,
-                                        )
-                                      : null,
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                ),
+              // 预设颜色网格 - 使用新的无障碍组件
+              AccessibleColorGrid(
+                selectedColorHex: _selectedColorHex,
+                onColorSelected: (color) {
+                  if (!mounted) return;
+                  Navigator.of(context).pop(color);
+                },
               ),
 
               const SizedBox(height: 16),
