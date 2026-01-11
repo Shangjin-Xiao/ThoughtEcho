@@ -16,26 +16,19 @@ void backgroundPushCallback() async {
   WidgetsFlutterBinding.ensureInitialized();
   DartPluginRegistrant.ensureInitialized();
 
-  // 2. 初始化日志 (简单控制台输出)
+  // 2. 初始化日志
   AppLogger.initialize();
   AppLogger.i('后台推送任务启动');
 
   try {
     // 3. 初始化基础服务
-    // 注意：在后台 Isolate 中，我们需要全新的服务实例
     final mmkvService = MMKVService();
     await mmkvService.init();
 
-    // 数据库初始化可能需要依赖 DataDirectoryService 来确定路径
-    // 如果 DatabaseService 内部已经处理了 init 逻辑（自动判断路径），则直接 init
-    // 但通常 DatabaseService.init() 依赖 getApplicationDocumentsDirectory
-    // 在后台 Isolate 中，PathProvider 插件应该能正常工作
     final databaseService = DatabaseService();
     await databaseService.init();
 
     final locationService = LocationService();
-    // 尝试预热位置服务（可能需要权限）
-    // 注意：后台定位权限在 Android 10+ 比较严格，这里只是尽力而为
     try {
       await locationService.init();
     } catch (e) {
@@ -49,20 +42,78 @@ void backgroundPushCallback() async {
       mmkvService: mmkvService,
     );
 
-    // 加载设置（内部会读取 MMKV）
-    // 这里我们不需要调用 initialize() 去注册通知点击回调，因为点击通知会打开主 Isolate
-    // 我们只需要 checkAndPush
+    // 加载设置
     await pushService.loadSettingsForBackground();
 
     // 5. 执行检查和推送
     await pushService.checkAndPush(isBackground: true);
 
+    // 6. 重新调度下一次推送（关键步骤！）
+    // 因为 oneShotAt 是一次性的，需要在执行完后重新调度
+    await pushService.scheduleNextPush();
+
+    AppLogger.i('后台推送任务完成，已重新调度下次推送');
   } catch (e, stack) {
     AppLogger.e('后台推送任务发生严重错误', error: e, stackTrace: stack);
   } finally {
     AppLogger.i('后台推送任务结束');
-    // 在 Isolate 中通常不需要手动关闭，Dart 会在函数执行完后自动处理资源，
-    // 但如果 DatabaseService 有连接池，最好 close。
-    // 这里我们暂不显式 close，依赖系统回收。
+  }
+}
+
+/// 后台定时检查入口（周期性任务）
+/// 用于定期检查是否需要推送，而不是依赖精确的闹钟
+@pragma('vm:entry-point')
+void backgroundPeriodicCheck() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  DartPluginRegistrant.ensureInitialized();
+
+  AppLogger.initialize();
+  AppLogger.i('后台周期性检查启动');
+
+  try {
+    final mmkvService = MMKVService();
+    await mmkvService.init();
+
+    final databaseService = DatabaseService();
+    await databaseService.init();
+
+    final locationService = LocationService();
+    try {
+      await locationService.init();
+    } catch (e) {
+      AppLogger.w('后台初始化位置服务失败: $e');
+    }
+
+    final pushService = SmartPushService(
+      databaseService: databaseService,
+      locationService: locationService,
+      mmkvService: mmkvService,
+    );
+
+    await pushService.loadSettingsForBackground();
+
+    // 检查当前时间是否在任何时间槽附近（±5分钟）
+    final now = DateTime.now();
+    final settings = pushService.settings;
+    
+    if (!settings.enabled) {
+      AppLogger.d('推送未启用，跳过检查');
+      return;
+    }
+
+    for (final slot in settings.pushTimeSlots) {
+      if (!slot.enabled) continue;
+      
+      final slotTime = DateTime(now.year, now.month, now.day, slot.hour, slot.minute);
+      final diff = now.difference(slotTime).inMinutes.abs();
+      
+      if (diff <= 5) {
+        AppLogger.i('当前时间接近推送时间槽 ${slot.formattedTime}，触发推送');
+        await pushService.checkAndPush(isBackground: true);
+        break;
+      }
+    }
+  } catch (e, stack) {
+    AppLogger.e('后台周期性检查失败', error: e, stackTrace: stack);
   }
 }
