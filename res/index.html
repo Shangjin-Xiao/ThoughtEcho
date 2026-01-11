@@ -511,11 +511,26 @@
 
         .notebook-list li {
             font-size: 1.15rem;
+            font-size: 1.3rem; /* 字号加大，更清晰 */
             color: var(--ink-medium);
             margin-bottom: 1.2rem;
+            margin-bottom: 1.6rem; /* 间距加大，更透气 */
             padding-left: 2rem;
             position: relative;
             font-family: 'Caveat', 'Long Cang', cursive;
+            transition: transform 0.3s ease, color 0.3s ease;
+            cursor: pointer;
+        }
+
+        .notebook-list a {
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .notebook-list li:hover {
+            transform: translateX(10px);
+            color: var(--accent-brown);
         }
 
         body.lang-en .notebook-list li {
@@ -589,6 +604,28 @@
         .feature-category-header {
             text-align: center;
             margin-bottom: 3rem;
+        }
+
+        /* 桌面端：左右交替布局，增加阅读趣味性 */
+        @media (min-width: 768px) {
+            .feature-category:nth-of-type(odd) .feature-category-header {
+                text-align: left;
+                border-left: 5px solid var(--accent-brown);
+                padding-left: 2rem;
+            }
+            .feature-category:nth-of-type(odd) .feature-category-desc {
+                margin: 0;
+            }
+
+            .feature-category:nth-of-type(even) .feature-category-header {
+                text-align: right;
+                border-right: 5px solid var(--accent-blue);
+                padding-right: 2rem;
+            }
+            .feature-category:nth-of-type(even) .feature-category-desc {
+                margin-left: auto; 
+                margin-right: 0;
+            }
         }
 
         .feature-category-title {
@@ -1929,14 +1966,10 @@
                             <span class="content-en">Current Features ✓</span>
                         </h3>
                         <ul class="notebook-list">
-                            <li><span class="content-zh">✍️ 富文本笔记 - 支持多媒体</span><span class="content-en">✍️ Rich Text Notes - Media Support</span></li>
-                            <li><span class="content-zh">✨ AI助手 - 问答、润色、灵感</span><span class="content-en">✨ AI Assistant - Q&A, Polish, Ideas</span></li>
-                            <li><span class="content-zh">📊 洞察报告 - 趋势分析</span><span class="content-en">📊 Insights - Trend Analysis</span></li>
-                            <li><span class="content-zh">🏷️ 智能标签 - 多维筛选</span><span class="content-en">🏷️ Smart Tags - Multi-Filter</span></li>
-                            <li><span class="content-zh">🎯 卡片生成 - 精美分享</span><span class="content-en">🎯 Card Generation - Beautiful Share</span></li>
-                            <li><span class="content-zh">📦 备份中心 - 安全可靠</span><span class="content-en">📦 Backup Hub - Safe & Secure</span></li>
-                            <li><span class="content-zh">🌍 情境记录 - 位置天气</span><span class="content-en">🌍 Context Capture - Location & Weather</span></li>
-                            <li><span class="content-zh">⚡ 快速捕获 - 剪贴板检测</span><span class="content-en">⚡ Quick Capture - Clipboard Watch</span></li>
+                            <li><a href="#feature-tailored"><span class="content-zh">🎨 专为你打造的心迹</span><span class="content-en">🎨 Tailored for You</span></a></li>
+                            <li><a href="#feature-understanding"><span class="content-zh">💡 懂你所想的心迹</span><span class="content-en">💡 Understanding You</span></a></li>
+                            <li><a href="#feature-secure"><span class="content-zh">🛡️ 安全无忧的心迹</span><span class="content-en">🛡️ Safe & Secure</span></a></li>
+                            <li><a href="#feature-open"><span class="content-zh">🚀 开放自由的心迹</span><span class="content-en">🚀 Open & Free</span></a></li>
                         </ul>
                     </div>
                 </div>
@@ -1951,7 +1984,7 @@
                 <span class="content-zh">✨ 核心功能</span>
                 <span class="content-en">✨ Core Features</span>
             </span>
-            <h2 class="section-title">
+            <h2 class="section-title text-gradient">
                 <span class="content-zh">为灵感而生</span>
                 <span class="content-en">Built for Inspiration</span>
             </h2>
@@ -1962,7 +1995,7 @@
         </div>
 
         <!-- 分类 1: 专为你打造的心迹 -->
-        <div class="feature-category fade-in">
+        <div class="feature-category fade-in" id="feature-tailored">
             <div class="feature-category-header">
                 <h3 class="feature-category-title">
                     <span class="content-zh">🎨 专为你打造的心迹</span>
@@ -2029,15 +2062,39 @@
                         <span class="content-en">Clipboard watcher, Hitokoto quotes, daily prompts</span>
                     </p>
                 </div>
+
+                <div class="sticky-note">
+                    <span class="feature-icon">🎨</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">个性化主题</span>
+                        <span class="content-en">Personalized Themes</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">内置多种配色方案，支持深色模式，随心切换视觉风格</span>
+                        <span class="content-en">Built-in color schemes, dark mode support, switch styles anytime</span>
+                    </p>
+                </div>
+
+                <div class="sticky-note">
+                    <span class="feature-icon">🔔</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">智能推送 (Beta)</span>
+                        <span class="content-en">Smart Push (Beta)</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">每日一言与往期笔记智能回顾，唤醒尘封的记忆</span>
+                        <span class="content-en">Daily quotes & past note recall to awaken memories</span>
+                    </p>
+                </div>
             </div>
         </div>
 
         <!-- 分类 2: 懂你所想的心迹 -->
-        <div class="feature-category fade-in">
+        <div class="feature-category fade-in" id="feature-understanding">
             <div class="feature-category-header">
                 <h3 class="feature-category-title">
-                    <span class="content-zh">🧠 懂你所想的心迹</span>
-                    <span class="content-en">🧠 Understanding You</span>
+                    <span class="content-zh">💡 懂你所想的心迹</span>
+                    <span class="content-en">💡 Understanding You</span>
                 </h3>
                 <p class="feature-category-desc">
                     <span class="content-zh">AI 深度赋能，感知情境，激发灵感，成为你的第二大脑</span>
@@ -2080,15 +2137,39 @@
                         <span class="content-en">Insights & Reports</span>
                     </h3>
                     <p class="feature-description">
-                        <span class="content-zh">AI 周期洞察、年度报告与写作趋势分析，看见你的成长</span>
-                        <span class="content-en">AI periodic insights, annual reports & trend analysis</span>
+                        <span class="content-zh">周期性数据概览、AI 总结报告与写作趋势分析，看见你的成长</span>
+                        <span class="content-en">Periodic data overview, AI summaries & trend analysis</span>
+                    </p>
+                </div>
+
+                <div class="sticky-note">
+                    <span class="feature-icon">📝</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">智能润色</span>
+                        <span class="content-en">Smart Polish</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">AI 辅助优化文案，续写思路，让表达更清晰流畅</span>
+                        <span class="content-en">AI helps polish text, continue ideas, making expression clearer</span>
+                    </p>
+                </div>
+
+                <div class="sticky-note">
+                    <span class="feature-icon">🌤️</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">每日情境提示</span>
+                        <span class="content-en">Contextual Prompts</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">结合当前天气、位置与时间的个性化写作提示，激发灵感</span>
+                        <span class="content-en">Personalized prompts based on weather, location & time</span>
                     </p>
                 </div>
             </div>
         </div>
 
         <!-- 分类 3: 安全无忧的心迹 -->
-        <div class="feature-category fade-in">
+        <div class="feature-category fade-in" id="feature-secure">
             <div class="feature-category-header">
                 <h3 class="feature-category-title">
                     <span class="content-zh">🛡️ 安全无忧的心迹</span>
@@ -2135,6 +2216,105 @@
                         <span class="content-en">Full ZIP backup & restore. Easy data migration</span>
                     </p>
                 </div>
+
+                <div class="sticky-note">
+                    <span class="feature-icon">🚫</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">零遥测</span>
+                        <span class="content-en">Zero Telemetry</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">拒绝任何形式的用户追踪与数据收集，纯净无干扰</span>
+                        <span class="content-en">No tracking, no analytics, no data collection. Pure & clean</span>
+                    </p>
+                </div>
+
+                <div class="sticky-note">
+                    <span class="feature-icon">🔑</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">加密存储</span>
+                        <span class="content-en">Encrypted Storage</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">API 密钥等敏感信息采用系统级加密存储，确保绝对安全</span>
+                        <span class="content-en">Sensitive info like API Keys uses system-level encryption</span>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 分类 4: 开放自由的心迹 -->
+        <div class="feature-category fade-in" id="feature-open">
+            <div class="feature-category-header">
+                <h3 class="feature-category-title">
+                    <span class="content-zh">🚀 开放自由的心迹</span>
+                    <span class="content-en">🚀 Open & Free</span>
+                </h3>
+                <p class="feature-category-desc">
+                    <span class="content-zh">代码开源，跨端同步，拒绝厂商锁定，还你真正的数字自由</span>
+                    <span class="content-en">Open source, cross-platform sync, no vendor lock-in. True digital freedom</span>
+                </p>
+            </div>
+            <div class="features-grid">
+                <div class="sticky-note">
+                    <span class="feature-icon">📖</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">开源透明</span>
+                        <span class="content-en">Open Source</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">MIT 协议开源，代码完全公开，接受社区审查，安全可信</span>
+                        <span class="content-en">MIT Licensed, fully open source code, community audited</span>
+                    </p>
+                </div>
+
+                <div class="sticky-note">
+                    <span class="feature-icon">🔄</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">模型自由</span>
+                        <span class="content-en">Model Freedom</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">支持 OpenAI, Claude, DeepSeek 等多种服务商，随时切换</span>
+                        <span class="content-en">Support OpenAI, Claude, DeepSeek & more. Switch anytime</span>
+                    </p>
+                </div>
+
+                <div class="sticky-note">
+                    <span class="feature-icon">📱</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">全平台支持</span>
+                        <span class="content-en">All Platforms</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">Windows, Android, iOS, Web 全覆盖，随时随地记录</span>
+                        <span class="content-en">Windows, Android, iOS, Web supported. Record anywhere</span>
+                    </p>
+                </div>
+
+                <div class="sticky-note">
+                    <span class="feature-icon">🔌</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">自定义 API</span>
+                        <span class="content-en">Custom API</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">支持配置自定义 API 地址，兼容本地大模型（如 Ollama）</span>
+                        <span class="content-en">Support custom API URLs, compatible with local LLMs (e.g. Ollama)</span>
+                    </p>
+                </div>
+
+                <div class="sticky-note">
+                    <span class="feature-icon">📲</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">多端同步</span>
+                        <span class="content-en">Note Sync</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">局域网内多设备发现与数据同步，随时随地无缝接力</span>
+                        <span class="content-en">LAN device discovery & data sync. Seamless handover</span>
+                    </p>
+                </div>
             </div>
         </div>
     </section>
@@ -2146,7 +2326,7 @@
                 <span class="content-zh">📸 应用展示</span>
                 <span class="content-en">📸 Screenshots</span>
             </span>
-            <h2 class="section-title">
+            <h2 class="section-title text-gradient">
                 <span class="content-zh">精美界面，一触即达</span>
                 <span class="content-en">Beautiful UI, Just a Tap Away</span>
             </h2>
@@ -2169,7 +2349,7 @@
             <div class="screenshots-grid">
                 <div class="screenshot-item fade-in">
                     <div class="screenshot-image" onclick="openModal('screenshot/home_page.jpg', '主页')">
-                        <img src="screenshot/home_page.jpg" alt="主页">
+                        <img src="screenshot/home_page.jpg" alt="主页" loading="lazy">
                     </div>
                     <div class="screenshot-content">
                         <div class="arrow-doodle"></div>
@@ -2185,7 +2365,7 @@
                         <p><span class="content-zh">支持标题、列表、引用等多种格式，可插入图片、音频、视频，满足你多样化的记录需求。</span><span class="content-en">Supports various formats like headings, lists, quotes, and allows inserting images, audio, and video to meet your diverse recording needs.</span></p>
                     </div>
                     <div class="screenshot-image" onclick="openModal('screenshot/note_full_editor_page.dart.jpg', '富文本编辑器')">
-                        <img src="screenshot/note_full_editor_page.dart.jpg" alt="富文本编辑器">
+                        <img src="screenshot/note_full_editor_page.dart.jpg" alt="富文本编辑器" loading="lazy">
                     </div>
                 </div>
             </div>
@@ -2200,7 +2380,7 @@
             <div class="screenshots-grid">
                 <div class="screenshot-item fade-in">
                     <div class="screenshot-image" onclick="openModal('screenshot/note_qa_chat_page.jpg', 'AI问答')">
-                        <img src="screenshot/note_qa_chat_page.jpg" alt="AI问答对话">
+                        <img src="screenshot/note_qa_chat_page.jpg" alt="AI问答对话" loading="lazy">
                     </div>
                     <div class="screenshot-content">
                         <div class="arrow-doodle"></div>
@@ -2216,7 +2396,7 @@
                         <p><span class="content-zh">通过标签、内容、时间等多维度进行筛选和排序，帮你快速定位所需信息。</span><span class="content-en">Filter and sort by tags, content, time, and other dimensions to help you quickly locate the information you need.</span></p>
                     </div>
                     <div class="screenshot-image" onclick="openModal('screenshot/note_filter_sort_sheet.dart.jpg', '筛选排序')">
-                        <img src="screenshot/note_filter_sort_sheet.dart.jpg" alt="筛选与排序">
+                        <img src="screenshot/note_filter_sort_sheet.dart.jpg" alt="筛选与排序" loading="lazy">
                     </div>
                 </div>
             </div>
@@ -2231,7 +2411,7 @@
             <div class="screenshots-grid">
                 <div class="screenshot-item fade-in">
                     <div class="screenshot-image" onclick="openModal('screenshot/insights_page.jpg', '洞察分析')">
-                        <img src="screenshot/insights_page.jpg" alt="洞察分析">
+                        <img src="screenshot/insights_page.jpg" alt="洞察分析" loading="lazy">
                     </div>
                     <div class="screenshot-content">
                         <div class="arrow-doodle"></div>
@@ -2247,7 +2427,7 @@
                         <p><span class="content-zh">通过局域网内的设备发现和数据同步功能，轻松实现多设备间的数据无缝流转。</span><span class="content-en">Seamlessly transfer data between multiple devices through local network device discovery and data synchronization.</span></p>
                     </div>
                     <div class="screenshot-image" onclick="openModal('screenshot/note_sync.jpg', '笔记同步')">
-                        <img src="screenshot/note_sync.jpg" alt="笔记同步">
+                        <img src="screenshot/note_sync.jpg" alt="笔记同步" loading="lazy">
                     </div>
                 </div>
             </div>
@@ -2262,7 +2442,7 @@
             <div class="screenshots-grid">
                 <div class="screenshot-item fade-in">
                     <div class="screenshot-image" onclick="openModal('screenshot/theme_settings_page.jpg', '主题设置')">
-                        <img src="screenshot/theme_settings_page.jpg" alt="主题设置">
+                        <img src="screenshot/theme_settings_page.jpg" alt="主题设置" loading="lazy">
                     </div>
                     <div class="screenshot-content">
                         <div class="arrow-doodle"></div>
@@ -2278,7 +2458,7 @@
                         <p><span class="content-zh">提供完整的数据备份和恢复功能，包括笔记、媒体文件和设置，保障你的数据安全。</span><span class="content-en">Provides complete data backup and recovery functions, including notes, media files, and settings, to ensure your data security.</span></p>
                     </div>
                     <div class="screenshot-image" onclick="openModal('screenshot/backup_restore_page.jpg', '备份恢复')">
-                        <img src="screenshot/backup_restore_page.jpg" alt="备份恢复">
+                        <img src="screenshot/backup_restore_page.jpg" alt="备份恢复" loading="lazy">
                     </div>
                 </div>
             </div>
@@ -2300,7 +2480,7 @@
                 <span class="content-zh">🛠️ 技术实力</span>
                 <span class="content-en">🛠️ Tech Power</span>
             </span>
-            <h2 class="section-title">
+            <h2 class="section-title text-gradient">
                 <span class="content-zh">现代化技术栈</span>
                 <span class="content-en">Modern Tech Stack</span>
             </h2>
@@ -2447,7 +2627,7 @@ cd ThoughtEcho</code></pre>
                 <span class="content-zh">🗺️ 发展规划</span>
                 <span class="content-en">🗺️ Roadmap</span>
             </span>
-            <h2 class="section-title">
+            <h2 class="section-title text-gradient">
                 <span class="content-zh">持续进化中</span>
                 <span class="content-en">Continuously Evolving</span>
             </h2>
@@ -2513,6 +2693,66 @@ cd ThoughtEcho</code></pre>
         </div>
     </section>
 
+    <!-- FAQ 常见问题 -->
+    <section class="section faq-section" id="faq">
+        <div class="section-header fade-in">
+            <span class="section-label">
+                <span class="content-zh">❓ 常见问题</span>
+                <span class="content-en">❓ FAQ</span>
+            </span>
+            <h2 class="section-title text-gradient">
+                <span class="content-zh">答疑解惑</span>
+                <span class="content-en">Q & A</span>
+            </h2>
+        </div>
+
+        <div class="faq-grid">
+            <div class="faq-item fade-in">
+                <div class="faq-question">
+                    <span class="content-zh">应用是免费的吗？</span>
+                    <span class="content-en">Is the app free?</span>
+                </div>
+                <div class="faq-answer">
+                    <span class="content-zh">是的，ThoughtEcho 是完全免费且开源的。你可以免费使用所有本地功能。</span>
+                    <span class="content-en">Yes, ThoughtEcho is completely free and open source. You can use all local features for free.</span>
+                </div>
+            </div>
+
+            <div class="faq-item fade-in">
+                <div class="faq-question">
+                    <span class="content-zh">如何使用 AI 功能？</span>
+                    <span class="content-en">How to use AI features?</span>
+                </div>
+                <div class="faq-answer">
+                    <span class="content-zh">你需要自行申请 AI 服务商（如 OpenAI, DeepSeek）的 API Key，并在设置中填入。费用直接由服务商收取，我们不经手。</span>
+                    <span class="content-en">You need to get an API Key from an AI provider (like OpenAI, DeepSeek) and enter it in settings. You pay the provider directly.</span>
+                </div>
+            </div>
+
+            <div class="faq-item fade-in">
+                <div class="faq-question">
+                    <span class="content-zh">我的数据安全吗？</span>
+                    <span class="content-en">Is my data safe?</span>
+                </div>
+                <div class="faq-answer">
+                    <span class="content-zh">绝对安全。所有数据存储在你的设备本地，不上传云端。API Key 采用系统级加密存储。</span>
+                    <span class="content-en">Absolutely. All data is stored locally on your device, not uploaded to the cloud. API Keys are stored with system-level encryption.</span>
+                </div>
+            </div>
+
+            <div class="faq-item fade-in">
+                <div class="faq-question">
+                    <span class="content-zh">支持多设备同步吗？</span>
+                    <span class="content-en">Does it support sync?</span>
+                </div>
+                <div class="faq-answer">
+                    <span class="content-zh">支持局域网同步。只要设备在同一 Wi-Fi 下，即可互相发现并同步数据，无需中央服务器。</span>
+                    <span class="content-en">Yes, via LAN sync. Devices on the same Wi-Fi can discover each other and sync data without a central server.</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- 下载区域（底部） -->
     <section class="section download-section" id="download">
         <div class="section-header fade-in">
@@ -2520,7 +2760,7 @@ cd ThoughtEcho</code></pre>
                 <span class="content-zh">立即下载</span>
                 <span class="content-en">Download Now</span>
             </span>
-            <h2 class="section-title">
+            <h2 class="section-title text-gradient">
                 <span class="content-zh">让我们一起随心迹录</span>
                 <span class="content-en">Let's freely record with ThoughtEcho</span>
             </h2>
@@ -2665,6 +2905,9 @@ cd ThoughtEcho</code></pre>
             </div>
         </div>
     </footer>
+
+    <!-- 回到顶部按钮 -->
+    <button id="backToTop" class="back-to-top" aria-label="Back to Top">↑</button>
 
     <script>
         // 主题切换
@@ -2838,6 +3081,21 @@ cd ThoughtEcho</code></pre>
 
         sections.forEach(section => {
             scrollSpy.observe(section);
+        });
+
+        // 回到顶部按钮逻辑
+        const backToTopBtn = document.getElementById('backToTop');
+        
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 500) {
+                backToTopBtn.classList.add('visible');
+            } else {
+                backToTopBtn.classList.remove('visible');
+            }
+        });
+
+        backToTopBtn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         });
     </script>
 </body>
