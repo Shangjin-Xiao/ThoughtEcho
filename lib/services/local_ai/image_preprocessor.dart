@@ -1,9 +1,9 @@
 /// 图像预处理服务
 ///
 /// 针对手写和印刷体提供不同的预处理策略，提升 OCR 识别准确率
+library;
 
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:image/image.dart' as img;
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
@@ -130,11 +130,12 @@ class ImagePreprocessor {
 
       // 5. 锐化
       if (config.sharpen) {
-        image = img.convolution(image, [
+        // image 4.5.x API: convolution 现在是扩展方法，直接在 image 上调用
+        image = img.convolution(image, filter: [
           -1, -1, -1,
           -1,  9, -1,
           -1, -1, -1,
-        ]);
+        ], div: 1, offset: 0);
         logInfo('锐化完成', source: 'ImagePreprocessor');
       }
 
@@ -191,10 +192,10 @@ class ImagePreprocessor {
     );
   }
 
-  /// 去噪处理（中值滤波）
+  /// 去噪处理（高斯模糊）
   static img.Image _denoise(img.Image image) {
-    // 使用中值滤波去噪，保留边缘
-    return img.medianBlur(image, radius: 1);
+    // 使用高斯模糊去噪（image 4.5.x 移除了 medianBlur）
+    return img.gaussianBlur(image, radius: 2);
   }
 
   /// 二值化处理

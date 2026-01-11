@@ -5,12 +5,9 @@
 
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_gemma/flutter_gemma.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as path;
 
 import '../../models/ocr_result.dart';
 import '../../utils/app_logger.dart';
@@ -113,7 +110,7 @@ class VLMOCRService extends ChangeNotifier {
 
       // 初始化 Gemma（如果支持视觉）
       try {
-        _gemma = FlutterGemmaPlugin();
+        _gemma = FlutterGemmaPlugin.instance;
         logInfo('Gemma 插件初始化成功', source: 'VLMOCRService');
       } catch (e) {
         logError('Gemma 插件初始化失败: $e', source: 'VLMOCRService');
@@ -266,27 +263,47 @@ class VLMOCRService extends ChangeNotifier {
   /// 使用 Gemma 进行推理
   Future<String> _runWithGemma(String imagePath, String prompt) async {
     try {
-      // flutter_gemma 支持 PaliGemma 视觉模型
-      // 使用 generateContentWithMedia API
-      
-      // 先检查模型是否加载
-      final modelInfo = await _gemma!.info();
-      logInfo('使用模型: ${modelInfo.modelName}', source: 'VLMOCRService');
+      // flutter_gemma 0.11.x 支持视觉模型（Gemma3N, DeepSeek 等）
+      logInfo('开始 Gemma 视觉推理', source: 'VLMOCRService');
       
       // 读取图片文件
       final imageFile = File(imagePath);
       final imageBytes = await imageFile.readAsBytes();
       
-      // 使用 PaliGemma 进行图像理解
-      // generateText 方法支持图像输入
-      final result = await _gemma!.generateText(
-        prompt,
-        images: [imageBytes],
+      // 创建视觉模型，需要启用图像支持
+      final model = await _gemma!.createModel(
+        modelType: ModelType.general, // general 支持多模态（文本+图像）
+        maxTokens: 2048, // VLM 需要更大的上下文
+        supportImage: true, // 启用图像支持
+        maxNumImages: 1, // 支持 1 张图像
       );
       
-      return result ?? '';
+      // 创建会话，启用视觉模态
+      final session = await model.createSession(
+        enableVisionModality: true, // 启用视觉模态
+      );
+      
+      // 使用 addQueryChunk 添加带图像的消息
+      // Message.withImage 可以同时发送文本和图像
+      await session.addQueryChunk(
+        Message.withImage(
+          text: prompt,
+          imageBytes: imageBytes,
+          isUser: true,
+        ),
+      );
+      
+      // 获取响应
+      final response = await session.getResponse();
+      
+      // 关闭会话
+      await session.close();
+      await model.close();
+      
+      return response;
     } catch (e) {
       logError('Gemma 视觉推理失败: $e', source: 'VLMOCRService');
+      // 如果视觉推理失败，抛出异常让调用者处理
       throw Exception('gemma_vision_failed: $e');
     }
   }

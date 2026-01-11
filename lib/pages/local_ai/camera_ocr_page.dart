@@ -1,17 +1,14 @@
 /// 相机 OCR 识别页面
 ///
 /// 拍照后使用 MLKit/VLM 进行文字识别，支持用户选择文字区域
+library;
 
-import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:path/path.dart' as path;
 
 import '../../gen_l10n/app_localizations.dart';
-import '../../models/ocr_result.dart';
 import '../../services/local_ai/hybrid_ocr_service.dart';
 import '../../widgets/local_ai/text_block_overlay.dart';
 
@@ -215,7 +212,6 @@ class _CameraOCRPageState extends State<CameraOCRPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final theme = Theme.of(context);
 
     return Scaffold(
       backgroundColor: Colors.black,

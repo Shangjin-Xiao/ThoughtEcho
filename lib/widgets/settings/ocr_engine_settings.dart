@@ -1,9 +1,9 @@
 /// 本地 AI OCR 引擎设置界面
 ///
 /// 允许用户选择 OCR 引擎：Tesseract、VLM 或自动选择
+library;
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 import '../../gen_l10n/app_localizations.dart';
 import '../../services/local_ai/local_ai_service.dart';
@@ -49,7 +49,7 @@ class OCREngineSettings extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceVariant.withOpacity(0.5),
+                  color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(

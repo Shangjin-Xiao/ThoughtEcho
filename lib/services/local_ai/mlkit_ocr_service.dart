@@ -4,12 +4,11 @@
 /// 适合印刷体文字，准确率高、速度快
 
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 
-import '../../models/ocr_result.dart';
+import '../../models/ocr_result.dart' as ocr_model;
 import '../../utils/app_logger.dart';
 
 /// MLKit OCR 服务
@@ -28,7 +27,7 @@ class MLKitOCRService extends ChangeNotifier {
   TextRecognizer? _textRecognizer;
 
   /// 当前状态
-  OCRStatus _status = OCRStatus.idle;
+  ocr_model.OCRStatus _status = ocr_model.OCRStatus.idle;
 
   /// 是否已初始化
   bool _initialized = false;
@@ -37,7 +36,7 @@ class MLKitOCRService extends ChangeNotifier {
   TextRecognitionScript _script = TextRecognitionScript.chinese;
 
   /// 获取当前状态
-  OCRStatus get status => _status;
+  ocr_model.OCRStatus get status => _status;
 
   /// 是否已初始化
   bool get isInitialized => _initialized;
@@ -79,7 +78,7 @@ class MLKitOCRService extends ChangeNotifier {
   }
 
   /// 从图片文件识别文字
-  Future<OCRResult> recognizeFromFile(
+  Future<ocr_model.OCRResult> recognizeFromFile(
     String imagePath, {
     TextRecognitionScript? script,
   }) async {
@@ -95,7 +94,7 @@ class MLKitOCRService extends ChangeNotifier {
     final startTime = DateTime.now();
 
     try {
-      _status = const OCRStatus(state: OCRState.processing, progress: 0.0);
+      _status = const ocr_model.OCRStatus(state: ocr_model.OCRState.processing, progress: 0.0);
       notifyListeners();
 
       logInfo('开始 MLKit OCR 识别: $imagePath', source: 'MLKitOCRService');
@@ -113,23 +112,23 @@ class MLKitOCRService extends ChangeNotifier {
       notifyListeners();
 
       // 转换结果
-      final blocks = <TextBlock>[];
+      final blocks = <ocr_model.TextBlock>[];
       for (final block in recognizedText.blocks) {
-        blocks.add(TextBlock(
+        blocks.add(ocr_model.TextBlock(
           text: block.text,
           boundingBox: block.boundingBox,
           confidence: block.recognizedLanguages.isNotEmpty
               ? 1.0 // MLKit 不提供置信度，默认 1.0
               : 0.9,
           language: block.recognizedLanguages.isNotEmpty
-              ? block.recognizedLanguages.first.languageCode
+              ? block.recognizedLanguages.first
               : null,
         ));
       }
 
       final processingTime = DateTime.now().difference(startTime).inMilliseconds;
 
-      final result = OCRResult(
+      final result = ocr_model.OCRResult(
         fullText: recognizedText.text,
         blocks: blocks,
         imagePath: imagePath,
@@ -137,7 +136,7 @@ class MLKitOCRService extends ChangeNotifier {
         languages: const ['auto'], // MLKit 自动检测
       );
 
-      _status = const OCRStatus(state: OCRState.completed, progress: 1.0);
+      _status = const ocr_model.OCRStatus(state: ocr_model.OCRState.completed, progress: 1.0);
       notifyListeners();
 
       logInfo(
@@ -148,8 +147,8 @@ class MLKitOCRService extends ChangeNotifier {
 
       return result;
     } catch (e) {
-      _status = OCRStatus(
-        state: OCRState.error,
+      _status = ocr_model.OCRStatus(
+        state: ocr_model.OCRState.error,
         errorMessage: e.toString(),
       );
       notifyListeners();
@@ -161,7 +160,7 @@ class MLKitOCRService extends ChangeNotifier {
   /// 取消当前识别
   void cancelRecognition() {
     if (_status.isProcessing) {
-      _status = OCRStatus.idle;
+      _status = ocr_model.OCRStatus.idle;
       notifyListeners();
       logInfo('取消 MLKit OCR 识别', source: 'MLKitOCRService');
     }
@@ -169,7 +168,7 @@ class MLKitOCRService extends ChangeNotifier {
 
   /// 重置状态
   void reset() {
-    _status = OCRStatus.idle;
+    _status = ocr_model.OCRStatus.idle;
     notifyListeners();
   }
 
