@@ -4,8 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="心迹 - 你的专属灵感摘录本。让我们一起随心记录，释放AI洞察的力量。">
+    <meta name="theme-color" content="#a67c52">
     <title>心迹 - 你的专属灵感摘录本</title>
     <link rel="icon" type="image/png" href="icon.png"/>
+    <link rel="canonical" href="https://shangjin-xiao.github.io/ThoughtEcho/">
     
     <!-- Open Graph / Social Media Meta Tags -->
     <meta property="og:title" content="心迹 ThoughtEcho - 你的专属灵感摘录本">
@@ -13,6 +15,10 @@
     <meta property="og:image" content="icon.png">
     <meta property="og:url" content="https://shangjin-xiao.github.io/ThoughtEcho/">
     <meta property="og:type" content="website">
+    <meta property="og:locale" content="zh_CN">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="心迹 ThoughtEcho - 你的专属灵感摘录本">
+    <meta name="twitter:description" content="随心记录每一刻灵感，释放AI洞察的力量。本地优先，安全私密。">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -100,6 +106,48 @@
         ::selection {
             background: var(--accent-brown);
             color: var(--paper-white);
+        }
+
+        /* ==================== 可访问性与交互一致性 ==================== */
+        :focus-visible {
+            outline: 3px solid var(--accent-blue);
+            outline-offset: 3px;
+        }
+
+        a, button {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .skip-link {
+            position: absolute;
+            left: 12px;
+            top: 12px;
+            z-index: 3000;
+            padding: 0.7rem 1rem;
+            background: var(--paper-white);
+            color: var(--ink-dark);
+            border: 2px solid var(--accent-blue);
+            border-radius: 10px;
+            box-shadow: 4px 4px 0 var(--shadow-hard);
+            text-decoration: none;
+            transform: translateY(-200%);
+            transition: transform 0.2s ease;
+        }
+
+        .skip-link:focus-visible {
+            transform: translateY(0);
+        }
+
+        /* 用户偏好：减少动画 */
+        @media (prefers-reduced-motion: reduce) {
+            html {
+                scroll-behavior: auto;
+            }
+            *, *::before, *::after {
+                animation-duration: 0.001ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.001ms !important;
+            }
         }
 
         body.lang-en {
@@ -250,11 +298,10 @@
             justify-content: center;
             transition: all 0.3s ease;
             box-shadow: 2px 2px 4px var(--shadow-soft);
-            transform: rotate(2deg);
         }
 
         .theme-toggle:hover {
-            transform: rotate(-3deg) scale(1.05);
+            transform: scale(1.05);
             box-shadow: 3px 3px 8px var(--shadow-medium);
         }
 
@@ -272,12 +319,11 @@
             justify-content: center;
             transition: all 0.3s ease;
             box-shadow: 2px 2px 4px var(--shadow-soft);
-            transform: rotate(-2deg);
             color: var(--accent-blue);
         }
 
         .lang-toggle:hover {
-            transform: rotate(2deg) scale(1.05);
+            transform: scale(1.05);
             box-shadow: 3px 3px 8px var(--shadow-medium);
             background: var(--accent-blue);
             color: var(--paper-white);
@@ -382,7 +428,6 @@
             font-weight: 600;
             margin-bottom: 2rem;
             box-shadow: 3px 3px 8px var(--shadow-medium);
-            transform: rotate(-2deg);
         }
 
         .hero h1 {
@@ -526,6 +571,10 @@
 
         .notebook-list {
             list-style: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 200px;
         }
 
         .notebook-list li {
@@ -586,7 +635,6 @@
             font-weight: 600;
             margin-bottom: 1.5rem;
             box-shadow: 3px 3px 8px var(--shadow-medium);
-            transform: rotate(1deg);
         }
 
         .section-title {
@@ -595,6 +643,13 @@
             color: var(--ink-dark);
             margin-bottom: 1.5rem;
             font-family: 'ZCOOL XiaoWei', serif;
+        }
+
+        .text-gradient {
+            background: linear-gradient(120deg, var(--accent-brown), var(--accent-orange), var(--accent-blue));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
         }
 
         .section-description {
@@ -665,12 +720,17 @@
         .sticky-note {
             background: var(--paper-yellow);
             border-radius: 6px;
+            background: var(--paper-white);
+            border: 1px solid var(--line-color);
+            border-radius: 16px;
             padding: 2.5rem 2.2rem;
             box-shadow: 0 5px 8px var(--shadow-soft), 0 12px 25px var(--shadow-soft);
+            box-shadow: 0 4px 12px var(--shadow-soft);
             position: relative;
             transform: rotate(-1.5deg);
             transition: all 0.4s ease;
             cursor: default; /* UX优化：非链接卡片不显示手型光标，避免误导点击 */
+            height: 100%;
         }
 
         .sticky-note:nth-child(2n) {
@@ -689,6 +749,9 @@
         .sticky-note:hover {
             transform: rotate(0deg) scale(1.05) translateY(-8px);
             box-shadow: 0 10px 15px var(--shadow-medium), 0 20px 40px var(--shadow-medium);
+            transform: translateY(-8px);
+            box-shadow: 0 12px 30px var(--shadow-medium);
+            border-color: var(--accent-brown);
             z-index: 10;
         }
 
@@ -790,18 +853,6 @@
 
         .screenshot-card:hover::before {
             opacity: 1;
-        }
-
-        .screenshot-card:nth-child(3n+1) {
-            transform: rotate(-1deg);
-        }
-
-        .screenshot-card:nth-child(3n+2) {
-            transform: rotate(1deg);
-        }
-
-        .screenshot-card:nth-child(3n) {
-            transform: rotate(-0.5deg);
         }
 
         .screenshot-image-wrapper {
@@ -1016,6 +1067,98 @@
             border: 2px solid var(--accent-brown);
         }
 
+        /* ==================== 截图轮播（Carousel）==================== */
+        .carousel-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+            padding: 0 2.5rem;
+        }
+
+        .carousel-track-container {
+            overflow: hidden;
+            border-radius: 18px;
+        }
+
+        .carousel-track {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: transform;
+        }
+
+        .carousel-slide {
+            padding: 0 0.75rem;
+        }
+
+        .carousel-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            background: rgba(0, 0, 0, 0.35);
+            color: #fff;
+            font-size: 1.4rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 5;
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            transition: transform 0.2s ease, background 0.2s ease;
+        }
+
+        .carousel-btn:hover {
+            background: rgba(0, 0, 0, 0.5);
+            transform: translateY(-50%) scale(1.06);
+        }
+
+        .carousel-btn:active {
+            transform: translateY(-50%) scale(0.98);
+        }
+
+        .prev-btn { left: 10px; }
+        .next-btn { right: 10px; }
+
+        .carousel-dots {
+            display: flex;
+            justify-content: center;
+            gap: 0.6rem;
+            margin-top: 1.25rem;
+            flex-wrap: wrap;
+        }
+
+        .carousel-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            border: 2px solid var(--accent-brown);
+            background: transparent;
+            cursor: pointer;
+            padding: 0;
+            transition: all 0.2s ease;
+        }
+
+        .carousel-dot.active {
+            width: 26px;
+            background: var(--accent-brown);
+        }
+
+        .screenshot-image {
+            outline: none;
+        }
+
+        .screenshot-image:focus-visible img {
+            outline: 3px solid var(--accent-blue);
+            outline-offset: 4px;
+        }
+
         /* ==================== 模态框 ==================== */
         .modal {
             display: none;
@@ -1024,11 +1167,11 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.9);
+            background: rgba(0, 0, 0, 0.86);
             z-index: 2000;
             justify-content: center;
             align-items: center;
-            padding: 3rem 2rem 2rem; /* 增加顶部 padding 防止关闭按钮溢出 */
+            padding: 3.25rem 1.5rem 1.5rem;
         }
 
         .modal.active {
@@ -1036,8 +1179,8 @@
         }
 
         .modal-content {
-            max-width: 95%;
-            max-height: 95%;
+            max-width: min(1100px, 96vw);
+            max-height: 92vh;
             position: relative;
             animation: modalZoom 0.3s ease;
         }
@@ -1049,15 +1192,23 @@
 
         .modal img {
             max-width: 100%;
-            max-height: 90vh;
+            max-height: 80vh;
             border-radius: 10px;
             box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
         }
 
+        .modal-caption {
+            margin-top: 0.75rem;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1rem;
+            line-height: 1.7;
+        }
+
         .modal-close {
             position: absolute;
-            top: -40px;
-            right: 0;
+            top: 12px;
+            right: 12px;
             color: white;
             font-size: 2rem;
             cursor: pointer;
@@ -1069,6 +1220,7 @@
             align-items: center;
             justify-content: center;
             transition: transform 0.3s ease;
+            border: none;
         }
         
         /* ==================== 模态框导航按钮 ==================== */
@@ -1146,6 +1298,7 @@
 
         .tech-tag:hover .tech-icon {
             transform: rotate(0deg) scale(1.1);
+            transform: scale(1.1);
         }
 
         .tech-info h4 {
@@ -1492,6 +1645,66 @@
             font-weight: bold;
         }
 
+        /* ==================== FAQ ==================== */
+        .faq-section {
+            background: var(--paper-white);
+        }
+
+        .faq-grid {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: grid;
+            gap: 1.25rem;
+        }
+
+        .faq-item {
+            background: var(--paper-cream);
+            border: 2px solid var(--line-color);
+            border-radius: 14px;
+            box-shadow: 0 6px 16px var(--shadow-soft);
+            overflow: hidden;
+            transition: border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .faq-item:hover {
+            border-color: var(--accent-brown);
+            box-shadow: 0 10px 26px var(--shadow-soft);
+        }
+
+        .faq-question {
+            width: 100%;
+            text-align: left;
+            background: transparent;
+            border: none;
+            padding: 1.25rem 1.25rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            color: var(--ink-dark);
+            font-weight: 700;
+            font-size: 1.05rem;
+        }
+
+        .faq-question::after {
+            content: '＋';
+            flex-shrink: 0;
+            color: var(--accent-brown);
+            font-size: 1.25rem;
+            transition: transform 0.2s ease;
+        }
+
+        .faq-question[aria-expanded="true"]::after {
+            content: '－';
+        }
+
+        .faq-answer {
+            padding: 0 1.25rem 1.25rem;
+            color: var(--ink-medium);
+            line-height: 1.9;
+        }
+
         /* ==================== CTA ==================== */
         .cta-section {
             padding: 5rem 2rem;
@@ -1609,6 +1822,7 @@
 
         .social-link:hover {
             transform: rotate(3deg) scale(1.15);
+            transform: scale(1.15);
             box-shadow: 4px 4px 8px var(--shadow-medium);
         }
 
@@ -1735,79 +1949,8 @@
             display: none;
         }
 
-        /* 模态框样式 */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 10000;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .modal.active {
-            display: flex;
-            opacity: 1;
-        }
-
-        .modal-content {
-            position: relative;
-            max-width: 90%;
-            max-height: 90%;
-            background: var(--paper-white);
-            border-radius: 15px;
-            padding: 2rem;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-            transform: scale(0.9);
-            transition: transform 0.3s ease;
-        }
-
-        .modal.active .modal-content {
-            transform: scale(1);
-        }
-
-        .modal-close {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            width: 40px;
-            height: 40px;
-            background: var(--accent-red);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            font-size: 1.5rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-            z-index: 10;
-        }
-
-        .modal-close:hover {
-            transform: rotate(90deg);
-            background: var(--accent-orange);
-        }
-
-        .modal img {
-            max-width: 100%;
-            max-height: 80vh;
-            border-radius: 10px;
-            display: block;
-        }
-
-        #modalCaption {
-            text-align: center;
-            margin-top: 1rem;
-            color: var(--ink-medium);
-            font-size: 1.1rem;
+        body.modal-open {
+            overflow: hidden;
         }
 
         /* 微软商店徽章高分辨率样式（小号） */
@@ -1992,12 +2135,16 @@
         }
     </style>
 </head>
-<body class="lang-zh">
+<body class="lang-zh" id="top">
+    <a class="skip-link" href="#main">
+        <span class="content-zh">跳到主要内容</span>
+        <span class="content-en">Skip to content</span>
+    </a>
     <!-- 导航栏 -->
     <nav>
         <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
         <div class="nav-container">
-            <a href="#" class="nav-brand">
+            <a href="#top" class="nav-brand" aria-label="ThoughtEcho Home">
                 <div class="nav-logo">
                     <img src="icon.png" alt="ThoughtEcho">
                 </div>
@@ -2028,6 +2175,8 @@
             </div>
         </div>
     </nav>
+
+    <main id="main" tabindex="-1">
 
     <!-- Hero -->
     <section class="hero">
@@ -2601,12 +2750,13 @@
     </section>
 
     <!-- 模态框 -->
-    <div class="modal" id="imageModal" onclick="closeModal()">
+    <div class="modal" id="imageModal" role="dialog" aria-modal="true" aria-hidden="true" aria-label="图片预览 / Image preview" onclick="closeModal()">
         <div class="modal-content" onclick="event.stopPropagation()">
-            <span class="modal-close" onclick="closeModal()">×</span>
-            <button class="modal-nav modal-prev" onclick="changeImage(-1)">&#10094;</button>
-            <button class="modal-nav modal-next" onclick="changeImage(1)">&#10095;</button>
-            <img id="modalImage" src="" alt="预览">
+            <button type="button" class="modal-close" id="modalCloseBtn" aria-label="Close" onclick="closeModal()">×</button>
+            <button type="button" class="modal-nav modal-prev" aria-label="Previous" onclick="changeImage(-1)">&#10094;</button>
+            <button type="button" class="modal-nav modal-next" aria-label="Next" onclick="changeImage(1)">&#10095;</button>
+            <img id="modalImage" src="" alt="" decoding="async">
+            <div class="modal-caption" id="modalCaption"></div>
         </div>
     </div>
 
@@ -2845,44 +2995,44 @@ cd ThoughtEcho</code></pre>
 
         <div class="faq-grid">
             <div class="faq-item fade-in">
-                <div class="faq-question">
+                <button type="button" class="faq-question" id="faq-q1" aria-expanded="false" aria-controls="faq-a1">
                     <span class="content-zh">应用是免费的吗？</span>
                     <span class="content-en">Is the app free?</span>
-                </div>
-                <div class="faq-answer">
+                </button>
+                <div class="faq-answer" id="faq-a1" role="region" aria-labelledby="faq-q1" hidden>
                     <span class="content-zh">是的，ThoughtEcho 是完全免费且开源的。你可以免费使用所有本地功能。</span>
                     <span class="content-en">Yes, ThoughtEcho is completely free and open source. You can use all local features for free.</span>
                 </div>
             </div>
 
             <div class="faq-item fade-in">
-                <div class="faq-question">
+                <button type="button" class="faq-question" id="faq-q2" aria-expanded="false" aria-controls="faq-a2">
                     <span class="content-zh">如何使用 AI 功能？</span>
                     <span class="content-en">How to use AI features?</span>
-                </div>
-                <div class="faq-answer">
+                </button>
+                <div class="faq-answer" id="faq-a2" role="region" aria-labelledby="faq-q2" hidden>
                     <span class="content-zh">你需要自行申请 AI 服务商（如 OpenAI, DeepSeek）的 API Key，并在设置中填入。费用直接由服务商收取，我们不经手。</span>
                     <span class="content-en">You need to get an API Key from an AI provider (like OpenAI, DeepSeek) and enter it in settings. You pay the provider directly.</span>
                 </div>
             </div>
 
             <div class="faq-item fade-in">
-                <div class="faq-question">
+                <button type="button" class="faq-question" id="faq-q3" aria-expanded="false" aria-controls="faq-a3">
                     <span class="content-zh">我的数据安全吗？</span>
                     <span class="content-en">Is my data safe?</span>
-                </div>
-                <div class="faq-answer">
+                </button>
+                <div class="faq-answer" id="faq-a3" role="region" aria-labelledby="faq-q3" hidden>
                     <span class="content-zh">绝对安全。所有数据存储在你的设备本地，不上传云端。API Key 采用系统级加密存储。</span>
                     <span class="content-en">Absolutely. All data is stored locally on your device, not uploaded to the cloud. API Keys are stored with system-level encryption.</span>
                 </div>
             </div>
 
             <div class="faq-item fade-in">
-                <div class="faq-question">
+                <button type="button" class="faq-question" id="faq-q4" aria-expanded="false" aria-controls="faq-a4">
                     <span class="content-zh">支持多设备同步吗？</span>
                     <span class="content-en">Does it support sync?</span>
-                </div>
-                <div class="faq-answer">
+                </button>
+                <div class="faq-answer" id="faq-a4" role="region" aria-labelledby="faq-q4" hidden>
                     <span class="content-zh">支持局域网同步。只要设备在同一 Wi-Fi 下，即可互相发现并同步数据，无需中央服务器。</span>
                     <span class="content-en">Yes, via LAN sync. Devices on the same Wi-Fi can discover each other and sync data without a central server.</span>
                 </div>
@@ -2957,9 +3107,11 @@ cd ThoughtEcho</code></pre>
         <!-- small download note removed as requested -->
     </section>
 
+    </main>
+
     <!-- Footer -->
     <footer>
-        <div class="container">
+        <div class="footer-container">
             <div class="footer-grid">
                 <div class="footer-brand">
                     <h3>
@@ -3025,6 +3177,8 @@ cd ThoughtEcho</code></pre>
                     </ul>
                 </div>
 
+            </div>
+
             <div class="footer-bottom">
                 <p>
                     © 2025 ThoughtEcho. 
@@ -3053,6 +3207,8 @@ cd ThoughtEcho</code></pre>
         const body = document.body;
         const html = document.documentElement;
 
+        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
         // 从本地存储加载主题
         const currentTheme = localStorage.getItem('theme') || 'light';
         if (currentTheme === 'dark') {
@@ -3076,28 +3232,35 @@ cd ThoughtEcho</code></pre>
         });
 
 
-        // 语言切换
+        // 语言切换（修复：避免同时存在 lang-zh 与 lang-en 导致内容全隐藏）
         const langToggle = document.getElementById('langToggle');
         const langText = document.getElementById('langText');
-        
-        // 从本地存储加载语言
-        const currentLang = localStorage.getItem('lang') || 'zh';
-        body.classList.add(`lang-${currentLang}`);
-        langText.textContent = currentLang === 'zh' ? 'EN' : '中文';
 
-        langToggle.addEventListener('click', () => {
-            const isZh = body.classList.contains('lang-zh');
-            if (isZh) {
-                body.classList.remove('lang-zh');
-                body.classList.add('lang-en');
-                langText.textContent = '中文';
-                localStorage.setItem('lang', 'en');
-            } else {
-                body.classList.remove('lang-en');
-                body.classList.add('lang-zh');
-                langText.textContent = 'EN';
-                localStorage.setItem('lang', 'zh');
+        function getCurrentLang() {
+            return body.classList.contains('lang-en') ? 'en' : 'zh';
+        }
+
+        function applyLanguage(lang) {
+            const normalized = lang === 'en' ? 'en' : 'zh';
+            body.classList.remove('lang-zh', 'lang-en');
+            body.classList.add(`lang-${normalized}`);
+            langText.textContent = normalized === 'zh' ? 'EN' : '中文';
+
+            // 同步 html lang（利于 SEO 与读屏）
+            html.setAttribute('lang', normalized === 'zh' ? 'zh-CN' : 'en');
+
+            // 微软徽章语言（存在则同步）
+            const storeBadge = document.querySelector('ms-store-badge');
+            if (storeBadge) {
+                storeBadge.setAttribute('language', normalized === 'zh' ? 'zh-cn' : 'en-us');
             }
+
+            localStorage.setItem('lang', normalized);
+        }
+
+        applyLanguage(localStorage.getItem('lang') || 'zh');
+        langToggle.addEventListener('click', () => {
+            applyLanguage(getCurrentLang() === 'zh' ? 'en' : 'zh');
         });
 
         // 移动端菜单
@@ -3105,11 +3268,15 @@ cd ThoughtEcho</code></pre>
         const navLinks = document.getElementById('navLinks');
         const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
 
+        mobileMenuBtn.setAttribute('aria-controls', 'navLinks');
+        mobileMenuBtn.setAttribute('aria-expanded', 'false');
+
         function toggleMenu() {
             navLinks.classList.toggle('active');
             mobileMenuOverlay.classList.toggle('active');
             const isOpen = navLinks.classList.contains('active');
             mobileMenuBtn.innerHTML = isOpen ? '×' : '☰';
+            mobileMenuBtn.setAttribute('aria-expanded', String(isOpen));
         }
 
         mobileMenuBtn.addEventListener('click', toggleMenu);
@@ -3126,28 +3293,51 @@ cd ThoughtEcho</code></pre>
         let currentImageIndex = 0;
         // 定义图片列表以便轮播
         const screenshots = [
-            { src: 'screenshot/home_page.jpg', alt: '主页' },
-            { src: 'screenshot/note_full_editor_page.dart.jpg', alt: '富文本编辑器' },
-            { src: 'screenshot/note_qa_chat_page.jpg', alt: 'AI问答' },
-            { src: 'screenshot/note_filter_sort_sheet.dart.jpg', alt: '筛选排序' },
-            { src: 'screenshot/insights_page.jpg', alt: '洞察分析' },
-            { src: 'screenshot/note_sync.jpg', alt: '笔记同步' },
-            { src: 'screenshot/theme_settings_page.jpg', alt: '主题设置' },
-            { src: 'screenshot/backup_restore_page.jpg', alt: '备份恢复' }
+            { src: 'screenshot/home_page.jpg', titleZh: '主页', titleEn: 'Homepage' },
+            { src: 'screenshot/note_full_editor_page.dart.jpg', titleZh: '富文本编辑器', titleEn: 'Rich Text Editor' },
+            { src: 'screenshot/note_qa_chat_page.jpg', titleZh: 'AI问答', titleEn: 'AI Q&A' },
+            { src: 'screenshot/note_filter_sort_sheet.dart.jpg', titleZh: '筛选排序', titleEn: 'Filter & Sort' },
+            { src: 'screenshot/insights_page.jpg', titleZh: '洞察分析', titleEn: 'Insights' },
+            { src: 'screenshot/note_sync.jpg', titleZh: '笔记同步', titleEn: 'Sync' },
+            { src: 'screenshot/theme_settings_page.jpg', titleZh: '主题设置', titleEn: 'Theme Settings' },
+            { src: 'screenshot/backup_restore_page.jpg', titleZh: '备份恢复', titleEn: 'Backup & Restore' }
         ];
 
+        const modal = document.getElementById('imageModal');
+        const modalImage = document.getElementById('modalImage');
+        const modalCaption = document.getElementById('modalCaption');
+        const modalCloseBtn = document.getElementById('modalCloseBtn');
+        let lastActiveElement = null;
+
+        function getImageTitle(img) {
+            const lang = getCurrentLang();
+            if (!img) return '';
+            return lang === 'zh' ? img.titleZh : img.titleEn;
+        }
+
         function openModal(src, alt) {
-            const modal = document.getElementById('imageModal');
-            const modalImage = document.getElementById('modalImage');
-            
             // 查找当前点击图片的索引
             const index = screenshots.findIndex(s => src.includes(s.src));
             if (index !== -1) {
                 currentImageIndex = index;
             }
 
+            const img = screenshots[currentImageIndex];
+            const title = getImageTitle(img) || alt || '';
+
+            lastActiveElement = document.activeElement;
             modal.classList.add('active');
+            modal.setAttribute('aria-hidden', 'false');
+            body.classList.add('modal-open');
+
             modalImage.src = src;
+            modalImage.alt = title;
+            modalCaption.textContent = title;
+
+            // 将焦点移入对话框
+            if (modalCloseBtn) {
+                modalCloseBtn.focus({ preventScroll: true });
+            }
         }
 
         function changeImage(direction) {
@@ -3161,58 +3351,139 @@ cd ThoughtEcho</code></pre>
             }
 
             const nextImage = screenshots[currentImageIndex];
-            const modalImage = document.getElementById('modalImage');
+            const title = getImageTitle(nextImage);
             
             // 简单的切换效果
             modalImage.style.opacity = '0.5';
             setTimeout(() => {
                 modalImage.src = nextImage.src;
+                modalImage.alt = title;
+                modalCaption.textContent = title;
                 modalImage.style.opacity = '1';
             }, 200);
         }
 
         function closeModal() {
-            const modal = document.getElementById('imageModal');
             modal.classList.remove('active');
+            modal.setAttribute('aria-hidden', 'true');
+            body.classList.remove('modal-open');
+            modalImage.src = '';
+            modalCaption.textContent = '';
+
+            if (lastActiveElement && typeof lastActiveElement.focus === 'function') {
+                lastActiveElement.focus({ preventScroll: true });
+            }
         }
 
         // ESC 键关闭模态框
         document.addEventListener('keydown', (e) => {
+            const isModalOpen = modal.classList.contains('active');
+            if (!isModalOpen) return;
+
             if (e.key === 'Escape') {
                 closeModal();
+                return;
+            }
+            if (e.key === 'ArrowLeft') {
+                changeImage(-1);
+                return;
+            }
+            if (e.key === 'ArrowRight') {
+                changeImage(1);
+                return;
+            }
+        });
+
+        // 模态框内 Tab 焦点循环（轻量 focus trap）
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Tab') return;
+            if (!modal.classList.contains('active')) return;
+
+            const focusables = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+            const list = Array.from(focusables).filter(el => !el.hasAttribute('disabled'));
+            if (list.length === 0) return;
+
+            const first = list[0];
+            const last = list[list.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
             }
         });
 
         // 滚动动画
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -100px 0px'
-        };
-
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
-                }
+        if (prefersReducedMotion) {
+            document.querySelectorAll('.fade-in, .slide-in-left, .slide-in-right, .scale-in').forEach(el => {
+                el.classList.add('visible');
             });
-        }, observerOptions);
+        } else {
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -100px 0px'
+            };
 
-        // 观察所有需要动画的元素
-        document.querySelectorAll('.fade-in, .slide-in-left, .slide-in-right, .scale-in').forEach(el => {
-            observer.observe(el);
-        });
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, observerOptions);
+
+            // 观察所有需要动画的元素
+            document.querySelectorAll('.fade-in, .slide-in-left, .slide-in-right, .scale-in').forEach(el => {
+                observer.observe(el);
+            });
+        }
 
         // 平滑滚动
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
                 e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
+                const href = this.getAttribute('href');
+                if (!href || href === '#') {
+                    window.scrollTo({ top: 0, behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+                    return;
+                }
+
+                let target = null;
+                try {
+                    target = document.querySelector(href);
+                } catch (_) {
+                    // 忽略无效选择器（例如 href="#"）
+                    return;
+                }
+
                 if (target) {
                     target.scrollIntoView({
-                        behavior: 'smooth',
+                        behavior: prefersReducedMotion ? 'auto' : 'smooth',
                         block: 'start'
                     });
                 }
+            });
+        });
+
+        // FAQ 手风琴逻辑
+        document.querySelectorAll('.faq-question').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const expanded = btn.getAttribute('aria-expanded') === 'true';
+                const answerId = btn.getAttribute('aria-controls');
+                const answer = answerId ? document.getElementById(answerId) : null;
+
+                // 默认行为：只展开一个
+                document.querySelectorAll('.faq-question[aria-expanded="true"]').forEach(openBtn => {
+                    if (openBtn === btn) return;
+                    openBtn.setAttribute('aria-expanded', 'false');
+                    const id = openBtn.getAttribute('aria-controls');
+                    const panel = id ? document.getElementById(id) : null;
+                    if (panel) panel.hidden = true;
+                });
+
+                btn.setAttribute('aria-expanded', String(!expanded));
+                if (answer) answer.hidden = expanded;
             });
         });
 
@@ -3273,93 +3544,129 @@ cd ThoughtEcho</code></pre>
 
         // ==================== 轮播图逻辑 ====================
         const track = document.querySelector('.carousel-track');
-        const slides = Array.from(track.children);
         const nextBtn = document.querySelector('.next-btn');
         const prevBtn = document.querySelector('.prev-btn');
         const dotsNav = document.getElementById('carouselDots');
-        
-        let currentSlideIndex = 0;
-        let autoPlayInterval;
 
-        // 生成圆点
-        slides.forEach((_, index) => {
-            const dot = document.createElement('button');
-            dot.classList.add('carousel-dot');
-            if (index === 0) dot.classList.add('active');
-            dot.addEventListener('click', () => moveToSlide(index));
-            dotsNav.appendChild(dot);
-        });
+        if (track && nextBtn && prevBtn && dotsNav) {
+            const slides = Array.from(track.children);
+            let currentSlideIndex = 0;
+            let autoPlayInterval;
 
-        const dots = Array.from(dotsNav.children);
+            // 初始化轮播尺寸
+            track.style.width = (slides.length * 100) + '%';
+            slides.forEach(slide => {
+                slide.style.width = (100 / slides.length) + '%';
+            });
 
-        function moveToSlide(index) {
-            // 循环逻辑
-            if (index < 0) index = slides.length - 1;
-            if (index >= slides.length) index = 0;
+            // 生成圆点
+            slides.forEach((_, index) => {
+                const dot = document.createElement('button');
+                dot.type = 'button';
+                dot.classList.add('carousel-dot');
+                if (index === 0) dot.classList.add('active');
+                dot.addEventListener('click', () => moveToSlide(index));
+                dotsNav.appendChild(dot);
+            });
 
-            track.style.transform = 'translateX(-' + (index * 100) + '%)';
-            
-            // 更新圆点状态
-            dots[currentSlideIndex].classList.remove('active');
-            dots[index].classList.add('active');
-            
-            currentSlideIndex = index;
-        }
+            const dots = Array.from(dotsNav.children);
 
-        // 按钮事件
-        nextBtn.addEventListener('click', () => {
-            moveToSlide(currentSlideIndex + 1);
-            resetAutoPlay();
-        });
+            function moveToSlide(index) {
+                if (slides.length === 0) return;
 
-        prevBtn.addEventListener('click', () => {
-            moveToSlide(currentSlideIndex - 1);
-            resetAutoPlay();
-        });
+                // 循环逻辑
+                if (index < 0) index = slides.length - 1;
+                if (index >= slides.length) index = 0;
 
-        // 自动播放
-        function startAutoPlay() {
-            autoPlayInterval = setInterval(() => {
+                // 修正：移动距离应为 (100 / slides.length) * index
+                const movePercentage = (100 / slides.length) * index;
+                track.style.transform = 'translateX(-' + movePercentage + '%)';
+
+                // 更新圆点状态
+                if (dots[currentSlideIndex]) dots[currentSlideIndex].classList.remove('active');
+                if (dots[index]) dots[index].classList.add('active');
+
+                currentSlideIndex = index;
+            }
+
+            // 按钮事件
+            nextBtn.addEventListener('click', () => {
                 moveToSlide(currentSlideIndex + 1);
-            }, 5000); // 5秒切换一次
-        }
+                resetAutoPlay();
+            });
 
-        function stopAutoPlay() {
-            clearInterval(autoPlayInterval);
-        }
+            prevBtn.addEventListener('click', () => {
+                moveToSlide(currentSlideIndex - 1);
+                resetAutoPlay();
+            });
 
-        function resetAutoPlay() {
-            stopAutoPlay();
+            // 自动播放
+            function startAutoPlay() {
+                if (prefersReducedMotion) return;
+                autoPlayInterval = setInterval(() => {
+                    moveToSlide(currentSlideIndex + 1);
+                }, 5000);
+            }
+
+            function stopAutoPlay() {
+                clearInterval(autoPlayInterval);
+            }
+
+            function resetAutoPlay() {
+                stopAutoPlay();
+                startAutoPlay();
+            }
+
+            // 鼠标悬停暂停
+            const carouselContainer = document.querySelector('.carousel-container');
+            if (carouselContainer) {
+                carouselContainer.addEventListener('mouseenter', stopAutoPlay);
+                carouselContainer.addEventListener('mouseleave', startAutoPlay);
+            }
+
+            // 触摸滑动支持 (Mobile Swipe)
+            let touchStartX = 0;
+            let touchEndX = 0;
+
+            track.addEventListener('touchstart', e => {
+                touchStartX = e.changedTouches[0].screenX;
+                stopAutoPlay();
+            }, { passive: true });
+
+            track.addEventListener('touchend', e => {
+                touchEndX = e.changedTouches[0].screenX;
+                if (touchEndX < touchStartX - 50) moveToSlide(currentSlideIndex + 1);
+                if (touchEndX > touchStartX + 50) moveToSlide(currentSlideIndex - 1);
+                startAutoPlay();
+            }, { passive: true });
+
             startAutoPlay();
         }
 
-        // 鼠标悬停暂停
-        const carouselContainer = document.querySelector('.carousel-container');
-        carouselContainer.addEventListener('mouseenter', stopAutoPlay);
-        carouselContainer.addEventListener('mouseleave', startAutoPlay);
+        // 截图/滚动提示：键盘可触达
+        document.querySelectorAll('.screenshot-image').forEach(el => {
+            el.setAttribute('role', 'button');
+            el.setAttribute('tabindex', '0');
+            el.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    el.click();
+                }
+            });
+        });
 
-        // 触摸滑动支持 (Mobile Swipe)
-        let touchStartX = 0;
-        let touchEndX = 0;
-
-        track.addEventListener('touchstart', e => {
-            touchStartX = e.changedTouches[0].screenX;
-            stopAutoPlay(); // 触摸时暂停
-        }, {passive: true});
-
-        track.addEventListener('touchend', e => {
-            touchEndX = e.changedTouches[0].screenX;
-            handleSwipe();
-            startAutoPlay(); // 触摸结束恢复
-        }, {passive: true});
-
-        function handleSwipe() {
-            if (touchEndX < touchStartX - 50) moveToSlide(currentSlideIndex + 1); // 左滑 -> 下一张
-            if (touchEndX > touchStartX + 50) moveToSlide(currentSlideIndex - 1); // 右滑 -> 上一张
+        const scrollIndicator = document.querySelector('.scroll-indicator');
+        if (scrollIndicator) {
+            scrollIndicator.setAttribute('role', 'button');
+            scrollIndicator.setAttribute('tabindex', '0');
+            scrollIndicator.setAttribute('aria-label', 'Scroll down');
+            scrollIndicator.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    scrollIndicator.click();
+                }
+            });
         }
-
-        // 启动
-        startAutoPlay();
     </script>
 </body>
 </html>

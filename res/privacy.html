@@ -604,28 +604,27 @@
             }
         });
 
-        // 语言切换
+        // 语言切换（修复：避免同时存在 lang-zh 与 lang-en）
         const langToggle = document.getElementById('langToggle');
         const langText = document.getElementById('langText');
         const body = document.body;
-        
-        const currentLang = localStorage.getItem('lang') || 'zh';
-        body.classList.add(`lang-${currentLang}`);
-        langText.textContent = currentLang === 'zh' ? 'EN' : '中文';
 
+        function getCurrentLang() {
+            return body.classList.contains('lang-en') ? 'en' : 'zh';
+        }
+
+        function applyLanguage(lang) {
+            const normalized = lang === 'en' ? 'en' : 'zh';
+            body.classList.remove('lang-zh', 'lang-en');
+            body.classList.add(`lang-${normalized}`);
+            langText.textContent = normalized === 'zh' ? 'EN' : '中文';
+            document.documentElement.setAttribute('lang', normalized === 'zh' ? 'zh-CN' : 'en');
+            localStorage.setItem('lang', normalized);
+        }
+
+        applyLanguage(localStorage.getItem('lang') || 'zh');
         langToggle.addEventListener('click', () => {
-            const isZh = body.classList.contains('lang-zh');
-            if (isZh) {
-                body.classList.remove('lang-zh');
-                body.classList.add('lang-en');
-                langText.textContent = '中文';
-                localStorage.setItem('lang', 'en');
-            } else {
-                body.classList.remove('lang-en');
-                body.classList.add('lang-zh');
-                langText.textContent = 'EN';
-                localStorage.setItem('lang', 'zh');
-            }
+            applyLanguage(getCurrentLang() === 'zh' ? 'en' : 'zh');
         });
     </script>
 </body>
