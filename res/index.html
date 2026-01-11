@@ -7,6 +7,13 @@
     <title>心迹 - 你的专属灵感摘录本</title>
     <link rel="icon" type="image/png" href="icon.png"/>
     
+    <!-- Open Graph / Social Media Meta Tags -->
+    <meta property="og:title" content="心迹 ThoughtEcho - 你的专属灵感摘录本">
+    <meta property="og:description" content="随心记录每一刻灵感，释放AI洞察的力量。本地优先，安全私密。">
+    <meta property="og:image" content="icon.png">
+    <meta property="og:url" content="https://shangjin-xiao.github.io/ThoughtEcho/">
+    <meta property="og:type" content="website">
+    
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,6 +42,7 @@
             --shadow-soft: rgba(0, 0, 0, 0.08);
             --shadow-medium: rgba(0, 0, 0, 0.12);
             --shadow-hard: rgba(0, 0, 0, 0.2);
+            --nav-bg: rgba(254, 253, 251, 0.85); /* 浅色模式半透明背景 */
         }
 
         [data-theme="dark"] {
@@ -48,6 +56,7 @@
             --ink-dark: #e8dfd5;
             --ink-medium: #d4c5b9;
             --ink-light: #b8a99a;
+            --nav-bg: rgba(42, 37, 32, 0.85); /* 深色模式半透明背景 */
         }
 
         * {
@@ -58,6 +67,7 @@
 
         html {
             scroll-behavior: smooth;
+            scroll-padding-top: 90px; /* 防止固定导航栏遮挡锚点内容 */
         }
 
         body {
@@ -126,9 +136,11 @@
             left: 0;
             right: 0;
             z-index: 1000;
-            background: var(--paper-white);
+            background: var(--nav-bg);
             border-bottom: 3px solid var(--accent-brown);
             box-shadow: 0 3px 12px var(--shadow-soft);
+            backdrop-filter: blur(12px); /* 毛玻璃效果 */
+            -webkit-backdrop-filter: blur(12px);
         }
 
         .nav-container {
@@ -209,6 +221,13 @@
         }
 
         .nav-links a:hover::after {
+            width: 100%;
+        }
+
+        .nav-links a.active {
+            color: var(--accent-brown);
+        }
+        .nav-links a.active::after {
             width: 100%;
         }
 
@@ -651,7 +670,7 @@
             position: relative;
             transform: rotate(-1.5deg);
             transition: all 0.4s ease;
-            cursor: pointer;
+            cursor: default; /* UX优化：非链接卡片不显示手型光标，避免误导点击 */
         }
 
         .sticky-note:nth-child(2n) {
@@ -681,9 +700,10 @@
             transform: translateX(-50%);
             width: 80px;
             height: 20px;
-            background: rgba(255, 255, 255, 0.4);
-            border: 1px solid rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(2px); /* 胶带磨砂质感 */
             box-shadow: 0 2px 4px var(--shadow-soft);
+            border: none;
         }
 
         .feature-icon {
@@ -1050,6 +1070,30 @@
             justify-content: center;
             transition: transform 0.3s ease;
         }
+        
+        /* ==================== 模态框导航按钮 ==================== */
+        .modal-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            z-index: 10;
+            backdrop-filter: blur(4px);
+        }
+        .modal-nav:hover { background: rgba(255, 255, 255, 0.3); transform: translateY(-50%) scale(1.1); }
+        .modal-prev { left: 20px; }
+        .modal-next { right: 20px; }
 
         .modal-close:hover {
             transform: rotate(90deg);
@@ -1338,6 +1382,30 @@
             font-size: 0.95rem;
             line-height: 1.6;
         }
+        
+        /* ==================== 代码块复制按钮 ==================== */
+        .code-wrapper {
+            position: relative;
+        }
+        
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--paper-white);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .copy-btn:hover { background: rgba(255, 255, 255, 0.25); }
+        .copy-btn.copied {
+            background: var(--accent-green);
+            border-color: var(--accent-green);
+        }
 
         /* ==================== 路线图 ==================== */
         .roadmap-section {
@@ -1585,6 +1653,62 @@
             color: var(--ink-light);
         }
 
+        /* ==================== 回到顶部按钮 ==================== */
+        .back-to-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            background: var(--accent-brown);
+            color: var(--paper-white);
+            border: none;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px var(--shadow-medium);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+            z-index: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .back-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .back-to-top:hover {
+            background: var(--accent-orange);
+            transform: translateY(-5px);
+            box-shadow: 0 6px 16px var(--shadow-medium);
+        }
+
+        /* ==================== 下滑提示箭头 ==================== */
+        .scroll-indicator {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--ink-light);
+            font-size: 2rem;
+            animation: bounce 2s infinite;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.3s ease;
+        }
+        .scroll-indicator:hover { opacity: 1; color: var(--accent-brown); }
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
+            40% { transform: translateX(-50%) translateY(-10px); }
+            60% { transform: translateX(-50%) translateY(-5px); }
+        }
+
         /* ==================== 响应式 ==================== */
         @media (max-width: 1024px) {
             .hero-container {
@@ -1830,15 +1954,19 @@
             .download-title {
                 font-size: 1.5rem;
             }
+            /* 移动端轮播适配：隐藏按钮，优化空间，统一布局顺序 */
+            .carousel-container { padding: 0; }
+            .carousel-btn { display: none; }
+            .carousel-slide { padding: 0; }
             .screenshot-item {
                 grid-template-columns: 1fr;
                 gap: 1.5rem;
                 padding: 2rem 1.5rem;
             }
-            .screenshot-item:nth-child(even) .screenshot-image {
+            .carousel-slide:nth-child(even) .screenshot-item .screenshot-image {
                 order: 1;
             }
-            .screenshot-item:nth-child(even) .screenshot-content {
+            .carousel-slide:nth-child(even) .screenshot-item .screenshot-content {
                 order: 2;
             }
             .arrow-doodle {
@@ -1974,6 +2102,10 @@
                     </div>
                 </div>
             </div>
+        </div>
+        
+        <div class="scroll-indicator" onclick="document.getElementById('features').scrollIntoView({behavior: 'smooth'})">
+            ↓
         </div>
     </section>
 
@@ -2340,127 +2472,130 @@
         <div class="screenshot-doodle doodle-star">✨</div>
         <div class="screenshot-doodle doodle-heart">❤️</div>
 
-        <!-- 核心功能 -->
-        <div class="screenshot-category fade-in">
-            <h3 class="category-title">
-                <span class="content-zh">核心功能</span>
-                <span class="content-en">Core Features</span>
-            </h3>
-            <div class="screenshots-grid">
-                <div class="screenshot-item fade-in">
-                    <div class="screenshot-image" onclick="openModal('screenshot/home_page.jpg', '主页')">
-                        <img src="screenshot/home_page.jpg" alt="主页" loading="lazy">
-                    </div>
-                    <div class="screenshot-content">
-                        <div class="arrow-doodle"></div>
-                        <h4><span class="content-zh">优雅的主页</span><span class="content-en">Elegant Homepage</span></h4>
-                        <p><span class="content-zh">卡片式设计清晰展示每日灵感、近期笔记和功能入口，助你快速进入创作状态。</span><span class="content-en">Card-based design clearly displays daily inspiration, recent notes, and feature entries to help you get into a creative state quickly.</span></p>
-                    </div>
-                </div>
+        <!-- 轮播容器 -->
+        <div class="carousel-container fade-in">
+            <button class="carousel-btn prev-btn" aria-label="Previous">❮</button>
+            
+            <div class="carousel-track-container">
+                <ul class="carousel-track">
+                    <!-- 1. 主页 -->
+                    <li class="carousel-slide">
+                        <div class="screenshot-item">
+                            <div class="screenshot-image" onclick="openModal('screenshot/home_page.jpg', '主页')">
+                                <img src="screenshot/home_page.jpg" alt="主页" loading="lazy">
+                            </div>
+                            <div class="screenshot-content">
+                                <div class="arrow-doodle"></div>
+                                <h4><span class="content-zh">优雅的主页</span><span class="content-en">Elegant Homepage</span></h4>
+                                <p><span class="content-zh">卡片式设计清晰展示每日灵感、近期笔记和功能入口，助你快速进入创作状态。</span><span class="content-en">Card-based design clearly displays daily inspiration, recent notes, and feature entries to help you get into a creative state quickly.</span></p>
+                            </div>
+                        </div>
+                    </li>
 
-                <div class="screenshot-item fade-in">
-                    <div class="screenshot-content">
-                        <div class="arrow-doodle"></div>
-                        <h4><span class="content-zh">强大的富文本编辑器</span><span class="content-en">Powerful Rich Text Editor</span></h4>
-                        <p><span class="content-zh">支持标题、列表、引用等多种格式，可插入图片、音频、视频，满足你多样化的记录需求。</span><span class="content-en">Supports various formats like headings, lists, quotes, and allows inserting images, audio, and video to meet your diverse recording needs.</span></p>
-                    </div>
-                    <div class="screenshot-image" onclick="openModal('screenshot/note_full_editor_page.dart.jpg', '富文本编辑器')">
-                        <img src="screenshot/note_full_editor_page.dart.jpg" alt="富文本编辑器" loading="lazy">
-                    </div>
-                </div>
+                    <!-- 2. 编辑器 -->
+                    <li class="carousel-slide">
+                        <div class="screenshot-item">
+                            <div class="screenshot-content">
+                                <div class="arrow-doodle"></div>
+                                <h4><span class="content-zh">强大的富文本编辑器</span><span class="content-en">Powerful Rich Text Editor</span></h4>
+                                <p><span class="content-zh">支持标题、列表、引用等多种格式，可插入图片、音频、视频，满足你多样化的记录需求。</span><span class="content-en">Supports various formats like headings, lists, quotes, and allows inserting images, audio, and video to meet your diverse recording needs.</span></p>
+                            </div>
+                            <div class="screenshot-image" onclick="openModal('screenshot/note_full_editor_page.dart.jpg', '富文本编辑器')">
+                                <img src="screenshot/note_full_editor_page.dart.jpg" alt="富文本编辑器" loading="lazy">
+                            </div>
+                        </div>
+                    </li>
+
+                    <!-- 3. AI问答 -->
+                    <li class="carousel-slide">
+                        <div class="screenshot-item">
+                            <div class="screenshot-image" onclick="openModal('screenshot/note_qa_chat_page.jpg', 'AI问答')">
+                                <img src="screenshot/note_qa_chat_page.jpg" alt="AI问答对话" loading="lazy">
+                            </div>
+                            <div class="screenshot-content">
+                                <div class="arrow-doodle"></div>
+                                <h4><span class="content-zh">AI 智能问答</span><span class="content-en">AI Q&A Chat</span></h4>
+                                <p><span class="content-zh">基于你的笔记内容，AI能够回答相关问题、提供总结、激发新灵感，成为你的私人知识助理。</span><span class="content-en">Based on your notes, the AI can answer related questions, provide summaries, and spark new ideas, becoming your personal knowledge assistant.</span></p>
+                            </div>
+                        </div>
+                    </li>
+
+                    <!-- 4. 筛选排序 -->
+                    <li class="carousel-slide">
+                        <div class="screenshot-item">
+                            <div class="screenshot-content">
+                                <div class="arrow-doodle"></div>
+                                <h4><span class="content-zh">智能筛选与排序</span><span class="content-en">Smart Filter & Sort</span></h4>
+                                <p><span class="content-zh">通过标签、内容、时间等多维度进行筛选和排序，帮你快速定位所需信息。</span><span class="content-en">Filter and sort by tags, content, time, and other dimensions to help you quickly locate the information you need.</span></p>
+                            </div>
+                            <div class="screenshot-image" onclick="openModal('screenshot/note_filter_sort_sheet.dart.jpg', '筛选排序')">
+                                <img src="screenshot/note_filter_sort_sheet.dart.jpg" alt="筛选与排序" loading="lazy">
+                            </div>
+                        </div>
+                    </li>
+
+                    <!-- 5. 洞察分析 -->
+                    <li class="carousel-slide">
+                        <div class="screenshot-item">
+                            <div class="screenshot-image" onclick="openModal('screenshot/insights_page.jpg', '洞察分析')">
+                                <img src="screenshot/insights_page.jpg" alt="洞察分析" loading="lazy">
+                            </div>
+                            <div class="screenshot-content">
+                                <div class="arrow-doodle"></div>
+                                <h4><span class="content-zh">AI 洞察分析</span><span class="content-en">AI Insights Analysis</span></h4>
+                                <p><span class="content-zh">AI 自动分析你的写作习惯、常用词汇和情感倾向，生成可视化图表，助你更好地了解自己。</span><span class="content-en">The AI automatically analyzes your writing habits, common vocabulary, and emotional tendencies, generating visual charts to help you better understand yourself.</span></p>
+                            </div>
+                        </div>
+                    </li>
+
+                    <!-- 6. 同步 -->
+                    <li class="carousel-slide">
+                        <div class="screenshot-item">
+                            <div class="screenshot-content">
+                                <div class="arrow-doodle"></div>
+                                <h4><span class="content-zh">跨设备同步</span><span class="content-en">Cross-Device Sync</span></h4>
+                                <p><span class="content-zh">通过局域网内的设备发现和数据同步功能，轻松实现多设备间的数据无缝流转。</span><span class="content-en">Seamlessly transfer data between multiple devices through local network device discovery and data synchronization.</span></p>
+                            </div>
+                            <div class="screenshot-image" onclick="openModal('screenshot/note_sync.jpg', '笔记同步')">
+                                <img src="screenshot/note_sync.jpg" alt="笔记同步" loading="lazy">
+                            </div>
+                        </div>
+                    </li>
+
+                    <!-- 7. 主题 -->
+                    <li class="carousel-slide">
+                        <div class="screenshot-item">
+                            <div class="screenshot-image" onclick="openModal('screenshot/theme_settings_page.jpg', '主题设置')">
+                                <img src="screenshot/theme_settings_page.jpg" alt="主题设置" loading="lazy">
+                            </div>
+                            <div class="screenshot-content">
+                                <div class="arrow-doodle"></div>
+                                <h4><span class="content-zh">个性化主题</span><span class="content-en">Personalized Theme</span></h4>
+                                <p><span class="content-zh">内置多种色彩主题，并支持自定义设置，打造专属于你的视觉风格。</span><span class="content-en">Built-in multiple color themes and supports custom settings to create your own unique visual style.</span></p>
+                            </div>
+                        </div>
+                    </li>
+
+                    <!-- 8. 备份 -->
+                    <li class="carousel-slide">
+                        <div class="screenshot-item">
+                            <div class="screenshot-content">
+                                <div class="arrow-doodle"></div>
+                                <h4><span class="content-zh">数据备份与恢复</span><span class="content-en">Backup & Restore</span></h4>
+                                <p><span class="content-zh">提供完整的数据备份和恢复功能，包括笔记、媒体文件和设置，保障你的数据安全。</span><span class="content-en">Provides complete data backup and recovery functions, including notes, media files, and settings, to ensure your data security.</span></p>
+                            </div>
+                            <div class="screenshot-image" onclick="openModal('screenshot/backup_restore_page.jpg', '备份恢复')">
+                                <img src="screenshot/backup_restore_page.jpg" alt="备份恢复" loading="lazy">
+                            </div>
+                        </div>
+                    </li>
+                </ul>
             </div>
-        </div>
 
-        <!-- 编辑与AI功能 -->
-        <div class="screenshot-category fade-in">
-            <h3 class="category-title">
-                <span class="content-zh">编辑与AI功能</span>
-                <span class="content-en">Editing & AI Features</span>
-            </h3>
-            <div class="screenshots-grid">
-                <div class="screenshot-item fade-in">
-                    <div class="screenshot-image" onclick="openModal('screenshot/note_qa_chat_page.jpg', 'AI问答')">
-                        <img src="screenshot/note_qa_chat_page.jpg" alt="AI问答对话" loading="lazy">
-                    </div>
-                    <div class="screenshot-content">
-                        <div class="arrow-doodle"></div>
-                        <h4><span class="content-zh">AI 智能问答</span><span class="content-en">AI Q&A Chat</span></h4>
-                        <p><span class="content-zh">基于你的笔记内容，AI能够回答相关问题、提供总结、激发新灵感，成为你的私人知识助理。</span><span class="content-en">Based on your notes, the AI can answer related questions, provide summaries, and spark new ideas, becoming your personal knowledge assistant.</span></p>
-                    </div>
-                </div>
-
-                <div class="screenshot-item fade-in">
-                    <div class="screenshot-content">
-                        <div class="arrow-doodle"></div>
-                        <h4><span class="content-zh">智能筛选与排序</span><span class="content-en">Smart Filter & Sort</span></h4>
-                        <p><span class="content-zh">通过标签、内容、时间等多维度进行筛选和排序，帮你快速定位所需信息。</span><span class="content-en">Filter and sort by tags, content, time, and other dimensions to help you quickly locate the information you need.</span></p>
-                    </div>
-                    <div class="screenshot-image" onclick="openModal('screenshot/note_filter_sort_sheet.dart.jpg', '筛选排序')">
-                        <img src="screenshot/note_filter_sort_sheet.dart.jpg" alt="筛选与排序" loading="lazy">
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 洞察与报告 -->
-        <div class="screenshot-category fade-in">
-            <h3 class="category-title">
-                <span class="content-zh">洞察与报告</span>
-                <span class="content-en">Insights & Reports</span>
-            </h3>
-            <div class="screenshots-grid">
-                <div class="screenshot-item fade-in">
-                    <div class="screenshot-image" onclick="openModal('screenshot/insights_page.jpg', '洞察分析')">
-                        <img src="screenshot/insights_page.jpg" alt="洞察分析" loading="lazy">
-                    </div>
-                    <div class="screenshot-content">
-                        <div class="arrow-doodle"></div>
-                        <h4><span class="content-zh">AI 洞察分析</span><span class="content-en">AI Insights Analysis</span></h4>
-                        <p><span class="content-zh">AI 自动分析你的写作习惯、常用词汇和情感倾向，生成可视化图表，助你更好地了解自己。</span><span class="content-en">The AI automatically analyzes your writing habits, common vocabulary, and emotional tendencies, generating visual charts to help you better understand yourself.</span></p>
-                    </div>
-                </div>
-
-                <div class="screenshot-item fade-in">
-                    <div class="screenshot-content">
-                        <div class="arrow-doodle"></div>
-                        <h4><span class="content-zh">跨设备同步</span><span class="content-en">Cross-Device Sync</span></h4>
-                        <p><span class="content-zh">通过局域网内的设备发现和数据同步功能，轻松实现多设备间的数据无缝流转。</span><span class="content-en">Seamlessly transfer data between multiple devices through local network device discovery and data synchronization.</span></p>
-                    </div>
-                    <div class="screenshot-image" onclick="openModal('screenshot/note_sync.jpg', '笔记同步')">
-                        <img src="screenshot/note_sync.jpg" alt="笔记同步" loading="lazy">
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 设置与管理 -->
-        <div class="screenshot-category fade-in">
-            <h3 class="category-title">
-                <span class="content-zh">设置与管理</span>
-                <span class="content-en">Settings & Management</span>
-            </h3>
-            <div class="screenshots-grid">
-                <div class="screenshot-item fade-in">
-                    <div class="screenshot-image" onclick="openModal('screenshot/theme_settings_page.jpg', '主题设置')">
-                        <img src="screenshot/theme_settings_page.jpg" alt="主题设置" loading="lazy">
-                    </div>
-                    <div class="screenshot-content">
-                        <div class="arrow-doodle"></div>
-                        <h4><span class="content-zh">个性化主题</span><span class="content-en">Personalized Theme</span></h4>
-                        <p><span class="content-zh">内置多种色彩主题，并支持自定义设置，打造专属于你的视觉风格。</span><span class="content-en">Built-in multiple color themes and supports custom settings to create your own unique visual style.</span></p>
-                    </div>
-                </div>
-
-                <div class="screenshot-item fade-in">
-                    <div class="screenshot-content">
-                        <div class="arrow-doodle"></div>
-                        <h4><span class="content-zh">数据备份与恢复</span><span class="content-en">Backup & Restore</span></h4>
-                        <p><span class="content-zh">提供完整的数据备份和恢复功能，包括笔记、媒体文件和设置，保障你的数据安全。</span><span class="content-en">Provides complete data backup and recovery functions, including notes, media files, and settings, to ensure your data security.</span></p>
-                    </div>
-                    <div class="screenshot-image" onclick="openModal('screenshot/backup_restore_page.jpg', '备份恢复')">
-                        <img src="screenshot/backup_restore_page.jpg" alt="备份恢复" loading="lazy">
-                    </div>
-                </div>
+            <button class="carousel-btn next-btn" aria-label="Next">❯</button>
+            
+            <div class="carousel-dots" id="carouselDots">
+                <!-- JS自动生成圆点 -->
             </div>
         </div>
     </section>
@@ -2469,6 +2604,8 @@
     <div class="modal" id="imageModal" onclick="closeModal()">
         <div class="modal-content" onclick="event.stopPropagation()">
             <span class="modal-close" onclick="closeModal()">×</span>
+            <button class="modal-nav modal-prev" onclick="changeImage(-1)">&#10094;</button>
+            <button class="modal-nav modal-next" onclick="changeImage(1)">&#10095;</button>
             <img id="modalImage" src="" alt="预览">
         </div>
     </div>
@@ -2986,16 +3123,52 @@ cd ThoughtEcho</code></pre>
         });
 
         // 图片模态框
+        let currentImageIndex = 0;
+        // 定义图片列表以便轮播
+        const screenshots = [
+            { src: 'screenshot/home_page.jpg', alt: '主页' },
+            { src: 'screenshot/note_full_editor_page.dart.jpg', alt: '富文本编辑器' },
+            { src: 'screenshot/note_qa_chat_page.jpg', alt: 'AI问答' },
+            { src: 'screenshot/note_filter_sort_sheet.dart.jpg', alt: '筛选排序' },
+            { src: 'screenshot/insights_page.jpg', alt: '洞察分析' },
+            { src: 'screenshot/note_sync.jpg', alt: '笔记同步' },
+            { src: 'screenshot/theme_settings_page.jpg', alt: '主题设置' },
+            { src: 'screenshot/backup_restore_page.jpg', alt: '备份恢复' }
+        ];
+
         function openModal(src, alt) {
             const modal = document.getElementById('imageModal');
             const modalImage = document.getElementById('modalImage');
-            const modalCaption = document.getElementById('modalCaption');
             
+            // 查找当前点击图片的索引
+            const index = screenshots.findIndex(s => src.includes(s.src));
+            if (index !== -1) {
+                currentImageIndex = index;
+            }
+
             modal.classList.add('active');
             modalImage.src = src;
-            if (modalCaption && alt) {
-                modalCaption.textContent = alt;
+        }
+
+        function changeImage(direction) {
+            currentImageIndex += direction;
+            
+            // 循环播放逻辑
+            if (currentImageIndex >= screenshots.length) {
+                currentImageIndex = 0;
+            } else if (currentImageIndex < 0) {
+                currentImageIndex = screenshots.length - 1;
             }
+
+            const nextImage = screenshots[currentImageIndex];
+            const modalImage = document.getElementById('modalImage');
+            
+            // 简单的切换效果
+            modalImage.style.opacity = '0.5';
+            setTimeout(() => {
+                modalImage.src = nextImage.src;
+                modalImage.style.opacity = '1';
+            }, 200);
         }
 
         function closeModal() {
@@ -3097,6 +3270,96 @@ cd ThoughtEcho</code></pre>
         backToTopBtn.addEventListener('click', () => {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         });
+
+        // ==================== 轮播图逻辑 ====================
+        const track = document.querySelector('.carousel-track');
+        const slides = Array.from(track.children);
+        const nextBtn = document.querySelector('.next-btn');
+        const prevBtn = document.querySelector('.prev-btn');
+        const dotsNav = document.getElementById('carouselDots');
+        
+        let currentSlideIndex = 0;
+        let autoPlayInterval;
+
+        // 生成圆点
+        slides.forEach((_, index) => {
+            const dot = document.createElement('button');
+            dot.classList.add('carousel-dot');
+            if (index === 0) dot.classList.add('active');
+            dot.addEventListener('click', () => moveToSlide(index));
+            dotsNav.appendChild(dot);
+        });
+
+        const dots = Array.from(dotsNav.children);
+
+        function moveToSlide(index) {
+            // 循环逻辑
+            if (index < 0) index = slides.length - 1;
+            if (index >= slides.length) index = 0;
+
+            track.style.transform = 'translateX(-' + (index * 100) + '%)';
+            
+            // 更新圆点状态
+            dots[currentSlideIndex].classList.remove('active');
+            dots[index].classList.add('active');
+            
+            currentSlideIndex = index;
+        }
+
+        // 按钮事件
+        nextBtn.addEventListener('click', () => {
+            moveToSlide(currentSlideIndex + 1);
+            resetAutoPlay();
+        });
+
+        prevBtn.addEventListener('click', () => {
+            moveToSlide(currentSlideIndex - 1);
+            resetAutoPlay();
+        });
+
+        // 自动播放
+        function startAutoPlay() {
+            autoPlayInterval = setInterval(() => {
+                moveToSlide(currentSlideIndex + 1);
+            }, 5000); // 5秒切换一次
+        }
+
+        function stopAutoPlay() {
+            clearInterval(autoPlayInterval);
+        }
+
+        function resetAutoPlay() {
+            stopAutoPlay();
+            startAutoPlay();
+        }
+
+        // 鼠标悬停暂停
+        const carouselContainer = document.querySelector('.carousel-container');
+        carouselContainer.addEventListener('mouseenter', stopAutoPlay);
+        carouselContainer.addEventListener('mouseleave', startAutoPlay);
+
+        // 触摸滑动支持 (Mobile Swipe)
+        let touchStartX = 0;
+        let touchEndX = 0;
+
+        track.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+            stopAutoPlay(); // 触摸时暂停
+        }, {passive: true});
+
+        track.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+            startAutoPlay(); // 触摸结束恢复
+        }, {passive: true});
+
+        function handleSwipe() {
+            if (touchEndX < touchStartX - 50) moveToSlide(currentSlideIndex + 1); // 左滑 -> 下一张
+            if (touchEndX > touchStartX + 50) moveToSlide(currentSlideIndex - 1); // 右滑 -> 上一张
+        }
+
+        // 启动
+        startAutoPlay();
     </script>
 </body>
 </html>
