@@ -1,0 +1,11 @@
+{
+  "tessdata": "tessdata",
+  "files": [
+    "eng.traineddata",
+    "chi_sim.traineddata"
+  ],
+  "languages": [
+    "eng",
+    "chi_sim"
+  ]
+}

@@ -233,7 +233,11 @@ class Quote {
         favoriteCount:
             (json['favorite_count'] as num?)?.toInt() ?? 0, // 新增：心形点击次数
       );
+    } on ArgumentError {
+      // 业务校验错误：保持原始异常类型，便于上层识别与单测断言。
+      rethrow;
     } catch (e) {
+      // 非预期解析错误：包装为 FormatException 并附带原始 JSON 便于排查。
       throw FormatException('解析Quote JSON失败: $e, JSON: $json');
     }
   }
