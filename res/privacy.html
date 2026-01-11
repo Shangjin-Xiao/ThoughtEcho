@@ -52,6 +52,28 @@
             transition: background 0.3s ease, color 0.3s ease;
         }
 
+        /* Custom Scrollbar & Selection */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--paper-cream);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--line-color);
+            border-radius: 5px;
+            border: 2px solid var(--paper-cream);
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-brown);
+        }
+
+        ::selection {
+            background: var(--accent-brown);
+            color: var(--paper-white);
+        }
+
         body.lang-en {
             font-family: 'Noto Sans', 'Noto Sans SC', serif;
         }
@@ -465,10 +487,10 @@
             <h3 class="content-zh">一言（Hitokoto）API</h3>
             <h3 class="content-en">Hitokoto API</h3>
             <p class="content-zh">
-                应用首页的"每日一言"功能使用 <a href="https://hitokoto.cn" target="_blank">Hitokoto API</a> 获取随机句子。此功能：
+                应用首页的"每日一言"功能使用 <a href="https://hitokoto.cn" target="_blank" rel="noopener noreferrer">Hitokoto API</a> 获取随机句子。此功能：
             </p>
             <p class="content-en">
-                The "Daily Quote" feature on the homepage uses the <a href="https://hitokoto.cn" target="_blank">Hitokoto API</a>. This feature:
+                The "Daily Quote" feature on the homepage uses the <a href="https://hitokoto.cn" target="_blank" rel="noopener noreferrer">Hitokoto API</a>. This feature:
             </p>
             <ul>
                 <li class="content-zh">仅发送 HTTP 请求获取公开句子，不发送任何个人数据</li>
@@ -480,10 +502,10 @@
             <h3 class="content-zh">天气 API（Open-Meteo）</h3>
             <h3 class="content-en">Weather API (Open-Meteo)</h3>
             <p class="content-zh">
-                应用的天气功能使用 <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> API 获取天气信息。此功能：
+                应用的天气功能使用 <a href="https://open-meteo.com" target="_blank" rel="noopener noreferrer">Open-Meteo</a> API 获取天气信息。此功能：
             </p>
             <p class="content-en">
-                The weather feature uses <a href="https://open-meteo.com" target="_blank">Open-Meteo</a> API to fetch weather information. This feature:
+                The weather feature uses <a href="https://open-meteo.com" target="_blank" rel="noopener noreferrer">Open-Meteo</a> API to fetch weather information. This feature:
             </p>
             <ul>
                 <li class="content-zh">仅在您主动启用天气功能时激活</li>
@@ -492,8 +514,8 @@
                 <li class="content-en">Sends your location (latitude and longitude coordinates) to Open-Meteo service</li>
                 <li class="content-zh">您可以随时在设置中禁用天气功能</li>
                 <li class="content-en">You can disable the weather feature anytime in settings</li>
-                <li class="content-zh">天气数据的使用受 Open-Meteo 隐私政策约束，请参阅 <a href="https://open-meteo.com/en/terms" target="_blank">Open-Meteo 服务条款</a></li>
-                <li class="content-en">Weather data usage is subject to Open-Meteo's terms of service. See <a href="https://open-meteo.com/en/terms" target="_blank">Open-Meteo Terms</a></li>
+                <li class="content-zh">天气数据的使用受 Open-Meteo 隐私政策约束，请参阅 <a href="https://open-meteo.com/en/terms" target="_blank" rel="noopener noreferrer">Open-Meteo 服务条款</a></li>
+                <li class="content-en">Weather data usage is subject to Open-Meteo's terms of service. See <a href="https://open-meteo.com/en/terms" target="_blank" rel="noopener noreferrer">Open-Meteo Terms</a></li>
             </ul>
 
             <h2><span class="icon">🔐</span> <span class="content-zh">数据安全</span><span class="content-en">Data Security</span></h2>
@@ -528,10 +550,10 @@
             <ul>
                 <li class="content-zh"><strong>邮箱</strong>: <a href="mailto:support@shangjinyun.cn">support@shangjinyun.cn</a></li>
                 <li class="content-en"><strong>Email</strong>: <a href="mailto:support@shangjinyun.cn">support@shangjinyun.cn</a></li>
-                <li class="content-zh"><strong>GitHub Issues</strong>: <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/issues" target="_blank">提交问题</a></li>
-                <li class="content-en"><strong>GitHub Issues</strong>: <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/issues" target="_blank">Submit an issue</a></li>
-                <li class="content-zh"><strong>项目主页</strong>: <a href="https://github.com/Shangjin-Xiao/ThoughtEcho" target="_blank">GitHub 仓库</a></li>
-                <li class="content-en"><strong>Project Page</strong>: <a href="https://github.com/Shangjin-Xiao/ThoughtEcho" target="_blank">GitHub Repository</a></li>
+                <li class="content-zh"><strong>GitHub Issues</strong>: <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/issues" target="_blank" rel="noopener noreferrer">提交问题</a></li>
+                <li class="content-en"><strong>GitHub Issues</strong>: <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/issues" target="_blank" rel="noopener noreferrer">Submit an issue</a></li>
+                <li class="content-zh"><strong>项目主页</strong>: <a href="https://github.com/Shangjin-Xiao/ThoughtEcho" target="_blank" rel="noopener noreferrer">GitHub 仓库</a></li>
+                <li class="content-en"><strong>Project Page</strong>: <a href="https://github.com/Shangjin-Xiao/ThoughtEcho" target="_blank" rel="noopener noreferrer">GitHub Repository</a></li>
             </ul>
 
             <div class="highlight-box">
