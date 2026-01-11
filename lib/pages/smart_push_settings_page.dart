@@ -7,7 +7,8 @@ import '../services/smart_push_service.dart';
 import '../services/database_service.dart';
 import '../constants/app_constants.dart';
 
-/// 智能推送设置页面 (Preview)
+/// 智能推送设置页面
+/// 重构版：简洁现代的UI设计，智能推送为默认模式
 class SmartPushSettingsPage extends StatefulWidget {
   const SmartPushSettingsPage({super.key});
 
@@ -15,16 +16,33 @@ class SmartPushSettingsPage extends StatefulWidget {
   State<SmartPushSettingsPage> createState() => _SmartPushSettingsPageState();
 }
 
-class _SmartPushSettingsPageState extends State<SmartPushSettingsPage> {
+class _SmartPushSettingsPageState extends State<SmartPushSettingsPage> 
+    with SingleTickerProviderStateMixin {
   SmartPushSettings _settings = SmartPushSettings.defaultSettings();
   List<NoteCategory> _availableTags = [];
   bool _isLoading = true;
   bool _isTesting = false;
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    );
     _loadData();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadData() async {
@@ -32,7 +50,6 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage> {
       final smartPushService = context.read<SmartPushService>();
       final databaseService = context.read<DatabaseService>();
 
-      // 加载标签列表
       final tags = await databaseService.getCategories();
 
       if (mounted) {
@@ -41,6 +58,9 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage> {
           _availableTags = tags;
           _isLoading = false;
         });
+        if (_settings.showAdvancedOptions) {
+          _animationController.forward();
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -60,14 +80,12 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage> {
       final smartPushService = context.read<SmartPushService>();
       await smartPushService.saveSettings(_settings);
 
-      // 显式触发一次计划更新（虽然 saveSettings 内部可能已经做了，但为了保险起见）
-      // 注意：saveSettings 已经在 SmartPushService 中实现了 scheduleNextPush 调用
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(AppLocalizations.of(context).settingsSaved),
             duration: AppConstants.snackBarDurationNormal,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -88,13 +106,12 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage> {
     try {
       final smartPushService = context.read<SmartPushService>();
       
-      // 请求通知权限
       final hasPermission = await smartPushService.requestNotificationPermission();
       if (!hasPermission) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(AppLocalizations.of(context).storagePermissionRequired),
+              content: Text(AppLocalizations.of(context).smartPushPermissionRequired),
               duration: AppConstants.snackBarDurationError,
             ),
           );
@@ -102,14 +119,12 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage> {
         return;
       }
 
-      // 预览推送
       final previewNote = await smartPushService.previewPush();
       if (previewNote == null) {
         if (mounted) {
-          final l10n = AppLocalizations.of(context);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(l10n.smartPushNoMatchingNotes),
+              content: Text(AppLocalizations.of(context).smartPushNoMatchingNotes),
               duration: AppConstants.snackBarDurationNormal,
             ),
           );
@@ -117,14 +132,13 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage> {
         return;
       }
 
-      // 发送测试通知
       await smartPushService.triggerPush();
       if (mounted) {
-        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10n.smartPushTestSent),
+            content: Text(AppLocalizations.of(context).smartPushTestSent),
             duration: AppConstants.snackBarDurationNormal,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -148,18 +162,12 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     if (_isLoading) {
       return Scaffold(
         appBar: AppBar(
-          title: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(l10n.smartPushTitle),
-              const SizedBox(width: 8),
-              _buildPreviewBadge(context),
-            ],
-          ),
+          title: Text(l10n.smartPushTitle),
         ),
         body: const Center(child: CircularProgressIndicator()),
       );
@@ -167,317 +175,661 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(l10n.smartPushTitle),
-            const SizedBox(width: 8),
-            _buildPreviewBadge(context),
-          ],
-        ),
+        title: Text(l10n.smartPushTitle),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.save),
+          TextButton.icon(
             onPressed: _saveSettings,
-            tooltip: l10n.save,
+            icon: const Icon(Icons.check),
+            label: Text(l10n.save),
           ),
         ],
       ),
       body: ListView(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         children: [
-          // 启用开关
-          SwitchListTile(
-            title: Text(l10n.smartPushEnable),
-            subtitle: Text(l10n.smartPushEnableDesc),
-            value: _settings.enabled,
-            onChanged: (value) {
-              setState(() {
-                _settings = _settings.copyWith(enabled: value);
-              });
-            },
-          ),
-
+          // 主开关卡片
+          _buildMainSwitchCard(l10n, theme, colorScheme),
+          
           if (_settings.enabled) ...[
-            const Divider(),
-
-            // 推送内容类型
-            _buildSectionTitle(l10n.smartPushContentType),
-            CheckboxListTile(
-              title: Text(l10n.smartPushDailyQuote),
-              subtitle: Text(l10n.smartPushDailyQuoteDesc),
-              value: _settings.enabledContentTypes.contains(PushContentType.dailyQuote),
-              onChanged: (value) {
-                final types = Set<PushContentType>.from(_settings.enabledContentTypes);
-                if (value == true) {
-                  types.add(PushContentType.dailyQuote);
-                } else {
-                  types.remove(PushContentType.dailyQuote);
-                }
-                setState(() {
-                  _settings = _settings.copyWith(enabledContentTypes: types);
-                });
-              },
-            ),
-            CheckboxListTile(
-              title: Text(l10n.smartPushPastNotes),
-              subtitle: Text(l10n.smartPushPastNotesDesc),
-              value: _settings.enabledContentTypes.contains(PushContentType.pastNotes),
-              onChanged: (value) {
-                final types = Set<PushContentType>.from(_settings.enabledContentTypes);
-                if (value == true) {
-                  types.add(PushContentType.pastNotes);
-                } else {
-                  types.remove(PushContentType.pastNotes);
-                }
-                setState(() {
-                  _settings = _settings.copyWith(enabledContentTypes: types);
-                });
-              },
-            ),
-
-            // 过去笔记类型
-            if (_settings.enabledContentTypes.contains(PushContentType.pastNotes)) ...[
-              const Divider(),
-              _buildSectionTitle(l10n.smartPushPastNoteTypes),
-              CheckboxListTile(
-                title: Text(l10n.smartPushYearAgoToday),
-                subtitle: Text(l10n.smartPushYearAgoTodayDesc),
-                value: _settings.enabledPastNoteTypes.contains(PastNoteType.yearAgoToday),
-                onChanged: (value) => _togglePastNoteType(PastNoteType.yearAgoToday, value),
-              ),
-              CheckboxListTile(
-                title: Text(l10n.smartPushMonthAgoToday),
-                subtitle: Text(l10n.smartPushMonthAgoTodayDesc),
-                value: _settings.enabledPastNoteTypes.contains(PastNoteType.monthAgoToday),
-                onChanged: (value) => _togglePastNoteType(PastNoteType.monthAgoToday, value),
-              ),
-              CheckboxListTile(
-                title: Text(l10n.smartPushSameLocation),
-                subtitle: Text(l10n.smartPushSameLocationDesc),
-                value: _settings.enabledPastNoteTypes.contains(PastNoteType.sameLocation),
-                onChanged: (value) => _togglePastNoteType(PastNoteType.sameLocation, value),
-              ),
-              CheckboxListTile(
-                title: Text(l10n.smartPushSameWeather),
-                subtitle: Text(l10n.smartPushSameWeatherDesc),
-                value: _settings.enabledPastNoteTypes.contains(PastNoteType.sameWeather),
-                onChanged: (value) => _togglePastNoteType(PastNoteType.sameWeather, value),
-              ),
-            ],
-
-            // 天气筛选
-            if (_settings.enabledPastNoteTypes.contains(PastNoteType.sameWeather)) ...[
-              const Divider(),
-              _buildSectionTitle(l10n.smartPushWeatherFilter),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: WeatherFilterType.values.map((weather) {
-                  final isSelected = _settings.filterWeatherTypes.contains(weather);
-                  return FilterChip(
-                    label: Text(_getWeatherLabel(l10n, weather)),
-                    selected: isSelected,
-                    onSelected: (selected) {
-                      final types = Set<WeatherFilterType>.from(_settings.filterWeatherTypes);
-                      if (selected) {
-                        types.add(weather);
-                      } else {
-                        types.remove(weather);
-                      }
-                      setState(() {
-                        _settings = _settings.copyWith(filterWeatherTypes: types);
-                      });
-                    },
-                  );
-                }).toList(),
-              ),
-              const SizedBox(height: 16),
-            ],
-
-            // 标签筛选
-            const Divider(),
-            _buildSectionTitle(l10n.smartPushTagFilter),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Text(
-                l10n.smartPushTagFilterDesc,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            if (_availableTags.isEmpty)
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  l10n.noTagsAvailable,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: _availableTags.map((tag) {
-                    final isSelected = _settings.filterTagIds.contains(tag.id);
-                    return FilterChip(
-                      avatar: tag.icon != null && tag.icon!.isNotEmpty
-                          ? Text(tag.icon!, style: const TextStyle(fontSize: 14))
-                          : null,
-                      label: Text(tag.name),
-                      selected: isSelected,
-                      onSelected: (selected) {
-                        final tagIds = List<String>.from(_settings.filterTagIds);
-                        if (selected) {
-                          tagIds.add(tag.id);
-                        } else {
-                          tagIds.remove(tag.id);
-                        }
-                        setState(() {
-                          _settings = _settings.copyWith(filterTagIds: tagIds);
-                        });
-                      },
-                    );
-                  }).toList(),
-                ),
-              ),
             const SizedBox(height: 16),
+            
+            // 推送模式选择
+            _buildModeSelectionCard(l10n, theme, colorScheme),
+            
+            const SizedBox(height: 16),
+            
+            // 推送时间设置
+            _buildTimeSettingsCard(l10n, theme, colorScheme),
+            
+            const SizedBox(height: 16),
+            
+            // 推送频率
+            _buildFrequencyCard(l10n, theme, colorScheme),
+            
+            const SizedBox(height: 16),
+            
+            // 高级选项
+            _buildAdvancedOptionsCard(l10n, theme, colorScheme),
+            
+            const SizedBox(height: 24),
+            
+            // 测试推送按钮
+            _buildTestButton(l10n, theme, colorScheme),
+            
+            const SizedBox(height: 16),
+            
+            // 说明卡片
+            _buildNoticeCard(l10n, theme, colorScheme),
+          ],
+          
+          const SizedBox(height: 32),
+        ],
+      ),
+    );
+  }
 
-            // 推送时间
-            const Divider(),
-            _buildSectionTitle(l10n.smartPushTimeSettings),
-            ..._settings.pushTimeSlots.asMap().entries.map((entry) {
-              final index = entry.key;
-              final slot = entry.value;
-              return ListTile(
-                leading: const Icon(Icons.access_time),
-                title: Text(slot.formattedTime),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Switch(
-                      value: slot.enabled,
-                      onChanged: (value) {
-                        final slots = List<PushTimeSlot>.from(_settings.pushTimeSlots);
-                        slots[index] = slot.copyWith(enabled: value);
-                        setState(() {
-                          _settings = _settings.copyWith(pushTimeSlots: slots);
-                        });
-                      },
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.edit),
-                      onPressed: () => _editTimeSlot(index, slot),
-                    ),
-                    if (_settings.pushTimeSlots.length > 1)
-                      IconButton(
-                        icon: const Icon(Icons.delete),
-                        onPressed: () {
-                          final slots = List<PushTimeSlot>.from(_settings.pushTimeSlots);
-                          slots.removeAt(index);
-                          setState(() {
-                            _settings = _settings.copyWith(pushTimeSlots: slots);
-                          });
-                        },
-                      ),
-                  ],
-                ),
-              );
-            }),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: OutlinedButton.icon(
-                onPressed: _addTimeSlot,
-                icon: const Icon(Icons.add),
-                label: Text(l10n.smartPushAddTime),
+  /// 主开关卡片
+  Widget _buildMainSwitchCard(AppLocalizations l10n, ThemeData theme, ColorScheme colorScheme) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: _settings.enabled 
+              ? colorScheme.primary.withOpacity(0.3) 
+              : colorScheme.outline.withOpacity(0.2),
+        ),
+      ),
+      color: _settings.enabled 
+          ? colorScheme.primaryContainer.withOpacity(0.3)
+          : colorScheme.surface,
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: _settings.enabled 
+                    ? colorScheme.primary.withOpacity(0.15)
+                    : colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(
+                _settings.enabled ? Icons.notifications_active : Icons.notifications_off_outlined,
+                color: _settings.enabled ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                size: 28,
               ),
             ),
-            const SizedBox(height: 16),
-
-            // AI智能推送（预留）
-            const Divider(),
-            _buildSectionTitle(l10n.smartPushAiSection),
-            SwitchListTile(
-              title: Row(
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(l10n.smartPushAiEnable),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.secondary.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(4),
+                  Text(
+                    l10n.smartPushEnable,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
-                    child: Text(
-                      l10n.smartPushComingSoon,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: theme.colorScheme.secondary,
-                      ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    l10n.smartPushEnableDesc,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
                     ),
                   ),
                 ],
               ),
-              subtitle: Text(l10n.smartPushAiEnableDesc),
-              value: _settings.aiPushEnabled,
-              onChanged: null, // 暂时禁用
             ),
+            Switch(
+              value: _settings.enabled,
+              onChanged: (value) {
+                setState(() {
+                  _settings = _settings.copyWith(enabled: value);
+                });
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-            const SizedBox(height: 24),
+  /// 推送模式选择卡片
+  Widget _buildModeSelectionCard(AppLocalizations l10n, ThemeData theme, ColorScheme colorScheme) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: colorScheme.outline.withOpacity(0.2)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.category_outlined, color: colorScheme.primary, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  l10n.smartPushContentType,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _buildModeOption(
+              l10n,
+              theme,
+              colorScheme,
+              mode: PushMode.smart,
+              icon: Icons.auto_awesome,
+              title: l10n.smartPushModeSmart,
+              subtitle: l10n.smartPushModeSmartDesc,
+            ),
+            const SizedBox(height: 8),
+            _buildModeOption(
+              l10n,
+              theme,
+              colorScheme,
+              mode: PushMode.dailyQuote,
+              icon: Icons.format_quote,
+              title: l10n.smartPushDailyQuote,
+              subtitle: l10n.smartPushDailyQuoteDesc,
+            ),
+            const SizedBox(height: 8),
+            _buildModeOption(
+              l10n,
+              theme,
+              colorScheme,
+              mode: PushMode.pastNotes,
+              icon: Icons.history,
+              title: l10n.smartPushPastNotes,
+              subtitle: l10n.smartPushPastNotesDesc,
+            ),
+            const SizedBox(height: 8),
+            _buildModeOption(
+              l10n,
+              theme,
+              colorScheme,
+              mode: PushMode.both,
+              icon: Icons.shuffle,
+              title: l10n.smartPushModeBoth,
+              subtitle: l10n.smartPushModeBothDesc,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-            // 测试按钮
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: ElevatedButton.icon(
-                onPressed: _isTesting ? null : _testPush,
-                icon: _isTesting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.notifications_active),
-                label: Text(_isTesting ? l10n.pleaseWait : l10n.smartPushTest),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(48),
+  Widget _buildModeOption(
+    AppLocalizations l10n,
+    ThemeData theme,
+    ColorScheme colorScheme, {
+    required PushMode mode,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    final isSelected = _settings.pushMode == mode;
+    
+    return Material(
+      color: isSelected 
+          ? colorScheme.primaryContainer.withOpacity(0.5)
+          : Colors.transparent,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          setState(() {
+            _settings = _settings.copyWith(pushMode: mode);
+          });
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: isSelected 
+                      ? colorScheme.primary.withOpacity(0.15)
+                      : colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  icon,
+                  size: 20,
+                  color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
                 ),
               ),
-            ),
-            const SizedBox(height: 32),
-          ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Radio<PushMode>(
+                value: mode,
+                groupValue: _settings.pushMode,
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _settings = _settings.copyWith(pushMode: value);
+                    });
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-          // 说明
-          Card(
-            margin: const EdgeInsets.all(16.0),
+  /// 推送时间设置卡片
+  Widget _buildTimeSettingsCard(AppLocalizations l10n, ThemeData theme, ColorScheme colorScheme) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: colorScheme.outline.withOpacity(0.2)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.schedule, color: colorScheme.primary, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  l10n.smartPushTimeSettings,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ..._settings.pushTimeSlots.asMap().entries.map((entry) {
+              final index = entry.key;
+              final slot = entry.value;
+              return _buildTimeSlotTile(l10n, theme, colorScheme, index, slot);
+            }),
+            const SizedBox(height: 8),
+            Center(
+              child: TextButton.icon(
+                onPressed: _addTimeSlot,
+                icon: const Icon(Icons.add, size: 18),
+                label: Text(l10n.smartPushAddTime),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimeSlotTile(
+    AppLocalizations l10n, 
+    ThemeData theme, 
+    ColorScheme colorScheme,
+    int index,
+    PushTimeSlot slot,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: slot.enabled 
+            ? colorScheme.surfaceContainerHighest.withOpacity(0.5)
+            : colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        leading: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: slot.enabled 
+                ? colorScheme.primary.withOpacity(0.15)
+                : colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Center(
+            child: Text(
+              slot.periodDescription,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: slot.enabled ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ),
+        title: Text(
+          slot.formattedTime,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+        subtitle: slot.label != null 
+            ? Text(slot.label!, style: theme.textTheme.bodySmall)
+            : null,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Switch(
+              value: slot.enabled,
+              onChanged: (value) {
+                final slots = List<PushTimeSlot>.from(_settings.pushTimeSlots);
+                slots[index] = slot.copyWith(enabled: value);
+                setState(() {
+                  _settings = _settings.copyWith(pushTimeSlots: slots);
+                });
+              },
+            ),
+            PopupMenuButton<String>(
+              icon: Icon(Icons.more_vert, color: colorScheme.onSurfaceVariant),
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: 'edit',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.edit_outlined, size: 20),
+                      const SizedBox(width: 8),
+                      Text(l10n.edit),
+                    ],
+                  ),
+                ),
+                if (_settings.pushTimeSlots.length > 1)
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete_outline, size: 20, color: colorScheme.error),
+                        const SizedBox(width: 8),
+                        Text(l10n.delete, style: TextStyle(color: colorScheme.error)),
+                      ],
+                    ),
+                  ),
+              ],
+              onSelected: (value) {
+                if (value == 'edit') {
+                  _editTimeSlot(index, slot);
+                } else if (value == 'delete') {
+                  final slots = List<PushTimeSlot>.from(_settings.pushTimeSlots);
+                  slots.removeAt(index);
+                  setState(() {
+                    _settings = _settings.copyWith(pushTimeSlots: slots);
+                  });
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 推送频率卡片
+  Widget _buildFrequencyCard(AppLocalizations l10n, ThemeData theme, ColorScheme colorScheme) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: colorScheme.outline.withOpacity(0.2)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.repeat, color: colorScheme.primary, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  l10n.smartPushFrequency,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.primary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: PushFrequency.values.map((freq) {
+                final isSelected = _settings.frequency == freq;
+                return ChoiceChip(
+                  label: Text(_getFrequencyLabel(l10n, freq)),
+                  selected: isSelected,
+                  onSelected: (selected) {
+                    if (selected) {
+                      setState(() {
+                        _settings = _settings.copyWith(frequency: freq);
+                      });
+                    }
+                  },
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 高级选项卡片
+  Widget _buildAdvancedOptionsCard(AppLocalizations l10n, ThemeData theme, ColorScheme colorScheme) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: colorScheme.outline.withOpacity(0.2)),
+      ),
+      child: Column(
+        children: [
+          InkWell(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            onTap: () {
+              setState(() {
+                _settings = _settings.copyWith(
+                  showAdvancedOptions: !_settings.showAdvancedOptions,
+                );
+              });
+              if (_settings.showAdvancedOptions) {
+                _animationController.forward();
+              } else {
+                _animationController.reverse();
+              }
+            },
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Icon(Icons.tune, color: colorScheme.primary, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    l10n.smartPushAdvancedOptions,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: colorScheme.primary,
+                    ),
+                  ),
+                  const Spacer(),
+                  AnimatedRotation(
+                    turns: _settings.showAdvancedOptions ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 200),
+                    child: Icon(
+                      Icons.expand_more,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SizeTransition(
+            sizeFactor: _fadeAnimation,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Icon(Icons.info_outline, color: theme.colorScheme.primary),
-                      const SizedBox(width: 8),
-                      Text(
-                        l10n.smartPushNotice,
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
+                  const Divider(),
                   const SizedBox(height: 8),
+                  
+                  // 回顾类型（仅在过去笔记模式下显示）
+                  if (_settings.pushMode != PushMode.dailyQuote) ...[
+                    Text(
+                      l10n.smartPushPastNoteTypes,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: PastNoteType.values.map((type) {
+                        final isSelected = _settings.enabledPastNoteTypes.contains(type);
+                        return FilterChip(
+                          avatar: Icon(
+                            _getPastNoteTypeIcon(type),
+                            size: 16,
+                          ),
+                          label: Text(_getPastNoteTypeLabel(l10n, type)),
+                          selected: isSelected,
+                          onSelected: (selected) {
+                            final types = Set<PastNoteType>.from(_settings.enabledPastNoteTypes);
+                            if (selected) {
+                              types.add(type);
+                            } else {
+                              types.remove(type);
+                            }
+                            setState(() {
+                              _settings = _settings.copyWith(enabledPastNoteTypes: types);
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  
+                  // 天气筛选
+                  if (_settings.enabledPastNoteTypes.contains(PastNoteType.sameWeather)) ...[
+                    Text(
+                      l10n.smartPushWeatherFilter,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: WeatherFilterType.values.map((weather) {
+                        final isSelected = _settings.filterWeatherTypes.contains(weather);
+                        return FilterChip(
+                          avatar: Text(_getWeatherEmoji(weather)),
+                          label: Text(_getWeatherLabel(l10n, weather)),
+                          selected: isSelected,
+                          onSelected: (selected) {
+                            final types = Set<WeatherFilterType>.from(_settings.filterWeatherTypes);
+                            if (selected) {
+                              types.add(weather);
+                            } else {
+                              types.remove(weather);
+                            }
+                            setState(() {
+                              _settings = _settings.copyWith(filterWeatherTypes: types);
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  
+                  // 标签筛选
                   Text(
-                    l10n.smartPushNoticeDesc,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                    l10n.smartPushTagFilter,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
+                  const SizedBox(height: 4),
+                  Text(
+                    l10n.smartPushTagFilterDesc,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (_availableTags.isEmpty)
+                    Text(
+                      l10n.noTagsAvailable,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    )
+                  else
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: _availableTags.map((tag) {
+                        final isSelected = _settings.filterTagIds.contains(tag.id);
+                        return FilterChip(
+                          avatar: tag.icon != null && tag.icon!.isNotEmpty
+                              ? Text(tag.icon!, style: const TextStyle(fontSize: 14))
+                              : null,
+                          label: Text(tag.name),
+                          selected: isSelected,
+                          onSelected: (selected) {
+                            final tagIds = List<String>.from(_settings.filterTagIds);
+                            if (selected) {
+                              tagIds.add(tag.id);
+                            } else {
+                              tagIds.remove(tag.id);
+                            }
+                            setState(() {
+                              _settings = _settings.copyWith(filterTagIds: tagIds);
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
                 ],
               ),
             ),
@@ -487,49 +839,137 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage> {
     );
   }
 
-  Widget _buildPreviewBadge(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.tertiary.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: theme.colorScheme.tertiary.withOpacity(0.5)),
-      ),
-      child: Text(
-        'Preview',
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-          color: theme.colorScheme.tertiary,
+  /// 测试按钮
+  Widget _buildTestButton(AppLocalizations l10n, ThemeData theme, ColorScheme colorScheme) {
+    return FilledButton.icon(
+      onPressed: _isTesting ? null : _testPush,
+      icon: _isTesting
+          ? SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: colorScheme.onPrimary,
+              ),
+            )
+          : const Icon(Icons.send),
+      label: Text(_isTesting ? l10n.pleaseWait : l10n.smartPushTest),
+      style: FilledButton.styleFrom(
+        minimumSize: const Size.fromHeight(52),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
         ),
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-      child: Text(
-        title,
-        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.primary,
+  /// 说明卡片
+  Widget _buildNoticeCard(AppLocalizations l10n, ThemeData theme, ColorScheme colorScheme) {
+    return Card(
+      elevation: 0,
+      color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.info_outline,
+              color: colorScheme.primary,
+              size: 20,
             ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.smartPushNotice,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    l10n.smartPushNoticeDesc,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  void _togglePastNoteType(PastNoteType type, bool? value) {
-    final types = Set<PastNoteType>.from(_settings.enabledPastNoteTypes);
-    if (value == true) {
-      types.add(type);
-    } else {
-      types.remove(type);
+  // Helper methods
+  String _getFrequencyLabel(AppLocalizations l10n, PushFrequency freq) {
+    switch (freq) {
+      case PushFrequency.daily:
+        return l10n.smartPushFrequencyDaily;
+      case PushFrequency.weekdays:
+        return l10n.smartPushFrequencyWeekdays;
+      case PushFrequency.weekends:
+        return l10n.smartPushFrequencyWeekends;
+      case PushFrequency.custom:
+        return l10n.smartPushFrequencyCustom;
     }
-    setState(() {
-      _settings = _settings.copyWith(enabledPastNoteTypes: types);
-    });
+  }
+
+  IconData _getPastNoteTypeIcon(PastNoteType type) {
+    switch (type) {
+      case PastNoteType.yearAgoToday:
+        return Icons.calendar_today;
+      case PastNoteType.monthAgoToday:
+        return Icons.date_range;
+      case PastNoteType.weekAgoToday:
+        return Icons.view_week;
+      case PastNoteType.randomMemory:
+        return Icons.shuffle;
+      case PastNoteType.sameLocation:
+        return Icons.place;
+      case PastNoteType.sameWeather:
+        return Icons.wb_sunny;
+    }
+  }
+
+  String _getPastNoteTypeLabel(AppLocalizations l10n, PastNoteType type) {
+    switch (type) {
+      case PastNoteType.yearAgoToday:
+        return l10n.smartPushYearAgoToday;
+      case PastNoteType.monthAgoToday:
+        return l10n.smartPushMonthAgoToday;
+      case PastNoteType.weekAgoToday:
+        return l10n.smartPushWeekAgoToday;
+      case PastNoteType.randomMemory:
+        return l10n.smartPushRandomMemory;
+      case PastNoteType.sameLocation:
+        return l10n.smartPushSameLocation;
+      case PastNoteType.sameWeather:
+        return l10n.smartPushSameWeather;
+    }
+  }
+
+  String _getWeatherEmoji(WeatherFilterType weather) {
+    switch (weather) {
+      case WeatherFilterType.clear:
+        return '☀️';
+      case WeatherFilterType.cloudy:
+        return '☁️';
+      case WeatherFilterType.rain:
+        return '🌧️';
+      case WeatherFilterType.snow:
+        return '❄️';
+      case WeatherFilterType.fog:
+        return '🌫️';
+    }
   }
 
   String _getWeatherLabel(AppLocalizations l10n, WeatherFilterType weather) {
