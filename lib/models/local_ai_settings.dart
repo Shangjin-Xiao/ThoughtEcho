@@ -1,20 +1,27 @@
 /// 本地 AI 功能设置模型
 /// 
 /// 控制设备端 AI 功能的各项开关设置
+/// 
+/// 方案B实现: cactus + ML Kit
+/// - LLM/嵌入/ASR: cactus (许可证未知⚠️)
+/// - OCR: google_mlkit_text_recognition (MIT)
+/// 
+/// ⚠️ 重要提示：
+/// cactus 许可证不明确，商业使用前请确认许可证状态。
 class LocalAISettings {
   /// 总开关 (Preview 标记)
   final bool enabled;
   
-  /// 语音转文字开关
+  /// 语音转文字开关 (ASR - cactus, 许可证待确认⚠️)
   final bool speechToTextEnabled;
   
-  /// OCR 文字识别开关
+  /// OCR 文字识别开关 (ML Kit - MIT)
   final bool ocrEnabled;
   
-  /// AI 语义搜索开关
+  /// AI 语义搜索开关 (嵌入 - cactus, 许可证待确认⚠️)
   final bool aiSearchEnabled;
   
-  /// AI 识别纠错开关
+  /// AI 识别纠错开关 (LLM - cactus, 许可证待确认⚠️)
   final bool aiCorrectionEnabled;
   
   /// 智能识别来源开关
@@ -32,6 +39,10 @@ class LocalAISettings {
   /// 相关笔记推荐开关
   final bool relatedNotesEnabled;
 
+  /// 本地模型文件路径 (可选)
+  /// 推荐模型: Qwen2.5-1.5B-Q4 (1.1GB) 或 Phi-3.5-mini-Q4 (2.4GB)
+  final String? modelPath;
+
   const LocalAISettings({
     this.enabled = false,
     this.speechToTextEnabled = true,
@@ -43,6 +54,7 @@ class LocalAISettings {
     this.noteClassificationEnabled = true,
     this.emotionDetectionEnabled = true,
     this.relatedNotesEnabled = true,
+    this.modelPath,
   });
 
   /// 默认设置
@@ -61,6 +73,7 @@ class LocalAISettings {
       noteClassificationEnabled: json['noteClassificationEnabled'] as bool? ?? true,
       emotionDetectionEnabled: json['emotionDetectionEnabled'] as bool? ?? true,
       relatedNotesEnabled: json['relatedNotesEnabled'] as bool? ?? true,
+      modelPath: json['modelPath'] as String?,
     );
   }
 
@@ -77,10 +90,13 @@ class LocalAISettings {
       'noteClassificationEnabled': noteClassificationEnabled,
       'emotionDetectionEnabled': emotionDetectionEnabled,
       'relatedNotesEnabled': relatedNotesEnabled,
+      'modelPath': modelPath,
     };
   }
 
   /// 复制并修改
+  /// 
+  /// 注意: 要清除 modelPath，请使用 clearModelPath() 方法
   LocalAISettings copyWith({
     bool? enabled,
     bool? speechToTextEnabled,
@@ -92,6 +108,7 @@ class LocalAISettings {
     bool? noteClassificationEnabled,
     bool? emotionDetectionEnabled,
     bool? relatedNotesEnabled,
+    String? modelPath,
   }) {
     return LocalAISettings(
       enabled: enabled ?? this.enabled,
@@ -104,6 +121,24 @@ class LocalAISettings {
       noteClassificationEnabled: noteClassificationEnabled ?? this.noteClassificationEnabled,
       emotionDetectionEnabled: emotionDetectionEnabled ?? this.emotionDetectionEnabled,
       relatedNotesEnabled: relatedNotesEnabled ?? this.relatedNotesEnabled,
+      modelPath: modelPath ?? this.modelPath,
+    );
+  }
+
+  /// 清除模型路径
+  LocalAISettings clearModelPath() {
+    return LocalAISettings(
+      enabled: enabled,
+      speechToTextEnabled: speechToTextEnabled,
+      ocrEnabled: ocrEnabled,
+      aiSearchEnabled: aiSearchEnabled,
+      aiCorrectionEnabled: aiCorrectionEnabled,
+      sourceRecognitionEnabled: sourceRecognitionEnabled,
+      smartTagsEnabled: smartTagsEnabled,
+      noteClassificationEnabled: noteClassificationEnabled,
+      emotionDetectionEnabled: emotionDetectionEnabled,
+      relatedNotesEnabled: relatedNotesEnabled,
+      modelPath: null,
     );
   }
 
@@ -120,7 +155,8 @@ class LocalAISettings {
         other.smartTagsEnabled == smartTagsEnabled &&
         other.noteClassificationEnabled == noteClassificationEnabled &&
         other.emotionDetectionEnabled == emotionDetectionEnabled &&
-        other.relatedNotesEnabled == relatedNotesEnabled;
+        other.relatedNotesEnabled == relatedNotesEnabled &&
+        other.modelPath == modelPath;
   }
 
   @override
@@ -136,6 +172,7 @@ class LocalAISettings {
       noteClassificationEnabled,
       emotionDetectionEnabled,
       relatedNotesEnabled,
+      modelPath,
     );
   }
 
@@ -151,6 +188,7 @@ class LocalAISettings {
         'smartTagsEnabled: $smartTagsEnabled, '
         'noteClassificationEnabled: $noteClassificationEnabled, '
         'emotionDetectionEnabled: $emotionDetectionEnabled, '
-        'relatedNotesEnabled: $relatedNotesEnabled)';
+        'relatedNotesEnabled: $relatedNotesEnabled, '
+        'modelPath: $modelPath)';
   }
 }
