@@ -70,6 +70,28 @@
             transition: background 0.3s ease, color 0.3s ease;
         }
 
+        /* ==================== 全局 UI 优化 ==================== */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--paper-cream);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--line-color);
+            border-radius: 5px;
+            border: 2px solid var(--paper-cream);
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-brown);
+        }
+
+        ::selection {
+            background: var(--accent-brown);
+            color: var(--paper-white);
+        }
+
         body.lang-en {
             font-family: 'Noto Sans', 'Noto Sans SC', 'ZCOOL XiaoWei', serif;
         }
@@ -283,6 +305,10 @@
             box-shadow: 3px 3px 8px var(--shadow-medium);
         }
 
+        .mobile-menu-overlay {
+            display: none;
+        }
+
         /* ==================== Hero 区域 ==================== */
         .hero {
             min-height: 100vh;
@@ -421,6 +447,12 @@
 
         .hero-notebook {
             perspective: 1500px;
+            animation: notebookFloat 6s ease-in-out infinite;
+        }
+
+        @keyframes notebookFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
         }
 
         .notebook-page {
@@ -548,6 +580,30 @@
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
             gap: 2.5rem;
+        }
+
+        .feature-category {
+            margin-bottom: 6rem;
+        }
+
+        .feature-category-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .feature-category-title {
+            font-family: 'ZCOOL XiaoWei', serif;
+            font-size: 2.2rem;
+            color: var(--accent-brown);
+            margin-bottom: 1rem;
+        }
+
+        .feature-category-desc {
+            font-size: 1.1rem;
+            color: var(--ink-medium);
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
         }
 
         .sticky-note {
@@ -915,7 +971,7 @@
             z-index: 2000;
             justify-content: center;
             align-items: center;
-            padding: 2rem;
+            padding: 3rem 2rem 2rem; /* 增加顶部 padding 防止关闭按钮溢出 */
         }
 
         .modal.active {
@@ -1664,6 +1720,24 @@
                 box-shadow: 0 4px 12px var(--shadow-medium);
                 z-index: 999;
             }
+            .mobile-menu-overlay {
+                display: block;
+                position: fixed;
+                top: 62px;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(44, 36, 22, 0.4);
+                backdrop-filter: blur(4px);
+                z-index: 998;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.3s ease;
+            }
+            .mobile-menu-overlay.active {
+                opacity: 1;
+                pointer-events: auto;
+            }
             .nav-links.active {
                 display: flex;
             }
@@ -1756,6 +1830,7 @@
 <body class="lang-zh">
     <!-- 导航栏 -->
     <nav>
+        <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
         <div class="nav-container">
             <a href="#" class="nav-brand">
                 <div class="nav-logo">
@@ -1886,149 +1961,180 @@
             </p>
         </div>
 
-        <div class="features-grid">
-            <div class="sticky-note fade-in">
-                <span class="feature-icon">✍️</span>
-                <h3 class="feature-title">
-                    <span class="content-zh">富文本笔记</span>
-                    <span class="content-en">Rich Text Notes</span>
+        <!-- 分类 1: 专为你打造的心迹 -->
+        <div class="feature-category fade-in">
+            <div class="feature-category-header">
+                <h3 class="feature-category-title">
+                    <span class="content-zh">🎨 专为你打造的心迹</span>
+                    <span class="content-en">🎨 Tailored for You</span>
                 </h3>
-                <p class="feature-description">
-                    <span class="content-zh">强大的富文本编辑器，支持文字格式化、图片、音频、视频等多种媒体形式</span>
-                    <span class="content-en">Powerful rich text editor with formatting, images, audio, video & more</span>
+                <p class="feature-category-desc">
+                    <span class="content-zh">丰富的功能模块自由组合，打造最适合你的专属记录空间</span>
+                    <span class="content-en">Freely combine rich feature modules to create your exclusive recording space</span>
                 </p>
-                <ul class="feature-list">
-                    <li><span class="content-zh">支持富文本、多媒体附件</span><span class="content-en">Rich text & media attachments</span></li>
-                    <li><span class="content-zh">大文件流式处理</span><span class="content-en">Large file streaming</span></li>
-                    <li><span class="content-zh">智能内存管理</span><span class="content-en">Smart memory management</span></li>
-                    <li><span class="content-zh">双格式存储备份</span><span class="content-en">Dual-format storage</span></li>
-                </ul>
             </div>
+            <div class="features-grid">
+                <div class="sticky-note">
+                    <span class="feature-icon">✍️</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">富文本笔记</span>
+                        <span class="content-en">Rich Text Notes</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">强大的编辑器，支持文字格式化、图片、音频、视频等多种媒体形式</span>
+                        <span class="content-en">Powerful editor with formatting, images, audio, video & more</span>
+                    </p>
+                    <ul class="feature-list">
+                        <li><span class="content-zh">多媒体附件支持</span><span class="content-en">Media attachments</span></li>
+                        <li><span class="content-zh">大文件流式处理</span><span class="content-en">Large file streaming</span></li>
+                    </ul>
+                </div>
 
-            <div class="sticky-note fade-in">
-                <span class="feature-icon">✨</span>
-                <h3 class="feature-title">
-                    <span class="content-zh">AI 助手</span>
-                    <span class="content-en">AI Assistant</span>
-                </h3>
-                <p class="feature-description">
-                    <span class="content-zh">基于笔记上下文的智能问答、内容润色、每日灵感提示</span>
-                    <span class="content-en">Context-aware Q&A, content polishing, daily inspiration prompts</span>
-                </p>
-                <ul class="feature-list">
-                    <li><span class="content-zh">笔记上下文问答</span><span class="content-en">Context-aware Q&A</span></li>
-                    <li><span class="content-zh">内容智能润色</span><span class="content-en">Smart content polishing</span></li>
-                    <li><span class="content-zh">每日灵感提示</span><span class="content-en">Daily inspiration</span></li>
-                    <li><span class="content-zh">多AI服务商支持</span><span class="content-en">Multi-AI provider support</span></li>
-                </ul>
+                <div class="sticky-note">
+                    <span class="feature-icon">🏷️</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">标签与搜索</span>
+                        <span class="content-en">Tags & Search</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">多标签筛选、智能过滤、全文搜索，快速定位所需信息</span>
+                        <span class="content-en">Multi-tag filters, smart facets, full-text search</span>
+                    </p>
+                    <ul class="feature-list">
+                        <li><span class="content-zh">多维度筛选</span><span class="content-en">Multi-dimension filter</span></li>
+                        <li><span class="content-zh">全文快速检索</span><span class="content-en">Fast full-text search</span></li>
+                    </ul>
+                </div>
+
+                <div class="sticky-note">
+                    <span class="feature-icon">🎯</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">AI 卡片生成</span>
+                        <span class="content-en">AI Card Generation</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">一键将笔记转换为精美分享卡片，多种模板随心切换</span>
+                        <span class="content-en">Convert notes into beautiful shareable cards with templates</span>
+                    </p>
+                </div>
+
+                <div class="sticky-note">
+                    <span class="feature-icon">⚡</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">快速捕获</span>
+                        <span class="content-en">Quick Capture</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">剪贴板检测、一言与每日灵感，不错过任何瞬时想法</span>
+                        <span class="content-en">Clipboard watcher, Hitokoto quotes, daily prompts</span>
+                    </p>
+                </div>
             </div>
+        </div>
 
-            <div class="sticky-note fade-in">
-                <span class="feature-icon">📊</span>
-                <h3 class="feature-title">
-                    <span class="content-zh">洞察与报告</span>
-                    <span class="content-en">Insights & Reports</span>
+        <!-- 分类 2: 懂你所想的心迹 -->
+        <div class="feature-category fade-in">
+            <div class="feature-category-header">
+                <h3 class="feature-category-title">
+                    <span class="content-zh">🧠 懂你所想的心迹</span>
+                    <span class="content-en">🧠 Understanding You</span>
                 </h3>
-                <p class="feature-description">
-                    <span class="content-zh">AI 周期洞察、年度报告与写作趋势分析</span>
-                    <span class="content-en">AI periodic insights, annual reports & writing trend analysis</span>
+                <p class="feature-category-desc">
+                    <span class="content-zh">AI 深度赋能，感知情境，激发灵感，成为你的第二大脑</span>
+                    <span class="content-en">AI-empowered context awareness and inspiration, becoming your second brain</span>
                 </p>
-                <ul class="feature-list">
-                    <li><span class="content-zh">AI 周期洞察</span><span class="content-en">AI periodic insights</span></li>
-                    <li><span class="content-zh">年度报告生成</span><span class="content-en">Annual report generation</span></li>
-                    <li><span class="content-zh">写作趋势分析</span><span class="content-en">Writing trend analysis</span></li>
-                    <li><span class="content-zh">数据可视化</span><span class="content-en">Data visualization</span></li>
-                </ul>
             </div>
+            <div class="features-grid">
+                <div class="sticky-note">
+                    <span class="feature-icon">✨</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">AI 助手</span>
+                        <span class="content-en">AI Assistant</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">基于笔记上下文的智能问答、内容润色、每日灵感提示</span>
+                        <span class="content-en">Context-aware Q&A, content polishing, daily inspiration</span>
+                    </p>
+                    <ul class="feature-list">
+                        <li><span class="content-zh">笔记上下文问答</span><span class="content-en">Context-aware Q&A</span></li>
+                        <li><span class="content-zh">多AI服务商支持</span><span class="content-en">Multi-AI provider support</span></li>
+                    </ul>
+                </div>
 
-            <div class="sticky-note fade-in">
-                <span class="feature-icon">🏷️</span>
-                <h3 class="feature-title">
-                    <span class="content-zh">标签与搜索</span>
-                    <span class="content-en">Tags & Search</span>
-                </h3>
-                <p class="feature-description">
-                    <span class="content-zh">多标签筛选、智能过滤、全文搜索</span>
-                    <span class="content-en">Multi-tag filters, smart facets, full-text search</span>
-                </p>
-                <ul class="feature-list">
-                    <li><span class="content-zh">多标签筛选</span><span class="content-en">Multi-tag filters</span></li>
-                    <li><span class="content-zh">智能过滤</span><span class="content-en">Smart filtering</span></li>
-                    <li><span class="content-zh">全文搜索</span><span class="content-en">Full-text search</span></li>
-                    <li><span class="content-zh">快速定位</span><span class="content-en">Quick navigation</span></li>
-                </ul>
+                <div class="sticky-note">
+                    <span class="feature-icon">🌍</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">情境记录</span>
+                        <span class="content-en">Context Capture</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">自动记录位置、天气与时间段，还原记忆发生的那一刻</span>
+                        <span class="content-en">Auto-save location, weather, and time context</span>
+                    </p>
+                </div>
+
+                <div class="sticky-note">
+                    <span class="feature-icon">📊</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">洞察与报告</span>
+                        <span class="content-en">Insights & Reports</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">AI 周期洞察、年度报告与写作趋势分析，看见你的成长</span>
+                        <span class="content-en">AI periodic insights, annual reports & trend analysis</span>
+                    </p>
+                </div>
             </div>
+        </div>
 
-            <div class="sticky-note fade-in">
-                <span class="feature-icon">🎯</span>
-                <h3 class="feature-title">
-                    <span class="content-zh">AI 卡片生成</span>
-                    <span class="content-en">AI Card Generation</span>
+        <!-- 分类 3: 安全无忧的心迹 -->
+        <div class="feature-category fade-in">
+            <div class="feature-category-header">
+                <h3 class="feature-category-title">
+                    <span class="content-zh">🛡️ 安全无忧的心迹</span>
+                    <span class="content-en">🛡️ Safe & Secure</span>
                 </h3>
-                <p class="feature-description">
-                    <span class="content-zh">将笔记转换为精美分享卡片</span>
-                    <span class="content-en">Convert notes into beautiful shareable cards</span>
+                <p class="feature-category-desc">
+                    <span class="content-zh">本地优先，隐私至上，端侧智能，你的数据完全由你掌控</span>
+                    <span class="content-en">Local-first, privacy-focused, on-device intelligence. Your data, fully under your control</span>
                 </p>
-                <ul class="feature-list">
-                    <li><span class="content-zh">智能排版设计</span><span class="content-en">Smart layout design</span></li>
-                    <li><span class="content-zh">多种模板风格</span><span class="content-en">Multiple templates</span></li>
-                    <li><span class="content-zh">一键导出分享</span><span class="content-en">One-click export</span></li>
-                    <li><span class="content-zh">自定义样式</span><span class="content-en">Custom styles</span></li>
-                </ul>
             </div>
+            <div class="features-grid">
+                <div class="sticky-note">
+                    <span class="feature-icon">🔒</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">本地优先</span>
+                        <span class="content-en">Local First</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">所有数据存储在本地 SQLite 数据库，不上传云端，无隐私泄露风险</span>
+                        <span class="content-en">All data stored locally in SQLite. No cloud upload, no privacy risks</span>
+                    </p>
+                </div>
 
-            <div class="sticky-note fade-in">
-                <span class="feature-icon">📦</span>
-                <h3 class="feature-title">
-                    <span class="content-zh">媒体与备份中心</span>
-                    <span class="content-en">Media & Backup Hub</span>
-                </h3>
-                <p class="feature-description">
-                    <span class="content-zh">流式处理大文件，完整备份恢复系统</span>
-                    <span class="content-en">Stream large files safely with backup/restore peace of mind</span>
-                </p>
-                <ul class="feature-list">
-                    <li><span class="content-zh">大文件流式处理</span><span class="content-en">Large file streaming</span></li>
-                    <li><span class="content-zh">ZIP 格式完整备份</span><span class="content-en">ZIP format backup</span></li>
-                    <li><span class="content-zh">一键恢复数据</span><span class="content-en">One-click restore</span></li>
-                    <li><span class="content-zh">媒体文件管理</span><span class="content-en">Media file management</span></li>
-                </ul>
-            </div>
+                <div class="sticky-note">
+                    <span class="feature-icon">🤖</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">端侧智能</span>
+                        <span class="content-en">On-Device AI</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">支持离线 OCR 文字识别与语音转写，无需联网即可享受 AI 便利</span>
+                        <span class="content-en">Offline OCR & Speech-to-Text support. Enjoy AI features without internet</span>
+                    </p>
+                </div>
 
-            <div class="sticky-note fade-in">
-                <span class="feature-icon">🌍</span>
-                <h3 class="feature-title">
-                    <span class="content-zh">情境记录</span>
-                    <span class="content-en">Context Capture</span>
-                </h3>
-                <p class="feature-description">
-                    <span class="content-zh">自动保存位置、天气（由和风天气提供）与时间段信息</span>
-                    <span class="content-en">Auto-save location, weather (powered by Open-Meteo), and time-of-day context</span>
-                </p>
-                <ul class="feature-list">
-                    <li><span class="content-zh">自动保存位置</span><span class="content-en">Auto-save location</span></li>
-                    <li><span class="content-zh">天气信息记录 (Open-Meteo)</span><span class="content-en">Weather tracking (Open-Meteo)</span></li>
-                    <li><span class="content-zh">时间段标记</span><span class="content-en">Time-of-day tags</span></li>
-                    <li><span class="content-zh">情境智能分析</span><span class="content-en">Context analysis</span></li>
-                </ul>
-            </div>
-
-            <div class="sticky-note fade-in">
-                <span class="feature-icon">⚡</span>
-                <h3 class="feature-title">
-                    <span class="content-zh">快速捕获</span>
-                    <span class="content-en">Quick Capture</span>
-                </h3>
-                <p class="feature-description">
-                    <span class="content-zh">剪贴板检测、一言与每日灵感</span>
-                    <span class="content-en">Clipboard watcher, Hitokoto quotes, daily prompts on tap</span>
-                </p>
-                <ul class="feature-list">
-                    <li><span class="content-zh">剪贴板检测</span><span class="content-en">Clipboard watch</span></li>
-                    <li><span class="content-zh">一言语录集成</span><span class="content-en">Hitokoto integration</span></li>
-                    <li><span class="content-zh">每日灵感推送</span><span class="content-en">Daily inspiration</span></li>
-                    <li><span class="content-zh">快速笔记入口</span><span class="content-en">Quick note entry</span></li>
-                </ul>
+                <div class="sticky-note">
+                    <span class="feature-icon">📦</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">备份中心</span>
+                        <span class="content-en">Backup Hub</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">支持 ZIP 格式完整备份与恢复，数据迁移轻松自如</span>
+                        <span class="content-en">Full ZIP backup & restore. Easy data migration</span>
+                    </p>
+                </div>
             </div>
         </div>
     </section>
@@ -2617,15 +2723,22 @@ cd ThoughtEcho</code></pre>
         // 移动端菜单
         const mobileMenuBtn = document.getElementById('mobileMenuBtn');
         const navLinks = document.getElementById('navLinks');
+        const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
 
-        mobileMenuBtn.addEventListener('click', () => {
+        function toggleMenu() {
             navLinks.classList.toggle('active');
-        });
+            mobileMenuOverlay.classList.toggle('active');
+            const isOpen = navLinks.classList.contains('active');
+            mobileMenuBtn.innerHTML = isOpen ? '×' : '☰';
+        }
+
+        mobileMenuBtn.addEventListener('click', toggleMenu);
+        mobileMenuOverlay.addEventListener('click', toggleMenu);
 
         // 点击导航链接后关闭菜单
         navLinks.querySelectorAll('a').forEach(link => {
             link.addEventListener('click', () => {
-                navLinks.classList.remove('active');
+                if (navLinks.classList.contains('active')) toggleMenu();
             });
         });
 
@@ -2701,6 +2814,30 @@ cd ThoughtEcho</code></pre>
             }
             
             lastScroll = currentScroll;
+        });
+
+        // 滚动监听 (Scroll Spy)
+        const sections = document.querySelectorAll('section[id]');
+        const navItems = document.querySelectorAll('.nav-links a');
+
+        const scrollSpyOptions = {
+            threshold: 0.3, // 30% 可见时触发
+            rootMargin: "-10% 0px -50% 0px" // 调整触发线，使其更符合视觉中心
+        };
+
+        const scrollSpy = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const id = entry.target.getAttribute('id');
+                    navItems.forEach(link => {
+                        link.classList.toggle('active', link.getAttribute('href') === `#${id}`);
+                    });
+                }
+            });
+        }, scrollSpyOptions);
+
+        sections.forEach(section => {
+            scrollSpy.observe(section);
         });
     </script>
 </body>
