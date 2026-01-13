@@ -562,45 +562,43 @@ class SettingsPageState extends State<SettingsPage> {
                   },
                 ),
                 // 本地AI功能 - 仅在开发者模式下显示
-                Consumer<SettingsService>(
-                  builder: (context, settingsService, _) {
-                    if (!settingsService.appSettings.developerMode) {
-                      return const SizedBox.shrink();
-                    }
-                    return ListTile(
-                      title: Row(
-                        children: [
-                          Text(l10n.localAiFeatures),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.tertiary.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: theme.colorScheme.tertiary.withOpacity(0.5)),
-                            ),
-                            child: Text(
-                              'Preview',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.tertiary,
-                              ),
-                            ),
+                ListTile(
+                  title: Row(
+                    children: [
+                      Text(l10n.localAiFeatures),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.tertiary.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: theme.colorScheme.tertiary.withOpacity(0.5),
                           ),
-                        ],
+                        ),
+                        child: Text(
+                          l10n.localAiFeaturesPreview,
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.tertiary,
+                          ),
+                        ),
                       ),
-                      subtitle: Text(l10n.localAiFeaturesDesc),
-                      leading: const Icon(Icons.device_hub),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LocalAISettingsPage(),
-                          ),
-                        );
-                      },
+                    ],
+                  ),
+                  subtitle: Text(l10n.localAiFeaturesDesc),
+                  leading: const Icon(Icons.device_hub),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const LocalAISettingsPage(),
+                      ),
                     );
                   },
                 ),
@@ -1004,11 +1002,7 @@ class SettingsPageState extends State<SettingsPage> {
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            newDeveloperMode 
-                ? '🎉 开发者模式已开启！Developer Mode Enabled!'
-                : '✅ 开发者模式已关闭 Developer Mode Disabled',
-          ),
+          content: Text(AppLocalizations.of(context).settingsSaved),
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
         ),

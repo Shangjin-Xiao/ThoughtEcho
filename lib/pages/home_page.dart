@@ -11,6 +11,7 @@ import '../services/weather_service.dart';
 import '../services/ai_service.dart';
 import '../services/clipboard_service.dart';
 import '../services/connectivity_service.dart';
+import '../services/ai/ocr_service.dart';
 import '../controllers/search_controller.dart'; // 导入搜索控制器
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
@@ -19,7 +20,7 @@ import '../widgets/note_list_view.dart';
 import '../widgets/add_note_dialog.dart';
 import '../widgets/local_ai/ocr_capture_page.dart';
 import '../widgets/local_ai/ocr_result_sheet.dart';
-import '../widgets/local_ai/voice_input_overlay.dart';
+import '../widgets/local_ai/voice_record_dialog.dart';
 import 'ai_features_page.dart';
 import 'settings_page.dart';
 import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
@@ -855,55 +856,89 @@ class _HomePageState extends State<HomePage>
   Future<void> _showVoiceInputOverlay() async {
     if (!mounted) return;
 
-    await showGeneralDialog<void>(
+    // Use new VoiceRecordDialog for immediate functionality
+    final text = await showDialog<String>(
       context: context,
-      barrierDismissible: true,
-      barrierLabel: 'voice_input_overlay',
-      barrierColor: Colors.transparent,
-      pageBuilder: (context, animation, secondaryAnimation) {
-        return VoiceInputOverlay(
-          transcribedText: null,
-          onSwipeUpForOCR: () async {
-            Navigator.of(context).pop();
-            await _openOCRFlow();
-          },
-          onRecordComplete: () {
-            Navigator.of(context).pop();
-            ScaffoldMessenger.of(this.context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  AppLocalizations.of(this.context).featureComingSoon,
-                ),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          },
-        );
-      },
-      transitionBuilder: (context, animation, secondaryAnimation, child) {
-        final curved = CurvedAnimation(parent: animation, curve: Curves.easeOut);
-        return FadeTransition(
-          opacity: curved,
-          child: child,
-        );
-      },
-      transitionDuration: const Duration(milliseconds: 180),
+      builder: (context) => const VoiceRecordDialog(),
     );
+
+    if (text != null && text.isNotEmpty && mounted) {
+      // Open add note dialog with transcribed text
+      _showAddQuoteDialog(prefilledContent: text);
+    }
   }
 
+  // OCR功能触发方法（可通过添加按钮或手势调用）
   Future<void> _openOCRFlow() async {
+    final settingsService = Provider.of<SettingsService>(context, listen: false);
+    final localAISettings = settingsService.localAISettings;
+
+    // 检查是否启用了本地AI和OCR功能
+    if (!localAISettings.enabled || !localAISettings.ocrEnabled) {
+      return;
+    }
+
     if (!mounted) return;
 
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(
+    final String? imagePath = await Navigator.of(context).push<String?>(
+      MaterialPageRoute<String?>(
         builder: (context) => const OCRCapturePage(),
       ),
     );
 
+    if (imagePath == null || imagePath.isEmpty) return;
+
     if (!mounted) return;
 
     final l10n = AppLocalizations.of(context);
-    String resultText = l10n.featureComingSoon;
+
+    // 先做OCR识别（显示进度），再打开结果编辑 Sheet
+    String resultText = '';
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return AlertDialog(
+          content: Row(
+            children: [
+              const SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              const SizedBox(width: 14),
+              Expanded(child: Text(l10n.ocrProcessing)),
+            ],
+          ),
+        );
+      },
+    );
+
+    try {
+      final ocrService = Provider.of<OCRService>(context, listen: false);
+      resultText = await ocrService.recognizeText(imagePath);
+      resultText = resultText.trim();
+    } catch (e) {
+      resultText = '';
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.startFailed(e.toString())),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+    }
+
+    if (!mounted) return;
+    if (resultText.isEmpty) {
+      resultText = l10n.ocrNoTextDetected;
+    }
 
     await showModalBottomSheet<void>(
       context: context,
@@ -1760,7 +1795,8 @@ class _HomePageState extends State<HomePage>
           ],
         ),
         floatingActionButton: GestureDetector(
-          onLongPressStart: (_) => _onFABLongPress(),
+          onDoubleTap: _openOCRFlow, // 双击触发OCR功能
+          onLongPressStart: (_) => _onFABLongPress(), // 长按触发语音输入
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
