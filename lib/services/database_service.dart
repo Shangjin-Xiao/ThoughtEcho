@@ -4772,7 +4772,13 @@ class DatabaseService extends ChangeNotifier {
       }
 
       final db = _database!;
-      final List<Map<String, dynamic>> maps = await db.query('quotes');
+      // 性能优化：仅查询需要补全 day_period 的记录，且只获取必要的列
+      // 避免全表扫描和加载所有字段导致的大内存占用
+      final List<Map<String, dynamic>> maps = await db.query(
+        'quotes',
+        columns: ['id', 'date'],
+        where: 'day_period IS NULL OR day_period = ""',
+      );
 
       if (maps.isEmpty) {
         logDebug('没有需要补全 day_period 字段的记录');
@@ -4781,42 +4787,39 @@ class DatabaseService extends ChangeNotifier {
 
       int patchedCount = 0;
       for (final map in maps) {
-        if (map['day_period'] == null ||
-            (map['day_period'] as String).isEmpty) {
-          // 解析时间
-          String? dateStr = map['date'];
-          if (dateStr == null || dateStr.isEmpty) continue;
-          DateTime? dt;
-          try {
-            dt = DateTime.parse(dateStr);
-          } catch (_) {
-            continue;
-          }
-          // 推算时间段key
-          final hour = dt.hour;
-          String dayPeriodKey;
-          if (hour >= 5 && hour < 8) {
-            dayPeriodKey = 'dawn';
-          } else if (hour >= 8 && hour < 12) {
-            dayPeriodKey = 'morning';
-          } else if (hour >= 12 && hour < 17) {
-            dayPeriodKey = 'afternoon';
-          } else if (hour >= 17 && hour < 20) {
-            dayPeriodKey = 'dusk';
-          } else if (hour >= 20 && hour < 23) {
-            dayPeriodKey = 'evening';
-          } else {
-            dayPeriodKey = 'midnight';
-          }
-          // 更新数据库
-          await db.update(
-            'quotes',
-            {'day_period': dayPeriodKey},
-            where: 'id = ?',
-            whereArgs: [map['id']],
-          );
-          patchedCount++;
+        // 解析时间
+        String? dateStr = map['date'];
+        if (dateStr == null || dateStr.isEmpty) continue;
+        DateTime? dt;
+        try {
+          dt = DateTime.parse(dateStr);
+        } catch (_) {
+          continue;
         }
+        // 推算时间段key
+        final hour = dt.hour;
+        String dayPeriodKey;
+        if (hour >= 5 && hour < 8) {
+          dayPeriodKey = 'dawn';
+        } else if (hour >= 8 && hour < 12) {
+          dayPeriodKey = 'morning';
+        } else if (hour >= 12 && hour < 17) {
+          dayPeriodKey = 'afternoon';
+        } else if (hour >= 17 && hour < 20) {
+          dayPeriodKey = 'dusk';
+        } else if (hour >= 20 && hour < 23) {
+          dayPeriodKey = 'evening';
+        } else {
+          dayPeriodKey = 'midnight';
+        }
+        // 更新数据库
+        await db.update(
+          'quotes',
+          {'day_period': dayPeriodKey},
+          where: 'id = ?',
+          whereArgs: [map['id']],
+        );
+        patchedCount++;
       }
 
       logDebug('已补全 $patchedCount 条记录的 day_period 字段');
@@ -4855,20 +4858,23 @@ class DatabaseService extends ChangeNotifier {
           logDebug('day_period_backup列可能已存在: $e');
         }
 
+        final labelToKey = TimeUtils.dayPeriodKeyToLabel.map(
+          (k, v) => MapEntry(v, k),
+        );
+
         // 3. 查询需要迁移的数据
+        // 性能优化：仅查询值为中文标签的记录
+        final legacyLabels = labelToKey.keys.map((l) => "'$l'").join(',');
         final List<Map<String, dynamic>> maps = await txn.query(
           'quotes',
           columns: ['id', 'day_period'],
+          where: "day_period IN ($legacyLabels)",
         );
 
         if (maps.isEmpty) {
           logDebug('没有需要迁移 dayPeriod 字段的记录');
           return;
         }
-
-        final labelToKey = TimeUtils.dayPeriodKeyToLabel.map(
-          (k, v) => MapEntry(v, k),
-        );
 
         int migratedCount = 0;
         int skippedCount = 0;
@@ -4961,7 +4967,16 @@ class DatabaseService extends ChangeNotifier {
         }
 
         // 3. 查询需要迁移的数据
-        final maps = await txn.query('quotes', columns: ['id', 'weather']);
+        // 性能优化：仅查询值为中文标签的记录
+        final legacyLabels =
+            WeatherService.weatherKeyToLabel.values.map((l) => "'$l'").join(
+              ',',
+            );
+        final maps = await txn.query(
+          'quotes',
+          columns: ['id', 'weather'],
+          where: "weather IN ($legacyLabels)",
+        );
 
         if (maps.isEmpty) {
           logDebug('没有需要迁移 weather 字段的记录');
