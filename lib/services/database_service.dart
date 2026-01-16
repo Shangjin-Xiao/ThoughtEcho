@@ -4864,11 +4864,13 @@ class DatabaseService extends ChangeNotifier {
 
         // 3. 查询需要迁移的数据
         // 性能优化：仅查询值为中文标签的记录
-        final legacyLabels = labelToKey.keys.map((l) => "'$l'").join(',');
+        final legacyLabels = labelToKey.keys.toList();
+        final placeholders = List.filled(legacyLabels.length, '?').join(',');
         final List<Map<String, dynamic>> maps = await txn.query(
           'quotes',
           columns: ['id', 'day_period'],
-          where: "day_period IN ($legacyLabels)",
+          where: "day_period IN ($placeholders)",
+          whereArgs: legacyLabels,
         );
 
         if (maps.isEmpty) {
