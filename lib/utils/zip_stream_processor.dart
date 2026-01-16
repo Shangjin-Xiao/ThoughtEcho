@@ -6,6 +6,7 @@ import 'package:archive/archive_io.dart';
 import 'package:flutter/foundation.dart';
 import '../services/large_file_manager.dart';
 import '../utils/app_logger.dart';
+import 'path_security_utils.dart';
 
 /// ZIP流式处理器
 ///
@@ -269,6 +270,10 @@ class ZipStreamProcessor {
         int processedCount = 0;
         for (final file in filesToProcess) {
           final outputPath = '$extractPath/${file.name}';
+
+          // 安全检查：防止Zip Slip路径穿越漏洞
+          PathSecurityUtils.validateExtractionPath(outputPath, extractPath);
+
           final outputFile = File(outputPath);
 
           // 确保目录存在
