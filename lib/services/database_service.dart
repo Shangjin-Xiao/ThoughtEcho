@@ -4970,14 +4970,18 @@ class DatabaseService extends ChangeNotifier {
 
         // 3. 查询需要迁移的数据
         // 性能优化：仅查询值为中文标签的记录
-        final legacyLabels =
-            WeatherService.weatherKeyToLabel.values.map((l) => "'$l'").join(
-              ',',
-            );
+        // 使用参数化查询而不是字符串拼接，防止潜在的 SQL 注入问题
+        final weatherLabels = WeatherService.weatherKeyToLabel.values.toList();
+        if (weatherLabels.isEmpty) {
+          logDebug('没有需要迁移的 weather 标签');
+          return;
+        }
+        final placeholders = List.filled(weatherLabels.length, '?').join(',');
         final maps = await txn.query(
           'quotes',
           columns: ['id', 'weather'],
-          where: "weather IN ($legacyLabels)",
+          where: 'weather IN ($placeholders)',
+          whereArgs: weatherLabels,
         );
 
         if (maps.isEmpty) {
