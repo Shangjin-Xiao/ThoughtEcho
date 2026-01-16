@@ -1411,6 +1411,7 @@ class _HomePageState extends State<HomePage>
     final weatherService = Provider.of<WeatherService>(context);
     final locationService = Provider.of<LocationService>(context);
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final aiService =
         context.watch<AIService>(); // Watch AIService for key changes
     final settingsService = context
@@ -1768,6 +1769,7 @@ class _HomePageState extends State<HomePage>
             ),
             child: FloatingActionButton(
               heroTag: 'homePageFAB',
+              tooltip: '${l10n.add} / ${l10n.voiceInputTitle}',
               onPressed: _onFABTap,
               elevation: 0,
               backgroundColor:
