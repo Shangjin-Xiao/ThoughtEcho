@@ -405,36 +405,15 @@ class AICardGenerationService {
         AppLogger.w('未提供BuildContext，渲染可能与预览不一致', source: 'AICardGeneration');
       }
 
-      // 标准化SVG内容，确保渲染一致性
-      final normalizedSvg = _normalizeSVGAttributes(card.svgContent);
-      if (normalizedSvg != card.svgContent) {
-        AppLogger.d('SVG内容已标准化', source: 'AICardGeneration');
-      }
-
       // 先渲染图片（此时尚未出现 async gap，满足 use_build_context_synchronously 规范）
       final safeContext =
           (context != null && context is Element && !context.mounted)
               ? null
               : context;
 
-      // 创建临时卡片对象用于渲染（使用标准化的SVG）
-      final tempCard = GeneratedCard(
-        id: card.id,
-        noteId: card.noteId,
-        originalContent: card.originalContent,
-        svgContent: normalizedSvg,
-        type: card.type,
-        createdAt: card.createdAt,
-        author: card.author,
-        source: card.source,
-        location: card.location,
-        weather: card.weather,
-        temperature: card.temperature,
-        date: card.date,
-        dayPeriod: card.dayPeriod,
-      );
-
-      final imageBytes = await tempCard.toImageBytes(
+      // 关键修复：直接使用原始 svgContent，不做任何标准化处理
+      // 这样保证保存时的渲染与预览完全一致（预览使用 SVGCardWidget 直接渲染原始 SVG）
+      final imageBytes = await card.toImageBytes(
         width: width,
         height: height,
         scaleFactor: scaleFactor,
