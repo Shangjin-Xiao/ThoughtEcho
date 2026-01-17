@@ -11,6 +11,7 @@ import '../constants/card_templates.dart';
 import '../utils/app_logger.dart';
 import 'ai_service.dart';
 import 'settings_service.dart';
+import 'database_service.dart';
 import 'svg_to_image_service.dart';
 import 'package:flutter/widgets.dart'; // 为新增的BuildContext参数添加导入
 
@@ -95,8 +96,8 @@ class AICardGenerationService {
 
   /// 本地模板回退封装(AI关闭或失败时使用)
   GeneratedCard _buildFallbackCard(Quote note) {
-    // 使用随机选择而不是固定分析,确保多样性
-    final cardType = _selectRandomTemplateType(note);
+    // 智能检测最适合的模板类型
+    final cardType = _determineTemplateType(note);
     final fallbackSVG = CardTemplates.getTemplateByType(
       type: cardType,
       content: note.content,
@@ -126,19 +127,164 @@ class AICardGenerationService {
     );
   }
 
-  /// 随机选择模板类型(用于本地回退)
-  CardType _selectRandomTemplateType(Quote note) {
-    // 使用真随机而不是伪随机
-    final random = DateTime.now().microsecondsSinceEpoch % 100;
-    final hasAuthor =
-        note.sourceAuthor != null && note.sourceAuthor!.isNotEmpty;
-
-    // 如果有作者信息,50%使用quote模板
-    if (hasAuthor && random < 50) {
-      return CardType.quote;
+  /// 智能决定模板类型（基于标签、内容和随机性）
+  CardType _determineTemplateType(Quote note) {
+    // 1. 优先匹配 Hitokoto 官方分类 (如果 categoryId 匹配)
+    if (note.categoryId != null) {
+      switch (note.categoryId) {
+        case DatabaseService.defaultCategoryIdAnime: // 动画 -> 几何/视觉
+          return CardType.geometric;
+        case DatabaseService.defaultCategoryIdComic: // 漫画 -> 几何/视觉
+          return CardType.geometric;
+        case DatabaseService.defaultCategoryIdGame: // 游戏 -> 赛博/科技
+          return CardType.cyberpunk;
+        case DatabaseService.defaultCategoryIdNovel: // 小说 -> 复古/纸张
+          return CardType.retro;
+        case DatabaseService.defaultCategoryIdPoem: // 诗词 -> 水墨/禅意
+          return CardType.ink;
+        case DatabaseService.defaultCategoryIdPhilosophy: // 哲学 -> 哲学/深邃
+          return CardType.philosophical;
+        case DatabaseService.defaultCategoryIdOriginal: // 原创 -> 情感/日记
+          return CardType.emotional;
+        case DatabaseService.defaultCategoryIdMusic: // 音乐 -> 情感/日记
+          return CardType.emotional;
+        case DatabaseService
+              .defaultCategoryIdInternet: // 网络 -> 开发者/代码 (通常是网络段子或技术梗)
+          return CardType.dev;
+        case DatabaseService.defaultCategoryIdMovie: // 影视 -> 引用/剧照感
+          return CardType.quote;
+        case DatabaseService.defaultCategoryIdJoke: // 抖机灵 -> 极简/留白 (突出笑点)
+          return CardType.minimalist;
+      }
     }
 
-    // 否则在所有可用模板中随机选择
+    final content = note.content.toLowerCase();
+    final keywords = note.keywords?.map((e) => e.toLowerCase()).toList() ?? [];
+
+    // 2. 匹配明确的关键词/标签 (支持中英文)
+    if (_hasKeyword(content, keywords, [
+      '代码',
+      '编程',
+      '开发',
+      'code',
+      'dev',
+      'programming',
+      'bug',
+      'flutter',
+      'dart',
+      'api'
+    ])) {
+      return CardType.dev;
+    }
+
+    if (_hasKeyword(content, keywords, [
+      '日记',
+      '心情',
+      '感受',
+      'diary',
+      'mood',
+      'feeling',
+      'emotion',
+      'love',
+      '悲伤',
+      '快乐'
+    ])) {
+      return CardType.emotional;
+    }
+
+    if (_hasKeyword(content, keywords, [
+      '学习',
+      '笔记',
+      '复习',
+      'study',
+      'note',
+      'learn',
+      'exam',
+      'research',
+      'paper',
+      '学术'
+    ])) {
+      return CardType.academic;
+    }
+
+    if (_hasKeyword(content, keywords, [
+      '自然',
+      '风景',
+      'nature',
+      'tree',
+      'flower',
+      'mountain',
+      'river',
+      'green',
+      'eco'
+    ])) {
+      return CardType.nature;
+    }
+
+    if (_hasKeyword(content, keywords,
+        ['思考', '哲学', '意义', 'philosophy', 'think', 'mind', 'reason', 'truth'])) {
+      return CardType.philosophical;
+    }
+
+    if (_hasKeyword(content, keywords, [
+      '历史',
+      '复古',
+      '旧',
+      'retro',
+      'history',
+      'old',
+      'vintage',
+      'memory',
+      'time'
+    ])) {
+      return CardType.retro;
+    }
+
+    if (_hasKeyword(content, keywords, [
+      '禅',
+      '道',
+      '静',
+      'ink',
+      'zen',
+      'tao',
+      'chinese',
+      'calligraphy',
+      'buddha'
+    ])) {
+      return CardType.ink;
+    }
+
+    if (_hasKeyword(content, keywords, [
+      '赛博',
+      '未来',
+      '科技',
+      'cyber',
+      'future',
+      'tech',
+      'neon',
+      'glitch',
+      'punk'
+    ])) {
+      return CardType.cyberpunk;
+    }
+
+    if (_hasKeyword(content, keywords,
+        ['几何', '设计', '艺术', 'geo', 'design', 'art', 'shape', 'abstract'])) {
+      return CardType.geometric;
+    }
+
+    // 2. 基于元数据的启发式规则
+    final hasAuthor =
+        note.sourceAuthor != null && note.sourceAuthor!.isNotEmpty;
+    // 如果是短文本且有作者，很可能是名言
+    if (hasAuthor && note.content.length < 100) {
+      // 50% 概率使用专门的引用模板
+      if (DateTime.now().millisecond % 2 == 0) {
+        return CardType.quote;
+      }
+    }
+
+    // 3. 随机回退
     final allTypes = [
       CardType.knowledge,
       CardType.quote,
@@ -149,47 +295,29 @@ class AICardGenerationService {
       CardType.ink,
       CardType.cyberpunk,
       CardType.geometric,
+      CardType.academic,
+      CardType.emotional,
+      CardType.dev,
     ];
 
-    // 基于内容特征调整权重
-    final content = note.content.toLowerCase();
-    if (content.contains('思考') ||
-        content.contains('哲学') ||
-        content.contains('意义')) {
-      // 哲学内容:40%哲学,其他平分
-      if (random < 40) return CardType.philosophical;
-    } else if (content.contains('自然') ||
-        content.contains('树') ||
-        content.contains('花') ||
-        content.contains('草') ||
-        content.contains('山') ||
-        content.contains('水')) {
-      // 自然内容:40%自然,其他平分
-      if (random < 40) return CardType.nature;
-    } else if (content.contains('旧') ||
-        content.contains('回忆') ||
-        content.contains('历史') ||
-        content.contains('过去') ||
-        content.contains('时光')) {
-      // 复古内容:40%复古,其他平分
-      if (random < 40) return CardType.retro;
-    } else if (content.contains('禅') ||
-        content.contains('静') ||
-        content.contains('悟') ||
-        content.contains('道')) {
-      // 水墨内容:40%水墨,其他平分
-      if (random < 40) return CardType.ink;
-    } else if (content.contains('科技') ||
-        content.contains('未来') ||
-        content.contains('赛博') ||
-        content.contains('电子')) {
-      // 赛博内容:40%赛博,其他平分
-      if (random < 40) return CardType.cyberpunk;
-    }
+    final randomcheck = DateTime.now().microsecondsSinceEpoch;
+    return allTypes[randomcheck % allTypes.length];
+  }
 
-    // 其他情况:平均分配概率
-    final typeIndex = (random ~/ (100 / allTypes.length)) % allTypes.length;
-    return allTypes[typeIndex];
+  /// 检查内容或关键词中是否包含目标词汇
+  bool _hasKeyword(
+      String content, List<String> keywords, List<String> targets) {
+    // 检查内容
+    for (final target in targets) {
+      if (content.contains(target)) return true;
+    }
+    // 检查关键词
+    for (final keyword in keywords) {
+      for (final target in targets) {
+        if (keyword.contains(target)) return true;
+      }
+    }
+    return false;
   }
 
   /// 批量生成（用于周期报告）
