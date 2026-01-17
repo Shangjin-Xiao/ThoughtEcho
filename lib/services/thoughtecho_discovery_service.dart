@@ -9,6 +9,7 @@ import 'package:thoughtecho/services/localsend/models/multicast_dto.dart';
 import 'package:thoughtecho/services/localsend/utils/network_interfaces.dart';
 import 'device_identity_manager.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/utils/ios_local_network_permission.dart';
 
 /// ThoughtEcho设备发现服务 - 基于UDP组播
 class ThoughtEchoDiscoveryService extends ChangeNotifier {
@@ -32,6 +33,17 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
   bool _fingerprintReady = false; // 指纹是否已获取
   String _deviceModel = 'ThoughtEcho'; // 真实设备型号（含平台），异步填充
   bool _deviceInfoReady = false;
+
+  /// iOS 本地网络权限状态
+  bool _iosPermissionTriggered = false;
+  bool _iosPermissionGranted = false;
+  String? _lastSendError; // 最近一次发送错误，用于诊断
+
+  /// 获取最近的发送错误信息（供 UI 显示诊断信息）
+  String? get lastSendError => _lastSendError;
+
+  /// iOS 网络权限是否可能已授予
+  bool get iosPermissionLikelyGranted => _iosPermissionGranted;
 
   List<Device> get devices => List.unmodifiable(_devices);
   bool get isScanning => _isScanning;
@@ -132,9 +144,34 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
 
     _isScanning = true;
     _devices.clear();
+    _lastSendError = null;
     notifyListeners();
 
     try {
+      // === iOS/macOS: 首先触发本地网络权限对话框 ===
+      // 这是关键步骤！iOS 只在发送网络流量时才触发权限对话框
+      if ((Platform.isIOS || Platform.isMacOS) && !_iosPermissionTriggered) {
+        logInfo('discovery_ios_permission_trigger', source: 'LocalSend');
+        debugPrint('iOS/macOS: 触发本地网络权限对话框...');
+
+        _iosPermissionTriggered = true;
+        final permissionResult =
+            await IOSLocalNetworkPermission.I.triggerPermissionDialog();
+        _iosPermissionGranted = permissionResult;
+
+        if (!permissionResult) {
+          logWarning(
+            'discovery_ios_permission_not_granted',
+            source: 'LocalSend',
+          );
+          debugPrint('警告: iOS 本地网络权限可能未授予，其他设备可能无法发现此设备');
+          _lastSendError = '本地网络权限未授予，请在设置中启用';
+        } else {
+          logInfo('discovery_ios_permission_granted', source: 'LocalSend');
+          debugPrint('iOS 本地网络权限已触发/授予');
+        }
+      }
+
       // 确保指纹已就绪，避免首次广播使用占位
       if (_deviceFingerprint == 'initializing' || !_fingerprintReady) {
         await _ensureFingerprint();
@@ -479,6 +516,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
         );
         if (result > 0) {
           successCount++;
+          _lastSendError = null; // 清除之前的错误
           debugPrint('✓ 套接字 $i 发送成功，字节数: $result');
           logInfo(
             'discovery_broadcast_sent sock=$i bytes=$result',
@@ -508,6 +546,34 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
         } catch (e) {
           debugPrint('广播兜底发送失败: $e');
         }
+      } on SocketException catch (e) {
+        // iOS 16+ 特有错误处理
+        final errorCode = e.osError?.errorCode;
+        if (errorCode == 65) {
+          // errno = 65: No route to host - iOS 本地网络权限未授予
+          _lastSendError = '本地网络权限未授予 (errno=65)，请前往 设置 → 隐私与安全性 → 本地网络 中启用本应用';
+          _iosPermissionGranted = false;
+          logError(
+            'discovery_ios_permission_denied errno=65',
+            source: 'LocalSend',
+          );
+          debugPrint('❌ iOS 本地网络权限未授予 (errno=65)');
+        } else if (errorCode == 1) {
+          // errno = 1: Operation not permitted
+          _lastSendError = '网络操作被拒绝 (errno=1)，请检查网络权限';
+          logError(
+            'discovery_send_not_permitted errno=1',
+            source: 'LocalSend',
+          );
+          debugPrint('❌ 网络操作被拒绝 (errno=1)');
+        } else {
+          _lastSendError = 'Socket 错误: ${e.message}';
+          debugPrint('❌ 套接字 $i Socket异常: ${e.message}');
+        }
+        logWarning(
+          'discovery_socket_exception sock=$i errno=$errorCode msg=${e.message}',
+          source: 'LocalSend',
+        );
       } catch (e) {
         debugPrint('❌ 套接字 $i 发送异常: $e');
       }
