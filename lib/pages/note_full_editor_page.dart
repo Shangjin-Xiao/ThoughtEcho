@@ -1186,11 +1186,15 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     } finally {
       if (mounted) {
         final l10n = AppLocalizations.of(context);
-        setState(() {
-          _saveProgress = 1.0;
-          _saveStatus = l10n.saveComplete;
-          await _clearDraft();
-        });
+        // 清除草稿（异步操作，不等待）
+        await _clearDraft();
+
+        if (mounted) {
+          setState(() {
+            _saveProgress = 1.0;
+            _saveStatus = l10n.saveComplete;
+          });
+        }
         Future.delayed(const Duration(milliseconds: 320), () {
           if (mounted) {
             setState(() {
