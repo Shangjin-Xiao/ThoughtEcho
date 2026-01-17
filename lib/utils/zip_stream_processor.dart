@@ -6,7 +6,7 @@ import 'package:archive/archive_io.dart';
 import 'package:flutter/foundation.dart';
 import '../services/large_file_manager.dart';
 import '../utils/app_logger.dart';
-import 'path_security_utils.dart';
+import './path_security_utils.dart';
 
 /// ZIP流式处理器
 ///
