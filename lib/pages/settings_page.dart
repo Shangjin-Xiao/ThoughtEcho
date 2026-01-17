@@ -1043,6 +1043,16 @@ class SettingsPageState extends State<SettingsPage> {
           return '简体中文';
         case 'en':
           return 'English';
+        case 'ja':
+          return '日本語';
+        case 'ko':
+          return '한국어';
+        case 'es':
+          return 'Español';
+        case 'fr':
+          return 'Français';
+        case 'de':
+          return 'Deutsch';
         default:
           return '跟随系统';
       }
@@ -1078,6 +1088,26 @@ class SettingsPageState extends State<SettingsPage> {
                       RadioListTile<String?>(
                         title: Text('English'),
                         value: 'en',
+                      ),
+                      RadioListTile<String?>(
+                        title: Text('日本語'),
+                        value: 'ja',
+                      ),
+                      RadioListTile<String?>(
+                        title: Text('한국어'),
+                        value: 'ko',
+                      ),
+                      RadioListTile<String?>(
+                        title: Text('Español'),
+                        value: 'es',
+                      ),
+                      RadioListTile<String?>(
+                        title: Text('Français'),
+                        value: 'fr',
+                      ),
+                      RadioListTile<String?>(
+                        title: Text('Deutsch'),
+                        value: 'de',
                       ),
                     ],
                   ),
