@@ -4773,52 +4773,70 @@ class DatabaseService extends ChangeNotifier {
       final db = _database!;
       // 性能优化：仅查询需要补全 day_period 的记录，且只获取必要的列
       // 避免全表扫描和加载所有字段导致的大内存占用
-      final List<Map<String, dynamic>> maps = await db.query(
-        'quotes',
-        columns: ['id', 'date'],
-        where: 'day_period IS NULL OR day_period = ""',
-      );
-
-      if (maps.isEmpty) {
-        logDebug('没有需要补全 day_period 字段的记录');
-        return;
-      }
-
       int patchedCount = 0;
-      for (final map in maps) {
-        // 解析时间
-        String? dateStr = map['date'];
-        if (dateStr == null || dateStr.isEmpty) continue;
-        DateTime? dt;
-        try {
-          dt = DateTime.parse(dateStr);
-        } catch (_) {
-          continue;
-        }
-        // 推算时间段key
-        final hour = dt.hour;
-        String dayPeriodKey;
-        if (hour >= 5 && hour < 8) {
-          dayPeriodKey = 'dawn';
-        } else if (hour >= 8 && hour < 12) {
-          dayPeriodKey = 'morning';
-        } else if (hour >= 12 && hour < 17) {
-          dayPeriodKey = 'afternoon';
-        } else if (hour >= 17 && hour < 20) {
-          dayPeriodKey = 'dusk';
-        } else if (hour >= 20 && hour < 23) {
-          dayPeriodKey = 'evening';
-        } else {
-          dayPeriodKey = 'midnight';
-        }
-        // 更新数据库
-        await db.update(
+      bool hasMore = true;
+      const int batchSize = 100;
+
+      while (hasMore) {
+        // 性能优化：分批查询需要补全的记录，避免一次性加载过多导致OOM
+        final List<Map<String, dynamic>> maps = await db.query(
           'quotes',
-          {'day_period': dayPeriodKey},
-          where: 'id = ?',
-          whereArgs: [map['id']],
+          columns: ['id', 'date'],
+          where: 'day_period IS NULL OR day_period = ""',
+          limit: batchSize,
         );
-        patchedCount++;
+
+        if (maps.isEmpty) {
+          hasMore = false;
+          break;
+        }
+
+        // 使用事务批量更新当前批次，减少磁盘IO
+        await db.transaction((txn) async {
+          for (final map in maps) {
+            // 解析时间
+            String? dateStr = map['date'];
+            if (dateStr == null || dateStr.isEmpty) continue;
+            DateTime? dt;
+            try {
+              dt = DateTime.parse(dateStr);
+            } catch (_) {
+              continue;
+            }
+            // 推算时间段key
+            final hour = dt.hour;
+            String dayPeriodKey;
+            if (hour >= 5 && hour < 8) {
+              dayPeriodKey = 'dawn';
+            } else if (hour >= 8 && hour < 12) {
+              dayPeriodKey = 'morning';
+            } else if (hour >= 12 && hour < 17) {
+              dayPeriodKey = 'afternoon';
+            } else if (hour >= 17 && hour < 20) {
+              dayPeriodKey = 'dusk';
+            } else if (hour >= 20 && hour < 23) {
+              dayPeriodKey = 'evening';
+            } else {
+              dayPeriodKey = 'midnight';
+            }
+            // 更新数据库
+            await txn.update(
+              'quotes',
+              {'day_period': dayPeriodKey},
+              where: 'id = ?',
+              whereArgs: [map['id']],
+            );
+            patchedCount++;
+          }
+        });
+
+        // 如果获取的数量小于批次大小，说明处理完了
+        if (maps.length < batchSize) {
+          hasMore = false;
+        } else {
+          // 关键：给主线程喘息机会，防止界面冻结
+          await Future.delayed(const Duration(milliseconds: 2));
+        }
       }
 
       logDebug('已补全 $patchedCount 条记录的 day_period 字段');

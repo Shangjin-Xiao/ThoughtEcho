@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:async'; // Added for Timer
+import 'package:path_provider/path_provider.dart'; // Added for draft storage
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
@@ -99,12 +101,26 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   late String? _initialWeather;
   late String? _initialTemperature;
 
+  // 自动保存草稿相关
+  Timer? _autoSaveTimer;
+  File? _draftFile;
+  // 标记是否正在恢复草稿，避免重复触发
+  bool _isRestoringDraft = false;
+
   @override
   void initState() {
     super.initState();
 
     // 先初始化为基本控制器，避免阻塞UI
     _controller = quill.QuillController.basic();
+
+    // 初始化自动保存
+    _setupAutoSave();
+
+    // 如果是新建笔记，尝试检查并恢复草稿
+    if (widget.initialQuote == null) {
+      _checkAndRestoreDraft();
+    }
 
     // 异步初始化文档内容
     _initializeDocumentAsync();
@@ -263,6 +279,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
             document: document,
             selection: const TextSelection.collapsed(offset: 0),
           );
+          _setupAutoSave();
         });
         logDebug('富文本内容直接初始化完成');
       }
@@ -322,6 +339,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
             document: document,
             selection: const TextSelection.collapsed(offset: 0),
           );
+          _setupAutoSave();
         });
         logDebug('富文本内容后台初始化完成');
       }
@@ -587,6 +605,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
             document: quill.Document()..insert(0, widget.initialContent),
             selection: const TextSelection.collapsed(offset: 0),
           );
+          _setupAutoSave();
         });
       }
     } catch (e) {
@@ -603,6 +622,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         setState(() {
           _controller.dispose(); // 释放旧控制器
           _controller = quill.QuillController.basic();
+          _setupAutoSave();
 
           // 尝试安全地添加内容
           try {
@@ -1169,6 +1189,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         setState(() {
           _saveProgress = 1.0;
           _saveStatus = l10n.saveComplete;
+          await _clearDraft();
         });
         Future.delayed(const Duration(milliseconds: 320), () {
           if (mounted) {
@@ -3031,8 +3052,118 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     }
   }
 
+  // --- 自动保存草稿逻辑开始 ---
+
+  void _setupAutoSave() {
+    // 移除旧监听器（防止重复）
+    try {
+      _controller.removeListener(_onContentChanged);
+    } catch (_) {}
+    // 添加新监听器
+    _controller.addListener(_onContentChanged);
+  }
+
+  void _onContentChanged() {
+    // 如果正在恢复草稿，不触发自动保存
+    if (_isRestoringDraft) return;
+
+    // 防抖：重置定时器，2秒后执行保存
+    _autoSaveTimer?.cancel();
+    _autoSaveTimer = Timer(const Duration(seconds: 2), _saveDraft);
+  }
+
+  Future<void> _saveDraft() async {
+    try {
+      if (!mounted) return;
+
+      final dir = await getTemporaryDirectory();
+      // 使用固定文件名，意味着只支持最近一次未保存的恢复
+      _draftFile = File('${dir.path}/draft_current_session.json');
+
+      // 获取当前Delta内容
+      final delta = _controller.document.toDelta().toJson();
+      final content = jsonEncode(delta);
+
+      await _draftFile!.writeAsString(content);
+      logDebug('自动保存草稿完成: ${_draftFile!.path}');
+    } catch (e) {
+      logDebug('自动保存草稿失败: $e');
+    }
+  }
+
+  Future<void> _checkAndRestoreDraft() async {
+    try {
+      final dir = await getTemporaryDirectory();
+      final file = File('${dir.path}/draft_current_session.json');
+
+      if (await file.exists()) {
+        final lastModified = await file.lastModified();
+        // 如果草稿超过24小时，丢弃
+        if (DateTime.now().difference(lastModified).inHours > 24) {
+          logDebug('草稿已过期，丢弃');
+          await file.delete();
+          return;
+        }
+
+        logDebug('发现未保存的草稿: $lastModified');
+        _isRestoringDraft = true;
+
+        final content = await file.readAsString();
+        final deltaJson = jsonDecode(content);
+
+        if (mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('发现上次未保存的内容，已自动恢复'),
+              action: SnackBarAction(
+                label: '丢弃',
+                onPressed: () {
+                   // 用户选择丢弃，恢复为空文档
+                   _initializeEmptyDocument();
+                   _clearDraft();
+                },
+              ),
+              duration: const Duration(seconds: 5),
+            ),
+          );
+
+          setState(() {
+             _controller.dispose();
+             _controller = quill.QuillController(
+                document: quill.Document.fromJson(deltaJson),
+                selection: const TextSelection.collapsed(offset: 0),
+             );
+             _setupAutoSave();
+          });
+        }
+      }
+    } catch (e) {
+      logDebug('恢复草稿失败: $e');
+    } finally {
+      _isRestoringDraft = false;
+    }
+  }
+
+  Future<void> _clearDraft() async {
+    try {
+       final dir = await getTemporaryDirectory();
+       final file = File('${dir.path}/draft_current_session.json');
+       if (await file.exists()) {
+         await file.delete();
+         logDebug('草稿已清除');
+       }
+    } catch (e) {
+      logDebug('清除草稿失败: $e');
+    }
+  }
+
+  // --- 自动保存草稿逻辑结束 ---
+
   @override
   void dispose() {
+    // 停止自动保存定时器
+    _autoSaveTimer?.cancel();
+
     // 未保存退出时，清理本会话导入而未被引用的媒体文件
     _cleanupSessionImportedMediaIfUnsaved();
     // 清理临时媒体文件（异步执行，不阻塞dispose）
