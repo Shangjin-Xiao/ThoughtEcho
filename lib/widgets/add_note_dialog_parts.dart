@@ -88,9 +88,12 @@ class _TagSelectionSectionState extends State<TagSelectionSection> {
     return ExpansionTile(
       title: Row(
         children: [
-          Text(
-            l10n.selectTagsWithCount(widget.selectedTagIds.length),
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+          Flexible(
+            child: Text(
+              l10n.selectTagsWithCount(widget.selectedTagIds.length),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
           if (widget.isLoading) ...[
             const SizedBox(width: 8),

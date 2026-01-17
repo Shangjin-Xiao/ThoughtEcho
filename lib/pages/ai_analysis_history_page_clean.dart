@@ -509,7 +509,12 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                 size: 28,
               ),
               const SizedBox(width: 12),
-              Text(AppLocalizations.of(context).selectAnnualReportType),
+              Flexible(
+                child: Text(
+                  AppLocalizations.of(context).selectAnnualReportType,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           content: Column(

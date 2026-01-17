@@ -786,11 +786,14 @@ class _InsightsPageState extends State<InsightsPage> {
                       color: theme.colorScheme.onSecondaryContainer,
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      l10n.analysisDescriptionTitle,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onSecondaryContainer,
+                    Flexible(
+                      child: Text(
+                        l10n.analysisDescriptionTitle,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSecondaryContainer,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -824,9 +827,12 @@ class _InsightsPageState extends State<InsightsPage> {
                   children: [
                     const Icon(Icons.warning_amber_rounded, size: 20),
                     const SizedBox(width: 8),
-                    Text(
-                      l10n.aiAnalysisUsageInstructionsTitle,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    Flexible(
+                      child: Text(
+                        l10n.aiAnalysisUsageInstructionsTitle,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),

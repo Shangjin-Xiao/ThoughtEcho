@@ -2878,7 +2878,7 @@
   "discardChanges": "Discard Changes",
 
   "localAiFeatures": "Local AI Features",
-  "localAiFeaturesPreview": "Local AI Features (Preview)",
+  "localAiFeaturesPreview": "Preview",
   "localAiFeaturesDesc": "Enhance your note-taking experience with on-device AI",
   "enableLocalAi": "Enable Local AI",
   "enableLocalAiDesc": "Turn on to enable on-device AI features",
