@@ -2341,7 +2341,7 @@ class DatabaseService extends ChangeNotifier {
       return _categoryStore;
     }
     try {
-      final db = database;
+      final db = await safeDatabase;
       final maps = await db.query('categories');
       final categories = maps.map((map) => NoteCategory.fromMap(map)).toList();
       return categories;
@@ -2390,7 +2390,7 @@ class DatabaseService extends ChangeNotifier {
         return hiddenTag;
       }
 
-      final db = database;
+      final db = await safeDatabase;
       final categoryMap = {
         'id': hiddenTagId,
         'name': '隐藏',
@@ -2437,7 +2437,7 @@ class DatabaseService extends ChangeNotifier {
         return;
       }
 
-      final db = database;
+      final db = await safeDatabase;
       await db.update(
         'categories',
         {
@@ -2470,7 +2470,7 @@ class DatabaseService extends ChangeNotifier {
         return;
       }
 
-      final db = database;
+      final db = await safeDatabase;
       // 先删除所有笔记与隐藏标签的关联
       await db.delete(
         'quote_tags',
@@ -2980,21 +2980,21 @@ class DatabaseService extends ChangeNotifier {
       _scheduleCacheCleanup();
 
       // 判断是否正在查询隐藏标签
-      final isQueryingHiddenTag = tagIds != null && tagIds.contains(hiddenTagId);
+      final isQueryingHiddenTag =
+          tagIds != null && tagIds.contains(hiddenTagId);
       // 如果正在查询隐藏标签，则不排除隐藏笔记
       final shouldExcludeHidden = excludeHiddenNotes && !isQueryingHiddenTag;
 
       if (kIsWeb) {
         // Web平台的完整筛选逻辑
         var filtered = _memoryStore;
-        
+
         // 排除隐藏笔记（除非正在查询隐藏标签）
         if (shouldExcludeHidden) {
-          filtered = filtered
-              .where((q) => !q.tagIds.contains(hiddenTagId))
-              .toList();
+          filtered =
+              filtered.where((q) => !q.tagIds.contains(hiddenTagId)).toList();
         }
-        
+
         if (tagIds != null && tagIds.isNotEmpty) {
           filtered = filtered
               .where((q) => q.tagIds.any((tag) => tagIds.contains(tag)))
@@ -3627,8 +3627,8 @@ class DatabaseService extends ChangeNotifier {
     }
 
     try {
-      final db = database;
-      
+      final db = await safeDatabase;
+
       // 修复：使用 LEFT JOIN 获取笔记及其关联的标签
       // 这样可以正确获取每个笔记的 tagIds
       final String query = '''
@@ -3644,11 +3644,11 @@ class DatabaseService extends ChangeNotifier {
         ''' : ''}
         GROUP BY q.id
       ''';
-      
+
       final List<Map<String, dynamic>> maps = excludeHiddenNotes
           ? await db.rawQuery(query, [hiddenTagId])
           : await db.rawQuery(query);
-      
+
       return maps.map((m) => Quote.fromJson(m)).toList();
     } catch (e) {
       logDebug('获取所有笔记失败: $e');
@@ -3677,9 +3677,8 @@ class DatabaseService extends ChangeNotifier {
 
       // 排除隐藏笔记
       if (shouldExcludeHidden) {
-        filtered = filtered
-            .where((q) => !q.tagIds.contains(hiddenTagId))
-            .toList();
+        filtered =
+            filtered.where((q) => !q.tagIds.contains(hiddenTagId)).toList();
       }
 
       if (tagIds != null && tagIds.isNotEmpty) {
@@ -3726,7 +3725,7 @@ class DatabaseService extends ChangeNotifier {
       return filtered.length;
     }
     try {
-      final db = database;
+      final db = await safeDatabase;
       List<String> conditions = [];
       List<dynamic> args = [];
 
