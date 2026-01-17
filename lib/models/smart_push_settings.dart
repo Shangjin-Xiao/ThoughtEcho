@@ -142,6 +142,12 @@ class SmartPushSettings {
   /// 是否显示高级选项
   final bool showAdvancedOptions;
 
+  /// 是否启用每日一言独立推送
+  final bool dailyQuotePushEnabled;
+
+  /// 每日一言推送时间
+  final PushTimeSlot dailyQuotePushTime;
+
   /// 上次推送时间
   final DateTime? lastPushTime;
 
@@ -166,6 +172,9 @@ class SmartPushSettings {
       PushTimeSlot(hour: 8, minute: 0, label: '早晨灵感'),
     ],
     this.showAdvancedOptions = false,
+    this.dailyQuotePushEnabled = false,
+    this.dailyQuotePushTime =
+        const PushTimeSlot(hour: 7, minute: 0, label: '每日一言'),
     this.lastPushTime,
     this.recentlyPushedNoteIds = const [],
   });
@@ -228,6 +237,11 @@ class SmartPushSettings {
               .toList() ??
           [const PushTimeSlot(hour: 8, minute: 0)],
       showAdvancedOptions: json['showAdvancedOptions'] as bool? ?? false,
+      dailyQuotePushEnabled: json['dailyQuotePushEnabled'] as bool? ?? false,
+      dailyQuotePushTime: json['dailyQuotePushTime'] != null
+          ? PushTimeSlot.fromJson(
+              json['dailyQuotePushTime'] as Map<String, dynamic>)
+          : const PushTimeSlot(hour: 7, minute: 0, label: '每日一言'),
       lastPushTime: json['lastPushTime'] != null
           ? DateTime.tryParse(json['lastPushTime'] as String)
           : null,
@@ -248,6 +262,8 @@ class SmartPushSettings {
       'filterWeatherTypes': filterWeatherTypes.map((e) => e.name).toList(),
       'pushTimeSlots': pushTimeSlots.map((e) => e.toJson()).toList(),
       'showAdvancedOptions': showAdvancedOptions,
+      'dailyQuotePushEnabled': dailyQuotePushEnabled,
+      'dailyQuotePushTime': dailyQuotePushTime.toJson(),
       'lastPushTime': lastPushTime?.toIso8601String(),
       'recentlyPushedNoteIds': recentlyPushedNoteIds,
     };
@@ -262,6 +278,8 @@ class SmartPushSettings {
     Set<WeatherFilterType>? filterWeatherTypes,
     List<PushTimeSlot>? pushTimeSlots,
     bool? showAdvancedOptions,
+    bool? dailyQuotePushEnabled,
+    PushTimeSlot? dailyQuotePushTime,
     DateTime? lastPushTime,
     List<String>? recentlyPushedNoteIds,
   }) {
@@ -274,6 +292,9 @@ class SmartPushSettings {
       filterWeatherTypes: filterWeatherTypes ?? this.filterWeatherTypes,
       pushTimeSlots: pushTimeSlots ?? this.pushTimeSlots,
       showAdvancedOptions: showAdvancedOptions ?? this.showAdvancedOptions,
+      dailyQuotePushEnabled:
+          dailyQuotePushEnabled ?? this.dailyQuotePushEnabled,
+      dailyQuotePushTime: dailyQuotePushTime ?? this.dailyQuotePushTime,
       lastPushTime: lastPushTime ?? this.lastPushTime,
       recentlyPushedNoteIds:
           recentlyPushedNoteIds ?? this.recentlyPushedNoteIds,
@@ -325,7 +346,9 @@ class SmartPushSettings {
           filterTagIds == other.filterTagIds &&
           filterWeatherTypes == other.filterWeatherTypes &&
           pushTimeSlots == other.pushTimeSlots &&
-          showAdvancedOptions == other.showAdvancedOptions;
+          showAdvancedOptions == other.showAdvancedOptions &&
+          dailyQuotePushEnabled == other.dailyQuotePushEnabled &&
+          dailyQuotePushTime == other.dailyQuotePushTime;
 
   @override
   int get hashCode =>
@@ -336,7 +359,9 @@ class SmartPushSettings {
       filterTagIds.hashCode ^
       filterWeatherTypes.hashCode ^
       pushTimeSlots.hashCode ^
-      showAdvancedOptions.hashCode;
+      showAdvancedOptions.hashCode ^
+      dailyQuotePushEnabled.hashCode ^
+      dailyQuotePushTime.hashCode;
 
   @override
   String toString() {

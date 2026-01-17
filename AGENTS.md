@@ -45,6 +45,10 @@ ThoughtEcho/
 
 ## CONVENTIONS
 
+### UI 开发规范
+- **调试功能隐身**: 所有测试按钮、调试入口必须仅在**应用内开发者模式**（通过关于页面激活）或 Debug 模式下显示，禁止在 Release 包的普通用户界面中直接暴露。
+- **设计美学**: 追求极致的视觉体验，使用 Material 3 规范，注重动效和微交互。
+
 ### 状态管理
 - 所有服务继承 `ChangeNotifier`，在 `main.dart` 通过 `ChangeNotifierProvider` 注入
 - 写操作后**必须**调用 `notifyListeners()`
