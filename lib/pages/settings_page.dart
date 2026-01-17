@@ -578,11 +578,15 @@ class SettingsPageState extends State<SettingsPage> {
                           ),
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.tertiary.withValues(alpha: 0.2),
+                              color: theme.colorScheme.tertiary
+                                  .withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: theme.colorScheme.tertiary.withValues(alpha: 0.5)),
+                              border: Border.all(
+                                  color: theme.colorScheme.tertiary
+                                      .withValues(alpha: 0.5)),
                             ),
                             child: Text(
                               'Preview',
@@ -609,51 +613,18 @@ class SettingsPageState extends State<SettingsPage> {
                     );
                   },
                 ),
-                // 智能推送 - 仅在开发者模式下显示
-                Consumer<SettingsService>(
-                  builder: (context, settingsService, _) {
-                    if (!settingsService.appSettings.developerMode) {
-                      return const SizedBox.shrink();
-                    }
-                    return ListTile(
-                      title: Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              l10n.smartPushTitle,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.tertiary.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: theme.colorScheme.tertiary.withValues(alpha: 0.5)),
-                            ),
-                            child: Text(
-                              'Preview',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.tertiary,
-                              ),
-                            ),
-                          ),
-                        ],
+                // 智能推送
+                ListTile(
+                  title: Text(l10n.smartPushTitle),
+                  subtitle: Text(l10n.smartPushDesc),
+                  leading: const Icon(Icons.notifications_active_outlined),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SmartPushSettingsPage(),
                       ),
-                      subtitle: Text(l10n.smartPushDesc),
-                      leading: const Icon(Icons.notifications_active_outlined),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SmartPushSettingsPage(),
-                          ),
-                        );
-                      },
                     );
                   },
                 ),
@@ -991,31 +962,31 @@ class SettingsPageState extends State<SettingsPage> {
   // --- 处理 Logo 三击激活开发者模式 ---
   void _handleLogoTap() async {
     final now = DateTime.now();
-    
+
     // 如果距离上次点击超过2秒，重置计数
     if (_lastLogoTap != null && now.difference(_lastLogoTap!).inSeconds > 2) {
       _logoTapCount = 0;
     }
-    
+
     _lastLogoTap = now;
     _logoTapCount++;
-    
+
     if (_logoTapCount >= 3) {
       _logoTapCount = 0;
       final settingsService = context.read<SettingsService>();
       final currentSettings = settingsService.appSettings;
       final newDeveloperMode = !currentSettings.developerMode;
-      
+
       await settingsService.updateAppSettings(
         currentSettings.copyWith(developerMode: newDeveloperMode),
       );
-      
+
       if (!mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            newDeveloperMode 
+            newDeveloperMode
                 ? '🎉 开发者模式已开启！Developer Mode Enabled!'
                 : '✅ 开发者模式已关闭 Developer Mode Disabled',
           ),
@@ -1023,7 +994,7 @@ class SettingsPageState extends State<SettingsPage> {
           behavior: SnackBarBehavior.floating,
         ),
       );
-      
+
       // 关闭对话框
       Navigator.of(context).pop();
     }

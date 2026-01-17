@@ -5,6 +5,7 @@ import '../models/smart_push_settings.dart';
 import '../models/note_category.dart';
 import '../services/smart_push_service.dart';
 import '../services/database_service.dart';
+import '../services/settings_service.dart';
 import '../constants/app_constants.dart';
 
 /// 智能推送设置页面
@@ -212,6 +213,11 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
             // 推送频率
             _buildFrequencyCard(l10n, theme, colorScheme),
 
+            const SizedBox(height: 16),
+
+            // 每日一言独立推送
+            _buildDailyQuoteCard(l10n, theme, colorScheme),
+
             // 高级选项 - 仅在自定义模式下显示
             if (_settings.pushMode == PushMode.custom) ...[
               const SizedBox(height: 16),
@@ -220,8 +226,15 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
 
             const SizedBox(height: 24),
 
-            // 测试推送按钮
-            _buildTestButton(l10n, theme, colorScheme),
+            // 测试推送按钮 - 仅在开发者模式显示
+            Consumer<SettingsService>(
+              builder: (context, settingsService, _) {
+                if (!settingsService.appSettings.developerMode) {
+                  return const SizedBox.shrink();
+                }
+                return _buildTestButton(l10n, theme, colorScheme);
+              },
+            ),
 
             const SizedBox(height: 16),
 
@@ -297,10 +310,46 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
             ),
             Switch(
               value: _settings.enabled,
-              onChanged: (value) {
-                setState(() {
-                  _settings = _settings.copyWith(enabled: value);
-                });
+              onChanged: (value) async {
+                if (value) {
+                  // 开启时请求权限
+                  final smartPushService = context.read<SmartPushService>();
+
+                  // 1. 请求通知权限
+                  final hasNotificationPermission =
+                      await smartPushService.requestNotificationPermission();
+                  if (!hasNotificationPermission) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(l10n.smartPushPermissionRequired),
+                          backgroundColor: colorScheme.error,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                    return;
+                  }
+
+                  // 2. 检查精确闹钟权限 (Android 12+)
+                  final hasExactAlarmPermission =
+                      await smartPushService.checkExactAlarmPermission();
+                  if (!hasExactAlarmPermission && context.mounted) {
+                    // 如果没有精确闹钟权限，提示用户（这通常需要跳转到系统设置，这里简化处理，只提示）
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('建议开启精确闹钟权限以确保准时推送'), // 暂时硬编码或添加新key
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                }
+
+                if (context.mounted) {
+                  setState(() {
+                    _settings = _settings.copyWith(enabled: value);
+                  });
+                }
               },
             ),
           ],
@@ -1097,6 +1146,108 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
       slots.add(PushTimeSlot(hour: time.hour, minute: time.minute));
       setState(() {
         _settings = _settings.copyWith(pushTimeSlots: slots);
+      });
+    }
+  }
+
+  /// 每日一言独立推送卡片
+  Widget _buildDailyQuoteCard(
+      AppLocalizations l10n, ThemeData theme, ColorScheme colorScheme) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: colorScheme.outline.withValues(alpha: 0.2)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.format_quote_outlined,
+                    color: colorScheme.primary, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    l10n.smartPushDailyQuote,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: colorScheme.primary,
+                    ),
+                  ),
+                ),
+                Switch(
+                  value: _settings.dailyQuotePushEnabled,
+                  onChanged: (value) {
+                    setState(() {
+                      _settings =
+                          _settings.copyWith(dailyQuotePushEnabled: value);
+                    });
+                  },
+                ),
+              ],
+            ),
+            if (_settings.dailyQuotePushEnabled) ...[
+              const SizedBox(height: 16),
+              InkWell(
+                onTap: _editDailyQuoteTime,
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerHighest
+                        .withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: colorScheme.outline.withValues(alpha: 0.1)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        l10n.smartPushTimeSettings,
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                      Row(
+                        children: [
+                          Text(
+                            _settings.dailyQuotePushTime.formattedTime,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: colorScheme.primary,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(Icons.edit_outlined,
+                              size: 16, color: colorScheme.primary),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _editDailyQuoteTime() async {
+    final slot = _settings.dailyQuotePushTime;
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay(hour: slot.hour, minute: slot.minute),
+    );
+    if (time != null) {
+      setState(() {
+        _settings = _settings.copyWith(
+          dailyQuotePushTime:
+              slot.copyWith(hour: time.hour, minute: time.minute),
+        );
       });
     }
   }

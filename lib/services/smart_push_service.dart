@@ -34,6 +34,7 @@ class SmartPushService extends ChangeNotifier {
   static const String _settingsKey = 'smart_push_settings_v2';
   static const String _legacySettingsKey = 'smart_push_settings';
   static const int _androidAlarmId = 888;
+  static const int _dailyQuoteAlarmId = 988;
   static const String _notificationChannelId = 'smart_push_channel';
   static const String _notificationChannelName = '智能推送';
 
@@ -239,36 +240,39 @@ class SmartPushService extends ChangeNotifier {
 
   /// 规划下一次推送
   Future<void> scheduleNextPush() async {
-    if (!_settings.enabled || _settings.pushTimeSlots.isEmpty) {
+    if (!_settings.enabled) {
       await _cancelAllSchedules();
-      return;
-    }
-
-    // 检查今天是否应该推送
-    if (!_settings.shouldPushToday()) {
-      AppLogger.d('根据频率设置，今天不推送');
       return;
     }
 
     // 取消现有的计划
     await _cancelAllSchedules();
 
-    // 找到所有启用的时间槽
-    final enabledSlots =
-        _settings.pushTimeSlots.where((s) => s.enabled).toList();
-    if (enabledSlots.isEmpty) return;
+    // 1. 规划常规智能推送
+    if (_settings.shouldPushToday() && _settings.pushTimeSlots.isNotEmpty) {
+      final enabledSlots =
+          _settings.pushTimeSlots.where((s) => s.enabled).toList();
 
-    for (int i = 0; i < enabledSlots.length; i++) {
-      final slot = enabledSlots[i];
+      for (int i = 0; i < enabledSlots.length; i++) {
+        final slot = enabledSlots[i];
+        final scheduledDate = _nextInstanceOfTime(slot.hour, slot.minute);
+        final id = i; // 0-9
+
+        await _scheduleSingleAlarm(id, scheduledDate, slot);
+      }
+    }
+
+    // 2. 规划每日一言独立推送
+    if (_settings.dailyQuotePushEnabled) {
+      final slot = _settings.dailyQuotePushTime;
+      // 每日一言每天都推，不受 frequency 限制（或者也可以受限制，这里假设它是每天的）
       final scheduledDate = _nextInstanceOfTime(slot.hour, slot.minute);
-      final id = i;
 
       if (!kIsWeb && Platform.isAndroid) {
-        // Android: 使用 AlarmManager 实现精确定时
         try {
           await AndroidAlarmManager.oneShotAt(
             scheduledDate,
-            _androidAlarmId + id,
+            _dailyQuoteAlarmId,
             backgroundPushCallback,
             exact: true,
             wakeup: true,
@@ -276,25 +280,67 @@ class SmartPushService extends ChangeNotifier {
             allowWhileIdle: true,
           );
           AppLogger.i(
-              '已设定 Android Alarm: $scheduledDate (ID: ${_androidAlarmId + id})');
+              '已设定每日一言 Alarm: $scheduledDate (ID: $_dailyQuoteAlarmId)');
         } catch (e) {
-          AppLogger.e('设定 Android Alarm 失败', error: e);
-          // 降级到普通通知调度
-          await _scheduleLocalNotification(id, scheduledDate, slot);
+          AppLogger.e('设定每日一言 Alarm 失败', error: e);
+          // 降级
+          await _scheduleLocalNotification(100, scheduledDate, slot,
+              isDailyQuote: true);
         }
       } else {
-        // iOS 和其他平台：使用本地通知调度
-        await _scheduleLocalNotification(id, scheduledDate, slot);
+        await _scheduleLocalNotification(100, scheduledDate, slot,
+            isDailyQuote: true);
       }
+    }
+  }
+
+  /// 调度单个 Alarm
+  Future<void> _scheduleSingleAlarm(
+      int idIndex, tz.TZDateTime scheduledDate, PushTimeSlot slot) async {
+    if (!kIsWeb && Platform.isAndroid) {
+      // Android: 使用 AlarmManager 实现精确定时
+      try {
+        await AndroidAlarmManager.oneShotAt(
+          scheduledDate,
+          _androidAlarmId + idIndex,
+          backgroundPushCallback,
+          exact: true,
+          wakeup: true,
+          rescheduleOnReboot: true,
+          allowWhileIdle: true,
+        );
+        AppLogger.i(
+            '已设定常规 Alarm: $scheduledDate (ID: ${_androidAlarmId + idIndex})');
+      } catch (e) {
+        AppLogger.e('设定常规 Alarm 失败', error: e);
+        // 降级到普通通知调度
+        await _scheduleLocalNotification(idIndex, scheduledDate, slot);
+      }
+    } else {
+      // iOS 和其他平台：使用本地通知调度
+      await _scheduleLocalNotification(idIndex, scheduledDate, slot);
     }
   }
 
   /// 使用本地通知调度（降级方案）
   Future<void> _scheduleLocalNotification(
-      int id, tz.TZDateTime scheduledDate, PushTimeSlot slot) async {
+      int id, tz.TZDateTime scheduledDate, PushTimeSlot slot,
+      {bool isDailyQuote = false}) async {
     try {
       // 尝试预计算要推送的内容
-      final content = await _getPrecomputedContent();
+      _PushContent? content;
+      if (isDailyQuote) {
+        final quote = await _fetchDailyQuote();
+        if (quote != null) {
+          content = _PushContent(
+            title: '📖 每日一言',
+            body: quote.content,
+            noteId: null,
+          );
+        }
+      } else {
+        content = await _getPrecomputedContent();
+      }
 
       final androidDetails = AndroidNotificationDetails(
         _notificationChannelId,
@@ -320,7 +366,7 @@ class SmartPushService extends ChangeNotifier {
 
       await _notificationsPlugin.zonedSchedule(
         id,
-        content?.title ?? '💡 回忆时刻',
+        content?.title ?? (isDailyQuote ? '📖 每日一言' : '💡 回忆时刻'),
         content?.body ?? '点击查看今天的灵感',
         scheduledDate,
         details,
@@ -338,9 +384,12 @@ class SmartPushService extends ChangeNotifier {
   Future<void> _cancelAllSchedules() async {
     await _notificationsPlugin.cancelAll();
     if (!kIsWeb && Platform.isAndroid) {
+      // 取消常规推送
       for (int i = 0; i < 10; i++) {
         await AndroidAlarmManager.cancel(_androidAlarmId + i);
       }
+      // 取消每日一言
+      await AndroidAlarmManager.cancel(_dailyQuoteAlarmId);
     }
   }
 
@@ -376,12 +425,182 @@ class SmartPushService extends ChangeNotifier {
 
   /// 检查并触发推送（核心逻辑）
   Future<void> checkAndPush({bool isBackground = false}) async {
-    await _performPush(isBackground: isBackground);
+    final now = DateTime.now();
+
+    // 如果是前台手动调用（非后台），默认执行智能推送检查（或根据上下文）
+    if (!isBackground) {
+      if (_settings.enabled) await _performSmartPush();
+      return;
+    }
+
+    // 后台逻辑：判断当前时间命中了哪个任务
+
+    // 1. 检查每日一言
+    if (_settings.dailyQuotePushEnabled) {
+      final slot = _settings.dailyQuotePushTime;
+      final slotTime =
+          DateTime(now.year, now.month, now.day, slot.hour, slot.minute);
+      final diff = now.difference(slotTime).inMinutes.abs();
+      if (diff <= 5) {
+        await _performDailyQuotePush(isBackground: true);
+      }
+    }
+
+    // 2. 检查常规智能推送
+    if (_settings.enabled && _settings.shouldPushToday()) {
+      for (final slot in _settings.pushTimeSlots) {
+        if (!slot.enabled) continue;
+        final slotTime =
+            DateTime(now.year, now.month, now.day, slot.hour, slot.minute);
+        final diff = now.difference(slotTime).inMinutes.abs();
+        if (diff <= 5) {
+          await _performSmartPush(isBackground: true);
+          break; // 只要命中一个时间槽就执行，避免重复
+        }
+      }
+    }
   }
 
   /// 手动触发推送（用于测试，绕过 enabled 检查）
   Future<void> triggerPush() async {
-    await _performPush(isTest: true);
+    // 测试时强制执行一次智能推送
+    await _performSmartPush(isTest: true);
+  }
+
+  /// 执行每日一言推送
+  Future<void> _performDailyQuotePush({bool isBackground = false}) async {
+    try {
+      final dailyQuote = await _fetchDailyQuote();
+      if (dailyQuote != null) {
+        await _showNotification(
+          dailyQuote,
+          title: '📖 每日一言',
+          // 每日一言通常没有ID，或者有也不需要记录去重
+        );
+        AppLogger.i('每日一言推送成功');
+      }
+
+      // 重新调度
+      if (!isBackground) {
+        await scheduleNextPush();
+      }
+    } catch (e, stack) {
+      AppLogger.e('每日一言推送失败', error: e, stackTrace: stack);
+    }
+  }
+
+  /// 执行智能推送的核心逻辑（原 _performPush）
+  Future<void> _performSmartPush(
+      {bool isTest = false, bool isBackground = false}) async {
+    try {
+      // 测试模式不检查 enabled 和频率
+      if (!isTest) {
+        if (!_settings.enabled) return;
+        if (!_settings.shouldPushToday()) {
+          AppLogger.d('根据频率设置，今天不推送');
+          return;
+        }
+      }
+
+      // 根据推送模式获取内容
+      Quote? noteToShow;
+      String title = '💭 心迹';
+      bool isDailyQuote = false;
+
+      switch (_settings.pushMode) {
+        case PushMode.smart:
+          // 智能模式：使用智能算法选择最佳内容
+          final result = await _smartSelectContent();
+          noteToShow = result.note;
+          title = result.title;
+          isDailyQuote = result.isDailyQuote;
+          break;
+
+        case PushMode.dailyQuote:
+          // 注意：这里的 PushMode.dailyQuote 是指"回顾推送"模式选了"仅每日一言"
+          // 与独立的每日一言推送是两码事
+          final dailyQuote = await _fetchDailyQuote();
+          if (dailyQuote != null) {
+            noteToShow = dailyQuote;
+            title = '📖 每日一言';
+            isDailyQuote = true;
+          }
+          break;
+
+        case PushMode.pastNotes:
+          final candidates = await getCandidateNotes();
+          if (candidates.isNotEmpty) {
+            noteToShow = _selectUnpushedNote(candidates);
+            if (noteToShow != null) {
+              title = _generateTitle(noteToShow);
+            }
+          }
+          break;
+
+        case PushMode.both:
+          // 随机选择推送类型
+          if (_random.nextBool()) {
+            final candidates = await getCandidateNotes();
+            if (candidates.isNotEmpty) {
+              noteToShow = _selectUnpushedNote(candidates);
+              if (noteToShow != null) {
+                title = _generateTitle(noteToShow);
+              }
+            }
+          }
+          if (noteToShow == null) {
+            final dailyQuote = await _fetchDailyQuote();
+            if (dailyQuote != null) {
+              noteToShow = dailyQuote;
+              title = '📖 每日一言';
+              isDailyQuote = true;
+            }
+          }
+          break;
+
+        case PushMode.custom:
+          // 自定义模式：根据用户选择的类型获取内容
+          final candidates = await getCandidateNotes();
+          if (candidates.isNotEmpty) {
+            noteToShow = _selectUnpushedNote(candidates);
+            if (noteToShow != null) {
+              title = _generateTitle(noteToShow);
+            }
+          } else {
+            // 如果没有匹配的笔记，尝试获取每日一言
+            final dailyQuote = await _fetchDailyQuote();
+            if (dailyQuote != null) {
+              noteToShow = dailyQuote;
+              title = '📖 每日一言';
+              isDailyQuote = true;
+            }
+          }
+          break;
+      }
+
+      if (noteToShow != null) {
+        await _showNotification(noteToShow, title: title);
+
+        // 记录推送历史（避免重复推送，测试模式也不记录）
+        if (!isDailyQuote && noteToShow.id != null && !isTest) {
+          final updatedSettings = _settings.addPushedNoteId(noteToShow.id!);
+          await saveSettings(updatedSettings);
+        }
+
+        AppLogger.i(
+            '推送成功: ${noteToShow.content.substring(0, min(50, noteToShow.content.length))}...');
+      } else {
+        AppLogger.d('没有内容可推送');
+      }
+
+      // 重新调度下一次推送
+      if (!isBackground && !isTest) {
+        await scheduleNextPush();
+      }
+    } catch (e, stack) {
+      AppLogger.e('智能推送失败', error: e, stackTrace: stack);
+      if (isTest) rethrow; // 测试模式抛出异常以便 UI 显示错误
+    }
   }
 
   /// 执行推送的核心逻辑
