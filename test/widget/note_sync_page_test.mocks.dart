@@ -40,6 +40,12 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
       ) as bool);
 
   @override
+  bool get awaitingPeerApproval => (super.noSuchMethod(
+        Invocation.getter(#awaitingPeerApproval),
+        returnValue: false,
+      ) as bool);
+
+  @override
   _i2.SyncStatus get syncStatus => (super.noSuchMethod(
         Invocation.getter(#syncStatus),
         returnValue: _i2.SyncStatus.idle,
@@ -55,9 +61,10 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
       ) as String);
 
   @override
-  double get syncProgress =>
-      (super.noSuchMethod(Invocation.getter(#syncProgress), returnValue: 0.0)
-          as double);
+  double get syncProgress => (super.noSuchMethod(
+        Invocation.getter(#syncProgress),
+        returnValue: 0.0,
+      ) as double);
 
   @override
   bool get skipSyncConfirmation => (super.noSuchMethod(
@@ -66,39 +73,55 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
       ) as bool);
 
   @override
-  bool get hasListeners =>
-      (super.noSuchMethod(Invocation.getter(#hasListeners), returnValue: false)
-          as bool);
+  bool get hasListeners => (super.noSuchMethod(
+        Invocation.getter(#hasListeners),
+        returnValue: false,
+      ) as bool);
 
   @override
   _i4.Future<void> initialize() => (super.noSuchMethod(
-        Invocation.method(#initialize, []),
+        Invocation.method(
+          #initialize,
+          [],
+        ),
         returnValue: _i4.Future<void>.value(),
         returnValueForMissingStub: _i4.Future<void>.value(),
       ) as _i4.Future<void>);
 
   @override
   _i4.Future<void> startServer() => (super.noSuchMethod(
-        Invocation.method(#startServer, []),
+        Invocation.method(
+          #startServer,
+          [],
+        ),
         returnValue: _i4.Future<void>.value(),
         returnValueForMissingStub: _i4.Future<void>.value(),
       ) as _i4.Future<void>);
 
   @override
   void approveIncoming() => super.noSuchMethod(
-        Invocation.method(#approveIncoming, []),
+        Invocation.method(
+          #approveIncoming,
+          [],
+        ),
         returnValueForMissingStub: null,
       );
 
   @override
   void rejectIncoming() => super.noSuchMethod(
-        Invocation.method(#rejectIncoming, []),
+        Invocation.method(
+          #rejectIncoming,
+          [],
+        ),
         returnValueForMissingStub: null,
       );
 
   @override
   _i4.Future<void> stopServer() => (super.noSuchMethod(
-        Invocation.method(#stopServer, []),
+        Invocation.method(
+          #stopServer,
+          [],
+        ),
         returnValue: _i4.Future<void>.value(),
         returnValueForMissingStub: _i4.Future<void>.value(),
       ) as _i4.Future<void>);
@@ -106,7 +129,10 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
   @override
   _i4.Future<void> sendNotesToDevice(_i5.Device? targetDevice) =>
       (super.noSuchMethod(
-        Invocation.method(#sendNotesToDevice, [targetDevice]),
+        Invocation.method(
+          #sendNotesToDevice,
+          [targetDevice],
+        ),
         returnValue: _i4.Future<void>.value(),
         returnValueForMissingStub: _i4.Future<void>.value(),
       ) as _i4.Future<void>);
@@ -114,7 +140,10 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
   @override
   _i4.Future<void> receiveAndMergeNotes(String? backupFilePath) =>
       (super.noSuchMethod(
-        Invocation.method(#receiveAndMergeNotes, [backupFilePath]),
+        Invocation.method(
+          #receiveAndMergeNotes,
+          [backupFilePath],
+        ),
         returnValue: _i4.Future<void>.value(),
         returnValueForMissingStub: _i4.Future<void>.value(),
       ) as _i4.Future<void>);
@@ -130,41 +159,51 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
           [targetDevice],
           {#includeMediaFiles: includeMediaFiles},
         ),
-        returnValue: _i4.Future<String>.value(
-          _i3.dummyValue<String>(
-            this,
-            Invocation.method(
-              #createSyncPackage,
-              [targetDevice],
-              {#includeMediaFiles: includeMediaFiles},
-            ),
+        returnValue: _i4.Future<String>.value(_i3.dummyValue<String>(
+          this,
+          Invocation.method(
+            #createSyncPackage,
+            [targetDevice],
+            {#includeMediaFiles: includeMediaFiles},
           ),
-        ),
+        )),
       ) as _i4.Future<String>);
 
   @override
   _i4.Future<void> setSkipSyncConfirmation(bool? value) => (super.noSuchMethod(
-        Invocation.method(#setSkipSyncConfirmation, [value]),
+        Invocation.method(
+          #setSkipSyncConfirmation,
+          [value],
+        ),
         returnValue: _i4.Future<void>.value(),
         returnValueForMissingStub: _i4.Future<void>.value(),
       ) as _i4.Future<void>);
 
   @override
   void cancelOngoingSend() => super.noSuchMethod(
-        Invocation.method(#cancelOngoingSend, []),
+        Invocation.method(
+          #cancelOngoingSend,
+          [],
+        ),
         returnValueForMissingStub: null,
       );
 
   @override
   void cancelReceiving() => super.noSuchMethod(
-        Invocation.method(#cancelReceiving, []),
+        Invocation.method(
+          #cancelReceiving,
+          [],
+        ),
         returnValueForMissingStub: null,
       );
 
   @override
   _i4.Future<void> processSyncPackage(String? backupFilePath) =>
       (super.noSuchMethod(
-        Invocation.method(#processSyncPackage, [backupFilePath]),
+        Invocation.method(
+          #processSyncPackage,
+          [backupFilePath],
+        ),
         returnValue: _i4.Future<void>.value(),
         returnValueForMissingStub: _i4.Future<void>.value(),
       ) as _i4.Future<void>);
@@ -172,42 +211,93 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
   @override
   _i4.Future<List<_i5.Device>> discoverNearbyDevices({int? timeout}) =>
       (super.noSuchMethod(
-        Invocation.method(#discoverNearbyDevices, [], {#timeout: timeout}),
+        Invocation.method(
+          #discoverNearbyDevices,
+          [],
+          {#timeout: timeout},
+        ),
         returnValue: _i4.Future<List<_i5.Device>>.value(<_i5.Device>[]),
       ) as _i4.Future<List<_i5.Device>>);
 
   @override
-  (_i4.Stream<List<_i5.Device>>, _i6.VoidCallback) discoverNearbyDevicesStream({
-    int? timeout,
-  }) =>
+  (_i4.Stream<List<_i5.Device>>, _i6.VoidCallback) discoverNearbyDevicesStream(
+          {int? timeout}) =>
       (super.noSuchMethod(
-        Invocation.method(#discoverNearbyDevicesStream, [], {
-          #timeout: timeout,
-        }),
+        Invocation.method(
+          #discoverNearbyDevicesStream,
+          [],
+          {#timeout: timeout},
+        ),
         returnValue: (_i4.Stream<List<_i5.Device>>.empty(), () {}),
       ) as (_i4.Stream<List<_i5.Device>>, _i6.VoidCallback));
 
   @override
   void dispose() => super.noSuchMethod(
-        Invocation.method(#dispose, []),
+        Invocation.method(
+          #dispose,
+          [],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void debugHandleReceiveSessionCreated(
+    String? sessionId,
+    int? totalBytes,
+    String? senderAlias,
+  ) =>
+      super.noSuchMethod(
+        Invocation.method(
+          #debugHandleReceiveSessionCreated,
+          [
+            sessionId,
+            totalBytes,
+            senderAlias,
+          ],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
+  void debugHandleReceiveProgress(
+    int? received,
+    int? total,
+  ) =>
+      super.noSuchMethod(
+        Invocation.method(
+          #debugHandleReceiveProgress,
+          [
+            received,
+            total,
+          ],
+        ),
         returnValueForMissingStub: null,
       );
 
   @override
   void addListener(_i6.VoidCallback? listener) => super.noSuchMethod(
-        Invocation.method(#addListener, [listener]),
+        Invocation.method(
+          #addListener,
+          [listener],
+        ),
         returnValueForMissingStub: null,
       );
 
   @override
   void removeListener(_i6.VoidCallback? listener) => super.noSuchMethod(
-        Invocation.method(#removeListener, [listener]),
+        Invocation.method(
+          #removeListener,
+          [listener],
+        ),
         returnValueForMissingStub: null,
       );
 
   @override
   void notifyListeners() => super.noSuchMethod(
-        Invocation.method(#notifyListeners, []),
+        Invocation.method(
+          #notifyListeners,
+          [],
+        ),
         returnValueForMissingStub: null,
       );
 }
