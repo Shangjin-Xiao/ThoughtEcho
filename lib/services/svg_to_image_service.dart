@@ -71,19 +71,11 @@ class SvgToImageService {
         _cacheService.smartCleanup();
       }
 
-      // 标准化SVG内容，确保正确的viewBox和尺寸属性
-      final normalizedSvg = _normalizeSvgForRendering(
-        svgContent,
-        width,
-        height,
-      );
-
-      // 预览-导出一致性：有 BuildContext 时优先用原始SVG走真实渲染；
-      // 备用/无 context 渠道使用标准化后版本，避免百分比尺寸导致裁剪。
-      final primarySvg = context != null ? svgContent : normalizedSvg;
-
+      // 关键修复：始终使用原始 SVG，不做任何标准化处理
+      // 这样保证保存时的渲染与预览完全一致
+      // flutter_svg 已能正确处理各种 SVG 格式（包括 rgb()/rgba()/style 等）
       final imageBytes = await _renderSvgToBytes(
-        primarySvg,
+        svgContent,
         width,
         height,
         format,
@@ -92,7 +84,6 @@ class SvgToImageService {
         scaleFactor,
         renderMode,
         context,
-        normalizedForFallback: normalizedSvg,
       );
 
       // 缓存结果
@@ -278,9 +269,7 @@ class SvgToImageService {
     bool maintainAspectRatio,
     double scaleFactor,
     ExportRenderMode renderMode,
-    BuildContext? buildContext, {
-    String? normalizedForFallback,
-  }
+    BuildContext? buildContext,
   ) async {
     // 策略：优先使用真实Flutter渲染，确保与预览一致
     if (buildContext != null) {
@@ -322,7 +311,7 @@ class SvgToImageService {
     try {
       AppLogger.d('使用flutter_svg备用渲染', source: 'SvgToImageService');
       return await _renderWithFlutterSvg(
-        normalizedForFallback ?? svgContent,
+        svgContent,
         width,
         height,
         format,
@@ -338,7 +327,7 @@ class SvgToImageService {
       );
       // 最终回退方案
       return await _renderFallbackImage(
-        normalizedForFallback ?? svgContent,
+        svgContent,
         width,
         height,
         format,
@@ -362,156 +351,87 @@ class SvgToImageService {
       source: 'SvgToImageService',
     );
 
-    // flutter_svg 备用渲染：在没有 BuildContext 时，构建一个“最小渲染树”离屏渲染 SvgPicture。
-    // 这样可以复用 flutter_svg 的解析与绘制能力（支持 rgb()/rgba()/style/CSS 等），避免手写解析导致的颜色缺失。
-    //
-    // 注意：为了快速定位“导出颜色问题到底来自 flutter_svg 还是手写兜底”，这里【默认禁用】
-    // _renderWithManualSvg 的回退。flutter_svg 离屏渲染若失败，将抛出异常并由上层生成占位/错误图片。
-    try {
-      final safeScale = scaleFactor.isFinite && scaleFactor > 0
-          ? scaleFactor
-          : 1.0;
+    final safeScale =
+        scaleFactor.isFinite && scaleFactor > 0 ? scaleFactor : 1.0;
 
-      final outputSize = Size(width.toDouble(), height.toDouble());
-      final fit = switch (renderMode) {
-        ExportRenderMode.contain => BoxFit.contain,
-        ExportRenderMode.cover => BoxFit.cover,
-        ExportRenderMode.stretch => BoxFit.fill,
-      };
+    final outputSize = Size(width.toDouble(), height.toDouble());
+    final fit = switch (renderMode) {
+      ExportRenderMode.contain => BoxFit.contain,
+      ExportRenderMode.cover => BoxFit.cover,
+      ExportRenderMode.stretch => BoxFit.fill,
+    };
 
-      // 确保绑定初始化（在单元测试/后台调用中尤为重要）。
-      final binding = WidgetsFlutterBinding.ensureInitialized();
-      final views = binding.platformDispatcher.views;
-      if (views.isEmpty) {
-        throw StateError('无可用 FlutterView，无法进行离屏渲染');
-      }
-      final flutterView = views.first;
-
-      final repaintBoundary = RenderRepaintBoundary();
-
-      // 通过 RenderView + PipelineOwner 驱动一次 layout/paint。
-      final renderView = RenderView(
-        view: flutterView,
-        configuration: ViewConfiguration(
-          logicalConstraints: BoxConstraints.tight(outputSize),
-          physicalConstraints: BoxConstraints.tight(outputSize),
-          devicePixelRatio: 1.0,
-        ),
-        child: RenderPositionedBox(
-          alignment: Alignment.center,
-          child: repaintBoundary,
-        ),
-      );
-
-      final pipelineOwner = PipelineOwner();
-      pipelineOwner.rootNode = renderView;
-      renderView.prepareInitialFrame();
-
-      final focusManager = FocusManager();
-      final buildOwner = BuildOwner(focusManager: focusManager);
-
-      final rootWidget = Directionality(
-        textDirection: ui.TextDirection.ltr,
-        child: SizedBox(
-          width: outputSize.width,
-          height: outputSize.height,
-          child: ColoredBox(
-            color: backgroundColor,
-            child: flutter_svg.SvgPicture.string(
-              svgContent,
-              width: outputSize.width,
-              height: outputSize.height,
-              fit: fit,
-              allowDrawingOutsideViewBox: false,
-            ),
-          ),
-        ),
-      );
-
-      final element = RenderObjectToWidgetAdapter<RenderBox>(
-        container: repaintBoundary,
-        child: rootWidget,
-      ).attachToRenderTree(buildOwner);
-
-      // build -> layout -> paint
-      buildOwner.buildScope(element);
-      buildOwner.finalizeTree();
-      pipelineOwner.flushLayout();
-      pipelineOwner.flushCompositingBits();
-      pipelineOwner.flushPaint();
-
-      // 通过 pixelRatio 控制最终清晰度
-      final image = await repaintBoundary.toImage(pixelRatio: safeScale);
-      final byteData = await image.toByteData(format: format);
-      image.dispose();
-
-      focusManager.dispose();
-
-      if (byteData == null) {
-        throw StateError('无法生成图片字节数据');
-      }
-      return byteData.buffer.asUint8List();
-    } catch (e, st) {
-      // 为了定位问题来源：不再回退手写解析，直接抛出，让上层走最终占位/错误图。
-      AppLogger.w(
-        'flutter_svg 离屏渲染失败（已禁用手写兜底），将交由上层处理: $e',
-        error: e,
-        stackTrace: st,
-        source: 'SvgToImageService',
-      );
-      Error.throwWithStackTrace(e, st);
+    // 确保绑定初始化（在单元测试/后台调用中尤为重要）。
+    final binding = WidgetsFlutterBinding.ensureInitialized();
+    final views = binding.platformDispatcher.views;
+    if (views.isEmpty) {
+      throw StateError('无可用 FlutterView，无法进行离屏渲染');
     }
-  }
+    final flutterView = views.first;
 
-  /// 极端兜底：手写解析（不完整，但避免彻底失败）
-  ///
-  /// 当前默认不再被调用：我们优先用 flutter_svg 离屏渲染来保证与预览一致。
-  /// 若你需要对比验证，可临时恢复调用点。
-  @Deprecated('仅用于调试/回滚对比：默认不启用手写渲染兜底')
-  // ignore: unused_element
-  static Future<Uint8List> _renderWithManualSvg(
-    String svgContent,
-    int width,
-    int height,
-    ui.ImageByteFormat format,
-    Color backgroundColor,
-    double scaleFactor,
-    ExportRenderMode renderMode,
-  ) async {
-    AppLogger.d('使用手写解析兜底渲染', source: 'SvgToImageService');
+    final repaintBoundary = RenderRepaintBoundary();
 
-    final pictureRecorder = ui.PictureRecorder();
-    final canvas = Canvas(pictureRecorder);
-
-    final scaledWidth = (width * scaleFactor).round().clamp(1, 10000);
-    final scaledHeight = (height * scaleFactor).round().clamp(1, 10000);
-
-    // 应用缩放
-    canvas.scale(scaleFactor);
-
-    // 绘制背景
-    final bgPaint = Paint()..color = backgroundColor;
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
-      bgPaint,
+    // 通过 RenderView + PipelineOwner 驱动一次 layout/paint。
+    final renderView = RenderView(
+      view: flutterView,
+      configuration: ViewConfiguration(
+        logicalConstraints: BoxConstraints.tight(outputSize),
+        physicalConstraints: BoxConstraints.tight(outputSize),
+        devicePixelRatio: 1.0,
+      ),
+      child: RenderPositionedBox(
+        alignment: Alignment.center,
+        child: repaintBoundary,
+      ),
     );
 
-    // 解析并绘制基础元素
-    await _drawSvgContentImproved(canvas, svgContent, width, height);
+    final pipelineOwner = PipelineOwner();
+    pipelineOwner.rootNode = renderView;
+    renderView.prepareInitialFrame();
 
-    final picture = pictureRecorder.endRecording();
-    final image = await picture.toImage(scaledWidth, scaledHeight);
+    final focusManager = FocusManager();
+    final buildOwner = BuildOwner(focusManager: focusManager);
+
+    final rootWidget = Directionality(
+      textDirection: ui.TextDirection.ltr,
+      child: SizedBox(
+        width: outputSize.width,
+        height: outputSize.height,
+        child: ColoredBox(
+          color: backgroundColor,
+          child: flutter_svg.SvgPicture.string(
+            svgContent,
+            width: outputSize.width,
+            height: outputSize.height,
+            fit: fit,
+            allowDrawingOutsideViewBox: false,
+          ),
+        ),
+      ),
+    );
+
+    final element = RenderObjectToWidgetAdapter<RenderBox>(
+      container: repaintBoundary,
+      child: rootWidget,
+    ).attachToRenderTree(buildOwner);
+
+    // build -> layout -> paint
+    buildOwner.buildScope(element);
+    buildOwner.finalizeTree();
+    pipelineOwner.flushLayout();
+    pipelineOwner.flushCompositingBits();
+    pipelineOwner.flushPaint();
+
+    // 通过 pixelRatio 控制最终清晰度
+    final image = await repaintBoundary.toImage(pixelRatio: safeScale);
     final byteData = await image.toByteData(format: format);
-
-    try {
-      picture.dispose();
-    } catch (_) {}
     image.dispose();
 
-    if (byteData == null) {
-      throw Exception('无法生成图片字节数据');
-    }
+    focusManager.dispose();
 
+    if (byteData == null) {
+      throw StateError('无法生成图片字节数据');
+    }
     return byteData.buffer.asUint8List();
   }
 
