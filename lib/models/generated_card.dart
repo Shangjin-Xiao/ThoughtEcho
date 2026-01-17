@@ -15,6 +15,9 @@ enum CardType {
   ink, // 水墨卡片（新增）
   cyberpunk, // 赛博朋克（新增）
   geometric, // 几何抽象（新增）
+  academic, // 学术/笔记（新增）
+  emotional, // 情感/日记（新增）
+  dev, // 开发者/代码（新增）
 }
 
 /// AI生成的卡片模型
