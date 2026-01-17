@@ -29,7 +29,16 @@ class _WelcomePageViewState extends State<WelcomePageView>
   int _selectedLanguageIndex = 0;
 
   // 语言选项: 空字符串表示跟随系统
-  static const List<String> _languageCodes = ['', 'zh', 'en'];
+  static const List<String> _languageCodes = [
+    '',
+    'zh',
+    'en',
+    'ja',
+    'ko',
+    'es',
+    'fr',
+    'de'
+  ];
 
   @override
   void initState() {
@@ -91,6 +100,16 @@ class _WelcomePageViewState extends State<WelcomePageView>
         return AppLocalizations.of(context).languageChinese;
       case 'en':
         return AppLocalizations.of(context).languageEnglish;
+      case 'ja':
+        return AppLocalizations.of(context).languageJapanese;
+      case 'ko':
+        return AppLocalizations.of(context).languageKorean;
+      case 'es':
+        return AppLocalizations.of(context).languageSpanish;
+      case 'fr':
+        return AppLocalizations.of(context).languageFrench;
+      case 'de':
+        return AppLocalizations.of(context).languageGerman;
       default:
         return code;
     }
