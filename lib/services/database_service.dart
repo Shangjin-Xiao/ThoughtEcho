@@ -150,6 +150,9 @@ class DatabaseService extends ChangeNotifier {
 
   /// 修复：安全地通知笔记流订阅者
   void _safeNotifyQuotesStream() {
+    // 修复：检查服务是否已销毁
+    if (_isDisposed) return;
+    
     if (_quotesController != null && !_quotesController!.isClosed) {
       // 创建去重的副本
       final uniqueQuotes = <Quote>[];
@@ -190,6 +193,11 @@ class DatabaseService extends ChangeNotifier {
 
   /// 修复：安全的数据库访问方法，增加并发控制
   Future<Database> get safeDatabase async {
+    // 修复：检查服务是否已销毁
+    if (_isDisposed) {
+      throw StateError('DatabaseService 已被销毁，无法访问数据库');
+    }
+    
     // Web平台使用内存存储，不需要数据库对象
     if (kIsWeb) {
       // 确保已初始化
@@ -200,11 +208,19 @@ class DatabaseService extends ChangeNotifier {
       throw UnsupportedError('Web平台使用内存存储，不支持数据库访问');
     }
 
+    // 修复：如果数据库已经打开，直接返回，避免在 init() 内部调用时死锁
+    // 这允许 init() 内部的方法（如 _updateCategoriesStream）正常工作
+    if (_database != null && _database!.isOpen) {
+      return _database!;
+    }
+
     // 如果正在初始化，等待初始化完成
+    // 注意：只有在数据库尚未打开时才等待，避免死锁
     if (_isInitializing && _initCompleter != null) {
       await _initCompleter!.future;
     }
 
+    // 再次检查数据库状态（可能在等待期间已初始化完成）
     if (_database != null && _database!.isOpen) {
       return _database!;
     }
@@ -262,6 +278,12 @@ class DatabaseService extends ChangeNotifier {
 
   /// 修复：初始化数据库，增加并发控制
   Future<void> init() async {
+    // 修复：检查服务是否已销毁
+    if (_isDisposed) {
+      logDebug('DatabaseService 已被销毁，无法初始化');
+      return;
+    }
+    
     // 修复：添加严格的重复初始化检查
     if (_isInitialized) {
       logDebug('数据库已初始化，跳过重复初始化');
@@ -418,6 +440,7 @@ class DatabaseService extends ChangeNotifier {
       if (_initCompleter != null && !_initCompleter!.isCompleted) {
         _initCompleter!.completeError(e);
       }
+      _initCompleter = null; // 修复：确保在错误时也清理 completer
 
       // 尝试基本的恢复措施
       try {
