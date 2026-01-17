@@ -570,7 +570,12 @@ class SettingsPageState extends State<SettingsPage> {
                     return ListTile(
                       title: Row(
                         children: [
-                          Text(l10n.localAiFeatures),
+                          Flexible(
+                            child: Text(
+                              l10n.localAiFeatures,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                           const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -613,7 +618,12 @@ class SettingsPageState extends State<SettingsPage> {
                     return ListTile(
                       title: Row(
                         children: [
-                          Text(l10n.smartPushTitle),
+                          Flexible(
+                            child: Text(
+                              l10n.smartPushTitle,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                           const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),

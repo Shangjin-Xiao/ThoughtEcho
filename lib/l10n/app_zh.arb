@@ -2878,7 +2878,7 @@
   "discardChanges": "放弃更改",
 
   "localAiFeatures": "本地 AI 功能",
-  "localAiFeaturesPreview": "本地 AI 功能 (Preview)",
+  "localAiFeaturesPreview": "预览版",
   "localAiFeaturesDesc": "使用设备端 AI 能力增强笔记体验",
   "enableLocalAi": "启用本地 AI",
   "enableLocalAiDesc": "开启后将启用设备端 AI 功能",

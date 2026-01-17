@@ -868,7 +868,12 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   children: [
                     const Icon(Icons.view_week, size: 16),
                     const SizedBox(width: 4),
-                    Text(l10n.thisWeek),
+                    Flexible(
+                      child: Text(
+                        l10n.thisWeek,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -879,7 +884,12 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   children: [
                     const Icon(Icons.calendar_view_month, size: 16),
                     const SizedBox(width: 4),
-                    Text(l10n.thisMonth),
+                    Flexible(
+                      child: Text(
+                        l10n.thisMonth,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -890,7 +900,12 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   children: [
                     const Icon(Icons.today, size: 16),
                     const SizedBox(width: 4),
-                    Text(l10n.thisYear),
+                    Flexible(
+                      child: Text(
+                        l10n.thisYear,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -906,7 +921,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
               _loadPeriodData();
             },
             style: SegmentedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             ),
           ),
         ],

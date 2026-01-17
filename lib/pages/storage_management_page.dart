@@ -271,7 +271,12 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 ),
                 const SizedBox(width: 16),
-                Text(l10n.maintenanceInProgress),
+                Flexible(
+                  child: Text(
+                    l10n.maintenanceInProgress,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
             content: Text(currentProgress),
@@ -316,7 +321,12 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
               children: [
                 const Icon(Icons.check_circle, color: Colors.green),
                 const SizedBox(width: 12),
-                Text(l10n.maintenanceComplete),
+                Flexible(
+                  child: Text(
+                    l10n.maintenanceComplete,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
             content: Column(

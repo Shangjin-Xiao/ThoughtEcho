@@ -724,7 +724,12 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
           children: [
             const Icon(Icons.info_outline, color: Colors.blue),
             const SizedBox(width: 8),
-            Text(l10n.annualReportOpenInBrowser),
+            Flexible(
+              child: Text(
+                l10n.annualReportOpenInBrowser,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         content: Column(
@@ -784,7 +789,12 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
           children: [
             const Icon(Icons.info_outline, color: Colors.orange),
             const SizedBox(width: 8),
-            Text(l10n.annualReportHowToView),
+            Flexible(
+              child: Text(
+                l10n.annualReportHowToView,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         content: Column(

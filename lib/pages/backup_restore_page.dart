@@ -708,7 +708,12 @@ Details: $e''';
               children: [
                 const Icon(Icons.warning_amber, color: Colors.orange),
                 const SizedBox(width: 8),
-                Text(l10n.restoreConfirmDialogTitle),
+                Flexible(
+                  child: Text(
+                    l10n.restoreConfirmDialogTitle,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
             content: Column(
@@ -763,7 +768,12 @@ Details: $e''';
               children: [
                 const Icon(Icons.merge_type, color: Colors.indigo),
                 const SizedBox(width: 8),
-                Text(l10n.mergeConfirmDialogTitle),
+                Flexible(
+                  child: Text(
+                    l10n.mergeConfirmDialogTitle,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
             content: Column(
@@ -815,7 +825,12 @@ Details: $e''';
           children: [
             const Icon(Icons.error, color: Colors.red),
             const SizedBox(width: 8),
-            Text(title),
+            Flexible(
+              child: Text(
+                title,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         content: Text(message),
