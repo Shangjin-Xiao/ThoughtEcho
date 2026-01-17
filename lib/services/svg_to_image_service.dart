@@ -1046,7 +1046,7 @@ class SvgToImageService {
   /// 将外部 opacity（如 fill-opacity/stop-opacity）与颜色本身 alpha 合并（乘法），而不是直接覆盖。
   static Color _applyOpacityMultiplier(Color color, double opacity) {
     final safeOpacity = opacity.isFinite ? opacity.clamp(0.0, 1.0) : 1.0;
-    final base = color.alpha / 255.0;
+    final base = color.a;
     final combined = (base * safeOpacity).clamp(0.0, 1.0);
     return color.withValues(alpha: combined);
   }
