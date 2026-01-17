@@ -3059,5 +3059,8 @@
   "smartPushNoMatchingNotes": "没有符合条件的内容可推送",
   "smartPushPermissionRequired": "需要通知权限才能发送推送",
   "smartPushNotice": "使用说明",
-  "smartPushNoticeDesc": "• 推送功能需要授予通知权限\n• 为确保按时推送，请在系统设置中允许应用自启动和后台运行\n• 部分设备需要关闭电池优化\n• 智能模式会自动选择最相关的内容"
+  "smartPushNoticeDesc": "• 推送功能需要授予通知权限\n• 为确保按时推送，请在系统设置中允许应用自启动和后台运行\n• 部分设备需要关闭电池优化\n• 智能模式会自动选择最相关的内容",
+  "smartPushModeCustom": "自定义推送",
+  "smartPushModeCustomDesc": "手动选择回顾类型和筛选条件",
+  "recommended": "推荐"
 }

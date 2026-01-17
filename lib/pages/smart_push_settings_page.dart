@@ -16,7 +16,7 @@ class SmartPushSettingsPage extends StatefulWidget {
   State<SmartPushSettingsPage> createState() => _SmartPushSettingsPageState();
 }
 
-class _SmartPushSettingsPageState extends State<SmartPushSettingsPage> 
+class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
     with SingleTickerProviderStateMixin {
   SmartPushSettings _settings = SmartPushSettings.defaultSettings();
   List<NoteCategory> _availableTags = [];
@@ -67,7 +67,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
         setState(() => _isLoading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context).loadFailed(e.toString())),
+            content:
+                Text(AppLocalizations.of(context).loadFailed(e.toString())),
             duration: AppConstants.snackBarDurationError,
           ),
         );
@@ -93,7 +94,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context).saveFailed(e.toString())),
+            content:
+                Text(AppLocalizations.of(context).saveFailed(e.toString())),
             duration: AppConstants.snackBarDurationError,
           ),
         );
@@ -105,13 +107,15 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
     setState(() => _isTesting = true);
     try {
       final smartPushService = context.read<SmartPushService>();
-      
-      final hasPermission = await smartPushService.requestNotificationPermission();
+
+      final hasPermission =
+          await smartPushService.requestNotificationPermission();
       if (!hasPermission) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(AppLocalizations.of(context).smartPushPermissionRequired),
+              content: Text(
+                  AppLocalizations.of(context).smartPushPermissionRequired),
               duration: AppConstants.snackBarDurationError,
             ),
           );
@@ -124,7 +128,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(AppLocalizations.of(context).smartPushNoMatchingNotes),
+              content:
+                  Text(AppLocalizations.of(context).smartPushNoMatchingNotes),
               duration: AppConstants.snackBarDurationNormal,
             ),
           );
@@ -146,7 +151,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context).testFailed(e.toString())),
+            content:
+                Text(AppLocalizations.of(context).testFailed(e.toString())),
             duration: AppConstants.snackBarDurationError,
           ),
         );
@@ -189,39 +195,40 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
         children: [
           // 主开关卡片
           _buildMainSwitchCard(l10n, theme, colorScheme),
-          
+
           if (_settings.enabled) ...[
             const SizedBox(height: 16),
-            
+
             // 推送模式选择
             _buildModeSelectionCard(l10n, theme, colorScheme),
-            
+
             const SizedBox(height: 16),
-            
+
             // 推送时间设置
             _buildTimeSettingsCard(l10n, theme, colorScheme),
-            
+
             const SizedBox(height: 16),
-            
+
             // 推送频率
             _buildFrequencyCard(l10n, theme, colorScheme),
-            
-            const SizedBox(height: 16),
-            
-            // 高级选项
-            _buildAdvancedOptionsCard(l10n, theme, colorScheme),
-            
+
+            // 高级选项 - 仅在自定义模式下显示
+            if (_settings.pushMode == PushMode.custom) ...[
+              const SizedBox(height: 16),
+              _buildAdvancedOptionsCard(l10n, theme, colorScheme),
+            ],
+
             const SizedBox(height: 24),
-            
+
             // 测试推送按钮
             _buildTestButton(l10n, theme, colorScheme),
-            
+
             const SizedBox(height: 16),
-            
+
             // 说明卡片
             _buildNoticeCard(l10n, theme, colorScheme),
           ],
-          
+
           const SizedBox(height: 32),
         ],
       ),
@@ -229,18 +236,19 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
   }
 
   /// 主开关卡片
-  Widget _buildMainSwitchCard(AppLocalizations l10n, ThemeData theme, ColorScheme colorScheme) {
+  Widget _buildMainSwitchCard(
+      AppLocalizations l10n, ThemeData theme, ColorScheme colorScheme) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: _settings.enabled 
-              ? colorScheme.primary.withValues(alpha: 0.3) 
+          color: _settings.enabled
+              ? colorScheme.primary.withValues(alpha: 0.3)
               : colorScheme.outline.withValues(alpha: 0.2),
         ),
       ),
-      color: _settings.enabled 
+      color: _settings.enabled
           ? colorScheme.primaryContainer.withValues(alpha: 0.3)
           : colorScheme.surface,
       child: Padding(
@@ -251,14 +259,18 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
               width: 56,
               height: 56,
               decoration: BoxDecoration(
-                color: _settings.enabled 
+                color: _settings.enabled
                     ? colorScheme.primary.withValues(alpha: 0.15)
                     : colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(
-                _settings.enabled ? Icons.notifications_active : Icons.notifications_off_outlined,
-                color: _settings.enabled ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                _settings.enabled
+                    ? Icons.notifications_active
+                    : Icons.notifications_off_outlined,
+                color: _settings.enabled
+                    ? colorScheme.primary
+                    : colorScheme.onSurfaceVariant,
                 size: 28,
               ),
             ),
@@ -298,7 +310,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
   }
 
   /// 推送模式选择卡片
-  Widget _buildModeSelectionCard(AppLocalizations l10n, ThemeData theme, ColorScheme colorScheme) {
+  Widget _buildModeSelectionCard(
+      AppLocalizations l10n, ThemeData theme, ColorScheme colorScheme) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -313,6 +326,11 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
             if (value != null) {
               setState(() {
                 _settings = _settings.copyWith(pushMode: value);
+                // 智能模式时自动关闭高级选项
+                if (value == PushMode.smart) {
+                  _settings = _settings.copyWith(showAdvancedOptions: false);
+                  _animationController.reverse();
+                }
               });
             }
           },
@@ -321,7 +339,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
             children: [
               Row(
                 children: [
-                  Icon(Icons.category_outlined, color: colorScheme.primary, size: 20),
+                  Icon(Icons.category_outlined,
+                      color: colorScheme.primary, size: 20),
                   const SizedBox(width: 8),
                   Text(
                     l10n.smartPushContentType,
@@ -341,6 +360,17 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                 icon: Icons.auto_awesome,
                 title: l10n.smartPushModeSmart,
                 subtitle: l10n.smartPushModeSmartDesc,
+                isRecommended: true,
+              ),
+              const SizedBox(height: 8),
+              _buildModeOption(
+                l10n,
+                theme,
+                colorScheme,
+                mode: PushMode.custom,
+                icon: Icons.tune,
+                title: l10n.smartPushModeCustom,
+                subtitle: l10n.smartPushModeCustomDesc,
               ),
               const SizedBox(height: 8),
               _buildModeOption(
@@ -387,11 +417,12 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
     required IconData icon,
     required String title,
     required String subtitle,
+    bool isRecommended = false,
   }) {
     final isSelected = _settings.pushMode == mode;
-    
+
     return Material(
-      color: isSelected 
+      color: isSelected
           ? colorScheme.primaryContainer.withValues(alpha: 0.5)
           : Colors.transparent,
       borderRadius: BorderRadius.circular(12),
@@ -400,6 +431,11 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
         onTap: () {
           setState(() {
             _settings = _settings.copyWith(pushMode: mode);
+            // 智能模式时自动关闭高级选项
+            if (mode == PushMode.smart) {
+              _settings = _settings.copyWith(showAdvancedOptions: false);
+              _animationController.reverse();
+            }
           });
         },
         child: Padding(
@@ -410,7 +446,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: isSelected 
+                  color: isSelected
                       ? colorScheme.primary.withValues(alpha: 0.15)
                       : colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(10),
@@ -418,7 +454,9 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                 child: Icon(
                   icon,
                   size: 20,
-                  color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                  color: isSelected
+                      ? colorScheme.primary
+                      : colorScheme.onSurfaceVariant,
                 ),
               ),
               const SizedBox(width: 12),
@@ -426,11 +464,36 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      title,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          title,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                          ),
+                        ),
+                        if (isRecommended) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color:
+                                  colorScheme.primary.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              l10n.recommended,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: colorScheme.primary,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     Text(
                       subtitle,
@@ -452,7 +515,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
   }
 
   /// 推送时间设置卡片
-  Widget _buildTimeSettingsCard(AppLocalizations l10n, ThemeData theme, ColorScheme colorScheme) {
+  Widget _buildTimeSettingsCard(
+      AppLocalizations l10n, ThemeData theme, ColorScheme colorScheme) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -498,8 +562,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
   }
 
   Widget _buildTimeSlotTile(
-    AppLocalizations l10n, 
-    ThemeData theme, 
+    AppLocalizations l10n,
+    ThemeData theme,
     ColorScheme colorScheme,
     int index,
     PushTimeSlot slot,
@@ -507,7 +571,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: slot.enabled 
+        color: slot.enabled
             ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
             : colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(12),
@@ -518,7 +582,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
           width: 44,
           height: 44,
           decoration: BoxDecoration(
-            color: slot.enabled 
+            color: slot.enabled
                 ? colorScheme.primary.withValues(alpha: 0.15)
                 : colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(10),
@@ -527,7 +591,9 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
             child: Text(
               slot.periodDescription,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: slot.enabled ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                color: slot.enabled
+                    ? colorScheme.primary
+                    : colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -540,7 +606,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
             fontFeatures: const [FontFeature.tabularFigures()],
           ),
         ),
-        subtitle: slot.label != null 
+        subtitle: slot.label != null
             ? Text(slot.label!, style: theme.textTheme.bodySmall)
             : null,
         trailing: Row(
@@ -574,9 +640,11 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                     value: 'delete',
                     child: Row(
                       children: [
-                        Icon(Icons.delete_outline, size: 20, color: colorScheme.error),
+                        Icon(Icons.delete_outline,
+                            size: 20, color: colorScheme.error),
                         const SizedBox(width: 8),
-                        Text(l10n.delete, style: TextStyle(color: colorScheme.error)),
+                        Text(l10n.delete,
+                            style: TextStyle(color: colorScheme.error)),
                       ],
                     ),
                   ),
@@ -585,7 +653,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                 if (value == 'edit') {
                   _editTimeSlot(index, slot);
                 } else if (value == 'delete') {
-                  final slots = List<PushTimeSlot>.from(_settings.pushTimeSlots);
+                  final slots =
+                      List<PushTimeSlot>.from(_settings.pushTimeSlots);
                   slots.removeAt(index);
                   setState(() {
                     _settings = _settings.copyWith(pushTimeSlots: slots);
@@ -600,7 +669,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
   }
 
   /// 推送频率卡片
-  Widget _buildFrequencyCard(AppLocalizations l10n, ThemeData theme, ColorScheme colorScheme) {
+  Widget _buildFrequencyCard(
+      AppLocalizations l10n, ThemeData theme, ColorScheme colorScheme) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -651,7 +721,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
   }
 
   /// 高级选项卡片
-  Widget _buildAdvancedOptionsCard(AppLocalizations l10n, ThemeData theme, ColorScheme colorScheme) {
+  Widget _buildAdvancedOptionsCard(
+      AppLocalizations l10n, ThemeData theme, ColorScheme colorScheme) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -709,7 +780,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                 children: [
                   const Divider(),
                   const SizedBox(height: 8),
-                  
+
                   // 回顾类型（仅在过去笔记模式下显示）
                   if (_settings.pushMode != PushMode.dailyQuote) ...[
                     Text(
@@ -723,7 +794,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                       spacing: 8,
                       runSpacing: 8,
                       children: PastNoteType.values.map((type) {
-                        final isSelected = _settings.enabledPastNoteTypes.contains(type);
+                        final isSelected =
+                            _settings.enabledPastNoteTypes.contains(type);
                         return FilterChip(
                           avatar: Icon(
                             _getPastNoteTypeIcon(type),
@@ -732,14 +804,16 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                           label: Text(_getPastNoteTypeLabel(l10n, type)),
                           selected: isSelected,
                           onSelected: (selected) {
-                            final types = Set<PastNoteType>.from(_settings.enabledPastNoteTypes);
+                            final types = Set<PastNoteType>.from(
+                                _settings.enabledPastNoteTypes);
                             if (selected) {
                               types.add(type);
                             } else {
                               types.remove(type);
                             }
                             setState(() {
-                              _settings = _settings.copyWith(enabledPastNoteTypes: types);
+                              _settings = _settings.copyWith(
+                                  enabledPastNoteTypes: types);
                             });
                           },
                         );
@@ -747,9 +821,10 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                     ),
                     const SizedBox(height: 16),
                   ],
-                  
+
                   // 天气筛选
-                  if (_settings.enabledPastNoteTypes.contains(PastNoteType.sameWeather)) ...[
+                  if (_settings.enabledPastNoteTypes
+                      .contains(PastNoteType.sameWeather)) ...[
                     Text(
                       l10n.smartPushWeatherFilter,
                       style: theme.textTheme.bodyMedium?.copyWith(
@@ -761,20 +836,23 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                       spacing: 8,
                       runSpacing: 8,
                       children: WeatherFilterType.values.map((weather) {
-                        final isSelected = _settings.filterWeatherTypes.contains(weather);
+                        final isSelected =
+                            _settings.filterWeatherTypes.contains(weather);
                         return FilterChip(
                           avatar: Text(_getWeatherEmoji(weather)),
                           label: Text(_getWeatherLabel(l10n, weather)),
                           selected: isSelected,
                           onSelected: (selected) {
-                            final types = Set<WeatherFilterType>.from(_settings.filterWeatherTypes);
+                            final types = Set<WeatherFilterType>.from(
+                                _settings.filterWeatherTypes);
                             if (selected) {
                               types.add(weather);
                             } else {
                               types.remove(weather);
                             }
                             setState(() {
-                              _settings = _settings.copyWith(filterWeatherTypes: types);
+                              _settings =
+                                  _settings.copyWith(filterWeatherTypes: types);
                             });
                           },
                         );
@@ -782,7 +860,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                     ),
                     const SizedBox(height: 16),
                   ],
-                  
+
                   // 标签筛选
                   Text(
                     l10n.smartPushTagFilter,
@@ -811,22 +889,26 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                       spacing: 8,
                       runSpacing: 8,
                       children: _availableTags.map((tag) {
-                        final isSelected = _settings.filterTagIds.contains(tag.id);
+                        final isSelected =
+                            _settings.filterTagIds.contains(tag.id);
                         return FilterChip(
                           avatar: tag.icon != null && tag.icon!.isNotEmpty
-                              ? Text(tag.icon!, style: const TextStyle(fontSize: 14))
+                              ? Text(tag.icon!,
+                                  style: const TextStyle(fontSize: 14))
                               : null,
                           label: Text(tag.name),
                           selected: isSelected,
                           onSelected: (selected) {
-                            final tagIds = List<String>.from(_settings.filterTagIds);
+                            final tagIds =
+                                List<String>.from(_settings.filterTagIds);
                             if (selected) {
                               tagIds.add(tag.id);
                             } else {
                               tagIds.remove(tag.id);
                             }
                             setState(() {
-                              _settings = _settings.copyWith(filterTagIds: tagIds);
+                              _settings =
+                                  _settings.copyWith(filterTagIds: tagIds);
                             });
                           },
                         );
@@ -842,7 +924,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
   }
 
   /// 测试按钮
-  Widget _buildTestButton(AppLocalizations l10n, ThemeData theme, ColorScheme colorScheme) {
+  Widget _buildTestButton(
+      AppLocalizations l10n, ThemeData theme, ColorScheme colorScheme) {
     return FilledButton.icon(
       onPressed: _isTesting ? null : _testPush,
       icon: _isTesting
@@ -866,7 +949,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
   }
 
   /// 说明卡片
-  Widget _buildNoticeCard(AppLocalizations l10n, ThemeData theme, ColorScheme colorScheme) {
+  Widget _buildNoticeCard(
+      AppLocalizations l10n, ThemeData theme, ColorScheme colorScheme) {
     return Card(
       elevation: 0,
       color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),

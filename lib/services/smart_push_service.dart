@@ -18,7 +18,7 @@ import '../utils/app_logger.dart';
 import 'background_push_handler.dart';
 
 /// 智能推送服务
-/// 
+///
 /// 负责根据用户设置筛选笔记并触发推送通知
 /// 支持混合模式：
 /// - Android: 使用 WorkManager/AlarmManager 实现精确定时
@@ -30,16 +30,16 @@ class SmartPushService extends ChangeNotifier {
   final LocationService _locationService;
   final FlutterLocalNotificationsPlugin _notificationsPlugin;
   WeatherService? _weatherService;
-  
+
   static const String _settingsKey = 'smart_push_settings_v2';
   static const String _legacySettingsKey = 'smart_push_settings';
   static const int _androidAlarmId = 888;
   static const String _notificationChannelId = 'smart_push_channel';
   static const String _notificationChannelName = '智能推送';
-  
+
   SmartPushSettings _settings = SmartPushSettings.defaultSettings();
   SmartPushSettings get settings => _settings;
-  
+
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
 
@@ -54,7 +54,8 @@ class SmartPushService extends ChangeNotifier {
   })  : _databaseService = databaseService,
         _locationService = locationService,
         _mmkv = mmkvService ?? MMKVService(),
-        _notificationsPlugin = notificationsPlugin ?? FlutterLocalNotificationsPlugin(),
+        _notificationsPlugin =
+            notificationsPlugin ?? FlutterLocalNotificationsPlugin(),
         _weatherService = weatherService;
 
   /// 设置天气服务（延迟注入）
@@ -97,7 +98,7 @@ class SmartPushService extends ChangeNotifier {
     try {
       // 先尝试加载新版本设置
       var jsonStr = _mmkv.getString(_settingsKey);
-      
+
       // 如果没有新版本，尝试迁移旧版本
       if (jsonStr == null || jsonStr.isEmpty) {
         jsonStr = _mmkv.getString(_legacySettingsKey);
@@ -141,7 +142,8 @@ class SmartPushService extends ChangeNotifier {
 
   /// 初始化通知插件
   Future<void> _initializeNotifications() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: false,
@@ -151,7 +153,7 @@ class SmartPushService extends ChangeNotifier {
       android: androidSettings,
       iOS: iosSettings,
     );
-    
+
     await _notificationsPlugin.initialize(
       initSettings,
       onDidReceiveNotificationResponse: _onNotificationTap,
@@ -159,8 +161,9 @@ class SmartPushService extends ChangeNotifier {
 
     // 创建通知频道（Android 8.0+）
     if (!kIsWeb && Platform.isAndroid) {
-      final androidPlugin = _notificationsPlugin
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      final androidPlugin =
+          _notificationsPlugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
       if (androidPlugin != null) {
         await androidPlugin.createNotificationChannel(
           const AndroidNotificationChannel(
@@ -184,17 +187,19 @@ class SmartPushService extends ChangeNotifier {
   Future<bool> requestNotificationPermission() async {
     try {
       if (!kIsWeb && Platform.isAndroid) {
-        final androidPlugin = _notificationsPlugin
-            .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+        final androidPlugin =
+            _notificationsPlugin.resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>();
         if (androidPlugin != null) {
           final granted = await androidPlugin.requestNotificationsPermission();
           return granted ?? false;
         }
       }
-      
+
       if (!kIsWeb && Platform.isIOS) {
-        final iosPlugin = _notificationsPlugin
-            .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
+        final iosPlugin =
+            _notificationsPlugin.resolvePlatformSpecificImplementation<
+                IOSFlutterLocalNotificationsPlugin>();
         if (iosPlugin != null) {
           final granted = await iosPlugin.requestPermissions(
             alert: true,
@@ -204,7 +209,7 @@ class SmartPushService extends ChangeNotifier {
           return granted ?? false;
         }
       }
-      
+
       return true;
     } catch (e) {
       AppLogger.e('请求通知权限失败', error: e);
@@ -215,10 +220,11 @@ class SmartPushService extends ChangeNotifier {
   /// 检查是否有精确闹钟权限（Android 12+）
   Future<bool> checkExactAlarmPermission() async {
     if (kIsWeb || !Platform.isAndroid) return true;
-    
+
     try {
-      final androidPlugin = _notificationsPlugin
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+      final androidPlugin =
+          _notificationsPlugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
       if (androidPlugin != null) {
         // Android 12+ 需要检查 SCHEDULE_EXACT_ALARM 权限
         // 这个权限不是运行时权限，而是需要用户在设置中手动开启
@@ -248,7 +254,8 @@ class SmartPushService extends ChangeNotifier {
     await _cancelAllSchedules();
 
     // 找到所有启用的时间槽
-    final enabledSlots = _settings.pushTimeSlots.where((s) => s.enabled).toList();
+    final enabledSlots =
+        _settings.pushTimeSlots.where((s) => s.enabled).toList();
     if (enabledSlots.isEmpty) return;
 
     for (int i = 0; i < enabledSlots.length; i++) {
@@ -268,7 +275,8 @@ class SmartPushService extends ChangeNotifier {
             rescheduleOnReboot: true,
             allowWhileIdle: true,
           );
-          AppLogger.i('已设定 Android Alarm: $scheduledDate (ID: ${_androidAlarmId + id})');
+          AppLogger.i(
+              '已设定 Android Alarm: $scheduledDate (ID: ${_androidAlarmId + id})');
         } catch (e) {
           AppLogger.e('设定 Android Alarm 失败', error: e);
           // 降级到普通通知调度
@@ -282,11 +290,12 @@ class SmartPushService extends ChangeNotifier {
   }
 
   /// 使用本地通知调度（降级方案）
-  Future<void> _scheduleLocalNotification(int id, tz.TZDateTime scheduledDate, PushTimeSlot slot) async {
+  Future<void> _scheduleLocalNotification(
+      int id, tz.TZDateTime scheduledDate, PushTimeSlot slot) async {
     try {
       // 尝试预计算要推送的内容
       final content = await _getPrecomputedContent();
-      
+
       final androidDetails = AndroidNotificationDetails(
         _notificationChannelId,
         _notificationChannelName,
@@ -319,7 +328,7 @@ class SmartPushService extends ChangeNotifier {
         payload: content?.noteId,
         matchDateTimeComponents: DateTimeComponents.time,
       );
-      
+
       AppLogger.i('已设定本地通知: $scheduledDate');
     } catch (e) {
       AppLogger.e('设定本地通知失败', error: e);
@@ -338,7 +347,8 @@ class SmartPushService extends ChangeNotifier {
   /// 计算下一个时间点
   tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
     final now = tz.TZDateTime.now(tz.local);
-    var scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    var scheduledDate =
+        tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
     if (scheduledDate.isBefore(now)) {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
     }
@@ -366,36 +376,39 @@ class SmartPushService extends ChangeNotifier {
 
   /// 检查并触发推送（核心逻辑）
   Future<void> checkAndPush({bool isBackground = false}) async {
-    if (!_settings.enabled) return;
+    await _performPush(isBackground: isBackground);
+  }
 
+  /// 手动触发推送（用于测试，绕过 enabled 检查）
+  Future<void> triggerPush() async {
+    await _performPush(isTest: true);
+  }
+
+  /// 执行推送的核心逻辑
+  Future<void> _performPush(
+      {bool isTest = false, bool isBackground = false}) async {
     try {
-      // 检查今天是否应该推送
-      if (!_settings.shouldPushToday()) {
-        AppLogger.d('根据频率设置，今天不推送');
-        return;
+      // 测试模式不检查 enabled 和频率
+      if (!isTest) {
+        if (!_settings.enabled) return;
+        if (!_settings.shouldPushToday()) {
+          AppLogger.d('根据频率设置，今天不推送');
+          return;
+        }
       }
 
       // 根据推送模式获取内容
       Quote? noteToShow;
-      String title = '💡 灵感';
+      String title = '💭 心迹';
       bool isDailyQuote = false;
 
       switch (_settings.pushMode) {
         case PushMode.smart:
-          // 智能模式：优先推送有意义的回忆，否则推送每日一言
-          final candidates = await getCandidateNotes();
-          if (candidates.isNotEmpty) {
-            noteToShow = _selectBestNote(candidates);
-            title = _generateTitle(noteToShow);
-          } else {
-            // 尝试获取每日一言
-            final dailyQuote = await _fetchDailyQuote();
-            if (dailyQuote != null) {
-              noteToShow = dailyQuote;
-              title = '📖 每日一言';
-              isDailyQuote = true;
-            }
-          }
+          // 智能模式：使用智能算法选择最佳内容
+          final result = await _smartSelectContent();
+          noteToShow = result.note;
+          title = result.title;
+          isDailyQuote = result.isDailyQuote;
           break;
 
         case PushMode.dailyQuote:
@@ -410,8 +423,10 @@ class SmartPushService extends ChangeNotifier {
         case PushMode.pastNotes:
           final candidates = await getCandidateNotes();
           if (candidates.isNotEmpty) {
-            noteToShow = _selectBestNote(candidates);
-            title = _generateTitle(noteToShow);
+            noteToShow = _selectUnpushedNote(candidates);
+            if (noteToShow != null) {
+              title = _generateTitle(noteToShow);
+            }
           }
           break;
 
@@ -420,11 +435,32 @@ class SmartPushService extends ChangeNotifier {
           if (_random.nextBool()) {
             final candidates = await getCandidateNotes();
             if (candidates.isNotEmpty) {
-              noteToShow = _selectBestNote(candidates);
-              title = _generateTitle(noteToShow);
+              noteToShow = _selectUnpushedNote(candidates);
+              if (noteToShow != null) {
+                title = _generateTitle(noteToShow);
+              }
             }
           }
           if (noteToShow == null) {
+            final dailyQuote = await _fetchDailyQuote();
+            if (dailyQuote != null) {
+              noteToShow = dailyQuote;
+              title = '📖 每日一言';
+              isDailyQuote = true;
+            }
+          }
+          break;
+
+        case PushMode.custom:
+          // 自定义模式：根据用户选择的类型获取内容
+          final candidates = await getCandidateNotes();
+          if (candidates.isNotEmpty) {
+            noteToShow = _selectUnpushedNote(candidates);
+            if (noteToShow != null) {
+              title = _generateTitle(noteToShow);
+            }
+          } else {
+            // 如果没有匹配的笔记，尝试获取每日一言
             final dailyQuote = await _fetchDailyQuote();
             if (dailyQuote != null) {
               noteToShow = dailyQuote;
@@ -438,81 +474,227 @@ class SmartPushService extends ChangeNotifier {
       if (noteToShow != null) {
         await _showNotification(noteToShow, title: title);
 
-        // 记录推送历史（避免重复推送）
-        if (!isDailyQuote && noteToShow.id != null) {
+        // 记录推送历史（避免重复推送，测试模式也不记录）
+        if (!isDailyQuote && noteToShow.id != null && !isTest) {
           final updatedSettings = _settings.addPushedNoteId(noteToShow.id!);
           await saveSettings(updatedSettings);
         }
 
-        AppLogger.i('推送成功: ${noteToShow.content.substring(0, min(50, noteToShow.content.length))}...');
+        AppLogger.i(
+            '推送成功: ${noteToShow.content.substring(0, min(50, noteToShow.content.length))}...');
       } else {
         AppLogger.d('没有内容可推送');
       }
 
       // 重新调度下一次推送
-      if (!isBackground) {
+      if (!isBackground && !isTest) {
         await scheduleNextPush();
       }
     } catch (e, stack) {
       AppLogger.e('智能推送失败', error: e, stackTrace: stack);
+      if (isTest) rethrow; // 测试模式抛出异常以便 UI 显示错误
     }
   }
 
-  /// 选择最佳笔记（避免重复）
-  Quote _selectBestNote(List<Quote> candidates) {
-    // 过滤掉最近已推送的笔记
-    final filtered = candidates.where((note) => 
-      note.id == null || !_settings.recentlyPushedNoteIds.contains(note.id)
-    ).toList();
+  /// 智能内容选择 - 核心算法
+  ///
+  /// 优先级策略：
+  /// 1. 那年今日（最高优先级 - 有纪念意义）
+  /// 2. 同一时刻创建的笔记（±30分钟 - 时光呼应）
+  /// 3. 相同地点的笔记（空间共鸣）
+  /// 4. 相同天气的笔记（情景再现）
+  /// 5. 往月今日
+  /// 6. 随机回忆（兜底）
+  /// 7. 每日一言（最终兜底）
+  Future<_SmartSelectResult> _smartSelectContent() async {
+    final now = DateTime.now();
+    final allNotes = await _databaseService.getUserQuotes();
 
-    // 如果过滤后没有候选，使用原始列表
-    final pool = filtered.isNotEmpty ? filtered : candidates;
-
-    // 优先级排序：那年今日 > 往月今日 > 同地点 > 同天气 > 随机
-    pool.sort((a, b) {
-      final now = DateTime.now();
-      final aDate = DateTime.tryParse(a.date) ?? now;
-      final bDate = DateTime.tryParse(b.date) ?? now;
-
-      // 那年今日优先
-      final aIsYearAgo = aDate.month == now.month && aDate.day == now.day && aDate.year < now.year;
-      final bIsYearAgo = bDate.month == now.month && bDate.day == now.day && bDate.year < now.year;
-      if (aIsYearAgo && !bIsYearAgo) return -1;
-      if (bIsYearAgo && !aIsYearAgo) return 1;
-
-      // 年份越久越优先
-      if (aIsYearAgo && bIsYearAgo) {
-        return aDate.year - bDate.year;
+    if (allNotes.isEmpty) {
+      // 没有笔记时，返回每日一言
+      final dailyQuote = await _fetchDailyQuote();
+      if (dailyQuote != null) {
+        return _SmartSelectResult(
+          note: dailyQuote,
+          title: '📖 每日一言',
+          isDailyQuote: true,
+        );
       }
+      return _SmartSelectResult.empty();
+    }
 
-      return 0;
-    });
+    Quote? selectedNote;
+    String title = '💭 心迹';
 
-    return pool.first;
+    // 1. 首先检查是否有"那年今日"的笔记（最高优先级）
+    final yearAgoNotes = _filterYearAgoToday(allNotes, now);
+    if (yearAgoNotes.isNotEmpty) {
+      selectedNote = _selectUnpushedNote(yearAgoNotes);
+      if (selectedNote != null) {
+        final noteDate = DateTime.tryParse(selectedNote.date);
+        if (noteDate != null) {
+          final years = now.year - noteDate.year;
+          title = '📅 $years年前的今天';
+        }
+      }
+    }
+
+    // 2. 检查同一时刻创建的笔记（±30分钟）
+    if (selectedNote == null) {
+      final sameTimeNotes = _filterSameTimeOfDay(allNotes, now);
+      if (sameTimeNotes.isNotEmpty) {
+        selectedNote = _selectUnpushedNote(sameTimeNotes);
+        if (selectedNote != null) {
+          title = '⏰ 此刻的回忆';
+        }
+      }
+    }
+
+    // 3. 检查相同地点的笔记
+    if (selectedNote == null) {
+      final sameLocationNotes = await _filterSameLocation(allNotes);
+      if (sameLocationNotes.isNotEmpty) {
+        selectedNote = _selectUnpushedNote(sameLocationNotes);
+        if (selectedNote != null) {
+          title = '📍 熟悉的地方';
+        }
+      }
+    }
+
+    // 4. 检查相同天气的笔记
+    if (selectedNote == null) {
+      final sameWeatherNotes = await _filterSameWeather(allNotes);
+      if (sameWeatherNotes.isNotEmpty) {
+        selectedNote = _selectUnpushedNote(sameWeatherNotes);
+        if (selectedNote != null) {
+          title = '🌤️ 此情此景';
+        }
+      }
+    }
+
+    // 5. 往月今日
+    if (selectedNote == null) {
+      final monthAgoNotes = _filterMonthAgoToday(allNotes, now);
+      if (monthAgoNotes.isNotEmpty) {
+        selectedNote = _selectUnpushedNote(monthAgoNotes);
+        if (selectedNote != null) {
+          final noteDate = DateTime.tryParse(selectedNote.date);
+          if (noteDate != null) {
+            final monthsDiff =
+                (now.year - noteDate.year) * 12 + (now.month - noteDate.month);
+            if (monthsDiff > 0) {
+              title = '📅 $monthsDiff个月前的今天';
+            } else {
+              title = '📅 往月今日';
+            }
+          }
+        }
+      }
+    }
+
+    // 6. 随机回忆（兜底）
+    if (selectedNote == null) {
+      final randomNotes = _filterRandomMemory(allNotes, now);
+      if (randomNotes.isNotEmpty) {
+        selectedNote = _selectUnpushedNote(randomNotes);
+        if (selectedNote != null) {
+          title = '💭 往日回忆';
+        }
+      }
+    }
+
+    // 7. 如果还是没有，尝试每日一言
+    if (selectedNote == null) {
+      final dailyQuote = await _fetchDailyQuote();
+      if (dailyQuote != null) {
+        return _SmartSelectResult(
+          note: dailyQuote,
+          title: '📖 每日一言',
+          isDailyQuote: true,
+        );
+      }
+    }
+
+    if (selectedNote != null) {
+      return _SmartSelectResult(
+        note: selectedNote,
+        title: title,
+        isDailyQuote: false,
+      );
+    }
+
+    return _SmartSelectResult.empty();
+  }
+
+  /// 筛选同一时刻（±30分钟）创建的笔记
+  List<Quote> _filterSameTimeOfDay(List<Quote> notes, DateTime now) {
+    final currentMinutes = now.hour * 60 + now.minute;
+
+    return notes.where((note) {
+      try {
+        final noteDate = DateTime.parse(note.date);
+        final noteMinutes = noteDate.hour * 60 + noteDate.minute;
+        final diff = (currentMinutes - noteMinutes).abs();
+        // 允许 ±30 分钟的时间差，并且不是今天的笔记
+        return diff <= 30 &&
+            !(noteDate.year == now.year &&
+                noteDate.month == now.month &&
+                noteDate.day == now.day);
+      } catch (e) {
+        return false;
+      }
+    }).toList();
+  }
+
+  /// 从候选列表中选择未被推送过的笔记
+  Quote? _selectUnpushedNote(List<Quote> candidates) {
+    // 优先选择未推送过的
+    final unpushed = candidates
+        .where((note) =>
+            note.id == null ||
+            !_settings.recentlyPushedNoteIds.contains(note.id))
+        .toList();
+
+    if (unpushed.isNotEmpty) {
+      unpushed.shuffle(_random);
+      return unpushed.first;
+    }
+
+    // 如果都推送过了，随机选一个
+    if (candidates.isNotEmpty) {
+      candidates.shuffle(_random);
+      return candidates.first;
+    }
+
+    return null;
   }
 
   /// 生成推送标题
   String _generateTitle(Quote note) {
     final now = DateTime.now();
     final noteDate = DateTime.tryParse(note.date);
-    
+
     if (noteDate != null) {
       // 那年今日
-      if (noteDate.month == now.month && noteDate.day == now.day && noteDate.year < now.year) {
+      if (noteDate.month == now.month &&
+          noteDate.day == now.day &&
+          noteDate.year < now.year) {
         final years = now.year - noteDate.year;
         return '📅 $years年前的今天';
       }
-      
+
       // 往月今日
-      if (noteDate.day == now.day && noteDate.year == now.year && noteDate.month < now.month) {
+      if (noteDate.day == now.day &&
+          noteDate.year == now.year &&
+          noteDate.month < now.month) {
         final months = now.month - noteDate.month;
         return '📅 $months个月前的今天';
       }
-      
+
       // 上周今日
       final weekAgo = now.subtract(const Duration(days: 7));
-      if (noteDate.year == weekAgo.year && 
-          noteDate.month == weekAgo.month && 
+      if (noteDate.year == weekAgo.year &&
+          noteDate.month == weekAgo.month &&
           noteDate.day == weekAgo.day) {
         return '📅 一周前的今天';
       }
@@ -544,7 +726,7 @@ class SmartPushService extends ChangeNotifier {
         'https://v1.hitokoto.cn/?c=d&c=e&c=i&c=k',
         timeoutSeconds: 10,
       );
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         if (data != null && data['hitokoto'] != null) {
@@ -566,7 +748,10 @@ class SmartPushService extends ChangeNotifier {
   }
 
   /// 显示通知
-  Future<void> _showNotification(Quote note, {String title = '通知'}) async {
+  Future<void> _showNotification(Quote note, {String title = '心迹'}) async {
+    // 构建更优雅的通知内容
+    final body = _buildNotificationBody(note);
+
     final androidDetails = AndroidNotificationDetails(
       _notificationChannelId,
       _notificationChannelName,
@@ -574,10 +759,11 @@ class SmartPushService extends ChangeNotifier {
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
-      styleInformation: note.content.length > 50
+      styleInformation: body.length > 50
           ? BigTextStyleInformation(
-              _truncateContent(note.content),
+              body,
               contentTitle: title,
+              summaryText: _getNotificationSummary(note),
             )
           : null,
     );
@@ -596,17 +782,57 @@ class SmartPushService extends ChangeNotifier {
     await _notificationsPlugin.show(
       DateTime.now().millisecondsSinceEpoch % 100000,
       title,
-      _truncateContent(note.content),
+      body,
       details,
       payload: note.id,
     );
+  }
+
+  /// 构建通知正文
+  String _buildNotificationBody(Quote note) {
+    final content = _truncateContent(note.content);
+
+    // 如果有来源信息，添加引用格式
+    if (note.sourceAuthor != null && note.sourceAuthor!.isNotEmpty) {
+      return '"$content"\n—— ${note.sourceAuthor}';
+    }
+
+    if (note.source != null && note.source!.isNotEmpty) {
+      return '"$content"\n—— 《${note.source}》';
+    }
+
+    return content;
+  }
+
+  /// 获取通知摘要文本
+  String? _getNotificationSummary(Quote note) {
+    final noteDate = DateTime.tryParse(note.date);
+    if (noteDate != null) {
+      final now = DateTime.now();
+      final diff = now.difference(noteDate);
+
+      if (diff.inDays == 0) {
+        return '今天';
+      } else if (diff.inDays == 1) {
+        return '昨天';
+      } else if (diff.inDays < 7) {
+        return '${diff.inDays}天前';
+      } else if (diff.inDays < 30) {
+        return '${(diff.inDays / 7).floor()}周前';
+      } else if (diff.inDays < 365) {
+        return '${(diff.inDays / 30).floor()}个月前';
+      } else {
+        return '${(diff.inDays / 365).floor()}年前';
+      }
+    }
+    return null;
   }
 
   /// 获取候选推送笔记
   Future<List<Quote>> getCandidateNotes() async {
     final candidates = <Quote>[];
     final allNotes = await _databaseService.getUserQuotes();
-    
+
     if (allNotes.isEmpty) return candidates;
 
     final now = DateTime.now();
@@ -662,8 +888,8 @@ class SmartPushService extends ChangeNotifier {
       try {
         final noteDate = DateTime.parse(note.date);
         return noteDate.month == now.month &&
-               noteDate.day == now.day &&
-               noteDate.year < now.year;
+            noteDate.day == now.day &&
+            noteDate.year < now.year;
       } catch (e) {
         return false;
       }
@@ -676,7 +902,7 @@ class SmartPushService extends ChangeNotifier {
       try {
         final noteDate = DateTime.parse(note.date);
         return noteDate.day == now.day &&
-               (noteDate.year < now.year ||
+            (noteDate.year < now.year ||
                 (noteDate.year == now.year && noteDate.month < now.month));
       } catch (e) {
         return false;
@@ -691,8 +917,8 @@ class SmartPushService extends ChangeNotifier {
       try {
         final noteDate = DateTime.parse(note.date);
         return noteDate.year == weekAgo.year &&
-               noteDate.month == weekAgo.month &&
-               noteDate.day == weekAgo.day;
+            noteDate.month == weekAgo.month &&
+            noteDate.day == weekAgo.day;
       } catch (e) {
         return false;
       }
@@ -724,7 +950,7 @@ class SmartPushService extends ChangeNotifier {
         await _locationService.init();
         if (_locationService.getFormattedLocation().isEmpty) return [];
       }
-      
+
       final validLocation = _locationService.getFormattedLocation();
       final currentDistrict = _extractDistrict(validLocation);
       if (currentDistrict == null) return [];
@@ -733,7 +959,7 @@ class SmartPushService extends ChangeNotifier {
         if (note.location == null || note.location!.isEmpty) return false;
         final noteDistrict = _extractDistrict(note.location!);
         return noteDistrict != null &&
-               noteDistrict.toLowerCase() == currentDistrict.toLowerCase();
+            noteDistrict.toLowerCase() == currentDistrict.toLowerCase();
       }).toList();
     } catch (e) {
       AppLogger.w('位置筛选失败: $e');
@@ -749,12 +975,12 @@ class SmartPushService extends ChangeNotifier {
         return parts[1].trim();
       }
     }
-    
+
     final districtMatch = RegExp(r'([^省市县]+(?:区|县|市))').firstMatch(location);
     if (districtMatch != null) {
       return districtMatch.group(1);
     }
-    
+
     return location;
   }
 
@@ -773,7 +999,7 @@ class SmartPushService extends ChangeNotifier {
     if (currentWeather == null || currentWeather.isEmpty) {
       // 如果没有当前天气，使用用户配置的天气筛选
       if (_settings.filterWeatherTypes.isEmpty) return [];
-      
+
       final weatherKeywords = <String>[];
       for (final weatherType in _settings.filterWeatherTypes) {
         weatherKeywords.addAll(_getWeatherKeywords(weatherType));
@@ -782,8 +1008,8 @@ class SmartPushService extends ChangeNotifier {
       return notes.where((note) {
         if (note.weather == null || note.weather!.isEmpty) return false;
         final lowerWeather = note.weather!.toLowerCase();
-        return weatherKeywords.any((keyword) =>
-            lowerWeather.contains(keyword.toLowerCase()));
+        return weatherKeywords
+            .any((keyword) => lowerWeather.contains(keyword.toLowerCase()));
       }).toList();
     }
 
@@ -816,9 +1042,21 @@ class SmartPushService extends ChangeNotifier {
   /// 天气匹配
   bool _weatherMatches(String current, String target) {
     // 提取核心天气词
-    final coreWeatherTerms = ['晴', '阴', '云', '雨', '雪', '雾', '霾', 
-                              'clear', 'cloudy', 'rain', 'snow', 'fog'];
-    
+    final coreWeatherTerms = [
+      '晴',
+      '阴',
+      '云',
+      '雨',
+      '雪',
+      '雾',
+      '霾',
+      'clear',
+      'cloudy',
+      'rain',
+      'snow',
+      'fog'
+    ];
+
     for (final term in coreWeatherTerms) {
       if (current.contains(term) && target.contains(term)) {
         return true;
@@ -830,25 +1068,25 @@ class SmartPushService extends ChangeNotifier {
   /// 预览推送内容
   Future<Quote?> previewPush() async {
     switch (_settings.pushMode) {
+      case PushMode.smart:
+        final result = await _smartSelectContent();
+        return result.note;
       case PushMode.dailyQuote:
         return await _fetchDailyQuote();
       case PushMode.pastNotes:
-      case PushMode.smart:
+      case PushMode.custom:
+        final candidates = await getCandidateNotes();
+        if (candidates.isNotEmpty) {
+          return _selectUnpushedNote(candidates);
+        }
+        return null;
       case PushMode.both:
         final candidates = await getCandidateNotes();
         if (candidates.isNotEmpty) {
-          return _selectBestNote(candidates);
+          return _selectUnpushedNote(candidates);
         }
-        if (_settings.pushMode == PushMode.smart || _settings.pushMode == PushMode.both) {
-          return await _fetchDailyQuote();
-        }
-        return null;
+        return await _fetchDailyQuote();
     }
-  }
-
-  /// 手动触发推送
-  Future<void> triggerPush() async {
-    await checkAndPush();
   }
 
   /// 获取推送统计信息
@@ -878,4 +1116,23 @@ class _PushContent {
     required this.body,
     this.noteId,
   });
+}
+
+/// 智能选择结果辅助类
+class _SmartSelectResult {
+  final Quote? note;
+  final String title;
+  final bool isDailyQuote;
+
+  _SmartSelectResult({
+    required this.note,
+    required this.title,
+    required this.isDailyQuote,
+  });
+
+  factory _SmartSelectResult.empty() => _SmartSelectResult(
+        note: null,
+        title: '',
+        isDailyQuote: false,
+      );
 }
