@@ -443,7 +443,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   /// 根据时间范围筛选笔记
   List<Quote> _filterQuotesByPeriod(List<Quote> quotes) {
     // 归一化选中日期为当天开始时间（去除时间分量）
-    final now = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+    final now =
+        DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
     DateTime startDate;
     DateTime endDate;
 
@@ -476,9 +477,11 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     final filtered = quotes.where((quote) {
       final quoteDateTime = DateTime.parse(quote.date);
       // 归一化笔记日期为当天开始时间，只比较日期部分
-      final quoteDate = DateTime(quoteDateTime.year, quoteDateTime.month, quoteDateTime.day);
+      final quoteDate =
+          DateTime(quoteDateTime.year, quoteDateTime.month, quoteDateTime.day);
       // 使用 >= startDate 且 <= endDate 的逻辑
-      final isInRange = !quoteDate.isBefore(startDate) && !quoteDate.isAfter(endDate);
+      final isInRange =
+          !quoteDate.isBefore(startDate) && !quoteDate.isAfter(endDate);
       return isInRange;
     }).toList();
 
@@ -1563,12 +1566,18 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  value,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Text(
+                      value,
+                      style:
+                          Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 4),
                 Text(
@@ -1622,12 +1631,18 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  value,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Text(
+                      value,
+                      style:
+                          Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 4),
                 Text(
@@ -1692,12 +1707,18 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  value,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Text(
+                      value,
+                      style:
+                          Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 4),
                 Text(
@@ -2232,8 +2253,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     Future<GeneratedCard> Function()? regenerateCallback;
     if (_aiCardService != null && quoteForCard != null) {
       regenerateCallback = () async {
-        final newCard =
-            await _aiCardService!.generateCard(note: quoteForCard!);
+        final newCard = await _aiCardService!.generateCard(note: quoteForCard!);
         if (mounted) {
           setState(() {
             final index =

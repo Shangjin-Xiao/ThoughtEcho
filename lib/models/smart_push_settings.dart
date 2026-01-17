@@ -1,49 +1,50 @@
 /// 智能推送设置数据模型
-/// 
+///
 /// 用于配置笔记智能推送功能，包括推送类型、时间、筛选条件等
 /// 重构版本：简化用户体验，默认智能推送，高级选项可折叠
 library;
 
 /// 推送模式
 enum PushMode {
-  smart,       // 智能推送（默认）- 自动选择最佳内容
-  dailyQuote,  // 仅每日一言
-  pastNotes,   // 仅过去的笔记
-  both,        // 两者都推送
+  smart, // 智能推送（默认）- 全自动，根据时间/地点/天气智能选择
+  custom, // 自定义推送 - 用户手动选择推送类型和筛选条件
+  dailyQuote, // 仅每日一言
+  pastNotes, // 仅过去的笔记
+  both, // 两者都推送（随机）
 }
 
 /// 过去笔记的推送类型
 enum PastNoteType {
-  yearAgoToday,      // 去年今日
-  monthAgoToday,     // 往月今日（上个月的今天）
-  weekAgoToday,      // 上周今日
-  randomMemory,      // 随机回忆
-  sameLocation,      // 相同地点（高级）
-  sameWeather,       // 相同天气（高级）
+  yearAgoToday, // 去年今日
+  monthAgoToday, // 往月今日（上个月的今天）
+  weekAgoToday, // 上周今日
+  randomMemory, // 随机回忆
+  sameLocation, // 相同地点（高级）
+  sameWeather, // 相同天气（高级）
 }
 
 /// 天气类型（用于高级筛选）
 enum WeatherFilterType {
-  clear,             // 晴
-  cloudy,            // 多云
-  rain,              // 雨
-  snow,              // 雪
-  fog,               // 雾
+  clear, // 晴
+  cloudy, // 多云
+  rain, // 雨
+  snow, // 雪
+  fog, // 雾
 }
 
 /// 推送频率
 enum PushFrequency {
-  daily,             // 每天
-  weekdays,          // 工作日
-  weekends,          // 周末
-  custom,            // 自定义
+  daily, // 每天
+  weekdays, // 工作日
+  weekends, // 周末
+  custom, // 自定义
 }
 
 /// 推送时间段
 class PushTimeSlot {
-  final int hour;      // 小时 (0-23)
-  final int minute;    // 分钟 (0-59)
-  final bool enabled;  // 是否启用
+  final int hour; // 小时 (0-23)
+  final int minute; // 分钟 (0-59)
+  final bool enabled; // 是否启用
   final String? label; // 可选标签（如"早晨灵感"）
 
   const PushTimeSlot({
@@ -274,7 +275,8 @@ class SmartPushSettings {
       pushTimeSlots: pushTimeSlots ?? this.pushTimeSlots,
       showAdvancedOptions: showAdvancedOptions ?? this.showAdvancedOptions,
       lastPushTime: lastPushTime ?? this.lastPushTime,
-      recentlyPushedNoteIds: recentlyPushedNoteIds ?? this.recentlyPushedNoteIds,
+      recentlyPushedNoteIds:
+          recentlyPushedNoteIds ?? this.recentlyPushedNoteIds,
     );
   }
 
@@ -298,7 +300,7 @@ class SmartPushSettings {
   bool shouldPushToday() {
     final now = DateTime.now();
     final weekday = now.weekday; // 1=Monday, 7=Sunday
-    
+
     switch (frequency) {
       case PushFrequency.daily:
         return true;

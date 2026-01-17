@@ -3059,5 +3059,8 @@
   "smartPushNoMatchingNotes": "No matching content to push",
   "smartPushPermissionRequired": "Notification permission is required to send push",
   "smartPushNotice": "Tips",
-  "smartPushNoticeDesc": "• Push notifications require notification permission\n• Enable auto-start and background running in system settings for reliable delivery\n• Some devices may need battery optimization disabled\n• Smart mode automatically selects the most relevant content"
+  "smartPushNoticeDesc": "• Push notifications require notification permission\n• Enable auto-start and background running in system settings for reliable delivery\n• Some devices may need battery optimization disabled\n• Smart mode automatically selects the most relevant content",
+  "smartPushModeCustom": "Custom Push",
+  "smartPushModeCustomDesc": "Manually select review types and filters",
+  "recommended": "Recommended"
 }
