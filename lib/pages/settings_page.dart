@@ -575,9 +575,9 @@ class SettingsPageState extends State<SettingsPage> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.tertiary.withOpacity(0.2),
+                              color: theme.colorScheme.tertiary.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: theme.colorScheme.tertiary.withOpacity(0.5)),
+                              border: Border.all(color: theme.colorScheme.tertiary.withValues(alpha: 0.5)),
                             ),
                             child: Text(
                               'Preview',
@@ -618,9 +618,9 @@ class SettingsPageState extends State<SettingsPage> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.tertiary.withOpacity(0.2),
+                              color: theme.colorScheme.tertiary.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: theme.colorScheme.tertiary.withOpacity(0.5)),
+                              border: Border.all(color: theme.colorScheme.tertiary.withValues(alpha: 0.5)),
                             ),
                             child: Text(
                               'Preview',

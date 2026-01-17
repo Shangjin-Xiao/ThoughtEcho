@@ -236,12 +236,12 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
           color: _settings.enabled 
-              ? colorScheme.primary.withOpacity(0.3) 
-              : colorScheme.outline.withOpacity(0.2),
+              ? colorScheme.primary.withValues(alpha: 0.3) 
+              : colorScheme.outline.withValues(alpha: 0.2),
         ),
       ),
       color: _settings.enabled 
-          ? colorScheme.primaryContainer.withOpacity(0.3)
+          ? colorScheme.primaryContainer.withValues(alpha: 0.3)
           : colorScheme.surface,
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -252,7 +252,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
               height: 56,
               decoration: BoxDecoration(
                 color: _settings.enabled 
-                    ? colorScheme.primary.withOpacity(0.15)
+                    ? colorScheme.primary.withValues(alpha: 0.15)
                     : colorScheme.surfaceContainerHighest,
                 borderRadius: BorderRadius.circular(16),
               ),
@@ -303,67 +303,77 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: colorScheme.outline.withOpacity(0.2)),
+        side: BorderSide(color: colorScheme.outline.withValues(alpha: 0.2)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.category_outlined, color: colorScheme.primary, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  l10n.smartPushContentType,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: colorScheme.primary,
+        child: RadioGroup<PushMode>(
+          groupValue: _settings.pushMode,
+          onChanged: (value) {
+            if (value != null) {
+              setState(() {
+                _settings = _settings.copyWith(pushMode: value);
+              });
+            }
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.category_outlined, color: colorScheme.primary, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    l10n.smartPushContentType,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: colorScheme.primary,
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildModeOption(
-              l10n,
-              theme,
-              colorScheme,
-              mode: PushMode.smart,
-              icon: Icons.auto_awesome,
-              title: l10n.smartPushModeSmart,
-              subtitle: l10n.smartPushModeSmartDesc,
-            ),
-            const SizedBox(height: 8),
-            _buildModeOption(
-              l10n,
-              theme,
-              colorScheme,
-              mode: PushMode.dailyQuote,
-              icon: Icons.format_quote,
-              title: l10n.smartPushDailyQuote,
-              subtitle: l10n.smartPushDailyQuoteDesc,
-            ),
-            const SizedBox(height: 8),
-            _buildModeOption(
-              l10n,
-              theme,
-              colorScheme,
-              mode: PushMode.pastNotes,
-              icon: Icons.history,
-              title: l10n.smartPushPastNotes,
-              subtitle: l10n.smartPushPastNotesDesc,
-            ),
-            const SizedBox(height: 8),
-            _buildModeOption(
-              l10n,
-              theme,
-              colorScheme,
-              mode: PushMode.both,
-              icon: Icons.shuffle,
-              title: l10n.smartPushModeBoth,
-              subtitle: l10n.smartPushModeBothDesc,
-            ),
-          ],
+                ],
+              ),
+              const SizedBox(height: 16),
+              _buildModeOption(
+                l10n,
+                theme,
+                colorScheme,
+                mode: PushMode.smart,
+                icon: Icons.auto_awesome,
+                title: l10n.smartPushModeSmart,
+                subtitle: l10n.smartPushModeSmartDesc,
+              ),
+              const SizedBox(height: 8),
+              _buildModeOption(
+                l10n,
+                theme,
+                colorScheme,
+                mode: PushMode.dailyQuote,
+                icon: Icons.format_quote,
+                title: l10n.smartPushDailyQuote,
+                subtitle: l10n.smartPushDailyQuoteDesc,
+              ),
+              const SizedBox(height: 8),
+              _buildModeOption(
+                l10n,
+                theme,
+                colorScheme,
+                mode: PushMode.pastNotes,
+                icon: Icons.history,
+                title: l10n.smartPushPastNotes,
+                subtitle: l10n.smartPushPastNotesDesc,
+              ),
+              const SizedBox(height: 8),
+              _buildModeOption(
+                l10n,
+                theme,
+                colorScheme,
+                mode: PushMode.both,
+                icon: Icons.shuffle,
+                title: l10n.smartPushModeBoth,
+                subtitle: l10n.smartPushModeBothDesc,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -382,7 +392,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
     
     return Material(
       color: isSelected 
-          ? colorScheme.primaryContainer.withOpacity(0.5)
+          ? colorScheme.primaryContainer.withValues(alpha: 0.5)
           : Colors.transparent,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
@@ -401,7 +411,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                 height: 40,
                 decoration: BoxDecoration(
                   color: isSelected 
-                      ? colorScheme.primary.withOpacity(0.15)
+                      ? colorScheme.primary.withValues(alpha: 0.15)
                       : colorScheme.surfaceContainerHighest,
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -433,14 +443,6 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
               ),
               Radio<PushMode>(
                 value: mode,
-                groupValue: _settings.pushMode,
-                onChanged: (value) {
-                  if (value != null) {
-                    setState(() {
-                      _settings = _settings.copyWith(pushMode: value);
-                    });
-                  }
-                },
               ),
             ],
           ),
@@ -455,7 +457,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: colorScheme.outline.withOpacity(0.2)),
+        side: BorderSide(color: colorScheme.outline.withValues(alpha: 0.2)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -506,8 +508,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: slot.enabled 
-            ? colorScheme.surfaceContainerHighest.withOpacity(0.5)
-            : colorScheme.surfaceContainerHighest.withOpacity(0.3),
+            ? colorScheme.surfaceContainerHighest.withValues(alpha: 0.5)
+            : colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
@@ -517,7 +519,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
           height: 44,
           decoration: BoxDecoration(
             color: slot.enabled 
-                ? colorScheme.primary.withOpacity(0.15)
+                ? colorScheme.primary.withValues(alpha: 0.15)
                 : colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(10),
           ),
@@ -603,7 +605,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: colorScheme.outline.withOpacity(0.2)),
+        side: BorderSide(color: colorScheme.outline.withValues(alpha: 0.2)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -654,7 +656,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: colorScheme.outline.withOpacity(0.2)),
+        side: BorderSide(color: colorScheme.outline.withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
@@ -867,7 +869,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
   Widget _buildNoticeCard(AppLocalizations l10n, ThemeData theme, ColorScheme colorScheme) {
     return Card(
       elevation: 0,
-      color: colorScheme.surfaceContainerHighest.withOpacity(0.5),
+      color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
       ),

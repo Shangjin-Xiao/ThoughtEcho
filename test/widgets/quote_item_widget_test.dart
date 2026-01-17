@@ -66,7 +66,7 @@ void main() {
             home: Material(
               child: QuoteItemWidget(
                 quote: quote,
-                tags: const [],
+                tagMap: const {},
                 isExpanded: false,
                 onToggleExpanded: (_) {},
                 onEdit: () {},
@@ -97,7 +97,7 @@ void main() {
             home: Material(
               child: QuoteItemWidget(
                 quote: quote,
-                tags: const [],
+                tagMap: const {},
                 isExpanded: true,
                 onToggleExpanded: (_) {},
                 onEdit: () {},
@@ -129,7 +129,7 @@ void main() {
             home: Material(
               child: QuoteItemWidget(
                 quote: quote,
-                tags: const [],
+                tagMap: const {},
                 isExpanded: false,
                 onToggleExpanded: (expanded) {
                   toggled = expanded;
@@ -174,7 +174,7 @@ void main() {
             home: Material(
               child: QuoteItemWidget(
                 quote: quote,
-                tags: const [],
+                tagMap: const {},
                 isExpanded: false,
                 onToggleExpanded: (_) {},
                 onEdit: () {},
@@ -228,7 +228,7 @@ void main() {
             home: Material(
               child: QuoteItemWidget(
                 quote: quote,
-                tags: const [],
+                tagMap: const {},
                 isExpanded: false,
                 onToggleExpanded: (_) {},
                 onEdit: () {},

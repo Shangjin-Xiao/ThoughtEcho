@@ -65,11 +65,8 @@ class ColorUtils {
     // 确保opacity在有效范围内
     opacity = opacity.clamp(0.0, 1.0);
 
-    // 将0-1的opacity转换为0-255的alpha值
-    final int alpha = (opacity * 255).round();
-
     // 创建带有新alpha值的颜色
-    return color.withAlpha(alpha);
+    return color.withValues(alpha: opacity);
   }
 
   /// 获取页面背景色

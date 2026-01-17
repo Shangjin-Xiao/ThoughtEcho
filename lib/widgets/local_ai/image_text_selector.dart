@@ -99,13 +99,13 @@ class _ImageTextSelectorState extends State<ImageTextSelector> {
                             width: 2,
                           ),
                           color: isSelected
-                              ? theme.colorScheme.primary.withOpacity(0.2)
+                              ? theme.colorScheme.primary.withValues(alpha: 0.2)
                               : Colors.transparent,
                         ),
                       ),
                     ),
                   );
-                }).toList(),
+                }),
               ],
             ),
           ),
