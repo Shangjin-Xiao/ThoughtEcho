@@ -26,6 +26,40 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
     Colors.cyan,
   ];
 
+  ThemeMode _themeMode = ThemeMode.system;
+  bool _useCustomColor = false;
+  bool _useDynamicColor = true;
+  Color? _customColor;
+  bool _hasSyncedFromTheme = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final appTheme = context.watch<AppTheme>();
+
+    if (!_hasSyncedFromTheme) {
+      _themeMode = appTheme.themeMode;
+      _useCustomColor = appTheme.useCustomColor;
+      _useDynamicColor = appTheme.useDynamicColor;
+      _customColor = appTheme.customColor;
+      _hasSyncedFromTheme = true;
+      return;
+    }
+
+    // 主题状态被外部更新时同步到本地，确保UI立即反映变化
+    if (_themeMode != appTheme.themeMode ||
+        _useCustomColor != appTheme.useCustomColor ||
+        _useDynamicColor != appTheme.useDynamicColor ||
+        _customColor != appTheme.customColor) {
+      setState(() {
+        _themeMode = appTheme.themeMode;
+        _useCustomColor = appTheme.useCustomColor;
+        _useDynamicColor = appTheme.useDynamicColor;
+        _customColor = appTheme.customColor;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final appTheme = Provider.of<AppTheme>(context);
@@ -63,21 +97,18 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                     children: [
                       _buildThemeModeOption(
                         context,
-                        appTheme,
                         ThemeMode.light,
                         l10n.themeModeLight,
                         Icons.light_mode,
                       ),
                       _buildThemeModeOption(
                         context,
-                        appTheme,
                         ThemeMode.dark,
                         l10n.themeModeDark,
                         Icons.dark_mode,
                       ),
                       _buildThemeModeOption(
                         context,
-                        appTheme,
                         ThemeMode.system,
                         l10n.followSystem,
                         Icons.brightness_auto,
@@ -114,12 +145,17 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                         ),
                       ),
                       Switch(
-                        value: appTheme.useCustomColor,
-                        onChanged: (value) => appTheme.setUseCustomColor(value),
+                        value: _useCustomColor,
+                        onChanged: (value) {
+                          setState(() {
+                            _useCustomColor = value;
+                          });
+                          appTheme.setUseCustomColor(value);
+                        },
                       ),
                     ],
                   ),
-                  if (appTheme.useCustomColor) ...[
+                  if (_useCustomColor) ...[
                     const SizedBox(height: 16),
                     Text(l10n.selectThemeColor),
                     const SizedBox(height: 8),
@@ -178,9 +214,14 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                         ],
                       ),
                       Switch(
-                        value: appTheme.useDynamicColor &&
-                            !appTheme.useCustomColor,
+                        value: _useDynamicColor && !_useCustomColor,
                         onChanged: (value) {
+                          setState(() {
+                            _useDynamicColor = value;
+                            if (value) {
+                              _useCustomColor = false;
+                            }
+                          });
                           // 如果启用动态取色，需要禁用自定义主题色
                           if (value) {
                             appTheme.setUseCustomColor(false);
@@ -188,7 +229,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                           appTheme.setUseDynamicColor(value);
                         },
                         // 当使用自定义颜色时禁用此开关
-                        activeThumbColor: appTheme.useCustomColor
+                        activeThumbColor: _useCustomColor
                             ? Theme.of(
                                 context,
                               ).colorScheme.surfaceContainerHighest
@@ -197,7 +238,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  if (appTheme.useCustomColor)
+                  if (_useCustomColor)
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
@@ -228,7 +269,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
                         ],
                       ),
                     ),
-                  if (!appTheme.useCustomColor && !appTheme.useDynamicColor)
+                  if (!_useCustomColor && !_useDynamicColor)
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
@@ -267,17 +308,22 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
 
   Widget _buildThemeModeOption(
     BuildContext context,
-    AppTheme appTheme,
     ThemeMode mode,
     String label,
     IconData icon,
   ) {
-    final isSelected = appTheme.themeMode == mode;
+    final isSelected = _themeMode == mode;
     final colorScheme = Theme.of(context).colorScheme;
 
     return InkWell(
       borderRadius: BorderRadius.circular(12),
-      onTap: () => appTheme.setThemeMode(mode),
+      onTap: () {
+        setState(() {
+          _themeMode = mode;
+        });
+        final appTheme = context.read<AppTheme>();
+        appTheme.setThemeMode(mode);
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
@@ -313,12 +359,17 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
     AppTheme appTheme,
     Color color,
   ) {
-    final isSelected = appTheme.customColor == color;
+    final isSelected = _customColor == color;
     final colorScheme = Theme.of(context).colorScheme;
 
     return InkWell(
       borderRadius: BorderRadius.circular(12),
       onTap: () async {
+        setState(() {
+          _customColor = color;
+          _useCustomColor = true;
+          _useDynamicColor = false;
+        });
         await appTheme.setCustomColor(color);
         await appTheme.setUseCustomColor(true);
         await appTheme.setUseDynamicColor(false);
@@ -377,7 +428,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
 
   Future<void> _showColorPicker(BuildContext context, AppTheme appTheme) async {
     // 获取当前选择的颜色作为对话框的初始颜色
-    final Color initialColor = appTheme.customColor ?? Colors.blue;
+    final Color initialColor = _customColor ?? Colors.blue;
     // 创建一个变量来跟踪当前选择的颜色
     Color selectedColor = initialColor;
 
@@ -405,6 +456,11 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
 
     // 如果用户点击了确认按钮，则应用选择的颜色
     if (colorSelected) {
+      setState(() {
+        _customColor = selectedColor;
+        _useCustomColor = true;
+        _useDynamicColor = false;
+      });
       await appTheme.setCustomColor(selectedColor);
       await appTheme.setUseCustomColor(true);
       await appTheme.setUseDynamicColor(false);
