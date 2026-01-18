@@ -2265,7 +2265,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     Future<GeneratedCard> Function()? regenerateCallback;
     if (_aiCardService != null && quoteForCard != null) {
       regenerateCallback = () async {
-        final newCard = await _aiCardService!.generateCard(note: quoteForCard!);
+        final newCard = await _aiCardService!.generateCard(
+          note: quoteForCard!,
+          isRegeneration: true,
+        );
         if (mounted) {
           setState(() {
             final index =
