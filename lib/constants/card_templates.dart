@@ -83,12 +83,12 @@ class CardTemplates {
   <rect x="32" y="$contentAreaTop" width="336" height="$contentAreaHeight" fill="url(#cardBg)" rx="20" filter="url(#cardShadow)"/>
   
   <!-- 内容文字 -->
-${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#1e293b', fontWeight: '500')}
+${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#1e293b', fontWeight: '500', fontFamily: 'PingFang SC, Microsoft YaHei, system-ui, sans-serif')}
 
   <!-- 底部信息 -->
   <line x1="60" y1="500" x2="340" y2="500" stroke="#ffffff" stroke-opacity="0.3" stroke-width="1"/>
-  <text x="200" y="530" text-anchor="middle" fill="#ffffff" font-family="system-ui, sans-serif" font-size="12" font-weight="500">${_escape(metaText)}</text>
-  <text x="200" y="555" text-anchor="middle" fill="#e2e8f0" font-family="system-ui, sans-serif" font-size="11">${_escape(brandText)}</text>
+  <text x="200" y="530" text-anchor="middle" fill="#ffffff" font-family="PingFang SC, Microsoft YaHei, system-ui, sans-serif" font-size="12" font-weight="500">${_escape(metaText)}</text>
+  <text x="200" y="555" text-anchor="middle" fill="#e2e8f0" font-family="PingFang SC, Microsoft YaHei, system-ui, sans-serif" font-size="11">${_escape(brandText)}</text>
 </svg>
 ''';
   }
@@ -144,17 +144,17 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#1e293b',
   <rect x="40" y="$contentAreaTop" width="320" height="$contentAreaHeight" fill="#ffffff" fill-opacity="0.95" rx="4" filter="url(#quoteShadow)"/>
 
   <!-- 引用内容 -->
-${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#881337', fontFamily: 'Georgia, serif', fontStyle: 'italic', fontWeight: '500')}
+${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#881337', fontFamily: 'Songti SC, SimSun, Georgia, serif', fontStyle: 'italic', fontWeight: '500')}
 
   <!-- 作者信息 -->
 ${authorDisplay.isNotEmpty ? '''
   <line x1="150" y1="490" x2="250" y2="490" stroke="#be185d" stroke-width="2"/>
-  <text x="200" y="515" text-anchor="middle" fill="#9d174d" font-family="Georgia, serif" font-size="15" font-weight="bold">${_escape(authorDisplay)}</text>
+  <text x="200" y="515" text-anchor="middle" fill="#9d174d" font-family="Songti SC, SimSun, Georgia, serif" font-size="15" font-weight="bold">${_escape(authorDisplay)}</text>
 ''' : ''}
 
   <!-- 底部信息 -->
-  <text x="200" y="550" text-anchor="middle" fill="#be185d" font-family="system-ui, sans-serif" font-size="10" fill-opacity="0.8">${_escape(metaText)}</text>
-  <text x="200" y="565" text-anchor="middle" fill="#be185d" font-family="system-ui, sans-serif" font-size="9" fill-opacity="0.6">心迹 · ThoughtEcho</text>
+  <text x="200" y="550" text-anchor="middle" fill="#be185d" font-family="PingFang SC, Microsoft YaHei, system-ui, sans-serif" font-size="10" fill-opacity="0.8">${_escape(metaText)}</text>
+  <text x="200" y="565" text-anchor="middle" fill="#be185d" font-family="PingFang SC, Microsoft YaHei, system-ui, sans-serif" font-size="9" fill-opacity="0.6">心迹 · ThoughtEcho</text>
 </svg>
 ''';
   }

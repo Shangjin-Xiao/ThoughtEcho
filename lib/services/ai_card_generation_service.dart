@@ -26,16 +26,18 @@ class AICardGenerationService {
   Future<GeneratedCard> generateCard({
     required Quote note,
     String? customStyle,
+    bool isRegeneration = false,
   }) async {
     // 如果用户关闭了 AI 生成功能，则直接使用模板（功能仍可用，只是没有AI增强）
     if (!isEnabled) {
       AppLogger.i('AI卡片生成已关闭，使用本地模板生成', source: 'AICardGeneration');
-      return _buildFallbackCard(note);
+      return _buildFallbackCard(note, isRegeneration: isRegeneration);
     }
 
     try {
       // 1. 智能选择最适合的提示词
-      var prompt = _selectBestPrompt(note, customStyle);
+      var prompt =
+          _selectBestPrompt(note, customStyle, isRegeneration: isRegeneration);
 
       // 1.1 根据笔记语言追加语言统一指令，避免出现 rain/Morning 等英文混杂
       final isChineseNote = _containsChinese(note.content);
@@ -90,14 +92,15 @@ class AICardGenerationService {
       );
     } catch (e) {
       AppLogger.w('AI生成失败，使用回退模板: $e', source: 'AICardGeneration');
-      return _buildFallbackCard(note);
+      return _buildFallbackCard(note, isRegeneration: isRegeneration);
     }
   }
 
   /// 本地模板回退封装(AI关闭或失败时使用)
-  GeneratedCard _buildFallbackCard(Quote note) {
+  GeneratedCard _buildFallbackCard(Quote note, {bool isRegeneration = false}) {
     // 智能检测最适合的模板类型
-    final cardType = _determineTemplateType(note);
+    final cardType =
+        _determineTemplateType(note, isRegeneration: isRegeneration);
     final fallbackSVG = CardTemplates.getTemplateByType(
       type: cardType,
       content: note.content,
@@ -128,7 +131,14 @@ class AICardGenerationService {
   }
 
   /// 智能决定模板类型（基于标签、内容和随机性）
-  CardType _determineTemplateType(Quote note) {
+  CardType _determineTemplateType(Quote note, {bool isRegeneration = false}) {
+    // 重新生成时完全随机，跳过内容匹配
+    if (isRegeneration) {
+      final allTypes = CardType.values;
+      final randomcheck = DateTime.now().microsecondsSinceEpoch;
+      return allTypes[randomcheck % allTypes.length];
+    }
+
     // 1. 优先匹配 Hitokoto 官方分类 (如果 categoryId 匹配)
     if (note.categoryId != null) {
       switch (note.categoryId) {
@@ -670,7 +680,49 @@ class AICardGenerationService {
   }
 
   /// 智能选择最适合的提示词（改进：增加随机性和变化）
-  String _selectBestPrompt(Quote note, String? customStyle) {
+  String _selectBestPrompt(Quote note, String? customStyle,
+      {bool isRegeneration = false}) {
+    // 重新生成时完全随机，跳过内容匹配
+    if (isRegeneration) {
+      final random = DateTime.now().millisecondsSinceEpoch % 3;
+      switch (random) {
+        case 0:
+          return AICardPrompts.randomStylePosterPrompt(
+            content: note.content,
+            author: note.sourceAuthor,
+            date: _formatDate(note.date),
+            location: note.location,
+            weather: note.weather,
+            temperature: note.temperature,
+            dayPeriod: note.dayPeriod,
+            source: note.fullSource,
+          );
+        case 1:
+          return AICardPrompts.intelligentCardPrompt(
+            content: note.content,
+            author: note.sourceAuthor,
+            date: _formatDate(note.date),
+            location: note.location,
+            weather: note.weather,
+            temperature: note.temperature,
+            dayPeriod: note.dayPeriod,
+            source: note.fullSource,
+          );
+        case 2:
+        default:
+          return AICardPrompts.contentAwareVisualPrompt(
+            content: note.content,
+            author: note.sourceAuthor,
+            date: _formatDate(note.date),
+            location: note.location,
+            weather: note.weather,
+            temperature: note.temperature,
+            dayPeriod: note.dayPeriod,
+            source: note.fullSource,
+          );
+      }
+    }
+
     // 分析内容特征
     final content = note.content.toLowerCase();
     final hasAuthor =
