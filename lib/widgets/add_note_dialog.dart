@@ -153,12 +153,47 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
     // 优化：完全延迟所有服务初始化和数据库监听器，避免阻塞首次绘制
     // 使用 microtask 确保在首次 build 完成后再执行
-    Future.microtask(() {
+    Future.microtask(() async {
       if (!mounted) return;
 
       _cachedLocationService = _readServiceOrNull<LocationService>(context);
       _cachedWeatherService = _readServiceOrNull<WeatherService>(context);
       _databaseService = _readServiceOrNull<DatabaseService>(context);
+
+      // 新建笔记时，读取用户偏好并自动勾选位置/天气
+      if (widget.initialQuote == null) {
+        final settingsService = _readServiceOrNull<SettingsService>(context);
+        if (settingsService != null) {
+          final autoLocation = settingsService.autoAttachLocation;
+          final autoWeather = settingsService.autoAttachWeather;
+
+          if (autoLocation || autoWeather) {
+            setState(() {
+              if (autoLocation) {
+                _includeLocation = true;
+              }
+              if (autoWeather) {
+                _includeWeather = true;
+              }
+            });
+
+            // 如果自动勾选了位置，立即获取；天气需要位置坐标，所以在位置获取后处理
+            if (autoLocation) {
+              await _fetchLocationForNewNote();
+              // 位置获取后再获取天气
+              if (autoWeather &&
+                  _includeLocation &&
+                  (_newLatitude != null ||
+                      _cachedLocationService?.currentPosition != null)) {
+                _fetchWeatherForNewNote();
+              }
+            } else if (autoWeather) {
+              // 没有勾选位置但勾选了天气，尝试用缓存的位置获取天气
+              _fetchWeatherForNewNote();
+            }
+          }
+        }
+      }
 
       // 延迟注册监听器，避免初始化时触发不必要的查询
       Future.delayed(const Duration(milliseconds: 500), () {
@@ -364,6 +399,93 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
             ],
           ),
         );
+      }
+    }
+  }
+
+  /// 获取新建笔记的天气信息
+  Future<void> _fetchWeatherForNewNote() async {
+    final weatherService = _cachedWeatherService;
+    final locationService = _cachedLocationService;
+    if (weatherService == null) return;
+
+    try {
+      // 天气需要位置坐标
+      double? lat = _newLatitude;
+      double? lon = _newLongitude;
+
+      // 如果还没有坐标，尝试从 locationService 获取
+      if (lat == null || lon == null) {
+        lat = locationService?.currentPosition?.latitude;
+        lon = locationService?.currentPosition?.longitude;
+      }
+
+      if (lat == null || lon == null) {
+        // 没有坐标，无法获取天气
+        if (mounted) {
+          setState(() {
+            _includeWeather = false;
+          });
+          if (context.mounted) {
+            final l10n = AppLocalizations.of(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(l10n.locationAndWeatherUnavailable),
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+        }
+        return;
+      }
+
+      // 获取天气
+      await weatherService.getWeatherData(lat, lon);
+
+      if (!weatherService.hasData && mounted) {
+        // 天气获取失败
+        setState(() {
+          _includeWeather = false;
+        });
+        if (context.mounted) {
+          final l10n = AppLocalizations.of(context);
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text(l10n.weatherFetchFailedTitle),
+              content: Text(l10n.weatherFetchFailedDesc),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(l10n.iKnow),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      logDebug('对话框获取天气失败: $e');
+      if (mounted) {
+        setState(() {
+          _includeWeather = false;
+        });
+        if (context.mounted) {
+          final l10n = AppLocalizations.of(context);
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text(l10n.weatherFetchFailedTitle),
+              content: Text(l10n.weatherFetchFailedDesc),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(l10n.iKnow),
+                ),
+              ],
+            ),
+          );
+        }
       }
     }
   }
@@ -1217,9 +1339,18 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                         await _showWeatherDialog(context, theme);
                         return;
                       }
-                      setState(() {
-                        _includeWeather = value;
-                      });
+                      // 新建模式
+                      if (value) {
+                        setState(() {
+                          _includeWeather = true;
+                        });
+                        // 勾选时获取天气
+                        _fetchWeatherForNewNote();
+                      } else {
+                        setState(() {
+                          _includeWeather = false;
+                        });
+                      }
                     },
                     selectedColor: theme.colorScheme.primaryContainer,
                   ),

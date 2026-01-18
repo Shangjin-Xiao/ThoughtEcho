@@ -32,6 +32,7 @@ import '../constants/app_constants.dart';
 import '../services/media_file_service.dart';
 import '../services/media_reference_service.dart';
 import '../utils/feature_guide_helper.dart';
+import '../services/settings_service.dart';
 
 class NoteFullEditorPage extends StatefulWidget {
   final String initialContent;
@@ -137,6 +138,27 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     _showLocation =
         _location != null || (_latitude != null && _longitude != null);
     _showWeather = _weather != null;
+
+    // 新建笔记时，读取用户偏好设置自动勾选位置/天气
+    if (widget.initialQuote == null) {
+      // 使用 microtask 确保 context 可用
+      Future.microtask(() {
+        if (!mounted) return;
+        final settingsService =
+            Provider.of<SettingsService>(context, listen: false);
+        final autoLocation = settingsService.autoAttachLocation;
+        final autoWeather = settingsService.autoAttachWeather;
+
+        if (autoLocation || autoWeather) {
+          setState(() {
+            if (autoLocation) _showLocation = true;
+            if (autoWeather) _showWeather = true;
+          });
+          // 自动获取位置和天气
+          _fetchLocationWeatherWithNotification();
+        }
+      });
+    }
 
     // 初始化用于检测未保存内容的初始状态
     _initialPlainText = widget.initialContent;
@@ -918,6 +940,131 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       }
     } catch (e) {
       logError('获取天气数据失败', error: e, source: 'NoteFullEditorPage');
+    }
+  }
+
+  /// 自动获取位置和天气，失败时弹出提示并取消勾选
+  /// 用于新建笔记时根据用户偏好自动触发
+  Future<void> _fetchLocationWeatherWithNotification() async {
+    final locationService = Provider.of<LocationService>(
+      context,
+      listen: false,
+    );
+    final weatherService = Provider.of<WeatherService>(context, listen: false);
+
+    // 检查并请求权限
+    if (!locationService.hasLocationPermission) {
+      bool permissionGranted =
+          await locationService.requestLocationPermission();
+      if (!permissionGranted) {
+        if (mounted) {
+          final l10n = AppLocalizations.of(context);
+          setState(() {
+            _showLocation = false;
+            _showWeather = false;
+          });
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text(l10n.cannotGetLocationTitle),
+              content: Text(l10n.cannotGetLocationPermissionShort),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(l10n.iKnow),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
+    }
+
+    final position = await locationService.getCurrentLocation();
+    if (position != null && mounted) {
+      final location = locationService.getFormattedLocation();
+
+      setState(() {
+        _location = location.isNotEmpty ? location : null;
+        _latitude = position.latitude;
+        _longitude = position.longitude;
+      });
+
+      // 获取天气
+      try {
+        await weatherService.getWeatherData(
+          position.latitude,
+          position.longitude,
+        );
+        if (mounted) {
+          setState(() {
+            _weather = weatherService.currentWeather;
+            _temperature = weatherService.temperature;
+          });
+          // 天气获取失败（无数据）
+          if (_weather == null && _showWeather) {
+            final l10n = AppLocalizations.of(context);
+            setState(() {
+              _showWeather = false;
+            });
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: Text(l10n.weatherFetchFailedTitle),
+                content: Text(l10n.weatherFetchFailedDesc),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text(l10n.iKnow),
+                  ),
+                ],
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        logError('获取天气数据失败', error: e, source: 'NoteFullEditorPage');
+        if (mounted && _showWeather) {
+          final l10n = AppLocalizations.of(context);
+          setState(() {
+            _showWeather = false;
+          });
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text(l10n.weatherFetchFailedTitle),
+              content: Text(l10n.weatherFetchFailedDesc),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(l10n.iKnow),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+    } else if (mounted) {
+      // 位置获取失败
+      final l10n = AppLocalizations.of(context);
+      setState(() {
+        _showLocation = false;
+        _showWeather = false;
+      });
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.cannotGetLocationTitle),
+          content: Text(l10n.locationFetchFailedNoNetwork),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.iKnow),
+            ),
+          ],
+        ),
+      );
     }
   }
 

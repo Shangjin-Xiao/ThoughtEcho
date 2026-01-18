@@ -14,6 +14,8 @@ class AppSettings {
   final bool enableHiddenNotes; // 新增：是否启用隐藏笔记功能
   final bool requireBiometricForHidden; // 新增：访问隐藏笔记是否需要生物识别验证
   final bool developerMode; // 新增：开发者模式
+  final bool autoAttachLocation; // 新增：添加笔记时自动勾选位置
+  final bool autoAttachWeather; // 新增：添加笔记时自动勾选天气
 
   AppSettings({
     this.hitokotoType = 'a,b,c,d,e,f,g,h,i,j,k', // 默认全选所有类型
@@ -31,6 +33,8 @@ class AppSettings {
     this.enableHiddenNotes = false, // 默认不启用隐藏笔记功能
     this.requireBiometricForHidden = false, // 默认不需要生物识别验证
     this.developerMode = false, // 默认关闭开发者模式
+    this.autoAttachLocation = false, // 默认不自动勾选位置
+    this.autoAttachWeather = false, // 默认不自动勾选天气
   });
 
   Map<String, dynamic> toJson() {
@@ -50,6 +54,8 @@ class AppSettings {
       'enableHiddenNotes': enableHiddenNotes,
       'requireBiometricForHidden': requireBiometricForHidden,
       'developerMode': developerMode,
+      'autoAttachLocation': autoAttachLocation,
+      'autoAttachWeather': autoAttachWeather,
     };
   }
 
@@ -71,6 +77,8 @@ class AppSettings {
       enableHiddenNotes: map['enableHiddenNotes'] ?? false,
       requireBiometricForHidden: map['requireBiometricForHidden'] ?? false,
       developerMode: map['developerMode'] ?? false,
+      autoAttachLocation: map['autoAttachLocation'] ?? false,
+      autoAttachWeather: map['autoAttachWeather'] ?? false,
     );
   }
 
@@ -90,6 +98,8 @@ class AppSettings {
         enableHiddenNotes: false, // 默认不启用隐藏笔记功能
         requireBiometricForHidden: false, // 默认不需要生物识别验证
         developerMode: false, // 默认关闭开发者模式
+        autoAttachLocation: false, // 默认不自动勾选位置
+        autoAttachWeather: false, // 默认不自动勾选天气
       );
 
   /// 使用特殊标记来区分"未指定"和"设置为null（跟随系统）"
@@ -110,6 +120,8 @@ class AppSettings {
     bool? enableHiddenNotes,
     bool? requireBiometricForHidden,
     bool? developerMode,
+    bool? autoAttachLocation,
+    bool? autoAttachWeather,
   }) {
     return AppSettings(
       hitokotoType: hitokotoType ?? this.hitokotoType,
@@ -132,6 +144,8 @@ class AppSettings {
       requireBiometricForHidden:
           requireBiometricForHidden ?? this.requireBiometricForHidden,
       developerMode: developerMode ?? this.developerMode,
+      autoAttachLocation: autoAttachLocation ?? this.autoAttachLocation,
+      autoAttachWeather: autoAttachWeather ?? this.autoAttachWeather,
     );
   }
 }
