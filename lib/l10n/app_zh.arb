@@ -3078,5 +3078,6 @@
   "smartPushNoticeDesc": "• 推送功能需要授予通知权限\n• 为确保按时推送，请在系统设置中允许应用自启动和后台运行\n• 部分设备需要关闭电池优化\n• 智能模式会自动选择最相关的内容",
   "smartPushModeCustom": "自定义推送",
   "smartPushModeCustomDesc": "手动选择回顾类型和筛选条件",
+  "smartPushExactAlarmHint": "建议开启精确闹钟权限以确保准时推送",
   "recommended": "推荐"
 }

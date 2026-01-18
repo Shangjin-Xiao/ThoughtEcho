@@ -423,6 +423,14 @@ Future<void> main() async {
             logDebug('开始初始化智能推送服务...');
             await smartPushService.initialize();
             logDebug('智能推送服务初始化完成');
+
+            // SOTA: 记录 App 打开时间（用于响应性热图分析）
+            try {
+              await smartPushService.analytics.recordAppOpen();
+              logDebug('SOTA: 已记录 App 打开时间');
+            } catch (e) {
+              logDebug('SOTA: 记录 App 打开时间失败: $e');
+            }
           } catch (e) {
             logDebug('预初始化服务失败: $e');
           }

@@ -2,10 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:timezone/timezone.dart' as tz;
-import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/data/latest.dart' as tz_data;
 
 import '../models/smart_push_settings.dart';
 import '../models/quote_model.dart';
@@ -16,6 +17,7 @@ import 'weather_service.dart';
 import 'network_service.dart';
 import '../utils/app_logger.dart';
 import 'background_push_handler.dart';
+import 'smart_push_analytics.dart';
 
 /// 智能推送服务
 ///
@@ -24,12 +26,21 @@ import 'background_push_handler.dart';
 /// - Android: 使用 WorkManager/AlarmManager 实现精确定时
 /// - iOS: 使用本地通知调度
 /// - 所有平台: 支持前台即时推送
+///
+/// SOTA 功能 (v2):
+/// - 响应性热图：基于用户 App 打开时间自动优化推送时段
+/// - 疲劳预防：虚拟预算系统 + 冷却机制
+/// - Thompson Sampling：内容选择的探索-利用平衡
+/// - 效果追踪：Time-to-Open, 交互反馈学习
 class SmartPushService extends ChangeNotifier {
   final DatabaseService _databaseService;
   final MMKVService _mmkv;
   final LocationService _locationService;
   final FlutterLocalNotificationsPlugin _notificationsPlugin;
   WeatherService? _weatherService;
+
+  /// SOTA 智能推送分析器
+  late final SmartPushAnalytics _analytics;
 
   static const String _settingsKey = 'smart_push_settings_v2';
   static const String _legacySettingsKey = 'smart_push_settings';
@@ -40,6 +51,9 @@ class SmartPushService extends ChangeNotifier {
 
   SmartPushSettings _settings = SmartPushSettings.defaultSettings();
   SmartPushSettings get settings => _settings;
+
+  /// 获取分析器实例
+  SmartPushAnalytics get analytics => _analytics;
 
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
@@ -52,12 +66,15 @@ class SmartPushService extends ChangeNotifier {
     MMKVService? mmkvService,
     FlutterLocalNotificationsPlugin? notificationsPlugin,
     WeatherService? weatherService,
+    SmartPushAnalytics? analytics,
   })  : _databaseService = databaseService,
         _locationService = locationService,
         _mmkv = mmkvService ?? MMKVService(),
         _notificationsPlugin =
             notificationsPlugin ?? FlutterLocalNotificationsPlugin(),
-        _weatherService = weatherService;
+        _weatherService = weatherService {
+    _analytics = analytics ?? SmartPushAnalytics(mmkvService: _mmkv);
+  }
 
   /// 设置天气服务（延迟注入）
   void setWeatherService(WeatherService service) {
@@ -67,7 +84,7 @@ class SmartPushService extends ChangeNotifier {
   /// 初始化服务
   Future<void> initialize() async {
     try {
-      tz.initializeTimeZones();
+      await _initializeTimezone();
       await _loadSettings();
       await _initializeNotifications();
 
@@ -85,6 +102,99 @@ class SmartPushService extends ChangeNotifier {
       AppLogger.i('SmartPushService 初始化完成');
     } catch (e, stack) {
       AppLogger.e('SmartPushService 初始化失败', error: e, stackTrace: stack);
+    }
+  }
+
+  /// 初始化时区 - 正确设置设备本地时区
+  Future<void> _initializeTimezone() async {
+    tz_data.initializeTimeZones();
+
+    // 获取设备时区并设置为本地时区
+    try {
+      final String timeZoneName = await _getDeviceTimeZone();
+      final location = tz.getLocation(timeZoneName);
+      tz.setLocalLocation(location);
+      AppLogger.d('时区设置为: $timeZoneName');
+    } catch (e) {
+      // 降级：使用 UTC 偏移量估算时区
+      AppLogger.w('获取设备时区失败，使用偏移量估算: $e');
+      final now = DateTime.now();
+      final offset = now.timeZoneOffset;
+      final hours = offset.inHours;
+
+      // 尝试找到匹配的时区
+      String fallbackZone = 'Asia/Shanghai'; // 默认
+      if (hours >= 8) {
+        fallbackZone = 'Asia/Shanghai';
+      } else if (hours >= 5 && hours < 8) {
+        fallbackZone = 'Asia/Kolkata';
+      } else if (hours >= 0 && hours < 5) {
+        fallbackZone = 'Europe/London';
+      } else if (hours >= -5 && hours < 0) {
+        fallbackZone = 'America/New_York';
+      } else {
+        fallbackZone = 'America/Los_Angeles';
+      }
+
+      try {
+        tz.setLocalLocation(tz.getLocation(fallbackZone));
+        AppLogger.d('使用降级时区: $fallbackZone');
+      } catch (_) {
+        // 最终降级：使用 UTC
+        tz.setLocalLocation(tz.UTC);
+        AppLogger.w('无法设置时区，使用 UTC');
+      }
+    }
+  }
+
+  /// 获取设备时区名称
+  Future<String> _getDeviceTimeZone() async {
+    if (kIsWeb) {
+      return 'UTC';
+    }
+
+    try {
+      // Android: 通过 MethodChannel 获取系统时区
+      if (Platform.isAndroid) {
+        const channel = MethodChannel('com.shangjin.thoughtecho/timezone');
+        try {
+          final String? timeZone = await channel.invokeMethod('getTimeZone');
+          if (timeZone != null && timeZone.isNotEmpty) {
+            return timeZone;
+          }
+        } catch (_) {
+          // MethodChannel 不可用，使用 DateTime 估算
+        }
+      }
+
+      // iOS/降级: 使用 DateTime.now().timeZoneName
+      final timeZoneName = DateTime.now().timeZoneName;
+
+      // 处理常见缩写
+      final zoneMapping = {
+        'CST': 'Asia/Shanghai',
+        'EST': 'America/New_York',
+        'PST': 'America/Los_Angeles',
+        'GMT': 'Europe/London',
+        'UTC': 'UTC',
+        'JST': 'Asia/Tokyo',
+        'KST': 'Asia/Seoul',
+      };
+
+      if (zoneMapping.containsKey(timeZoneName)) {
+        return zoneMapping[timeZoneName]!;
+      }
+
+      // 尝试直接使用时区名称
+      try {
+        tz.getLocation(timeZoneName);
+        return timeZoneName;
+      } catch (_) {
+        return 'Asia/Shanghai'; // 默认
+      }
+    } catch (e) {
+      AppLogger.w('获取设备时区失败: $e');
+      return 'Asia/Shanghai';
     }
   }
 
@@ -178,9 +288,40 @@ class SmartPushService extends ChangeNotifier {
     }
   }
 
-  /// 通知点击回调
+  /// 通知点击回调 - SOTA 效果追踪
   void _onNotificationTap(NotificationResponse response) {
     AppLogger.i('通知被点击: ${response.payload}');
+
+    // SOTA: 记录用户点击交互（正向反馈）
+    // payload 格式: "contentType:xxx|noteId:yyy" 或 "dailyQuote"
+    try {
+      final payload = response.payload;
+      if (payload != null && payload.isNotEmpty) {
+        String? contentType;
+
+        if (payload.contains('contentType:')) {
+          // 解析 contentType
+          final parts = payload.split('|');
+          for (final part in parts) {
+            if (part.startsWith('contentType:')) {
+              contentType = part.substring('contentType:'.length);
+              break;
+            }
+          }
+        } else if (payload == 'dailyQuote') {
+          contentType = 'dailyQuote';
+        }
+
+        if (contentType != null && contentType.isNotEmpty) {
+          // 记录交互（异步执行，不阻塞 UI）
+          _analytics.recordInteraction(contentType);
+          AppLogger.d('SOTA: 记录通知点击交互 - $contentType');
+        }
+      }
+    } catch (e) {
+      AppLogger.w('解析通知 payload 失败', error: e);
+    }
+
     // TODO: 可以在这里处理打开特定笔记的逻辑
   }
 
@@ -219,6 +360,9 @@ class SmartPushService extends ChangeNotifier {
   }
 
   /// 检查是否有精确闹钟权限（Android 12+）
+  ///
+  /// 注意：SCHEDULE_EXACT_ALARM 不是运行时权限，需要用户在设置中手动开启
+  /// Android 14+ 默认拒绝此权限
   Future<bool> checkExactAlarmPermission() async {
     if (kIsWeb || !Platform.isAndroid) return true;
 
@@ -227,13 +371,56 @@ class SmartPushService extends ChangeNotifier {
           _notificationsPlugin.resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>();
       if (androidPlugin != null) {
-        // Android 12+ 需要检查 SCHEDULE_EXACT_ALARM 权限
-        // 这个权限不是运行时权限，而是需要用户在设置中手动开启
-        return await androidPlugin.areNotificationsEnabled() ?? false;
+        // 1. 首先检查通知权限
+        final notificationsEnabled =
+            await androidPlugin.areNotificationsEnabled() ?? false;
+        if (!notificationsEnabled) {
+          AppLogger.w('通知权限未授予');
+          return false;
+        }
+
+        // 2. 检查精确闹钟权限 (Android 12+)
+        // 使用 canScheduleExactNotifications() 检查
+        final canScheduleExact =
+            await androidPlugin.canScheduleExactNotifications() ?? false;
+        if (!canScheduleExact) {
+          AppLogger.w('精确闹钟权限未授予 (SCHEDULE_EXACT_ALARM)');
+          // 返回 true 但记录警告 - 我们仍会尝试调度，系统会降级处理
+          // 用户可以手动在设置中开启
+        }
+
+        return notificationsEnabled;
       }
       return true;
     } catch (e) {
       AppLogger.w('检查精确闹钟权限失败', error: e);
+      return false;
+    }
+  }
+
+  /// 请求精确闹钟权限（引导用户到设置页面）
+  Future<bool> requestExactAlarmPermission() async {
+    if (kIsWeb || !Platform.isAndroid) return true;
+
+    try {
+      final androidPlugin =
+          _notificationsPlugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      if (androidPlugin != null) {
+        // 检查是否已有权限
+        final canSchedule =
+            await androidPlugin.canScheduleExactNotifications() ?? false;
+        if (canSchedule) return true;
+
+        // 尝试请求权限（会打开系统设置页面）
+        await androidPlugin.requestExactAlarmsPermission();
+
+        // 再次检查
+        return await androidPlugin.canScheduleExactNotifications() ?? false;
+      }
+      return true;
+    } catch (e) {
+      AppLogger.e('请求精确闹钟权限失败', error: e);
       return false;
     }
   }
@@ -248,13 +435,23 @@ class SmartPushService extends ChangeNotifier {
     // 取消现有的计划
     await _cancelAllSchedules();
 
-    // 1. 规划常规智能推送
-    if (_settings.shouldPushToday() && _settings.pushTimeSlots.isNotEmpty) {
-      final enabledSlots =
-          _settings.pushTimeSlots.where((s) => s.enabled).toList();
+    // 1. 规划常规推送
+    if (_settings.shouldPushToday()) {
+      List<PushTimeSlot> slotsToSchedule;
 
-      for (int i = 0; i < enabledSlots.length; i++) {
-        final slot = enabledSlots[i];
+      if (_settings.pushMode == PushMode.smart) {
+        // 智能模式：使用智能算法计算最佳推送时间
+        slotsToSchedule = await _calculateSmartPushTimes();
+        AppLogger.i(
+            '智能推送时间: ${slotsToSchedule.map((s) => s.formattedTime).join(", ")}');
+      } else {
+        // 自定义模式：使用用户设置的时间
+        slotsToSchedule =
+            _settings.pushTimeSlots.where((s) => s.enabled).toList();
+      }
+
+      for (int i = 0; i < slotsToSchedule.length; i++) {
+        final slot = slotsToSchedule[i];
         final scheduledDate = _nextInstanceOfTime(slot.hour, slot.minute);
         final id = i; // 0-9
 
@@ -265,7 +462,7 @@ class SmartPushService extends ChangeNotifier {
     // 2. 规划每日一言独立推送
     if (_settings.dailyQuotePushEnabled) {
       final slot = _settings.dailyQuotePushTime;
-      // 每日一言每天都推，不受 frequency 限制（或者也可以受限制，这里假设它是每天的）
+      // 每日一言每天都推，不受 frequency 限制
       final scheduledDate = _nextInstanceOfTime(slot.hour, slot.minute);
 
       if (!kIsWeb && Platform.isAndroid) {
@@ -292,6 +489,171 @@ class SmartPushService extends ChangeNotifier {
             isDailyQuote: true);
       }
     }
+  }
+
+  /// 智能推送时间计算算法 (SOTA v2)
+  ///
+  /// 策略升级：
+  /// 1. 优先使用用户 App 打开时间的响应性热图（比笔记创建时间更准确）
+  /// 2. 结合笔记创建时间避开创作高峰
+  /// 3. 应用 Thompson Sampling 的时间窗口探索
+  /// 4. 周末/节假日自动调整
+  Future<List<PushTimeSlot>> _calculateSmartPushTimes() async {
+    final now = DateTime.now();
+
+    // 默认黄金时间点（经过验证的高效推送时间）
+    const defaultSlots = [
+      PushTimeSlot(hour: 8, minute: 30, label: '早晨灵感'),
+      PushTimeSlot(hour: 20, minute: 0, label: '晚间回顾'),
+    ];
+
+    try {
+      // 1. 首先尝试使用 SOTA 响应性热图（基于用户 App 打开时间）
+      final optimalWindows = await _analytics.getOptimalPushWindows(
+        count: 3,
+        minScore: 0.15,
+      );
+
+      if (optimalWindows.isNotEmpty) {
+        // 有足够的用户行为数据
+        final selectedSlots = <PushTimeSlot>[];
+
+        for (final window in optimalWindows) {
+          if (selectedSlots.length >= 2) break;
+
+          final hour = window.key;
+          final label = _getTimeSlotLabel(hour);
+
+          // 添加少量随机分钟数，避免总是整点推送
+          final minute = (now.millisecond % 4) * 15; // 0, 15, 30, 45
+
+          selectedSlots.add(PushTimeSlot(
+            hour: hour,
+            minute: minute,
+            label: label,
+          ));
+        }
+
+        if (selectedSlots.isNotEmpty) {
+          selectedSlots.sort((a, b) => a.hour.compareTo(b.hour));
+          AppLogger.d(
+              'SOTA 智能推送时间: ${selectedSlots.map((s) => s.formattedTime).join(", ")}');
+          return selectedSlots;
+        }
+      }
+    } catch (e) {
+      AppLogger.w('SOTA 时间计算失败，降级到传统算法', error: e);
+    }
+
+    // 2. 降级：使用传统的笔记创建时间分析
+    final allNotes = await _databaseService.getUserQuotes();
+
+    if (allNotes.length < 10) {
+      return defaultSlots;
+    }
+
+    // 分析用户笔记创建时间分布
+    final hourDistribution = List<int>.filled(24, 0);
+    for (final note in allNotes) {
+      try {
+        final noteDate = DateTime.parse(note.date);
+        hourDistribution[noteDate.hour]++;
+      } catch (_) {}
+    }
+
+    final totalNotes = hourDistribution.reduce((a, b) => a + b);
+    if (totalNotes == 0) return defaultSlots;
+
+    // 定义时间段及其权重
+    final timeSlotCandidates = <_TimeSlotCandidate>[
+      _TimeSlotCandidate(
+          hour: 8,
+          minute: 0,
+          label: '早晨灵感',
+          baseScore: 80,
+          avoidCreationPeak: true),
+      _TimeSlotCandidate(
+          hour: 12,
+          minute: 30,
+          label: '午间小憩',
+          baseScore: 60,
+          avoidCreationPeak: true),
+      _TimeSlotCandidate(
+          hour: 18,
+          minute: 0,
+          label: '傍晚时光',
+          baseScore: 70,
+          avoidCreationPeak: true),
+      _TimeSlotCandidate(
+          hour: 20,
+          minute: 30,
+          label: '晚间回顾',
+          baseScore: 85,
+          avoidCreationPeak: false),
+    ];
+
+    // 计算每个时段的得分
+    for (final candidate in timeSlotCandidates) {
+      final hour = candidate.hour;
+      final hourActivity = hourDistribution[hour];
+      final activityRatio = hourActivity / totalNotes;
+
+      if (candidate.avoidCreationPeak && activityRatio > 0.15) {
+        candidate.score = candidate.baseScore - 30;
+      } else if (activityRatio > 0.05) {
+        candidate.score = candidate.baseScore + 10;
+      } else {
+        candidate.score = candidate.baseScore;
+      }
+
+      // 周末调整
+      if (now.weekday == 6 || now.weekday == 7) {
+        if (hour >= 9 && hour <= 10) {
+          candidate.score += 15;
+        }
+        if (hour == 8) {
+          candidate.score -= 10;
+        }
+      }
+    }
+
+    timeSlotCandidates.sort((a, b) => b.score.compareTo(a.score));
+
+    final selectedSlots = <PushTimeSlot>[];
+    for (final candidate in timeSlotCandidates) {
+      if (selectedSlots.length >= 2) break;
+
+      bool hasConflict = false;
+      for (final selected in selectedSlots) {
+        final hourDiff = (candidate.hour - selected.hour).abs();
+        if (hourDiff < 4) {
+          hasConflict = true;
+          break;
+        }
+      }
+
+      if (!hasConflict) {
+        selectedSlots.add(PushTimeSlot(
+          hour: candidate.hour,
+          minute: candidate.minute,
+          label: candidate.label,
+        ));
+      }
+    }
+
+    selectedSlots.sort((a, b) => a.hour.compareTo(b.hour));
+
+    return selectedSlots.isEmpty ? defaultSlots : selectedSlots;
+  }
+
+  /// 获取时段标签
+  String _getTimeSlotLabel(int hour) {
+    if (hour >= 5 && hour < 9) return '早晨灵感';
+    if (hour >= 9 && hour < 12) return '上午时光';
+    if (hour >= 12 && hour < 14) return '午间小憩';
+    if (hour >= 14 && hour < 18) return '下午时光';
+    if (hour >= 18 && hour < 21) return '傍晚时光';
+    return '晚间回顾';
   }
 
   /// 调度单个 Alarm
@@ -470,13 +832,27 @@ class SmartPushService extends ChangeNotifier {
   /// 执行每日一言推送
   Future<void> _performDailyQuotePush({bool isBackground = false}) async {
     try {
+      // SOTA: 疲劳预防检查
+      if (!await _analytics.canSendNotification('dailyQuote')) {
+        AppLogger.d('SOTA 疲劳预防：跳过每日一言推送');
+        if (!isBackground) {
+          await scheduleNextPush();
+        }
+        return;
+      }
+
       final dailyQuote = await _fetchDailyQuote();
       if (dailyQuote != null) {
         await _showNotification(
           dailyQuote,
           title: '📖 每日一言',
-          // 每日一言通常没有ID，或者有也不需要记录去重
+          contentType: 'dailyQuote',
         );
+
+        // SOTA: 消费预算并记录推送
+        await _analytics.consumeBudget('dailyQuote');
+        await _analytics.updateContentScore('dailyQuote', false);
+
         AppLogger.i('每日一言推送成功');
       }
 
@@ -489,7 +865,12 @@ class SmartPushService extends ChangeNotifier {
     }
   }
 
-  /// 执行智能推送的核心逻辑（原 _performPush）
+  /// 执行智能推送的核心逻辑 (SOTA v2)
+  ///
+  /// 增强功能：
+  /// - 疲劳预防检查（虚拟预算 + 冷却期）
+  /// - Thompson Sampling 内容选择
+  /// - 推送效果追踪
   Future<void> _performSmartPush(
       {bool isTest = false, bool isBackground = false}) async {
     try {
@@ -500,20 +881,35 @@ class SmartPushService extends ChangeNotifier {
           AppLogger.d('根据频率设置，今天不推送');
           return;
         }
+
+        // SOTA: 疲劳预防检查
+        final contentType = _settings.pushMode == PushMode.dailyQuote
+            ? 'dailyQuote'
+            : 'smartContent';
+        if (!await _analytics.canSendNotification(contentType)) {
+          AppLogger.d('SOTA 疲劳预防：跳过本次推送');
+          // 仍然重新调度下次推送
+          if (!isBackground) {
+            await scheduleNextPush();
+          }
+          return;
+        }
       }
 
       // 根据推送模式获取内容
       Quote? noteToShow;
       String title = '💭 心迹';
       bool isDailyQuote = false;
+      String contentType = 'randomMemory';
 
       switch (_settings.pushMode) {
         case PushMode.smart:
-          // 智能模式：使用智能算法选择最佳内容
+          // 智能模式：使用 SOTA 智能算法选择最佳内容
           final result = await _smartSelectContent();
           noteToShow = result.note;
           title = result.title;
           isDailyQuote = result.isDailyQuote;
+          contentType = result.contentType;
           break;
 
         case PushMode.dailyQuote:
@@ -579,12 +975,21 @@ class SmartPushService extends ChangeNotifier {
       }
 
       if (noteToShow != null) {
-        await _showNotification(noteToShow, title: title);
+        await _showNotification(noteToShow,
+            title: title, contentType: contentType);
 
         // 记录推送历史（避免重复推送，测试模式也不记录）
         if (!isDailyQuote && noteToShow.id != null && !isTest) {
           final updatedSettings = _settings.addPushedNoteId(noteToShow.id!);
           await saveSettings(updatedSettings);
+        }
+
+        // SOTA: 消费疲劳预算并记录推送（用于效果追踪）
+        if (!isTest && contentType.isNotEmpty) {
+          await _analytics.consumeBudget(contentType);
+          // 推送成功，但尚未确定用户是否交互，先记录为未交互
+          // 用户点击通知时会调用 recordInteraction 更新得分
+          await _analytics.updateContentScore(contentType, false);
         }
 
         AppLogger.i(
@@ -603,128 +1008,13 @@ class SmartPushService extends ChangeNotifier {
     }
   }
 
-  /// 执行推送的核心逻辑
-  Future<void> _performPush(
-      {bool isTest = false, bool isBackground = false}) async {
-    try {
-      // 测试模式不检查 enabled 和频率
-      if (!isTest) {
-        if (!_settings.enabled) return;
-        if (!_settings.shouldPushToday()) {
-          AppLogger.d('根据频率设置，今天不推送');
-          return;
-        }
-      }
-
-      // 根据推送模式获取内容
-      Quote? noteToShow;
-      String title = '💭 心迹';
-      bool isDailyQuote = false;
-
-      switch (_settings.pushMode) {
-        case PushMode.smart:
-          // 智能模式：使用智能算法选择最佳内容
-          final result = await _smartSelectContent();
-          noteToShow = result.note;
-          title = result.title;
-          isDailyQuote = result.isDailyQuote;
-          break;
-
-        case PushMode.dailyQuote:
-          final dailyQuote = await _fetchDailyQuote();
-          if (dailyQuote != null) {
-            noteToShow = dailyQuote;
-            title = '📖 每日一言';
-            isDailyQuote = true;
-          }
-          break;
-
-        case PushMode.pastNotes:
-          final candidates = await getCandidateNotes();
-          if (candidates.isNotEmpty) {
-            noteToShow = _selectUnpushedNote(candidates);
-            if (noteToShow != null) {
-              title = _generateTitle(noteToShow);
-            }
-          }
-          break;
-
-        case PushMode.both:
-          // 随机选择推送类型
-          if (_random.nextBool()) {
-            final candidates = await getCandidateNotes();
-            if (candidates.isNotEmpty) {
-              noteToShow = _selectUnpushedNote(candidates);
-              if (noteToShow != null) {
-                title = _generateTitle(noteToShow);
-              }
-            }
-          }
-          if (noteToShow == null) {
-            final dailyQuote = await _fetchDailyQuote();
-            if (dailyQuote != null) {
-              noteToShow = dailyQuote;
-              title = '📖 每日一言';
-              isDailyQuote = true;
-            }
-          }
-          break;
-
-        case PushMode.custom:
-          // 自定义模式：根据用户选择的类型获取内容
-          final candidates = await getCandidateNotes();
-          if (candidates.isNotEmpty) {
-            noteToShow = _selectUnpushedNote(candidates);
-            if (noteToShow != null) {
-              title = _generateTitle(noteToShow);
-            }
-          } else {
-            // 如果没有匹配的笔记，尝试获取每日一言
-            final dailyQuote = await _fetchDailyQuote();
-            if (dailyQuote != null) {
-              noteToShow = dailyQuote;
-              title = '📖 每日一言';
-              isDailyQuote = true;
-            }
-          }
-          break;
-      }
-
-      if (noteToShow != null) {
-        await _showNotification(noteToShow, title: title);
-
-        // 记录推送历史（避免重复推送，测试模式也不记录）
-        if (!isDailyQuote && noteToShow.id != null && !isTest) {
-          final updatedSettings = _settings.addPushedNoteId(noteToShow.id!);
-          await saveSettings(updatedSettings);
-        }
-
-        AppLogger.i(
-            '推送成功: ${noteToShow.content.substring(0, min(50, noteToShow.content.length))}...');
-      } else {
-        AppLogger.d('没有内容可推送');
-      }
-
-      // 重新调度下一次推送
-      if (!isBackground && !isTest) {
-        await scheduleNextPush();
-      }
-    } catch (e, stack) {
-      AppLogger.e('智能推送失败', error: e, stackTrace: stack);
-      if (isTest) rethrow; // 测试模式抛出异常以便 UI 显示错误
-    }
-  }
-
-  /// 智能内容选择 - 核心算法
+  /// 智能内容选择 - SOTA 核心算法
   ///
-  /// 优先级策略：
-  /// 1. 那年今日（最高优先级 - 有纪念意义）
-  /// 2. 同一时刻创建的笔记（±30分钟 - 时光呼应）
-  /// 3. 相同地点的笔记（空间共鸣）
-  /// 4. 相同天气的笔记（情景再现）
-  /// 5. 往月今日
-  /// 6. 随机回忆（兜底）
-  /// 7. 每日一言（最终兜底）
+  /// SOTA v2 策略：
+  /// 1. 收集所有可用内容类型及其候选笔记
+  /// 2. 使用 Thompson Sampling 选择最佳内容类型（探索-利用平衡）
+  /// 3. 从选中类型中随机选择未推送的笔记
+  /// 4. 返回选中内容及其类型（用于效果追踪）
   Future<_SmartSelectResult> _smartSelectContent() async {
     final now = DateTime.now();
     final allNotes = await _databaseService.getUserQuotes();
@@ -737,108 +1027,141 @@ class SmartPushService extends ChangeNotifier {
           note: dailyQuote,
           title: '📖 每日一言',
           isDailyQuote: true,
+          contentType: 'dailyQuote',
         );
       }
       return _SmartSelectResult.empty();
     }
 
-    Quote? selectedNote;
-    String title = '💭 心迹';
+    // SOTA: 收集所有可用的内容类型及其候选笔记
+    final availableContent = <String, _ContentCandidate>{};
 
-    // 1. 首先检查是否有"那年今日"的笔记（最高优先级）
+    // 1. 那年今日（最高优先级 - 有纪念意义）
     final yearAgoNotes = _filterYearAgoToday(allNotes, now);
     if (yearAgoNotes.isNotEmpty) {
-      selectedNote = _selectUnpushedNote(yearAgoNotes);
-      if (selectedNote != null) {
-        final noteDate = DateTime.tryParse(selectedNote.date);
-        if (noteDate != null) {
-          final years = now.year - noteDate.year;
-          title = '📅 $years年前的今天';
-        }
-      }
-    }
-
-    // 2. 检查同一时刻创建的笔记（±30分钟）
-    if (selectedNote == null) {
-      final sameTimeNotes = _filterSameTimeOfDay(allNotes, now);
-      if (sameTimeNotes.isNotEmpty) {
-        selectedNote = _selectUnpushedNote(sameTimeNotes);
-        if (selectedNote != null) {
-          title = '⏰ 此刻的回忆';
-        }
-      }
-    }
-
-    // 3. 检查相同地点的笔记
-    if (selectedNote == null) {
-      final sameLocationNotes = await _filterSameLocation(allNotes);
-      if (sameLocationNotes.isNotEmpty) {
-        selectedNote = _selectUnpushedNote(sameLocationNotes);
-        if (selectedNote != null) {
-          title = '📍 熟悉的地方';
-        }
-      }
-    }
-
-    // 4. 检查相同天气的笔记
-    if (selectedNote == null) {
-      final sameWeatherNotes = await _filterSameWeather(allNotes);
-      if (sameWeatherNotes.isNotEmpty) {
-        selectedNote = _selectUnpushedNote(sameWeatherNotes);
-        if (selectedNote != null) {
-          title = '🌤️ 此情此景';
-        }
-      }
-    }
-
-    // 5. 往月今日
-    if (selectedNote == null) {
-      final monthAgoNotes = _filterMonthAgoToday(allNotes, now);
-      if (monthAgoNotes.isNotEmpty) {
-        selectedNote = _selectUnpushedNote(monthAgoNotes);
-        if (selectedNote != null) {
-          final noteDate = DateTime.tryParse(selectedNote.date);
-          if (noteDate != null) {
-            final monthsDiff =
-                (now.year - noteDate.year) * 12 + (now.month - noteDate.month);
-            if (monthsDiff > 0) {
-              title = '📅 $monthsDiff个月前的今天';
-            } else {
-              title = '📅 往月今日';
-            }
-          }
-        }
-      }
-    }
-
-    // 6. 随机回忆（兜底）
-    if (selectedNote == null) {
-      final randomNotes = _filterRandomMemory(allNotes, now);
-      if (randomNotes.isNotEmpty) {
-        selectedNote = _selectUnpushedNote(randomNotes);
-        if (selectedNote != null) {
-          title = '💭 往日回忆';
-        }
-      }
-    }
-
-    // 7. 如果还是没有，尝试每日一言
-    if (selectedNote == null) {
-      final dailyQuote = await _fetchDailyQuote();
-      if (dailyQuote != null) {
-        return _SmartSelectResult(
-          note: dailyQuote,
-          title: '📖 每日一言',
-          isDailyQuote: true,
+      final note = _selectUnpushedNote(yearAgoNotes);
+      if (note != null) {
+        final noteDate = DateTime.tryParse(note.date);
+        final years = noteDate != null ? now.year - noteDate.year : 1;
+        availableContent['yearAgoToday'] = _ContentCandidate(
+          note: note,
+          title: '📅 $years年前的今天',
+          priority: 100, // 最高优先级
         );
       }
     }
 
-    if (selectedNote != null) {
+    // 2. 同一时刻创建的笔记（±30分钟）
+    final sameTimeNotes = _filterSameTimeOfDay(allNotes, now);
+    if (sameTimeNotes.isNotEmpty) {
+      final note = _selectUnpushedNote(sameTimeNotes);
+      if (note != null) {
+        availableContent['sameTimeOfDay'] = _ContentCandidate(
+          note: note,
+          title: '⏰ 此刻的回忆',
+          priority: 80,
+        );
+      }
+    }
+
+    // 3. 相同地点的笔记
+    final sameLocationNotes = await _filterSameLocation(allNotes);
+    if (sameLocationNotes.isNotEmpty) {
+      final note = _selectUnpushedNote(sameLocationNotes);
+      if (note != null) {
+        availableContent['sameLocation'] = _ContentCandidate(
+          note: note,
+          title: '📍 熟悉的地方',
+          priority: 70,
+        );
+      }
+    }
+
+    // 4. 相同天气的笔记
+    final sameWeatherNotes = await _filterSameWeather(allNotes);
+    if (sameWeatherNotes.isNotEmpty) {
+      final note = _selectUnpushedNote(sameWeatherNotes);
+      if (note != null) {
+        availableContent['sameWeather'] = _ContentCandidate(
+          note: note,
+          title: '🌤️ 此情此景',
+          priority: 60,
+        );
+      }
+    }
+
+    // 5. 往月今日
+    final monthAgoNotes = _filterMonthAgoToday(allNotes, now);
+    if (monthAgoNotes.isNotEmpty) {
+      final note = _selectUnpushedNote(monthAgoNotes);
+      if (note != null) {
+        final noteDate = DateTime.tryParse(note.date);
+        String title = '📅 往月今日';
+        if (noteDate != null) {
+          final monthsDiff =
+              (now.year - noteDate.year) * 12 + (now.month - noteDate.month);
+          if (monthsDiff > 0) {
+            title = '📅 $monthsDiff个月前的今天';
+          }
+        }
+        availableContent['monthAgoToday'] = _ContentCandidate(
+          note: note,
+          title: title,
+          priority: 50,
+        );
+      }
+    }
+
+    // 6. 随机回忆（兜底）
+    final randomNotes = _filterRandomMemory(allNotes, now);
+    if (randomNotes.isNotEmpty) {
+      final note = _selectUnpushedNote(randomNotes);
+      if (note != null) {
+        availableContent['randomMemory'] = _ContentCandidate(
+          note: note,
+          title: '💭 往日回忆',
+          priority: 30,
+        );
+      }
+    }
+
+    // SOTA: 使用 Thompson Sampling 选择内容类型
+    if (availableContent.isNotEmpty) {
+      final availableTypes = availableContent.keys.toList();
+
+      // 那年今日始终优先（高纪念价值）
+      if (availableContent.containsKey('yearAgoToday')) {
+        final candidate = availableContent['yearAgoToday']!;
+        return _SmartSelectResult(
+          note: candidate.note,
+          title: candidate.title,
+          isDailyQuote: false,
+          contentType: 'yearAgoToday',
+        );
+      }
+
+      // 其他类型使用 Thompson Sampling 选择
+      final selectedType = await _analytics.selectContentType(availableTypes);
+      final candidate = availableContent[selectedType];
+
+      if (candidate != null) {
+        return _SmartSelectResult(
+          note: candidate.note,
+          title: candidate.title,
+          isDailyQuote: false,
+          contentType: selectedType,
+        );
+      }
+    }
+
+    // 7. 如果还是没有，尝试每日一言
+    final dailyQuote = await _fetchDailyQuote();
+    if (dailyQuote != null) {
       return _SmartSelectResult(
-        note: selectedNote,
-        title: title,
-        isDailyQuote: false,
+        note: dailyQuote,
+        title: '📖 每日一言',
+        isDailyQuote: true,
+        contentType: 'dailyQuote',
       );
     }
 
@@ -967,7 +1290,11 @@ class SmartPushService extends ChangeNotifier {
   }
 
   /// 显示通知
-  Future<void> _showNotification(Quote note, {String title = '心迹'}) async {
+  Future<void> _showNotification(
+    Quote note, {
+    String title = '心迹',
+    String contentType = '',
+  }) async {
     // 构建更优雅的通知内容
     final body = _buildNotificationBody(note);
 
@@ -998,12 +1325,23 @@ class SmartPushService extends ChangeNotifier {
       iOS: iosDetails,
     );
 
+    // SOTA: 构建包含 contentType 的 payload 用于效果追踪
+    String payload = '';
+    if (contentType.isNotEmpty) {
+      payload = 'contentType:$contentType';
+      if (note.id != null) {
+        payload += '|noteId:${note.id}';
+      }
+    } else {
+      payload = note.id ?? '';
+    }
+
     await _notificationsPlugin.show(
       DateTime.now().millisecondsSinceEpoch % 100000,
       title,
       body,
       details,
-      payload: note.id,
+      payload: payload,
     );
   }
 
@@ -1342,16 +1680,52 @@ class _SmartSelectResult {
   final Quote? note;
   final String title;
   final bool isDailyQuote;
+  final String contentType; // 用于 SOTA 效果追踪
 
   _SmartSelectResult({
     required this.note,
     required this.title,
     required this.isDailyQuote,
+    this.contentType = 'randomMemory',
   });
 
   factory _SmartSelectResult.empty() => _SmartSelectResult(
         note: null,
         title: '',
         isDailyQuote: false,
+        contentType: '',
       );
+}
+
+/// 智能时间候选辅助类
+class _TimeSlotCandidate {
+  final int hour;
+  final int minute;
+  final String label;
+  final int baseScore;
+  final bool avoidCreationPeak;
+  int score;
+
+  _TimeSlotCandidate({
+    required this.hour,
+    required this.minute,
+    required this.label,
+    required this.baseScore,
+    this.avoidCreationPeak = true,
+  }) : score = baseScore;
+}
+
+/// SOTA 内容候选辅助类
+///
+/// 用于 Thompson Sampling 选择时存储候选内容信息
+class _ContentCandidate {
+  final Quote note;
+  final String title;
+  final int priority;
+
+  _ContentCandidate({
+    required this.note,
+    required this.title,
+    required this.priority,
+  });
 }

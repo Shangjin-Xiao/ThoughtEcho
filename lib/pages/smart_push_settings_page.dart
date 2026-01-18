@@ -200,27 +200,29 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
           if (_settings.enabled) ...[
             const SizedBox(height: 16),
 
-            // 推送模式选择
+            // 推送模式选择（只显示 智能/自定义 两个选项）
             _buildModeSelectionCard(l10n, theme, colorScheme),
 
             const SizedBox(height: 16),
 
-            // 推送时间设置
-            _buildTimeSettingsCard(l10n, theme, colorScheme),
-
-            const SizedBox(height: 16),
-
-            // 推送频率
-            _buildFrequencyCard(l10n, theme, colorScheme),
-
-            const SizedBox(height: 16),
-
-            // 每日一言独立推送
+            // 每日一言独立推送（始终显示，不依赖推送模式）
             _buildDailyQuoteCard(l10n, theme, colorScheme),
 
-            // 高级选项 - 仅在自定义模式下显示
+            // 自定义模式：显示完整高级选项
             if (_settings.pushMode == PushMode.custom) ...[
               const SizedBox(height: 16),
+
+              // 推送时间设置
+              _buildTimeSettingsCard(l10n, theme, colorScheme),
+
+              const SizedBox(height: 16),
+
+              // 推送频率
+              _buildFrequencyCard(l10n, theme, colorScheme),
+
+              const SizedBox(height: 16),
+
+              // 高级选项（回顾类型、天气筛选、标签筛选）
               _buildAdvancedOptionsCard(l10n, theme, colorScheme),
             ],
 
@@ -335,10 +337,10 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                   final hasExactAlarmPermission =
                       await smartPushService.checkExactAlarmPermission();
                   if (!hasExactAlarmPermission && context.mounted) {
-                    // 如果没有精确闹钟权限，提示用户（这通常需要跳转到系统设置，这里简化处理，只提示）
+                    // 如果没有精确闹钟权限，提示用户
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('建议开启精确闹钟权限以确保准时推送'), // 暂时硬编码或添加新key
+                      SnackBar(
+                        content: Text(l10n.smartPushExactAlarmHint),
                         behavior: SnackBarBehavior.floating,
                       ),
                     );
@@ -358,9 +360,14 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
     );
   }
 
-  /// 推送模式选择卡片
+  /// 推送模式选择卡片 - 简化为智能/自定义两个选项
   Widget _buildModeSelectionCard(
       AppLocalizations l10n, ThemeData theme, ColorScheme colorScheme) {
+    // 将非 smart/custom 模式映射到 custom（兼容旧数据）
+    final effectiveMode = (_settings.pushMode == PushMode.smart)
+        ? PushMode.smart
+        : PushMode.custom;
+
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -369,107 +376,75 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: RadioGroup<PushMode>(
-          groupValue: _settings.pushMode,
-          onChanged: (value) {
-            if (value != null) {
-              setState(() {
-                _settings = _settings.copyWith(pushMode: value);
-                // 智能模式时自动关闭高级选项
-                if (value == PushMode.smart) {
-                  _settings = _settings.copyWith(showAdvancedOptions: false);
-                  _animationController.reverse();
-                }
-              });
-            }
-          },
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.category_outlined,
-                      color: colorScheme.primary, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    l10n.smartPushContentType,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: colorScheme.primary,
-                    ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.category_outlined,
+                    color: colorScheme.primary, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  l10n.smartPushContentType,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.primary,
                   ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _buildModeOption(
-                l10n,
-                theme,
-                colorScheme,
-                mode: PushMode.smart,
-                icon: Icons.auto_awesome,
-                title: l10n.smartPushModeSmart,
-                subtitle: l10n.smartPushModeSmartDesc,
-                isRecommended: true,
-              ),
-              const SizedBox(height: 8),
-              _buildModeOption(
-                l10n,
-                theme,
-                colorScheme,
-                mode: PushMode.custom,
-                icon: Icons.tune,
-                title: l10n.smartPushModeCustom,
-                subtitle: l10n.smartPushModeCustomDesc,
-              ),
-              const SizedBox(height: 8),
-              _buildModeOption(
-                l10n,
-                theme,
-                colorScheme,
-                mode: PushMode.dailyQuote,
-                icon: Icons.format_quote,
-                title: l10n.smartPushDailyQuote,
-                subtitle: l10n.smartPushDailyQuoteDesc,
-              ),
-              const SizedBox(height: 8),
-              _buildModeOption(
-                l10n,
-                theme,
-                colorScheme,
-                mode: PushMode.pastNotes,
-                icon: Icons.history,
-                title: l10n.smartPushPastNotes,
-                subtitle: l10n.smartPushPastNotesDesc,
-              ),
-              const SizedBox(height: 8),
-              _buildModeOption(
-                l10n,
-                theme,
-                colorScheme,
-                mode: PushMode.both,
-                icon: Icons.shuffle,
-                title: l10n.smartPushModeBoth,
-                subtitle: l10n.smartPushModeBothDesc,
-              ),
-            ],
-          ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // 智能推送选项
+            _buildSimpleModeOption(
+              theme,
+              colorScheme,
+              isSelected: effectiveMode == PushMode.smart,
+              icon: Icons.auto_awesome,
+              title: l10n.smartPushModeSmart,
+              subtitle: l10n.smartPushModeSmartDesc,
+              isRecommended: true,
+              onTap: () {
+                setState(() {
+                  _settings = _settings.copyWith(
+                    pushMode: PushMode.smart,
+                    showAdvancedOptions: false,
+                  );
+                  _animationController.reverse();
+                });
+              },
+            ),
+            const SizedBox(height: 8),
+            // 自定义推送选项
+            _buildSimpleModeOption(
+              theme,
+              colorScheme,
+              isSelected: effectiveMode == PushMode.custom,
+              icon: Icons.tune,
+              title: l10n.smartPushModeCustom,
+              subtitle: l10n.smartPushModeCustomDesc,
+              onTap: () {
+                setState(() {
+                  _settings = _settings.copyWith(pushMode: PushMode.custom);
+                });
+              },
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildModeOption(
-    AppLocalizations l10n,
+  /// 简化的模式选项组件
+  Widget _buildSimpleModeOption(
     ThemeData theme,
     ColorScheme colorScheme, {
-    required PushMode mode,
+    required bool isSelected,
     required IconData icon,
     required String title,
     required String subtitle,
+    required VoidCallback onTap,
     bool isRecommended = false,
   }) {
-    final isSelected = _settings.pushMode == mode;
-
     return Material(
       color: isSelected
           ? colorScheme.primaryContainer.withValues(alpha: 0.5)
@@ -477,16 +452,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () {
-          setState(() {
-            _settings = _settings.copyWith(pushMode: mode);
-            // 智能模式时自动关闭高级选项
-            if (mode == PushMode.smart) {
-              _settings = _settings.copyWith(showAdvancedOptions: false);
-              _animationController.reverse();
-            }
-          });
-        },
+        onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           child: Row(
@@ -534,7 +500,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              l10n.recommended,
+                              AppLocalizations.of(context).recommended,
                               style: theme.textTheme.labelSmall?.copyWith(
                                 color: colorScheme.primary,
                                 fontWeight: FontWeight.w500,
@@ -553,8 +519,13 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                   ],
                 ),
               ),
-              Radio<PushMode>(
-                value: mode,
+              Icon(
+                isSelected
+                    ? Icons.radio_button_checked
+                    : Icons.radio_button_unchecked,
+                color: isSelected
+                    ? colorScheme.primary
+                    : colorScheme.onSurfaceVariant,
               ),
             ],
           ),
