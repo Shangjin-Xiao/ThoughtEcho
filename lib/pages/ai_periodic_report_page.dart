@@ -46,7 +46,12 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   List<GeneratedCard> _featuredCards = [];
   bool _isLoadingData = false;
   bool _isGeneratingCards = false;
+  bool _isLoadingMoreCards = false; // 加载更多卡片中
   int? _selectedCardIndex;
+
+  // 分页加载状态
+  List<Quote> _pendingQuotesForCards = []; // 待生成卡片的笔记队列
+  static const int _cardsPerBatch = 6; // 每批生成卡片数
 
   // 新增：周期"最多"统计与洞察
   String? _mostDayPeriod; // 晨曦/午后/黄昏/夜晚
@@ -531,7 +536,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     }
   }
 
-  /// 生成精选卡片
+  /// 生成精选卡片（首次加载）
   Future<void> _generateFeaturedCards() async {
     if (_aiCardService == null || _periodQuotes.isEmpty || _isGeneratingCards) {
       return;
@@ -539,15 +544,23 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
     setState(() {
       _isGeneratingCards = true;
+      _featuredCards = []; // 清空现有卡片
     });
 
     try {
-      // 选择最有代表性的笔记（最多6张卡片）
-      final selectedQuotes = _selectRepresentativeQuotes(_periodQuotes);
+      // 选择所有有代表性的笔记（不限制数量），按多样性排序
+      final allSelectedQuotes = _selectRepresentativeQuotes(
+        _periodQuotes,
+        maxCount: _periodQuotes.length, // 选择所有符合条件的笔记
+      );
+
+      // 首批生成 _cardsPerBatch 张
+      final firstBatch = allSelectedQuotes.take(_cardsPerBatch).toList();
+      _pendingQuotesForCards = allSelectedQuotes.skip(_cardsPerBatch).toList();
 
       final cards = await _aiCardService!.generateFeaturedCards(
-        selectedQuotes,
-        maxCards: 6,
+        firstBatch,
+        maxCards: _cardsPerBatch,
       );
 
       setState(() {
@@ -571,20 +584,70 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     }
   }
 
+  /// 加载更多卡片
+  Future<void> _loadMoreCards() async {
+    if (_aiCardService == null ||
+        _pendingQuotesForCards.isEmpty ||
+        _isLoadingMoreCards ||
+        _isGeneratingCards) {
+      return;
+    }
+
+    setState(() {
+      _isLoadingMoreCards = true;
+    });
+
+    try {
+      // 取下一批笔记
+      final nextBatch = _pendingQuotesForCards.take(_cardsPerBatch).toList();
+      _pendingQuotesForCards =
+          _pendingQuotesForCards.skip(_cardsPerBatch).toList();
+
+      final newCards = await _aiCardService!.generateFeaturedCards(
+        nextBatch,
+        maxCards: _cardsPerBatch,
+      );
+
+      setState(() {
+        _featuredCards.addAll(newCards);
+        _isLoadingMoreCards = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingMoreCards = false;
+      });
+      AppLogger.e('加载更多卡片失败', error: e);
+      if (mounted) {
+        final l10n = AppLocalizations.of(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.generateCardFailed(e.toString())),
+            duration: AppConstants.snackBarDurationError,
+          ),
+        );
+      }
+    }
+  }
+
+  /// 是否还有更多卡片可加载
+  bool get _hasMoreCards => _pendingQuotesForCards.isNotEmpty;
+
   /// 选择有代表性的笔记
-  List<Quote> _selectRepresentativeQuotes(List<Quote> quotes) {
+  /// [maxCount] 根据周期类型动态调整（周=6，月=12，年=18）
+  List<Quote> _selectRepresentativeQuotes(List<Quote> quotes,
+      {int maxCount = 6}) {
     // 按内容长度和多样性选择
     final sortedQuotes = List<Quote>.from(quotes);
 
     // 优先选择内容丰富的笔记
     sortedQuotes.sort((a, b) => b.content.length.compareTo(a.content.length));
 
-    // 选择前6条，确保多样性
+    // 选择指定数量的笔记，确保多样性
     final selected = <Quote>[];
     final usedKeywords = <String>{};
 
     for (final quote in sortedQuotes) {
-      if (selected.length >= 6) break;
+      if (selected.length >= maxCount) break;
 
       // 简单的关键词去重逻辑
       final words = quote.content.toLowerCase().split(' ');
@@ -919,6 +982,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                 _selectedPeriod = selection.first;
                 // 切换时间范围时，重置生成的内容
                 _featuredCards = [];
+                _pendingQuotesForCards = [];
                 _selectedCardIndex = null;
               });
               _loadPeriodData();
@@ -946,6 +1010,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         _selectedDate = picked;
         // 切换日期时，重置生成的内容
         _featuredCards = [];
+        _pendingQuotesForCards = [];
         _selectedCardIndex = null;
       });
       _loadPeriodData();
@@ -2098,6 +2163,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   onPressed: () {
                     setState(() {
                       _featuredCards = [];
+                      _pendingQuotesForCards = [];
                     });
                     _generateFeaturedCards();
                   },
@@ -2188,6 +2254,15 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
   /// 构建精选卡片网格
   Widget _buildFeaturedCardsGrid() {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+
+    // 计算总项数：卡片数 + 可能的"加载更多"按钮
+    final hasLoadMore = _hasMoreCards && !_isLoadingMoreCards;
+    final isLoadingMore = _isLoadingMoreCards;
+    final extraItemCount = (hasLoadMore || isLoadingMore) ? 1 : 0;
+    final totalItemCount = _featuredCards.length + extraItemCount;
+
     return GridView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -2196,8 +2271,86 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
-      itemCount: _featuredCards.length,
+      itemCount: totalItemCount,
       itemBuilder: (context, index) {
+        // 最后一项显示"加载更多"或加载指示器
+        if (index >= _featuredCards.length) {
+          if (_isLoadingMoreCards) {
+            return Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: theme.colorScheme.surfaceContainerHighest
+                    .withValues(alpha: 0.5),
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      l10n.generatingCards,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          // "加载更多"按钮
+          return InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: _loadMoreCards,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: theme.colorScheme.outline.withValues(alpha: 0.5),
+                  width: 1.5,
+                  style: BorderStyle.solid,
+                ),
+                color: theme.colorScheme.surfaceContainerHighest
+                    .withValues(alpha: 0.3),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.add_circle_outline,
+                    size: 36,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    l10n.loadMoreCards,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    l10n.remainingCards(_pendingQuotesForCards.length),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
         final card = _featuredCards[index];
         final isSelected = _selectedCardIndex == index;
 

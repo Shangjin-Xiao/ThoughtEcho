@@ -2607,6 +2607,17 @@
   "regenerateCard": "重新生成",
   "regeneratingCard": "正在重新生成...",
   "cardGenerating": "正在生成卡片...",
+  "generatingCards": "正在生成卡片...",
+  "loadMoreCards": "加载更多卡片",
+  "remainingCards": "还有 {count} 张可生成",
+  "@remainingCards": {
+    "description": "剩余可生成卡片数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "saveBtn": "保存",
   "work": "作品: ",
   "explanation": "说明: ",

@@ -2607,6 +2607,17 @@
   "regenerateCard": "Regenerate",
   "regeneratingCard": "Regenerating...",
   "cardGenerating": "Generating card...",
+  "generatingCards": "Generating cards...",
+  "loadMoreCards": "Load more cards",
+  "remainingCards": "{count} more available",
+  "@remainingCards": {
+    "description": "Remaining cards count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "saveBtn": "Save",
   "work": "Work: ",
   "explanation": "Explanation: ",
