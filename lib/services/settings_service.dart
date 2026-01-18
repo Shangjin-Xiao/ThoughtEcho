@@ -130,6 +130,22 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 添加笔记时自动勾选位置
+  bool get autoAttachLocation => _appSettings.autoAttachLocation;
+  Future<void> setAutoAttachLocation(bool enabled) async {
+    _appSettings = _appSettings.copyWith(autoAttachLocation: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  // 添加笔记时自动勾选天气
+  bool get autoAttachWeather => _appSettings.autoAttachWeather;
+  Future<void> setAutoAttachWeather(bool enabled) async {
+    _appSettings = _appSettings.copyWith(autoAttachWeather: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
   SettingsService(this._prefs);
 
   /// 创建SettingsService实例的静态工厂方法
