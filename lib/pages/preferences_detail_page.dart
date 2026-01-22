@@ -181,6 +181,24 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                   value: settings.useLocalQuotesOnly,
                   onChanged: (v) => settings.setUseLocalQuotesOnly(v),
                 ),
+                _buildDivider(),
+                _buildSwitchTile(
+                  context: context,
+                  title: l10n.settingsAutoAttachLocation,
+                  subtitle: l10n.settingsAutoAttachLocationDesc,
+                  icon: Icons.location_on_outlined,
+                  value: settings.autoAttachLocation,
+                  onChanged: (v) => settings.setAutoAttachLocation(v),
+                ),
+                _buildDivider(),
+                _buildSwitchTile(
+                  context: context,
+                  title: l10n.settingsAutoAttachWeather,
+                  subtitle: l10n.settingsAutoAttachWeatherDesc,
+                  icon: Icons.cloud_outlined,
+                  value: settings.autoAttachWeather,
+                  onChanged: (v) => settings.setAutoAttachWeather(v),
+                ),
               ],
             ),
 
@@ -286,7 +304,8 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
   }
 
   /// 处理生物识别验证开关
-  Future<void> _handleBiometricToggle(BuildContext context, bool enabled) async {
+  Future<void> _handleBiometricToggle(
+      BuildContext context, bool enabled) async {
     final settings = context.read<SettingsService>();
     final l10n = AppLocalizations.of(context);
 
@@ -390,13 +409,16 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
         title,
         style: theme.textTheme.titleSmall?.copyWith(
           fontWeight: FontWeight.w500,
-          color: isEnabled ? null : theme.colorScheme.onSurface.withValues(alpha: 0.5),
+          color: isEnabled
+              ? null
+              : theme.colorScheme.onSurface.withValues(alpha: 0.5),
         ),
       ),
       subtitle: Text(
         subtitle,
         style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.onSurface.withValues(alpha: isEnabled ? 0.7 : 0.4),
+          color: theme.colorScheme.onSurface
+              .withValues(alpha: isEnabled ? 0.7 : 0.4),
         ),
       ),
       trailing: Switch(
