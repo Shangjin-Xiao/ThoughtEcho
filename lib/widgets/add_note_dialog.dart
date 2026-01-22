@@ -1042,7 +1042,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                     contentPadding: const EdgeInsets.fromLTRB(16, 16, 48, 16),
                   ),
                   maxLines: 3,
-                  autofocus: false, // 改为手动延迟请求焦点
+                  autofocus: true, // 立即弹出键盘，其他重操作已延迟
                 ),
                 Positioned(
                   top: 0,
