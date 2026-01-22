@@ -84,6 +84,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   // 标签搜索控制器
   final TextEditingController _tagSearchController = TextEditingController();
 
+  // 性能优化：延迟请求焦点，避免与 BottomSheet 动画竞争
+  final FocusNode _contentFocusNode = FocusNode();
+
   // 性能优化：缓存Provider引用，避免重复查找
   LocationService? _cachedLocationService;
   WeatherService? _cachedWeatherService;
@@ -152,65 +155,83 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     _lastSearchQuery = '';
 
     // 优化：完全延迟所有服务初始化和数据库监听器，避免阻塞首次绘制
-    // 使用 microtask 确保在首次 build 完成后再执行
-    Future.microtask(() async {
+    // 使用 postFrameCallback + delay 确保首帧渲染完成后再执行重量级操作
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
-      _cachedLocationService = _readServiceOrNull<LocationService>(context);
-      _cachedWeatherService = _readServiceOrNull<WeatherService>(context);
-      _databaseService = _readServiceOrNull<DatabaseService>(context);
+      // 延迟 300ms 执行服务初始化和位置/天气获取，避免与动画竞争
+      Future.delayed(const Duration(milliseconds: 300), () async {
+        if (!mounted) return;
 
-      // 新建笔记时，读取用户偏好并自动勾选位置/天气
-      if (widget.initialQuote == null) {
-        final settingsService = _readServiceOrNull<SettingsService>(context);
-        if (settingsService != null) {
-          final autoLocation = settingsService.autoAttachLocation;
-          final autoWeather = settingsService.autoAttachWeather;
+        _cachedLocationService = _readServiceOrNull<LocationService>(context);
+        _cachedWeatherService = _readServiceOrNull<WeatherService>(context);
+        _databaseService = _readServiceOrNull<DatabaseService>(context);
 
-          if (autoLocation || autoWeather) {
-            setState(() {
+        // 新建笔记时，读取用户偏好并自动勾选位置/天气
+        if (widget.initialQuote == null) {
+          final settingsService = _readServiceOrNull<SettingsService>(context);
+          if (settingsService != null) {
+            final autoLocation = settingsService.autoAttachLocation;
+            final autoWeather = settingsService.autoAttachWeather;
+
+            if (autoLocation || autoWeather) {
+              if (mounted) {
+                setState(() {
+                  if (autoLocation) {
+                    _includeLocation = true;
+                  }
+                  if (autoWeather) {
+                    _includeWeather = true;
+                  }
+                });
+              }
+
+              // 如果自动勾选了位置，获取位置；天气需要位置坐标，所以在位置获取后处理
               if (autoLocation) {
-                _includeLocation = true;
-              }
-              if (autoWeather) {
-                _includeWeather = true;
-              }
-            });
-
-            // 如果自动勾选了位置，立即获取；天气需要位置坐标，所以在位置获取后处理
-            if (autoLocation) {
-              await _fetchLocationForNewNote();
-              // 位置获取后再获取天气
-              if (autoWeather &&
-                  _includeLocation &&
-                  (_newLatitude != null ||
-                      _cachedLocationService?.currentPosition != null)) {
+                await _fetchLocationForNewNote();
+                // 位置获取后再获取天气
+                if (autoWeather &&
+                    _includeLocation &&
+                    (_newLatitude != null ||
+                        _cachedLocationService?.currentPosition != null)) {
+                  _fetchWeatherForNewNote();
+                }
+              } else if (autoWeather) {
+                // 没有勾选位置但勾选了天气，尝试用缓存的位置获取天气
                 _fetchWeatherForNewNote();
               }
-            } else if (autoWeather) {
-              // 没有勾选位置但勾选了天气，尝试用缓存的位置获取天气
-              _fetchWeatherForNewNote();
             }
           }
         }
-      }
 
-      // 延迟注册监听器，避免初始化时触发不必要的查询
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted && _databaseService != null) {
-          _databaseService!.addListener(_onDatabaseChanged);
-        }
+        // 延迟注册监听器，避免初始化时触发不必要的查询
+        Future.delayed(const Duration(milliseconds: 200), () {
+          if (mounted && _databaseService != null) {
+            _databaseService!.addListener(_onDatabaseChanged);
+          }
+        });
       });
     });
 
     // 添加搜索防抖监听器
     _tagSearchController.addListener(_onSearchChanged);
 
-    // 显示全屏编辑按钮的功能引导
+    // 性能优化：延迟请求焦点，避免与 BottomSheet 动画竞争
+    // 同时延迟 Feature Guide 弹出
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _showFullscreenButtonGuide();
-      }
+      if (!mounted) return;
+      // 延迟 300ms 请求焦点，让 BottomSheet 动画完成
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted && _contentFocusNode.canRequestFocus) {
+          _contentFocusNode.requestFocus();
+        }
+      });
+      // 延迟 500ms 显示功能引导，确保 UI 稳定
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          _showFullscreenButtonGuide();
+        }
+      });
     });
 
     // 如果是编辑已有笔记
@@ -694,6 +715,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     _authorController.dispose();
     _workController.dispose();
     _tagSearchController.dispose();
+    _contentFocusNode.dispose();
 
     // 优化：移除数据库监听器，防止内存泄漏
     _databaseService?.removeListener(_onDatabaseChanged);
@@ -1019,6 +1041,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
               children: [
                 TextField(
                   controller: _contentController,
+                  focusNode: _contentFocusNode,
                   decoration: InputDecoration(
                     hintText: AppLocalizations.of(context).writeYourThoughts,
                     border: const OutlineInputBorder(),
@@ -1026,7 +1049,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                     contentPadding: const EdgeInsets.fromLTRB(16, 16, 48, 16),
                   ),
                   maxLines: 3,
-                  autofocus: true,
+                  autofocus: false, // 改为手动延迟请求焦点
                 ),
                 Positioned(
                   top: 0,
