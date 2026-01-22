@@ -21,7 +21,7 @@ void main() {
       expect(svg, contains('</svg>'));
       expect(svg, contains('xmlns="http://www.w3.org/2000/svg"'));
       expect(svg, matches(RegExp(r'viewBox="0 0 400\.?0? 600\.?0?"')));
-      expect(svg, contains('knowledgeBg'));
+      expect(svg, contains('auroraBlur'));
       expect(svg, contains(testAuthor));
       expect(svg, contains(testDate));
       expect(svg, contains('ThoughtEcho'));
@@ -52,7 +52,8 @@ void main() {
         date: testDate,
       );
 
-      final italicLineCount = RegExp('font-style="italic"').allMatches(svg).length;
+      final italicLineCount =
+          RegExp('font-style="italic"').allMatches(svg).length;
       expect(italicLineCount, greaterThanOrEqualTo(4));
     });
 
@@ -124,7 +125,7 @@ void main() {
         author: testAuthor,
         date: testDate,
       );
-      expect(knowledgeSvg, contains('knowledgeBg'));
+      expect(knowledgeSvg, contains('auroraBlur'));
 
       // 测试引用卡片
       final quoteSvg = CardTemplates.getTemplateByType(
@@ -170,6 +171,24 @@ void main() {
         date: testDate,
       );
       expect(retroSvg, contains('noise'));
+
+      // 测试正念模板
+      final mindfulSvg = CardTemplates.getTemplateByType(
+        type: CardType.mindful,
+        content: testContent,
+        author: testAuthor,
+        date: testDate,
+      );
+      expect(mindfulSvg, contains('paperNoise'));
+
+      // 测试霓虹赛博模板
+      final neonCyberSvg = CardTemplates.getTemplateByType(
+        type: CardType.neonCyber,
+        content: testContent,
+        author: testAuthor,
+        date: testDate,
+      );
+      expect(neonCyberSvg, contains('cyberGrid'));
     });
 
     test('长文本处理', () {
@@ -237,9 +256,9 @@ void main() {
       );
 
       // 验证现代化配色 (更新后的颜色)
-      expect(svg, contains('#6366f1')); // Indigo
-      expect(svg, contains('#8b5cf6')); // Violet
-      expect(svg, contains('#d946ef')); // Fuchsia
+      expect(svg, contains('#7c3aed')); // Violet
+      expect(svg, contains('#0891b2')); // Cyan
+      expect(svg, contains('#db2777')); // Pink
       expect(svg, contains('stop-opacity'));
       expect(svg, contains('fill-opacity'));
     });

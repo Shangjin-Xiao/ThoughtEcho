@@ -15,7 +15,7 @@ class CardTemplates {
   static const double _lineHeight = 1.6;
 
   /// 现代化知识卡片模板
-  /// 特点：清新渐变，磨砂玻璃质感，网格背景
+  /// 特点：极光渐变背景，磨砂玻璃质感，高对比度文字
   static String knowledgeTemplate({
     required String content,
     String? author,
@@ -43,54 +43,182 @@ class CardTemplates {
         _contentFontSize;
 
     return '''
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $_viewBoxWidth $_viewBoxHeight" preserveAspectRatio="xMidYMid meet">
-  <defs>
-    <linearGradient id="knowledgeBg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#8b5cf6"/>
-      <stop offset="100%" stop-color="#3b82f6"/>
-    </linearGradient>
-    <linearGradient id="cardBg" x1="0%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
-      <stop offset="100%" stop-color="#f1f5f9" stop-opacity="0.9"/>
-    </linearGradient>
-    <filter id="cardShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="12" stdDeviation="20" flood-color="#000000" flood-opacity="0.15"/>
-    </filter>
-    <pattern id="gridPattern" width="20" height="20" patternUnits="userSpaceOnUse">
-      <rect width="20" height="20" fill="none"/>
-      <circle cx="1" cy="1" r="1" fill="#ffffff" fill-opacity="0.2"/>
-    </pattern>
-  </defs>
+ <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $_viewBoxWidth $_viewBoxHeight" preserveAspectRatio="xMidYMid meet">
+   <defs>
+     <filter id="auroraBlur" x="-50%" y="-50%" width="200%" height="200%">
+       <feGaussianBlur stdDeviation="40"/>
+     </filter>
+     <linearGradient id="glassStroke" x1="0%" y1="0%" x2="100%" y2="100%">
+       <stop offset="0%" stop-color="#ffffff" stop-opacity="0.4"/>
+       <stop offset="100%" stop-color="#ffffff" stop-opacity="0.05"/>
+     </linearGradient>
+   </defs>
 
-  <!-- 背景 -->
-  <rect width="$_viewBoxWidth" height="$_viewBoxHeight" fill="url(#knowledgeBg)" rx="24"/>
-  <rect width="$_viewBoxWidth" height="$_viewBoxHeight" fill="url(#gridPattern)" rx="24"/>
+   <!-- 深色背景 -->
+   <rect width="$_viewBoxWidth" height="$_viewBoxHeight" fill="#020617" rx="24"/>
   
-  <!-- 装饰元素 -->
-  <circle cx="360" cy="60" r="100" fill="#ffffff" fill-opacity="0.1"/>
-  <circle cx="40" cy="540" r="80" fill="#ffffff" fill-opacity="0.08"/>
+   <!-- 极光光晕 -->
+   <circle cx="50" cy="100" r="150" fill="#7c3aed" fill-opacity="0.4" filter="url(#auroraBlur)"/>
+   <circle cx="350" cy="500" r="180" fill="#0891b2" fill-opacity="0.4" filter="url(#auroraBlur)"/>
+   <circle cx="200" cy="300" r="120" fill="#db2777" fill-opacity="0.25" filter="url(#auroraBlur)"/>
 
-  <!-- 顶部图标 -->
-  <circle cx="200" cy="80" r="32" fill="#ffffff" fill-opacity="0.2"/>
-  <circle cx="200" cy="80" r="24" fill="#ffffff" fill-opacity="0.9"/>
-  <g transform="translate(200, 80) scale(1.2)">
-    <path d="M-6 -8 L6 -8 L8 8 L-8 8 Z" fill="none" stroke="#6366f1" stroke-width="2" stroke-linejoin="round"/>
-    <line x1="-3" y1="-3" x2="3" y2="-3" stroke="#6366f1" stroke-width="2" stroke-linecap="round"/>
-    <line x1="-3" y1="2" x2="3" y2="2" stroke="#6366f1" stroke-width="2" stroke-linecap="round"/>
-  </g>
+   <!-- 玻璃卡片容器 -->
+   <rect x="24" y="24" width="352" height="552" rx="20" fill="#ffffff" fill-opacity="0.03" stroke="url(#glassStroke)" stroke-width="1.5"/>
 
-  <!-- 内容卡片 -->
-  <rect x="32" y="$contentAreaTop" width="336" height="$contentAreaHeight" fill="url(#cardBg)" rx="20" filter="url(#cardShadow)"/>
-  
-  <!-- 内容文字 -->
-${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#1e293b', fontWeight: '500', fontFamily: 'PingFang SC, Microsoft YaHei, system-ui, sans-serif')}
+   <!-- 装饰元素 -->
+   <circle cx="340" cy="60" r="40" fill="#ffffff" fill-opacity="0.03"/>
+   <path d="M60 540 L80 520 L100 540" fill="none" stroke="#ffffff" stroke-opacity="0.2" stroke-width="2"/>
+   <rect x="175" y="40" width="50" height="3" rx="1.5" fill="#ffffff" fill-opacity="0.2"/>
 
-  <!-- 底部信息 -->
-  <line x1="60" y1="500" x2="340" y2="500" stroke="#ffffff" stroke-opacity="0.3" stroke-width="1"/>
-  <text x="200" y="530" text-anchor="middle" fill="#ffffff" font-family="PingFang SC, Microsoft YaHei, system-ui, sans-serif" font-size="12" font-weight="500">${_escape(metaText)}</text>
-  <text x="200" y="555" text-anchor="middle" fill="#e2e8f0" font-family="PingFang SC, Microsoft YaHei, system-ui, sans-serif" font-size="11">${_escape(brandText)}</text>
-</svg>
-''';
+   <!-- 内容文字 -->
+ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#f1f5f9', fontWeight: '500', fontFamily: 'PingFang SC, system-ui, sans-serif')}
+
+   <!-- 底部信息 -->
+   <rect x="150" y="510" width="100" height="1" fill="#ffffff" fill-opacity="0.15"/>
+   <text x="200" y="535" text-anchor="middle" fill="#94a3b8" font-family="PingFang SC, sans-serif" font-size="11" letter-spacing="0.5">${_escape(metaText)}</text>
+   <text x="200" y="555" text-anchor="middle" fill="#64748b" font-family="PingFang SC, sans-serif" font-size="10">${_escape(brandText)}</text>
+ </svg>
+ ''';
+  }
+
+  /// 正念/自然模板
+  /// 特点：有机流体形状，大地色系，纸张质感
+  static String mindfulTemplate({
+    required String content,
+    String? author,
+    String? date,
+    String? source,
+    String? location,
+    String? weather,
+    String? temperature,
+    String? dayPeriod,
+  }) {
+    const contentAreaTop = 160.0;
+    const contentAreaHeight = 300.0;
+    final maxLines = _calculateMaxLines(contentAreaHeight);
+    final textLines = _wrapText(content, 18, maxLines);
+    final metaText = _buildMetaText(
+        date: date,
+        location: location,
+        weather: weather,
+        temperature: temperature);
+    final brandText = _buildBrandText(author: author, source: source);
+
+    final contentHeight = textLines.length * _contentFontSize * _lineHeight;
+    final contentStartY = contentAreaTop +
+        (contentAreaHeight - contentHeight) / 2 +
+        _contentFontSize;
+
+    return '''
+ <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $_viewBoxWidth $_viewBoxHeight" preserveAspectRatio="xMidYMid meet">
+   <defs>
+     <filter id="paperNoise">
+       <feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="3" stitchTiles="stitch"/>
+       <feColorMatrix type="matrix" values="0 0 0 0 0.9  0 0 0 0 0.88  0 0 0 0 0.83  0 0 0 1 0"/>
+       <feBlend mode="multiply" in2="SourceGraphic"/>
+     </filter>
+     <linearGradient id="warmGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+       <stop offset="0%" stop-color="#fffbeb"/>
+       <stop offset="100%" stop-color="#fef3c7"/>
+     </linearGradient>
+   </defs>
+
+   <!-- 背景 -->
+   <rect width="$_viewBoxWidth" height="$_viewBoxHeight" fill="url(#warmGrad)" rx="24"/>
+   
+   <!-- 有机形状 -->
+   <path d="M-50 0 Q100 150 250 50 T450 0 V300 H-50 Z" fill="#dcfce7" fill-opacity="0.7"/>
+   <path d="M-50 600 Q150 450 300 550 T450 600 V600 H-50 Z" fill="#ffedd5" fill-opacity="0.8"/>
+   
+   <!-- 质感叠层 -->
+   <rect width="$_viewBoxWidth" height="$_viewBoxHeight" filter="url(#paperNoise)" opacity="0.4" rx="24"/>
+
+   <!-- 内容区域 -->
+   <rect x="40" y="140" width="320" height="340" rx="16" fill="#ffffff" fill-opacity="0.6"/>
+
+   <!-- 内容文字 -->
+ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#431407', fontFamily: 'Songti SC, Georgia, serif', fontWeight: '500')}
+
+   <!-- 底部信息 -->
+   <circle cx="200" cy="510" r="3" fill="#a8a29e"/>
+   <text x="200" y="535" text-anchor="middle" fill="#78350f" font-family="Songti SC, serif" font-size="11">${_escape(metaText)}</text>
+   <text x="200" y="555" text-anchor="middle" fill="#92400e" font-family="Songti SC, serif" font-size="10">${_escape(brandText)}</text>
+ </svg>
+ ''';
+  }
+
+  /// 霓虹赛博模板
+  /// 特点：暗黑网格，霓虹线条，等宽字体
+  static String neonCyberTemplate({
+    required String content,
+    String? author,
+    String? date,
+    String? source,
+    String? location,
+    String? weather,
+    String? temperature,
+    String? dayPeriod,
+  }) {
+    const contentAreaTop = 140.0;
+    const contentAreaHeight = 340.0;
+    final maxLines = _calculateMaxLines(contentAreaHeight);
+    final textLines = _wrapText(content, 20, maxLines);
+    final metaText = _buildMetaText(
+        date: date,
+        location: location,
+        weather: weather,
+        temperature: temperature);
+    final brandText = _buildBrandText(author: author, source: source);
+
+    final contentHeight = textLines.length * _contentFontSize * _lineHeight;
+    final contentStartY = contentAreaTop +
+        (contentAreaHeight - contentHeight) / 2 +
+        _contentFontSize;
+
+    final buffer = StringBuffer();
+    final lineSpacing = _contentFontSize * _lineHeight;
+    for (int i = 0; i < textLines.length; i++) {
+      final y = contentStartY + i * lineSpacing;
+      buffer.writeln(
+          '<text x="50" y="${y.toStringAsFixed(1)}" text-anchor="start" fill="#22d3ee" font-family="Courier New, monospace" font-size="16" font-weight="bold">${_escape(textLines[i])}</text>');
+    }
+    final renderedText = buffer.toString();
+
+    return '''
+ <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $_viewBoxWidth $_viewBoxHeight" preserveAspectRatio="xMidYMid meet">
+   <defs>
+     <pattern id="cyberGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+       <rect width="40" height="40" fill="none" stroke="#1e293b" stroke-width="1"/>
+       <rect width="2" height="2" fill="#334155" x="0" y="0"/>
+     </pattern>
+     <linearGradient id="scanline" x1="0" y1="0" x2="0" y2="100%">
+       <stop offset="0%" stop-color="#000" stop-opacity="0"/>
+       <stop offset="50%" stop-color="#000" stop-opacity="0.3"/>
+       <stop offset="100%" stop-color="#000" stop-opacity="0"/>
+     </linearGradient>
+   </defs>
+
+   <!-- 背景 -->
+   <rect width="$_viewBoxWidth" height="$_viewBoxHeight" fill="#020617" rx="24"/>
+   <rect width="$_viewBoxWidth" height="$_viewBoxHeight" fill="url(#cyberGrid)" rx="24"/>
+
+   <!-- 霓虹装饰 -->
+   <rect x="0" y="60" width="8" height="60" fill="#22d3ee"/>
+   <rect x="392" y="480" width="8" height="60" fill="#d946ef"/>
+   <rect x="40" y="110" width="320" height="1" fill="#22d3ee" fill-opacity="0.5"/>
+   <rect x="40" y="490" width="320" height="1" fill="#d946ef" fill-opacity="0.5"/>
+
+   <!-- 内容文字 -->
+   $renderedText
+
+   <!-- 底部信息 -->
+   <text x="200" y="530" text-anchor="middle" fill="#94a3b8" font-family="Courier New, monospace" font-size="10">SYS.LOG: ${_escape(metaText)}</text>
+   <text x="200" y="550" text-anchor="middle" fill="#64748b" font-family="Courier New, monospace" font-size="10">// ${_escape(brandText)}</text>
+   
+   <!-- 扫描线层 -->
+   <rect width="$_viewBoxWidth" height="$_viewBoxHeight" fill="url(#scanline)" rx="24" pointer-events="none"/>
+ </svg>
+ ''';
   }
 
   /// 引用卡片模板
@@ -929,6 +1057,28 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#881337',
         );
       case CardType.dev:
         return devTemplate(
+          content: content,
+          author: author,
+          date: date,
+          source: source,
+          location: location,
+          weather: weather,
+          temperature: temperature,
+          dayPeriod: dayPeriod,
+        );
+      case CardType.mindful:
+        return mindfulTemplate(
+          content: content,
+          author: author,
+          date: date,
+          source: source,
+          location: location,
+          weather: weather,
+          temperature: temperature,
+          dayPeriod: dayPeriod,
+        );
+      case CardType.neonCyber:
+        return neonCyberTemplate(
           content: content,
           author: author,
           date: date,
