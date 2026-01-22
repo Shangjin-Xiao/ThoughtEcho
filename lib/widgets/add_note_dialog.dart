@@ -216,16 +216,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     // 添加搜索防抖监听器
     _tagSearchController.addListener(_onSearchChanged);
 
-    // 性能优化：延迟请求焦点，避免与 BottomSheet 动画竞争
-    // 同时延迟 Feature Guide 弹出
+    // 性能优化：延迟 Feature Guide 弹出，避免与键盘动画竞争
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      // 延迟 300ms 请求焦点，让 BottomSheet 动画完成
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted && _contentFocusNode.canRequestFocus) {
-          _contentFocusNode.requestFocus();
-        }
-      });
       // 延迟 500ms 显示功能引导，确保 UI 稳定
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {

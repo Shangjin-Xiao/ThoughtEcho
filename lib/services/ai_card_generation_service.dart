@@ -308,6 +308,8 @@ class AICardGenerationService {
       CardType.academic,
       CardType.emotional,
       CardType.dev,
+      CardType.mindful,
+      CardType.neonCyber,
     ];
 
     final randomcheck = DateTime.now().microsecondsSinceEpoch;

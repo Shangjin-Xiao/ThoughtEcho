@@ -18,6 +18,8 @@ enum CardType {
   academic, // 学术/笔记（新增）
   emotional, // 情感/日记（新增）
   dev, // 开发者/代码（新增）
+  mindful, // 正念/自然（新增）
+  neonCyber, // 霓虹赛博（新增）
 }
 
 /// AI生成的卡片模型

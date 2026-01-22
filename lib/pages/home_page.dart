@@ -841,7 +841,8 @@ class _HomePageState extends State<HomePage>
 
   // FAB 长按处理 - 显示语音录制浮层
   void _onFABLongPress() {
-    final settingsService = Provider.of<SettingsService>(context, listen: false);
+    final settingsService =
+        Provider.of<SettingsService>(context, listen: false);
     final localAISettings = settingsService.localAISettings;
 
     // 检查是否启用了本地AI和语音转文字功能，未启用则直接返回无反应
@@ -881,7 +882,8 @@ class _HomePageState extends State<HomePage>
         );
       },
       transitionBuilder: (context, animation, secondaryAnimation, child) {
-        final curved = CurvedAnimation(parent: animation, curve: Curves.easeOut);
+        final curved =
+            CurvedAnimation(parent: animation, curve: Curves.easeOut);
         return FadeTransition(
           opacity: curved,
           child: child,
@@ -1098,7 +1100,10 @@ class _HomePageState extends State<HomePage>
             card: card,
             onShare: (selected) => _shareCard(selected),
             onSave: (selected) => _saveCard(selected),
-            onRegenerate: () => _aiCardService!.generateCard(note: quote),
+            onRegenerate: () => _aiCardService!.generateCard(
+              note: quote,
+              isRegeneration: true,
+            ),
           ),
         );
       }
@@ -1449,10 +1454,10 @@ class _HomePageState extends State<HomePage>
             ? null // 记录页不需要标题栏
             : _currentIndex == 0
                 ? AppBar(
-                  automaticallyImplyLeading: false,
-                  leadingWidth: NavigationToolbar.kMiddleSpacing,
-                  leading: const SizedBox.shrink(),
-                  titleSpacing: 0, // 左侧保留默认留白，且让标题充分利用空间
+                    automaticallyImplyLeading: false,
+                    leadingWidth: NavigationToolbar.kMiddleSpacing,
+                    leading: const SizedBox.shrink(),
+                    titleSpacing: 0, // 左侧保留默认留白，且让标题充分利用空间
                     title: Consumer<ConnectivityService>(
                       builder: (context, connectivityService, child) {
                         final locale = Localizations.localeOf(context);
