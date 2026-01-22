@@ -533,15 +533,16 @@ $contentSection
         mostTimePeriod ?? (isEnglish ? 'evenly distributed' : '本期时段分布较均衡');
     final weather = mostWeather ??
         (isEnglish ? 'weather was not a significant factor' : '天气因素不明显');
-    // 处理标签：移除已有的#前缀，然后统一添加#
+    // 处理标签：清理前后空格和多余符号，直接使用标签名
     String tag;
     if (topTag != null && topTag.trim().isNotEmpty) {
-      final cleanTag = topTag.trim().replaceAll(RegExp(r'^#+'), ''); // 移除开头的所有#
+      // 移除开头的#符号和多余空格
+      final cleanTag = topTag.trim().replaceAll(RegExp(r'^#+\s*'), '').trim();
       tag = cleanTag.isNotEmpty
-          ? '#$cleanTag'
-          : (isEnglish ? 'themes are still emerging' : '主题尚未收敛');
+          ? '「$cleanTag」'
+          : (isEnglish ? 'diverse topics' : '多元主题');
     } else {
-      tag = isEnglish ? 'themes are still emerging' : '主题尚未收敛';
+      tag = isEnglish ? 'diverse topics' : '多元主题';
     }
 
     // 3种风格模板（除了简约数据型和极简禅意型），随机挑选
@@ -650,9 +651,9 @@ $contentSection
     int totalWordCount,
   ) {
     final templates = [
-      '这$periodLabel你坚持了$activeDays天记录，共写下$noteCount篇温暖的文字。看起来你更喜欢在$time书写，$weather是你的创作伙伴，$tag充满了你的思绪。',
-      '一个$periodLabel来，你用$activeDays天时光记录了生活的点滴。$time的时候，你写得最多，$weather见证着$tag的绽放。',
-      '你在这$periodLabel里坚持了$activeDays天，留下$noteCount篇共$totalWordCount字的珍贵记忆。$time是你最爱的创作时光，$tag在你心中流淌。',
+      '$periodLabel你坚持记录了$activeDays天，写下$noteCount篇心情随笔。$time是你偏爱的书写时光，$weather相伴左右，$tag是你这段时间的关注焦点。',
+      '过去$periodLabel，你用$activeDays天记录生活点滴，留下$totalWordCount字的温暖印记。$time最能激发你的表达欲，$tag贯穿其中。',
+      '这$periodLabel你用心记录了$activeDays天，$noteCount篇文字承载着日常感悟。$time书写、$weather相伴，$tag是你的思绪主线。',
     ];
     final rng = math.Random();
     return templates[rng.nextInt(templates.length)];
@@ -669,9 +670,9 @@ $contentSection
     int totalWordCount,
   ) {
     final templates = [
-      '时光如水，你用$activeDays个日夜编织了$noteCount个故事片段。$time是你的缪斯时刻，$weather见证着$tag的绽放。',
-      '一$periodLabel光阴里，你在$activeDays个日子种下文字的种子。$time最懂你的心思，$tag在笔尖流淌。',
-      '岁月不居，时节如流。这$periodLabel你以$activeDays日为纸，写下$noteCount篇心语。$time时分，$tag与$weather共舞。',
+      '时光缓缓流淌，你用$activeDays个日夜编织了$noteCount段故事。$time是灵感涌动的时刻，$weather为背景，$tag是这段旅程的注脚。',
+      '$periodLabel悄然而过，你在$activeDays个清晨或黄昏落笔，$totalWordCount字凝结成记忆的琥珀。$time懂你，$tag是心底的回响。',
+      '笔尖轻触纸面，$activeDays天里你写下$noteCount篇心语。$time静谧，$weather如常，$tag在字里行间若隐若现。',
     ];
     final rng = math.Random();
     return templates[rng.nextInt(templates.length)];
@@ -688,9 +689,9 @@ $contentSection
     int totalWordCount,
   ) {
     final templates = [
-      '本$periodLabel你保持了$activeDays天的记录习惯，积累了$totalWordCount字的思考财富。$time的安静最适合你深度思考，$tag值得进一步探索。',
-      '这一$periodLabel你在思考的路上走了$activeDays天，留下了$noteCount篇成长足迹。$time激发你的灵感，$tag或许是下一个突破点。',
-      '你用$activeDays天的坚持证明了成长的决心，$noteCount篇记录见证着进步。$time是你的黄金思考时段，$tag展现了你的关注焦点。',
+      '$periodLabel你保持了$activeDays天的记录习惯，积累$totalWordCount字的思考沉淀。$time适合深度思考，$tag值得持续探索。',
+      '这$periodLabel你坚持了$activeDays天，$noteCount篇记录见证着你的思维轨迹。$time是高效时段，$tag或许是下一个突破口。',
+      '$activeDays天的坚持展现了你的自律，$noteCount篇笔记记录着成长。$time是你的黄金时段，$tag体现了近期关注点。',
     ];
     final rng = math.Random();
     return templates[rng.nextInt(templates.length)];
@@ -709,9 +710,9 @@ $contentSection
     int totalWordCount,
   ) {
     final templates = [
-      'This $periodLabel, you maintained $activeDays days of journaling, writing $noteCount heartfelt entries. You seem to prefer writing during $time, with $weather as your creative companion, and $tag fills your thoughts.',
-      'Over the $periodLabel, you spent $activeDays days recording life\'s moments. You wrote the most during $time, and $weather witnessed the blossoming of $tag.',
-      'During this $periodLabel, you persisted for $activeDays days, leaving behind $noteCount entries with $totalWordCount words of precious memories. $time is your favorite creative time, and $tag flows through your heart.',
+      'This $periodLabel, you journaled for $activeDays days, creating $noteCount entries. $time was your preferred writing time, with $weather in the background, and $tag emerged as your main focus.',
+      'Over the past $periodLabel, you recorded $totalWordCount words across $activeDays days. $time sparked your creativity, and $tag wove through your reflections.',
+      'You stayed consistent for $activeDays days this $periodLabel, writing $noteCount heartfelt entries. $time suited you best, and $tag captured your thoughts.',
     ];
     final rng = math.Random();
     return templates[rng.nextInt(templates.length)];
@@ -728,9 +729,9 @@ $contentSection
     int totalWordCount,
   ) {
     final templates = [
-      'Time flows like water, and you wove $noteCount story fragments across $activeDays days and nights. $time was your muse moment, $weather witnessed the blossoming of $tag.',
-      'In the tapestry of this $periodLabel, you planted seeds of words across $activeDays days. $time understands your heart best, and $tag flows from your pen.',
-      'Time never pauses, seasons keep flowing. This $periodLabel, you used $activeDays days as your canvas, writing $noteCount heartfelt pieces. During $time, $tag dances with $weather.',
+      'Time drifted gently as you wove $noteCount stories across $activeDays days. $time held your inspiration, $weather set the scene, and $tag became your quiet refrain.',
+      'This $periodLabel slipped by softly, and you penned $totalWordCount words in its wake. $time understood you best, with $tag echoing through the pages.',
+      'Ink met paper on $activeDays occasions, yielding $noteCount reflections. $time was serene, $weather familiar, and $tag lingered between the lines.',
     ];
     final rng = math.Random();
     return templates[rng.nextInt(templates.length)];
@@ -747,9 +748,9 @@ $contentSection
     int totalWordCount,
   ) {
     final templates = [
-      'This $periodLabel, you maintained a journaling habit for $activeDays days, accumulating $totalWordCount words of thoughtful reflection. The quiet of $time suits your deep thinking best, and $tag is worth exploring further.',
-      'This $periodLabel, you walked $activeDays days on the path of reflection, leaving $noteCount growth footprints. $time sparks your inspiration, and $tag might be your next breakthrough point.',
-      'Your $activeDays days of persistence demonstrate your commitment to growth, with $noteCount entries witnessing your progress. $time is your golden thinking period, and $tag reveals your focus.',
+      'This $periodLabel, you maintained a $activeDays-day journaling streak, accumulating $totalWordCount words of reflection. $time suits deep thinking, and $tag is worth exploring further.',
+      'You stayed on track for $activeDays days, leaving $noteCount entries that map your thought process. $time was productive, and $tag may be your next breakthrough.',
+      '$activeDays days of consistency show your discipline, with $noteCount notes tracking your growth. $time was your prime window, and $tag highlights your current focus.',
     ];
     final rng = math.Random();
     return templates[rng.nextInt(templates.length)];
