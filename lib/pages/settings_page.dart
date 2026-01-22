@@ -488,29 +488,6 @@ class SettingsPageState extends State<SettingsPage> {
                 ),
 
                 // 当前天气信息已移动到"搜索并选择城市"对话框内
-                const SizedBox(height: 8.0),
-                // 自动附加位置开关
-                SwitchListTile(
-                  title: Text(l10n.settingsAutoAttachLocation),
-                  subtitle: Text(l10n.settingsAutoAttachLocationDesc),
-                  value: context.watch<SettingsService>().autoAttachLocation,
-                  onChanged: (value) async {
-                    await context
-                        .read<SettingsService>()
-                        .setAutoAttachLocation(value);
-                  },
-                ),
-                // 自动附加天气开关
-                SwitchListTile(
-                  title: Text(l10n.settingsAutoAttachWeather),
-                  subtitle: Text(l10n.settingsAutoAttachWeatherDesc),
-                  value: context.watch<SettingsService>().autoAttachWeather,
-                  onChanged: (value) async {
-                    await context
-                        .read<SettingsService>()
-                        .setAutoAttachWeather(value);
-                  },
-                ),
               ],
             ),
           ),
