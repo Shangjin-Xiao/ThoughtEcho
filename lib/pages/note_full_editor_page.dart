@@ -141,22 +141,25 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
     // 新建笔记时，读取用户偏好设置自动勾选位置/天气
     if (widget.initialQuote == null) {
-      // 使用 microtask 确保 context 可用
-      Future.microtask(() {
+      // 性能优化：延迟到首帧渲染后 300ms 执行，避免与页面动画竞争
+      WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        final settingsService =
-            Provider.of<SettingsService>(context, listen: false);
-        final autoLocation = settingsService.autoAttachLocation;
-        final autoWeather = settingsService.autoAttachWeather;
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (!mounted) return;
+          final settingsService =
+              Provider.of<SettingsService>(context, listen: false);
+          final autoLocation = settingsService.autoAttachLocation;
+          final autoWeather = settingsService.autoAttachWeather;
 
-        if (autoLocation || autoWeather) {
-          setState(() {
-            if (autoLocation) _showLocation = true;
-            if (autoWeather) _showWeather = true;
-          });
-          // 自动获取位置和天气
-          _fetchLocationWeatherWithNotification();
-        }
+          if (autoLocation || autoWeather) {
+            setState(() {
+              if (autoLocation) _showLocation = true;
+              if (autoWeather) _showWeather = true;
+            });
+            // 自动获取位置和天气
+            _fetchLocationWeatherWithNotification();
+          }
+        });
       });
     }
 
@@ -173,12 +176,16 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     _initialWeather = widget.initialQuote?.weather;
     _initialTemperature = widget.initialQuote?.temperature;
 
-    // 显示功能引导（首帧后立即触发）
+    // 性能优化：延迟显示功能引导，避免与编辑器初始化竞争
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _showEditorGuide();
-        _showToolbarGuide();
-      }
+      if (!mounted) return;
+      // 延迟 500ms 显示引导，确保编辑器完全初始化
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          _showEditorGuide();
+          _showToolbarGuide();
+        }
+      });
     });
   }
 
