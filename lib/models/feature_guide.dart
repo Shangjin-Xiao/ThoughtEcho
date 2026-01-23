@@ -64,6 +64,12 @@ class FeatureGuide {
     'add_note_fullscreen_button': FeatureGuideConfig(
       placement: FeatureGuidePlacement.left,
     ),
+    'add_note_tag_hidden': FeatureGuideConfig(
+      placement: FeatureGuidePlacement.below,
+    ),
+    'note_item_more_share': FeatureGuideConfig(
+      placement: FeatureGuidePlacement.left,
+    ),
 
     // 设置页
     'settings_preferences': FeatureGuideConfig(
@@ -98,6 +104,10 @@ class FeatureGuide {
         return l10n.guideEditorToolbarUsageTitle;
       case 'add_note_fullscreen_button':
         return l10n.guideAddNoteFullscreenButtonTitle;
+      case 'add_note_tag_hidden':
+        return l10n.guideAddNoteTagHiddenTitle;
+      case 'note_item_more_share':
+        return l10n.guideNoteItemMoreShareTitle;
       case 'settings_preferences':
         return l10n.guideSettingsPreferencesTitle;
       case 'settings_startup':
@@ -127,6 +137,10 @@ class FeatureGuide {
         return l10n.guideEditorToolbarUsageDesc;
       case 'add_note_fullscreen_button':
         return l10n.guideAddNoteFullscreenButtonDesc;
+      case 'add_note_tag_hidden':
+        return l10n.guideAddNoteTagHiddenDesc;
+      case 'note_item_more_share':
+        return l10n.guideNoteItemMoreShareDesc;
       case 'settings_preferences':
         return l10n.guideSettingsPreferencesDesc;
       case 'settings_startup':

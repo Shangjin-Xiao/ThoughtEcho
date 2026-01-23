@@ -1059,7 +1059,11 @@
   "noteSearchEmptySubtitle": "尝试使用其他关键词或检查拼写",
   "noteSearchTimeoutMessage": "搜索超时，请重试",
   "searchingLabel": "搜索中",
-  "filterAndSortTooltip": "筛选/排序",
+  "guideAddNoteTagHiddenTitle": "隐藏笔记",
+  "guideAddNoteTagHiddenDesc": "选择标签可以将笔记设为隐藏",
+  "guideNoteItemMoreShareTitle": "卡片分享",
+  "guideNoteItemMoreShareDesc": "在此生成卡片分享",
+  "filterAndSortTooltip": "筛选笔记或查看隐藏内容",
   "noNotesFound": "没有找到笔记，请先添加一些笔记",
   "generateInsightsError": "生成洞察失败: {error}",
   "@generateInsightsError": {

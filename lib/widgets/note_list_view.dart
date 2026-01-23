@@ -42,6 +42,7 @@ class NoteListView extends StatefulWidget {
   final Function(List<String>, List<String>) onFilterChanged; // 新增筛选变化回调
   final GlobalKey? filterButtonKey; // 功能引导：筛选按钮的 Key
   final GlobalKey? favoriteButtonGuideKey; // 功能引导：心形按钮 Key
+  final GlobalKey? moreButtonGuideKey; // 功能引导：更多按钮 Key
   final GlobalKey? foldToggleGuideKey; // 功能引导：折叠/展开区域 Key
   final VoidCallback? onGuideTargetsReady; // 功能引导：目标就绪回调
 
@@ -66,6 +67,7 @@ class NoteListView extends StatefulWidget {
     required this.onFilterChanged,
     this.filterButtonKey, // 功能引导 Key
     this.favoriteButtonGuideKey,
+    this.moreButtonGuideKey,
     this.foldToggleGuideKey,
     this.onGuideTargetsReady,
   });
@@ -1103,6 +1105,7 @@ class NoteListViewState extends State<NoteListView> {
     }
 
     var favoriteGuideAssigned = false;
+    var moreGuideAssigned = false;
     var foldGuideAssigned = false;
 
     // 优化：提前创建标签映射，避免在 item builder 中重复计算
@@ -1172,12 +1175,18 @@ class NoteListViewState extends State<NoteListView> {
             final attachFavoriteGuideKey = !favoriteGuideAssigned &&
                 widget.favoriteButtonGuideKey != null &&
                 widget.onFavorite != null;
+            final attachMoreGuideKey =
+                !moreGuideAssigned && widget.moreButtonGuideKey != null;
             final attachFoldGuideKey = !foldGuideAssigned &&
                 widget.foldToggleGuideKey != null &&
                 needsExpansion;
 
             if (attachFavoriteGuideKey) {
               favoriteGuideAssigned = true;
+            }
+
+            if (attachMoreGuideKey) {
+              moreGuideAssigned = true;
             }
 
             if (attachFoldGuideKey) {
@@ -1229,6 +1238,8 @@ class NoteListViewState extends State<NoteListView> {
                   favoriteButtonGuideKey: attachFavoriteGuideKey
                       ? widget.favoriteButtonGuideKey
                       : null,
+                  moreButtonGuideKey:
+                      attachMoreGuideKey ? widget.moreButtonGuideKey : null,
                   foldToggleGuideKey:
                       attachFoldGuideKey ? widget.foldToggleGuideKey : null,
                   // 不使用自定义 tagBuilder，让 QuoteItemWidget 使用内部的标签渲染逻辑
