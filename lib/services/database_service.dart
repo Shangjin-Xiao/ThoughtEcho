@@ -149,23 +149,15 @@ class DatabaseService extends ChangeNotifier {
   }
 
   /// 修复：安全地通知笔记流订阅者
+  /// 性能优化：由于 _currentQuotes 已通过 _currentQuoteIds 保证唯一性，
+  /// 此处直接发送，无需再次遍历去重
   void _safeNotifyQuotesStream() {
     // 修复：检查服务是否已销毁
     if (_isDisposed) return;
-    
+
     if (_quotesController != null && !_quotesController!.isClosed) {
-      // 创建去重的副本
-      final uniqueQuotes = <Quote>[];
-      final seenIds = <String>{};
-
-      for (final quote in _currentQuotes) {
-        if (quote.id != null && !seenIds.contains(quote.id)) {
-          seenIds.add(quote.id!);
-          uniqueQuotes.add(quote);
-        }
-      }
-
-      _quotesController!.add(List.from(uniqueQuotes));
+      // 直接发送当前列表的副本，已保证唯一性
+      _quotesController!.add(List.from(_currentQuotes));
     }
   }
 
@@ -197,7 +189,7 @@ class DatabaseService extends ChangeNotifier {
     if (_isDisposed) {
       throw StateError('DatabaseService 已被销毁，无法访问数据库');
     }
-    
+
     // Web平台使用内存存储，不需要数据库对象
     if (kIsWeb) {
       // 确保已初始化
@@ -283,7 +275,7 @@ class DatabaseService extends ChangeNotifier {
       logDebug('DatabaseService 已被销毁，无法初始化');
       return;
     }
-    
+
     // 修复：添加严格的重复初始化检查
     if (_isInitialized) {
       logDebug('数据库已初始化，跳过重复初始化');
@@ -1416,6 +1408,7 @@ class DatabaseService extends ChangeNotifier {
     try {
       // 修复：重置状态，但不依赖流控制器
       _currentQuotes = [];
+      _currentQuoteIds.clear(); // 性能优化：同步清空 ID Set
       _watchHasMore = true;
       _isLoading = false;
       _watchOffset = 0;
@@ -1456,6 +1449,7 @@ class DatabaseService extends ChangeNotifier {
       logDebug('预加载笔记时出错: $e');
       // 确保状态一致
       _currentQuotes = [];
+      _currentQuoteIds.clear(); // 性能优化：同步清空 ID Set
       _watchHasMore = false;
 
       // 修复：确保流控制器存在
@@ -2967,6 +2961,7 @@ class DatabaseService extends ChangeNotifier {
       _quotesCache = [];
       _watchHasMore = true;
       _currentQuotes = [];
+      _currentQuoteIds.clear(); // 性能优化：同步清空 ID Set
 
       // 触发重新加载
       loadMoreQuotes();
@@ -4457,6 +4452,7 @@ class DatabaseService extends ChangeNotifier {
 
       // 修复：在重置状态时确保原子性操作，避免竞态条件
       _currentQuotes = [];
+      _currentQuoteIds.clear(); // 性能优化：同步清空 ID Set
       _isLoading = false;
       _watchHasMore = true; // 重置分页状态
 
@@ -4547,10 +4543,15 @@ class DatabaseService extends ChangeNotifier {
         _watchHasMore = false;
         logDebug('没有更多笔记数据，设置_watchHasMore=false');
       } else {
-        // 修复：添加去重逻辑，防止重复数据
-        final existingIds = _currentQuotes.map((q) => q.id).toSet();
-        final newQuotes =
-            quotes.where((q) => !existingIds.contains(q.id)).toList();
+        // 性能优化：使用增量维护的 _currentQuoteIds 进行去重
+        // 避免每次都遍历 _currentQuotes 构建 Set
+        final newQuotes = <Quote>[];
+        for (final quote in quotes) {
+          if (quote.id != null && !_currentQuoteIds.contains(quote.id)) {
+            _currentQuoteIds.add(quote.id!);
+            newQuotes.add(quote);
+          }
+        }
 
         if (newQuotes.isNotEmpty) {
           _currentQuotes.addAll(newQuotes);
@@ -4685,6 +4686,9 @@ class DatabaseService extends ChangeNotifier {
 
   // 添加存储当前加载的笔记列表的变量
   List<Quote> _currentQuotes = [];
+
+  // 性能优化：增量维护的 ID Set，避免每次去重时遍历
+  final Set<String> _currentQuoteIds = {};
 
   /// 更新分类信息
   Future<void> updateCategory(

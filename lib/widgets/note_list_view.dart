@@ -1015,18 +1015,8 @@ class NoteListViewState extends State<NoteListView> {
           _hasMore = db.hasMoreQuotes;
           _isLoading = false; // 加载完成后重置状态
         });
-
-        // 修复：加载更多后强制刷新滚动范围
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && _scrollController.hasClients) {
-            // 触发轻微滚动以强制重新计算滚动范围
-            final currentOffset = _scrollController.offset;
-            if (currentOffset > 0) {
-              _scrollController.jumpTo(currentOffset + 0.1);
-              _scrollController.jumpTo(currentOffset);
-            }
-          }
-        });
+        // 注意：移除了 jumpTo 双跳 hack，该 hack 会导致偶发卡顿
+        // ListView.builder 会自动处理 itemCount 变化后的滚动范围更新
       }
     } catch (e) {
       // 修复：出错时也要重置加载状态
@@ -1438,20 +1428,28 @@ class NoteListViewState extends State<NoteListView> {
                               builder: (context, settings, _) {
                                 final localAI = settings.localAISettings;
                                 // 只有启用了本地AI和AI搜索功能才显示
-                                if (localAI.enabled && localAI.aiSearchEnabled) {
+                                if (localAI.enabled &&
+                                    localAI.aiSearchEnabled) {
                                   return IconButton(
                                     icon: Icon(
-                                      _isAISearchMode ? Icons.auto_awesome : Icons.search,
-                                      color: _isAISearchMode ? theme.colorScheme.primary : null,
+                                      _isAISearchMode
+                                          ? Icons.auto_awesome
+                                          : Icons.search,
+                                      color: _isAISearchMode
+                                          ? theme.colorScheme.primary
+                                          : null,
                                     ),
-                                    tooltip: _isAISearchMode ? l10n.aiSearchMode : l10n.normalSearchMode,
+                                    tooltip: _isAISearchMode
+                                        ? l10n.aiSearchMode
+                                        : l10n.normalSearchMode,
                                     onPressed: () {
                                       setState(() {
                                         _isAISearchMode = !_isAISearchMode;
                                       });
                                       // 如果有搜索词，重新搜索
                                       if (_searchController.text.isNotEmpty) {
-                                        _onSearchChanged(_searchController.text);
+                                        _onSearchChanged(
+                                            _searchController.text);
                                       }
                                     },
                                   );
@@ -1465,47 +1463,50 @@ class NoteListViewState extends State<NoteListView> {
                               icon: const Icon(Icons.tune),
                               tooltip: l10n.filterAndSortTooltip,
                               onPressed: () {
-                            final settings = context.read<SettingsService>();
-                            showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              backgroundColor: Theme.of(
-                                context,
-                              ).colorScheme.surfaceContainerLowest,
-                              shape: const RoundedRectangleBorder(
-                                borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(16),
-                                ),
-                              ),
-                              builder: (context) => NoteFilterSortSheet(
-                                allTags: _effectiveTags,
-                                selectedTagIds: widget.selectedTagIds,
-                                sortType: widget.sortType,
-                                sortAscending: widget.sortAscending,
-                                selectedWeathers: widget.selectedWeathers,
-                                selectedDayPeriods: widget.selectedDayPeriods,
-                                requireBiometricForHidden: settings.requireBiometricForHidden,
-                                onApply: (
-                                  tagIds,
-                                  sortType,
-                                  sortAscending,
-                                  selectedWeathers,
-                                  selectedDayPeriods,
-                                ) {
-                                  widget.onTagSelectionChanged(tagIds);
-                                  widget.onSortChanged(
-                                    sortType,
-                                    sortAscending,
-                                  );
-                                  widget.onFilterChanged(
-                                    selectedWeathers,
-                                    selectedDayPeriods,
-                                  );
-                                  _updateStreamSubscription();
-                                },
-                              ),
-                            );
-                          },
+                                final settings =
+                                    context.read<SettingsService>();
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.surfaceContainerLowest,
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.vertical(
+                                      top: Radius.circular(16),
+                                    ),
+                                  ),
+                                  builder: (context) => NoteFilterSortSheet(
+                                    allTags: _effectiveTags,
+                                    selectedTagIds: widget.selectedTagIds,
+                                    sortType: widget.sortType,
+                                    sortAscending: widget.sortAscending,
+                                    selectedWeathers: widget.selectedWeathers,
+                                    selectedDayPeriods:
+                                        widget.selectedDayPeriods,
+                                    requireBiometricForHidden:
+                                        settings.requireBiometricForHidden,
+                                    onApply: (
+                                      tagIds,
+                                      sortType,
+                                      sortAscending,
+                                      selectedWeathers,
+                                      selectedDayPeriods,
+                                    ) {
+                                      widget.onTagSelectionChanged(tagIds);
+                                      widget.onSortChanged(
+                                        sortType,
+                                        sortAscending,
+                                      );
+                                      widget.onFilterChanged(
+                                        selectedWeathers,
+                                        selectedDayPeriods,
+                                      );
+                                      _updateStreamSubscription();
+                                    },
+                                  ),
+                                );
+                              },
                             ),
                           ],
                         ),
