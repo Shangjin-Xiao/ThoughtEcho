@@ -121,8 +121,6 @@ bool _isEmergencyMode = false;
 // 缓存早期捕获但无法立即记录的错误
 final List<Map<String, dynamic>> _deferredErrors = [];
 
-// 全局应用状态管理
-GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   // 立即设置日志级别为INFO，避免早期verbose日志输出
@@ -294,6 +292,11 @@ Future<void> main() async {
         final weatherService = WeatherService();
         final clipboardService = ClipboardService(); // 创建统一日志服务
         final unifiedLogService = UnifiedLogService.instance;
+
+        // 根据开发者模式设置日志服务的持久化状态
+        unifiedLogService
+            .setPersistenceEnabled(settingsService.appSettings.developerMode);
+
         final aiAnalysisDbService = AIAnalysisDatabaseService();
         final connectivityService = ConnectivityService();
         final featureGuideService = FeatureGuideService(SafeMMKV());
@@ -847,9 +850,10 @@ class EmergencyRecoveryPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('心迹 - 数据恢复'),
+        title: Text(l10n.emergencyRecoveryTitle),
         backgroundColor: Colors.red,
       ),
       body: SafeArea(
@@ -867,16 +871,18 @@ class EmergencyRecoveryPage extends StatelessWidget {
                   color: Colors.red,
                 ),
                 const SizedBox(height: 24),
-                const Text(
-                  '数据库初始化失败',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                Text(
+                  l10n.emergencyRecoveryHeading,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  '应用无法正常启动。可能是数据库损坏或无法访问。\n\n'
-                  '您可以尝试备份现有数据以防数据丢失，或尝试重新启动应用。',
-                  style: TextStyle(fontSize: 16),
+                Text(
+                  l10n.emergencyRecoveryDescription,
+                  style: const TextStyle(fontSize: 16),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
@@ -894,7 +900,7 @@ class EmergencyRecoveryPage extends StatelessWidget {
                     );
                   },
                   icon: const Icon(Icons.backup),
-                  label: const Text('备份和恢复数据'),
+                  label: Text(l10n.emergencyBackupAndRestoreButton),
                   style: FilledButton.styleFrom(
                     backgroundColor: Colors.orange,
                     padding: const EdgeInsets.symmetric(vertical: 16.0),
@@ -923,7 +929,8 @@ class EmergencyRecoveryPage extends StatelessWidget {
                       // 如果重新初始化失败，显示错误信息
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('重新初始化失败: $e'),
+                          content:
+                              Text(l10n.emergencyReinitializeFailed('$e')),
                           backgroundColor: Colors.red,
                           duration: const Duration(seconds: 3),
                         ),
@@ -931,15 +938,15 @@ class EmergencyRecoveryPage extends StatelessWidget {
                     }
                   },
                   icon: const Icon(Icons.refresh),
-                  label: const Text('尝试重新启动应用'),
+                  label: Text(l10n.emergencyTryRestartAppButton),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16.0),
                   ),
                 ),
                 const SizedBox(height: 32),
-                const Text(
-                  '提示: 如果问题持续存在，可能需要重新安装应用。请确保在此之前备份您的数据。',
-                  style: TextStyle(
+                Text(
+                  l10n.emergencyRecoveryHint,
+                  style: const TextStyle(
                     fontSize: 14,
                     fontStyle: FontStyle.italic,
                     color: Colors.grey,
@@ -968,8 +975,9 @@ class EmergencyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return MaterialApp(
-      title: '心迹 - 紧急恢复',
+      title: l10n.emergencyAppTitle,
       navigatorKey: navigatorKey, // 使用全局导航键
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -996,8 +1004,12 @@ class EmergencyHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('紧急恢复模式'), backgroundColor: Colors.red),
+      appBar: AppBar(
+        title: Text(l10n.emergencyModeTitle),
+        backgroundColor: Colors.red,
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -1006,15 +1018,18 @@ class EmergencyHomePage extends StatelessWidget {
             children: [
               const Icon(Icons.error_outline, size: 64, color: Colors.red),
               const SizedBox(height: 16),
-              const Text(
-                '应用启动失败',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              Text(
+                l10n.emergencyAppStartFailedTitle,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
-              const Text(
-                '心迹应用启动过程中发生严重错误。这可能是由于数据损坏或者存储权限问题导致。',
-                style: TextStyle(fontSize: 16),
+              Text(
+                l10n.emergencyAppStartFailedDesc,
+                style: const TextStyle(fontSize: 16),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
@@ -1027,9 +1042,9 @@ class EmergencyHomePage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      '错误信息:',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                    Text(
+                      l10n.emergencyErrorLabel,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
                     Text(error),
@@ -1038,7 +1053,7 @@ class EmergencyHomePage extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               ExpansionTile(
-                title: const Text('技术详情'),
+                title: Text(l10n.emergencyTechnicalDetails),
                 children: [
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -1068,7 +1083,7 @@ class EmergencyHomePage extends StatelessWidget {
                   );
                 },
                 icon: const Icon(Icons.backup),
-                label: const Text('备份和恢复数据'),
+                label: Text(l10n.emergencyBackupAndRestoreButton),
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.orange,
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -1081,7 +1096,7 @@ class EmergencyHomePage extends StatelessWidget {
                   restartApp();
                 },
                 icon: const Icon(Icons.refresh),
-                label: const Text('尝试重新启动应用'),
+                label: Text(l10n.emergencyTryRestartAppButton),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
@@ -1093,16 +1108,16 @@ class EmergencyHomePage extends StatelessWidget {
                   exit(0);
                 },
                 icon: const Icon(Icons.exit_to_app),
-                label: const Text('退出应用'),
+                label: Text(l10n.emergencyExitAppButton),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   foregroundColor: Colors.red,
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
-                '如果问题持续存在，请尝试重新安装应用，或联系开发者获取支持。',
-                style: TextStyle(
+              Text(
+                l10n.emergencyPersistentIssueHint,
+                style: const TextStyle(
                   fontSize: 14,
                   fontStyle: FontStyle.italic,
                   color: Colors.grey,
@@ -1123,16 +1138,13 @@ class EmergencyHomePage extends StatelessWidget {
       _isEmergencyMode = false;
       _deferredErrors.clear();
 
-      // 重新创建导航键
-      _navigatorKey = GlobalKey<NavigatorState>();
-
       // 重新运行main函数
       main();
     } catch (e) {
       logDebug('重启应用失败: $e');
       // 如果重启失败，尝试导航到主页
-      if (_navigatorKey.currentState != null) {
-        _navigatorKey.currentState!.pushAndRemoveUntil(
+      if (navigatorKey.currentState != null) {
+        navigatorKey.currentState!.pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const HomePage()),
           (route) => false,
         );
@@ -1156,9 +1168,10 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('紧急数据恢复'),
+        title: Text(l10n.emergencyBackupPageTitle),
         backgroundColor: Colors.orange,
       ),
       body: SafeArea(
@@ -1169,17 +1182,18 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
             children: [
               const Icon(Icons.data_saver_on, size: 64, color: Colors.orange),
               const SizedBox(height: 16),
-              const Text(
-                '数据紧急恢复工具',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              Text(
+                l10n.emergencyBackupToolTitle,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
-              const Text(
-                '由于应用发生了严重错误，您可以尝试：\n\n'
-                '1. 导出数据库文件 - 导出原始数据库文件供专业人员恢复\n'
-                '2. 尝试查看备份恢复页 - 注意：由于数据库可能损坏，此功能可能无法正常工作',
-                style: TextStyle(fontSize: 16),
+              Text(
+                l10n.emergencyBackupToolDesc,
+                style: const TextStyle(fontSize: 16),
               ),
               const SizedBox(height: 32),
               if (_isLoading)
@@ -1187,7 +1201,7 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
                   children: [
                     const CircularProgressIndicator(),
                     const SizedBox(height: 16),
-                    Text('正在处理...${_statusMessage ?? ""}'),
+                    Text(_statusMessage ?? l10n.emergencyProcessing),
                   ],
                 )
               else
@@ -1197,7 +1211,7 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
                     FilledButton.icon(
                       onPressed: _exportDatabaseFile,
                       icon: const Icon(Icons.folder),
-                      label: const Text('导出数据库文件'),
+                      label: Text(l10n.emergencyExportDatabaseButton),
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
@@ -1210,7 +1224,8 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
                         } catch (e) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('无法打开备份还原页面：$e'),
+                              content:
+                                  Text(l10n.emergencyOpenBackupFailed('$e')),
                               backgroundColor: Colors.red,
                               duration: const Duration(seconds: 3),
                             ),
@@ -1218,7 +1233,7 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
                         }
                       },
                       icon: const Icon(Icons.backup),
-                      label: const Text('尝试打开标准备份还原页面'),
+                      label: Text(l10n.emergencyOpenBackupPageButton),
                       style: FilledButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                       ),
@@ -1244,9 +1259,12 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
                   ),
                 ),
               const Spacer(),
-              const Text(
-                '提示: 导出的数据库文件可以发送给开发人员进行专业恢复。',
-                style: TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
+              Text(
+                l10n.emergencyExportHint,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontStyle: FontStyle.italic,
+                ),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -1257,9 +1275,10 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
   }
 
   Future<void> _exportDatabaseFile() async {
+    final l10n = AppLocalizations.of(this.context);
     setState(() {
       _isLoading = true;
-      _statusMessage = '正在定位数据库文件...';
+      _statusMessage = l10n.emergencyLocatingDatabase;
       _hasError = false;
     });
 
@@ -1274,7 +1293,7 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
       if (!dbFile.existsSync() && !oldDbFile.existsSync()) {
         setState(() {
           _isLoading = false;
-          _statusMessage = '未找到数据库文件';
+          _statusMessage = l10n.emergencyDatabaseNotFound;
           _hasError = true;
         });
         return;
@@ -1284,7 +1303,7 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
       final sourceFile = dbFile.existsSync() ? dbFile : oldDbFile;
 
       setState(() {
-        _statusMessage = '正在准备导出...';
+        _statusMessage = l10n.emergencyPreparingExport;
       });
 
       // 创建一个导出目录
@@ -1302,20 +1321,20 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
 
       // 复制文件
       setState(() {
-        _statusMessage = '正在复制文件...';
+        _statusMessage = l10n.emergencyCopyingFile;
       });
 
       await sourceFile.copy(exportFile.path);
 
       setState(() {
         _isLoading = false;
-        _statusMessage = '数据库文件已导出到: ${exportFile.path}';
+        _statusMessage = l10n.emergencyDatabaseExported(exportFile.path);
         _hasError = false;
       });
     } catch (e) {
       setState(() {
         _isLoading = false;
-        _statusMessage = '导出失败: $e';
+        _statusMessage = l10n.emergencyExportFailed('$e');
         _hasError = true;
       });
     }

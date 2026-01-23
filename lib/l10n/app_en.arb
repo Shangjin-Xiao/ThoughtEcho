@@ -132,6 +132,65 @@
   "settingsCheckUpdate": "Check for Updates",
   "settingsCheckUpdateDesc": "Check if a new version is available",
   "settingsClose": "Close",
+  "developerModeEnabled": "🎉 Developer mode enabled!",
+  "developerModeDisabled": "✅ Developer mode disabled",
+  "emergencyRecoveryTitle": "ThoughtEcho - Data Recovery",
+  "emergencyRecoveryHeading": "Database initialization failed",
+  "emergencyRecoveryDescription": "The app cannot start normally. The database may be corrupted or inaccessible.\n\nYou can try backing up existing data to prevent loss, or try restarting the app.",
+  "emergencyBackupAndRestoreButton": "Backup & restore data",
+  "emergencyTryRestartAppButton": "Try restarting the app",
+  "emergencyReinitializeFailed": "Reinitialize failed: {error}",
+  "@emergencyReinitializeFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyRecoveryHint": "Tip: If the issue persists, you may need to reinstall the app. Please back up your data beforehand.",
+  "emergencyAppTitle": "ThoughtEcho - Emergency Recovery",
+  "emergencyModeTitle": "Emergency Recovery Mode",
+  "emergencyAppStartFailedTitle": "App failed to start",
+  "emergencyAppStartFailedDesc": "A severe error occurred while starting ThoughtEcho. This may be caused by data corruption or storage permission issues.",
+  "emergencyErrorLabel": "Error:",
+  "emergencyTechnicalDetails": "Technical details",
+  "emergencyExitAppButton": "Exit app",
+  "emergencyPersistentIssueHint": "If the issue persists, try reinstalling the app or contact the developer for support.",
+  "emergencyBackupPageTitle": "Emergency Data Recovery",
+  "emergencyBackupToolTitle": "Emergency data recovery tool",
+  "emergencyBackupToolDesc": "Due to a critical error, you can try:\n\n1. Export database file - export the raw database file for professional recovery\n2. Try opening the backup & restore page - note: this may not work if the database is damaged",
+  "emergencyProcessing": "Processing...",
+  "emergencyExportDatabaseButton": "Export database file",
+  "emergencyOpenBackupPageButton": "Try opening standard backup & restore",
+  "emergencyOpenBackupFailed": "Unable to open backup & restore page: {error}",
+  "@emergencyOpenBackupFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyExportHint": "Tip: You can send the exported database file to the developer for recovery.",
+  "emergencyLocatingDatabase": "Locating database file...",
+  "emergencyDatabaseNotFound": "Database file not found",
+  "emergencyPreparingExport": "Preparing export...",
+  "emergencyCopyingFile": "Copying file...",
+  "emergencyDatabaseExported": "Database file exported to: {path}",
+  "@emergencyDatabaseExported": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyExportFailed": "Export failed: {error}",
+  "@emergencyExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "locationPermissionDenied": "Location permission denied, cannot enable location service",
   "enableLocationService": "Please Enable Location Service",
   "enableLocationServiceDesc": "ThoughtEcho needs access to your location to provide weather and other features. Please enable location service in system settings.",

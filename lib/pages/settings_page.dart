@@ -643,19 +643,27 @@ class SettingsPageState extends State<SettingsPage> {
                 ),
                 // 移至偏好设置页
                 // Add Logs Settings entry below
-                ListTile(
-                  title: Text(l10n.settingsLogs),
-                  subtitle: Text(l10n.settingsLogsDesc),
-                  leading: const Icon(
-                    Icons.article_outlined,
-                  ), // 或者 Icons.bug_report_outlined
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const LogsSettingsPage(),
-                      ),
+                Consumer<SettingsService>(
+                  builder: (context, settingsService, _) {
+                    // 仅在开发者模式下显示日志设置入口
+                    if (!settingsService.appSettings.developerMode) {
+                      return const SizedBox.shrink();
+                    }
+                    return ListTile(
+                      title: Text(l10n.settingsLogs),
+                      subtitle: Text(l10n.settingsLogsDesc),
+                      leading: const Icon(
+                        Icons.article_outlined,
+                      ), // 或者 Icons.bug_report_outlined
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const LogsSettingsPage(),
+                          ),
+                        );
+                      },
                     );
                   },
                 ),
@@ -980,14 +988,18 @@ class SettingsPageState extends State<SettingsPage> {
         currentSettings.copyWith(developerMode: newDeveloperMode),
       );
 
+      // 同步更新日志服务的持久化状态
+      UnifiedLogService.instance.setPersistenceEnabled(newDeveloperMode);
+
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             newDeveloperMode
-                ? '🎉 开发者模式已开启！Developer Mode Enabled!'
-                : '✅ 开发者模式已关闭 Developer Mode Disabled',
+                ? l10n.developerModeEnabled
+                : l10n.developerModeDisabled,
           ),
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,

@@ -213,6 +213,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
   // logging_flutter 的 logger
   late logging.Logger _logger;
+  bool _loggerInitialized = false;
 
   // 日志数据库服务
   final LogDatabaseService _logDb = LogDatabaseService();
@@ -238,6 +239,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
   // 提供只读访问
   List<LogEntry> get logs => List.unmodifiable(_memoryLogs);
   UnifiedLogLevel get currentLevel => _currentLevel;
+  bool get isPersistenceEnabled => _isPersistenceEnabled;
   Map<UnifiedLogLevel, int> get logStats => Map.unmodifiable(_logStats);
   DateTime? get lastLogTime => _lastLogTime;
 
@@ -251,6 +253,9 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
   // 标志位，防止日志记录的无限递归
   bool _isLogging = false;
+
+  // 标志位，控制是否持久化日志（默认关闭，由开发者模式控制）
+  bool _isPersistenceEnabled = false;
 
   // 日志性能监控
   int _logOperationCount = 0;
@@ -279,6 +284,11 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
         await _initCompleter!.future;
       } catch (_) {}
       return;
+    }
+
+    if (!_loggerInitialized) {
+      _logger = logging.Logger('ThoughtEcho');
+      _loggerInitialized = true;
     }
 
     try {
@@ -388,6 +398,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
     // 创建应用专用的 logger
     _logger = logging.Logger('ThoughtEcho');
+    _loggerInitialized = true;
 
     // 添加控制台输出处理器
     logging.Logger.root.onRecord.listen((record) {
@@ -543,8 +554,30 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     });
   }
 
+  /// 启用或禁用日志持久化（对应开发者模式）
+  void setPersistenceEnabled(bool enabled) {
+    if (_isPersistenceEnabled != enabled) {
+      _isPersistenceEnabled = enabled;
+      log(
+        UnifiedLogLevel.info,
+        '日志持久化已${enabled ? "启用" : "禁用"}',
+        source: 'UnifiedLogService',
+      );
+      // 如果禁用了持久化，立即清除待处理的日志
+      if (!enabled) {
+        _pendingLogs.clear();
+      }
+      notifyListeners();
+    }
+  }
+
   /// 添加日志条目到内存缓存和待处理队列
   void _addLogEntry(LogEntry entry) {
+    // 始终添加到内存缓存，以便在启用开发者模式后能看到当前的即时日志（可选）
+    // 或者，如果要求"默认无日志"，也可以在这里拦截内存缓存。
+    // 但通常保留内存缓存有助于查看刚刚发生的错误，且内存开销可控。
+    // 这里我们保留内存缓存，但控制持久化。
+
     // 添加到内存缓存，保持最新的日志在前面
     _memoryLogs.insert(0, entry);
 
@@ -552,9 +585,6 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     if (_memoryLogs.length > _maxInMemoryLogs) {
       _memoryLogs.removeLast();
     }
-
-    // 添加到待处理队列，准备写入数据库
-    _pendingLogs.add(entry);
 
     // 更新日志统计信息
     _logStats[entry.level] = (_logStats[entry.level] ?? 0) + 1;
@@ -564,6 +594,14 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     _logOperationCount++;
     _sourceStats[entry.source ?? 'unknown'] =
         (_sourceStats[entry.source ?? 'unknown'] ?? 0) + 1;
+
+    // 只有在启用持久化时，才添加到待处理队列准备写入数据库
+    // 唯一的例外是：如果这是紧急错误且我们处于特定模式？
+    // 根据需求："默认无日志...在程序开发者模式下才显示日志入口和开启日志记录功能"
+    // 因此，如果未开启开发者模式（_isPersistenceEnabled == false），则不写入数据库。
+    if (_isPersistenceEnabled) {
+      _pendingLogs.add(entry);
+    }
 
     // 延迟通知监听器，避免在 build 方法中直接调用
     if (!_notifyScheduled) {
@@ -576,8 +614,8 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
       });
     }
 
-    // 对错误级别的日志进行更积极的持久化，减少进程被杀前的丢失风险（Android常见）
-    if (entry.level == UnifiedLogLevel.error) {
+    // 对错误级别的日志进行更积极的持久化，但仅当持久化启用时
+    if (_isPersistenceEnabled && entry.level == UnifiedLogLevel.error) {
       // 忽略返回的 Future，避免阻塞 UI 线程
       // ignore: discarded_futures
       flushLogs();
