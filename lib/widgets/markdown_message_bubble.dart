@@ -127,9 +127,20 @@ class MarkdownMessageBubble extends StatelessWidget {
     }
   }
 
-  void _handleLinkTap(String text, String? href, String title) {
-    if (href != null) {
-      launchUrl(Uri.parse(href), mode: LaunchMode.externalApplication);
+  Future<void> _handleLinkTap(String text, String? href, String title) async {
+    if (href == null || href.isEmpty) return;
+
+    try {
+      final uri = Uri.tryParse(href);
+      if (uri == null) return;
+
+      // 检查是否可以打开该链接
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      // 忽略链接打开失败的异常，避免崩溃
+      debugPrint('无法打开链接: $href, 错误: $e');
     }
   }
 
