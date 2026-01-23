@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
+import 'package:workmanager/workmanager.dart'; // Add this import
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
 
@@ -88,7 +89,15 @@ class SmartPushService extends ChangeNotifier {
       await _loadSettings();
       await _initializeNotifications();
 
-      // Android 平台特定初始化
+      // 初始化 WorkManager (支持 iOS 和 Android)
+      if (!kIsWeb) {
+        await Workmanager().initialize(
+          callbackDispatcher, // 这是一个顶层函数，需要在 background_push_handler.dart 中定义
+          isInDebugMode: kDebugMode, // 调试模式下会显示通知
+        );
+      }
+
+      // Android 平台特定初始化 (保留用于精确定时，作为 WorkManager 的补充)
       if (!kIsWeb && Platform.isAndroid) {
         await AndroidAlarmManager.initialize();
       }
@@ -659,8 +668,8 @@ class SmartPushService extends ChangeNotifier {
   /// 调度单个 Alarm
   Future<void> _scheduleSingleAlarm(
       int idIndex, tz.TZDateTime scheduledDate, PushTimeSlot slot) async {
+    // 1. Android: 优先使用 AlarmManager 实现精确定时
     if (!kIsWeb && Platform.isAndroid) {
-      // Android: 使用 AlarmManager 实现精确定时
       try {
         await AndroidAlarmManager.oneShotAt(
           scheduledDate,
@@ -675,11 +684,40 @@ class SmartPushService extends ChangeNotifier {
             '已设定常规 Alarm: $scheduledDate (ID: ${_androidAlarmId + idIndex})');
       } catch (e) {
         AppLogger.e('设定常规 Alarm 失败', error: e);
-        // 降级到普通通知调度
+        // 降级到普通通知
         await _scheduleLocalNotification(idIndex, scheduledDate, slot);
       }
-    } else {
-      // iOS 和其他平台：使用本地通知调度
+    }
+    // 2. iOS: 使用 WorkManager 注册后台任务
+    else if (!kIsWeb && Platform.isIOS) {
+      // iOS 使用本地通知作为用户可见的提醒
+      await _scheduleLocalNotification(idIndex, scheduledDate, slot);
+
+      // 同时注册 WorkManager 任务以执行后台逻辑（如数据刷新）
+      // 注意：iOS 不支持精确定时执行代码，这里注册的是一次性任务，
+      // 系统会在"合适的时候"运行。为了周期性检查，我们使用 registerOneOffTask
+      // 并在执行完后重新注册。
+      try {
+        // 计算初始延迟
+        final now = DateTime.now();
+        final delay = scheduledDate.difference(now);
+
+        await Workmanager().registerOneOffTask(
+          'ios_push_check_$idIndex', // 唯一ID
+          'com.shangjin.thoughtecho.backgroundPush', // 任务名称
+          initialDelay: delay > Duration.zero ? delay : Duration.zero,
+          constraints: Constraints(
+            networkType: NetworkType.connected, // 需要网络来获取天气/一言
+          ),
+          existingWorkPolicy: ExistingWorkPolicy.replace,
+        );
+        AppLogger.i('已注册 iOS 后台任务: 延迟 ${delay.inMinutes} 分钟');
+      } catch (e) {
+        AppLogger.w('注册 iOS 后台任务失败', error: e);
+      }
+    }
+    // 3. 其他平台：仅本地通知
+    else {
       await _scheduleLocalNotification(idIndex, scheduledDate, slot);
     }
   }
