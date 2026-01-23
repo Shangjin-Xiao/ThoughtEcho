@@ -164,19 +164,19 @@ class CardTemplates {
   </g>
 
   <!-- 元数据 (带图标) -->
-  <g transform="translate(55, 500)">
-    <g opacity="0.6">
+  <g transform="translate(55, 510)">
+    <g opacity="0.8">
       <path d="$_calendarIcon" transform="scale(0.6)" fill="white"/>
-      <text x="18" y="10" fill="white" font-family="system-ui, sans-serif" font-size="10">${_escape(date ?? '')}</text>
+      <text x="22" y="10" fill="white" font-family="system-ui, sans-serif" font-size="10" font-weight="500">${_escape(date ?? '')}</text>
     </g>
     
-    <g transform="translate(0, 20)" opacity="0.6">
+    <g transform="translate(0, 25)" opacity="0.8">
       <path d="$_locationIcon" transform="scale(0.6)" fill="white"/>
-      <text x="18" y="10" fill="white" font-family="system-ui, sans-serif" font-size="10">${_escape(location ?? '')} ${temperature ?? ''}</text>
+      <text x="22" y="10" fill="white" font-family="system-ui, sans-serif" font-size="10" font-weight="500">${_escape(location ?? '')} ${temperature ?? ''} ${weather ?? ''}</text>
     </g>
 
-    <g transform="translate(240, 10)" text-anchor="end">
-      <text x="50" y="10" fill="white" font-family="system-ui, sans-serif" font-size="10" opacity="0.4">${_escape(author ?? brandName)}</text>
+    <g transform="translate(240, 15)" text-anchor="end">
+      <text x="50" y="10" fill="white" font-family="system-ui, sans-serif" font-size="10" opacity="0.6">${_escape(author ?? brandName)}</text>
     </g>
   </g>
 </svg>
@@ -1199,9 +1199,12 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#2C1810',
     for (int i = 0; i < textLines.length; i++) {
       final y = contentStartY + i * lineSpacing;
       // 黄色高亮背景条
-      // 估算文字宽度 (粗略)
-      double estimatedWidth =
-          textLines[i].length * _contentFontSize * 0.7; // 调整系数
+      // 估算文字宽度 (精确)
+      double estimatedWidth = 0;
+      for (final char in textLines[i].runes) {
+        estimatedWidth += (char > 255 ? 1.05 : 0.65) * _contentFontSize;
+      }
+
       buffer.writeln(
           '<rect x="40" y="${y - _contentFontSize + 4}" width="${estimatedWidth + 20}" height="${_contentFontSize + 4}" fill="#FFD700" stroke="black" stroke-width="2"/>');
       buffer.writeln(
@@ -1320,7 +1323,7 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#ffffff',
     const contentAreaTop = 120.0;
     const contentAreaHeight = 340.0;
     final maxLines = _calculateMaxLines(contentAreaHeight);
-    final textLines = _wrapText(content, 18, maxLines);
+    final textLines = _wrapText(content, 14, maxLines);
     final metaText = _buildMetaText(
         date: date,
         location: location,
@@ -1411,7 +1414,7 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#ffffff',
     }
 
     // 重新计算剩余文本的行
-    final remainingLines = _wrapText(remainingText, 18, maxLines);
+    final remainingLines = _wrapText(remainingText, 15, maxLines);
     final contentHeight =
         remainingLines.length * _contentFontSize * _lineHeight;
     final contentStartY = contentAreaTop +
@@ -1422,15 +1425,15 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#ffffff',
     final buffer = StringBuffer();
     final lineSpacing = _contentFontSize * _lineHeight;
 
-    // 首字母大写占位
+    // 首字母大写占位 (Drop Cap)
     buffer.writeln(
-        '<text x="50" y="${contentStartY + 10}" text-anchor="start" fill="#000000" font-family="Times New Roman, serif" font-size="64" font-weight="bold">${_escape(firstChar)}</text>');
+        '<text x="40" y="${contentStartY + 32}" text-anchor="start" fill="#000000" font-family="Times New Roman, serif" font-size="64" font-weight="bold">${_escape(firstChar)}</text>');
 
     // 渲染剩余行
     for (int i = 0; i < remainingLines.length; i++) {
       double y = contentStartY + i * lineSpacing;
-      // 第一行缩进
-      double x = (i == 0) ? 90.0 : 50.0;
+      // 前两行缩进以避开首字母
+      double x = (i < 2) ? 100.0 : 40.0;
       buffer.writeln(
           '<text x="$x" y="$y" text-anchor="start" fill="#333333" font-family="Georgia, serif" font-size="${_contentFontSize}">${_escape(remainingLines[i])}</text>');
     }
