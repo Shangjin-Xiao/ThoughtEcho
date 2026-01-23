@@ -103,6 +103,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   // 一言标签加载状态
   bool _isLoadingHitokotoTags = false;
 
+  // 保存状态
+  bool _isSaving = false;
+
   // AI推荐标签相关状态
   // 预留：后续接入本地 embedding/标签推荐时使用
 
@@ -1513,7 +1516,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                       ),
                     ),
                   ),
-                  onPressed: () => Navigator.pop(context),
+                  onPressed:
+                      _isSaving ? null : () => Navigator.pop(context),
                   child: Text(l10n.cancel),
                 ),
                 const SizedBox(width: 8),
@@ -1525,65 +1529,70 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                       ),
                     ),
                   ),
-                  onPressed: () async {
+                  // 保存时保持按钮样式但不响应点击，避免视觉闪烁
+                  onPressed: _isSaving ? () {} : () async {
                     if (_contentController.text.isNotEmpty) {
-                      // 获取当前时间段
-                      final String currentDayPeriodKey =
-                          TimeUtils.getCurrentDayPeriodKey(); // 使用 Key
-
-                      // 创建或更新笔记
-                      // 使用实时获取的位置（新建）或原始位置（编辑）
-                      final isEditing = widget.initialQuote != null;
-
-                      final Quote quote = Quote(
-                        id: widget.initialQuote?.id ?? const Uuid().v4(),
-                        content: _contentController.text,
-                        date: widget.initialQuote?.date ??
-                            DateTime.now().toIso8601String(),
-                        aiAnalysis: _aiSummary,
-                        source: _formatSource(
-                          _authorController.text,
-                          _workController.text,
-                        ),
-                        sourceAuthor: _authorController.text,
-                        sourceWork: _workController.text,
-                        tagIds: _selectedTagIds,
-                        sentiment: widget.initialQuote?.sentiment,
-                        keywords: widget.initialQuote?.keywords,
-                        summary: widget.initialQuote?.summary,
-                        categoryId: _selectedCategory?.id ??
-                            widget.initialQuote?.categoryId,
-                        colorHex: _selectedColorHex,
-                        location: _includeLocation
-                            ? (isEditing
-                                ? _originalLocation
-                                : _newLocation ??
-                                    _cachedLocationService
-                                        ?.getFormattedLocation())
-                            : null,
-                        latitude: _includeLocation
-                            ? (isEditing ? _originalLatitude : _newLatitude)
-                            : null,
-                        longitude: _includeLocation
-                            ? (isEditing ? _originalLongitude : _newLongitude)
-                            : null,
-                        weather: _includeWeather
-                            ? (isEditing
-                                ? _originalWeather
-                                : _cachedWeatherService?.currentWeather)
-                            : null,
-                        temperature: _includeWeather
-                            ? (isEditing
-                                ? _originalTemperature
-                                : _cachedWeatherService?.temperature)
-                            : null,
-                        dayPeriod: widget.initialQuote?.dayPeriod ??
-                            currentDayPeriodKey, // 保存 Key
-                        editSource: widget.initialQuote?.editSource, // 保证兼容
-                        deltaContent: widget.initialQuote?.deltaContent, // 保证兼容
-                      );
-
+                      setState(() {
+                        _isSaving = true;
+                      });
                       try {
+                        // 获取当前时间段
+                        final String currentDayPeriodKey =
+                            TimeUtils.getCurrentDayPeriodKey(); // 使用 Key
+
+                        // 创建或更新笔记
+                        // 使用实时获取的位置（新建）或原始位置（编辑）
+                        final isEditing = widget.initialQuote != null;
+
+                        final Quote quote = Quote(
+                          id: widget.initialQuote?.id ?? const Uuid().v4(),
+                          content: _contentController.text,
+                          date: widget.initialQuote?.date ??
+                              DateTime.now().toIso8601String(),
+                          aiAnalysis: _aiSummary,
+                          source: _formatSource(
+                            _authorController.text,
+                            _workController.text,
+                          ),
+                          sourceAuthor: _authorController.text,
+                          sourceWork: _workController.text,
+                          tagIds: _selectedTagIds,
+                          sentiment: widget.initialQuote?.sentiment,
+                          keywords: widget.initialQuote?.keywords,
+                          summary: widget.initialQuote?.summary,
+                          categoryId: _selectedCategory?.id ??
+                              widget.initialQuote?.categoryId,
+                          colorHex: _selectedColorHex,
+                          location: _includeLocation
+                              ? (isEditing
+                                  ? _originalLocation
+                                  : _newLocation ??
+                                      _cachedLocationService
+                                          ?.getFormattedLocation())
+                              : null,
+                          latitude: _includeLocation
+                              ? (isEditing ? _originalLatitude : _newLatitude)
+                              : null,
+                          longitude: _includeLocation
+                              ? (isEditing ? _originalLongitude : _newLongitude)
+                              : null,
+                          weather: _includeWeather
+                              ? (isEditing
+                                  ? _originalWeather
+                                  : _cachedWeatherService?.currentWeather)
+                              : null,
+                          temperature: _includeWeather
+                              ? (isEditing
+                                  ? _originalTemperature
+                                  : _cachedWeatherService?.temperature)
+                              : null,
+                          dayPeriod: widget.initialQuote?.dayPeriod ??
+                              currentDayPeriodKey, // 保存 Key
+                          editSource: widget.initialQuote?.editSource, // 保证兼容
+                          deltaContent:
+                              widget.initialQuote?.deltaContent, // 保证兼容
+                        );
+
                         final db = Provider.of<DatabaseService>(
                           context,
                           listen: false,
@@ -1643,14 +1652,29 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                             ),
                           );
                         }
+                      } finally {
+                         if (mounted) {
+                           setState(() {
+                             _isSaving = false;
+                           });
+                         }
                       }
                     }
                   },
-                  child: Text(
-                    widget.initialQuote != null
-                        ? AppLocalizations.of(context).edit
-                        : AppLocalizations.of(context).save,
-                  ),
+                  child: _isSaving
+                      ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: theme.colorScheme.onPrimary,
+                          ),
+                        )
+                      : Text(
+                          widget.initialQuote != null
+                              ? AppLocalizations.of(context).edit
+                              : AppLocalizations.of(context).save,
+                        ),
                 ),
               ],
             ),
