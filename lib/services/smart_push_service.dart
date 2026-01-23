@@ -93,7 +93,6 @@ class SmartPushService extends ChangeNotifier {
       if (!kIsWeb) {
         await Workmanager().initialize(
           callbackDispatcher, // 这是一个顶层函数，需要在 background_push_handler.dart 中定义
-          isInDebugMode: kDebugMode, // 调试模式下会显示通知
         );
       }
 
@@ -105,12 +104,103 @@ class SmartPushService extends ChangeNotifier {
       // 每次启动时重新规划下一次推送
       if (_settings.enabled) {
         await scheduleNextPush();
+
+        // 仅当精确闹钟权限不可用时，才注册周期性备用任务（省电）
+        if (!kIsWeb && Platform.isAndroid) {
+          final canScheduleExact = await _canScheduleExactAlarms();
+          if (!canScheduleExact) {
+            await _registerPeriodicFallbackTask();
+          } else {
+            // 有精确闹钟权限，取消周期性任务节省电量
+            await _cancelPeriodicFallbackTask();
+          }
+        }
       }
 
       _isInitialized = true;
       AppLogger.i('SmartPushService 初始化完成');
     } catch (e, stack) {
       AppLogger.e('SmartPushService 初始化失败', error: e, stackTrace: stack);
+    }
+  }
+
+  /// 注册 WorkManager 周期性备用任务
+  ///
+  /// 当 Android 12+ 精确闹钟权限被拒绝或系统限制后台执行时，
+  /// 这个周期性任务（每15分钟）会检查是否有遗漏的推送
+  Future<void> _registerPeriodicFallbackTask() async {
+    if (kIsWeb) return;
+
+    try {
+      // 注册周期性任务（最小间隔15分钟）
+      await Workmanager().registerPeriodicTask(
+        'smart_push_periodic_check',
+        kPeriodicCheckTask,
+        frequency: const Duration(minutes: 15),
+      );
+      AppLogger.i('已注册 WorkManager 周期性备用任务（15分钟间隔）');
+    } catch (e) {
+      AppLogger.w('注册周期性备用任务失败', error: e);
+    }
+  }
+
+  /// 取消周期性备用任务
+  Future<void> _cancelPeriodicFallbackTask() async {
+    if (kIsWeb) return;
+
+    try {
+      await Workmanager().cancelByUniqueName('smart_push_periodic_check');
+      AppLogger.d('已取消 WorkManager 周期性备用任务');
+    } catch (e) {
+      AppLogger.w('取消周期性备用任务失败', error: e);
+    }
+  }
+
+  /// 检查是否可以调度精确闹钟
+  ///
+  /// Android 12+ 需要 SCHEDULE_EXACT_ALARM 权限，Android 14+ 默认不授予
+  Future<bool> _canScheduleExactAlarms() async {
+    if (kIsWeb || !Platform.isAndroid) return true;
+
+    try {
+      final androidPlugin =
+          _notificationsPlugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      if (androidPlugin != null) {
+        final canSchedule =
+            await androidPlugin.canScheduleExactNotifications() ?? false;
+        return canSchedule;
+      }
+      return true; // 无法确定时默认允许
+    } catch (e) {
+      AppLogger.w('检查精确闹钟权限失败', error: e);
+      return false; // 失败时保守处理，使用降级方案
+    }
+  }
+
+  /// WorkManager 降级方案
+  ///
+  /// 当精确闹钟不可用时，使用 WorkManager 一次性任务作为备用
+  Future<void> _scheduleWorkManagerFallback(
+      int idIndex, tz.TZDateTime scheduledDate, PushTimeSlot slot) async {
+    try {
+      final now = DateTime.now();
+      final delay = scheduledDate.difference(now);
+
+      // 使用 WorkManager 一次性任务
+      await Workmanager().registerOneOffTask(
+        'android_push_fallback_$idIndex',
+        kBackgroundPushTask,
+        initialDelay: delay > Duration.zero ? delay : Duration.zero,
+      );
+      AppLogger.i('已使用 WorkManager 降级方案调度推送: 延迟 ${delay.inMinutes} 分钟');
+
+      // 同时调度本地通知作为用户可见的提醒
+      await _scheduleLocalNotification(idIndex, scheduledDate, slot);
+    } catch (e) {
+      AppLogger.e('WorkManager 降级方案也失败', error: e);
+      // 最后的降级：仅本地通知
+      await _scheduleLocalNotification(idIndex, scheduledDate, slot);
     }
   }
 
@@ -475,29 +565,58 @@ class SmartPushService extends ChangeNotifier {
       final scheduledDate = _nextInstanceOfTime(slot.hour, slot.minute);
 
       if (!kIsWeb && Platform.isAndroid) {
-        try {
-          await AndroidAlarmManager.oneShotAt(
-            scheduledDate,
-            _dailyQuoteAlarmId,
-            backgroundPushCallback,
-            exact: true,
-            wakeup: true,
-            rescheduleOnReboot: true,
-            allowWhileIdle: true,
-          );
-          AppLogger.i(
-              '已设定每日一言 Alarm: $scheduledDate (ID: $_dailyQuoteAlarmId)');
-        } catch (e) {
-          AppLogger.e('设定每日一言 Alarm 失败', error: e);
-          // 降级
-          await _scheduleLocalNotification(100, scheduledDate, slot,
-              isDailyQuote: true);
+        // 先检查精确闹钟权限
+        final canScheduleExact = await _canScheduleExactAlarms();
+
+        if (canScheduleExact) {
+          try {
+            await AndroidAlarmManager.oneShotAt(
+              scheduledDate,
+              _dailyQuoteAlarmId,
+              backgroundPushCallback,
+              exact: true,
+              wakeup: true,
+              rescheduleOnReboot: true,
+              allowWhileIdle: true,
+            );
+            AppLogger.i(
+                '已设定每日一言 Alarm: $scheduledDate (ID: $_dailyQuoteAlarmId)');
+          } catch (e) {
+            AppLogger.e('设定每日一言 Alarm 失败', error: e);
+            // 降级到 WorkManager + 本地通知
+            await _scheduleDailyQuoteWorkManagerFallback(scheduledDate, slot);
+          }
+        } else {
+          AppLogger.w('精确闹钟权限被拒绝，每日一言使用 WorkManager 降级方案');
+          await _scheduleDailyQuoteWorkManagerFallback(scheduledDate, slot);
         }
       } else {
         await _scheduleLocalNotification(100, scheduledDate, slot,
             isDailyQuote: true);
       }
     }
+  }
+
+  /// 每日一言 WorkManager 降级方案
+  Future<void> _scheduleDailyQuoteWorkManagerFallback(
+      tz.TZDateTime scheduledDate, PushTimeSlot slot) async {
+    try {
+      final now = DateTime.now();
+      final delay = scheduledDate.difference(now);
+
+      await Workmanager().registerOneOffTask(
+        'daily_quote_fallback',
+        kBackgroundPushTask,
+        initialDelay: delay > Duration.zero ? delay : Duration.zero,
+      );
+      AppLogger.i('已使用 WorkManager 调度每日一言: 延迟 ${delay.inMinutes} 分钟');
+    } catch (e) {
+      AppLogger.w('每日一言 WorkManager 降级失败', error: e);
+    }
+
+    // 同时调度本地通知作为用户可见的提醒
+    await _scheduleLocalNotification(100, scheduledDate, slot,
+        isDailyQuote: true);
   }
 
   /// 智能推送时间计算算法 (SOTA v2)
@@ -670,23 +789,33 @@ class SmartPushService extends ChangeNotifier {
       int idIndex, tz.TZDateTime scheduledDate, PushTimeSlot slot) async {
     // 1. Android: 优先使用 AlarmManager 实现精确定时
     if (!kIsWeb && Platform.isAndroid) {
-      try {
-        await AndroidAlarmManager.oneShotAt(
-          scheduledDate,
-          _androidAlarmId + idIndex,
-          backgroundPushCallback,
-          exact: true,
-          wakeup: true,
-          rescheduleOnReboot: true,
-          allowWhileIdle: true,
-        );
-        AppLogger.i(
-            '已设定常规 Alarm: $scheduledDate (ID: ${_androidAlarmId + idIndex})');
-      } catch (e) {
-        AppLogger.e('设定常规 Alarm 失败', error: e);
-        // 降级到普通通知
-        await _scheduleLocalNotification(idIndex, scheduledDate, slot);
+      // 先检查精确闹钟权限
+      final canScheduleExact = await _canScheduleExactAlarms();
+
+      if (canScheduleExact) {
+        try {
+          await AndroidAlarmManager.oneShotAt(
+            scheduledDate,
+            _androidAlarmId + idIndex,
+            backgroundPushCallback,
+            exact: true,
+            wakeup: true,
+            rescheduleOnReboot: true,
+            allowWhileIdle: true,
+          );
+          AppLogger.i(
+              '已设定常规 Alarm: $scheduledDate (ID: ${_androidAlarmId + idIndex})');
+          return; // 成功，直接返回
+        } catch (e) {
+          AppLogger.e('设定常规 Alarm 失败', error: e);
+          // 继续降级处理
+        }
+      } else {
+        AppLogger.w('精确闹钟权限被拒绝，使用 WorkManager 降级方案');
       }
+
+      // Android 降级方案: 使用 WorkManager 一次性任务
+      await _scheduleWorkManagerFallback(idIndex, scheduledDate, slot);
     }
     // 2. iOS: 使用 WorkManager 注册后台任务
     else if (!kIsWeb && Platform.isIOS) {
@@ -791,6 +920,8 @@ class SmartPushService extends ChangeNotifier {
       // 取消每日一言
       await AndroidAlarmManager.cancel(_dailyQuoteAlarmId);
     }
+    // 取消 WorkManager 周期性任务
+    await _cancelPeriodicFallbackTask();
   }
 
   /// 计算下一个时间点

@@ -3158,5 +3158,8 @@
   "smartPushModeCustom": "Custom Push",
   "smartPushModeCustomDesc": "Manually select review types and filters",
   "smartPushExactAlarmHint": "Enable exact alarm permission for reliable push notifications",
+  "smartPushExactAlarmTitle": "Exact Alarm Permission",
+  "smartPushExactAlarmMessage": "To ensure notifications arrive on time, please grant exact alarm permission. You can still use push without it, but timing may vary by a few minutes.",
+  "smartPushGoToSettings": "Go to Settings",
   "recommended": "Recommended"
 }

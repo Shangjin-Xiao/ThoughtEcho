@@ -129,6 +129,9 @@ void backgroundPushCallback() async {
 
 /// 后台定时检查入口（周期性任务）
 /// 用于定期检查是否需要推送，而不是依赖精确的闹钟
+///
+/// 这是 Android 12+ 精确闹钟权限被拒绝时的备用方案
+/// 每15分钟检查一次是否有遗漏的推送
 @pragma('vm:entry-point')
 void backgroundPeriodicCheck() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -159,7 +162,6 @@ void backgroundPeriodicCheck() async {
 
     await pushService.loadSettingsForBackground();
 
-    // 检查当前时间是否在任何时间槽附近（±5分钟）
     final now = DateTime.now();
     final settings = pushService.settings;
 
@@ -168,19 +170,40 @@ void backgroundPeriodicCheck() async {
       return;
     }
 
-    for (final slot in settings.pushTimeSlots) {
-      if (!slot.enabled) continue;
+    // 检查常规推送时间槽（扩大窗口到±10分钟，因为周期性任务不精确）
+    bool pushedRegular = false;
+    if (settings.shouldPushToday()) {
+      for (final slot in settings.pushTimeSlots) {
+        if (!slot.enabled) continue;
 
-      final slotTime =
-          DateTime(now.year, now.month, now.day, slot.hour, slot.minute);
-      final diff = now.difference(slotTime).inMinutes.abs();
+        final slotTime =
+            DateTime(now.year, now.month, now.day, slot.hour, slot.minute);
+        final diff = now.difference(slotTime).inMinutes;
 
-      if (diff <= 5) {
-        AppLogger.i('当前时间接近推送时间槽 ${slot.formattedTime}，触发推送');
-        await pushService.checkAndPush(isBackground: true);
-        break;
+        // 在时间槽之后0-10分钟内触发（避免重复推送）
+        if (diff >= 0 && diff <= 10) {
+          AppLogger.i('周期性检查：当前时间接近推送时间槽 ${slot.formattedTime}，触发推送');
+          await pushService.checkAndPush(isBackground: true);
+          pushedRegular = true;
+          break;
+        }
       }
     }
+
+    // 检查每日一言推送
+    if (settings.dailyQuotePushEnabled && !pushedRegular) {
+      final dailySlot = settings.dailyQuotePushTime;
+      final dailyTime = DateTime(
+          now.year, now.month, now.day, dailySlot.hour, dailySlot.minute);
+      final dailyDiff = now.difference(dailyTime).inMinutes;
+
+      if (dailyDiff >= 0 && dailyDiff <= 10) {
+        AppLogger.i('周期性检查：当前时间接近每日一言时间 ${dailySlot.formattedTime}，触发推送');
+        await pushService.checkAndPush(isBackground: true);
+      }
+    }
+
+    AppLogger.i('后台周期性检查完成');
   } catch (e, stack) {
     AppLogger.e('后台周期性检查失败', error: e, stackTrace: stack);
   }
