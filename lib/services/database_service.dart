@@ -3901,7 +3901,8 @@ class DatabaseService extends ChangeNotifier {
             // storedPath 可能是相对路径（相对于应用文档目录）
             String absolutePath = storedPath;
             try {
-              if (!absolutePath.startsWith('/')) {
+              // 使用 path.isAbsolute 来判断是否为绝对路径，兼容 Windows/Linux/macOS
+              if (!isAbsolute(absolutePath)) {
                 // 简单判断相对路径
                 final appDir = await getApplicationDocumentsDirectory();
                 absolutePath = join(appDir.path, storedPath);

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart'; // Add kIsWeb import
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:io';
@@ -582,12 +583,13 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
         // URL方式失败，继续尝试其他方法
       }
 
-      // 方法3：移动端专用 - 尝试使用HTTP服务器方式
-      if (Platform.isAndroid || Platform.isIOS) {
+      // 方法3：尝试使用HTTP服务器方式 (通用且更可靠，支持 Windows/iOS/Android)
+      if (!kIsWeb) {
         try {
           await _openInBrowserViaTempServer(contentToWrite);
           return;
         } catch (serverError) {
+          debugPrint('HTTP服务器方式失败: $serverError');
           // 服务器方式失败，继续尝试其他方法
         }
       }
@@ -619,6 +621,68 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
 
   /// 移动端专用：通过临时HTTP服务器在浏览器中打开HTML内容
   Future<void> _openInBrowserViaTempServer(String htmlContent) async {
+    // 1. 尝试使用本地HTTP服务器方式 (iOS/Android通用且更可靠)
+    HttpServer? server;
+    try {
+      // 绑定到本地回环地址的随机端口
+      server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+
+      // 处理请求
+      server.listen((HttpRequest request) {
+        // 设置正确的ContentType和编码，防止乱码
+        request.response.headers.contentType =
+            ContentType('text', 'html', charset: 'utf-8');
+        request.response.headers.add('Access-Control-Allow-Origin', '*');
+
+        // 写入HTML内容
+        request.response.write(htmlContent);
+        request.response.close();
+      });
+
+      // 构建localhost URL
+      final uri = Uri.parse(
+          'http://127.0.0.1:${server.port}/annual_report_${widget.year}.html');
+
+      // 使用外部浏览器打开
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Text(l10n.reportOpenedInBrowser),
+                ],
+              ),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              duration: AppConstants.snackBarDurationNormal,
+            ),
+          );
+        }
+
+        // 延迟关闭服务器，给予用户足够的时间加载页面
+        // 注意：页面加载完成后，服务器关闭不会影响查看，但刷新会失效
+        Future.delayed(const Duration(minutes: 5), () {
+          try {
+            server?.close(force: true);
+            debugPrint('临时报告服务器已自动关闭');
+          } catch (_) {}
+        });
+
+        return; // 成功打开，直接返回
+      }
+    } catch (e) {
+      debugPrint('HTTP服务器方式打开失败: $e');
+      try {
+        server?.close(force: true);
+      } catch (_) {}
+      // 继续执行后续的Fallback逻辑
+    }
+
+    // 2. Fallback: 原有的文件方式 (对于某些Android设备可能有效，或者作为失败后的各种尝试)
     try {
       // 创建临时文件
       final tempDir = await getTemporaryDirectory();
@@ -680,7 +744,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
         );
       }
     } catch (e) {
-      throw Exception('临时服务器方式失败: $e');
+      throw Exception('打开浏览器失败: $e');
     }
   }
 
