@@ -132,6 +132,65 @@
   "settingsCheckUpdate": "检查更新",
   "settingsCheckUpdateDesc": "检查是否有新版本可用",
   "settingsClose": "关闭",
+  "developerModeEnabled": "🎉 开发者模式已开启！",
+  "developerModeDisabled": "✅ 开发者模式已关闭",
+  "emergencyRecoveryTitle": "心迹 - 数据恢复",
+  "emergencyRecoveryHeading": "数据库初始化失败",
+  "emergencyRecoveryDescription": "应用无法正常启动。可能是数据库损坏或无法访问。\n\n您可以尝试备份现有数据以防数据丢失，或尝试重新启动应用。",
+  "emergencyBackupAndRestoreButton": "备份和恢复数据",
+  "emergencyTryRestartAppButton": "尝试重新启动应用",
+  "emergencyReinitializeFailed": "重新初始化失败: {error}",
+  "@emergencyReinitializeFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyRecoveryHint": "提示: 如果问题持续存在，可能需要重新安装应用。请确保在此之前备份您的数据。",
+  "emergencyAppTitle": "心迹 - 紧急恢复",
+  "emergencyModeTitle": "紧急恢复模式",
+  "emergencyAppStartFailedTitle": "应用启动失败",
+  "emergencyAppStartFailedDesc": "心迹应用启动过程中发生严重错误。这可能是由于数据损坏或者存储权限问题导致。",
+  "emergencyErrorLabel": "错误信息:",
+  "emergencyTechnicalDetails": "技术详情",
+  "emergencyExitAppButton": "退出应用",
+  "emergencyPersistentIssueHint": "如果问题持续存在，请尝试重新安装应用，或联系开发者获取支持。",
+  "emergencyBackupPageTitle": "紧急数据恢复",
+  "emergencyBackupToolTitle": "数据紧急恢复工具",
+  "emergencyBackupToolDesc": "由于应用发生了严重错误，您可以尝试：\n\n1. 导出数据库文件 - 导出原始数据库文件供专业人员恢复\n2. 尝试查看备份恢复页 - 注意：由于数据库可能损坏，此功能可能无法正常工作",
+  "emergencyProcessing": "正在处理...",
+  "emergencyExportDatabaseButton": "导出数据库文件",
+  "emergencyOpenBackupPageButton": "尝试打开标准备份还原页面",
+  "emergencyOpenBackupFailed": "无法打开备份还原页面：{error}",
+  "@emergencyOpenBackupFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyExportHint": "提示: 导出的数据库文件可以发送给开发人员进行专业恢复。",
+  "emergencyLocatingDatabase": "正在定位数据库文件...",
+  "emergencyDatabaseNotFound": "未找到数据库文件",
+  "emergencyPreparingExport": "正在准备导出...",
+  "emergencyCopyingFile": "正在复制文件...",
+  "emergencyDatabaseExported": "数据库文件已导出到: {path}",
+  "@emergencyDatabaseExported": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyExportFailed": "导出失败: {error}",
+  "@emergencyExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "locationPermissionDenied": "位置权限被拒绝，无法启用位置服务",
   "enableLocationService": "请启用位置服务",
   "enableLocationServiceDesc": "心迹需要访问您的位置以提供天气等功能。请在系统设置中启用位置服务。",
