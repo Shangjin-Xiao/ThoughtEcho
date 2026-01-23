@@ -77,6 +77,7 @@ class _HomePageState extends State<HomePage>
   // 功能引导：记录页的 Keys
   final GlobalKey _noteFilterGuideKey = GlobalKey();
   final GlobalKey _noteFavoriteGuideKey = GlobalKey();
+  final GlobalKey _noteMoreGuideKey = GlobalKey(); // 功能引导：更多按钮 Key
   final GlobalKey _noteFoldGuideKey = GlobalKey();
   final GlobalKey<SettingsPageState> _settingsPageKey =
       GlobalKey<SettingsPageState>();
@@ -689,6 +690,11 @@ class _HomePageState extends State<HomePage>
       guides.add(('note_page_expand', _noteFoldGuideKey));
     }
 
+    if (!FeatureGuideHelper.hasShown(context, 'note_item_more_share') &&
+        noteListState.hasQuotes) {
+      guides.add(('note_item_more_share', _noteMoreGuideKey));
+    }
+
     if (guides.isEmpty) {
       return;
     }
@@ -1087,7 +1093,8 @@ class _HomePageState extends State<HomePage>
 
     try {
       // 生成卡片
-      final card = await _aiCardService!.generateCard(note: quote, brandName: AppLocalizations.of(context).appTitle);
+      final card = await _aiCardService!.generateCard(
+          note: quote, brandName: AppLocalizations.of(context).appTitle);
 
       // 关闭加载对话框
       if (mounted) Navigator.of(context).pop();
@@ -1102,7 +1109,8 @@ class _HomePageState extends State<HomePage>
             onSave: (selected) => _saveCard(selected),
             onRegenerate: () => _aiCardService!.generateCard(
               note: quote,
-              isRegeneration: true, brandName: AppLocalizations.of(context).appTitle,
+              isRegeneration: true,
+              brandName: AppLocalizations.of(context).appTitle,
             ),
           ),
         );
@@ -1243,7 +1251,8 @@ class _HomePageState extends State<HomePage>
         height: 1200,
         scaleFactor: 2.0,
         renderMode: ExportRenderMode.contain,
-        context: context, fileNamePrefix: AppLocalizations.of(context).cardFileNamePrefix,
+        context: context,
+        fileNamePrefix: AppLocalizations.of(context).cardFileNamePrefix,
       );
 
       if (mounted) {
@@ -1752,6 +1761,7 @@ class _HomePageState extends State<HomePage>
                       },
                       filterButtonKey: _noteFilterGuideKey, // 功能引导 key
                       favoriteButtonGuideKey: _noteFavoriteGuideKey,
+                      moreButtonGuideKey: _noteMoreGuideKey,
                       foldToggleGuideKey: _noteFoldGuideKey,
                       onGuideTargetsReady: _handleNoteGuideTargetsReady,
                     );

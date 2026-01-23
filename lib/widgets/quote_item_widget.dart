@@ -29,6 +29,7 @@ class QuoteItemWidget extends StatefulWidget {
   final Widget Function(NoteCategory)? tagBuilder;
   final GlobalKey? favoriteButtonGuideKey;
   final GlobalKey? foldToggleGuideKey;
+  final GlobalKey? moreButtonGuideKey; // 功能引导：更多按钮 Key
 
   /// 当前筛选的标签ID列表，用于优先显示匹配的标签
   final List<String> selectedTagIds;
@@ -48,6 +49,7 @@ class QuoteItemWidget extends StatefulWidget {
     this.searchQuery,
     this.favoriteButtonGuideKey,
     this.foldToggleGuideKey,
+    this.moreButtonGuideKey,
     this.selectedTagIds = const [],
   });
 
@@ -760,6 +762,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
 
                   // 更多操作按钮
                   PopupMenuButton<String>(
+                    key: widget.moreButtonGuideKey, // 功能引导 key
                     icon: Icon(Icons.more_vert, color: iconColor),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),

@@ -1059,7 +1059,11 @@
   "noteSearchEmptySubtitle": "Try other keywords or check your spelling",
   "noteSearchTimeoutMessage": "Search timed out, please retry",
   "searchingLabel": "Searching",
-  "filterAndSortTooltip": "Filter/Sort",
+  "guideAddNoteTagHiddenTitle": "Hide Notes",
+  "guideAddNoteTagHiddenDesc": "Select tags to hide notes",
+  "guideNoteItemMoreShareTitle": "Share Card",
+  "guideNoteItemMoreShareDesc": "Generate share cards here",
+  "filterAndSortTooltip": "Filter notes or view hidden ones",
   "noNotesFound": "No notes found, please add some notes first",
   "generateInsightsError": "Failed to generate insights: {error}",
   "@generateInsightsError": {
