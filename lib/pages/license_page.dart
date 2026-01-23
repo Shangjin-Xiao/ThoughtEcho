@@ -855,26 +855,58 @@ class ProgressiveSystemLicensesPage extends StatefulWidget {
 
 class _ProgressiveSystemLicensesPageState
     extends State<ProgressiveSystemLicensesPage> {
-  List<LicenseEntry> _entries = [];
+  List<_MergedLicenseEntry> _entries = [];
   bool _loading = true;
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    // 一次性读取所有系统许可证条目，但不在列表中渲染完整文本
+    // 一次性读取所有系统许可证条目并进行合并
     LicenseRegistry.licenses.toList().then((list) {
-      setState(() {
-        _entries = list;
-        _loading = false;
-      });
+      final merged = _mergeEntries(list);
+      // 按包名排序
+      merged.sort(
+        (a, b) => a.packages.join('').toLowerCase().compareTo(
+              b.packages.join('').toLowerCase(),
+            ),
+      );
+      if (mounted) {
+        setState(() {
+          _entries = merged;
+          _loading = false;
+        });
+      }
     }).catchError((e) {
-      setState(() {
-        _entries = [];
-        _error = e.toString();
-        _loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _entries = [];
+          _error = e.toString();
+          _loading = false;
+        });
+      }
     });
+  }
+
+  List<_MergedLicenseEntry> _mergeEntries(List<LicenseEntry> entries) {
+    final Map<String, _MergedLicenseEntry> map = {};
+    for (final entry in entries) {
+      for (final pkg in entry.packages) {
+        final key = pkg.trim();
+        if (!map.containsKey(key)) {
+          map[key] = _MergedLicenseEntry([key], List.of(entry.paragraphs));
+        } else {
+          final exist = map[key]!;
+          for (final p in entry.paragraphs) {
+            // 去重段落
+            if (!exist.paragraphs.any((ep) => ep.text == p.text)) {
+              exist.paragraphs.add(p);
+            }
+          }
+        }
+      }
+    }
+    return map.values.toList();
   }
 
   @override
@@ -911,67 +943,70 @@ class _ProgressiveSystemLicensesPageState
         final initials =
             packages.isNotEmpty ? packages.trim()[0].toUpperCase() : 'P';
 
-        return GestureDetector(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => LicenseDetailPage(
-                  entry: entry,
-                  title: packages.isEmpty ? l10n.unnamed : packages,
-                ),
-              ),
-            );
-          },
-          child: Card(
-            elevation: 2,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
+        return Card(
+          elevation: 0,
+          color: Theme.of(context).colorScheme.surfaceContainerLow,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(
+              color: Theme.of(context).colorScheme.outlineVariant,
             ),
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => LicenseDetailPage(
+                    title: packages.isEmpty ? l10n.unnamed : packages,
+                    paragraphs: entry.paragraphs,
+                  ),
+                ),
+              );
+            },
             child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+              padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
                   CircleAvatar(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    radius: 20,
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.primaryContainer,
+                    foregroundColor:
+                        Theme.of(context).colorScheme.onPrimaryContainer,
+                    radius: 24,
                     child: Text(
                       initials,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           packages.isEmpty ? l10n.unnamed : packages,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(fontWeight: FontWeight.bold),
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
                         Text(
-                          preview.length > 140
-                              ? '${preview.substring(0, 140)}…'
+                          preview.length > 100
+                              ? '${preview.substring(0, 100)}…'
                               : preview,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.color
-                                ?.withValues(alpha: 0.85),
-                          ),
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
+                        const SizedBox(height: 8),
                       ],
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  const Icon(Icons.chevron_right),
+                  const Icon(Icons.chevron_right, color: Colors.grey),
                 ],
               ),
             ),
@@ -983,12 +1018,13 @@ class _ProgressiveSystemLicensesPageState
 }
 
 class LicenseDetailPage extends StatelessWidget {
-  final LicenseEntry entry;
   final String title;
+  final List<LicenseParagraph> paragraphs;
+
   const LicenseDetailPage({
     super.key,
-    required this.entry,
     required this.title,
+    required this.paragraphs,
   });
 
   @override
@@ -999,7 +1035,7 @@ class LicenseDetailPage extends StatelessWidget {
       body: FutureBuilder<String>(
         future: compute(
           _joinParagraphs,
-          entry.paragraphs.map((p) => p.text).toList(),
+          paragraphs.map((p) => p.text).toList(),
         ),
         builder: (context, snapshot) {
           if (snapshot.connectionState != ConnectionState.done) {
