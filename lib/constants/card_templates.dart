@@ -228,18 +228,15 @@ class CardTemplates {
     return '''
  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $_viewBoxWidth $_viewBoxHeight" preserveAspectRatio="xMidYMid meet">
     <defs>
-      <filter id="paperNoise">
-        <feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="3" stitchTiles="stitch"/>
-        <feColorMatrix type="matrix" values="0 0 0 0 0.9  0 0 0 0 0.88  0 0 0 0 0.83  0 0 0 1 0"/>
-        <feBlend mode="multiply" in2="SourceGraphic"/>
-      </filter>
       <linearGradient id="warmGrad" x1="0%" y1="0%" x2="0%" y2="100%">
         <stop offset="0%" stop-color="#fffbeb"/>
         <stop offset="100%" stop-color="#fef3c7"/>
       </linearGradient>
-      <filter id="softShadow">
-        <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#78350f" flood-opacity="0.1"/>
-      </filter>
+          <pattern id="paperTexture" width="16" height="16" patternUnits="userSpaceOnUse">
+            <circle cx="2" cy="2" r="0.6" fill="#78350f" opacity="0.08"/>
+            <circle cx="10" cy="6" r="0.6" fill="#78350f" opacity="0.05"/>
+            <circle cx="6" cy="12" r="0.6" fill="#78350f" opacity="0.06"/>
+          </pattern>
     </defs>
 
     <!-- 背景 -->
@@ -250,10 +247,11 @@ class CardTemplates {
     <path d="M-50 600 Q150 420 350 520 T500 600 V600 H-50 Z" fill="#ffedd5" fill-opacity="0.8"/>
     
     <!-- 质感叠层 -->
-    <rect width="$_viewBoxWidth" height="$_viewBoxHeight" filter="url(#paperNoise)" opacity="0.3" rx="24"/>
+    <rect width="$_viewBoxWidth" height="$_viewBoxHeight" fill="url(#paperTexture)" opacity="0.25" rx="24"/>
 
     <!-- 内容区域 -->
-    <rect x="40" y="140" width="320" height="340" rx="24" fill="#ffffff" fill-opacity="0.7" filter="url(#softShadow)"/>
+    <rect x="42" y="142" width="320" height="340" rx="24" fill="#000000" opacity="0.05"/>
+    <rect x="40" y="140" width="320" height="340" rx="24" fill="#ffffff" fill-opacity="0.7"/>
 
     <!-- 装饰图标 -->
     <path d="M200 100 Q205 85 220 80 T200 60 Q195 85 180 80 T200 100" fill="#15803d" fill-opacity="0.2"/>
@@ -286,6 +284,7 @@ class CardTemplates {
   }) {
     const contentAreaTop = 140.0;
     const contentAreaHeight = 340.0;
+    const contentFontSize = 16.0;
     final maxLines = _calculateMaxLines(contentAreaHeight);
     final textLines = _wrapText(content, 20, maxLines);
     final metaText = _buildMetaText(
@@ -296,17 +295,17 @@ class CardTemplates {
     final brandText =
         _buildBrandText(author: author, source: source, brandName: brandName);
 
-    final contentHeight = textLines.length * _contentFontSize * _lineHeight;
+    final contentHeight = textLines.length * contentFontSize * _lineHeight;
     final contentStartY = contentAreaTop +
-        (contentAreaHeight - contentHeight) / 2 +
-        _contentFontSize;
+      (contentAreaHeight - contentHeight) / 2 +
+      contentFontSize;
 
     final buffer = StringBuffer();
-    final lineSpacing = _contentFontSize * _lineHeight;
+    final lineSpacing = contentFontSize * _lineHeight;
     for (int i = 0; i < textLines.length; i++) {
       final y = contentStartY + i * lineSpacing;
       buffer.writeln(
-          '<text x="60" y="${y.toStringAsFixed(1)}" text-anchor="start" fill="#22d3ee" font-family="Courier New, monospace" font-size="16" font-weight="bold" filter="url(#neonGlow)">${_escape(textLines[i])}</text>');
+        '<text x="60" y="${y.toStringAsFixed(1)}" text-anchor="start" fill="#22d3ee" font-family="Courier New, monospace" font-size="${contentFontSize.toStringAsFixed(0)}" font-weight="bold" filter="url(#neonGlow)">${_escape(textLines[i])}</text>');
     }
     final renderedText = buffer.toString();
 
@@ -663,19 +662,17 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#14532d',
     return '''
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $_viewBoxWidth $_viewBoxHeight" preserveAspectRatio="xMidYMid meet">
   <defs>
-    <filter id="noise">
-      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/>
-      <feColorMatrix type="saturate" values="0"/>
-      <feComponentTransfer>
-        <feFuncA type="linear" slope="0.15"/>
-      </feComponentTransfer>
-    </filter>
+    <pattern id="retroGrain" width="18" height="18" patternUnits="userSpaceOnUse">
+      <circle cx="3" cy="3" r="0.7" fill="#78350f" opacity="0.08"/>
+      <circle cx="12" cy="8" r="0.7" fill="#78350f" opacity="0.05"/>
+      <circle cx="7" cy="14" r="0.6" fill="#78350f" opacity="0.06"/>
+    </pattern>
   </defs>
 
   <!-- 背景 -->
   <rect width="$_viewBoxWidth" height="$_viewBoxHeight" fill="#fdf6e3" rx="24"/>
   <rect width="$_viewBoxWidth" height="$_viewBoxHeight" fill="#d2b48c" fill-opacity="0.2" rx="24"/>
-  <rect width="$_viewBoxWidth" height="$_viewBoxHeight" filter="url(#noise)" rx="24"/>
+  <rect width="$_viewBoxWidth" height="$_viewBoxHeight" fill="url(#retroGrain)" opacity="0.2" rx="24"/>
   
   <!-- 边框 -->
   <rect x="24" y="24" width="352" height="552" fill="none" stroke="#78350f" stroke-width="2" rx="16" stroke-dasharray="8 6"/>
@@ -1021,6 +1018,8 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#881337',
   }) {
     const contentAreaTop = 140.0;
     const contentAreaHeight = 360.0;
+    const contentFontSize = 16.0;
+    const lineNumberFontSize = 14.0;
     final maxLines = _calculateMaxLines(contentAreaHeight);
     final textLines = _wrapText(
         content, 20, maxLines); // Monospace fits more chars? Adjusted width.
@@ -1032,20 +1031,24 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#881337',
     final brandText =
         _buildBrandText(author: author, source: source, brandName: brandName);
 
-    final contentHeight = textLines.length * _contentFontSize * _lineHeight;
+    final contentHeight = textLines.length * contentFontSize * _lineHeight;
     final contentStartY = contentAreaTop +
-        (contentAreaHeight - contentHeight) / 2 +
-        _contentFontSize;
+      (contentAreaHeight - contentHeight) / 2 +
+      contentFontSize;
 
     // 生成行号
     final lineNumbers =
         List.generate(textLines.length, (i) => (i + 1).toString()).join('\n');
-    String renderLineNumbers(int count, double startY, double fontSize) {
+    String renderLineNumbers(
+      int count,
+      double startY,
+      double lineSpacing,
+      double fontSize,
+    ) {
       final buffer = StringBuffer();
-      final lineSpacing = fontSize * _lineHeight;
       for (int i = 0; i < count; i++) {
         buffer.writeln(
-            '<text x="50" y="${startY + i * lineSpacing}" text-anchor="end" fill="#4b5563" font-family="monospace" font-size="14">${i + 1}</text>');
+            '<text x="50" y="${startY + i * lineSpacing}" text-anchor="end" fill="#4b5563" font-family="monospace" font-size="${fontSize.toStringAsFixed(0)}">${i + 1}</text>');
       }
       return buffer.toString();
     }
@@ -1067,17 +1070,17 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#881337',
   <rect x="0" y="40" width="60" height="560" fill="#1e1e1e"/>
   
   <!-- 行号 -->
-  ${renderLineNumbers(textLines.length, contentStartY, _contentFontSize)}
+  ${renderLineNumbers(textLines.length, contentStartY, contentFontSize * _lineHeight, lineNumberFontSize)}
 
   <!-- 内容文字 (左对齐) -->
   ${(() {
       final buffer = StringBuffer();
-      final lineSpacing = _contentFontSize * _lineHeight;
+      final lineSpacing = contentFontSize * _lineHeight;
       for (int i = 0; i < textLines.length; i++) {
         final y = contentStartY + i * lineSpacing;
         // 简单的语法高亮模拟：奇数行白色，偶数行浅蓝 (太复杂，统一用亮色)
         buffer.writeln(
-            '<text x="70" y="$y" text-anchor="start" fill="#d4d4d4" font-family="monospace" font-size="16">${_escape(textLines[i])}</text>');
+        '<text x="70" y="$y" text-anchor="start" fill="#d4d4d4" font-family="monospace" font-size="${contentFontSize.toStringAsFixed(0)}">${_escape(textLines[i])}</text>');
       }
       return buffer.toString();
     })()}
@@ -1125,11 +1128,10 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#881337',
     return '''
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $_viewBoxWidth $_viewBoxHeight" preserveAspectRatio="xMidYMid meet">
   <defs>
-    <pattern id="noiseTexture" width="100" height="100" patternUnits="userSpaceOnUse">
-       <filter id="noise">
-         <feTurbulence type="fractalNoise" baseFrequency="0.6" numOctaves="3" stitchTiles="stitch"/>
-       </filter>
-       <rect width="100" height="100" filter="url(#noise)" opacity="0.05"/>
+    <pattern id="noiseTexture" width="12" height="12" patternUnits="userSpaceOnUse">
+       <circle cx="2" cy="2" r="0.6" fill="#2C1810" opacity="0.06"/>
+       <circle cx="8" cy="5" r="0.5" fill="#2C1810" opacity="0.04"/>
+       <circle cx="5" cy="10" r="0.6" fill="#2C1810" opacity="0.05"/>
     </pattern>
   </defs>
 
@@ -1196,6 +1198,7 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#2C1810',
     // 自定义渲染左对齐文字，带背景块
     final buffer = StringBuffer();
     final lineSpacing = _contentFontSize * _lineHeight;
+    const maxTextWidth = 280.0;
     for (int i = 0; i < textLines.length; i++) {
       final y = contentStartY + i * lineSpacing;
       // 黄色高亮背景条
@@ -1204,6 +1207,7 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#2C1810',
       for (final char in textLines[i].runes) {
         estimatedWidth += (char > 255 ? 1.05 : 0.65) * _contentFontSize;
       }
+      estimatedWidth = math.min(estimatedWidth, maxTextWidth);
 
       buffer.writeln(
           '<rect x="40" y="${y - _contentFontSize + 4}" width="${estimatedWidth + 20}" height="${_contentFontSize + 4}" fill="#FFD700" stroke="black" stroke-width="2"/>');
@@ -1320,8 +1324,8 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#ffffff',
     String? temperature,
     String? dayPeriod,
   }) {
-    const contentAreaTop = 120.0;
-    const contentAreaHeight = 340.0;
+    const contentAreaTop = 90.0;
+    const contentAreaHeight = 300.0;
     final maxLines = _calculateMaxLines(contentAreaHeight);
     final textLines = _wrapText(content, 14, maxLines);
     final metaText = _buildMetaText(
@@ -1340,18 +1344,15 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#ffffff',
     return '''
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 $_viewBoxWidth $_viewBoxHeight" preserveAspectRatio="xMidYMid meet">
   <defs>
-    <filter id="photoShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="2" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.3"/>
-    </filter>
     <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
       <stop offset="60%" stop-color="#000000" stop-opacity="0"/>
       <stop offset="100%" stop-color="#000000" stop-opacity="0.4"/>
     </radialGradient>
-    <filter id="grain">
-        <feTurbulence type="fractalNoise" baseFrequency="1.5" numOctaves="3"/>
-        <feColorMatrix type="saturate" values="0"/>
-        <feComponentTransfer><feFuncA type="linear" slope="0.1"/></feComponentTransfer>
-    </filter>
+    <pattern id="grainTexture" width="10" height="10" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="0.6" fill="#000000" opacity="0.08"/>
+      <circle cx="6" cy="4" r="0.5" fill="#000000" opacity="0.05"/>
+      <circle cx="4" cy="8" r="0.6" fill="#000000" opacity="0.06"/>
+    </pattern>
   </defs>
 
   <!-- 木纹/桌面背景 -->
@@ -1359,7 +1360,8 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#ffffff',
   <rect width="$_viewBoxWidth" height="$_viewBoxHeight" fill="#1F2937" opacity="0.5"/>
 
   <!-- 拍立得相纸 -->
-  <rect x="40" y="40" width="320" height="520" fill="#F3F4F6" filter="url(#photoShadow)" transform="rotate(-2 200 300)"/>
+  <rect x="44" y="44" width="320" height="520" fill="#000000" opacity="0.2" transform="rotate(-2 200 300)"/>
+  <rect x="40" y="40" width="320" height="520" fill="#F3F4F6" transform="rotate(-2 200 300)"/>
 
   <!-- 黑色照片区域 -->
   <g transform="rotate(-2 200 300)">
@@ -1369,7 +1371,7 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#ffffff',
     <!-- 暗角 -->
     <rect x="60" y="60" width="280" height="380" fill="url(#vignette)" pointer-events="none"/>
     <!-- 颗粒感 -->
-    <rect x="60" y="60" width="280" height="380" filter="url(#grain)" opacity="0.3" pointer-events="none"/>
+    <rect x="60" y="60" width="280" height="380" fill="url(#grainTexture)" opacity="0.2" pointer-events="none"/>
     
     <!-- 底部手写字区域 -->
     <text x="200" y="480" text-anchor="middle" fill="#374151" font-family="Brush Script MT, cursive, serif" font-size="20">${_escape(metaText)}</text>
@@ -1414,7 +1416,8 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#ffffff',
     }
 
     // 重新计算剩余文本的行
-    final remainingLines = _wrapText(remainingText, 15, maxLines);
+    final remainingMaxLines = math.max(1, maxLines - 1);
+    final remainingLines = _wrapText(remainingText, 15, remainingMaxLines);
     final contentHeight =
         remainingLines.length * _contentFontSize * _lineHeight;
     final contentStartY = contentAreaTop +
