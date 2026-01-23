@@ -1,5 +1,6 @@
 import 'dart:convert';
-import '../utils/mmkv_ffi_fix.dart'; // 使用 SafeMMKV 替代 MMKVAdapter
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import '../utils/mmkv_ffi_fix.dart'; // 保留引用用于迁移
 import 'package:thoughtecho/utils/app_logger.dart';
 
 /// 安全存储服务，专门用于存储多供应商API密钥
@@ -7,7 +8,13 @@ class SecureStorageService {
   static final SecureStorageService _instance =
       SecureStorageService._internal();
   static const String _providerApiKeysKey = 'provider_api_keys';
-  late SafeMMKV _storage;
+
+  // 使用 FlutterSecureStorage 替代 SafeMMKV
+  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+
+  // 仅用于迁移旧数据
+  final SafeMMKV _legacyStorage = SafeMMKV();
+
   bool _initialized = false;
 
   factory SecureStorageService() => _instance;
@@ -18,8 +25,28 @@ class SecureStorageService {
 
   Future<void> _initStorage() async {
     if (!_initialized) {
-      _storage = SafeMMKV();
-      await _storage.initialize();
+      // 尝试迁移旧数据
+      try {
+        await _legacyStorage.initialize();
+        final oldData = _legacyStorage.getString(_providerApiKeysKey);
+
+        if (oldData != null && oldData.isNotEmpty) {
+          logDebug('正在迁移API密钥到安全存储...');
+          // 检查新存储中是否已有数据，避免覆盖
+          final newData = await _storage.read(key: _providerApiKeysKey);
+          if (newData == null) {
+            await _storage.write(key: _providerApiKeysKey, value: oldData);
+            logDebug('API密钥迁移成功');
+          } else {
+            logDebug('新存储已有数据，跳过迁移');
+          }
+          // 无论是否迁移，都移除旧的不安全数据
+          await _legacyStorage.remove(_providerApiKeysKey);
+        }
+      } catch (e) {
+        logDebug('API密钥迁移检查失败: $e');
+      }
+
       _initialized = true;
       logDebug('安全存储服务初始化完成');
     }
@@ -45,9 +72,9 @@ class SecureStorageService {
     final existingKeys = await _getAllApiKeys();
     existingKeys[providerId] = cleanedKey;
 
-    await _storage.setString(
-      _providerApiKeysKey,
-      _encodeApiKeysMap(existingKeys),
+    await _storage.write(
+      key: _providerApiKeysKey,
+      value: _encodeApiKeysMap(existingKeys),
     );
     logDebug('已保存 Provider $providerId 的API密钥');
   }
@@ -75,9 +102,9 @@ class SecureStorageService {
     final existingKeys = await _getAllApiKeys();
     existingKeys.remove(providerId);
 
-    await _storage.setString(
-      _providerApiKeysKey,
-      _encodeApiKeysMap(existingKeys),
+    await _storage.write(
+      key: _providerApiKeysKey,
+      value: _encodeApiKeysMap(existingKeys),
     );
     logDebug('已删除 Provider $providerId 的API密钥');
   }
@@ -85,7 +112,7 @@ class SecureStorageService {
   /// 获取所有供应商的API密钥映射
   Future<Map<String, String>> _getAllApiKeys() async {
     await ensureInitialized();
-    final keysJson = _storage.getString(_providerApiKeysKey);
+    final keysJson = await _storage.read(key: _providerApiKeysKey);
 
     if (keysJson == null || keysJson.isEmpty) {
       return <String, String>{};
