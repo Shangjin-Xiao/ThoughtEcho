@@ -22,28 +22,77 @@ class AICardGenerationService {
 
   AICardGenerationService(this._aiService, this._settingsService);
 
+  /// 获取当前语言代码 (zh, en, ja, fr, etc.)
+  String get _currentLanguageCode {
+    final localeCode = _settingsService.localeCode;
+    String lang;
+
+    // 如果未设置则跟随系统
+    if (localeCode == null || localeCode.isEmpty) {
+      if (kIsWeb) {
+        lang = 'zh'; // Web 默认中文
+      } else {
+        // Platform.localeName 格式可能是 'en_US', 'zh_CN'
+        lang = Platform.localeName.split('_')[0].toLowerCase();
+      }
+    } else {
+      lang = localeCode.split('_')[0].toLowerCase();
+    }
+
+    // 简单规范化
+    if (lang == 'zh-hans' || lang == 'zh-hant') return 'zh';
+    return lang;
+  }
+
   /// 为单条笔记生成卡片（AI智能生成 + 模板回退）
   Future<GeneratedCard> generateCard({
+    required String brandName,
     required Quote note,
     String? customStyle,
     bool isRegeneration = false,
+    CardType? excludeType,
   }) async {
     // 如果用户关闭了 AI 生成功能，则直接使用模板（功能仍可用，只是没有AI增强）
     if (!isEnabled) {
       AppLogger.i('AI卡片生成已关闭，使用本地模板生成', source: 'AICardGeneration');
-      return _buildFallbackCard(note, isRegeneration: isRegeneration);
+      return _buildFallbackCard(note,
+          isRegeneration: isRegeneration,
+          brandName: brandName,
+          excludeType: excludeType);
     }
+
+    // 根据用户语言设置决定卡片元数据语言
+    final languageCode = _currentLanguageCode;
 
     try {
       // 1. 智能选择最适合的提示词
-      var prompt =
-          _selectBestPrompt(note, customStyle, isRegeneration: isRegeneration);
+      var prompt = _selectBestPrompt(note, customStyle,
+          brandName: brandName,
+          isRegeneration: isRegeneration,
+          languageCode: languageCode);
 
-      // 1.1 根据笔记语言追加语言统一指令，避免出现 rain/Morning 等英文混杂
-      final isChineseNote = _containsChinese(note.content);
-      final langDirective = isChineseNote
-          ? '使用全中文作为所有底部元数据（日期、天气、时间段等），不要出现英文单词（例如用“雨”“晨间”“夜晚”而不是 rain/Morning）。如果某项信息缺失可以省略，不要编造。'
-          : 'Use the same language as the note for any footer metadata (date, weather, period). Keep language consistent and do not mix Chinese unless original content is Chinese.';
+      // 1.1 根据用户语言设置追加语言统一指令
+      String langDirective;
+      switch (languageCode) {
+        case 'zh':
+          langDirective =
+              '使用全中文作为所有底部元数据（日期、天气、时间段等），不要出现英文单词（例如用"雨""晨间""夜晚"而不是 rain/Morning）。如果某项信息缺失可以省略，不要编造。';
+          break;
+        case 'ja':
+          langDirective =
+              'Use Japanese for all footer metadata (date, weather, period). Do not mix English. If some info is missing, omit it.';
+          break;
+        case 'fr':
+          langDirective =
+              'Use French for all footer metadata (date, weather, period). Do not mix English. If some info is missing, omit it.';
+          break;
+        case 'en':
+        default:
+          langDirective =
+              'Use English for all footer metadata (date, weather, period). Do not mix Chinese. If some info is missing, omit it.';
+          break;
+      }
+
       prompt = '$prompt\n\n### 语言 / Language Constraint\n$langDirective';
 
       AppLogger.i(
@@ -59,14 +108,16 @@ class AICardGenerationService {
 
       // 4. 补全缺失的底部元数据（AI 可能忽略）
       cleanedSVG = _ensureMetadataPresence(
+        brandName: brandName,
         cleanedSVG,
-        date: _formatDate(note.date),
+        date: _formatDate(note.date, languageCode: languageCode),
         location: note.location,
         weather: note.weather,
         temperature: note.temperature,
         author: note.sourceAuthor,
         source: note.fullSource,
         dayPeriod: note.dayPeriod,
+        languageCode: languageCode,
       );
 
       AppLogger.i(
@@ -92,25 +143,31 @@ class AICardGenerationService {
       );
     } catch (e) {
       AppLogger.w('AI生成失败，使用回退模板: $e', source: 'AICardGeneration');
-      return _buildFallbackCard(note, isRegeneration: isRegeneration);
+      return _buildFallbackCard(note,
+          isRegeneration: isRegeneration, brandName: brandName);
     }
   }
 
   /// 本地模板回退封装(AI关闭或失败时使用)
-  GeneratedCard _buildFallbackCard(Quote note, {bool isRegeneration = false}) {
+  GeneratedCard _buildFallbackCard(Quote note,
+      {bool isRegeneration = false,
+      required String brandName,
+      CardType? excludeType}) {
     // 智能检测最适合的模板类型
-    final cardType =
-        _determineTemplateType(note, isRegeneration: isRegeneration);
+    final cardType = _determineTemplateType(note,
+        isRegeneration: isRegeneration, excludeType: excludeType);
+    final languageCode = _currentLanguageCode;
     final fallbackSVG = CardTemplates.getTemplateByType(
+      brandName: brandName,
       type: cardType,
       content: note.content,
       author: note.sourceAuthor,
-      date: _formatDate(note.date),
+      date: _formatDate(note.date, languageCode: languageCode),
       source: note.fullSource,
       location: note.location,
-      weather: note.weather,
+      weather: _localizeWeather(note.weather, languageCode: languageCode),
       temperature: note.temperature,
-      dayPeriod: note.dayPeriod,
+      dayPeriod: _localizeDayPeriod(note.dayPeriod, languageCode: languageCode),
     );
 
     return GeneratedCard(
@@ -131,10 +188,12 @@ class AICardGenerationService {
   }
 
   /// 智能决定模板类型（基于标签、内容和随机性）
-  CardType _determineTemplateType(Quote note, {bool isRegeneration = false}) {
+  CardType _determineTemplateType(Quote note,
+      {bool isRegeneration = false, CardType? excludeType}) {
     // 重新生成时完全随机，跳过内容匹配
     if (isRegeneration) {
-      final allTypes = CardType.values;
+      final allTypes = CardType.values.where((t) => t != excludeType).toList();
+      if (allTypes.isEmpty) return CardType.knowledge;
       final randomcheck = DateTime.now().microsecondsSinceEpoch;
       return allTypes[randomcheck % allTypes.length];
     }
@@ -310,9 +369,21 @@ class AICardGenerationService {
       CardType.dev,
       CardType.mindful,
       CardType.neonCyber,
-    ];
+      CardType.classicSerif,
+      CardType.modernPop,
+      CardType.softGradient,
+      CardType.polaroid,
+      CardType.magazine,
+      CardType.sotaModern,
+    ].where((t) => t != excludeType).toList();
+
+    if (allTypes.isEmpty) return CardType.sotaModern;
 
     final randomcheck = DateTime.now().microsecondsSinceEpoch;
+    // 增加 SOTA Modern 的出现概率 (20%)
+    if (randomcheck % 5 == 0 && excludeType != CardType.sotaModern) {
+      return CardType.sotaModern;
+    }
     return allTypes[randomcheck % allTypes.length];
   }
 
@@ -333,8 +404,9 @@ class AICardGenerationService {
   }
 
   /// 批量生成（用于周期报告）
-  Future<List<GeneratedCard>> generateFeaturedCards(
-    List<Quote> notes, {
+  Future<List<GeneratedCard>> generateFeaturedCards({
+    required String brandName,
+    required List<Quote> notes,
     int maxCards = 6,
     Function(int current, int total, String? error)? onProgress,
   }) async {
@@ -351,7 +423,7 @@ class AICardGenerationService {
           source: 'AICardGeneration',
         );
 
-        final card = await generateCard(note: note);
+        final card = await generateCard(note: note, brandName: brandName);
         cards.add(card);
 
         // 报告进度
@@ -521,6 +593,7 @@ class AICardGenerationService {
     int width = 400,
     int height = 600,
     String? customName,
+    String fileNamePrefix = 'ThoughtEcho_Card',
     double scaleFactor = 2.0,
     ExportRenderMode renderMode = ExportRenderMode.contain,
     BuildContext? context,
@@ -575,7 +648,7 @@ class AICardGenerationService {
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final fileName = customName != null
           ? '${customName}_$timestamp'
-          : '心迹_Card_$timestamp';
+          : '${fileNamePrefix}_$timestamp';
 
       // 保存到相册（仅移动端）
       if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
@@ -665,11 +738,40 @@ class AICardGenerationService {
     return savedFiles;
   }
 
-  /// 格式化日期
-  String _formatDate(String dateStr) {
+  /// 格式化日期 - 支持多语言
+  /// [languageCode] 语言代码 ('zh', 'en', 'ja', 'fr', etc.)
+  String _formatDate(String dateStr, {String languageCode = 'zh'}) {
     try {
       final date = DateTime.parse(dateStr);
-      return '${date.year}年${date.month}月${date.day}日';
+      switch (languageCode) {
+        case 'zh':
+        case 'ja':
+          // 中日文: 2026年1月22日
+          return '${date.year}年${date.month}月${date.day}日';
+        case 'fr':
+          // 法文: 22/01/2026
+          final d = date.day.toString().padLeft(2, '0');
+          final m = date.month.toString().padLeft(2, '0');
+          return '$d/$m/${date.year}';
+        case 'en':
+        default:
+          // 英文格式: Jan 22, 2026
+          const months = [
+            'Jan',
+            'Feb',
+            'Mar',
+            'Apr',
+            'May',
+            'Jun',
+            'Jul',
+            'Aug',
+            'Sep',
+            'Oct',
+            'Nov',
+            'Dec'
+          ];
+          return '${months[date.month - 1]} ${date.day}, ${date.year}';
+      }
     } catch (e) {
       return dateStr;
     }
@@ -683,16 +785,19 @@ class AICardGenerationService {
 
   /// 智能选择最适合的提示词（改进：增加随机性和变化）
   String _selectBestPrompt(Quote note, String? customStyle,
-      {bool isRegeneration = false}) {
+      {required String brandName,
+      bool isRegeneration = false,
+      String languageCode = 'zh'}) {
     // 重新生成时完全随机，跳过内容匹配
     if (isRegeneration) {
       final random = DateTime.now().millisecondsSinceEpoch % 3;
       switch (random) {
         case 0:
           return AICardPrompts.randomStylePosterPrompt(
+            brandName: brandName,
             content: note.content,
             author: note.sourceAuthor,
-            date: _formatDate(note.date),
+            date: _formatDate(note.date, languageCode: languageCode),
             location: note.location,
             weather: note.weather,
             temperature: note.temperature,
@@ -701,9 +806,10 @@ class AICardGenerationService {
           );
         case 1:
           return AICardPrompts.intelligentCardPrompt(
+            brandName: brandName,
             content: note.content,
             author: note.sourceAuthor,
-            date: _formatDate(note.date),
+            date: _formatDate(note.date, languageCode: languageCode),
             location: note.location,
             weather: note.weather,
             temperature: note.temperature,
@@ -713,9 +819,10 @@ class AICardGenerationService {
         case 2:
         default:
           return AICardPrompts.contentAwareVisualPrompt(
+            brandName: brandName,
             content: note.content,
             author: note.sourceAuthor,
-            date: _formatDate(note.date),
+            date: _formatDate(note.date, languageCode: languageCode),
             location: note.location,
             weather: note.weather,
             temperature: note.temperature,
@@ -735,9 +842,10 @@ class AICardGenerationService {
       switch (customStyle) {
         case 'creative':
           return AICardPrompts.randomStylePosterPrompt(
+            brandName: brandName,
             content: note.content,
             author: note.sourceAuthor,
-            date: _formatDate(note.date),
+            date: _formatDate(note.date, languageCode: languageCode),
             location: note.location,
             weather: note.weather,
             temperature: note.temperature,
@@ -746,9 +854,10 @@ class AICardGenerationService {
           );
         case 'intelligent':
           return AICardPrompts.intelligentCardPrompt(
+            brandName: brandName,
             content: note.content,
             author: note.sourceAuthor,
-            date: _formatDate(note.date),
+            date: _formatDate(note.date, languageCode: languageCode),
             location: note.location,
             weather: note.weather,
             temperature: note.temperature,
@@ -757,9 +866,10 @@ class AICardGenerationService {
           );
         case 'visual':
           return AICardPrompts.contentAwareVisualPrompt(
+            brandName: brandName,
             content: note.content,
             author: note.sourceAuthor,
-            date: _formatDate(note.date),
+            date: _formatDate(note.date, languageCode: languageCode),
             location: note.location,
             weather: note.weather,
             temperature: note.temperature,
@@ -779,9 +889,10 @@ class AICardGenerationService {
         content.contains('"')) {
       if (random < 30) {
         return AICardPrompts.intelligentCardPrompt(
+          brandName: brandName,
           content: note.content,
           author: note.sourceAuthor,
-          date: _formatDate(note.date),
+          date: _formatDate(note.date, languageCode: languageCode),
           location: note.location,
           weather: note.weather,
           temperature: note.temperature,
@@ -790,9 +901,10 @@ class AICardGenerationService {
         );
       } else {
         return AICardPrompts.randomStylePosterPrompt(
+          brandName: brandName,
           content: note.content,
           author: note.sourceAuthor,
-          date: _formatDate(note.date),
+          date: _formatDate(note.date, languageCode: languageCode),
           location: note.location,
           weather: note.weather,
           temperature: note.temperature,
@@ -807,9 +919,10 @@ class AICardGenerationService {
     if (techKeywords.any((keyword) => content.contains(keyword))) {
       if (random < 40) {
         return AICardPrompts.contentAwareVisualPrompt(
+          brandName: brandName,
           content: note.content,
           author: note.sourceAuthor,
-          date: _formatDate(note.date),
+          date: _formatDate(note.date, languageCode: languageCode),
           location: note.location,
           weather: note.weather,
           temperature: note.temperature,
@@ -818,9 +931,10 @@ class AICardGenerationService {
         );
       } else if (random < 70) {
         return AICardPrompts.intelligentCardPrompt(
+          brandName: brandName,
           content: note.content,
           author: note.sourceAuthor,
-          date: _formatDate(note.date),
+          date: _formatDate(note.date, languageCode: languageCode),
           location: note.location,
           weather: note.weather,
           temperature: note.temperature,
@@ -829,9 +943,10 @@ class AICardGenerationService {
         );
       } else {
         return AICardPrompts.randomStylePosterPrompt(
+          brandName: brandName,
           content: note.content,
           author: note.sourceAuthor,
-          date: _formatDate(note.date),
+          date: _formatDate(note.date, languageCode: languageCode),
           location: note.location,
           weather: note.weather,
           temperature: note.temperature,
@@ -846,9 +961,10 @@ class AICardGenerationService {
     if (emotionalKeywords.any((keyword) => content.contains(keyword))) {
       if (random < 50) {
         return AICardPrompts.randomStylePosterPrompt(
+          brandName: brandName,
           content: note.content,
           author: note.sourceAuthor,
-          date: _formatDate(note.date),
+          date: _formatDate(note.date, languageCode: languageCode),
           location: note.location,
           weather: note.weather,
           temperature: note.temperature,
@@ -857,9 +973,10 @@ class AICardGenerationService {
         );
       } else {
         return AICardPrompts.contentAwareVisualPrompt(
+          brandName: brandName,
           content: note.content,
           author: note.sourceAuthor,
-          date: _formatDate(note.date),
+          date: _formatDate(note.date, languageCode: languageCode),
           location: note.location,
           weather: note.weather,
           temperature: note.temperature,
@@ -874,9 +991,10 @@ class AICardGenerationService {
       // 长内容：40%随机海报，30%智能，30%视觉
       if (random < 40) {
         return AICardPrompts.randomStylePosterPrompt(
+          brandName: brandName,
           content: note.content,
           author: note.sourceAuthor,
-          date: _formatDate(note.date),
+          date: _formatDate(note.date, languageCode: languageCode),
           location: note.location,
           weather: note.weather,
           temperature: note.temperature,
@@ -885,9 +1003,10 @@ class AICardGenerationService {
         );
       } else if (random < 70) {
         return AICardPrompts.intelligentCardPrompt(
+          brandName: brandName,
           content: note.content,
           author: note.sourceAuthor,
-          date: _formatDate(note.date),
+          date: _formatDate(note.date, languageCode: languageCode),
           location: note.location,
           weather: note.weather,
           temperature: note.temperature,
@@ -896,9 +1015,10 @@ class AICardGenerationService {
         );
       } else {
         return AICardPrompts.contentAwareVisualPrompt(
+          brandName: brandName,
           content: note.content,
           author: note.sourceAuthor,
-          date: _formatDate(note.date),
+          date: _formatDate(note.date, languageCode: languageCode),
           location: note.location,
           weather: note.weather,
           temperature: note.temperature,
@@ -911,9 +1031,10 @@ class AICardGenerationService {
     // 5. 默认使用三种提示词随机选择（各33%）
     if (random < 33) {
       return AICardPrompts.randomStylePosterPrompt(
+        brandName: brandName,
         content: note.content,
         author: note.sourceAuthor,
-        date: _formatDate(note.date),
+        date: _formatDate(note.date, languageCode: languageCode),
         location: note.location,
         weather: note.weather,
         temperature: note.temperature,
@@ -922,9 +1043,10 @@ class AICardGenerationService {
       );
     } else if (random < 66) {
       return AICardPrompts.intelligentCardPrompt(
+        brandName: brandName,
         content: note.content,
         author: note.sourceAuthor,
-        date: _formatDate(note.date),
+        date: _formatDate(note.date, languageCode: languageCode),
         location: note.location,
         weather: note.weather,
         temperature: note.temperature,
@@ -933,9 +1055,10 @@ class AICardGenerationService {
       );
     } else {
       return AICardPrompts.contentAwareVisualPrompt(
+        brandName: brandName,
         content: note.content,
         author: note.sourceAuthor,
-        date: _formatDate(note.date),
+        date: _formatDate(note.date, languageCode: languageCode),
         location: note.location,
         weather: note.weather,
         temperature: note.temperature,
@@ -948,6 +1071,7 @@ class AICardGenerationService {
   /// 如果AI未输出底部元数据，则添加一个简单信息块
   String _ensureMetadataPresence(
     String svg, {
+    required String brandName,
     required String? date,
     String? location,
     String? weather,
@@ -955,6 +1079,7 @@ class AICardGenerationService {
     String? author,
     String? source,
     String? dayPeriod,
+    String languageCode = 'zh',
   }) {
     final lower = svg.toLowerCase();
     final hasDate = date != null && lower.contains(date.toLowerCase());
@@ -967,11 +1092,13 @@ class AICardGenerationService {
     }
     // 简单插入在 </svg> 前
     final metaParts = <String>[];
-    // 规则：程序自动补全 -> 统一中文本地化
-    final localizedWeather = _localizeWeather(weather);
-    final localizedDayPeriod = _localizeDayPeriod(dayPeriod);
+    // 规则：程序自动补全 -> 根据语言本地化
+    final localizedWeather =
+        _localizeWeather(weather, languageCode: languageCode);
+    final localizedDayPeriod =
+        _localizeDayPeriod(dayPeriod, languageCode: languageCode);
 
-    if (date != null) metaParts.add(date); // 已是中文格式化
+    if (date != null) metaParts.add(date); // 已是格式化的
     if (location != null) metaParts.add(location); // 用户输入不改动
     if (localizedWeather != null) {
       metaParts.add(
@@ -983,7 +1110,7 @@ class AICardGenerationService {
     if (author != null) metaParts.add(author);
     if (source != null && source != author) metaParts.add(source);
     if (localizedDayPeriod != null) metaParts.add(localizedDayPeriod);
-    metaParts.add('心迹');
+    metaParts.add(brandName);
     final meta = metaParts.join(' · ');
     final injection =
         '<text x="200" y="590" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="10" fill="#ffffff" fill-opacity="0.75">${_escape(meta)}</text>';
@@ -1003,91 +1130,171 @@ class AICardGenerationService {
   bool _containsChinese(String text) =>
       RegExp(r'[\u4e00-\u9fff]').hasMatch(text);
 
-  // 天气本地化映射
-  static const Map<String, String> _weatherMap = {
+  // 天气本地化映射 - 多语言支持
+  // Key: 英文标准名（小写）, Value: Map<languageCode, localizedName>
+  static const Map<String, Map<String, String>> _weatherLocalizations = {
     // 基础天气类型
-    'clear': '晴',
-    'sunny': '晴',
-    'partly_cloudy': '少云',
-    'cloudy': '多云',
-    'overcast': '阴',
-    'fog': '雾',
-    'haze': '霾',
-    'windy': '有风',
+    'clear': {'zh': '晴', 'en': 'Clear', 'ja': '晴れ', 'fr': 'Dégagé'},
+    'sunny': {'zh': '晴', 'en': 'Sunny', 'ja': '晴れ', 'fr': 'Ensoleillé'},
+    'partly_cloudy': {
+      'zh': '少云',
+      'en': 'Partly Cloudy',
+      'ja': '晴れ時々曇り',
+      'fr': 'Partiellement nuageux'
+    },
+    'cloudy': {'zh': '多云', 'en': 'Cloudy', 'ja': '曇り', 'fr': 'Nuageux'},
+    'overcast': {'zh': '阴', 'en': 'Overcast', 'ja': '曇天', 'fr': 'Couvert'},
+    'fog': {'zh': '雾', 'en': 'Fog', 'ja': '霧', 'fr': 'Brouillard'},
+    'haze': {'zh': '霾', 'en': 'Haze', 'ja': '霞', 'fr': 'Brume'},
+    'windy': {'zh': '有风', 'en': 'Windy', 'ja': '風', 'fr': 'Venteux'},
 
     // 雨类天气
-    'drizzle': '毛毛雨',
-    'light rain': '小雨',
-    'rain': '雨',
-    'moderate rain': '中雨',
-    'heavy rain': '大雨',
-    'freezing_rain': '冻雨',
-    'rain_shower': '阵雨',
-    'thunderstorm': '雷雨',
-    'thunderstorm_heavy': '雷暴雨',
+    'drizzle': {'zh': '毛毛雨', 'en': 'Drizzle', 'ja': '霧雨', 'fr': 'Bruine'},
+    'light rain': {
+      'zh': '小雨',
+      'en': 'Light Rain',
+      'ja': '小雨',
+      'fr': 'Pluie légère'
+    },
+    'rain': {'zh': '雨', 'en': 'Rain', 'ja': '雨', 'fr': 'Pluie'},
+    'moderate rain': {
+      'zh': '中雨',
+      'en': 'Moderate Rain',
+      'ja': '中雨',
+      'fr': 'Pluie modérée'
+    },
+    'heavy rain': {
+      'zh': '大雨',
+      'en': 'Heavy Rain',
+      'ja': '大雨',
+      'fr': 'Forte pluie'
+    },
+    'freezing_rain': {
+      'zh': '冻雨',
+      'en': 'Freezing Rain',
+      'ja': '凍雨',
+      'fr': 'Pluie verglaçante'
+    },
+    'rain_shower': {
+      'zh': '阵雨',
+      'en': 'Rain Shower',
+      'ja': 'にわか雨',
+      'fr': 'Averse'
+    },
+    'thunderstorm': {
+      'zh': '雷雨',
+      'en': 'Thunderstorm',
+      'ja': '雷雨',
+      'fr': 'Orage'
+    },
+    'thunderstorm_heavy': {
+      'zh': '雷暴雨',
+      'en': 'Heavy Thunderstorm',
+      'ja': '激しい雷雨',
+      'fr': 'Orage violent'
+    },
 
     // 雪类天气
-    'snow': '雪',
-    'light snow': '小雪',
-    'heavy snow': '大雪',
-    'snow_grains': '雪粒',
-    'snow_shower': '阵雪',
-    'sleet': '雨夹雪',
-
-    // 大写变体（AI可能生成的大小写不同）
-    'Clear': '晴',
-    'Sunny': '晴',
-    'Partly_cloudy': '少云',
-    'Cloudy': '多云',
-    'Overcast': '阴',
-    'Fog': '雾',
-    'Haze': '霾',
-    'Windy': '有风',
-    'Drizzle': '毛毛雨',
-    'Light rain': '小雨',
-    'Rain': '雨',
-    'Moderate rain': '中雨',
-    'Heavy rain': '大雨',
-    'Freezing_rain': '冻雨',
-    'Rain_shower': '阵雨',
-    'Thunderstorm': '雷雨',
-    'Thunderstorm_heavy': '雷暴雨',
-    'Snow': '雪',
-    'Light snow': '小雪',
-    'Heavy snow': '大雪',
-    'Snow_grains': '雪粒',
-    'Snow_shower': '阵雪',
-    'Sleet': '雨夹雪',
+    'snow': {'zh': '雪', 'en': 'Snow', 'ja': '雪', 'fr': 'Neige'},
+    'light snow': {
+      'zh': '小雪',
+      'en': 'Light Snow',
+      'ja': '小雪',
+      'fr': 'Neige légère'
+    },
+    'heavy snow': {
+      'zh': '大雪',
+      'en': 'Heavy Snow',
+      'ja': '大雪',
+      'fr': 'Forte neige'
+    },
+    'snow_grains': {
+      'zh': '雪粒',
+      'en': 'Snow Grains',
+      'ja': '雪あられ',
+      'fr': 'Grésil'
+    },
+    'snow_shower': {
+      'zh': '阵雪',
+      'en': 'Snow Shower',
+      'ja': 'にわか雪',
+      'fr': 'Averse de neige'
+    },
+    'sleet': {'zh': '雨夹雪', 'en': 'Sleet', 'ja': 'みぞれ', 'fr': 'Grésil'},
 
     // 其他格式变体
-    'rainy': '雨',
-    'snowy': '雪',
-    'stormy': '暴风雨',
+    'rainy': {'zh': '雨', 'en': 'Rainy', 'ja': '雨', 'fr': 'Pluvieux'},
+    'snowy': {'zh': '雪', 'en': 'Snowy', 'ja': '雪', 'fr': 'Neigeux'},
+    'stormy': {'zh': '暴风雨', 'en': 'Stormy', 'ja': '嵐', 'fr': 'Orageux'},
   };
 
-  String? _localizeWeather(String? weather) {
+  /// 本地化天气字符串
+  /// [languageCode] 语言代码 ('zh', 'en', 'ja', 'fr', etc.)
+  String? _localizeWeather(String? weather, {String languageCode = 'zh'}) {
     if (weather == null || weather.trim().isEmpty) return null;
-    final w = weather.toLowerCase();
-    return _weatherMap[w] ?? weather; // 未命中保持原样（可能已是中文）
+    final w = weather.toLowerCase().trim();
+
+    // 如果已经是目标语言，直接返回
+    if (_weatherLocalizations.containsKey(w)) {
+      return _weatherLocalizations[w]?[languageCode] ??
+          _weatherLocalizations[w]?['en'] ??
+          weather;
+    }
+
+    // 尝试匹配（可能输入带下划线或空格变体）
+    final normalized = w.replaceAll('_', ' ');
+    if (_weatherLocalizations.containsKey(normalized)) {
+      return _weatherLocalizations[normalized]?[languageCode] ??
+          _weatherLocalizations[normalized]?['en'] ??
+          weather;
+    }
+
+    // 未命中保持原样（可能已是目标语言）
+    return weather;
   }
 
-  // 时间段本地化
-  static const Map<String, String> _dayPeriodMap = {
-    'moring': '晨间', // 兼容常见拼写错误
-    'morning': '晨间',
-    'noon': '正午',
-    'afternoon': '午后',
-    'evening': '傍晚',
-    'night': '夜晚',
-    'dawn': '黎明',
-    'dusk': '黄昏',
-    'late night': '深夜',
+  // 时间段本地化 - 多语言支持
+  static const Map<String, Map<String, String>> _dayPeriodLocalizations = {
+    'moring': {
+      'zh': '晨间',
+      'en': 'Morning',
+      'ja': '朝',
+      'fr': 'Matin'
+    }, // 兼容常见拼写错误
+    'morning': {'zh': '晨间', 'en': 'Morning', 'ja': '朝', 'fr': 'Matin'},
+    'noon': {'zh': '正午', 'en': 'Noon', 'ja': '正午', 'fr': 'Midi'},
+    'afternoon': {
+      'zh': '午后',
+      'en': 'Afternoon',
+      'ja': '午後',
+      'fr': 'Après-midi'
+    },
+    'evening': {'zh': '傍晚', 'en': 'Evening', 'ja': '夕方', 'fr': 'Soir'},
+    'night': {'zh': '夜晚', 'en': 'Night', 'ja': '夜', 'fr': 'Nuit'},
+    'dawn': {'zh': '黎明', 'en': 'Dawn', 'ja': '夜明け', 'fr': 'Aube'},
+    'dusk': {'zh': '黄昏', 'en': 'Dusk', 'ja': '夕暮れ', 'fr': 'Crépuscule'},
+    'late night': {
+      'zh': '深夜',
+      'en': 'Late Night',
+      'ja': '深夜',
+      'fr': 'Tard dans la nuit'
+    },
+    'midnight': {'zh': '午夜', 'en': 'Midnight', 'ja': '真夜中', 'fr': 'Minuit'},
   };
 
-  String? _localizeDayPeriod(String? period) {
+  /// 本地化时间段字符串
+  String? _localizeDayPeriod(String? period, {String languageCode = 'zh'}) {
     if (period == null || period.trim().isEmpty) return null;
-    final p = period.toLowerCase();
-    return _dayPeriodMap[p] ?? period; // 未命中保持原样（可能已是中文）
+    final p = period.toLowerCase().trim();
+
+    if (_dayPeriodLocalizations.containsKey(p)) {
+      return _dayPeriodLocalizations[p]?[languageCode] ??
+          _dayPeriodLocalizations[p]?['en'] ??
+          period;
+    }
+
+    // 未命中保持原样（可能已是目标语言）
+    return period;
   }
 
   /// 验证SVG基本结构

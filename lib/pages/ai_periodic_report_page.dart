@@ -559,7 +559,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       _pendingQuotesForCards = allSelectedQuotes.skip(_cardsPerBatch).toList();
 
       final cards = await _aiCardService!.generateFeaturedCards(
-        firstBatch,
+        notes: firstBatch,
+        brandName: AppLocalizations.of(context).appTitle,
         maxCards: _cardsPerBatch,
       );
 
@@ -604,7 +605,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
           _pendingQuotesForCards.skip(_cardsPerBatch).toList();
 
       final newCards = await _aiCardService!.generateFeaturedCards(
-        nextBatch,
+        notes: nextBatch,
+        brandName: AppLocalizations.of(context).appTitle,
         maxCards: _cardsPerBatch,
       );
 
@@ -2420,7 +2422,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       regenerateCallback = () async {
         final newCard = await _aiCardService!.generateCard(
           note: quoteForCard!,
-          isRegeneration: true,
+          isRegeneration: true, brandName: AppLocalizations.of(context).appTitle,
         );
         if (mounted) {
           setState(() {

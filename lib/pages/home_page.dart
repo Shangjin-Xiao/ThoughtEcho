@@ -1087,7 +1087,7 @@ class _HomePageState extends State<HomePage>
 
     try {
       // 生成卡片
-      final card = await _aiCardService!.generateCard(note: quote);
+      final card = await _aiCardService!.generateCard(note: quote, brandName: AppLocalizations.of(context).appTitle);
 
       // 关闭加载对话框
       if (mounted) Navigator.of(context).pop();
@@ -1102,7 +1102,7 @@ class _HomePageState extends State<HomePage>
             onSave: (selected) => _saveCard(selected),
             onRegenerate: () => _aiCardService!.generateCard(
               note: quote,
-              isRegeneration: true,
+              isRegeneration: true, brandName: AppLocalizations.of(context).appTitle,
             ),
           ),
         );
@@ -1243,7 +1243,7 @@ class _HomePageState extends State<HomePage>
         height: 1200,
         scaleFactor: 2.0,
         renderMode: ExportRenderMode.contain,
-        context: context,
+        context: context, fileNamePrefix: AppLocalizations.of(context).cardFileNamePrefix,
       );
 
       if (mounted) {

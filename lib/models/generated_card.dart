@@ -20,6 +20,12 @@ enum CardType {
   dev, // 开发者/代码（新增）
   mindful, // 正念/自然（新增）
   neonCyber, // 霓虹赛博（新增）
+  classicSerif, // 经典衬线（新增）
+  modernPop, // 现代波普（新增）
+  softGradient, // 柔和渐变（新增）
+  polaroid, // 拍立得（新增）
+  magazine, // 杂志排版（新增）
+  sotaModern, // SOTA 现代（旗舰新风格）
 }
 
 /// AI生成的卡片模型

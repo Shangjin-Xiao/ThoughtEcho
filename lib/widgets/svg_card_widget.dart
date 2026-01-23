@@ -361,6 +361,8 @@ class GeneratedCardWidget extends StatelessWidget {
   final Future<void> Function(GeneratedCard card)? onShare;
   final Future<void> Function(GeneratedCard card)? onSave;
   final Future<void> Function()? onRegenerate;
+  final Future<GeneratedCard> Function(GeneratedCard currentCard)?
+      onRegenerateWithExclude;
   final bool showActions;
   final bool actionsEnabled;
   final double? width;
@@ -373,6 +375,7 @@ class GeneratedCardWidget extends StatelessWidget {
     this.onShare,
     this.onSave,
     this.onRegenerate,
+    this.onRegenerateWithExclude,
     this.showActions = true,
     this.actionsEnabled = true,
     this.width,
@@ -409,11 +412,17 @@ class GeneratedCardWidget extends StatelessWidget {
           spacing: 12,
           runSpacing: 8,
           children: [
-            if (onRegenerate != null)
+            if (onRegenerate != null || onRegenerateWithExclude != null)
               _ActionButton(
                 icon: Icons.refresh,
                 label: l10n.regenerateCard,
-                onPressed: () => onRegenerate?.call(),
+                onPressed: () {
+                  if (onRegenerateWithExclude != null) {
+                    onRegenerateWithExclude!(card);
+                  } else if (onRegenerate != null) {
+                    onRegenerate!();
+                  }
+                },
                 enabled: actionsEnabled,
               ),
             if (onShare != null)
@@ -471,6 +480,8 @@ class CardPreviewDialog extends StatefulWidget {
   final Future<void> Function(GeneratedCard card)? onShare;
   final Future<void> Function(GeneratedCard card)? onSave;
   final Future<GeneratedCard> Function()? onRegenerate;
+  final Future<GeneratedCard> Function(GeneratedCard currentCard)?
+      onRegenerateWithExclude;
 
   const CardPreviewDialog({
     super.key,
@@ -478,6 +489,7 @@ class CardPreviewDialog extends StatefulWidget {
     this.onShare,
     this.onSave,
     this.onRegenerate,
+    this.onRegenerateWithExclude,
   });
 
   @override
@@ -513,14 +525,19 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
   }
 
   Future<void> _handleRegenerate() async {
-    if (widget.onRegenerate == null || _isRegenerating) return;
+    if ((widget.onRegenerate == null &&
+            widget.onRegenerateWithExclude == null) ||
+        _isRegenerating) return;
 
     setState(() {
       _isRegenerating = true;
     });
 
     try {
-      final newCard = await widget.onRegenerate!();
+      final newCard = widget.onRegenerateWithExclude != null
+          ? await widget.onRegenerateWithExclude!(_currentCard)
+          : await widget.onRegenerate!();
+
       if (!mounted) return;
       setState(() {
         _currentCard = newCard;
@@ -623,13 +640,15 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
                                 card: _currentCard,
                                 onShare: widget.onShare,
                                 onSave: widget.onSave,
-                                onRegenerate: widget.onRegenerate == null
+                                onRegenerate: widget.onRegenerate == null &&
+                                        widget.onRegenerateWithExclude == null
                                     ? null
-                                    : () => _handleRegenerate(),
+                                    : () async => await _handleRegenerate(),
                                 actionsEnabled: !_isRegenerating,
                                 width: 300,
                                 height: 400,
                               ),
+
                               if (_isRegenerating) ...[
                                 const SizedBox(height: 12),
                                 Row(
