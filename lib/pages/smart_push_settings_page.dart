@@ -321,37 +321,52 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                   final hasNotificationPermission =
                       await smartPushService.requestNotificationPermission();
                   if (!hasNotificationPermission) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(l10n.smartPushPermissionRequired),
-                          backgroundColor: colorScheme.error,
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    }
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(l10n.smartPushPermissionRequired),
+                        backgroundColor: colorScheme.error,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
                     return;
                   }
 
                   // 2. 检查精确闹钟权限 (Android 12+)
                   final hasExactAlarmPermission =
                       await smartPushService.checkExactAlarmPermission();
-                  if (!hasExactAlarmPermission && context.mounted) {
-                    // 如果没有精确闹钟权限，提示用户
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(l10n.smartPushExactAlarmHint),
-                        behavior: SnackBarBehavior.floating,
+                  if (!hasExactAlarmPermission) {
+                    if (!context.mounted) return;
+                    // 没有精确闹钟权限，询问用户是否授权
+                    final shouldRequest = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: Text(l10n.smartPushExactAlarmTitle),
+                        content: Text(l10n.smartPushExactAlarmMessage),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx, false),
+                            child: Text(l10n.cancel),
+                          ),
+                          FilledButton(
+                            onPressed: () => Navigator.pop(ctx, true),
+                            child: Text(l10n.smartPushGoToSettings),
+                          ),
+                        ],
                       ),
                     );
+
+                    if (shouldRequest == true) {
+                      // 跳转到系统设置授权
+                      await smartPushService.requestExactAlarmPermission();
+                    }
                   }
                 }
 
-                if (context.mounted) {
-                  setState(() {
-                    _settings = _settings.copyWith(enabled: value);
-                  });
-                }
+                if (!context.mounted) return;
+                setState(() {
+                  _settings = _settings.copyWith(enabled: value);
+                });
               },
             ),
           ],

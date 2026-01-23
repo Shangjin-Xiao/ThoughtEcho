@@ -3158,5 +3158,8 @@
   "smartPushModeCustom": "自定义推送",
   "smartPushModeCustomDesc": "手动选择回顾类型和筛选条件",
   "smartPushExactAlarmHint": "建议开启精确闹钟权限以确保准时推送",
+  "smartPushExactAlarmTitle": "精确闹钟权限",
+  "smartPushExactAlarmMessage": "为确保推送准时送达，需要授予精确闹钟权限。不授权也可使用，但推送时间可能有几分钟误差。",
+  "smartPushGoToSettings": "去设置",
   "recommended": "推荐"
 }
