@@ -660,12 +660,12 @@ class _AISettingsPageState extends State<AISettingsPage> {
     final theme = Theme.of(context);
 
     return Card(
-      elevation: 2,
+      elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: theme.colorScheme.primary, width: 1.5),
+        side: BorderSide(color: theme.colorScheme.primary, width: 2),
       ),
-      color: theme.colorScheme.primaryContainer.withOpacity(0.1),
+      color: theme.colorScheme.surface,
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -874,28 +874,29 @@ class _AISettingsPageState extends State<AISettingsPage> {
                   ),
                   obscureText: _obscureApiKey,
                 ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _modelController,
+                  decoration: InputDecoration(
+                    labelText: l10n.modelNameField,
+                    border: const OutlineInputBorder(),
+                    prefixIcon: const Icon(Icons.psychology),
+                  ),
+                ),
               ],
             ),
           ),
         ),
         const SizedBox(height: 12),
 
-        // Model & Advanced
+        // Advanced (formerly Model & Advanced)
         Card(
           child: ExpansionTile(
-            title: Text(l10n.modelAndAdvanced),
-            leading: const Icon(Icons.tune),
+            title: Text(l10n
+                .hostOverrideField), // Using Host Override label as title or keep general "Advanced"
+            leading: const Icon(Icons.settings),
             childrenPadding: const EdgeInsets.all(16),
             children: [
-              TextFormField(
-                controller: _modelController,
-                decoration: InputDecoration(
-                  labelText: l10n.modelNameField,
-                  border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.psychology),
-                ),
-              ),
-              const SizedBox(height: 16),
               TextField(
                 controller: _hostOverrideController,
                 decoration: InputDecoration(
