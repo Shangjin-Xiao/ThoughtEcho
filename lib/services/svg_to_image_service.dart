@@ -24,12 +24,13 @@ class SvgToImageService {
     int width = 400,
     int height = 600,
     ui.ImageByteFormat format = ui.ImageByteFormat.png,
-    Color backgroundColor = Colors.white,
+    Color backgroundColor = Colors.transparent,
     bool maintainAspectRatio = true,
     bool useCache = true,
     double scaleFactor = 1.0,
     ExportRenderMode renderMode = ExportRenderMode.contain,
     BuildContext? context,
+    double borderRadius = 0,
   }) async {
     try {
       // 验证输入参数
@@ -84,6 +85,7 @@ class SvgToImageService {
         scaleFactor,
         renderMode,
         context,
+        borderRadius,
       );
 
       // 缓存结果
@@ -105,7 +107,7 @@ class SvgToImageService {
     int width = 400,
     int height = 600,
     ui.ImageByteFormat format = ui.ImageByteFormat.png,
-    Color backgroundColor = Colors.white,
+    Color backgroundColor = Colors.transparent,
     bool maintainAspectRatio = true,
     Function(int current, int total)? onProgress,
   }) async {
@@ -270,6 +272,7 @@ class SvgToImageService {
     double scaleFactor,
     ExportRenderMode renderMode,
     BuildContext? buildContext,
+    double borderRadius,
   ) async {
     // 策略：优先使用真实Flutter渲染，确保与预览一致
     if (buildContext != null) {
@@ -287,6 +290,7 @@ class SvgToImageService {
           background: backgroundColor,
           mode: renderMode,
           format: format,
+          borderRadius: borderRadius,
         );
         AppLogger.i(
           'Flutter真实渲染成功，图片大小: ${result.length} bytes',
@@ -318,6 +322,7 @@ class SvgToImageService {
         backgroundColor,
         scaleFactor,
         renderMode,
+        borderRadius,
       );
     } catch (e) {
       AppLogger.w(
@@ -345,6 +350,7 @@ class SvgToImageService {
     Color backgroundColor,
     double scaleFactor,
     ExportRenderMode renderMode,
+    double borderRadius,
   ) async {
     AppLogger.d(
       '使用flutter_svg Drawable 渲染（无BuildContext）: ${width}x$height, 缩放: $scaleFactor, 模式: $renderMode',
@@ -392,6 +398,22 @@ class SvgToImageService {
     final focusManager = FocusManager();
     final buildOwner = BuildOwner(focusManager: focusManager);
 
+    Widget content = flutter_svg.SvgPicture.string(
+      svgContent,
+      width: outputSize.width,
+      height: outputSize.height,
+      fit: fit,
+      allowDrawingOutsideViewBox: false,
+    );
+
+    // 如果指定了圆角，则使用ClipRRect裁剪内容
+    if (borderRadius > 0) {
+      content = ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: content,
+      );
+    }
+
     final rootWidget = Directionality(
       textDirection: ui.TextDirection.ltr,
       child: SizedBox(
@@ -399,13 +421,7 @@ class SvgToImageService {
         height: outputSize.height,
         child: ColoredBox(
           color: backgroundColor,
-          child: flutter_svg.SvgPicture.string(
-            svgContent,
-            width: outputSize.width,
-            height: outputSize.height,
-            fit: fit,
-            allowDrawingOutsideViewBox: false,
-          ),
+          child: content,
         ),
       ),
     );

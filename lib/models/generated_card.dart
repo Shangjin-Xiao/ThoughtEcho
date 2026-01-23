@@ -66,12 +66,15 @@ class GeneratedCard {
     int width = 400,
     int height = 600,
     ui.ImageByteFormat format = ui.ImageByteFormat.png,
-    Color backgroundColor = Colors.white,
+    Color backgroundColor = Colors.transparent,
     bool maintainAspectRatio = true,
     BuildContext? context,
     double scaleFactor = 1.0,
     ExportRenderMode renderMode = ExportRenderMode.contain,
   }) async {
+    // 根据宽度按比例计算圆角（基准：宽度400时圆角12）
+    final double borderRadius = 12.0 * (width / 400.0);
+
     return await SvgToImageService.convertSvgToImage(
       svgContent,
       width: width,
@@ -82,6 +85,7 @@ class GeneratedCard {
       context: context,
       scaleFactor: scaleFactor,
       renderMode: renderMode,
+      borderRadius: borderRadius,
     );
   }
 
