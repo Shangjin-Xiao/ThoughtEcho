@@ -212,17 +212,17 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       if (fullQuote != null && mounted) {
         setState(() {
           _fullInitialQuote = fullQuote;
-          _isLoadingFullQuote = false;
         });
         logDebug('已获取完整笔记数据，ID: ${fullQuote.id}');
-      } else {
-        // 未能获取到完整笔记数据，保持加载状态以避免基于部分数据保存
-        logDebug('未能获取到完整笔记数据，ID: ${widget.initialQuote!.id}');
       }
     } catch (e) {
-      // 获取完整笔记数据失败时保持 _isLoadingFullQuote 为 true，
-      // 以防止用户在仅有部分数据的情况下执行保存操作
       logDebug('获取完整笔记数据失败: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingFullQuote = false;
+        });
+      }
     }
   }
 
