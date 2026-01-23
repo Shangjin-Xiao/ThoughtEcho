@@ -14,6 +14,7 @@ import 'package:uuid/uuid.dart';
 import '../services/weather_service.dart';
 import '../utils/time_utils.dart';
 import '../utils/app_logger.dart';
+import '../utils/safe_compute.dart';
 import '../utils/database_platform_init.dart';
 import 'large_file_manager.dart';
 import 'media_reference_service.dart';
@@ -3194,7 +3195,7 @@ class DatabaseService extends ChangeNotifier {
     }
   }
 
-  /// 执行实际的数据库查询（修复版本）
+  /// 执行实际的数据库查询（性能优化版：两步查询 + Isolate解析）
   Future<List<Quote>> _performDatabaseQuery({
     required Database db,
     List<String>? tagIds,
@@ -3211,13 +3212,11 @@ class DatabaseService extends ChangeNotifier {
     if (!db.isOpen) {
       throw Exception('数据库连接已关闭');
     }
-    // 优化：使用单一查询替代两步查询，减少数据库往返
+
+    // 1. 构建主查询 (获取 Quote 基本信息，不包含 LEFT JOIN quote_tags 以利用索引)
     List<String> conditions = [];
     List<dynamic> args = [];
     String fromClause = 'FROM quotes q';
-    String joinClause = '';
-    String groupByClause = '';
-    String havingClause = '';
 
     // 排除隐藏笔记（如果需要）
     if (excludeHiddenNotes) {
@@ -3239,7 +3238,6 @@ class DatabaseService extends ChangeNotifier {
 
     // 优化：搜索查询使用FTS（全文搜索）如果可用，否则使用优化的LIKE查询
     if (searchQuery != null && searchQuery.isNotEmpty) {
-      // 使用更高效的搜索策略：优先匹配内容，然后匹配其他字段
       conditions.add(
         '(q.content LIKE ? OR (q.source LIKE ? OR q.source_author LIKE ? OR q.source_work LIKE ?))',
       );
@@ -3262,11 +3260,9 @@ class DatabaseService extends ChangeNotifier {
       args.addAll(selectedDayPeriods);
     }
 
-    /// 修复：优化标签筛选查询，减少复杂度
-    /// 关键修复：始终使用独立的 LEFT JOIN 获取所有标签，不受筛选条件影响
+    // 标签筛选：使用 EXISTS，避免在主查询中进行 JOIN
     if (tagIds != null && tagIds.isNotEmpty) {
       if (tagIds.length == 1) {
-        // 单标签查询：使用简单的INNER JOIN筛选，但用另一个JOIN获取所有标签
         conditions.add('''
           EXISTS (
             SELECT 1 FROM quote_tags qt_filter
@@ -3276,7 +3272,6 @@ class DatabaseService extends ChangeNotifier {
         ''');
         args.add(tagIds.first);
       } else {
-        // 多标签查询：使用EXISTS确保所有标签都匹配
         final tagPlaceholders = tagIds.map((_) => '?').join(',');
         conditions.add('''
           EXISTS (
@@ -3292,10 +3287,6 @@ class DatabaseService extends ChangeNotifier {
       }
     }
 
-    // 始终使用独立的 LEFT JOIN 来获取所有标签（不受筛选条件影响）
-    joinClause = 'LEFT JOIN quote_tags qt ON q.id = qt.quote_id';
-    groupByClause = 'GROUP BY q.id';
-
     final where =
         conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
 
@@ -3303,33 +3294,42 @@ class DatabaseService extends ChangeNotifier {
     final correctedOrderBy =
         'q.${orderByParts[0]} ${orderByParts.length > 1 ? orderByParts[1] : ''}';
 
-    /// 修复：始终使用 qt.tag_id 获取所有标签
+    // 第一步：查询分页的 Quote 数据
     final query = '''
-      SELECT q.*, GROUP_CONCAT(qt.tag_id) as tag_ids
+      SELECT q.*
       $fromClause
-      $joinClause
       $where
-      $groupByClause
-      $havingClause
       ORDER BY $correctedOrderBy
       LIMIT ? OFFSET ?
     ''';
 
     args.addAll([limit, offset]);
 
-    logDebug('执行优化查询: $query\n参数: $args');
-
-    /// 修复：增强查询性能监控和慢查询检测
     final stopwatch = Stopwatch()..start();
-    final maps = await db.rawQuery(query, args);
+    final List<Map<String, dynamic>> quotesMaps = await db.rawQuery(query, args);
+
+    // 如果没有数据，直接返回
+    if (quotesMaps.isEmpty) {
+      stopwatch.stop();
+      return [];
+    }
+
+    // 第二步：查询这些 Quote 对应的标签
+    final quoteIds = quotesMaps.map((m) => m['id'] as String).toList();
+    final placeholders = List.filled(quoteIds.length, '?').join(',');
+
+    final tagsQuery = '''
+      SELECT quote_id, tag_id
+      FROM quote_tags
+      WHERE quote_id IN ($placeholders)
+    ''';
+
+    final List<Map<String, dynamic>> tagsMaps = await db.rawQuery(tagsQuery, quoteIds);
     stopwatch.stop();
 
     final queryTime = stopwatch.elapsedMilliseconds;
 
-    // 记录查询统计（用于性能分析）
-    _recordQueryStats('getQuotesCount', queryTime);
-
-    // 慢查询检测和警告（阈值降低到100ms，更敏感）
+    // 慢查询检测和警告
     if (queryTime > 100) {
       final level = queryTime > 1000
           ? '🔴 严重慢查询'
@@ -3337,30 +3337,20 @@ class DatabaseService extends ChangeNotifier {
               ? '⚠️ 慢查询警告'
               : 'ℹ️ 性能提示';
       logDebug('$level: 查询耗时 ${queryTime}ms');
-
-      if (queryTime > 500) {
-        logDebug('慢查询SQL: $query');
-        logDebug('查询参数: $args');
-
-        // 可选：记录查询执行计划用于优化
-        try {
-          final plan = await db.rawQuery('EXPLAIN QUERY PLAN $query', args);
-          logDebug('查询执行计划:');
-          for (final step in plan) {
-            logDebug('  ${step['detail']}');
-          }
-        } catch (e) {
-          logDebug('获取查询执行计划失败: $e');
-        }
-      }
     }
 
-    logDebug('查询完成，耗时: ${queryTime}ms，结果数量: ${maps.length}');
+    logDebug('查询完成，耗时: ${queryTime}ms，结果数量: ${quotesMaps.length}');
 
     // 更新性能统计
     _updateQueryStats('getUserQuotes', queryTime);
 
-    return maps.map((m) => Quote.fromJson(m)).toList();
+    // 第三步：在后台 Isolate 中合并标签并解析对象，避免阻塞 UI
+    return await SafeCompute.run(
+      _mergeAndParseQuotes,
+      [quotesMaps, tagsMaps],
+      fallbackValue: <Quote>[], // 类型明确
+      debugLabel: 'ParseQuotes',
+    ) ?? [];
   }
 
   /// 修复：更新查询性能统计
@@ -5843,4 +5833,36 @@ class DatabaseService extends ChangeNotifier {
       return null;
     }
   }
+}
+
+/// 在后台 Isolate 中合并标签并解析 Quote 对象
+List<Quote> _mergeAndParseQuotes(List<dynamic> args) {
+  final List<Map<String, dynamic>> quotesMaps = args[0] as List<Map<String, dynamic>>;
+  final List<Map<String, dynamic>> tagsMaps = args[1] as List<Map<String, dynamic>>;
+
+  // 构建 quote_id -> tag_ids 映射
+  final Map<String, List<String>> tagsMap = {};
+  for (final tagRow in tagsMaps) {
+    final quoteId = tagRow['quote_id'] as String?;
+    final tagId = tagRow['tag_id'] as String?;
+    if (quoteId != null && tagId != null) {
+      tagsMap.putIfAbsent(quoteId, () => []).add(tagId);
+    }
+  }
+
+  // 解析 Quote 对象并注入标签
+  return quotesMaps.map((map) {
+    try {
+      final id = map['id']?.toString();
+      final tagIds = id != null ? (tagsMap[id] ?? []) : <String>[];
+
+      final Map<String, dynamic> quoteData = Map<String, dynamic>.from(map);
+      quoteData['tag_ids'] = tagIds;
+
+      return Quote.fromJson(quoteData);
+    } catch (e) {
+      // 记录错误但继续处理其他条目
+      rethrow;
+    }
+  }).toList();
 }
