@@ -230,156 +230,160 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.8,
+        height: MediaQuery.of(context).size.height * 0.85, // Slightly taller
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(AppTheme.dialogRadius), // Use AppTheme
+          ),
+          boxShadow: AppTheme.defaultShadow, // Add shadow
         ),
         child: Column(
           children: [
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(2),
+            // Drag Handle
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.symmetric(vertical: 12),
+                decoration: BoxDecoration(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurfaceVariant.withOpacity(0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
+            // Header
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: Text(
-                      AppLocalizations.of(context).aiAnalysisDetails,
-                      style: Theme.of(context).textTheme.headlineSmall,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          AppLocalizations.of(context).aiAnalysisDetails,
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineSmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.access_time,
+                              size: 14,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              analysis
+                                  .createdAt, // Consider formatting date nicer
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
+                    icon: const Icon(Icons.close_rounded),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Theme.of(context)
+                          .colorScheme
+                          .surfaceContainerHighest
+                          .withOpacity(0.5),
+                    ),
                   ),
                 ],
               ),
             ),
+            const Divider(height: 1),
+            // Content
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(24), // More padding
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      AppLocalizations.of(context).analysisTime,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      analysis.createdAt,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withValues(alpha: 0.7),
-                          ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
+                    // Analysis Content Section
+                    _buildSectionHeader(
+                      context,
                       AppLocalizations.of(context).analysisContent,
-                      style: Theme.of(context).textTheme.titleMedium,
+                      Icons.article_outlined,
                     ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: MarkdownBody(
-                        data: analysis.content,
-                        styleSheet: MarkdownStyleSheet.fromTheme(
-                          Theme.of(context),
-                        ).copyWith(
-                          p: Theme.of(context).textTheme.bodyMedium,
-                          h1: Theme.of(context).textTheme.titleLarge,
-                          h2: Theme.of(context).textTheme.titleMedium,
-                          h3: Theme.of(context).textTheme.titleSmall,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      AppLocalizations.of(context).aiAnalysisResult,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: MarkdownBody(
-                        data: analysis.content,
-                        styleSheet: MarkdownStyleSheet.fromTheme(
-                          Theme.of(context),
-                        ).copyWith(
-                          p: Theme.of(context).textTheme.bodyMedium,
-                          h1: Theme.of(context).textTheme.titleLarge,
-                          h2: Theme.of(context).textTheme.titleMedium,
-                          h3: Theme.of(context).textTheme.titleSmall,
-                          code:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    backgroundColor: Theme.of(
-                                      context,
-                                    ).colorScheme.surfaceContainerHigh,
-                                    fontFamily: 'monospace',
-                                    fontSize: 14,
-                                  ),
-                          codeblockPadding: const EdgeInsets.all(12),
-                          codeblockDecoration: BoxDecoration(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.surfaceContainerHigh,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.outline.withValues(alpha: 0.2),
-                              width: 1,
+                    const SizedBox(height: 12),
+                    MarkdownBody(
+                      data: analysis.content,
+                      selectable: true,
+                      styleSheet: MarkdownStyleSheet.fromTheme(
+                        Theme.of(context),
+                      ).copyWith(
+                        p: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              height: 1.6,
+                              fontSize: 16,
                             ),
-                          ),
-                          blockquote:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    fontStyle: FontStyle.italic,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.8),
-                                  ),
-                          blockquotePadding: const EdgeInsets.all(12),
-                          blockquoteDecoration: BoxDecoration(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.surfaceContainerLow,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border(
-                              left: BorderSide(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.primary,
-                                width: 4,
-                              ),
+                        h1: Theme.of(context)
+                            .textTheme
+                            .headlineMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                        h2: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                        blockquote:
+                            Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  fontStyle: FontStyle.italic,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
+                        blockquoteDecoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest
+                              .withOpacity(0.5),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border(
+                            left: BorderSide(
+                              color: Theme.of(context).colorScheme.primary,
+                              width: 4,
                             ),
                           ),
                         ),
+                        code: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontFamily: 'monospace',
+                              backgroundColor: Theme.of(context)
+                                  .colorScheme
+                                  .surfaceContainerHighest,
+                            ),
+                        codeblockDecoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                     ),
+                    const SizedBox(height: 32), // Spacing at bottom
                   ],
                 ),
               ),
@@ -387,6 +391,27 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildSectionHeader(
+      BuildContext context, String title, IconData icon) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: 20,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+        ),
+      ],
     );
   }
 
@@ -1052,9 +1077,20 @@ $positiveQuotesText
                           final analysis = filteredAnalyses[index];
                           return Card(
                             margin: const EdgeInsets.only(bottom: 12),
+                            elevation: 2,
+                            shadowColor: Theme.of(context)
+                                .colorScheme
+                                .shadow
+                                .withValues(alpha: 0.1),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(
                                 AppTheme.cardRadius,
+                              ),
+                              side: BorderSide(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .outline
+                                    .withValues(alpha: 0.1),
                               ),
                             ),
                             child: InkWell(
@@ -1069,39 +1105,65 @@ $positiveQuotesText
                                   children: [
                                     Row(
                                       children: [
-                                        Icon(
-                                          _getAnalysisTypeIcon(
-                                            analysis.analysisType,
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primaryContainer
+                                                .withValues(alpha: 0.3),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
                                           ),
-                                          size: 20,
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.primary,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            _getAnalysisTypeName(
+                                          child: Icon(
+                                            _getAnalysisTypeIcon(
                                               analysis.analysisType,
                                             ),
-                                            style: Theme.of(
+                                            size: 20,
+                                            color: Theme.of(
                                               context,
-                                            ).textTheme.titleMedium,
+                                            ).colorScheme.primary,
                                           ),
                                         ),
-                                        Text(
-                                          analysis.createdAt,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodySmall
-                                              ?.copyWith(
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .onSurface
-                                                    .withValues(alpha: 0.6),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                _getAnalysisTypeName(
+                                                  analysis.analysisType,
+                                                ),
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .titleMedium
+                                                    ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
                                               ),
+                                              Text(
+                                                analysis.createdAt,
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodySmall
+                                                    ?.copyWith(
+                                                      color: Theme.of(context)
+                                                          .colorScheme
+                                                          .onSurfaceVariant,
+                                                    ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                         PopupMenuButton<String>(
+                                          icon: Icon(
+                                            Icons.more_vert,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .onSurfaceVariant,
+                                          ),
                                           onSelected: (value) {
                                             if (value == 'delete') {
                                               _deleteAnalysis(analysis);
@@ -1112,11 +1174,23 @@ $positiveQuotesText
                                               value: 'delete',
                                               child: Row(
                                                 children: [
-                                                  Icon(Icons.delete, size: 16),
-                                                  SizedBox(width: 8),
-                                                  Text(AppLocalizations.of(
-                                                          context)
-                                                      .delete),
+                                                  Icon(
+                                                    Icons.delete_outline,
+                                                    size: 20,
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .error,
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    AppLocalizations.of(context)
+                                                        .delete,
+                                                    style: TextStyle(
+                                                      color: Theme.of(context)
+                                                          .colorScheme
+                                                          .error,
+                                                    ),
+                                                  ),
                                                 ],
                                               ),
                                             ),
@@ -1124,29 +1198,25 @@ $positiveQuotesText
                                         ),
                                       ],
                                     ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      analysis.content,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    const SizedBox(height: 8),
+                                    const SizedBox(height: 16),
                                     Container(
+                                      width: double.infinity,
                                       padding: const EdgeInsets.all(12),
                                       decoration: BoxDecoration(
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.surfaceContainerHighest,
-                                        borderRadius: BorderRadius.circular(8),
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .surfaceContainerHighest
+                                            .withValues(alpha: 0.3),
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
                                       child: Text(
-                                        analysis.title,
-                                        style: Theme.of(
-                                          context,
-                                        ).textTheme.bodySmall,
+                                        analysis.content,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(
+                                              height: 1.5,
+                                            ),
                                         maxLines: 3,
                                         overflow: TextOverflow.ellipsis,
                                       ),
