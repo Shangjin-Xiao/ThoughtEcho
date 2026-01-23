@@ -295,20 +295,38 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     await Future.delayed(Duration.zero);
     if (!mounted) return;
 
-    try {
-      final db = Provider.of<DatabaseService>(context, listen: false);
-      final fullQuote = await db.getQuoteById(widget.initialQuote!.id!);
-      if (fullQuote != null && mounted) {
-        setState(() {
-          _fullInitialQuote = fullQuote;
-          // 如果列表页传递的对象缺少 AI 分析等大字段，这里补全
-          if (_aiSummary == null && fullQuote.aiAnalysis != null) {
-            _aiSummary = fullQuote.aiAnalysis;
-          }
-        });
+    const int maxAttempts = 3;
+    const Duration retryDelay = Duration(milliseconds: 200);
+
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
+      if (!mounted) return;
+      try {
+        final db = Provider.of<DatabaseService>(context, listen: false);
+        final fullQuote = await db.getQuoteById(widget.initialQuote!.id!);
+
+        if (fullQuote != null && mounted) {
+          setState(() {
+            _fullInitialQuote = fullQuote;
+            // 如果列表页传递的对象缺少 AI 分析等大字段，这里补全
+            if (_aiSummary == null && fullQuote.aiAnalysis != null) {
+              _aiSummary = fullQuote.aiAnalysis;
+            }
+          });
+          return;
+        } else {
+          // 未能获取到完整数据，记录日志并在需要时重试
+          logDebug('获取完整笔记详情失败: 数据为空 (第 $attempt 次)');
+        }
+      } catch (e) {
+        logDebug('获取完整笔记详情失败 (第 $attempt 次): $e');
       }
-    } catch (e) {
-      logDebug('获取完整笔记详情失败: $e');
+
+      if (attempt < maxAttempts) {
+        await Future.delayed(retryDelay);
+      } else {
+        // 最终重试仍失败，保留原有的回退逻辑（使用列表传入的部分数据）
+        logDebug('获取完整笔记详情最终失败，已用尽重试次数 ($maxAttempts 次)');
+      }
     }
   }
 
