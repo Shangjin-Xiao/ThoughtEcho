@@ -2970,6 +2970,39 @@ class DatabaseService extends ChangeNotifier {
     }
   }
 
+  /// 根据ID获取单个笔记的完整信息
+  Future<Quote?> getQuoteById(String id) async {
+    if (kIsWeb) {
+      try {
+        return _memoryStore.firstWhere((q) => q.id == id);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    try {
+      final db = await safeDatabase;
+
+      // 使用 GROUP_CONCAT 获取关联标签
+      final List<Map<String, dynamic>> maps = await db.rawQuery('''
+        SELECT q.*, GROUP_CONCAT(qt.tag_id) as tag_ids
+        FROM quotes q
+        LEFT JOIN quote_tags qt ON q.id = qt.quote_id
+        WHERE q.id = ?
+        GROUP BY q.id
+      ''', [id]);
+
+      if (maps.isEmpty) {
+        return null;
+      }
+
+      return Quote.fromJson(maps.first);
+    } catch (e) {
+      logDebug('获取指定ID笔记失败: $e');
+      return null;
+    }
+  }
+
   /// 获取笔记列表，支持标签、分类、搜索、天气和时间段筛选
   /// 修复：获取用户笔记，增加初始化状态检查
   Future<List<Quote>> getUserQuotes({
@@ -3304,8 +3337,14 @@ class DatabaseService extends ChangeNotifier {
         'q.${orderByParts[0]} ${orderByParts.length > 1 ? orderByParts[1] : ''}';
 
     /// 修复：始终使用 qt.tag_id 获取所有标签
+    // 优化：指定查询列，排除大文本字段(ai_analysis, summary等)以提升列表加载性能
     final query = '''
-      SELECT q.*, GROUP_CONCAT(qt.tag_id) as tag_ids
+      SELECT
+        q.id, q.content, q.date, q.source, q.source_author, q.source_work,
+        q.category_id, q.color_hex, q.location, q.latitude, q.longitude,
+        q.weather, q.temperature, q.edit_source, q.delta_content, q.day_period,
+        q.last_modified, q.favorite_count,
+        GROUP_CONCAT(qt.tag_id) as tag_ids
       $fromClause
       $joinClause
       $where
