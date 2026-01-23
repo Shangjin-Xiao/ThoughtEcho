@@ -56,6 +56,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   final GlobalKey _tagGuideKey = GlobalKey(); // 标签功能引导 Key
   final List<String> _selectedTagIds = [];
   String? _aiSummary;
+  Quote? _fullInitialQuote;
+  bool _isLoadingFullQuote = false;
 
   // 优化：内部维护标签列表，支持动态更新
   List<NoteCategory> _availableTags = [];
@@ -265,6 +267,16 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
           _workController,
         );
       }
+
+      // 异步获取完整的 Quote 信息（防止列表页传递的是不完整的对象）
+      _isLoadingFullQuote = true;
+      _fetchFullQuote().whenComplete(() {
+        if (mounted) {
+          setState(() {
+            _isLoadingFullQuote = false;
+          });
+        }
+      });
     }
 
     // 优化：完全异步执行重量级操作，不阻塞 UI
@@ -275,6 +287,31 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
           _addDefaultHitokotoTagsAsync();
         }
       });
+    }
+  }
+
+  /// 异步获取完整的 Quote 对象
+  Future<void> _fetchFullQuote() async {
+    if (widget.initialQuote == null || widget.initialQuote!.id == null) return;
+
+    // 延迟一点执行，确保 Provider 可用
+    await Future.delayed(Duration.zero);
+    if (!mounted) return;
+
+    try {
+      final db = Provider.of<DatabaseService>(context, listen: false);
+      final fullQuote = await db.getQuoteById(widget.initialQuote!.id!);
+      if (fullQuote != null && mounted) {
+        setState(() {
+          _fullInitialQuote = fullQuote;
+          // 如果列表页传递的对象缺少 AI 分析等大字段，这里补全
+          if (_aiSummary == null && fullQuote.aiAnalysis != null) {
+            _aiSummary = fullQuote.aiAnalysis;
+          }
+        });
+      }
+    } catch (e) {
+      logDebug('获取完整笔记详情失败: $e');
     }
   }
 
@@ -1530,7 +1567,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                     ),
                   ),
                   // 保存时保持按钮样式但不响应点击，避免视觉闪烁
-                  onPressed: _isSaving ? () {} : () async {
+                  onPressed: (_isSaving || _isLoadingFullQuote)
+                      ? (_isSaving ? () {} : null)
+                      : () async {
                     if (_contentController.text.isNotEmpty) {
                       setState(() {
                         _isSaving = true;
@@ -1543,6 +1582,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                         // 创建或更新笔记
                         // 使用实时获取的位置（新建）或原始位置（编辑）
                         final isEditing = widget.initialQuote != null;
+                        final baseQuote =
+                            _fullInitialQuote ?? widget.initialQuote;
 
                         final Quote quote = Quote(
                           id: widget.initialQuote?.id ?? const Uuid().v4(),
@@ -1557,9 +1598,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                           sourceAuthor: _authorController.text,
                           sourceWork: _workController.text,
                           tagIds: _selectedTagIds,
-                          sentiment: widget.initialQuote?.sentiment,
-                          keywords: widget.initialQuote?.keywords,
-                          summary: widget.initialQuote?.summary,
+                          sentiment: baseQuote?.sentiment,
+                          keywords: baseQuote?.keywords,
+                          summary: baseQuote?.summary,
                           categoryId: _selectedCategory?.id ??
                               widget.initialQuote?.categoryId,
                           colorHex: _selectedColorHex,
@@ -1589,8 +1630,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                           dayPeriod: widget.initialQuote?.dayPeriod ??
                               currentDayPeriodKey, // 保存 Key
                           editSource: widget.initialQuote?.editSource, // 保证兼容
-                          deltaContent:
-                              widget.initialQuote?.deltaContent, // 保证兼容
+                          deltaContent: widget.initialQuote?.deltaContent, // 保证兼容
                         );
 
                         final db = Provider.of<DatabaseService>(
@@ -1661,13 +1701,14 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                       }
                     }
                   },
-                  child: _isSaving
+                  child: (_isSaving || _isLoadingFullQuote)
                       ? SizedBox(
                           width: 20,
                           height: 20,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            color: theme.colorScheme.onPrimary,
+                            color:
+                                _isSaving ? theme.colorScheme.onPrimary : null,
                           ),
                         )
                       : Text(

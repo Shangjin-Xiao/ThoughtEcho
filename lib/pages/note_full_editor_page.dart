@@ -100,9 +100,22 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   late String? _initialWeather;
   late String? _initialTemperature;
 
+  // 完整笔记数据（从数据库重新获取，确保字段完整）
+  Quote? _fullInitialQuote;
+  bool _isLoadingFullQuote = false;
+
   @override
   void initState() {
     super.initState();
+
+    // 如果是编辑模式，异步获取完整笔记数据
+    if (widget.initialQuote != null && widget.initialQuote!.id != null) {
+      _isLoadingFullQuote = true;
+      _fullInitialQuote = widget.initialQuote; // 先使用传入的数据
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _fetchFullQuote();
+      });
+    }
 
     // 先初始化为基本控制器，避免阻塞UI
     _controller = quill.QuillController.basic();
@@ -187,6 +200,30 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         }
       });
     });
+  }
+
+  /// 异步获取完整笔记数据
+  Future<void> _fetchFullQuote() async {
+    if (!mounted || widget.initialQuote?.id == null) return;
+
+    try {
+      final db = Provider.of<DatabaseService>(context, listen: false);
+      final fullQuote = await db.getQuoteById(widget.initialQuote!.id!);
+      if (fullQuote != null && mounted) {
+        setState(() {
+          _fullInitialQuote = fullQuote;
+        });
+        logDebug('已获取完整笔记数据，ID: ${fullQuote.id}');
+      }
+    } catch (e) {
+      logDebug('获取完整笔记数据失败: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingFullQuote = false;
+        });
+      }
+    }
   }
 
   /// 显示编辑器功能引导
@@ -1225,19 +1262,22 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         TimeUtils.getCurrentDayPeriodKey(); // 使用 Key
 
     // 构建笔记对象
+    // 优先使用 _fullInitialQuote 中的数据，以保留未加载的字段（如aiAnalysis等）
+    final baseQuote = _fullInitialQuote ?? widget.initialQuote;
+
     final quote = Quote(
-      id: widget.initialQuote?.id ?? const Uuid().v4(),
+      id: baseQuote?.id ?? const Uuid().v4(),
       content: plainTextContent,
-      date: widget.initialQuote?.date ?? now,
-      aiAnalysis: widget.initialQuote?.aiAnalysis,
+      date: baseQuote?.date ?? now,
+      aiAnalysis: baseQuote?.aiAnalysis,
       source: _formatSource(_authorController.text, _workController.text),
       sourceAuthor: _authorController.text,
       sourceWork: _workController.text,
       tagIds: _selectedTagIds,
-      sentiment: widget.initialQuote?.sentiment,
-      keywords: widget.initialQuote?.keywords,
-      summary: widget.initialQuote?.summary,
-      categoryId: widget.initialQuote?.categoryId,
+      sentiment: baseQuote?.sentiment,
+      keywords: baseQuote?.keywords,
+      summary: baseQuote?.summary,
+      categoryId: baseQuote?.categoryId,
       colorHex: _selectedColorHex,
       location: _showLocation ? _location : null,
       latitude: _showLocation ? _latitude : null,
@@ -1246,8 +1286,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       temperature: _showWeather ? _temperature : null,
       deltaContent: deltaJson,
       editSource: 'fullscreen',
-      dayPeriod:
-          widget.initialQuote?.dayPeriod ?? currentDayPeriodKey, // 保存 Key
+      dayPeriod: baseQuote?.dayPeriod ?? currentDayPeriodKey, // 保存 Key
+      lastModified: now, // 更新最后修改时间
+      favoriteCount: baseQuote?.favoriteCount ?? 0, // 保留喜爱计数
     );
 
     try {
@@ -1659,14 +1700,25 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
               onPressed: () => _showAIOptions(context),
             ),
             IconButton(
-              icon: const Icon(Icons.save),
+              icon: _isLoadingFullQuote
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.grey, // 适配 AppBar 颜色
+                      ),
+                    )
+                  : const Icon(Icons.save),
               tooltip: l10n.save,
-              onPressed: () async {
-                try {
-                  await pauseAllMediaPlayers();
-                } catch (_) {}
-                await _saveContent();
-              },
+              onPressed: _isLoadingFullQuote
+                  ? null
+                  : () async {
+                      try {
+                        await pauseAllMediaPlayers();
+                      } catch (_) {}
+                      await _saveContent();
+                    },
             ),
           ],
           automaticallyImplyLeading: true,
