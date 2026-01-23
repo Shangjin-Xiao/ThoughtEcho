@@ -852,6 +852,9 @@ class SmartPushService extends ChangeNotifier {
   }
 
   /// 使用本地通知调度（降级方案）
+  ///
+  /// Android 12+ 需要精确闹钟权限才能使用 exactAllowWhileIdle 模式。
+  /// 当权限不可用时，自动降级到 inexactAllowWhileIdle 模式（时间可能有 15 分钟误差）。
   Future<void> _scheduleLocalNotification(
       int id, tz.TZDateTime scheduledDate, PushTimeSlot slot,
       {bool isDailyQuote = false}) async {
@@ -893,18 +896,29 @@ class SmartPushService extends ChangeNotifier {
         iOS: iosDetails,
       );
 
+      // 检查精确闹钟权限，决定使用哪种调度模式
+      final canScheduleExact = await _canScheduleExactAlarms();
+      final scheduleMode = canScheduleExact
+          ? AndroidScheduleMode.exactAllowWhileIdle
+          : AndroidScheduleMode.inexactAllowWhileIdle;
+
+      if (!canScheduleExact) {
+        AppLogger.w('精确闹钟权限不可用，使用 inexact 模式调度本地通知（时间可能有 15 分钟误差）');
+      }
+
       await _notificationsPlugin.zonedSchedule(
         id,
         content?.title ?? (isDailyQuote ? '📖 每日一言' : '💡 回忆时刻'),
         content?.body ?? '点击查看今天的灵感',
         scheduledDate,
         details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: scheduleMode,
         payload: content?.noteId,
         matchDateTimeComponents: DateTimeComponents.time,
       );
 
-      AppLogger.i('已设定本地通知: $scheduledDate');
+      AppLogger.i(
+          '已设定本地通知: $scheduledDate (模式: ${canScheduleExact ? "精确" : "非精确"})');
     } catch (e) {
       AppLogger.e('设定本地通知失败', error: e);
     }
