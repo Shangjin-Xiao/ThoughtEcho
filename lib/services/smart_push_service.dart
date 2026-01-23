@@ -99,6 +99,22 @@ class SmartPushService extends ChangeNotifier {
       // Android 平台特定初始化 (保留用于精确定时，作为 WorkManager 的补充)
       if (!kIsWeb && Platform.isAndroid) {
         await AndroidAlarmManager.initialize();
+
+        // 请求精确闹钟权限（Android 12+）
+        final canScheduleExact = await _canScheduleExactAlarms();
+        if (!canScheduleExact) {
+          AppLogger.i('精确闹钟权限不可用，尝试请求权限');
+          try {
+            final androidPlugin =
+                _notificationsPlugin.resolvePlatformSpecificImplementation<
+                    AndroidFlutterLocalNotificationsPlugin>();
+            if (androidPlugin != null) {
+              await androidPlugin.requestExactAlarmsPermission();
+            }
+          } catch (e) {
+            AppLogger.w('请求精确闹钟权限失败，将使用降级方案', error: e);
+          }
+        }
       }
 
       // 每次启动时重新规划下一次推送
