@@ -816,19 +816,49 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
               );
             }
           } else if (context.mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(l10n.cannotGetAddress)));
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: Text(l10n.cannotGetLocationTitle),
+                content: Text(l10n.cannotGetAddress),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text(l10n.iKnow),
+                  ),
+                ],
+              ),
+            );
           }
         } else if (mounted && context.mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(l10n.cannotGetAddress)));
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text(l10n.cannotGetLocationTitle),
+              content: Text(l10n.cannotGetAddress),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(l10n.iKnow),
+                ),
+              ],
+            ),
+          );
         }
       } catch (e) {
         if (mounted && context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.updateFailed(e.toString()))),
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text(l10n.cannotGetLocationTitle),
+              content: Text(l10n.updateFailed(e.toString())),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(l10n.iKnow),
+                ),
+              ],
+            ),
           );
         }
       }
@@ -2059,6 +2089,336 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                           ),
                           const SizedBox(height: 24),
 
+                          const SizedBox(height: 24),
+
+                          // 颜色选择
+                          Text(
+                            l10n.colorLabel,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerLow,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: theme.colorScheme.outlineVariant,
+                              ),
+                            ),
+                            child: ListTile(
+                              title: Text(l10n.selectCardColorLabel),
+                              subtitle: Text(
+                                _selectedColorHex == null
+                                    ? l10n.noColor
+                                    : l10n.colorSet,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              leading: Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: _selectedColorHex != null
+                                      ? Color(
+                                          int.parse(
+                                                _selectedColorHex!.substring(1),
+                                                radix: 16,
+                                              ) |
+                                              0xFF000000,
+                                        )
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                    color: _selectedColorHex == null
+                                        ? theme.colorScheme.outline
+                                        : Colors.transparent,
+                                  ),
+                                ),
+                                child: _selectedColorHex == null
+                                    ? Icon(
+                                        Icons.block,
+                                        size: 16,
+                                        color: theme.colorScheme.outline,
+                                      )
+                                    : null,
+                              ),
+                              trailing: const Icon(
+                                Icons.arrow_forward_ios,
+                                size: 16,
+                              ),
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.all(
+                                  Radius.circular(12),
+                                ),
+                              ),
+                              onTap: () async {
+                                // 使用async/await确保颜色选择完成后刷新UI
+                                if (!context.mounted) return;
+                                await _showCustomColorPicker(context);
+                                // 强制刷新对话框UI以显示新选的颜色
+                                if (mounted) {
+                                  setState(() {});
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+
+                          // 位置和天气
+                          Row(
+                            children: [
+                              Text(
+                                l10n.locationAndWeather,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const Spacer(),
+                              // 编辑模式提示
+                              if (widget.initialQuote != null)
+                                Text(
+                                  l10n.recordedOnFirstSave,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+
+                          // 位置和天气选择容器
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerLow,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: theme.colorScheme.outlineVariant,
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // 位置和天气开关
+                                RepaintBoundary(
+                                  child: Row(
+                                    children: [
+                                      // 位置信息按钮
+                                      Expanded(
+                                        child: Stack(
+                                          children: [
+                                            FilterChip(
+                                              key: const ValueKey(
+                                                  'full_editor_location_chip'),
+                                              avatar: Icon(
+                                                Icons.location_on,
+                                                color: _showLocation
+                                                    ? theme.colorScheme.primary
+                                                    : Colors.grey,
+                                                size: 18,
+                                              ),
+                                              label: Text(l10n.locationLabel),
+                                              selected: _showLocation,
+                                              onSelected: (value) async {
+                                                // 编辑模式下统一弹对话框（只有已保存的笔记才是编辑模式）
+                                                if (widget.initialQuote?.id !=
+                                                    null) {
+                                                  await _showLocationDialogInEditor(
+                                                    context,
+                                                    theme,
+                                                  );
+                                                  return;
+                                                }
+                                                // 新建模式
+                                                if (value &&
+                                                    _location == null &&
+                                                    _latitude == null) {
+                                                  _fetchLocationWeather();
+                                                }
+                                                setState(() {
+                                                  _showLocation = value;
+                                                });
+                                              },
+                                              selectedColor: theme
+                                                  .colorScheme.primaryContainer,
+                                            ),
+                                            // 小红点：有坐标但没地址时提示可更新（仅已保存笔记）
+                                            if (widget.initialQuote?.id !=
+                                                    null &&
+                                                _originalLocation == null &&
+                                                _originalLatitude != null &&
+                                                _originalLongitude != null)
+                                              Positioned(
+                                                right: 0,
+                                                top: 0,
+                                                child: Container(
+                                                  width: 8,
+                                                  height: 8,
+                                                  decoration: BoxDecoration(
+                                                    color:
+                                                        theme.colorScheme.error,
+                                                    shape: BoxShape.circle,
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      // 天气信息按钮
+                                      Expanded(
+                                        child: FilterChip(
+                                          key: const ValueKey(
+                                              'full_editor_weather_chip'),
+                                          avatar: Icon(
+                                            _weather != null
+                                                ? _getWeatherIcon(_weather!)
+                                                : Icons.cloud,
+                                            color: _showWeather
+                                                ? theme.colorScheme.primary
+                                                : Colors.grey,
+                                            size: 18,
+                                          ),
+                                          label: Text(l10n.weatherLabel),
+                                          selected: _showWeather,
+                                          onSelected: (value) async {
+                                            // 编辑模式下统一弹对话框（只有已保存的笔记才是编辑模式）
+                                            if (widget.initialQuote?.id !=
+                                                null) {
+                                              await _showWeatherDialogInEditor(
+                                                context,
+                                                theme,
+                                              );
+                                              return;
+                                            }
+                                            // 新建模式
+                                            if (value && _weather == null) {
+                                              _fetchLocationWeather();
+                                            }
+                                            setState(() {
+                                              _showWeather = value;
+                                            });
+                                          },
+                                          selectedColor: theme
+                                              .colorScheme.primaryContainer,
+                                        ),
+                                      ),
+                                      // 刷新按钮 - 仅新建模式显示（未保存的笔记）
+                                      if (widget.initialQuote?.id == null)
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.refresh,
+                                            size: 20,
+                                          ),
+                                          tooltip: l10n.refreshLocationWeather,
+                                          onPressed: () {
+                                            _fetchLocationWeather();
+                                            setState(() {});
+                                          },
+                                        ),
+                                    ],
+                                  ),
+                                ),
+
+                                // 显示位置和天气信息
+                                if (_location != null ||
+                                    _latitude != null ||
+                                    _weather != null) ...[
+                                  const SizedBox(height: 12),
+                                  const Divider(height: 1),
+                                  const SizedBox(height: 12),
+                                  if (_location != null || _latitude != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 8),
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            Icons.location_on,
+                                            size: 16,
+                                            color: theme.colorScheme.primary,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              // 优先显示地址，没有地址时显示坐标
+                                              _location ??
+                                                  ((_latitude != null &&
+                                                          _longitude != null)
+                                                      ? '📍 ${LocationService.formatCoordinates(_latitude, _longitude)}'
+                                                      : l10n
+                                                          .gettingLocationHint),
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: theme.colorScheme
+                                                    .onSurfaceVariant,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  if (_weather != null)
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          _getWeatherIcon(_weather!),
+                                          size: 16,
+                                          color: theme.colorScheme.primary,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          WeatherService
+                                              .getLocalizedWeatherDescription(
+                                            AppLocalizations.of(context),
+                                            _weather!,
+                                          ),
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: theme
+                                                .colorScheme.onSurfaceVariant,
+                                          ),
+                                        ),
+                                        if (_temperature != null)
+                                          Text(
+                                            ' $_temperature',
+                                            style: TextStyle(
+                                              fontSize: 14,
+                                              color: theme
+                                                  .colorScheme.onSurfaceVariant,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                ],
+
+                                // 编辑模式下无数据时的提示（只有真正编辑已保存的笔记时才显示）
+                                // initialQuote.id 不为空表示是已保存的笔记
+                                if (widget.initialQuote?.id != null &&
+                                    _originalLocation == null &&
+                                    _originalLatitude == null &&
+                                    _originalWeather == null) ...[
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    '此笔记首次保存时未记录位置和天气信息',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 24),
                           // 标签选择
                           Row(
                             children: [
@@ -2250,326 +2610,6 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                 ],
                               ),
                             ),
-                          const SizedBox(height: 24),
-
-                          // 颜色选择
-                          Text(
-                            l10n.colorLabel,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerLow,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: theme.colorScheme.outlineVariant,
-                              ),
-                            ),
-                            child: ListTile(
-                              title: Text(l10n.selectCardColorLabel),
-                              subtitle: Text(
-                                _selectedColorHex == null
-                                    ? l10n.noColor
-                                    : l10n.colorSet,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                              leading: Container(
-                                width: 32,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  color: _selectedColorHex != null
-                                      ? Color(
-                                          int.parse(
-                                                _selectedColorHex!.substring(1),
-                                                radix: 16,
-                                              ) |
-                                              0xFF000000,
-                                        )
-                                      : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: _selectedColorHex == null
-                                        ? theme.colorScheme.outline
-                                        : Colors.transparent,
-                                  ),
-                                ),
-                                child: _selectedColorHex == null
-                                    ? Icon(
-                                        Icons.block,
-                                        size: 16,
-                                        color: theme.colorScheme.outline,
-                                      )
-                                    : null,
-                              ),
-                              trailing: const Icon(
-                                Icons.arrow_forward_ios,
-                                size: 16,
-                              ),
-                              shape: const RoundedRectangleBorder(
-                                borderRadius: BorderRadius.all(
-                                  Radius.circular(12),
-                                ),
-                              ),
-                              onTap: () async {
-                                // 使用async/await确保颜色选择完成后刷新UI
-                                if (!context.mounted) return;
-                                await _showCustomColorPicker(context);
-                                // 强制刷新对话框UI以显示新选的颜色
-                                if (mounted) {
-                                  setState(() {});
-                                }
-                              },
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-
-                          // 位置和天气
-                          Row(
-                            children: [
-                              Text(
-                                l10n.locationAndWeather,
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const Spacer(),
-                              // 编辑模式提示
-                              if (widget.initialQuote != null)
-                                Text(
-                                  l10n.recordedOnFirstSave,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-
-                          // 位置和天气选择容器
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerLow,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: theme.colorScheme.outlineVariant,
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // 位置和天气开关
-                                Row(
-                                  children: [
-                                    // 位置信息按钮
-                                    Expanded(
-                                      child: Stack(
-                                        children: [
-                                          FilterChip(
-                                            avatar: Icon(
-                                              Icons.location_on,
-                                              color: _showLocation
-                                                  ? theme.colorScheme.primary
-                                                  : Colors.grey,
-                                              size: 18,
-                                            ),
-                                            label: Text(l10n.locationLabel),
-                                            selected: _showLocation,
-                                            onSelected: (value) async {
-                                              // 编辑模式下统一弹对话框（只有已保存的笔记才是编辑模式）
-                                              if (widget.initialQuote?.id !=
-                                                  null) {
-                                                await _showLocationDialogInEditor(
-                                                  context,
-                                                  theme,
-                                                );
-                                                return;
-                                              }
-                                              // 新建模式
-                                              if (value &&
-                                                  _location == null &&
-                                                  _latitude == null) {
-                                                _fetchLocationWeather();
-                                              }
-                                              setState(() {
-                                                _showLocation = value;
-                                              });
-                                            },
-                                            selectedColor: theme
-                                                .colorScheme.primaryContainer,
-                                          ),
-                                          // 小红点：有坐标但没地址时提示可更新（仅已保存笔记）
-                                          if (widget.initialQuote?.id != null &&
-                                              _originalLocation == null &&
-                                              _originalLatitude != null &&
-                                              _originalLongitude != null)
-                                            Positioned(
-                                              right: 0,
-                                              top: 0,
-                                              child: Container(
-                                                width: 8,
-                                                height: 8,
-                                                decoration: BoxDecoration(
-                                                  color:
-                                                      theme.colorScheme.error,
-                                                  shape: BoxShape.circle,
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    // 天气信息按钮
-                                    Expanded(
-                                      child: FilterChip(
-                                        avatar: Icon(
-                                          _weather != null
-                                              ? _getWeatherIcon(_weather!)
-                                              : Icons.cloud,
-                                          color: _showWeather
-                                              ? theme.colorScheme.primary
-                                              : Colors.grey,
-                                          size: 18,
-                                        ),
-                                        label: Text(l10n.weatherLabel),
-                                        selected: _showWeather,
-                                        onSelected: (value) async {
-                                          // 编辑模式下统一弹对话框（只有已保存的笔记才是编辑模式）
-                                          if (widget.initialQuote?.id != null) {
-                                            await _showWeatherDialogInEditor(
-                                              context,
-                                              theme,
-                                            );
-                                            return;
-                                          }
-                                          // 新建模式
-                                          if (value && _weather == null) {
-                                            _fetchLocationWeather();
-                                          }
-                                          setState(() {
-                                            _showWeather = value;
-                                          });
-                                        },
-                                        selectedColor:
-                                            theme.colorScheme.primaryContainer,
-                                      ),
-                                    ),
-                                    // 刷新按钮 - 仅新建模式显示（未保存的笔记）
-                                    if (widget.initialQuote?.id == null)
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.refresh,
-                                          size: 20,
-                                        ),
-                                        tooltip: l10n.refreshLocationWeather,
-                                        onPressed: () {
-                                          _fetchLocationWeather();
-                                          setState(() {});
-                                        },
-                                      ),
-                                  ],
-                                ),
-
-                                // 显示位置和天气信息
-                                if (_location != null ||
-                                    _latitude != null ||
-                                    _weather != null) ...[
-                                  const SizedBox(height: 12),
-                                  const Divider(height: 1),
-                                  const SizedBox(height: 12),
-                                  if (_location != null || _latitude != null)
-                                    Padding(
-                                      padding: const EdgeInsets.only(bottom: 8),
-                                      child: Row(
-                                        children: [
-                                          Icon(
-                                            Icons.location_on,
-                                            size: 16,
-                                            color: theme.colorScheme.primary,
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Text(
-                                              // 优先显示地址，没有地址时显示坐标
-                                              _location ??
-                                                  ((_latitude != null &&
-                                                          _longitude != null)
-                                                      ? '📍 ${LocationService.formatCoordinates(_latitude, _longitude)}'
-                                                      : l10n
-                                                          .gettingLocationHint),
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                color: theme.colorScheme
-                                                    .onSurfaceVariant,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  if (_weather != null)
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          _getWeatherIcon(_weather!),
-                                          size: 16,
-                                          color: theme.colorScheme.primary,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          WeatherService
-                                              .getLocalizedWeatherDescription(
-                                            AppLocalizations.of(context),
-                                            _weather!,
-                                          ),
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: theme
-                                                .colorScheme.onSurfaceVariant,
-                                          ),
-                                        ),
-                                        if (_temperature != null)
-                                          Text(
-                                            ' $_temperature',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color: theme
-                                                  .colorScheme.onSurfaceVariant,
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                ],
-
-                                // 编辑模式下无数据时的提示（只有真正编辑已保存的笔记时才显示）
-                                // initialQuote.id 不为空表示是已保存的笔记
-                                if (widget.initialQuote?.id != null &&
-                                    _originalLocation == null &&
-                                    _originalLatitude == null &&
-                                    _originalWeather == null) ...[
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    '此笔记首次保存时未记录位置和天气信息',
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: theme.colorScheme.onSurfaceVariant,
-                                      fontStyle: FontStyle.italic,
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
                         ],
                       ),
                     ),
