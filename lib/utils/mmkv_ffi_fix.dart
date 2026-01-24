@@ -3,11 +3,11 @@
 // 主要目的是解决 MMKV 在某些设备上的兼容性问题，特别是32位ARM设备
 
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart' as sp;
 import 'mmkv_adapter.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'platform_helper.dart';
 
 /// 安全的 MMKV 包装类，当 MMKV 出现问题时会回退到 shared_preferences
 class SafeMMKV {
@@ -50,7 +50,7 @@ class SafeMMKV {
     _initializing = true;
     try {
       // 检查是否是32位ARM设备
-      if (!kIsWeb && Platform.isAndroid) {
+      if (!kIsWeb && PlatformHelper.isAndroid) {
         try {
           final is64bit = await _checkIs64BitDevice();
           _isArm32Device = !is64bit;
@@ -65,7 +65,9 @@ class SafeMMKV {
         _storage = SharedPrefsAdapter();
         await _storage!.initialize();
         logDebug('SafeMMKV: Web 平台，使用 SharedPreferences');
-      } else if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+      } else if (PlatformHelper.isWindows ||
+          PlatformHelper.isMacOS ||
+          PlatformHelper.isLinux) {
         // 桌面平台使用 SharedPreferences，避免 MMKV FFI 兼容性问题
         logDebug('SafeMMKV: 桌面平台，使用 SharedPreferences');
         _storage = SharedPrefsAdapter();
@@ -109,14 +111,14 @@ class SafeMMKV {
   // 检测设备是否为64位
   Future<bool> _checkIs64BitDevice() async {
     try {
-      if (!kIsWeb && Platform.isAndroid) {
+      if (!kIsWeb && PlatformHelper.isAndroid) {
         // 基于设备架构检测64位系统
-        final arch = await _getPlatformArchitecture();
+        final arch = await PlatformHelper.getCpuArchitecture();
         return arch.contains('64') ||
             arch == 'aarch64' ||
             arch == 'x86_64' ||
             arch == 'mips64';
-      } else if (!kIsWeb && Platform.isIOS) {
+      } else if (!kIsWeb && PlatformHelper.isIOS) {
         // iOS模拟器可能返回x86_64，真机一般是arm64
         return true; // iOS设备大多都是64位了
       }
@@ -126,30 +128,6 @@ class SafeMMKV {
       logDebug('检测设备架构失败: $e');
       // 安全起见，如果检测失败，假定为32位设备避免使用MMKV 2.x
       return false;
-    }
-  }
-
-  // 获取设备架构
-  Future<String> _getPlatformArchitecture() async {
-    try {
-      if (Platform.isAndroid) {
-        // 尝试获取系统架构信息
-        final archInfo = await Process.run('getprop', ['ro.product.cpu.abi']);
-        if (archInfo.exitCode == 0 && archInfo.stdout != null) {
-          final arch = (archInfo.stdout as String).trim().toLowerCase();
-          logDebug('检测到CPU架构: $arch');
-          return arch;
-        }
-      }
-      // 如果无法通过命令获取，使用Dart自身检测
-      String arch = Platform.operatingSystemVersion.toLowerCase();
-      if (arch.contains('64')) return 'arm64';
-
-      // 最后使用dart:io的内置属性
-      return Platform.version.toLowerCase();
-    } catch (e) {
-      logDebug('获取平台架构失败: $e');
-      return ''; // 返回空字符串，让调用者判断为32位设备
     }
   }
 

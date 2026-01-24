@@ -816,8 +816,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         // 提示用户草稿已恢复
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-                AppLocalizations.of(context).draftRestored ?? '已自动恢复未保存的草稿'),
+            content: Text(AppLocalizations.of(context).draftRestored),
             duration: AppConstants.snackBarDurationNormal,
           ),
         );

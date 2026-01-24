@@ -245,7 +245,8 @@ class MMKVService {
   List<String> getAllKeys() {
     _ensureInitialized();
     try {
-      return _storage!.getKeys().toList();
+      final keys = _storage!.getKeys();
+      return keys.map((e) => e.toString()).toList();
     } catch (e) {
       logDebug('MMKV获取所有键失败: $e');
       return [];
