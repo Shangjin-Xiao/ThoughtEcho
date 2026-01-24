@@ -51,6 +51,21 @@ class DraftService {
     }
   }
 
+  /// 删除所有草稿
+  Future<void> deleteAllDrafts() async {
+    try {
+      final keys = MMKVService().getAllKeys();
+      for (final key in keys) {
+        if (key.startsWith('draft_')) {
+          await MMKVService().remove(key);
+        }
+      }
+      logDebug('所有草稿已删除 (MMKV)');
+    } catch (e) {
+      logError('删除所有草稿失败', error: e, source: 'DraftService');
+    }
+  }
+
   /// 检查是否存在草稿（跨平台）
   Future<bool> hasDraft(String id) async {
     try {

@@ -432,9 +432,8 @@ class _HomePageState extends State<HomePage>
           actions: [
             TextButton(
               onPressed: () {
-                // 用户选择丢弃，删除草稿
-                final draftId = draftData['id'] as String;
-                DraftService().deleteDraft(draftId);
+                // 用户选择丢弃，删除所有草稿，避免重复提示
+                DraftService().deleteAllDrafts();
                 Navigator.pop(ctx, false);
               },
               child: Text(
@@ -517,6 +516,7 @@ class _HomePageState extends State<HomePage>
               builder: (context) => NoteFullEditorPage(
                 initialContent: initialQuote!.content,
                 initialQuote: initialQuote,
+                isRestoredDraft: true, // 标记为恢复的草稿
                 // 如果有标签信息，也可以传递 allTags，但这通常由编辑器自己加载
               ),
             ),
