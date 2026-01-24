@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
+import '../services/large_file_manager.dart';
 import '../constants/app_constants.dart';
 import '../gen_l10n/app_localizations.dart';
 
@@ -555,7 +556,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
           '${tempDir.path}/annual_report_${widget.year}_$timestamp.html',
         );
 
-        await htmlFile.writeAsString(contentToWrite);
+        await LargeFileManager.writeStringToFile(htmlFile, contentToWrite);
 
         // 尝试直接打开文件URL
         final uri = Uri.file(htmlFile.path);
@@ -691,7 +692,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
         '${tempDir.path}/annual_report_${widget.year}_$timestamp.html',
       );
 
-      await htmlFile.writeAsString(htmlContent);
+      await LargeFileManager.writeStringToFile(htmlFile, htmlContent);
 
       // 尝试使用不同的LaunchMode来打开文件
       final uri = Uri.file(htmlFile.path);
@@ -972,7 +973,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
 ''';
       }
 
-      await htmlFile.writeAsString(contentToShare);
+      await LargeFileManager.writeStringToFile(htmlFile, contentToShare);
 
       // 使用系统分享功能
       await SharePlus.instance.share(
@@ -1041,7 +1042,8 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
         final reportFile = File('${reportsDir.path}/$fileName');
 
         // 保存文件
-        await reportFile.writeAsString(widget.htmlContent);
+        await LargeFileManager.writeStringToFile(
+            reportFile, widget.htmlContent);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

@@ -27,6 +27,40 @@ class OutOfMemoryError extends Error {
 class LargeFileManager {
   static const int _defaultChunkSize = 64 * 1024; // 64KB
 
+  /// 安全写入字符串到文件（使用流式写入避免内存峰值）
+  static Future<void> writeStringToFile(
+    File file,
+    String content, {
+    Encoding encoding = utf8,
+    bool flush = false,
+  }) async {
+    final sink = file.openWrite(encoding: encoding);
+    try {
+      // 分块写入，避免一次性编码超大字符串导致OOM
+      const chunkSize = 512 * 1024; // 512KB
+      final length = content.length;
+
+      if (length > chunkSize) {
+        for (int i = 0; i < length; i += chunkSize) {
+          final end = (i + chunkSize < length) ? i + chunkSize : length;
+          sink.write(content.substring(i, end));
+          // 定期刷新，虽然sink通常会自动缓冲，但在内存紧张时主动刷新可能有助于释放缓冲区
+          if (i % (chunkSize * 4) == 0) {
+            await sink.flush();
+          }
+        }
+      } else {
+        sink.write(content);
+      }
+
+      if (flush) {
+        await sink.flush();
+      }
+    } finally {
+      await sink.close();
+    }
+  }
+
   /// 流式JSON编码到文件
   ///
   /// [data] - 要编码的数据

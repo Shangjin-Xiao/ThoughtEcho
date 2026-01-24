@@ -118,8 +118,9 @@ class LocalSendProvider {
           source: 'LocalSend',
         );
         final previewLen =
-            response.body.length < 200 ? response.body.length : 200;
-        debugPrint('响应内容: ${response.body.substring(0, previewLen)}...');
+            response.body.length < 50 ? response.body.length : 50;
+        // P2 Fix: 脱敏日志，不打印完整响应内容
+        debugPrint('响应摘要: ${response.body.substring(0, previewLen)}...');
 
         if (response.statusCode == 200) {
           final responseDto = PrepareUploadResponseDto.fromJson(
@@ -187,7 +188,8 @@ class LocalSendProvider {
         }
 
         final fileSize = await file.length();
-        debugPrint('准备上传文件: ${file.path} (大小: $fileSize 字节)');
+        final fileName = file.path.split('/').last;
+        debugPrint('准备上传文件: $fileName (大小: $fileSize 字节)');
 
         // Upload file with retry mechanism
         await _uploadSingleFile(
@@ -242,7 +244,7 @@ class LocalSendProvider {
           },
         );
         debugPrint(
-          '上传文件到: $url (文件: ${file.path}, 尝试: ${attempt + 1}/$maxRetries)',
+          '上传文件到: $url (文件: ${file.path.split('/').last}, 尝试: ${attempt + 1}/$maxRetries)',
         );
 
         final request = http.MultipartRequest('POST', Uri.parse(url));
@@ -271,7 +273,7 @@ class LocalSendProvider {
             );
 
         logDebug(
-          'upload_resp status=${response.statusCode} file=${file.path}',
+          'upload_resp status=${response.statusCode} file=${file.path.split('/').last}',
           source: 'LocalSend',
         );
 
@@ -302,7 +304,7 @@ class LocalSendProvider {
                 const Duration(minutes: 5),
               );
           if (legacyResp.statusCode == 200) {
-            debugPrint('文件上传成功(v1): ${file.path}');
+            debugPrint('文件上传成功(v1): $fileId');
             return;
           } else {
             final respBody = await legacyResp.stream.bytesToString();
@@ -314,7 +316,7 @@ class LocalSendProvider {
 
         if (response.statusCode == 200) {
           logInfo(
-            'upload_success attempt=${attempt + 1} file=${file.path} size=$fileSize',
+            'upload_success attempt=${attempt + 1} file=${file.path.split('/').last} size=$fileSize',
             source: 'LocalSend',
           );
           return; // Success
@@ -329,13 +331,13 @@ class LocalSendProvider {
       } catch (e) {
         attempt++;
         logWarning(
-          'upload_retry attempt=$attempt file=${file.path} error=$e',
+          'upload_retry attempt=$attempt file=${file.path.split('/').last} error=$e',
           source: 'LocalSend',
         );
 
         if (attempt >= maxRetries) {
           logError(
-            'upload_give_up file=${file.path} error=$e',
+            'upload_give_up file=${file.path.split('/').last} error=$e',
             source: 'LocalSend',
           );
           throw Exception(

@@ -1,6 +1,8 @@
 {
   "@@locale": "zh",
   "appTitle": "心迹",
+  "draftRestored": "已自动恢复未保存的草稿",
+  "draftSaved": "草稿已保存",
   "cancel": "取消",
   "confirm": "确定",
   "delete": "删除",

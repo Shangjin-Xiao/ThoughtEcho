@@ -32,6 +32,7 @@ import '../widgets/media_player_widget.dart';
 import '../constants/app_constants.dart';
 import '../services/media_file_service.dart';
 import '../services/media_reference_service.dart';
+import '../services/draft_service.dart'; // 导入草稿服务
 import '../utils/feature_guide_helper.dart';
 import '../services/settings_service.dart';
 
@@ -756,16 +757,18 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
   Future<void> _loadDraftIfAvailable() async {
     if (_draftLoaded) return;
-    final settingsService = Provider.of<SettingsService>(context, listen: false);
     final key = _draftStorageKey;
     if (key == null || key.isEmpty) return;
-    final draftJson = await settingsService.getCustomString(key);
-    if (draftJson == null || draftJson.isEmpty) {
+
+    // 使用 DraftService 加载草稿
+    final payload = await DraftService().getDraft(key);
+
+    if (payload == null) {
       _draftLoaded = true;
       return;
     }
+
     try {
-      final payload = jsonDecode(draftJson) as Map<String, dynamic>;
       final deltaContent = payload['deltaContent'] as String?;
       final plainText = payload['plainText'] as String?;
       final author = payload['author'] as String?;
@@ -809,6 +812,15 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
               _location != null || (_latitude != null && _longitude != null);
           _showWeather = _weather != null;
         });
+
+        // 提示用户草稿已恢复
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+                AppLocalizations.of(context).draftRestored ?? '已自动恢复未保存的草稿'),
+            duration: AppConstants.snackBarDurationNormal,
+          ),
+        );
       }
     } catch (e) {
       logDebug('加载草稿失败: $e');
@@ -819,7 +831,6 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
   Future<void> _saveDraft() async {
     try {
-      final settingsService = Provider.of<SettingsService>(context, listen: false);
       final key = _draftStorageKey;
       if (key == null || key.isEmpty) return;
       final plainText = _controller.document.toPlainText().trim();
@@ -838,7 +849,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         'temperature': _showWeather ? _temperature : null,
         'timestamp': DateTime.now().toIso8601String(),
       };
-      await settingsService.setCustomString(key, jsonEncode(payload));
+      // 使用 DraftService 保存草稿
+      await DraftService().saveDraft(key, payload);
     } catch (e) {
       logDebug('保存草稿失败: $e');
     }
@@ -846,10 +858,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
   Future<void> _clearDraft() async {
     try {
-      final settingsService = Provider.of<SettingsService>(context, listen: false);
       final key = _draftStorageKey;
       if (key == null || key.isEmpty) return;
-      await settingsService.setCustomString(key, '');
+      // 使用 DraftService 删除草稿
+      await DraftService().deleteDraft(key);
     } catch (e) {
       logDebug('清理草稿失败: $e');
     }
@@ -1476,10 +1488,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         });
       }
 
-       if (widget.initialQuote != null && widget.initialQuote?.id != null) {
-         // 只有当initialQuote存在且有ID时，才更新现有笔记
-         logDebug('更新现有笔记，ID: ${quote.id}');
-         await db.updateQuote(quote);
+      if (widget.initialQuote != null && widget.initialQuote?.id != null) {
+        // 只有当initialQuote存在且有ID时，才更新现有笔记
+        logDebug('更新现有笔记，ID: ${quote.id}');
+        await db.updateQuote(quote);
         _draftSaveTimer?.cancel();
         await _clearDraft();
         _didSaveSuccessfully = true; // 标记保存成功，避免会话级清理
@@ -1493,10 +1505,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
           // 成功更新后，关闭页面并返回
           Navigator.of(context).pop(true); // 返回true表示更新成功
         }
-       } else {
-         // 添加新笔记（初始Quote为null或无ID时）
-         logDebug('添加新笔记');
-         await db.addQuote(quote);
+      } else {
+        // 添加新笔记（初始Quote为null或无ID时）
+        logDebug('添加新笔记');
+        await db.addQuote(quote);
         _draftSaveTimer?.cancel();
         await _clearDraft();
         _didSaveSuccessfully = true; // 标记保存成功，避免会话级清理
@@ -3455,8 +3467,18 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   Future<void> _cleanupSessionImportedMediaIfUnsaved() async {
     try {
       if (_didSaveSuccessfully || _sessionImportedMedia.isEmpty) return;
+
+      // 获取草稿引用的媒体文件，避免误删
+      final draftMediaPaths = await DraftService().getAllMediaPathsInDrafts();
+
       for (final p in _sessionImportedMedia) {
         try {
+          // 如果被草稿引用，跳过删除
+          if (draftMediaPaths.contains(p)) {
+            logDebug('文件被草稿引用，跳过会话级清理: $p');
+            continue;
+          }
+
           final refCount = await MediaReferenceService.getReferenceCount(p);
           if (refCount <= 0) {
             final deleted = await MediaFileService.deleteMediaFile(p);

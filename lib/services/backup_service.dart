@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
@@ -85,45 +86,37 @@ class BackupService {
     try {
       cancelToken?.throwIfCancelled();
 
-      // 1. 导出结构化数据 (笔记, 设置, AI历史) 到 JSON
-      logDebug('开始收集结构化数据...');
-      onProgress?.call(5, 100); // 更新进度
+      // 1. 使用流式导出结构化数据，避免内存溢出
+      logDebug('开始流式导出结构化数据...');
+      onProgress?.call(5, 100);
 
       // 让UI有机会更新
       await Future.delayed(const Duration(milliseconds: 50));
 
-      final backupData = await _gatherStructuredData(includeMediaFiles);
-
-      cancelToken?.throwIfCancelled();
-      onProgress?.call(15, 100); // 更新进度
-
-      // 2. 使用流式JSON写入避免大JSON一次性加载到内存
       jsonFile = File(path.join(tempDir.path, _backupDataFile));
-      logDebug('开始流式写入JSON数据...');
 
-      // 让UI有机会更新
-      await Future.delayed(const Duration(milliseconds: 50));
-
-      await LargeFileManager.encodeJsonToFileStreaming(
-        backupData,
+      // 修复 P1-2：流式导出数据到JSON文件
+      await _exportStructuredDataStreaming(
         jsonFile,
-        onProgress: (current, total) {
-          // JSON写入进度占总进度的15%
-          final jsonProgress = (current * 15).round();
-          onProgress?.call(15 + jsonProgress, 100);
+        includeMediaFiles,
+        onProgress: (progress) {
+          // JSON导出进度占总进度的30% (5% - 35%)
+          final jsonProgress = (progress * 30).round();
+          onProgress?.call(5 + jsonProgress, 100);
         },
+        cancelToken: cancelToken,
       );
 
       cancelToken?.throwIfCancelled();
-      onProgress?.call(30, 100); // 更新进度
+      onProgress?.call(35, 100); // 更新进度
 
-      // 3. 准备ZIP文件列表
+      // 2. 准备ZIP文件列表
       final filesToZip = <String, String>{};
 
       // 添加JSON文件
       filesToZip[_backupDataFile] = jsonFile.path;
 
-      // 4. (可选) 收集媒体文件 - 使用优化的媒体处理器
+      // 3. (可选) 收集媒体文件 - 使用优化的媒体处理器
       final mediaFilesMap =
           await BackupMediaProcessor.collectMediaFilesForBackup(
         includeMediaFiles: includeMediaFiles,
@@ -148,7 +141,7 @@ class BackupService {
       cancelToken?.throwIfCancelled();
       onProgress?.call(60, 100); // 更新进度
 
-      // 5. 使用流式ZIP创建
+      // 4. 使用流式ZIP创建
       logDebug('开始创建ZIP文件，包含 ${filesToZip.length} 个文件...');
 
       // 让UI有机会更新
@@ -202,6 +195,131 @@ class BackupService {
           await jsonFile.delete();
         }
       } catch (_) {}
+    }
+  }
+
+  /// 流式导出结构化数据到JSON文件
+  Future<void> _exportStructuredDataStreaming(
+    File outputFile,
+    bool includeMediaFiles, {
+    Function(double progress)? onProgress,
+    CancelToken? cancelToken,
+  }) async {
+    IOSink? sink;
+    try {
+      await outputFile.parent.create(recursive: true);
+      sink = outputFile.openWrite();
+
+      final deviceId = _settingsService.getOrCreateDeviceId();
+      final appDir = await getApplicationDocumentsDirectory();
+      final appPath = appDir.path;
+
+      // 写入JSON头部
+      sink.write('{"version":"$_backupVersion",');
+      sink.write('"createdAt":"${DateTime.now().toIso8601String()}",');
+      sink.write('"device_id":"$deviceId",');
+      sink.write('"notes":{');
+
+      // 1. 导出分类
+      logDebug('正在导出分类数据...');
+      final categories = await _databaseService.getAllCategories(); // 假设分类数据量不大
+      sink.write('"categories":${jsonEncode(categories)},');
+      sink.write('"quotes":[');
+
+      // 2. 流式导出笔记
+      logDebug('正在流式导出笔记数据...');
+      const int pageSize = 50;
+      int offset = 0;
+      int totalQuotes = 0;
+      bool isFirstQuote = true;
+
+      // 先获取总数用于进度计算
+      final allQuotesCount = await _databaseService.getQuotesCount(
+        excludeHiddenNotes: false,
+      );
+
+      while (true) {
+        cancelToken?.throwIfCancelled();
+
+        final quotes = await _databaseService.getUserQuotes(
+          offset: offset,
+          limit: pageSize,
+          excludeHiddenNotes: false, // 备份包含隐藏笔记
+        );
+
+        if (quotes.isEmpty) break;
+
+        for (final quote in quotes) {
+          if (!isFirstQuote) {
+            sink.write(',');
+          }
+          isFirstQuote = false;
+
+          // 转换为JSON并处理tag_ids
+          final quoteMap = quote.toJson();
+          if (quote.tagIds.isNotEmpty) {
+            quoteMap['tag_ids'] = quote.tagIds.join(',');
+          }
+
+          // 处理媒体路径
+          if (includeMediaFiles &&
+              quoteMap['delta_content'] != null &&
+              quoteMap['delta_content'].toString().isNotEmpty) {
+            final deltaContent = quoteMap['delta_content'] as String;
+            try {
+              // 暂时简单处理：如果不包含超大JSON，直接转换
+              // 对于超大JSON，可能需要更复杂的流式处理，但这里先假设单个笔记Delta不会导致OOM
+              // 如果确实很大，BackupService原有逻辑也是在内存中处理单个笔记的
+              final deltaJson = jsonDecode(deltaContent);
+              final convertedDelta = _convertDeltaMediaPaths(
+                deltaJson,
+                appPath,
+                true,
+              );
+              quoteMap['delta_content'] = jsonEncode(convertedDelta);
+            } catch (e) {
+              logDebug('导出时处理笔记 ${quote.id} 富文本失败: $e');
+            }
+          }
+
+          sink.write(jsonEncode(quoteMap));
+        }
+
+        totalQuotes += quotes.length;
+        offset += quotes.length;
+
+        // 报告进度 (0.0 - 0.8)
+        if (allQuotesCount > 0) {
+          onProgress?.call((totalQuotes / allQuotesCount) * 0.8);
+        }
+
+        // 定期刷新缓冲区
+        await sink.flush();
+
+        // 让出CPU
+        await Future.delayed(const Duration(milliseconds: 1));
+      }
+
+      sink.write(']},'); // 关闭 quotes 数组和 notes 对象
+
+      cancelToken?.throwIfCancelled();
+      onProgress?.call(0.85);
+
+      // 3. 导出设置
+      logDebug('正在导出设置数据...');
+      final settingsData = _settingsService.getAllSettingsForBackup();
+      sink.write('"settings":${jsonEncode(settingsData)},');
+
+      // 4. 导出AI分析数据
+      logDebug('正在导出AI分析数据...');
+      // 假设AI分析数据量也不大，或者也可以改为分页查询
+      final aiAnalysisData = await _aiAnalysisDbService.exportAnalysesAsList();
+      sink.write('"ai_analysis":${jsonEncode(aiAnalysisData)}}'); // 结束JSON对象
+
+      await sink.flush();
+      onProgress?.call(1.0);
+    } finally {
+      await sink?.close();
     }
   }
 
@@ -453,8 +571,7 @@ class BackupService {
             quote['deltaContent'] != null) {
           final deltaContent = quote['deltaContent'] as String;
           try {
-            final deltaJson =
-                await LargeFileManager.processLargeJson<dynamic>(
+            final deltaJson = await LargeFileManager.processLargeJson<dynamic>(
               deltaContent,
               encode: false,
             );
@@ -499,8 +616,7 @@ class BackupService {
             quote['deltaContent'] != null) {
           final deltaContent = quote['deltaContent'] as String;
           try {
-            final deltaJson =
-                await LargeFileManager.processLargeJson<dynamic>(
+            final deltaJson = await LargeFileManager.processLargeJson<dynamic>(
               deltaContent,
               encode: false,
             );

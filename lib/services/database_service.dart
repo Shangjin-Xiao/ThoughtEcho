@@ -803,8 +803,21 @@ class DatabaseService extends ChangeNotifier {
     // 如果数据库版本低于 11，添加 delta_content 字段用于存储富文本Delta JSON
     if (oldVersion < 11) {
       logDebug('数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 delta_content 字段');
-      await txn.execute('ALTER TABLE quotes ADD COLUMN delta_content TEXT');
-      logDebug('数据库升级：delta_content 字段添加完成');
+      try {
+        // 先检查字段是否已存在
+        final columns = await txn.rawQuery('PRAGMA table_info(quotes)');
+        final hasColumn = columns.any((col) => col['name'] == 'delta_content');
+
+        if (!hasColumn) {
+          await txn.execute('ALTER TABLE quotes ADD COLUMN delta_content TEXT');
+          logDebug('数据库升级：delta_content 字段添加完成');
+        } else {
+          logDebug('数据库升级：delta_content 字段已存在，跳过添加');
+        }
+      } catch (e) {
+        logError('delta_content 字段升级失败: $e',
+            error: e, source: 'DatabaseUpgrade');
+      }
     }
 
     // 修复：如果数据库版本低于 12，安全地创建 quote_tags 表并迁移数据
@@ -1614,6 +1627,20 @@ class DatabaseService extends ChangeNotifier {
     return quotes;
   }
 
+  /// 获取所有分类列表
+  Future<List<Map<String, dynamic>>> getAllCategories() async {
+    try {
+      if (kIsWeb) {
+        return _categoryStore.map((c) => c.toJson()).toList();
+      }
+      final db = database;
+      return await db.query('categories');
+    } catch (e) {
+      logDebug('获取所有分类失败: $e');
+      return [];
+    }
+  }
+
   /// 检查并修复数据库结构，确保所有必要的列都存在
   /// 修复：检查并修复数据库结构，包括字段和索引
   Future<void> _checkAndFixDatabaseStructure() async {
@@ -1942,28 +1969,28 @@ class DatabaseService extends ChangeNotifier {
   /// 返回保存的文件路径
   Future<String> exportAllData({String? customPath}) async {
     try {
-      // 调用新方法获取数据
+      // 修复 P1-2: 避免直接构建巨大的 JSON 字符串并 writeAsString 导致 OOM
+      // 1. 调用新方法获取 Map 数据（在内存中构建 Map）
       final jsonData = await exportDataAsMap();
-
-      // 转换为格式化的 JSON 字符串
-      final jsonStr = const JsonEncoder.withIndent('  ').convert(jsonData);
 
       String filePath;
       if (customPath != null) {
-        // 使用自定义路径
         filePath = customPath;
       } else {
-        // 使用默认路径
         final dir = await getApplicationDocumentsDirectory();
         final fileName = '心迹_${DateTime.now().millisecondsSinceEpoch}.json';
-        filePath = '${dir.path}/$fileName';
+        filePath = join(dir.path, fileName);
       }
 
-      final file = File(filePath);
-      await file.writeAsString(jsonStr);
-      return file.path;
+      // 2. 使用流式写入将 Map 数据转换为文件（大幅降低内存峰值占用）
+      // 修复：替换 file.writeAsString(jsonStr)，并传入 File 对象
+      logDebug('开始流式导出大文件到: $filePath');
+      await LargeFileManager.encodeJsonToFileStreaming(
+          jsonData, File(filePath));
+
+      return filePath;
     } catch (e) {
-      logDebug('数据导出失败: $e');
+      logError('数据导出失败', error: e, source: 'exportAllData');
       rethrow;
     }
   }
@@ -4085,32 +4112,32 @@ class DatabaseService extends ChangeNotifier {
                   conflictAlgorithm: ConflictAlgorithm.ignore);
             }
           }
+
+          // 3. 同步媒体引用，确保与内容更新保持原子性
+          await MediaReferenceService.syncQuoteMediaReferencesWithTransaction(
+            txn,
+            quote,
+          );
         });
 
         logDebug('笔记已成功更新，ID: ${quote.id}');
 
-        // 同步媒体文件引用
-        await MediaReferenceService.syncQuoteMediaReferences(quote);
-
         // 使用轻量级检查机制清理因内容变更而不再被引用的媒体文件
-        // 注：syncQuoteMediaReferences 已经更新了引用表，这里只需查引用计数
         for (final storedPath in oldReferencedFiles) {
           try {
             String absolutePath = storedPath;
-            try {
-              if (!absolutePath.startsWith('/')) {
-                final appDir = await getApplicationDocumentsDirectory();
-                absolutePath = join(appDir.path, storedPath);
-              }
-            } catch (_) {}
+            if (!absolutePath.startsWith('/') && !absolutePath.contains(':')) {
+              final appDir = await getApplicationDocumentsDirectory();
+              absolutePath = join(appDir.path, storedPath);
+            }
 
-            // 使用轻量级检查（仅查引用表计数）
+            // 使用增强版的 quickCheckAndDeleteIfOrphan（包含内容二次校验）
             final deleted =
                 await MediaReferenceService.quickCheckAndDeleteIfOrphan(
               absolutePath,
             );
             if (deleted) {
-              logDebug('已清理无引用媒体文件: $absolutePath (原始记录: $storedPath)');
+              logDebug('已清理无引用媒体文件: $absolutePath');
             }
           } catch (e) {
             logDebug('清理无引用媒体文件失败: $storedPath, 错误: $e');
@@ -4871,7 +4898,10 @@ class DatabaseService extends ChangeNotifier {
         return;
       }
 
+      // 使用 Batch 批量更新，大幅提升性能
+      final batch = db.batch();
       int patchedCount = 0;
+
       for (final map in maps) {
         // 解析时间
         String? dateStr = map['date'];
@@ -4898,8 +4928,9 @@ class DatabaseService extends ChangeNotifier {
         } else {
           dayPeriodKey = 'midnight';
         }
-        // 更新数据库
-        await db.update(
+
+        // 添加到 batch
+        batch.update(
           'quotes',
           {'day_period': dayPeriodKey},
           where: 'id = ?',
@@ -4908,7 +4939,10 @@ class DatabaseService extends ChangeNotifier {
         patchedCount++;
       }
 
-      logDebug('已补全 $patchedCount 条记录的 day_period 字段');
+      if (patchedCount > 0) {
+        await batch.commit(noResult: true);
+        logDebug('已补全 $patchedCount 条记录的 day_period 字段');
+      }
     } catch (e) {
       logDebug('补全 day_period 字段失败: $e');
       rethrow;
@@ -4967,6 +5001,9 @@ class DatabaseService extends ChangeNotifier {
         int migratedCount = 0;
         int skippedCount = 0;
 
+        // 使用 Batch 批量更新
+        final batch = txn.batch();
+
         for (final map in maps) {
           final id = map['id'] as String?;
           final dayPeriod = map['day_period'] as String?;
@@ -4975,7 +5012,7 @@ class DatabaseService extends ChangeNotifier {
 
           if (labelToKey.containsKey(dayPeriod)) {
             final key = labelToKey[dayPeriod]!;
-            await txn.update(
+            batch.update(
               'quotes',
               {'day_period': key},
               where: 'id = ?',
@@ -4985,6 +5022,10 @@ class DatabaseService extends ChangeNotifier {
           } else {
             skippedCount++;
           }
+        }
+
+        if (migratedCount > 0) {
+          await batch.commit(noResult: true);
         }
 
         logDebug('dayPeriod字段迁移完成：转换 $migratedCount 条，跳过 $skippedCount 条');
@@ -5078,6 +5119,9 @@ class DatabaseService extends ChangeNotifier {
         int migratedCount = 0;
         int skippedCount = 0;
 
+        // 使用 Batch 批量更新
+        final batch = txn.batch();
+
         for (final m in maps) {
           final id = m['id'] as String?;
           final weather = m['weather'] as String?;
@@ -5090,7 +5134,7 @@ class DatabaseService extends ChangeNotifier {
                 .firstWhere((e) => e.value == weather)
                 .key;
 
-            await txn.update(
+            batch.update(
               'quotes',
               {'weather': key},
               where: 'id = ?',
@@ -5100,6 +5144,10 @@ class DatabaseService extends ChangeNotifier {
           } else {
             skippedCount++;
           }
+        }
+
+        if (migratedCount > 0) {
+          await batch.commit(noResult: true);
         }
 
         logDebug('weather字段迁移完成：转换 $migratedCount 条，跳过 $skippedCount 条');
@@ -5342,6 +5390,10 @@ class DatabaseService extends ChangeNotifier {
           categoryIdRemap,
         );
       });
+
+      // 修复 P0-2：合并完成后必须重建媒体引用，确保引用表准确，防止后续孤儿清理误删文件
+      logInfo('开始重建同步后的媒体引用记录...');
+      await MediaReferenceService.migrateExistingQuotes();
 
       // 清理缓存并通知监听器，然后刷新当前流（如果存在）
       _clearAllCache();
