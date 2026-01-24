@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io' show Platform;
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart' as logging;
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
@@ -205,7 +205,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
   static const String _logLevelKey = 'log_level';
   static const String _logLevelUserSetKey = 'log_level_user_set'; // 标记用户是否手动设置过
   static const int _maxInMemoryLogs = 300;
-  static const int _maxStoredLogs = 500;
+  static const int _maxStoredLogs = 1000;
   static const Duration _batchSaveInterval = Duration(seconds: 2);
 
   // 单例实例
@@ -494,7 +494,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
   /// 从数据库加载最近的日志
   Future<void> _loadRecentLogs() async {
     try {
-      final results = await _logDb.getRecentLogs(100);
+      final results = await _logDb.getRecentLogs(_maxInMemoryLogs);
 
       if (results.isNotEmpty) {
         final loadedLogs = <LogEntry>[];
@@ -596,10 +596,10 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
         (_sourceStats[entry.source ?? 'unknown'] ?? 0) + 1;
 
     // 只有在启用持久化时，才添加到待处理队列准备写入数据库
-    // 唯一的例外是：如果这是紧急错误且我们处于特定模式？
-    // 根据需求："默认无日志...在程序开发者模式下才显示日志入口和开启日志记录功能"
-    // 因此，如果未开启开发者模式（_isPersistenceEnabled == false），则不写入数据库。
-    if (_isPersistenceEnabled) {
+    // 唯一的例外是：如果这是严重错误或警告，即使未开启持久化也记录，以便后续诊断问题
+    if (_isPersistenceEnabled ||
+        entry.level == UnifiedLogLevel.error ||
+        entry.level == UnifiedLogLevel.warning) {
       _pendingLogs.add(entry);
     }
 
@@ -1031,6 +1031,87 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     }
 
     return buffer.toString();
+  }
+
+  /// 导出日志到文件（流式写入，内存安全）
+  Future<void> exportLogsToFile(
+    File file, {
+    UnifiedLogLevel? minLevel,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final sink = file.openWrite();
+    try {
+      sink.writeln('# ThoughtEcho 日志导出');
+      sink.writeln('导出时间: ${DateTime.now().toIso8601String()}');
+      sink.writeln('日志级别: ${minLevel?.name ?? '所有级别'}');
+      sink.writeln('');
+
+      // 1. 先写内存中的日志
+      final filteredMemoryLogs = _memoryLogs.where((log) {
+        if (minLevel != null && log.level.index < minLevel.index) return false;
+        if (startDate != null && log.timestamp.isBefore(startDate))
+          return false;
+        if (endDate != null && log.timestamp.isAfter(endDate)) return false;
+        return true;
+      });
+
+      for (final log in filteredMemoryLogs) {
+        sink.writeln(log.toString());
+        sink.writeln('---');
+      }
+
+      // 2. 如果开启了持久化，从数据库中读取更多日志并写入
+      // 为了防止数据库日志过多导致 OOM，我们采用分页读取
+      const int pageSize = 100;
+      int offset = 0;
+      bool hasMore = true;
+
+      while (hasMore) {
+        final dbLogs = await queryLogs(
+          level: minLevel,
+          startDate: startDate,
+          endDate: endDate,
+          limit: pageSize,
+          offset: offset,
+        );
+
+        if (dbLogs.isEmpty) {
+          hasMore = false;
+        } else {
+          for (final log in dbLogs) {
+            // 避免重复写入（如果内存中已经有了）
+            // 简单的排重逻辑：如果时间戳在内存日志范围内，可能重复
+            // 这里为了简单，只写不在内存中的日志
+            bool alreadyInMemory = _memoryLogs.any(
+              (m) =>
+                  m.timestamp == log.timestamp &&
+                  m.message == log.message &&
+                  m.level == log.level,
+            );
+
+            if (!alreadyInMemory) {
+              sink.writeln(log.toString());
+              sink.writeln('---');
+            }
+          }
+
+          offset += pageSize;
+          if (dbLogs.length < pageSize) {
+            hasMore = false;
+          }
+
+          // 定期刷新，释放缓冲区
+          if (offset % (pageSize * 2) == 0) {
+            await sink.flush();
+          }
+        }
+      }
+
+      await sink.flush();
+    } finally {
+      await sink.close();
+    }
   }
 
   /// 处理在日志服务初始化之前缓存的错误
