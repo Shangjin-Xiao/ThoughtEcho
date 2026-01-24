@@ -377,56 +377,19 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
             .replaceAll(RegExp(r'\s+'), ' ')
             .trim();
 
-        return '''
-⚠️ 检测到AI返回了JSON数据格式
-
-这表明AI模型可能误解了请求，返回了数据分析结果而非HTML报告。
-
-返回的内容：
-$cleanJson
-
-这个问题可能的原因：
-• AI混淆了年度报告生成和内容分析功能
-• 提示词需要进一步优化
-• 模型版本或配置问题
-
-建议解决方案：
-1. 重新生成报告（AI可能会修正错误）
-2. 检查AI设置中的模型配置
-3. 尝试使用原生Flutter报告功能
-4. 更新AI提示词配置
-
-如需技术支持，请保存此错误信息并联系开发者。
-''';
+        return l10n.detectedAIJSONFormat(cleanJson);
       } catch (e) {
-        return '''
-⚠️ 检测到异常数据格式
-
-AI返回了无法正常解析的JSON数据，这可能是由于：
-• 网络传输问题
-• AI服务异常
-• 数据格式错误
-
-原始内容：
-${content.length > 300 ? '${content.substring(0, 300)}...' : content}
-
-建议重新生成报告或使用原生报告功能。
-''';
+        return l10n.detectedAbnormalFormat(
+          content.length > 300 ? '${content.substring(0, 300)}...' : content,
+        );
       }
     }
 
     // 检查是否包含HTML标签
     if (!content.contains('<html') && !content.contains('<!DOCTYPE')) {
-      return '''
-📄 AI生成的文本内容
-
-${content.length > 500 ? '${content.substring(0, 500)}...' : content}
-
-💡 提示：AI返回了纯文本格式的总结而非HTML报告。
-这可能是因为模型理解了内容但没有按照HTML格式输出。
-
-完整内容可以在浏览器中查看，系统会自动包装为HTML格式。
-''';
+      return l10n.aiGeneratedTextContent(
+        content.length > 500 ? '${content.substring(0, 500)}...' : content,
+      );
     }
 
     // 提取HTML中的文本内容
@@ -462,7 +425,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>心迹 ${widget.year} 年度报告</title>
+    <title>${l10n.annualReportHtmlTitle(widget.year.toString())}</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
@@ -503,8 +466,8 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
 <body>
     <div class="container">
         <div class="header">
-            <h1>心迹 ${widget.year} 年度报告</h1>
-            <p>生成时间: ${DateTime.now().toString().substring(0, 19)}</p>
+            <h1>${l10n.annualReportHtmlTitle(widget.year.toString())}</h1>
+            <p>${l10n.generationTimeLabel(DateTime.now().toString().substring(0, 19))}</p>
         </div>
         <div class="content ${widget.htmlContent.trim().startsWith('{') ? 'json-content' : ''}">${widget.htmlContent}</div>
     </div>
@@ -705,11 +668,11 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: const Row(
+                content: Row(
                   children: [
-                    Icon(Icons.check_circle, color: Colors.white),
-                    SizedBox(width: 8),
-                    Text('报告已在浏览器中打开'),
+                    const Icon(Icons.check_circle, color: Colors.white),
+                    const SizedBox(width: 8),
+                    Text(l10n.reportOpenedInBrowser),
                   ],
                 ),
                 backgroundColor: Theme.of(context).colorScheme.primary,
@@ -866,21 +829,21 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('HTML报告内容已复制到剪贴板。请按以下步骤操作：'),
+            Text(l10n.htmlReportCopiedSteps),
             const SizedBox(height: 16),
             Text(l10n.annualReportMobileInstructions,
                 style: const TextStyle(fontWeight: FontWeight.bold)),
-            const Text('1. 打开浏览器（Chrome/Safari等）'),
-            const Text('2. 新建空白页面或新标签页'),
-            const Text('3. 在地址栏输入：data:text/html,'),
-            const Text('4. 粘贴复制的内容'),
-            const Text('5. 回车查看报告'),
+            Text(l10n.browserInstructionsStep1),
+            Text(l10n.browserInstructionsStep2),
+            Text(l10n.browserInstructionsStep3),
+            Text(l10n.browserInstructionsStep4),
+            Text(l10n.browserInstructionsStep5),
             const SizedBox(height: 12),
             Text(l10n.annualReportDesktopInstructions,
                 style: const TextStyle(fontWeight: FontWeight.bold)),
-            const Text('1. 新建文本文件，粘贴内容'),
-            const Text('2. 将文件保存为 .html 格式'),
-            const Text('3. 双击文件在浏览器中打开'),
+            Text(l10n.desktopInstructionsStep1),
+            Text(l10n.desktopInstructionsStep2),
+            Text(l10n.desktopInstructionsStep3),
           ],
         ),
         actions: [
@@ -931,7 +894,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>心迹 ${widget.year} 年度报告</title>
+    <title>${l10n.annualReportHtmlTitle(widget.year.toString())}</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
@@ -963,8 +926,8 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
 <body>
     <div class="container">
         <div class="header">
-            <h1>心迹 ${widget.year} 年度报告</h1>
-            <p>生成时间: ${DateTime.now().toString().substring(0, 19)}</p>
+            <h1>${l10n.annualReportHtmlTitle(widget.year.toString())}</h1>
+            <p>${l10n.generationTimeLabel(DateTime.now().toString().substring(0, 19))}</p>
         </div>
         <div class="content">${widget.htmlContent}</div>
     </div>
