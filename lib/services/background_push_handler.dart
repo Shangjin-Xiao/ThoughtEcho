@@ -21,7 +21,7 @@ void callbackDispatcher() {
 
     // 2. 初始化日志
     AppLogger.initialize();
-    AppLogger.i('WorkManager 任务启动: $task');
+    AppLogger.w('WorkManager 任务启动: $task'); // 改为 warning 以便在非开发者模式下也能记录到数据库
 
     try {
       // 3. 初始化基础服务
@@ -52,11 +52,13 @@ void callbackDispatcher() {
       switch (task) {
         case kBackgroundPushTask:
         case Workmanager.iOSBackgroundTask: // iOS 后台处理通用入口
+          AppLogger.i('执行一次性推送检查...');
           await pushService.checkAndPush(isBackground: true);
           break;
 
         case kPeriodicCheckTask:
           // 周期性检查逻辑
+          AppLogger.i('执行周期性推送检查...');
           await pushService.checkAndPush(isBackground: true);
           break;
 
@@ -64,7 +66,7 @@ void callbackDispatcher() {
           AppLogger.w('未知的 WorkManager 任务: $task');
       }
 
-      AppLogger.i('WorkManager 任务完成: $task');
+      AppLogger.w('WorkManager 任务完成: $task');
       return true;
     } catch (e, stack) {
       AppLogger.e('WorkManager 任务失败', error: e, stackTrace: stack);
@@ -78,14 +80,14 @@ void callbackDispatcher() {
 /// 当 Android AlarmManager 触发时，会在独立的 isolate 中运行此函数。
 /// 这里必须初始化最小的必要环境。
 @pragma('vm:entry-point')
-void backgroundPushCallback() async {
+void backgroundPushCallback([int? id]) async {
   // 1. 初始化 Flutter 绑定
   WidgetsFlutterBinding.ensureInitialized();
   DartPluginRegistrant.ensureInitialized();
 
   // 2. 初始化日志
   AppLogger.initialize();
-  AppLogger.i('后台推送任务启动');
+  AppLogger.w('后台推送任务启动 (AlarmId: $id)'); // 改为 warning 以便记录
 
   try {
     // 3. 初始化基础服务
@@ -113,13 +115,14 @@ void backgroundPushCallback() async {
     await pushService.loadSettingsForBackground();
 
     // 5. 执行检查和推送
+    AppLogger.i('执行检查和推送 (isBackground: true)');
     await pushService.checkAndPush(isBackground: true);
 
     // 6. 重新调度下一次推送（关键步骤！）
     // 因为 oneShotAt 是一次性的，需要在执行完后重新调度
     await pushService.scheduleNextPush();
 
-    AppLogger.i('后台推送任务完成，已重新调度下次推送');
+    AppLogger.w('后台推送任务完成，已重新调度下次推送');
   } catch (e, stack) {
     AppLogger.e('后台推送任务发生严重错误', error: e, stackTrace: stack);
   } finally {

@@ -7,12 +7,25 @@ import android.view.WindowManager
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 
+import io.flutter.plugin.common.MethodChannel
+import java.util.TimeZone
+
 class MainActivity : FlutterFragmentActivity() {
+
+    private val CHANNEL = "com.shangjin.thoughtecho/timezone"
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         flutterEngine.plugins.add(MemoryInfoPlugin())
         flutterEngine.plugins.add(StreamFileSelector())
+
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
+            if (call.method == "getTimeZone") {
+                result.success(TimeZone.getDefault().id)
+            } else {
+                result.notImplemented()
+            }
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
