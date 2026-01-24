@@ -109,7 +109,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    '导入说明',
+                    l10n.importInstructions,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: Theme.of(context).colorScheme.primary,
@@ -174,13 +174,15 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
     return [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: const Text('取消'),
+        child: Text(l10n.cancel),
       ),
     ];
   }
 
   List<Widget> _buildImportingActions() {
-    return [TextButton(onPressed: _cancelImport, child: const Text('取消导入'))];
+    return [
+      TextButton(onPressed: _cancelImport, child: Text(l10n.cancelImport))
+    ];
   }
 
   /// 从文件导入
@@ -189,7 +191,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
       setState(() {
         _isImporting = true;
         _progress = 0.0;
-        _statusMessage = '正在选择文件...';
+        _statusMessage = l10n.selectingFile;
         _cancelToken = lfm.LargeFileManager.createCancelToken();
       });
 
@@ -225,7 +227,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
       logDebug('文件选择成功，路径: ${file.path}');
 
       setState(() {
-        _statusMessage = '正在验证文件...';
+        _statusMessage = l10n.validatingFile;
         _progress = 0.1;
       });
 
@@ -257,7 +259,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
       }
 
       setState(() {
-        _statusMessage = '正在检查文件兼容性...';
+        _statusMessage = l10n.checkingFileCompatibility;
         _progress = 0.2;
       });
 
@@ -271,7 +273,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
       }
 
       setState(() {
-        _statusMessage = '正在导入文件...';
+        _statusMessage = l10n.importingFile;
         _progress = 0.3;
       });
 
@@ -309,7 +311,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
       if (savedPath != null && mounted) {
         setState(() {
           _progress = 1.0;
-          _statusMessage = '导入完成！';
+          _statusMessage = l10n.importComplete;
         });
 
         // 延迟一下让用户看到完成状态
@@ -320,12 +322,12 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
           widget.onMediaImported(savedPath);
         }
       } else {
-        throw Exception('文件保存失败');
+        throw Exception(l10n.fileSaveFailed);
       }
     } catch (e) {
       logDebug('文件导入失败: $e');
       if (mounted) {
-        _showError('导入失败: $e');
+        _showError('${l10n.restoreFailed}: $e');
       }
     }
   }
@@ -336,7 +338,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
       setState(() {
         _isImporting = true;
         _progress = 0.0;
-        _statusMessage = '正在${_getCameraAction()}...';
+        _statusMessage = '${_getCameraAction()}...';
       });
 
       final ImagePicker picker = ImagePicker();
@@ -367,7 +369,8 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
       }
 
       setState(() {
-        _statusMessage = '正在处理${_getMediaTypeName(widget.mediaType)}...';
+        _statusMessage =
+            l10n.processingMedia(_getMediaTypeName(widget.mediaType));
         _progress = 0.5;
       });
 
@@ -390,7 +393,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
       if (savedPath != null && mounted) {
         setState(() {
           _progress = 1.0;
-          _statusMessage = '导入完成！';
+          _statusMessage = l10n.importComplete;
         });
 
         await Future.delayed(const Duration(milliseconds: 500));
@@ -403,7 +406,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
     } catch (e) {
       logDebug('相机导入失败: $e');
       if (mounted) {
-        _showError('${_getCameraAction()}失败: $e');
+        _showError('${_getCameraAction()}${l10n.failStatus}: $e');
       }
     }
   }
@@ -415,11 +418,11 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
     final String? url = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('输入${_getMediaTypeName(widget.mediaType)}网址'),
+        title: Text(l10n.enterMediaUrl(_getMediaTypeName(widget.mediaType))),
         content: TextField(
           controller: urlController,
           decoration: InputDecoration(
-            hintText: '请输入${_getMediaTypeName(widget.mediaType)}文件的网址',
+            hintText: l10n.enterMediaUrl(_getMediaTypeName(widget.mediaType)),
             border: const OutlineInputBorder(),
           ),
           keyboardType: TextInputType.url,
@@ -427,12 +430,12 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('取消'),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             onPressed: () =>
                 Navigator.of(context).pop(urlController.text.trim()),
-            child: const Text('确定'),
+            child: Text(l10n.confirm),
           ),
         ],
       ),
@@ -444,7 +447,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
       setState(() {
         _isImporting = true;
         _progress = 0.0;
-        _statusMessage = '正在下载文件...';
+        _statusMessage = l10n.downloadingFile;
         _cancelToken = lfm.LargeFileManager.createCancelToken();
       });
 
@@ -460,7 +463,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
       if (savedPath != null && mounted) {
         setState(() {
           _progress = 1.0;
-          _statusMessage = '下载完成！';
+          _statusMessage = l10n.downloadComplete;
         });
 
         await Future.delayed(const Duration(milliseconds: 500));
@@ -473,7 +476,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
     } catch (e) {
       logDebug('网址导入失败: $e');
       if (mounted) {
-        _showError('下载失败: $e');
+        _showError('${l10n.restoreFailed}: $e');
       }
     }
   }
@@ -576,11 +579,11 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
   String _getCameraTitle() {
     switch (widget.mediaType) {
       case 'image':
-        return '拍照';
+        return l10n.takePhoto;
       case 'video':
-        return '录制视频';
+        return l10n.recordVideo;
       default:
-        return '拍摄';
+        return l10n.takePhoto;
     }
   }
 
@@ -588,11 +591,11 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
   String _getCameraAction() {
     switch (widget.mediaType) {
       case 'image':
-        return '拍照';
+        return l10n.takePhoto;
       case 'video':
-        return '录制';
+        return l10n.recordVideo;
       default:
-        return '拍摄';
+        return l10n.takePhoto;
     }
   }
 
@@ -600,25 +603,13 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
   String _getImportTips() {
     switch (widget.mediaType) {
       case 'image':
-        return '• 支持 JPG、PNG、GIF、WebP 等格式\n'
-            '• 直接保存到应用媒体库，减少重复复制\n'
-            '• 使用内存保护技术，支持超大图片\n'
-            '• 未保存笔记退出将自动清理未引用文件';
+        return l10n.importTipsImage;
       case 'video':
-        return '• 支持 MP4、MOV、AVI、MKV 等格式\n'
-            '• 直接保存到应用媒体库，减少重复复制\n'
-            '• 流式处理技术，防止内存溢出\n'
-            '• 未保存笔记退出将自动清理未引用文件';
+        return l10n.importTipsVideo;
       case 'audio':
-        return '• 支持 MP3、WAV、AAC、M4A 等格式\n'
-            '• 直接保存到应用媒体库，减少重复复制\n'
-            '• 优化存储，快速加载\n'
-            '• 未保存笔记退出将自动清理未引用文件';
+        return l10n.importTipsAudio;
       default:
-        return '• 支持多种媒体格式\n'
-            '• 直接保存到应用媒体库\n'
-            '• 内存安全保护\n'
-            '• 未保存笔记退出将自动清理未引用文件';
+        return l10n.importTipsDefault;
     }
   }
 
@@ -628,15 +619,15 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
     if (!kIsWeb &&
         Platform.isAndroid &&
         (widget.mediaType == 'image' || widget.mediaType == 'video')) {
-      return '从相册选择$typeName';
+      return l10n.selectFromGallery(typeName);
     }
-    return '从文件选择$typeName';
+    return l10n.selectFromFilesWithTypeName(typeName);
   }
 
   /// 从URL下载媒体文件
   Future<String?> _downloadMediaFromUrl(String url) async {
     try {
-      _updateStatus('正在连接服务器...');
+      _updateStatus(l10n.connectingToServer);
 
       // 生成临时文件路径
       final tempDir = Directory.systemTemp;
@@ -664,12 +655,12 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
               _updateProgress(received / total * 0.8); // 80%用于下载
             }
             _updateStatus(
-              '正在下载文件... ${(received / 1024 / 1024).toStringAsFixed(1)}MB',
+              '${l10n.downloadingFile} ${(received / 1024 / 1024).toStringAsFixed(1)}MB',
             );
           },
         );
 
-        _updateStatus('正在保存文件...');
+        _updateStatus(l10n.savingFile);
         _updateProgress(0.9);
 
         // 保存到应用目录（直接保存到媒体目录）
