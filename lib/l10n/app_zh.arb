@@ -1357,6 +1357,16 @@
       }
     }
   },
+  "@operationFailed": {
+    "placeholders": {
+      "operation": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "loadStatsFailed": "无法加载统计信息",
   "mediaFileStats": "媒体文件统计",
   "totalFiles": "总文件数",

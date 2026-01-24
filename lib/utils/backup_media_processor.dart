@@ -33,7 +33,7 @@ class BackupMediaProcessor {
       logDebug('开始智能收集媒体文件...');
       onStatusUpdate?.call('正在扫描媒体文件...');
 
-      // 使用媒体引用服务获取被引用的媒体文件
+      // 使用媒体引用服务获取被引用的媒体文件（从引用表 + 内容提取联合校验）
       final referencedFiles = await _getReferencedMediaFiles();
 
       // 如果没有被引用的媒体文件，直接返回
@@ -405,12 +405,30 @@ class BackupMediaProcessor {
       final allMediaFiles = await _getAllMediaFiles();
       final referencedFiles = <String>[];
 
+      // 预先构建引用快照，避免单文件多次扫描
+      final snapshot = await MediaReferenceService.buildReferenceSnapshotForBackup();
+      final appDir = await getApplicationDocumentsDirectory();
+      final appPath = path.normalize(appDir.path);
+
       // 检查每个文件的引用计数
       for (final filePath in allMediaFiles) {
-        final refCount = await MediaReferenceService.getReferenceCount(
+        final normalizedPath =
+            await MediaReferenceService.normalizePathForBackup(
           filePath,
+          appPath: appPath,
         );
-        if (refCount > 0) {
+        final canonicalKey =
+            MediaReferenceService.canonicalKeyForBackup(normalizedPath);
+        final hasStoredRefs = snapshot.storedIndex[canonicalKey]
+                ?.values
+                .any((refs) => refs.isNotEmpty) ??
+            false;
+        final hasQuoteRefs = snapshot.quoteIndex[canonicalKey]
+                ?.values
+                .any((refs) => refs.isNotEmpty) ??
+            false;
+
+        if (hasStoredRefs || hasQuoteRefs) {
           referencedFiles.add(filePath);
         }
       }

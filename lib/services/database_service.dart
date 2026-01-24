@@ -3982,6 +3982,26 @@ class DatabaseService extends ChangeNotifier {
     });
   }
 
+  /// 根据内容搜索笔记（用于媒体引用校验等内部逻辑）
+  Future<List<Quote>> searchQuotesByContent(String query) async {
+    if (kIsWeb) {
+      return _memoryStore
+          .where((q) =>
+              (q.content.contains(query)) ||
+              (q.deltaContent != null && q.deltaContent!.contains(query)))
+          .toList();
+    }
+
+    final db = await safeDatabase;
+    final List<Map<String, dynamic>> results = await db.query(
+      'quotes',
+      where: 'content LIKE ? OR delta_content LIKE ?',
+      whereArgs: ['%$query%', '%$query%'],
+    );
+
+    return results.map((map) => Quote.fromJson(map)).toList();
+  }
+
   /// 修复：更新笔记内容，增加数据验证和并发控制
   Future<void> updateQuote(Quote quote) async {
     // 修复：添加数据验证

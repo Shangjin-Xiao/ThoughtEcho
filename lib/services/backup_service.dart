@@ -453,28 +453,21 @@ class BackupService {
             quote['deltaContent'] != null) {
           final deltaContent = quote['deltaContent'] as String;
           try {
-            // 使用流式JSON处理避免大内容OOM
-            if (deltaContent.length > 10 * 1024 * 1024) {
-              // 10MB以上
-              logDebug('富文本内容过大，跳过媒体路径转换');
-              // 保留原内容，避免OOM
-            } else {
-              final deltaJson =
-                  await LargeFileManager.processLargeJson<Map<String, dynamic>>(
-                deltaContent,
-                encode: false,
-              );
-              final convertedDelta = _convertDeltaMediaPaths(
-                deltaJson,
-                appPath,
-                true,
-              );
-              quote['deltaContent'] =
-                  await LargeFileManager.processLargeJson<String>(
-                convertedDelta,
-                encode: true,
-              );
-            }
+            final deltaJson =
+                await LargeFileManager.processLargeJson<dynamic>(
+              deltaContent,
+              encode: false,
+            );
+            final convertedDelta = _convertDeltaMediaPaths(
+              deltaJson,
+              appPath,
+              true,
+            );
+            quote['deltaContent'] =
+                await LargeFileManager.processLargeJson<String>(
+              convertedDelta as Map<String, dynamic>,
+              encode: true,
+            );
           } catch (e) {
             logDebug('处理笔记 ${quote['id']} 的富文本内容时出错: $e');
             // 如果处理失败，保持原内容不变
@@ -506,28 +499,21 @@ class BackupService {
             quote['deltaContent'] != null) {
           final deltaContent = quote['deltaContent'] as String;
           try {
-            // 使用流式JSON处理避免大内容OOM
-            if (deltaContent.length > 10 * 1024 * 1024) {
-              // 10MB以上
-              logDebug('富文本内容过大，跳过媒体路径转换');
-              // 保留原内容，避免OOM
-            } else {
-              final deltaJson =
-                  await LargeFileManager.processLargeJson<Map<String, dynamic>>(
-                deltaContent,
-                encode: false,
-              );
-              final convertedDelta = _convertDeltaMediaPaths(
-                deltaJson,
-                appPath,
-                false,
-              );
-              quote['deltaContent'] =
-                  await LargeFileManager.processLargeJson<String>(
-                convertedDelta,
-                encode: true,
-              );
-            }
+            final deltaJson =
+                await LargeFileManager.processLargeJson<dynamic>(
+              deltaContent,
+              encode: false,
+            );
+            final convertedDelta = _convertDeltaMediaPaths(
+              deltaJson,
+              appPath,
+              false,
+            );
+            quote['deltaContent'] =
+                await LargeFileManager.processLargeJson<String>(
+              convertedDelta as Map<String, dynamic>,
+              encode: true,
+            );
           } catch (e) {
             logDebug('处理笔记 ${quote['id']} 的富文本内容时出错: $e');
             // 如果处理失败，保持原内容不变

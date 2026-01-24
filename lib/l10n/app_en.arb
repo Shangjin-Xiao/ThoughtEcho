@@ -1357,6 +1357,16 @@
       }
     }
   },
+  "@operationFailed": {
+    "placeholders": {
+      "operation": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "loadStatsFailed": "Failed to load statistics",
   "mediaFileStats": "Media File Statistics",
   "totalFiles": "Total Files",

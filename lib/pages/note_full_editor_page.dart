@@ -20,6 +20,7 @@ import '../utils/color_utils.dart'; // Import color_utils
 import 'dart:math' show min; // 添加math包导入
 import '../widgets/streaming_text_dialog.dart'; // 导入 StreamingTextDialog
 import 'package:flutter/services.dart';
+import 'dart:async';
 import '../utils/app_logger.dart';
 import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
 import 'package:flutter/foundation.dart' show kIsWeb, compute;
@@ -104,9 +105,16 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   Quote? _fullInitialQuote;
   bool _isLoadingFullQuote = false;
 
+  // 草稿自动保存
+  Timer? _draftSaveTimer;
+  String? _draftStorageKey;
+  bool _draftLoaded = false;
+
   @override
   void initState() {
     super.initState();
+
+    _draftStorageKey = _buildDraftStorageKey();
 
     // 如果是编辑模式，异步获取完整笔记数据
     if (widget.initialQuote != null && widget.initialQuote!.id != null) {
@@ -119,6 +127,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
     // 先初始化为基本控制器，避免阻塞UI
     _controller = quill.QuillController.basic();
+    _attachDraftListener();
 
     // 异步初始化文档内容
     _initializeDocumentAsync();
@@ -248,6 +257,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   /// 异步初始化文档内容
   Future<void> _initializeDocumentAsync() async {
     try {
+      if (!_draftLoaded) {
+        await _loadDraftIfAvailable();
+      }
       if (widget.initialQuote?.deltaContent != null) {
         // 如果有富文本内容，使用后台处理避免阻塞UI
         logDebug('开始异步解析富文本内容...');
@@ -256,7 +268,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
         // 使用内存安全的处理策略
         await _initializeRichTextContentSafely(deltaContent);
-      } else {
+      } else if (!_draftLoaded) {
         logDebug('使用纯文本初始化编辑器');
         _initializeAsPlainText();
       }
@@ -329,6 +341,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
             document: document,
             selection: const TextSelection.collapsed(offset: 0),
           );
+          _attachDraftListener();
         });
         logDebug('富文本内容直接初始化完成');
       }
@@ -388,6 +401,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
             document: document,
             selection: const TextSelection.collapsed(offset: 0),
           );
+          _attachDraftListener();
         });
         logDebug('富文本内容后台初始化完成');
       }
@@ -413,6 +427,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
             document: placeholderDocument,
             selection: const TextSelection.collapsed(offset: 0),
           );
+          _attachDraftListener();
         });
       }
 
@@ -433,6 +448,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
             document: document,
             selection: const TextSelection.collapsed(offset: 0),
           );
+          _attachDraftListener();
         });
         logDebug('超大富文本内容分段加载完成');
       }
@@ -653,6 +669,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
             document: quill.Document()..insert(0, widget.initialContent),
             selection: const TextSelection.collapsed(offset: 0),
           );
+          _attachDraftListener();
         });
       }
     } catch (e) {
@@ -669,6 +686,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         setState(() {
           _controller.dispose(); // 释放旧控制器
           _controller = quill.QuillController.basic();
+          _attachDraftListener();
 
           // 尝试安全地添加内容
           try {
@@ -711,6 +729,129 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     } catch (e) {
       logDebug('初始化空文档也失败: $e');
       // 这种情况下，保持现有控制器状态
+    }
+  }
+
+  String _buildDraftStorageKey() {
+    if (widget.initialQuote?.id != null &&
+        widget.initialQuote!.id!.isNotEmpty) {
+      return 'draft_${widget.initialQuote!.id}';
+    }
+    return 'draft_new_${widget.initialContent.hashCode}';
+  }
+
+  void _attachDraftListener() {
+    _controller.removeListener(_onDraftChanged);
+    _controller.addListener(_onDraftChanged);
+  }
+
+  void _onDraftChanged() {
+    if (_draftLoaded) {
+      _draftSaveTimer?.cancel();
+      _draftSaveTimer = Timer(const Duration(seconds: 2), () {
+        _saveDraft();
+      });
+    }
+  }
+
+  Future<void> _loadDraftIfAvailable() async {
+    if (_draftLoaded) return;
+    final settingsService = Provider.of<SettingsService>(context, listen: false);
+    final key = _draftStorageKey;
+    if (key == null || key.isEmpty) return;
+    final draftJson = await settingsService.getCustomString(key);
+    if (draftJson == null || draftJson.isEmpty) {
+      _draftLoaded = true;
+      return;
+    }
+    try {
+      final payload = jsonDecode(draftJson) as Map<String, dynamic>;
+      final deltaContent = payload['deltaContent'] as String?;
+      final plainText = payload['plainText'] as String?;
+      final author = payload['author'] as String?;
+      final work = payload['work'] as String?;
+      final tagIds =
+          (payload['tagIds'] as List?)?.map((e) => e.toString()).toList();
+      final colorHex = payload['colorHex'] as String?;
+      final location = payload['location'] as String?;
+      final latitude = payload['latitude'] as num?;
+      final longitude = payload['longitude'] as num?;
+      final weather = payload['weather'] as String?;
+      final temperature = payload['temperature'] as String?;
+
+      if (deltaContent != null && deltaContent.isNotEmpty) {
+        await _initializeRichTextContentSafely(deltaContent);
+      } else if (plainText != null) {
+        if (mounted) {
+          setState(() {
+            _controller.dispose();
+            _controller = quill.QuillController(
+              document: quill.Document()..insert(0, plainText),
+              selection: const TextSelection.collapsed(offset: 0),
+            );
+            _attachDraftListener();
+          });
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          if (author != null) _authorController.text = author;
+          if (work != null) _workController.text = work;
+          if (tagIds != null) _selectedTagIds = tagIds;
+          _selectedColorHex = colorHex;
+          _location = location;
+          _latitude = latitude?.toDouble();
+          _longitude = longitude?.toDouble();
+          _weather = weather;
+          _temperature = temperature;
+          _showLocation =
+              _location != null || (_latitude != null && _longitude != null);
+          _showWeather = _weather != null;
+        });
+      }
+    } catch (e) {
+      logDebug('加载草稿失败: $e');
+    } finally {
+      _draftLoaded = true;
+    }
+  }
+
+  Future<void> _saveDraft() async {
+    try {
+      final settingsService = Provider.of<SettingsService>(context, listen: false);
+      final key = _draftStorageKey;
+      if (key == null || key.isEmpty) return;
+      final plainText = _controller.document.toPlainText().trim();
+      final deltaJson = await _getDocumentContentSafely();
+      final payload = {
+        'deltaContent': deltaJson,
+        'plainText': plainText,
+        'author': _authorController.text,
+        'work': _workController.text,
+        'tagIds': _selectedTagIds,
+        'colorHex': _selectedColorHex,
+        'location': _showLocation ? _location : null,
+        'latitude': _showLocation ? _latitude : null,
+        'longitude': _showLocation ? _longitude : null,
+        'weather': _showWeather ? _weather : null,
+        'temperature': _showWeather ? _temperature : null,
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+      await settingsService.setCustomString(key, jsonEncode(payload));
+    } catch (e) {
+      logDebug('保存草稿失败: $e');
+    }
+  }
+
+  Future<void> _clearDraft() async {
+    try {
+      final settingsService = Provider.of<SettingsService>(context, listen: false);
+      final key = _draftStorageKey;
+      if (key == null || key.isEmpty) return;
+      await settingsService.setCustomString(key, '');
+    } catch (e) {
+      logDebug('清理草稿失败: $e');
     }
   }
 
@@ -1202,12 +1343,13 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   Future<void> _saveContent() async {
     final db = Provider.of<DatabaseService>(context, listen: false);
 
+    final l10n = AppLocalizations.of(context);
     logDebug('开始保存笔记内容...');
     if (mounted) {
       setState(() {
         _isSaving = true;
         _saveProgress = 0.0;
-        _saveStatus = '准备处理中...';
+        _saveStatus = l10n.preparingProcess;
       });
     }
 
@@ -1329,15 +1471,17 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
       if (mounted) {
         setState(() {
-          _saveStatus = '写入数据库...';
+          _saveStatus = l10n.writingDatabase;
           _saveProgress = _saveProgress < 0.9 ? 0.9 : _saveProgress;
         });
       }
 
-      if (widget.initialQuote != null && widget.initialQuote?.id != null) {
-        // 只有当initialQuote存在且有ID时，才更新现有笔记
-        logDebug('更新现有笔记，ID: ${quote.id}');
-        await db.updateQuote(quote);
+       if (widget.initialQuote != null && widget.initialQuote?.id != null) {
+         // 只有当initialQuote存在且有ID时，才更新现有笔记
+         logDebug('更新现有笔记，ID: ${quote.id}');
+         await db.updateQuote(quote);
+        _draftSaveTimer?.cancel();
+        await _clearDraft();
         _didSaveSuccessfully = true; // 标记保存成功，避免会话级清理
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1349,10 +1493,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
           // 成功更新后，关闭页面并返回
           Navigator.of(context).pop(true); // 返回true表示更新成功
         }
-      } else {
-        // 添加新笔记（初始Quote为null或无ID时）
-        logDebug('添加新笔记');
-        await db.addQuote(quote);
+       } else {
+         // 添加新笔记（初始Quote为null或无ID时）
+         logDebug('添加新笔记');
+         await db.addQuote(quote);
+        _draftSaveTimer?.cancel();
+        await _clearDraft();
         _didSaveSuccessfully = true; // 标记保存成功，避免会话级清理
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -1390,7 +1536,6 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       }
     } finally {
       if (mounted) {
-        final l10n = AppLocalizations.of(context);
         setState(() {
           _saveProgress = 1.0;
           _saveStatus = l10n.saveComplete;
@@ -3279,6 +3424,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
   @override
   void dispose() {
+    _draftSaveTimer?.cancel();
     // 未保存退出时，清理本会话导入而未被引用的媒体文件
     _cleanupSessionImportedMediaIfUnsaved();
     // 清理临时媒体文件（异步执行，不阻塞dispose）
@@ -3298,7 +3444,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   /// 清理临时媒体文件
   Future<void> _cleanupTemporaryMedia() async {
     try {
-      await TemporaryMediaService.cleanupAllTemporaryFiles();
+      await TemporaryMediaService.cleanupExpiredTemporaryFiles();
       logDebug('临时媒体文件清理完成');
     } catch (e) {
       logDebug('清理临时媒体文件失败: $e');
