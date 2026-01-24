@@ -62,6 +62,14 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
         if (_settings.showAdvancedOptions) {
           _animationController.forward();
         }
+
+        // 检查是否有精确闹钟权限（如果已启用功能但缺少权限）
+        // 延迟执行以确保页面已构建完成
+        if ((_settings.enabled || _settings.dailyQuotePushEnabled) && mounted) {
+          Future.delayed(const Duration(milliseconds: 500), () {
+            _checkPermissionAndShowDialog();
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -162,6 +170,77 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
       if (mounted) {
         setState(() => _isTesting = false);
       }
+    }
+  }
+
+  Future<void> _checkPermissionAndShowDialog() async {
+    if (!mounted) return;
+    try {
+      final smartPushService = context.read<SmartPushService>();
+      final hasExactAlarmPermission =
+          await smartPushService.checkExactAlarmPermission();
+
+      if (!hasExactAlarmPermission && mounted) {
+        final l10n = AppLocalizations.of(context);
+        final theme = Theme.of(context);
+        final colorScheme = theme.colorScheme;
+
+        final shouldRequest = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.smartPushExactAlarmTitle),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.smartPushExactAlarmMessage),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.info_outline,
+                          size: 16, color: colorScheme.primary),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          l10n.smartPushExactAlarmHint,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(l10n.cancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(l10n.smartPushGoToSettings),
+              ),
+            ],
+          ),
+        );
+
+        if (shouldRequest == true && mounted) {
+          await smartPushService.requestExactAlarmPermission();
+          // 刷新页面状态以移除警告卡片
+          setState(() {});
+        }
+      }
+    } catch (e) {
+      // 忽略检查错误
     }
   }
 
