@@ -33,6 +33,7 @@ import 'package:thoughtecho/services/unified_log_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
 import 'package:thoughtecho/services/clipboard_service.dart';
 import 'package:thoughtecho/services/media_cleanup_service.dart';
+import 'package:thoughtecho/services/apk_download_service.dart';
 import 'package:thoughtecho/services/version_check_service.dart';
 import 'package:thoughtecho/services/insight_history_service.dart';
 import 'package:thoughtecho/services/connectivity_service.dart';
@@ -120,7 +121,6 @@ bool _isEmergencyMode = false;
 
 // 缓存早期捕获但无法立即记录的错误
 final List<Map<String, dynamic>> _deferredErrors = [];
-
 
 Future<void> main() async {
   // 立即设置日志级别为INFO，避免早期verbose日志输出
@@ -416,6 +416,12 @@ Future<void> main() async {
         // 简单预初始化位置服务（异步执行，不阻塞UI）
         Future.microtask(() async {
           try {
+            // 启动时清理旧的 APK 安装包
+            if (!kIsWeb && Platform.isAndroid) {
+              logDebug('启动清理旧安装包逻辑...');
+              await ApkDownloadService.cleanupApkFiles();
+            }
+
             logDebug('开始预初始化位置服务...');
             // 设置语言代码，确保位置显示使用正确的语言
             locationService.currentLocaleCode = settingsService.localeCode;
@@ -929,8 +935,7 @@ class EmergencyRecoveryPage extends StatelessWidget {
                       // 如果重新初始化失败，显示错误信息
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content:
-                              Text(l10n.emergencyReinitializeFailed('$e')),
+                          content: Text(l10n.emergencyReinitializeFailed('$e')),
                           backgroundColor: Colors.red,
                           duration: const Duration(seconds: 3),
                         ),

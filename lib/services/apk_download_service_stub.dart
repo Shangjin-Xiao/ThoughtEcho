@@ -22,4 +22,7 @@ class ApkDownloadService {
 
   /// 清理资源（Web 平台空实现）
   static void dispose() {}
+
+  /// 清理 APK 文件（Web 平台空实现）
+  static Future<void> cleanupApkFiles() async {}
 }
