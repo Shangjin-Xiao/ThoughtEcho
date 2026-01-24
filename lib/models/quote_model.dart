@@ -3,7 +3,7 @@ class Quote {
   final String content;
   final String date;
   final String? aiAnalysis;
-  final String? source;
+  final String? _source;
   final String? sourceAuthor;
   final String? sourceWork;
   final List<String> tagIds;
@@ -27,7 +27,7 @@ class Quote {
     this.id,
     required this.content,
     required this.date,
-    this.source, // TODO: 优化：考虑source字段是否冗余。如果sourceAuthor和sourceWork总是用于重建source，则可以移除source字段以减少数据冗余。
+    String? source, // 保持构造函数参数名兼容
     this.sourceAuthor,
     this.sourceWork,
     this.tagIds = const [],
@@ -47,7 +47,23 @@ class Quote {
     this.dayPeriod, // 新增：时间段
     this.lastModified,
     this.favoriteCount = 0, // 新增：心形点击次数，默认为0
-  });
+  }) : _source = source;
+
+  /// 获取来源信息 (兼容性 getter)
+  /// 如果 sourceAuthor 和 sourceWork 存在，则优先从它们重建
+  String? get source {
+    if (sourceAuthor != null &&
+        sourceWork != null &&
+        sourceAuthor!.isNotEmpty &&
+        sourceWork!.isNotEmpty) {
+      return '$sourceAuthor - $sourceWork';
+    } else if (sourceAuthor != null && sourceAuthor!.isNotEmpty) {
+      return sourceAuthor;
+    } else if (sourceWork != null && sourceWork!.isNotEmpty) {
+      return sourceWork;
+    }
+    return _source;
+  }
 
   /// 修复：添加数据验证方法
   static bool isValidDate(String date) {
@@ -233,6 +249,8 @@ class Quote {
         favoriteCount:
             (json['favorite_count'] as num?)?.toInt() ?? 0, // 新增：心形点击次数
       );
+    } on ArgumentError {
+      rethrow;
     } catch (e) {
       throw FormatException('解析Quote JSON失败: $e, JSON: $json');
     }
@@ -351,15 +369,8 @@ class Quote {
 
   /// 获取完整的来源信息
   String get fullSource {
-    if (sourceAuthor != null && sourceWork != null) {
-      return '$sourceAuthor - $sourceWork';
-    } else if (sourceAuthor != null) {
-      return sourceAuthor!;
-    } else if (sourceWork != null) {
-      return sourceWork!;
-    } else if (source != null) {
-      return source!;
-    }
+    final s = source;
+    if (s != null && s.isNotEmpty) return s;
     return '未知来源';
   }
 
