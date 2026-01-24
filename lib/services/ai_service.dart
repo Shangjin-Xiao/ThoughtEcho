@@ -285,6 +285,7 @@ class AIService extends ChangeNotifier {
     required int totalWordCount,
     String? notesPreview,
     String? fullNotesContent, // 新增：完整笔记内容用于深度分析
+    String? previousInsights, // 新增：历史洞察上下文
   }) {
     final controller = _requestHelper.createStreamController();
 
@@ -317,6 +318,7 @@ class AIService extends ChangeNotifier {
                 totalWordCount: totalWordCount,
                 notesPreview: notesPreview,
                 fullNotesContent: fullNotesContent, // 传递完整内容
+                previousInsights: previousInsights, // 传递历史洞察
               );
 
               await _requestHelper.makeStreamRequestWithProvider(

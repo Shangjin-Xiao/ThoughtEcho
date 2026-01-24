@@ -174,11 +174,20 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   }
 
   Future<void> _computeExtrasAndInsight() async {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
+
     // 计算总字数
     final totalWords = _periodQuotes.fold<int>(
       0,
       (sum, q) => sum + q.content.length,
     );
+
+    // 生成数据签名 (用于判断数据是否发生变化)
+    // 签名组成: 周期类型_开始日期_结束日期_笔记数量_总字数
+    final rangeText = _getDateRangeText(l10n);
+    final dataSignature =
+        '${_selectedPeriod}_${rangeText}_${_periodQuotes.length}_$totalWords';
 
     // 最常见时间段
     final Map<String, int> periodCounts = {};
@@ -253,9 +262,6 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
     if (!mounted) return;
 
-    // 本地化资源
-    final l10n = AppLocalizations.of(context);
-
     // 处理时段显示：转换为本地化标签
     String? dayPeriodDisplay;
     IconData? dayPeriodIcon;
@@ -309,10 +315,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       _mostTopTagIcon = topTagIcon;
     });
 
-    _maybeStartInsight();
+    _maybeStartInsight(dataSignature);
   }
 
-  void _maybeStartInsight() {
+  void _maybeStartInsight(String dataSignature) async {
     if (!mounted) return;
     final l10n = AppLocalizations.of(context);
     final settings = context.read<SettingsService>();
@@ -322,12 +328,44 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     final noteCount = _periodQuotes.length;
 
     _insightSub?.cancel();
+
+    // 1. 尝试从历史记录中查找缓存
+    final insightService = context.read<InsightHistoryService>();
+    final cachedInsight = insightService.getInsightBySignature(dataSignature);
+
+    if (cachedInsight != null) {
+      // 如果有缓存，直接使用缓存
+      if (mounted) {
+        setState(() {
+          _insightText = cachedInsight.insight;
+          _insightLoading = false;
+        });
+        AppLogger.d('Using cached insight for signature: $dataSignature');
+      }
+      return;
+    }
+
+    // 如果没有数据，不进行生成
+    if (noteCount == 0) {
+      if (mounted) {
+        setState(() {
+          _insightText = '';
+          _insightLoading = false;
+        });
+      }
+      return;
+    }
+
     if (useAI) {
       setState(() {
         _insightText = '';
         _insightLoading = true;
       });
       final ai = context.read<AIService>();
+
+      // 获取历史洞察上下文
+      final previousInsights =
+          await insightService.getPreviousInsightsContext();
 
       // 准备完整的笔记内容用于AI分析
       final fullNotesContent = _periodQuotes.map((quote) {
@@ -372,6 +410,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         totalWordCount: _totalWordCount,
         notesPreview: _notesPreview,
         fullNotesContent: fullNotesContent, // 传递完整内容
+        previousInsights: previousInsights, // 传递历史上下文
       )
           .listen(
         (chunk) {
@@ -396,6 +435,11 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
             _insightText = local;
             _insightLoading = false;
           });
+
+          // 本地兜底生成的洞察也保存，但标记为非AI（在save方法里处理）
+          // 不过由于saveInsightToHistory目前强制isAiGenerated=true，
+          // 这里我们可能不想保存本地兜底的，或者保存但不带signature以避免污染？
+          // 暂时策略：出错降级为本地生成后，不保存到带signature的历史，以免下次误用本地版覆盖AI版
         },
         onDone: () {
           if (!mounted) return;
@@ -405,17 +449,15 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
           // 保存洞察到历史记录
           if (_insightText.isNotEmpty) {
-            _saveInsightToHistory(l10n);
+            _saveInsightToHistory(l10n, dataSignature: dataSignature);
           }
         },
       );
     } else {
+      // ... (Local generation logic remains mostly the same, but we won't save it with signature)
       // 调试：记录本地生成洞察的参数
       AppLogger.d(
         'Start generating local insight - useAI: $useAI, periodLabel: $periodLabel, activeDays: $activeDays, noteCount: $noteCount, totalWordCount: $_totalWordCount',
-      );
-      AppLogger.d(
-        'Local insight parameters - mostTimePeriod: ${_mostDayPeriodDisplay ?? _mostDayPeriod}, mostWeather: ${_mostWeatherDisplay ?? _mostWeather}, topTag: $_mostTopTag',
       );
 
       final local = context.read<AIService>().buildLocalReportInsight(
@@ -428,20 +470,14 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
             totalWordCount: _totalWordCount,
           );
 
-      // 调试：记录本地生成的结果
-      AppLogger.d(
-        'Local insight result - length: ${local.length}, content: ${local.isNotEmpty ? local.substring(0, local.length > 50 ? 50 : local.length) : "empty"}',
-      );
-
       setState(() {
         _insightText = local;
         _insightLoading = false;
       });
 
-      // 保存洞察到历史记录
-      if (_insightText.isNotEmpty) {
-        _saveInsightToHistory(l10n);
-      }
+      // 本地生成的洞察通常不保存到"AI历史"中，或者保存但不用于上下文参考
+      // 根据用户需求，这里我们不保存本地生成的洞察到带signature的缓存中，
+      // 因为用户明确说 "只有调用ai生成的才保存"
     }
   }
 
@@ -501,7 +537,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   }
 
   /// 保存洞察到历史记录
-  Future<void> _saveInsightToHistory(AppLocalizations l10n) async {
+  Future<void> _saveInsightToHistory(AppLocalizations l10n,
+      {String? dataSignature}) async {
     try {
       final insightService = context.read<InsightHistoryService>();
 
@@ -526,6 +563,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         periodType: _selectedPeriod,
         periodLabel: periodLabel,
         isAiGenerated: true,
+        dataSignature: dataSignature, // 传递签名
       );
 
       logDebug(
