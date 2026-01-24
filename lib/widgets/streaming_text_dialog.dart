@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'dart:async';
+import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
 class StreamingTextDialog extends StatefulWidget {
@@ -26,6 +27,7 @@ class StreamingTextDialog extends StatefulWidget {
 }
 
 class _StreamingTextDialogState extends State<StreamingTextDialog> {
+  AppLocalizations get l10n => AppLocalizations.of(context);
   String _currentText = '';
   bool _isStreamingComplete = false;
   StreamSubscription<String>? _streamSubscription;
@@ -52,7 +54,8 @@ class _StreamingTextDialogState extends State<StreamingTextDialog> {
         logDebug('流式传输错误: $error');
         if (mounted) {
           setState(() {
-            _currentText += '\n\n[发生错误: ${error.toString()}]'; // 显示错误信息
+            _currentText +=
+                '\n\n${l10n.occurredError(error.toString())}'; // 显示错误信息
             _isStreamingComplete = true; // 标记完成以显示按钮
           });
         }
@@ -74,11 +77,13 @@ class _StreamingTextDialogState extends State<StreamingTextDialog> {
       content: SingleChildScrollView(
         child: widget.isMarkdown
             ? MarkdownBody(
-                data: _currentText.isEmpty ? '等待AI生成内容...' : _currentText,
+                data: _currentText.isEmpty
+                    ? l10n.waitingForAIContent
+                    : _currentText,
                 selectable: true,
               )
             : SelectableText(
-                _currentText.isEmpty ? '等待AI生成内容...' : _currentText,
+                _currentText.isEmpty ? l10n.waitingForAIContent : _currentText,
               ),
       ),
       actions: [
@@ -87,11 +92,12 @@ class _StreamingTextDialogState extends State<StreamingTextDialog> {
             widget.onCancel();
             Navigator.of(context).pop();
           },
-          child: const Text('取消'),
+          child: Text(l10n.cancelLabel),
         ),
         if (_isStreamingComplete &&
             _currentText.isNotEmpty &&
-            !_currentText.contains('[发生错误:')) // 完成且有内容且无错误时显示应用按钮
+            !_currentText.contains('[发生错误:') &&
+            !_currentText.contains('[Error occurred:')) // 完成且有内容且无错误时显示应用按钮
           TextButton(
             onPressed: () {
               widget.onApply(_currentText);
