@@ -33,8 +33,12 @@ class LargeFileManager {
     String content, {
     Encoding encoding = utf8,
     bool flush = false,
+    bool append = false,
   }) async {
-    final sink = file.openWrite(encoding: encoding);
+    final sink = file.openWrite(
+      encoding: encoding,
+      mode: append ? FileMode.append : FileMode.write,
+    );
     try {
       // 分块写入，避免一次性编码超大字符串导致OOM
       const chunkSize = 512 * 1024; // 512KB
