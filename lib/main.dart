@@ -41,8 +41,10 @@ import 'package:thoughtecho/services/feature_guide_service.dart';
 import 'package:thoughtecho/services/data_directory_service.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/utils/update_dialog_helper.dart';
-import 'package:thoughtecho/services/smart_push_service.dart'; // Add import
-// import 'package:thoughtecho/services/debug_service.dart'; // 正式版已禁用
+import 'package:thoughtecho/services/smart_push_service.dart';
+import 'package:thoughtecho/services/background_push_handler.dart';
+import 'package:workmanager/workmanager.dart';
+import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'controllers/search_controller.dart';
 import 'utils/app_logger.dart';
 import 'utils/global_exception_handler.dart';
@@ -135,6 +137,19 @@ Future<void> main() async {
   await runZonedGuarded<Future<void>>(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
+
+      // 初始化后台任务组件
+      if (!kIsWeb) {
+        try {
+          if (Platform.isAndroid) {
+            await AndroidAlarmManager.initialize();
+          }
+          await Workmanager().initialize(callbackDispatcher);
+          logInfo('后台任务组件初始化成功', source: 'Main');
+        } catch (e) {
+          logError('后台任务组件初始化失败: $e', source: 'Main');
+        }
+      }
 
       // Windows平台启动调试服务 - 正式版已禁用
       // if (!kIsWeb && Platform.isWindows) {

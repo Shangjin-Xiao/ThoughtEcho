@@ -89,18 +89,11 @@ class SmartPushService extends ChangeNotifier {
       await _loadSettings();
       await _initializeNotifications();
 
-      // 初始化 WorkManager (支持 iOS 和 Android)
-      if (!kIsWeb) {
-        await Workmanager().initialize(
-          callbackDispatcher, // 这是一个顶层函数，需要在 background_push_handler.dart 中定义
-        );
-      }
+      AppLogger.i(
+          'SmartPushService settings: enabled=${_settings.enabled}, dailyQuoteEnabled=${_settings.dailyQuotePushEnabled}');
 
-      // Android 平台特定初始化 (保留用于精确定时，作为 WorkManager 的补充)
+      // 请求精确闹钟权限（Android 12+）
       if (!kIsWeb && Platform.isAndroid) {
-        await AndroidAlarmManager.initialize();
-
-        // 请求精确闹钟权限（Android 12+）
         final canScheduleExact = await _canScheduleExactAlarms();
         if (!canScheduleExact) {
           AppLogger.i('精确闹钟权限不可用，尝试请求权限');
@@ -118,7 +111,7 @@ class SmartPushService extends ChangeNotifier {
       }
 
       // 每次启动时重新规划下一次推送
-      if (_settings.enabled) {
+      if (_settings.enabled || _settings.dailyQuotePushEnabled) {
         await scheduleNextPush();
 
         // 仅当精确闹钟权限不可用时，才注册周期性备用任务（省电）
@@ -131,6 +124,9 @@ class SmartPushService extends ChangeNotifier {
             await _cancelPeriodicFallbackTask();
           }
         }
+      } else {
+        // 如果都禁用了，确保取消所有计划
+        await _cancelAllSchedules();
       }
 
       _isInitialized = true;
@@ -542,16 +538,18 @@ class SmartPushService extends ChangeNotifier {
 
   /// 规划下一次推送
   Future<void> scheduleNextPush() async {
-    if (!_settings.enabled) {
+    // 只有当两个推送都关闭时才取消所有计划并返回
+    if (!_settings.enabled && !_settings.dailyQuotePushEnabled) {
       await _cancelAllSchedules();
       return;
     }
 
-    // 取消现有的计划
+    // 取消现有的计划（为了重新规划）
     await _cancelAllSchedules();
+    AppLogger.d('已取消现有推送计划，准备重新规划');
 
-    // 1. 规划常规推送
-    if (_settings.shouldPushToday()) {
+    // 1. 规划常规推送 (仅当 enabled 为 true 时)
+    if (_settings.enabled && _settings.shouldPushToday()) {
       List<PushTimeSlot> slotsToSchedule;
 
       if (_settings.pushMode == PushMode.smart) {
@@ -576,6 +574,7 @@ class SmartPushService extends ChangeNotifier {
 
     // 2. 规划每日一言独立推送
     if (_settings.dailyQuotePushEnabled) {
+      AppLogger.d('正在规划每日一言独立推送...');
       final slot = _settings.dailyQuotePushTime;
       // 每日一言每天都推，不受 frequency 限制
       final scheduledDate = _nextInstanceOfTime(slot.hour, slot.minute);
