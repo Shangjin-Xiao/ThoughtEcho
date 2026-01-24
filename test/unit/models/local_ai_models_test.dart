@@ -50,7 +50,7 @@ void main() {
       expect(models.any((m) => m.id == 'gemma-2b'), true);
       expect(models.any((m) => m.id == 'gecko-384'), true);
       expect(models.any((m) => m.id == 'whisper-tiny'), true);
-      expect(models.any((m) => m.id == 'tesseract-chi-sim-eng'), true);
+      // expect(models.any((m) => m.id == 'tesseract-chi-sim'), true); // Removed
     });
 
     test('LocalAIModels.byType filters correctly', () {
@@ -136,7 +136,8 @@ void main() {
   });
 
   group('TextProcessingResult Tests', () {
-    test('SourceRecognitionResult hasSource is true when author is present', () {
+    test('SourceRecognitionResult hasSource is true when author is present',
+        () {
       const result = SourceRecognitionResult(
         author: 'Test Author',
       );
@@ -165,7 +166,7 @@ void main() {
 
     test('TextCorrectionResult noChange creates unchanged result', () {
       final result = TextCorrectionResult.noChange('original text');
-      
+
       expect(result.originalText, 'original text');
       expect(result.correctedText, 'original text');
       expect(result.hasChanges, false);

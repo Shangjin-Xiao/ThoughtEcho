@@ -5,7 +5,7 @@ import '../gen_l10n/app_localizations.dart';
 import '../models/local_ai_model.dart';
 import '../services/local_ai/embedding_service.dart';
 import '../services/local_ai/model_manager.dart';
-import '../services/local_ai/ocr_service.dart';
+// import '../services/local_ai/ocr_service.dart'; // Tesseract 已移除
 import '../services/local_ai/speech_recognition_service.dart';
 import '../services/local_ai/text_processing_service.dart';
 import '../theme/app_theme.dart';
@@ -78,7 +78,8 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
     );
   }
 
-  Widget _buildBody(BuildContext context, AppLocalizations l10n, ThemeData theme) {
+  Widget _buildBody(
+      BuildContext context, AppLocalizations l10n, ThemeData theme) {
     if (_initError != null) {
       return Center(
         child: Padding(
@@ -163,7 +164,8 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
     return grouped;
   }
 
-  Widget _buildStorageCard(BuildContext context, AppLocalizations l10n, ThemeData theme) {
+  Widget _buildStorageCard(
+      BuildContext context, AppLocalizations l10n, ThemeData theme) {
     return FutureBuilder<int>(
       future: _modelManager.getTotalStorageUsage(),
       builder: (context, snapshot) {
@@ -360,14 +362,16 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    l10n.modelDownloadProgress((model.downloadProgress * 100).toInt()),
+                    l10n.modelDownloadProgress(
+                        (model.downloadProgress * 100).toInt()),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.primary,
                     ),
                   ),
                 ],
                 // 错误信息
-                if (model.status == LocalAIModelStatus.error && model.errorMessage != null) ...[
+                if (model.status == LocalAIModelStatus.error &&
+                    model.errorMessage != null) ...[
                   const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.all(8),
@@ -462,7 +466,8 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
     );
   }
 
-  Widget _buildInfoCard(BuildContext context, AppLocalizations l10n, ThemeData theme) {
+  Widget _buildInfoCard(
+      BuildContext context, AppLocalizations l10n, ThemeData theme) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
@@ -503,7 +508,8 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
     );
   }
 
-  void _showModelActions(BuildContext context, AppLocalizations l10n, LocalAIModelInfo model) {
+  void _showModelActions(
+      BuildContext context, AppLocalizations l10n, LocalAIModelInfo model) {
     final theme = Theme.of(context);
     final isManaged = _isManagedModel(model);
     final canPrepare = isManaged ||
@@ -592,8 +598,10 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
               if (model.status == LocalAIModelStatus.downloaded ||
                   model.status == LocalAIModelStatus.loaded)
                 ListTile(
-                  leading: Icon(Icons.delete_outline, color: theme.colorScheme.error),
-                  title: Text(l10n.modelDelete, style: TextStyle(color: theme.colorScheme.error)),
+                  leading: Icon(Icons.delete_outline,
+                      color: theme.colorScheme.error),
+                  title: Text(l10n.modelDelete,
+                      style: TextStyle(color: theme.colorScheme.error)),
                   onTap: () {
                     Navigator.pop(context);
                     _showDeleteConfirmDialog(model);
@@ -609,8 +617,10 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
 
   Future<void> _downloadModel(LocalAIModelInfo model) async {
     // flutter_gemma 托管模型：需要先配置真实下载地址
-    if (_isManagedModel(model) && model.downloadUrl.startsWith('managed://flutter_gemma/')) {
-      final existingUrl = await _modelManager.getFlutterGemmaManagedModelUrl(model.id);
+    if (_isManagedModel(model) &&
+        model.downloadUrl.startsWith('managed://flutter_gemma/')) {
+      final existingUrl =
+          await _modelManager.getFlutterGemmaManagedModelUrl(model.id);
       if (existingUrl == null || existingUrl.trim().isEmpty) {
         final configured = await _promptAndSaveManagedModelUrl(model);
         if (!configured) {
@@ -634,9 +644,9 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
         }
 
         // OCR 模型下载完成后同步到 tessdata，避免“下载完仍不可用”。
-        if (model.type == LocalAIModelType.ocr) {
-          OCRService.instance.refreshModels();
-        }
+        // if (model.type == LocalAIModelType.ocr) {
+        //   OCRService.instance.refreshModels();
+        // }
       },
       onError: (error) {
         if (mounted) {
@@ -657,7 +667,8 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
 
   Future<bool> _promptAndSaveManagedModelUrl(LocalAIModelInfo model) async {
     final l10n = AppLocalizations.of(context);
-    final existingUrl = await _modelManager.getFlutterGemmaManagedModelUrl(model.id) ?? '';
+    final existingUrl =
+        await _modelManager.getFlutterGemmaManagedModelUrl(model.id) ?? '';
     final controller = TextEditingController(text: existingUrl);
 
     final result = await showDialog<String>(
@@ -692,7 +703,8 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
     if (result == null) return false;
 
     final uri = Uri.tryParse(result);
-    final isValid = uri != null && (uri.scheme == 'http' || uri.scheme == 'https');
+    final isValid =
+        uri != null && (uri.scheme == 'http' || uri.scheme == 'https');
     if (!isValid) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -740,11 +752,12 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
     try {
       switch (model.type) {
         case LocalAIModelType.asr:
-          await SpeechRecognitionService.instance.initialize(eagerLoadModel: false);
+          await SpeechRecognitionService.instance
+              .initialize(eagerLoadModel: false);
           await SpeechRecognitionService.instance.prepareModel();
           break;
         case LocalAIModelType.ocr:
-          await OCRService.instance.refreshModels();
+          // await OCRService.instance.refreshModels();
           break;
         case LocalAIModelType.llm:
           await TextProcessingService.instance.initialize();
@@ -770,7 +783,8 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10n.modelPrepareFailed(_localizeModelError(l10n, e.toString()))),
+            content: Text(l10n
+                .modelPrepareFailed(_localizeModelError(l10n, e.toString()))),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -786,11 +800,11 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
 
   Future<void> _importModel(LocalAIModelInfo model) async {
     final l10n = AppLocalizations.of(context);
-    
+
     // 根据模型类型确定允许的文件扩展名
     List<String> allowedExtensions;
     String dialogTitle;
-    
+
     switch (model.type) {
       case LocalAIModelType.asr:
         // Whisper 模型是 tar.bz2 压缩包
@@ -809,7 +823,7 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
         dialogTitle = l10n.modelImport;
         break;
     }
-    
+
     try {
       // 使用 file_picker 选择文件
       final result = await FilePicker.platform.pickFiles(
@@ -817,16 +831,16 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
         allowedExtensions: allowedExtensions,
         dialogTitle: dialogTitle,
       );
-      
+
       if (result == null || result.files.isEmpty) {
         return; // 用户取消
       }
-      
+
       final filePath = result.files.single.path;
       if (filePath == null) {
         throw Exception('无法获取文件路径');
       }
-      
+
       // 显示导入进度
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -846,15 +860,15 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
           ),
         );
       }
-      
+
       // 导入模型
       await _modelManager.importModel(model.id, filePath);
 
       // OCR 导入后同步 tessdata
-      if (model.type == LocalAIModelType.ocr) {
-        await OCRService.instance.refreshModels();
-      }
-      
+      // if (model.type == LocalAIModelType.ocr) {
+      //   await OCRService.instance.refreshModels();
+      // }
+
       if (mounted) {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
@@ -933,7 +947,8 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
     );
   }
 
-  _ModelTypeInfo _getModelTypeInfo(AppLocalizations l10n, LocalAIModelType type) {
+  _ModelTypeInfo _getModelTypeInfo(
+      AppLocalizations l10n, LocalAIModelType type) {
     switch (type) {
       case LocalAIModelType.llm:
         return _ModelTypeInfo(
@@ -1009,7 +1024,8 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
 
   bool _needsPreparation(LocalAIModelInfo model) {
     if (model.status != LocalAIModelStatus.downloaded) return false;
-    if (model.fileName.endsWith('.tar.bz2') || model.fileName.endsWith('.tar.gz')) {
+    if (model.fileName.endsWith('.tar.bz2') ||
+        model.fileName.endsWith('.tar.gz')) {
       return _modelManager.getExtractedModelPath(model.id) == null;
     }
     // LLM/Embedding 由运行时加载；下载完成不代表已加载。
@@ -1030,7 +1046,8 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
     if (raw.contains(ModelManager.errorManagedModelUrlMissing)) {
       return l10n.modelManagedByPackage;
     }
-    if (raw.contains(ModelManager.errorExtractFailed) || raw.contains('extract_failed')) {
+    if (raw.contains(ModelManager.errorExtractFailed) ||
+        raw.contains('extract_failed')) {
       return l10n.modelExtractFailed;
     }
     if (raw.contains('asr_model_required')) {

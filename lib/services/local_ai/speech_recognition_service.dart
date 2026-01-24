@@ -132,7 +132,7 @@ class SpeechRecognitionService extends ChangeNotifier {
   /// 准备 ASR 模型：解压（若需要）并初始化识别器。
   ///
   /// 该过程可能耗时较长，应由 UI 在用户显式触发后调用。
-  Future<void> prepareModel() async {
+  Future<void> prepareModel({String language = 'zh'}) async {
     // 确保模型管理器已初始化
     if (!_modelManager.isInitialized) {
       await _modelManager.initialize();
@@ -143,16 +143,17 @@ class SpeechRecognitionService extends ChangeNotifier {
     }
 
     // 识别器已存在则无需重复初始化
+    // TODO: 如果需要切换语言，可能需要重新初始化
     if (_recognizer != null) return;
 
-    await _initializeRecognizer();
+    await _initializeRecognizer(language: language);
     if (_recognizer == null) {
       throw Exception('asr_model_init_failed');
     }
   }
 
   /// 初始化 sherpa_onnx 识别器
-  Future<void> _initializeRecognizer() async {
+  Future<void> _initializeRecognizer({String language = 'zh'}) async {
     try {
       await _ensureSherpaInitialized();
 
@@ -173,13 +174,16 @@ class SpeechRecognitionService extends ChangeNotifier {
       }
 
       // 验证 Whisper 模型文件
-      final modelFiles = await ModelExtractor.validateWhisperModel(extractedPath);
+      final modelFiles =
+          await ModelExtractor.validateWhisperModel(extractedPath);
       if (modelFiles == null) {
-        logError('Whisper 模型文件不完整: $extractedPath', source: 'SpeechRecognitionService');
+        logError('Whisper 模型文件不完整: $extractedPath',
+            source: 'SpeechRecognitionService');
         return;
       }
 
-      logInfo('找到 Whisper 模型文件: $modelFiles', source: 'SpeechRecognitionService');
+      logInfo('找到 Whisper 模型文件: $modelFiles',
+          source: 'SpeechRecognitionService');
 
       // 配置 Whisper 模型
       final config = sherpa.OfflineRecognizerConfig(
@@ -187,7 +191,7 @@ class SpeechRecognitionService extends ChangeNotifier {
           whisper: sherpa.OfflineWhisperModelConfig(
             encoder: modelFiles.encoder,
             decoder: modelFiles.decoder,
-            language: 'zh', // 中文
+            language: language,
             task: 'transcribe',
           ),
           tokens: modelFiles.tokens,
@@ -219,7 +223,8 @@ class SpeechRecognitionService extends ChangeNotifier {
       logInfo('sherpa_onnx bindings 初始化完成', source: 'SpeechRecognitionService');
     } catch (e) {
       // 初始化失败不应直接阻断后续逻辑；真正创建 recognizer 时仍会抛出具体错误。
-      logError('sherpa_onnx bindings 初始化失败: $e', source: 'SpeechRecognitionService');
+      logError('sherpa_onnx bindings 初始化失败: $e',
+          source: 'SpeechRecognitionService');
     }
   }
 
@@ -245,7 +250,7 @@ class SpeechRecognitionService extends ChangeNotifier {
     } else if (_modelManager.isModelDownloaded('whisper-tiny')) {
       modelId = 'whisper-tiny';
     }
-    
+
     if (modelId != null) {
       await _modelManager.extractModelIfNeeded(modelId);
     }
@@ -462,7 +467,8 @@ class SpeechRecognitionService extends ChangeNotifier {
       } catch (_) {}
       _asrStream = null;
 
-      logInfo('转写完成: ${transcribedText.length} 字符', source: 'SpeechRecognitionService');
+      logInfo('转写完成: ${transcribedText.length} 字符',
+          source: 'SpeechRecognitionService');
       return result;
     } catch (e) {
       _status = RecordingStatus(
@@ -488,10 +494,10 @@ class SpeechRecognitionService extends ChangeNotifier {
         sampleRate: 16000,
       );
       _recognizer!.decode(stream);
-      
+
       final result = _recognizer!.getResult(stream);
       stream.free();
-      
+
       return result.text;
     } catch (e) {
       logError('sherpa_onnx 转写失败: $e', source: 'SpeechRecognitionService');
@@ -501,11 +507,20 @@ class SpeechRecognitionService extends ChangeNotifier {
 
   /// 取消录音
   Future<void> cancelRecording() async {
-    if (!_status.isRecording && !_status.isProcessing) {
-      return;
-    }
+    // 即使状态不是 recording，也要清理可能残留的资源
 
     try {
+      // 1. 优先停止 record 插件，防止麦克风锁定
+      try {
+        final isRec = await _recorder.isRecording();
+        if (isRec) {
+          await _recorder.stop();
+        }
+      } catch (e) {
+        logError('停止录音器失败 (cancel): $e', source: 'SpeechRecognitionService');
+      }
+
+      // 2. 清理定时器和流
       _partialDecodeTimer?.cancel();
       _partialDecodeTimer = null;
 
@@ -519,17 +534,7 @@ class SpeechRecognitionService extends ChangeNotifier {
       } catch (_) {}
       _asrStream = null;
 
-      // record 插件的录音必须显式 stop，否则会继续占用麦克风并导致下一次录音/转写异常。
-      try {
-        final isRec = await _recorder.isRecording();
-        if (isRec) {
-          await _recorder.stop();
-        }
-      } catch (_) {
-        // ignore: stop best-effort
-      }
-
-      // 清理临时录音文件
+      // 3. 清理临时文件
       final audioPath = _recordingFilePath;
       _recordingFilePath = null;
       if (audioPath != null && audioPath.isNotEmpty) {
@@ -580,7 +585,7 @@ class SpeechRecognitionService extends ChangeNotifier {
 
       // 解码音频文件为 PCM 数据
       final samples = await _decodeAudioFile(audioPath);
-      
+
       // 使用 sherpa_onnx 转写
       final text = await _transcribeAudio(samples);
 
@@ -678,7 +683,8 @@ class SpeechRecognitionService extends ChangeNotifier {
     }
     if (sampleRate != 16000) {
       // 不做重采样，避免引入额外依赖；用日志提示即可
-      logInfo('WAV 采样率为 $sampleRate，建议使用 16000Hz', source: 'SpeechRecognitionService');
+      logInfo('WAV 采样率为 $sampleRate，建议使用 16000Hz',
+          source: 'SpeechRecognitionService');
     }
 
     final bytesPerSample = (bitsPerSample! ~/ 8);
@@ -763,7 +769,8 @@ class SpeechRecognitionService extends ChangeNotifier {
   /// 开始录音计时器
   void _startRecordingTimer() {
     _recordingTimer?.cancel();
-    _recordingTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
+    _recordingTimer =
+        Timer.periodic(const Duration(milliseconds: 100), (timer) {
       if (!_status.isRecording) {
         timer.cancel();
         return;

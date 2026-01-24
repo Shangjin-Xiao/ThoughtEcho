@@ -246,44 +246,17 @@ class LocalAIModels {
     isRequired: false,
   );
 
-  /// Tesseract OCR 模型（中文简体）
-  /// tessdata_fast 是优化过的较小模型
-  static const tesseractChiSim = LocalAIModelInfo(
-    id: 'tesseract-chi-sim',
-    name: 'Tesseract 中文简体',
-    type: LocalAIModelType.ocr,
-    description: 'Tesseract OCR 中文简体识别模型',
-    sizeBytes: 18 * 1024 * 1024, // ~18MB
-    downloadUrl:
-        'https://github.com/tesseract-ocr/tessdata_fast/raw/main/chi_sim.traineddata',
-    fileName: 'chi_sim.traineddata',
-    version: '4.0',
-    isRequired: false,
-  );
-
-  /// Tesseract OCR 模型（英文）
-  static const tesseractEng = LocalAIModelInfo(
-    id: 'tesseract-eng',
-    name: 'Tesseract 英文',
-    type: LocalAIModelType.ocr,
-    description: 'Tesseract OCR 英文识别模型',
-    sizeBytes: 4 * 1024 * 1024, // ~4MB
-    downloadUrl:
-        'https://github.com/tesseract-ocr/tessdata_fast/raw/main/eng.traineddata',
-    fileName: 'eng.traineddata',
-    version: '4.0',
-    isRequired: false,
-  );
-
   /// PaliGemma 视觉语言模型（推荐用于手写 OCR）
   /// 通过 flutter_gemma 管理和加载
   static const paliGemma3B = LocalAIModelInfo(
     id: 'paligemma-3b',
     name: 'PaliGemma 3B (手写识别)',
     type: LocalAIModelType.ocr,
-    description: 'Google PaliGemma 视觉语言模型，专为图像理解和手写 OCR 优化，识别准确率远超传统 OCR。需要通过 flutter_gemma 下载。',
+    description:
+        'Google PaliGemma 视觉语言模型，专为图像理解和手写 OCR 优化，识别准确率远超传统 OCR。需要通过 flutter_gemma 下载。',
     sizeBytes: 3000 * 1024 * 1024, // ~3GB
-    downloadUrl: 'managed://flutter_gemma/paligemma-3b-mix-224', // 由 flutter_gemma 管理
+    downloadUrl:
+        'managed://flutter_gemma/paligemma-3b-mix-224', // 由 flutter_gemma 管理
     fileName: 'paligemma-3b.task',
     version: '1.0',
     isRequired: false,
@@ -298,8 +271,6 @@ class LocalAIModels {
         gecko384,
         whisperTiny,
         whisperBase,
-        tesseractChiSim,
-        tesseractEng,
         paliGemma3B, // flutter_gemma 支持
       ];
 

@@ -4,7 +4,7 @@
 
 export 'model_manager.dart';
 export 'speech_recognition_service.dart';
-export 'ocr_service.dart';
+// export 'ocr_service.dart'; // Tesseract 已移除
 export 'embedding_service.dart';
 export 'vector_store.dart';
 export 'text_processing_service.dart';

@@ -34,15 +34,15 @@ class ModelManager extends ChangeNotifier {
   /// 模型存储目录
   String? _modelsDirectory;
 
-    // ==================== flutter_gemma 托管模型支持 ====================
+  // ==================== flutter_gemma 托管模型支持 ====================
 
-    static const String _prefsKeyGemmaManagedUrlPrefix =
+  static const String _prefsKeyGemmaManagedUrlPrefix =
       'local_ai.managed.flutter_gemma.url.';
-    static const String _prefsKeyGemmaActiveModelId =
+  static const String _prefsKeyGemmaActiveModelId =
       'local_ai.managed.flutter_gemma.active_model_id';
 
-    /// flutter_gemma 当前“激活”的模型 id（用于避免多个托管模型同时被标记为已下载）
-    String? _flutterGemmaActiveModelId;
+  /// flutter_gemma 当前“激活”的模型 id（用于避免多个托管模型同时被标记为已下载）
+  String? _flutterGemmaActiveModelId;
 
   /// 解压后的模型目录（例如 Whisper 解压后的文件夹）
   final Map<String, String> _extractedModelPaths = {};
@@ -64,9 +64,10 @@ class ModelManager extends ChangeNotifier {
 
   /// 获取模型目录
   String? get modelsDirectory => _modelsDirectory;
-  
+
   /// 获取解压后的模型路径
-  String? getExtractedModelPath(String modelId) => _extractedModelPaths[modelId];
+  String? getExtractedModelPath(String modelId) =>
+      _extractedModelPaths[modelId];
 
   /// 获取所有模型状态
   List<LocalAIModelInfo> get models => _modelStates.values.toList();
@@ -109,7 +110,7 @@ class ModelManager extends ChangeNotifier {
       for (final model in LocalAIModels.all) {
         final status = await _checkModelStatus(model);
         _modelStates[model.id] = model.copyWith(status: status);
-        
+
         // 如果模型已下载且需要解压，检查解压后的路径
         if (status == LocalAIModelStatus.downloaded) {
           await _checkExtractedPath(model);
@@ -128,7 +129,7 @@ class ModelManager extends ChangeNotifier {
   /// 检查并记录已解压的模型路径
   Future<void> _checkExtractedPath(LocalAIModelInfo model) async {
     if (_modelsDirectory == null) return;
-    
+
     final fileName = model.fileName;
     // 检查是否是压缩文件
     if (fileName.endsWith('.tar.bz2') || fileName.endsWith('.tar.gz')) {
@@ -139,13 +140,14 @@ class ModelManager extends ChangeNotifier {
       } else if (fileName.endsWith('.tar.gz')) {
         extractDirName = fileName.replaceAll('.tar.gz', '');
       }
-      
+
       final extractedPath = path.join(_modelsDirectory!, extractDirName);
       final extractedDir = Directory(extractedPath);
-      
+
       if (await extractedDir.exists()) {
         _extractedModelPaths[model.id] = extractedPath;
-        logInfo('找到已解压的模型: ${model.id} -> $extractedPath', source: 'ModelManager');
+        logInfo('找到已解压的模型: ${model.id} -> $extractedPath',
+            source: 'ModelManager');
       }
     }
   }
@@ -158,7 +160,10 @@ class ModelManager extends ChangeNotifier {
     if (model.downloadUrl.startsWith('managed://flutter_gemma/')) {
       final managedPath = path.join(_modelsDirectory!, model.fileName);
       if (await File(managedPath).exists()) {
-        return LocalAIModelStatus.downloaded;
+        // 验证是否是当前激活的模型
+        if (_flutterGemmaActiveModelId == model.id) {
+          return LocalAIModelStatus.downloaded;
+        }
       }
       return LocalAIModelStatus.notDownloaded;
     }
@@ -168,17 +173,18 @@ class ModelManager extends ChangeNotifier {
 
     if (await file.exists()) {
       // 如果是压缩文件，还需要检查是否已解压
-      if (model.fileName.endsWith('.tar.bz2') || model.fileName.endsWith('.tar.gz')) {
+      if (model.fileName.endsWith('.tar.bz2') ||
+          model.fileName.endsWith('.tar.gz')) {
         String extractDirName = model.fileName;
         if (model.fileName.endsWith('.tar.bz2')) {
           extractDirName = model.fileName.replaceAll('.tar.bz2', '');
         } else if (model.fileName.endsWith('.tar.gz')) {
           extractDirName = model.fileName.replaceAll('.tar.gz', '');
         }
-        
+
         final extractedPath = path.join(_modelsDirectory!, extractDirName);
         final extractedDir = Directory(extractedPath);
-        
+
         // 如果解压目录存在，才算真正下载完成
         if (await extractedDir.exists()) {
           return LocalAIModelStatus.downloaded;
@@ -358,10 +364,11 @@ class ModelManager extends ChangeNotifier {
           final fileSize = await downloadedFile.length();
           if (fileSize > 0) {
             // 检查是否需要解压
-            if (task.savePath.endsWith('.tar.bz2') || task.savePath.endsWith('.tar.gz')) {
+            if (task.savePath.endsWith('.tar.bz2') ||
+                task.savePath.endsWith('.tar.gz')) {
               logInfo('开始解压模型: ${task.savePath}', source: 'ModelManager');
               task.onProgress?.call(0.85);
-              
+
               try {
                 final extractedPath = await ModelExtractor.extract(
                   task.savePath,
@@ -371,7 +378,7 @@ class ModelManager extends ChangeNotifier {
                     task.onProgress?.call(0.8 + progress * 0.2);
                   },
                 );
-                
+
                 // 记录解压后的路径
                 _extractedModelPaths[task.modelId] = extractedPath;
                 logInfo('模型解压完成: $extractedPath', source: 'ModelManager');
@@ -382,7 +389,7 @@ class ModelManager extends ChangeNotifier {
                 throw Exception('extract_failed');
               }
             }
-            
+
             task.onComplete?.call();
           } else {
             throw Exception('下载的文件为空');
@@ -422,7 +429,8 @@ class ModelManager extends ChangeNotifier {
   static const String errorManagedModelUrlMissing = 'managed_model_url_missing';
   static const String errorExtractFailed = 'extract_failed';
 
-  Future<void> setFlutterGemmaManagedModelUrl(String modelId, String url) async {
+  Future<void> setFlutterGemmaManagedModelUrl(
+      String modelId, String url) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('$_prefsKeyGemmaManagedUrlPrefix$modelId', url);
   }
@@ -495,7 +503,8 @@ class ModelManager extends ChangeNotifier {
       if (task.isCancelled) return;
 
       final downloadedFile = File(task.savePath);
-      if (!await downloadedFile.exists() || await downloadedFile.length() <= 0) {
+      if (!await downloadedFile.exists() ||
+          await downloadedFile.length() <= 0) {
         throw Exception('下载的文件为空');
       }
 
@@ -596,7 +605,7 @@ class ModelManager extends ChangeNotifier {
       if (await file.exists()) {
         await file.delete();
       }
-      
+
       // 删除解压后的目录（如果存在）
       final extractedPath = _extractedModelPaths[modelId];
       if (extractedPath != null) {
@@ -644,7 +653,7 @@ class ModelManager extends ChangeNotifier {
         await gemma.modelManager.setModelPath(targetPath);
         await _setFlutterGemmaActiveModelId(modelId);
       }
-      
+
       // 如果是压缩文件，需要解压
       if (targetPath.endsWith('.tar.bz2') || targetPath.endsWith('.tar.gz')) {
         logInfo('开始解压导入的模型: $targetPath', source: 'ModelManager');
@@ -669,7 +678,7 @@ class ModelManager extends ChangeNotifier {
   }
 
   /// 获取模型文件路径
-  /// 
+  ///
   /// 对于压缩文件类型的模型（如 Whisper），返回解压后的目录路径
   /// 对于单文件模型（如 Tesseract traineddata），返回文件路径
   String? getModelPath(String modelId) {
@@ -691,17 +700,17 @@ class ModelManager extends ChangeNotifier {
   Future<void> extractModelIfNeeded(String modelId) async {
     final model = _modelStates[modelId];
     if (model == null || _modelsDirectory == null) return;
-    
+
     // 已有解压路径，跳过
     if (_extractedModelPaths.containsKey(modelId)) return;
-    
+
     final modelPath = path.join(_modelsDirectory!, model.fileName);
-    
+
     // 检查是否是压缩文件
     if (modelPath.endsWith('.tar.bz2') || modelPath.endsWith('.tar.gz')) {
       final file = File(modelPath);
       if (!await file.exists()) return;
-      
+
       logInfo('手动解压模型: $modelPath', source: 'ModelManager');
       try {
         final extractedPath = await ModelExtractor.extract(

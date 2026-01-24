@@ -15,7 +15,7 @@ import '../../models/text_processing_result.dart';
 import '../../utils/app_logger.dart';
 import 'model_manager.dart';
 import 'speech_recognition_service.dart';
-import 'ocr_service.dart';
+import 'mlkit_ocr_service.dart';
 import 'hybrid_ocr_service.dart';
 import 'embedding_service.dart';
 import 'vector_store.dart';
@@ -48,8 +48,9 @@ class LocalAIService extends ChangeNotifier {
 
   // 子服务
   final ModelManager _modelManager = ModelManager.instance;
-  final SpeechRecognitionService _speechService = SpeechRecognitionService.instance;
-  final OCRService _ocrService = OCRService.instance;
+  final SpeechRecognitionService _speechService =
+      SpeechRecognitionService.instance;
+  // final OCRService _ocrService = OCRService.instance; // Tesseract 已移除
   final HybridOCRService _hybridOCRService = HybridOCRService.instance;
   final EmbeddingService _embeddingService = EmbeddingService.instance;
   final VectorStore _vectorStore = VectorStore.instance;
@@ -73,8 +74,7 @@ class LocalAIService extends ChangeNotifier {
   /// 获取语音识别服务
   SpeechRecognitionService get speechService => _speechService;
 
-  /// 获取 OCR 服务（Tesseract）
-  OCRService get ocrService => _ocrService;
+  // OCRService get ocrService => _ocrService; // Tesseract 已移除
 
   /// 获取混合 OCR 服务（智能选择 Tesseract/VLM）
   HybridOCRService get hybridOCRService => _hybridOCRService;
@@ -112,7 +112,7 @@ class LocalAIService extends ChangeNotifier {
           await _speechService.initialize(eagerLoadModel: eagerLoadModels);
         }
         if (settings.ocrEnabled) {
-          await _ocrService.initialize();
+          // await _ocrService.initialize(); // Tesseract 已移除
         }
         if (settings.aiSearchEnabled || settings.relatedNotesEnabled) {
           await _embeddingService.initialize();
@@ -151,9 +151,9 @@ class LocalAIService extends ChangeNotifier {
     if (settings.speechToTextEnabled && !_speechService.isInitialized) {
       await _speechService.initialize();
     }
-    if (settings.ocrEnabled && !_ocrService.isInitialized) {
-      await _ocrService.initialize();
-    }
+    // if (settings.ocrEnabled && !_ocrService.isInitialized) { // Tesseract 已移除
+    //   await _ocrService.initialize();
+    // }
     if ((settings.aiSearchEnabled || settings.relatedNotesEnabled) &&
         !_embeddingService.isInitialized) {
       await _embeddingService.initialize();
@@ -181,7 +181,10 @@ class LocalAIService extends ChangeNotifier {
         return _settings.speechToTextEnabled && _speechService.isModelAvailable;
 
       case LocalAIFeature.ocr:
-        return _settings.ocrEnabled && _ocrService.isModelAvailable;
+        return _settings.ocrEnabled &&
+            (_hybridOCRService.isMLKitAvailable ||
+                // _hybridOCRService.isTesseractAvailable || // Tesseract 已移除
+                _hybridOCRService.isVLMAvailable);
 
       case LocalAIFeature.aiCorrection:
         // Gemma 模型由 flutter_gemma 管理，ModelManager 不一定能反映其可用性。
@@ -195,7 +198,8 @@ class LocalAIService extends ChangeNotifier {
         return _settings.aiSearchEnabled && _embeddingService.isModelAvailable;
 
       case LocalAIFeature.relatedNotes:
-        return _settings.relatedNotesEnabled && _embeddingService.isModelAvailable;
+        return _settings.relatedNotesEnabled &&
+            _embeddingService.isModelAvailable;
 
       case LocalAIFeature.smartTags:
         return _settings.smartTagsEnabled;
@@ -274,7 +278,7 @@ class LocalAIService extends ChangeNotifier {
   // ==================== OCR API ====================
 
   /// 从图片识别文字（智能选择引擎）
-  /// 
+  ///
   /// 默认使用混合 OCR 服务，自动选择 Tesseract（印刷体）或 VLM（手写）
   /// 如果需要强制使用特定引擎，请使用 [recognizeTextWithEngine]
   Future<OCRResult> recognizeText(String imagePath) async {
@@ -286,8 +290,8 @@ class LocalAIService extends ChangeNotifier {
   }
 
   /// 使用指定引擎识别文字
-  /// 
-  /// [engineType] OCR 引擎类型：tesseract（传统OCR）、vlm（视觉语言模型）、auto（自动选择）
+  ///
+  /// [engineType] OCR 引擎类型：mlkit, vlm, auto（自动选择）
   Future<OCRResult> recognizeTextWithEngine(
     String imagePath, {
     OCREngineType engineType = OCREngineType.auto,
@@ -302,12 +306,14 @@ class LocalAIService extends ChangeNotifier {
   }
 
   /// 从图片识别文字（带区域信息）- 仅 Tesseract 支持
-  Future<OCRResult> recognizeTextWithRegions(String imagePath) async {
-    if (!isFeatureEnabled(LocalAIFeature.ocr)) {
-      throw Exception('OCR 功能未启用');
-    }
-    return await _ocrService.recognizeWithRegions(imagePath);
-  }
+  // Future<OCRResult> recognizeTextWithRegions(String imagePath) async {
+  //   if (!isFeatureEnabled(LocalAIFeature.ocr)) {
+  //     throw Exception('OCR 功能未启用');
+  //   }
+  //   return await _ocrService.recognizeWithRegions(imagePath);
+  // }
+
+  // 临时保留方法签名但抛出不支持，或者完全移除。这里注释掉。
 
   /// 设置 OCR 引擎偏好
   void setOCREngine(OCREngineType engine) {
@@ -370,7 +376,8 @@ class LocalAIService extends ChangeNotifier {
   }
 
   /// 获取相关笔记
-  Future<List<RelatedNote>> getRelatedNotes(String noteId, {int topK = 5}) async {
+  Future<List<RelatedNote>> getRelatedNotes(String noteId,
+      {int topK = 5}) async {
     if (!isFeatureEnabled(LocalAIFeature.relatedNotes)) {
       throw Exception('相关笔记功能未启用');
     }
@@ -432,7 +439,7 @@ class LocalAIService extends ChangeNotifier {
   @override
   void dispose() {
     _speechService.dispose();
-    _ocrService.dispose();
+    // _ocrService.dispose(); // Tesseract 已移除
     _embeddingService.dispose();
     _vectorStore.dispose();
     _textService.dispose();

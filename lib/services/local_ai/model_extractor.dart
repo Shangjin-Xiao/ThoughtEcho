@@ -5,165 +5,77 @@
 import 'dart:io';
 import 'dart:isolate';
 
-import 'package:archive/archive.dart';
+import 'package:archive/archive_io.dart';
 import 'package:path/path.dart' as path;
 
 import '../../utils/app_logger.dart';
 
 /// 模型解压工具
 class ModelExtractor {
-  /// 解压 tar.bz2 文件
+  /// 解压文件 (支持 .zip, .tar, .tar.gz, .tar.bz2)
   ///
   /// [archivePath] 压缩文件路径
   /// [extractDir] 解压目标目录
-  /// [onProgress] 进度回调 (0.0 - 1.0)
-  /// 
+  /// [onProgress] 进度回调 (目前 extractFileToDisk 不支持细粒度进度，只在开始/结束回调)
+  ///
   /// 返回解压后的根目录路径
-  static Future<String> extractTarBz2(
-    String archivePath,
-    String extractDir, {
-    void Function(double progress)? onProgress,
-  }) async {
-    logInfo('开始解压: $archivePath -> $extractDir', source: 'ModelExtractor');
-
-    try {
-      // 进度回调仅用于 UI 提示；真正的解压会在后台 isolate 中完成。
-      onProgress?.call(0.05);
-
-      final extractedPath = await Isolate.run(() async {
-        // 读取压缩文件（注意：此处仍为一次性读入；但放在 isolate 中可避免阻塞 UI）
-        final file = File(archivePath);
-        if (!await file.exists()) {
-          throw Exception('archive_not_found');
-        }
-
-        final bytes = await file.readAsBytes();
-
-        // 解压 bzip2
-        final bzip2Decoded = BZip2Decoder().decodeBytes(bytes);
-
-        // 解压 tar
-        final archive = TarDecoder().decodeBytes(bzip2Decoded);
-
-        // 确保目标目录存在
-        final destDir = Directory(extractDir);
-        if (!await destDir.exists()) {
-          await destDir.create(recursive: true);
-        }
-
-        // 提取文件
-        String? rootDir;
-
-        for (final archiveFile in archive.files) {
-          final fileName = archiveFile.name;
-
-          // 跳过目录条目
-          if (archiveFile.isFile) {
-            // 提取根目录名
-            final parts = fileName.split('/');
-            if (parts.isNotEmpty && rootDir == null) {
-              rootDir = parts[0];
-            }
-
-            final outputPath = path.join(extractDir, fileName);
-            final outputFile = File(outputPath);
-
-            // 确保父目录存在
-            await outputFile.parent.create(recursive: true);
-
-            // 写入文件
-            await outputFile.writeAsBytes(archiveFile.content as List<int>);
-          }
-        }
-
-        return rootDir != null ? path.join(extractDir, rootDir) : extractDir;
-      });
-
-      onProgress?.call(1.0);
-      logInfo('解压完成: $extractedPath', source: 'ModelExtractor');
-      return extractedPath;
-    } catch (e) {
-      logError('解压失败: $e', source: 'ModelExtractor');
-      rethrow;
-    }
-  }
-
-  /// 解压 tar.gz 文件
-  static Future<String> extractTarGz(
-    String archivePath,
-    String extractDir, {
-    void Function(double progress)? onProgress,
-  }) async {
-    logInfo('开始解压: $archivePath -> $extractDir', source: 'ModelExtractor');
-
-    try {
-      onProgress?.call(0.05);
-
-      final extractedPath = await Isolate.run(() async {
-        final file = File(archivePath);
-        if (!await file.exists()) {
-          throw Exception('archive_not_found');
-        }
-
-        final bytes = await file.readAsBytes();
-
-        // 解压 gzip
-        final gzipDecoded = GZipDecoder().decodeBytes(bytes);
-
-        // 解压 tar
-        final archive = TarDecoder().decodeBytes(gzipDecoded);
-
-        // 确保目标目录存在
-        final destDir = Directory(extractDir);
-        if (!await destDir.exists()) {
-          await destDir.create(recursive: true);
-        }
-
-        // 提取文件
-        String? rootDir;
-
-        for (final archiveFile in archive.files) {
-          final fileName = archiveFile.name;
-
-          if (archiveFile.isFile) {
-            final parts = fileName.split('/');
-            if (parts.isNotEmpty && rootDir == null) {
-              rootDir = parts[0];
-            }
-
-            final outputPath = path.join(extractDir, fileName);
-            final outputFile = File(outputPath);
-
-            await outputFile.parent.create(recursive: true);
-            await outputFile.writeAsBytes(archiveFile.content as List<int>);
-          }
-        }
-
-        return rootDir != null ? path.join(extractDir, rootDir) : extractDir;
-      });
-
-      onProgress?.call(1.0);
-      logInfo('解压完成: $extractedPath', source: 'ModelExtractor');
-      return extractedPath;
-    } catch (e) {
-      logError('解压失败: $e', source: 'ModelExtractor');
-      rethrow;
-    }
-  }
-
-  /// 根据文件扩展名自动选择解压方法
   static Future<String> extract(
     String archivePath,
     String extractDir, {
     void Function(double progress)? onProgress,
   }) async {
-    if (archivePath.endsWith('.tar.bz2') || archivePath.endsWith('.tbz2')) {
-      return extractTarBz2(archivePath, extractDir, onProgress: onProgress);
-    } else if (archivePath.endsWith('.tar.gz') || archivePath.endsWith('.tgz')) {
-      return extractTarGz(archivePath, extractDir, onProgress: onProgress);
-    } else {
-      throw Exception('不支持的压缩格式: $archivePath');
+    logInfo('开始解压(extractFileToDisk): $archivePath -> $extractDir',
+        source: 'ModelExtractor');
+
+    try {
+      onProgress?.call(0.1);
+
+      await Isolate.run(() async {
+        // 使用 archive_io 的 extractFileToDisk，它通常比手动解码更高效且处理了流式解压
+        await extractFileToDisk(archivePath, extractDir);
+      });
+
+      onProgress?.call(1.0);
+
+      // 尝试推断解压后的根目录（如果有单层文件夹）
+      return _findRootExtractPath(extractDir);
+    } catch (e) {
+      logError('解压失败: $e', source: 'ModelExtractor');
+      rethrow;
     }
+  }
+
+  // 兼容旧 API
+  static Future<String> extractTarBz2(
+    String archivePath,
+    String extractDir, {
+    void Function(double progress)? onProgress,
+  }) =>
+      extract(archivePath, extractDir, onProgress: onProgress);
+
+  static Future<String> extractTarGz(
+    String archivePath,
+    String extractDir, {
+    void Function(double progress)? onProgress,
+  }) =>
+      extract(archivePath, extractDir, onProgress: onProgress);
+
+  /// 辅助方法：如果解压后只包含一个目录，则返回该目录路径，否则返回 extractDir
+  static Future<String> _findRootExtractPath(String extractDir) async {
+    final dir = Directory(extractDir);
+    if (!await dir.exists()) return extractDir;
+
+    final entities = await dir.list().toList();
+    // 过滤掉隐藏文件 (如 .DS_Store)
+    final visibleEntities = entities.where((e) {
+      final name = path.basename(e.path);
+      return !name.startsWith('.');
+    }).toList();
+
+    if (visibleEntities.length == 1 && visibleEntities.first is Directory) {
+      return visibleEntities.first.path;
+    }
+    return extractDir;
   }
 
   /// 检查 Whisper 模型目录是否完整
@@ -172,7 +84,8 @@ class ModelExtractor {
   /// - *-encoder.onnx (或 encoder.onnx)
   /// - *-decoder.onnx (或 decoder.onnx)
   /// - *-tokens.txt (或 tokens.txt)
-  static Future<WhisperModelFiles?> validateWhisperModel(String modelDir) async {
+  static Future<WhisperModelFiles?> validateWhisperModel(
+      String modelDir) async {
     final dir = Directory(modelDir);
     if (!await dir.exists()) {
       return null;
@@ -185,7 +98,7 @@ class ModelExtractor {
     await for (final entity in dir.list(recursive: true)) {
       if (entity is File) {
         final name = path.basename(entity.path).toLowerCase();
-        
+
         if (name.endsWith('-encoder.onnx') || name == 'encoder.onnx') {
           encoderPath = entity.path;
         } else if (name.endsWith('-decoder.onnx') || name == 'decoder.onnx') {

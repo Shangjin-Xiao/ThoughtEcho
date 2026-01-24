@@ -33,6 +33,7 @@ class _TextBlockOverlayState extends State<TextBlockOverlay>
   ui.Image? _imageInfo;
   bool _imageLoaded = false;
   late AnimationController _animationController;
+  final GlobalKey _imageKey = GlobalKey();
 
   @override
   void initState() {
@@ -164,7 +165,9 @@ class _TextBlockOverlayState extends State<TextBlockOverlay>
                           animation: _animationController,
                         ),
                         child: GestureDetector(
-                          onTapUp: (details) => _handleTap(details.localPosition),
+                          key: _imageKey,
+                          onTapUp: (details) =>
+                              _handleTap(details.localPosition),
                           child: Image.file(
                             File(widget.imagePath),
                             fit: BoxFit.contain,
@@ -208,10 +211,24 @@ class _TextBlockOverlayState extends State<TextBlockOverlay>
   void _handleTap(Offset position) {
     if (_imageInfo == null) return;
 
+    final RenderBox? renderBox =
+        _imageKey.currentContext?.findRenderObject() as RenderBox?;
+    if (renderBox == null) return;
+
+    final Size displayedSize = renderBox.size;
+    final double scaleX = displayedSize.width / _imageInfo!.width;
+    final double scaleY = displayedSize.height / _imageInfo!.height;
+
+    // Convert tap position to image coordinates
+    final double imageX = position.dx / scaleX;
+    final double imageY = position.dy / scaleY;
+
+    final Offset imagePosition = Offset(imageX, imageY);
+
     // 找到被点击的文字块
     for (int i = 0; i < widget.ocrResult.blocks.length; i++) {
       final block = widget.ocrResult.blocks[i];
-      if (block.boundingBox.contains(position)) {
+      if (block.boundingBox.contains(imagePosition)) {
         _toggleBlock(i);
         return;
       }

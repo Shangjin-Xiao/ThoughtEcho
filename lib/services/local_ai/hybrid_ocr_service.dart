@@ -12,7 +12,6 @@ import 'package:flutter/foundation.dart';
 
 import '../../models/ocr_result.dart';
 import '../../utils/app_logger.dart';
-import 'ocr_service.dart';
 import 'mlkit_ocr_service.dart';
 import 'vlm_ocr_service.dart';
 import 'image_preprocessor.dart';
@@ -22,12 +21,9 @@ enum OCREngineType {
   /// MLKit 引擎（移动端主力，适合印刷体）
   mlkit,
 
-  /// Tesseract 引擎（桌面端兼容，适合印刷体）
-  tesseract,
-  
   /// VLM 引擎（视觉语言模型，适合手写和复杂场景）
   vlm,
-  
+
   /// 自动选择（根据图像特征智能选择）
   auto,
 }
@@ -43,7 +39,6 @@ class HybridOCRService extends ChangeNotifier {
 
   HybridOCRService._();
 
-  final OCRService _tesseractService = OCRService.instance;
   final MLKitOCRService _mlkitService = MLKitOCRService.instance;
   final VLMOCRService _vlmService = VLMOCRService.instance;
 
@@ -66,9 +61,6 @@ class HybridOCRService extends ChangeNotifier {
     return Platform.isAndroid || Platform.isIOS;
   }
 
-  /// 检查 Tesseract 是否可用
-  bool get isTesseractAvailable => _tesseractService.isModelAvailable;
-
   /// 检查 VLM 是否可用
   bool get isVLMAvailable => _vlmService.isModelAvailable;
 
@@ -86,17 +78,13 @@ class HybridOCRService extends ChangeNotifier {
         futures.add(_mlkitService.initialize());
       }
 
-      futures.addAll([
-        _tesseractService.initialize(),
-        _vlmService.initialize(),
-      ]);
+      futures.add(_vlmService.initialize());
 
       await Future.wait(futures);
 
       _initialized = true;
       logInfo('混合 OCR 服务初始化完成', source: 'HybridOCRService');
       logInfo('MLKit 可用: $isMLKitAvailable', source: 'HybridOCRService');
-      logInfo('Tesseract 可用: $isTesseractAvailable', source: 'HybridOCRService');
       logInfo('VLM 可用: $isVLMAvailable', source: 'HybridOCRService');
     } catch (e) {
       logError('混合 OCR 服务初始化失败: $e', source: 'HybridOCRService');
@@ -124,9 +112,6 @@ class HybridOCRService extends ChangeNotifier {
         case OCREngineType.mlkit:
           return await _recognizeWithMLKit(imagePath);
 
-        case OCREngineType.tesseract:
-          return await _recognizeWithTesseract(imagePath, languages);
-
         case OCREngineType.vlm:
           return await _recognizeWithVLM(imagePath);
 
@@ -147,23 +132,6 @@ class HybridOCRService extends ChangeNotifier {
 
     logInfo('使用 MLKit 引擎识别', source: 'HybridOCRService');
     return await _mlkitService.recognizeFromFile(imagePath);
-  }
-
-  /// 使用 Tesseract 识别
-  Future<OCRResult> _recognizeWithTesseract(
-    String imagePath,
-    List<String>? languages,
-  ) async {
-    if (!isTesseractAvailable) {
-      throw Exception('tesseract_not_available');
-    }
-
-    logInfo('使用 Tesseract 引擎识别', source: 'HybridOCRService');
-    return await _tesseractService.recognizeFromFile(
-      imagePath,
-      languages: languages,
-      enablePreprocess: true,
-    );
   }
 
   /// 使用 VLM 识别
@@ -188,16 +156,17 @@ class HybridOCRService extends ChangeNotifier {
 
     // 检测图像类型
     final config = await ImagePreprocessor.detectImageType(imagePath);
-    
+
     // 判断是否为手写
     final isHandwritten = config == PreprocessConfig.handwritten;
 
-    logInfo('图像类型检测: ${isHandwritten ? "手写" : "印刷体"}', source: 'HybridOCRService');
+    logInfo('图像类型检测: ${isHandwritten ? "手写" : "印刷体"}',
+        source: 'HybridOCRService');
 
     // 决策逻辑：
     // 1. 手写 + VLM 可用 → 使用 VLM
     // 2. 印刷体 + MLKit 可用（移动端） → 使用 MLKit
-    // 3. 印刷体 + Tesseract 可用（桌面端） → 使用 Tesseract
+    // 3. 优先引擎不可用，回退到 MLKit/VLM
     // 4. 回退策略
 
     if (isHandwritten && isVLMAvailable) {
@@ -206,18 +175,12 @@ class HybridOCRService extends ChangeNotifier {
     } else if (!isHandwritten && isMLKitAvailable) {
       logInfo('检测到印刷体（移动端），使用 MLKit 引擎', source: 'HybridOCRService');
       return await _recognizeWithMLKit(imagePath);
-    } else if (!isHandwritten && isTesseractAvailable) {
-      logInfo('检测到印刷体（桌面端），使用 Tesseract 引擎', source: 'HybridOCRService');
-      return await _recognizeWithTesseract(imagePath, languages);
     } else if (isMLKitAvailable) {
       logInfo('优先引擎不可用，回退到 MLKit', source: 'HybridOCRService');
       return await _recognizeWithMLKit(imagePath);
     } else if (isVLMAvailable) {
       logInfo('MLKit 不可用，回退到 VLM', source: 'HybridOCRService');
       return await _recognizeWithVLM(imagePath);
-    } else if (isTesseractAvailable) {
-      logInfo('VLM 不可用，回退到 Tesseract', source: 'HybridOCRService');
-      return await _recognizeWithTesseract(imagePath, languages);
     } else {
       throw Exception('no_ocr_engine_available');
     }
@@ -240,17 +203,6 @@ class HybridOCRService extends ChangeNotifier {
             .catchError((e) {
           logError('MLKit 识别失败: $e', source: 'HybridOCRService');
           return MapEntry('mlkit', OCRResult.empty);
-        }),
-      );
-    }
-
-    if (isTesseractAvailable) {
-      futures.add(
-        _recognizeWithTesseract(imagePath, languages)
-            .then((r) => MapEntry('tesseract', r))
-            .catchError((e) {
-          logError('Tesseract 识别失败: $e', source: 'HybridOCRService');
-          return MapEntry('tesseract', OCRResult.empty);
         }),
       );
     }
@@ -278,8 +230,6 @@ class HybridOCRService extends ChangeNotifier {
   String getCurrentEngine() {
     if (_preferredEngine == OCREngineType.vlm) {
       return 'VLM (视觉语言模型)';
-    } else if (_preferredEngine == OCREngineType.tesseract) {
-      return 'Tesseract OCR';
     } else {
       return '自动选择';
     }
@@ -294,11 +244,8 @@ class HybridOCRService extends ChangeNotifier {
         return '手写文字建议下载 VLM 模型以获得更好效果';
       }
     } else {
-      if (isTesseractAvailable) {
-        return '印刷体使用 Tesseract 引擎即可';
-      } else {
-        return '请下载 Tesseract 模型';
-      }
+      // 印刷体
+      return '推荐使用自动选择';
     }
   }
 

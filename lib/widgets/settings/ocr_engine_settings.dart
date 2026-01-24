@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import '../../gen_l10n/app_localizations.dart';
 import '../../services/local_ai/local_ai_service.dart';
 import '../../services/local_ai/hybrid_ocr_service.dart';
+import '../../pages/model_management_page.dart';
 
 /// OCR 引擎设置Widget
 class OCREngineSettings extends StatelessWidget {
@@ -25,7 +26,7 @@ class OCREngineSettings extends StatelessWidget {
       builder: (context, _) {
         final currentEngine = hybridOCR.preferredEngine;
         final mlkitAvailable = hybridOCR.isMLKitAvailable;
-        final tesseractAvailable = hybridOCR.isTesseractAvailable;
+        // final tesseractAvailable = hybridOCR.isTesseractAvailable;
         final vlmAvailable = hybridOCR.isVLMAvailable;
 
         return Column(
@@ -49,7 +50,8 @@ class OCREngineSettings extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                  color: theme.colorScheme.surfaceContainerHighest
+                      .withOpacity(0.5),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -139,57 +141,6 @@ class OCREngineSettings extends StatelessWidget {
               const Divider(height: 1, indent: 72),
             ],
 
-            // Tesseract 选项
-            RadioListTile<OCREngineType>(
-              value: OCREngineType.tesseract,
-              groupValue: currentEngine,
-              onChanged: tesseractAvailable
-                  ? (value) {
-                      if (value != null) {
-                        localAI.setOCREngine(value);
-                      }
-                    }
-                  : null,
-              title: Row(
-                children: [
-                  Text(l10n.ocrEngineTesseract),
-                  if (!tesseractAvailable) ...[
-                    const SizedBox(width: 8),
-                    Icon(
-                      Icons.warning_amber_rounded,
-                      size: 16,
-                      color: theme.colorScheme.error,
-                    ),
-                  ],
-                ],
-              ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(l10n.ocrEngineTesseractDesc),
-                  if (!tesseractAvailable)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        '未下载 Tesseract 模型',
-                        style: TextStyle(
-                          color: theme.colorScheme.error,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              secondary: Icon(
-                Icons.text_fields,
-                color: currentEngine == OCREngineType.tesseract && tesseractAvailable
-                    ? theme.colorScheme.primary
-                    : null,
-              ),
-            ),
-
-            const Divider(height: 1, indent: 72),
-
             // VLM 选项
             RadioListTile<OCREngineType>(
               value: OCREngineType.vlm,
@@ -273,7 +224,7 @@ class OCREngineSettings extends StatelessWidget {
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          '手写文字识别准确率：\n• Tesseract: 15-30%\n• VLM (PaliGemma): 85-92%',
+                          '手写文字识别准确率：\n• VLM (PaliGemma): 85-92%',
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: theme.colorScheme.onPrimaryContainer,
                           ),
@@ -282,7 +233,13 @@ class OCREngineSettings extends StatelessWidget {
                         FilledButton.icon(
                           onPressed: () {
                             // 跳转到模型管理页面
-                            Navigator.pushNamed(context, '/model-management');
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const ModelManagementPage(),
+                              ),
+                            );
                           },
                           icon: const Icon(Icons.download),
                           label: Text(l10n.ocrDownloadVLMModel),
@@ -304,8 +261,6 @@ class OCREngineSettings extends StatelessWidget {
         return l10n.ocrEngineAuto;
       case OCREngineType.mlkit:
         return l10n.ocrEngineMLKit;
-      case OCREngineType.tesseract:
-        return l10n.ocrEngineTesseract;
       case OCREngineType.vlm:
         return l10n.ocrEngineVLM;
     }

@@ -86,7 +86,7 @@ class PreprocessConfig {
 /// 图像预处理服务
 class ImagePreprocessor {
   /// 预处理图像文件
-  /// 
+  ///
   /// [imagePath] 原始图像路径
   /// [config] 预处理配置
   /// 返回预处理后的图像路径
@@ -131,11 +131,20 @@ class ImagePreprocessor {
       // 5. 锐化
       if (config.sharpen) {
         // image 4.5.x API: convolution 现在是扩展方法，直接在 image 上调用
-        image = img.convolution(image, filter: [
-          -1, -1, -1,
-          -1,  9, -1,
-          -1, -1, -1,
-        ], div: 1, offset: 0);
+        image = img.convolution(image,
+            filter: [
+              -1,
+              -1,
+              -1,
+              -1,
+              9,
+              -1,
+              -1,
+              -1,
+              -1,
+            ],
+            div: 1,
+            offset: 0);
         logInfo('锐化完成', source: 'ImagePreprocessor');
       }
 
@@ -164,6 +173,12 @@ class ImagePreprocessor {
       await outputFile.writeAsBytes(img.encodePng(image));
 
       logInfo('图像预处理完成: $outputPath', source: 'ImagePreprocessor');
+
+      // 触发自动清理（概率性清理或每次清理，这里选择简单的概率性清理以减少IO）
+      if (DateTime.now().millisecondsSinceEpoch % 10 == 0) {
+        cleanupTempFiles();
+      }
+
       return outputPath;
     } catch (e) {
       logError('图像预处理失败: $e', source: 'ImagePreprocessor');
@@ -218,7 +233,7 @@ class ImagePreprocessor {
   }
 
   /// 自动检测图像类型（印刷体/手写体）
-  /// 
+  ///
   /// 返回建议的预处理配置
   static Future<PreprocessConfig> detectImageType(String imagePath) async {
     try {
@@ -286,7 +301,8 @@ class ImagePreprocessor {
 
     for (final path in imagePaths) {
       final processedConfig = config ?? await detectImageType(path);
-      final processedPath = await preprocessImage(path, config: processedConfig);
+      final processedPath =
+          await preprocessImage(path, config: processedConfig);
       results.add(processedPath);
     }
 
