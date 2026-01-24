@@ -1776,57 +1776,45 @@
   "yesStatus": "Yes",
   "noStatus": "No",
   "notSelectedStatus": "Not selected",
-  "viewNoteInfo": "View note info",
-  "contentLengthLabel": "Content length: {length} chars",
-  "htmlFormatLabel": "HTML format: {status}",
-  "jsonFormatLabel": "JSON format: {status}",
-  "containsHtmlTagsLabel": "Contains HTML tags: {status}",
-  "first100CharsLabel": "First 100 chars:",
-  "testFailedEmptyContent": "Test failed: AI returned empty content",
-  "testFailedApiKey": "Test failed: Please configure a valid API Key in AI settings",
-  "testFailedNetwork": "Test failed: Network connection abnormal",
-  "apiKeyDiagnosticsTitle": "API Key Diagnostics",
-  "apiKeyDiagnosticsTool": "API Key Diagnostics Tool",
-  "apiKeyDiagnosticsDesc": "This tool checks the storage and retrieval of API keys to help diagnose 401 authentication errors.",
-  "runDiagnostics": "Run Diagnostics",
-  "diagnosticResultLabel": "Diagnostic Result:",
-  "diagnosticReportHeader": "=== API Key Diagnostic Report ===",
-  "diagnosticReportTime": "Time: {time}",
-  "diagnosticMultiProviderCheck": "1. Multi-provider configuration...",
-  "diagnosticCurrentProvider": "   - Current Provider: {name}",
-  "diagnosticAvailableProviders": "   - Available providers: {count}",
-  "diagnosticEnabledProviders": "   - Enabled providers: {count}",
-  "diagnosticProviderDetails": "2. Current provider details...",
-  "diagnosticProviderId": "   - ID: {id}",
-  "diagnosticProviderName": "   - Name: {name}",
-  "diagnosticProviderUrl": "   - API URL: {url}",
-  "diagnosticProviderModel": "   - Model: {model}",
-  "diagnosticProviderEnabled": "   - Enabled: {status}",
-  "diagnosticApiKeyCheck": "3. API Key check...",
-  "diagnosticApiKeyInSettings": "   - Key in settings: {status}",
-  "diagnosticApiKeyLength": "   - Key length in settings: {length}",
-  "diagnosticApiKeyPrefix": "   - Key prefix in settings: {prefix}",
-  "diagnosticSecureApiKeyExists": "   - Key in secure storage: {status}",
-  "diagnosticSecureApiKeyLength": "   - Key length in secure storage: {length}",
-  "diagnosticSecureApiKeyPrefix": "   - Key prefix in secure storage: {prefix}",
-  "diagnosticApiKeyValidation": "4. Key validation...",
-  "diagnosticAsyncValidation": "   - Async validation: {status}",
-  "diagnosticFormatValidation": "   - Format validation: {status}",
-  "diagnosticErrorNoProvider": "2. Error: No current provider selected",
-  "diagnosticAllProvidersStatus": "5. All providers status...",
-  "diagnosticProviderStatusItem": "   - {name}: {keyStatus} {enabledStatus}",
-  "diagnosticSuggestions": "6. Suggestions...",
-  "diagnosticSuggestionSelectProvider": "   - Please select an AI provider",
-  "diagnosticSuggestionEnableProvider": "   - Please enable the currently selected AI provider",
-  "diagnosticSuggestionConfigureKey": "   - Please configure a valid API key for {name}",
-  "diagnosticSuggestionNormal": "   - ✓ API key configuration is normal",
-  "diagnosticComplete": "=== Diagnostics Complete ===",
-  "diagnosticError": "Error during diagnostics: {error}",
-  "passStatus": "Pass",
-  "failStatus": "Fail",
-  "yesStatus": "Yes",
-  "noStatus": "No",
-  "notSelectedStatus": "Not selected",
+  "importInstructions": "Import Instructions",
+  "selectingFile": "Selecting file...",
+  "validatingFile": "Validating file...",
+  "checkingFileCompatibility": "Checking file compatibility...",
+  "importingFile": "Importing file...",
+  "importComplete": "Import complete!",
+  "fileSaveFailed": "File save failed",
+  "processingMedia": "Processing {mediaType}...",
+  "@processingMedia": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadingFile": "Downloading file...",
+  "downloadComplete": "Download complete!",
+  "connectingToServer": "Connecting to server...",
+  "savingFile": "Saving file...",
+  "selectFromGallery": "Select {mediaType} from gallery",
+  "@selectFromGallery": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "selectFromFilesWithTypeName": "Select {mediaType} from files",
+  "@selectFromFilesWithTypeName": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "importTipsImage": "• Supports JPG, PNG, GIF, WebP formats\n• Save directly to app media library, reducing duplicates\n• Use memory protection technology for large images\n• Unsaved files are automatically cleaned up",
+  "importTipsVideo": "• Supports MP4, MOV, AVI, MKV formats\n• Save directly to app media library, reducing duplicates\n• Streaming technology to prevent OOM\n• Unsaved files are automatically cleaned up",
+  "importTipsAudio": "• Supports MP3, WAV, AAC, M4A formats\n• Save directly to app media library, reducing duplicates\n• Optimized storage, fast loading\n• Unsaved files are automatically cleaned up",
+  "importTipsDefault": "• Supports multiple media formats\n• Save directly to app media library, memory safety protection\n• Unsaved files are automatically cleaned up",
   "formattedDate": "{month}/{day}",
   "@formattedDate": {
     "placeholders": {

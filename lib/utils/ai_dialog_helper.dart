@@ -6,10 +6,12 @@ import '../services/ai_service.dart';
 import '../widgets/streaming_text_dialog.dart';
 import '../theme/app_theme.dart';
 import '../constants/app_constants.dart';
+import '../gen_l10n/app_localizations.dart';
 
 class AiDialogHelper {
   final BuildContext context;
   final AIService aiService;
+  AppLocalizations get l10n => AppLocalizations.of(context);
 
   AiDialogHelper(this.context)
       : aiService = Provider.of<AIService>(context, listen: false);
@@ -51,7 +53,7 @@ class AiDialogHelper {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'AI助手',
+                          l10n.aiAssistant,
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -64,8 +66,8 @@ class AiDialogHelper {
                   Divider(height: 1, color: theme.colorScheme.outline),
                   ListTile(
                     leading: const Icon(Icons.text_fields),
-                    title: const Text('智能分析来源'),
-                    subtitle: const Text('分析文本中可能的作者和作品'),
+                    title: Text(l10n.smartAnalyzeSource),
+                    subtitle: Text(l10n.smartAnalyzeSourceDesc),
                     onTap: () {
                       Navigator.pop(context);
                       onAnalyzeSource();
@@ -73,8 +75,8 @@ class AiDialogHelper {
                   ),
                   ListTile(
                     leading: const Icon(Icons.brush),
-                    title: const Text('润色文本'),
-                    subtitle: const Text('优化文本表达，使其更加流畅、优美'),
+                    title: Text(l10n.polishText),
+                    subtitle: Text(l10n.polishTextDesc),
                     onTap: () {
                       Navigator.pop(context);
                       onPolishText();
@@ -82,8 +84,8 @@ class AiDialogHelper {
                   ),
                   ListTile(
                     leading: const Icon(Icons.add_circle_outline),
-                    title: const Text('续写内容'),
-                    subtitle: const Text('以相同的风格和语调延伸当前内容'),
+                    title: Text(l10n.continueWriting),
+                    subtitle: Text(l10n.continueWritingDesc),
                     onTap: () {
                       Navigator.pop(context);
                       onContinueText();
@@ -91,8 +93,8 @@ class AiDialogHelper {
                   ),
                   ListTile(
                     leading: const Icon(Icons.analytics),
-                    title: const Text('深度分析'),
-                    subtitle: const Text('对笔记内容进行深入分析和解读'),
+                    title: Text(l10n.deepAnalysis),
+                    subtitle: Text(l10n.deepAnalysisDesc),
                     onTap: () {
                       Navigator.pop(context);
                       onAnalyzeContent();
@@ -101,8 +103,8 @@ class AiDialogHelper {
                   if (onAskQuestion != null)
                     ListTile(
                       leading: const Icon(Icons.chat),
-                      title: const Text('问笔记'),
-                      subtitle: const Text('与AI助手对话，深入探讨笔记内容'),
+                      title: Text(l10n.askNote),
+                      subtitle: Text(l10n.askNoteDesc),
                       onTap: () {
                         Navigator.pop(context);
                         onAskQuestion();
@@ -124,11 +126,11 @@ class AiDialogHelper {
     TextEditingController workController,
   ) async {
     if (contentController.text.isEmpty) {
-      _showSnackBar('请先输入内容');
+      _showSnackBar(l10n.pleaseEnterContent);
       return;
     }
 
-    _showLoadingDialog('正在分析来源...');
+    _showLoadingDialog(l10n.analyzingSource);
 
     try {
       final result = await aiService.analyzeSource(contentController.text);
@@ -139,14 +141,14 @@ class AiDialogHelper {
     } catch (e) {
       if (!context.mounted) return;
       Navigator.of(context).pop();
-      _showSnackBar('分析失败: $e');
+      _showSnackBar(l10n.analysisFailedWithError(e.toString()));
     }
   }
 
   // 润色文本
   Future<void> polishText(TextEditingController contentController) async {
     if (contentController.text.isEmpty) {
-      _showSnackBar('请先输入内容');
+      _showSnackBar(l10n.pleaseEnterContent);
       return;
     }
 
@@ -156,9 +158,9 @@ class AiDialogHelper {
         barrierDismissible: false,
         builder: (dialogContext) {
           return StreamingTextDialog(
-            title: '润色结果',
+            title: l10n.polishResult,
             textStream: aiService.streamPolishText(contentController.text),
-            applyButtonText: '应用更改',
+            applyButtonText: l10n.applyChanges,
             onApply: (polishedText) {
               contentController.text = polishedText;
             },
@@ -169,14 +171,14 @@ class AiDialogHelper {
         },
       );
     } catch (e) {
-      _showSnackBar('润色失败: $e');
+      _showSnackBar(l10n.polishFailedWithError(e.toString()));
     }
   }
 
   // 续写文本
   Future<void> continueText(TextEditingController contentController) async {
     if (contentController.text.isEmpty) {
-      _showSnackBar('请先输入内容');
+      _showSnackBar(l10n.pleaseEnterContent);
       return;
     }
 
@@ -186,9 +188,9 @@ class AiDialogHelper {
         barrierDismissible: false,
         builder: (dialogContext) {
           return StreamingTextDialog(
-            title: '续写结果',
+            title: l10n.continueResult,
             textStream: aiService.streamContinueText(contentController.text),
-            applyButtonText: '追加到笔记',
+            applyButtonText: l10n.appendToNote,
             onApply: (continuedText) {
               contentController.text += continuedText;
             },
@@ -199,7 +201,7 @@ class AiDialogHelper {
         },
       );
     } catch (e) {
-      _showSnackBar('续写失败: $e');
+      _showSnackBar(l10n.continueFailedWithError(e.toString()));
     }
   }
 
@@ -209,7 +211,7 @@ class AiDialogHelper {
     required Function(String) onFinish,
   }) async {
     if (quote.content.isEmpty) {
-      _showSnackBar('请先输入内容');
+      _showSnackBar(l10n.pleaseEnterContent);
       return;
     }
 
@@ -219,9 +221,9 @@ class AiDialogHelper {
         barrierDismissible: false,
         builder: (dialogContext) {
           return StreamingTextDialog(
-            title: '笔记分析',
+            title: l10n.noteAnalysis,
             textStream: aiService.streamSummarizeNote(quote),
-            applyButtonText: '更新分析结果',
+            applyButtonText: l10n.applyToNote,
             onApply: onFinish,
             onCancel: () {
               Navigator.of(dialogContext).pop();
@@ -231,7 +233,7 @@ class AiDialogHelper {
         },
       );
     } catch (e) {
-      _showSnackBar('分析失败: $e');
+      _showSnackBar(l10n.analysisFailedWithError(e.toString()));
     }
   }
 
@@ -251,44 +253,44 @@ class AiDialogHelper {
         context: context,
         builder: (dialogContext) {
           return AlertDialog(
-            title: Text('分析结果 (可信度: $confidence)'),
+            title: Text(l10n.analysisResultWithConfidence(confidence)),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (author != null && author.isNotEmpty) ...[
-                  const Text(
-                    '可能的作者:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  Text(
+                    l10n.possibleAuthor,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   Text(author),
                   const SizedBox(height: 8),
                 ],
                 if (work != null && work.isNotEmpty) ...[
-                  const Text(
-                    '可能的作品:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  Text(
+                    l10n.possibleWork,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   Text(work),
                   const SizedBox(height: 8),
                 ],
                 if (explanation.isNotEmpty) ...[
-                  const Text(
-                    '分析说明:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                  Text(
+                    l10n.analysisExplanation,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   Text(explanation, style: const TextStyle(fontSize: 13)),
                 ],
                 if ((author == null || author.isEmpty) &&
                     (work == null || work.isEmpty))
-                  const Text('未能识别出明确的作者或作品'),
+                  Text(l10n.noAuthorWorkIdentified),
               ],
             ),
             actions: [
               if ((author != null && author.isNotEmpty) ||
                   (work != null && work.isNotEmpty))
                 TextButton(
-                  child: const Text('应用分析结果'),
+                  child: Text(l10n.applyAnalysisResult),
                   onPressed: () {
                     if (author != null && author.isNotEmpty) {
                       authorController.text = author;
@@ -300,7 +302,7 @@ class AiDialogHelper {
                   },
                 ),
               TextButton(
-                child: const Text('关闭'),
+                child: Text(l10n.close),
                 onPressed: () => Navigator.of(dialogContext).pop(),
               ),
             ],
@@ -308,7 +310,7 @@ class AiDialogHelper {
         },
       );
     } catch (e) {
-      _showSnackBar('解析结果失败: $e');
+      _showSnackBar(l10n.parseResultFailed(e.toString()));
     }
   }
 

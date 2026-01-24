@@ -1776,6 +1776,45 @@
   "yesStatus": "是",
   "noStatus": "否",
   "notSelectedStatus": "未选择",
+  "importInstructions": "导入说明",
+  "selectingFile": "正在选择文件...",
+  "validatingFile": "正在验证文件...",
+  "checkingFileCompatibility": "正在检查文件兼容性...",
+  "importingFile": "正在导入文件...",
+  "importComplete": "导入完成！",
+  "fileSaveFailed": "文件保存失败",
+  "processingMedia": "正在处理{mediaType}...",
+  "@processingMedia": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadingFile": "正在下载文件...",
+  "downloadComplete": "下载完成！",
+  "connectingToServer": "正在连接服务器...",
+  "savingFile": "正在保存文件...",
+  "selectFromGallery": "从相册选择{mediaType}",
+  "@selectFromGallery": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "selectFromFilesWithTypeName": "从文件选择{mediaType}",
+  "@selectFromFilesWithTypeName": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "importTipsImage": "• 支持 JPG、PNG、GIF、WebP 等格式\n• 直接保存到应用媒体库，减少重复复制\n• 使用内存保护技术，支持超大图片\n• 未保存笔记退出将自动清理未引用文件",
+  "importTipsVideo": "• 支持 MP4、MOV、AVI、MKV 等格式\n• 直接保存到应用媒体库，减少重复复制\n• 流式处理技术，防止内存溢出\n• 未保存笔记退出将自动清理未引用文件",
+  "importTipsAudio": "• 支持 MP3、WAV、AAC、M4A 等格式\n• 直接保存到应用媒体库，减少重复复制\n• 优化存储，快速加载\n• 未保存笔记退出将自动清理未引用文件",
+  "importTipsDefault": "• 支持多种媒体格式\n• 直接保存到应用媒体库\n• 内存安全保护\n• 未保存笔记退出将自动清理未引用文件",
   "viewNoteInfo": "查看笔记信息",
   "contentLengthLabel": "内容长度：{length}字符",
   "htmlFormatLabel": "HTML格式：{status}",
