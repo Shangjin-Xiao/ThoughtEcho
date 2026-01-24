@@ -166,7 +166,7 @@ class MediaReferenceService {
   /// 检测孤儿文件（没有被任何笔记引用的文件）
   static Future<List<String>> detectOrphanFiles() async {
     try {
-      final plan = await _planOrphanCleanup();
+      final plan = await _planOrphanCleanupStreamed();
       logDebug(
         '检测到 ${plan.candidates.length} 个孤儿文件，待修复引用 ${plan.missingReferencePairs} 条',
       );
@@ -180,7 +180,7 @@ class MediaReferenceService {
   /// 清理孤儿文件
   static Future<int> cleanupOrphanFiles({bool dryRun = false}) async {
     try {
-      final plan = await _planOrphanCleanup();
+      final plan = await _planOrphanCleanupStreamed();
 
       if (plan.missingReferencePairs > 0) {
         if (dryRun) {
@@ -278,6 +278,98 @@ class MediaReferenceService {
     );
   }
 
+  /// 迭代式构建清理计划，避免一次性加载所有笔记
+  static Future<_CleanupPlan> _planOrphanCleanupStreamed() async {
+    final storedIndex = await _fetchStoredReferenceIndex();
+    final quoteIndex = await _collectQuoteReferenceIndexStreamed();
+    final snapshot =
+        _ReferenceSnapshot(storedIndex: storedIndex, quoteIndex: quoteIndex);
+    final allMediaFiles = await _getAllMediaFiles();
+    final candidates = <_OrphanCandidate>[];
+    final missingReferences = <String, Map<String, Set<String>>>{};
+
+    for (final filePath in allMediaFiles) {
+      final normalizedPath = await _normalizeFilePath(filePath);
+      final canonicalKey = _canonicalComparisonKey(normalizedPath);
+
+      final storedVariants = snapshot.storedIndex[canonicalKey];
+      final quoteVariants = snapshot.quoteIndex[canonicalKey];
+
+      final hasStoredRefs = storedVariants != null &&
+          storedVariants.values.any((refs) => refs.isNotEmpty);
+      final hasQuoteRefs = quoteVariants != null &&
+          quoteVariants.values.any((refs) => refs.isNotEmpty);
+
+      if (hasQuoteRefs) {
+        final variants = quoteVariants;
+        if (!hasStoredRefs) {
+          missingReferences[canonicalKey] = variants.map(
+            (variantPath, ids) => MapEntry(variantPath, Set<String>.from(ids)),
+          );
+        }
+        continue;
+      }
+
+      if (hasStoredRefs) {
+        continue;
+      }
+
+      candidates.add(
+        _OrphanCandidate(
+          absolutePath: filePath,
+          normalizedPath: normalizedPath,
+          canonicalKey: canonicalKey,
+        ),
+      );
+    }
+
+    return _CleanupPlan(
+      candidates: candidates,
+      missingReferenceIndex: missingReferences,
+    );
+  }
+
+  /// 提供给备份使用的引用快照（避免重复全量扫描）
+  static Future<_ReferenceSnapshot> buildReferenceSnapshotForBackup() async {
+    return _buildReferenceSnapshot();
+  }
+
+  /// 备份/恢复使用的路径标准化（避免重复获取目录）
+  static Future<String> normalizePathForBackup(
+    String filePath, {
+    required String appPath,
+  }) async {
+    try {
+      if (filePath.isEmpty) {
+        return filePath;
+      }
+
+      var sanitized = filePath.trim();
+
+      if (sanitized.startsWith('file://')) {
+        final uri = Uri.tryParse(sanitized);
+        if (uri != null && uri.scheme == 'file') {
+          sanitized = uri.toFilePath();
+        }
+      }
+
+      sanitized = path.normalize(sanitized);
+
+      if (sanitized.startsWith(appPath)) {
+        return path.normalize(path.relative(sanitized, from: appPath));
+      }
+
+      return sanitized;
+    } catch (_) {
+      return filePath;
+    }
+  }
+
+  /// 备份/恢复使用的统一比较Key
+  static String canonicalKeyForBackup(String value) {
+    return _canonicalComparisonKey(value);
+  }
+
   static Future<_ReferenceSnapshot> _buildReferenceSnapshot() async {
     final storedIndex = await _fetchStoredReferenceIndex();
     final quoteIndex = await _collectQuoteReferenceIndex();
@@ -313,7 +405,8 @@ class MediaReferenceService {
       _collectQuoteReferenceIndex() async {
     final databaseService = DatabaseService();
     // 媒体引用索引需要包含所有笔记（包括隐藏笔记）
-    final quotes = await databaseService.getAllQuotes(excludeHiddenNotes: false);
+    final quotes =
+        await databaseService.getAllQuotes(excludeHiddenNotes: false);
 
     final index = <String, Map<String, Set<String>>>{};
 
@@ -333,6 +426,48 @@ class MediaReferenceService {
         final quoteSet = variants.putIfAbsent(variantPath, () => <String>{});
         quoteSet.add(quoteId);
       }
+    }
+
+    return index;
+  }
+
+  /// 流式收集引用索引，避免一次性加载全部笔记
+  static Future<Map<String, Map<String, Set<String>>>>
+      _collectQuoteReferenceIndexStreamed() async {
+    final databaseService = DatabaseService();
+    final index = <String, Map<String, Set<String>>>{};
+    const int pageSize = 200;
+    var offset = 0;
+
+    while (true) {
+      final quotes = await databaseService.getUserQuotes(
+        offset: offset,
+        limit: pageSize,
+        excludeHiddenNotes: false,
+      );
+      if (quotes.isEmpty) break;
+
+      for (final quote in quotes) {
+        final quoteId = quote.id;
+        if (quoteId == null || quoteId.isEmpty) {
+          continue;
+        }
+
+        final mediaPaths = await extractMediaPathsFromQuote(quote);
+
+        for (final mediaPath in mediaPaths) {
+          final variantPath = path.normalize(mediaPath);
+          final key = _canonicalComparisonKey(variantPath);
+
+          final variants =
+              index.putIfAbsent(key, () => <String, Set<String>>{});
+          final quoteSet = variants.putIfAbsent(variantPath, () => <String>{});
+          quoteSet.add(quoteId);
+        }
+      }
+
+      offset += quotes.length;
+      if (quotes.length < pageSize) break;
     }
 
     return index;
@@ -377,18 +512,37 @@ class MediaReferenceService {
     return key;
   }
 
-  /// 轻量级检查单个文件是否仍被引用（仅查引用表，性能优化版）
+  /// 轻量级检查单个文件是否仍被引用（双重校验：引用表 + 笔记内容）
   /// 返回 true 表示文件已被安全删除，false 表示文件仍被引用或删除失败
   static Future<bool> quickCheckAndDeleteIfOrphan(String filePath) async {
     try {
       final normalizedPath = await _normalizeFilePath(filePath);
-      final refCount = await getReferenceCount(normalizedPath);
 
+      // 1. 优先查引用表（高性能）
+      final refCount = await getReferenceCount(normalizedPath);
       if (refCount > 0) {
         return false; // 仍被引用，不删除
       }
 
-      // 引用计数为0，执行删除
+      // 2. 二次确认：即使引用表说没有，也从笔记内容中全文搜索一次（防止引用表损坏/不同步导致的误删）
+      // 注意：这步对于数据安全至关重要
+      final dbService = DatabaseService();
+      final quotesWithFile =
+          await dbService.searchQuotesByContent(normalizedPath);
+
+      if (quotesWithFile.isNotEmpty) {
+        logDebug(
+            '警告：文件 $filePath 在引用表中无记录，但在 ${quotesWithFile.length} 条笔记内容中发现引用。正在自动修复引用表并跳过删除。');
+        // 自动修复逻辑：重建引用记录
+        for (final quote in quotesWithFile) {
+          if (quote.id != null) {
+            await addReference(normalizedPath, quote.id!);
+          }
+        }
+        return false;
+      }
+
+      // 引用计数为0且内容中未搜到，执行删除
       final file = File(filePath);
       if (await file.exists()) {
         await file.delete();
@@ -540,6 +694,51 @@ class MediaReferenceService {
     }
   }
 
+  /// 同步笔记的媒体文件引用（事务内版本）
+  static Future<bool> syncQuoteMediaReferencesWithTransaction(
+    DatabaseExecutor txn,
+    Quote quote,
+  ) async {
+    try {
+      final quoteId = quote.id;
+      if (quoteId == null) {
+        logDebug('笔记ID为空，跳过媒体引用同步');
+        return false;
+      }
+
+      // 先移除该笔记的所有现有引用
+      await txn.delete(
+        _tableName,
+        where: 'quote_id = ?',
+        whereArgs: [quoteId],
+      );
+
+      // 从笔记内容中提取媒体文件路径
+      final mediaPaths = await extractMediaPathsFromQuote(quote);
+
+      // 添加新的引用
+      for (final mediaPath in mediaPaths) {
+        final normalizedPath = await _normalizeFilePath(mediaPath);
+        await txn.insert(
+          _tableName,
+          {
+            'id': const Uuid().v4(),
+            'file_path': normalizedPath,
+            'quote_id': quoteId,
+            'created_at': DateTime.now().toIso8601String(),
+          },
+          conflictAlgorithm: ConflictAlgorithm.ignore,
+        );
+      }
+
+      logDebug('同步笔记媒体文件引用完成: $quoteId, 共 ${mediaPaths.length} 个文件');
+      return true;
+    } catch (e) {
+      logDebug('同步笔记媒体文件引用失败: $e');
+      return false;
+    }
+  }
+
   /// 获取所有媒体文件路径
   static Future<List<String>> _getAllMediaFiles() async {
     final mediaFiles = <String>[];
@@ -643,7 +842,8 @@ class MediaReferenceService {
 
       final databaseService = DatabaseService();
       // 媒体引用迁移需要处理所有笔记（包括隐藏笔记）
-      final quotes = await databaseService.getAllQuotes(excludeHiddenNotes: false);
+      final quotes =
+          await databaseService.getAllQuotes(excludeHiddenNotes: false);
 
       int migratedCount = 0;
 
