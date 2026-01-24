@@ -707,6 +707,7 @@ ${_getLanguageDirective(languageCode)}''';
     required int totalWordCount, // 总字数（纯文本）
     String? notesPreview, // 选填：拼接后的笔记内容片段（可部分）
     String? fullNotesContent, // 新增：完整的笔记内容用于深度分析
+    String? previousInsights, // 新增：历史洞察上下文
   }) {
     final timeText = mostTimePeriod ?? '—';
     final weatherText = mostWeather ?? '—';
@@ -730,8 +731,18 @@ ${_getLanguageDirective(languageCode)}''';
             ? '（无可用笔记内容）'
             : contentForAnalysis;
 
+    String previousInsightsSection = '';
+    if (previousInsights != null && previousInsights.isNotEmpty) {
+      previousInsightsSection = '''
+
+【历史洞察参考】
+这是你之前为该用户生成的洞察（供参考，以保持连贯性，但请根据本期新数据生成）：
+$previousInsights''';
+    }
+
     return '''【统计数据】
 $stats
+$previousInsightsSection
 
 【笔记内容分析】
 请仔细分析以下笔记内容，结合统计数据理解用户的记录习惯和特征，寻找地理位置、文学引用、主题特征等线索：
