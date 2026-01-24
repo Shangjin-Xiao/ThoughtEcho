@@ -62,6 +62,61 @@ class DraftService {
     }
   }
 
+  /// 获取最新的草稿信息（用于启动恢复）
+  Future<Map<String, dynamic>?> getLatestDraft() async {
+    try {
+      final keys = MMKVService().getAllKeys();
+      String? latestKey;
+      DateTime? latestTime;
+      Map<String, dynamic>? latestData;
+
+      for (final key in keys) {
+        if (!key.startsWith('draft_')) continue;
+
+        try {
+          final dynamic stored = MMKVService().getJson(key);
+          Map<String, dynamic>? data;
+          if (stored == null) continue;
+          if (stored is Map<String, dynamic>) {
+            data = stored;
+          } else if (stored is String) {
+            data = jsonDecode(stored) as Map<String, dynamic>;
+          } else {
+            data = Map<String, dynamic>.from(stored);
+          }
+
+          if (data.containsKey('timestamp')) {
+            final tsStr = data['timestamp'] as String;
+            final ts = DateTime.tryParse(tsStr);
+            if (ts != null) {
+              if (latestTime == null || ts.isAfter(latestTime)) {
+                latestTime = ts;
+                latestKey = key;
+                latestData = data;
+              }
+            }
+          }
+        } catch (e) {
+          logDebug('解析草稿失败: $key, $e');
+        }
+      }
+
+      if (latestKey != null && latestData != null) {
+        // 返回包含原始ID的数据（从key中提取）
+        // key format: draft_xxx
+        final originalId = latestKey.substring(6);
+        return {
+          'id': originalId,
+          ...latestData,
+        };
+      }
+      return null;
+    } catch (e) {
+      logError('获取最新草稿失败', error: e, source: 'DraftService');
+      return null;
+    }
+  }
+
   /// 获取所有草稿中引用的媒体文件路径（跨平台）
   Future<Set<String>> getAllMediaPathsInDrafts() async {
     final mediaPaths = <String>{};

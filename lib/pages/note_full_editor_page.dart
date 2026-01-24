@@ -258,9 +258,6 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   /// 异步初始化文档内容
   Future<void> _initializeDocumentAsync() async {
     try {
-      if (!_draftLoaded) {
-        await _loadDraftIfAvailable();
-      }
       if (widget.initialQuote?.deltaContent != null) {
         // 如果有富文本内容，使用后台处理避免阻塞UI
         logDebug('开始异步解析富文本内容...');
@@ -269,13 +266,15 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
         // 使用内存安全的处理策略
         await _initializeRichTextContentSafely(deltaContent);
-      } else if (!_draftLoaded) {
+      } else {
         logDebug('使用纯文本初始化编辑器');
         _initializeAsPlainText();
       }
     } catch (e) {
       logDebug('文档初始化失败: $e');
       _initializeAsPlainText();
+    } finally {
+      _draftLoaded = true;
     }
   }
 
@@ -752,79 +751,6 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       _draftSaveTimer = Timer(const Duration(seconds: 2), () {
         _saveDraft();
       });
-    }
-  }
-
-  Future<void> _loadDraftIfAvailable() async {
-    if (_draftLoaded) return;
-    final key = _draftStorageKey;
-    if (key == null || key.isEmpty) return;
-
-    // 使用 DraftService 加载草稿
-    final payload = await DraftService().getDraft(key);
-
-    if (payload == null) {
-      _draftLoaded = true;
-      return;
-    }
-
-    try {
-      final deltaContent = payload['deltaContent'] as String?;
-      final plainText = payload['plainText'] as String?;
-      final author = payload['author'] as String?;
-      final work = payload['work'] as String?;
-      final tagIds =
-          (payload['tagIds'] as List?)?.map((e) => e.toString()).toList();
-      final colorHex = payload['colorHex'] as String?;
-      final location = payload['location'] as String?;
-      final latitude = payload['latitude'] as num?;
-      final longitude = payload['longitude'] as num?;
-      final weather = payload['weather'] as String?;
-      final temperature = payload['temperature'] as String?;
-
-      if (deltaContent != null && deltaContent.isNotEmpty) {
-        await _initializeRichTextContentSafely(deltaContent);
-      } else if (plainText != null) {
-        if (mounted) {
-          setState(() {
-            _controller.dispose();
-            _controller = quill.QuillController(
-              document: quill.Document()..insert(0, plainText),
-              selection: const TextSelection.collapsed(offset: 0),
-            );
-            _attachDraftListener();
-          });
-        }
-      }
-
-      if (mounted) {
-        setState(() {
-          if (author != null) _authorController.text = author;
-          if (work != null) _workController.text = work;
-          if (tagIds != null) _selectedTagIds = tagIds;
-          _selectedColorHex = colorHex;
-          _location = location;
-          _latitude = latitude?.toDouble();
-          _longitude = longitude?.toDouble();
-          _weather = weather;
-          _temperature = temperature;
-          _showLocation =
-              _location != null || (_latitude != null && _longitude != null);
-          _showWeather = _weather != null;
-        });
-
-        // 提示用户草稿已恢复
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context).draftRestored),
-            duration: AppConstants.snackBarDurationNormal,
-          ),
-        );
-      }
-    } catch (e) {
-      logDebug('加载草稿失败: $e');
-    } finally {
-      _draftLoaded = true;
     }
   }
 
@@ -1837,6 +1763,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         final hasUnsavedChanges = _hasUnsavedChanges();
         if (!hasUnsavedChanges) {
           if (context.mounted) {
+            // 没有未保存的更改，安全退出并清理草稿
+            _clearDraft();
             Navigator.pop(context);
           }
           return;
@@ -1865,6 +1793,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
         if (shouldDiscard ?? false) {
           if (context.mounted) {
+            // 用户选择放弃更改，清理草稿
+            _clearDraft();
             Navigator.pop(context);
           }
         }

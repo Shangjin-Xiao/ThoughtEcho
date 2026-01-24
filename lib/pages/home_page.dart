@@ -39,6 +39,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import '../services/svg_to_image_service.dart';
 import '../utils/feature_guide_helper.dart';
+import '../services/draft_service.dart';
 
 class HomePage extends StatefulWidget {
   final int initialPage; // 添加初始页面参数
@@ -353,8 +354,13 @@ class _HomePageState extends State<HomePage>
         _preloadTags();
       }
 
-      // 首次进入应用时检查剪贴板
-      _checkClipboard();
+      // 1. 检查是否有未保存的草稿（最高优先级，阻塞后续弹窗）
+      final draftRecovered = await _checkDraftRecovery();
+
+      // 2. 如果没有恢复草稿，再检查剪贴板
+      if (!draftRecovered) {
+        _checkClipboard();
+      }
 
       // 如果不是记录页启动，确保标签也被加载
       if (widget.initialPage != 1) {
@@ -404,6 +410,124 @@ class _HomePageState extends State<HomePage>
         }
       });
     }
+  }
+
+  // 检查是否有未保存的草稿
+  Future<bool> _checkDraftRecovery() async {
+    if (!mounted) return false;
+
+    try {
+      final draftData = await DraftService().getLatestDraft();
+      if (draftData == null) return false;
+
+      if (!mounted) return false;
+
+      final l10n = AppLocalizations.of(context);
+      final shouldRestore = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.draftRecoverTitle),
+          content: Text(l10n.draftRecoverMessage),
+          actions: [
+            TextButton(
+              onPressed: () {
+                // 用户选择丢弃，删除草稿
+                final draftId = draftData['id'] as String;
+                DraftService().deleteDraft(draftId);
+                Navigator.pop(ctx, false);
+              },
+              child: Text(
+                l10n.discard,
+                style: TextStyle(color: Colors.red.shade400),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.restore),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldRestore == true && mounted) {
+        final draftId = draftData['id'] as String;
+        final isNew = draftId.startsWith('new_');
+        final plainText = draftData['plainText'] as String? ?? '';
+        final deltaContent = draftData['deltaContent'] as String?;
+
+        Quote? initialQuote;
+
+        if (!isNew) {
+          // 如果是现有笔记，尝试从数据库获取原始信息
+          try {
+            final db = context.read<DatabaseService>();
+            final original = await db.getQuoteById(draftId);
+            if (original != null) {
+              // 使用草稿内容覆盖原始笔记内容
+              initialQuote = original.copyWith(
+                content: plainText,
+                deltaContent: deltaContent,
+                sourceAuthor: draftData['author'] as String?,
+                sourceWork: draftData['work'] as String?,
+                tagIds: (draftData['tagIds'] as List?)
+                    ?.map((e) => e.toString())
+                    .toList(),
+                colorHex: draftData['colorHex'] as String?,
+                location: draftData['location'] as String?,
+                latitude: (draftData['latitude'] as num?)?.toDouble(),
+                longitude: (draftData['longitude'] as num?)?.toDouble(),
+                weather: draftData['weather'] as String?,
+                temperature: draftData['temperature'] as String?,
+              );
+            }
+          } catch (e) {
+            logDebug('恢复草稿时获取原始笔记失败: $e');
+          }
+        }
+
+        if (initialQuote == null) {
+          // 新建笔记或找不到原始笔记，构造新的Quote
+          initialQuote = Quote(
+            id: isNew ? null : draftId,
+            content: plainText,
+            deltaContent: deltaContent,
+            date: DateTime.now().toIso8601String(),
+            sourceAuthor: draftData['author'] as String?,
+            sourceWork: draftData['work'] as String?,
+            tagIds: (draftData['tagIds'] as List?)
+                    ?.map((e) => e.toString())
+                    .toList() ??
+                [],
+            colorHex: draftData['colorHex'] as String?,
+            location: draftData['location'] as String?,
+            latitude: (draftData['latitude'] as num?)?.toDouble(),
+            longitude: (draftData['longitude'] as num?)?.toDouble(),
+            weather: draftData['weather'] as String?,
+            temperature: draftData['temperature'] as String?,
+            editSource: 'fullscreen',
+          );
+        }
+
+        // 导航到全屏编辑器
+        if (mounted) {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => NoteFullEditorPage(
+                initialContent: initialQuote!.content,
+                initialQuote: initialQuote,
+                // 如果有标签信息，也可以传递 allTags，但这通常由编辑器自己加载
+              ),
+            ),
+          );
+          return true; // 已处理恢复
+        }
+      }
+    } catch (e) {
+      logError('检查草稿恢复失败', error: e, source: 'HomePage');
+    }
+    return false;
   }
 
   // 检查剪贴板内容并处理
