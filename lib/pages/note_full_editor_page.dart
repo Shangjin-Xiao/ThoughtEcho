@@ -40,11 +40,14 @@ class NoteFullEditorPage extends StatefulWidget {
   final String initialContent;
   final Quote? initialQuote;
   final List<NoteCategory>? allTags;
+  final bool isRestoredDraft; // 新增：标记是否为恢复的草稿
+
   const NoteFullEditorPage({
     super.key,
     required this.initialContent,
     this.initialQuote,
     this.allTags,
+    this.isRestoredDraft = false, // 默认为 false
   });
 
   @override
@@ -70,6 +73,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   double? _originalLatitude;
   double? _originalLongitude;
   String? _originalWeather;
+
+  // 标记是否是从草稿恢复的
+  late bool _isRestoredFromDraft;
 
   // 会话级媒体追踪：记录本编辑会话中通过导入对话框新增的媒体文件
   final Set<String> _sessionImportedMedia = <String>{};
@@ -116,6 +122,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     super.initState();
 
     _draftStorageKey = _buildDraftStorageKey();
+
+    _isRestoredFromDraft = widget.isRestoredDraft;
 
     // 如果是编辑模式，异步获取完整笔记数据
     if (widget.initialQuote != null && widget.initialQuote!.id != null) {
@@ -1222,6 +1230,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
   /// 检测是否有未保存的内容变化
   bool _hasUnsavedChanges() {
+    // 如果是从草稿恢复的且尚未保存，则视为有未保存更改
+    if (_isRestoredFromDraft) {
+      return true;
+    }
+
     // 检查主要内容
     final currentPlainText = _controller.document.toPlainText().trim();
     if (currentPlainText != _initialPlainText.trim()) {
@@ -1420,6 +1433,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         _draftSaveTimer?.cancel();
         await _clearDraft();
         _didSaveSuccessfully = true; // 标记保存成功，避免会话级清理
+        _isRestoredFromDraft = false; // 保存成功后，不再视为恢复的草稿
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -1437,6 +1451,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         _draftSaveTimer?.cancel();
         await _clearDraft();
         _didSaveSuccessfully = true; // 标记保存成功，避免会话级清理
+        _isRestoredFromDraft = false; // 保存成功后，不再视为恢复的草稿
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
