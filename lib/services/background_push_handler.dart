@@ -80,14 +80,16 @@ void callbackDispatcher() {
 /// 当 Android AlarmManager 触发时，会在独立的 isolate 中运行此函数。
 /// 这里必须初始化最小的必要环境。
 @pragma('vm:entry-point')
-void backgroundPushCallback([int? id]) async {
+void backgroundPushCallback(int id) async {
   // 1. 初始化 Flutter 绑定
   WidgetsFlutterBinding.ensureInitialized();
   DartPluginRegistrant.ensureInitialized();
 
   // 2. 初始化日志
   AppLogger.initialize();
-  AppLogger.w('后台推送任务启动 (AlarmId: $id)'); // 改为 warning 以便记录
+  // 使用 Warning 级别以确保在后台 Isolate 中也能记录到数据库（除非开启了全量日志持久化）
+  // 这是一个正常的生命周期事件，标记为 Warning 仅为了确保可见性
+  AppLogger.w('后台推送任务启动 (AlarmId: $id)');
 
   try {
     // 3. 初始化基础服务
