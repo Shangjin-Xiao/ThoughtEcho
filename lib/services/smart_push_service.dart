@@ -1001,8 +1001,16 @@ class SmartPushService extends ChangeNotifier {
       final slotTime =
           DateTime(now.year, now.month, now.day, slot.hour, slot.minute);
       final diff = now.difference(slotTime).inMinutes.abs();
+
+      AppLogger.d(
+          '检查每日一言推送: 设定时间=${slot.formattedTime}, 当前时间=${now.hour}:${now.minute}, 差距=$diff分钟');
+
       if (diff <= 5) {
+        // 使用 Warning 级别确保后台日志被持久化
+        AppLogger.w('时间匹配，执行每日一言推送 (diff=$diff分钟)');
         await _performDailyQuotePush(isBackground: true);
+      } else {
+        AppLogger.d('时间不匹配，跳过每日一言推送');
       }
     }
 

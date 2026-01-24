@@ -193,6 +193,9 @@ class _LogsPageState extends State<LogsPage> {
       return true;
     }).toList();
 
+    // 确保按时间倒序排列 (修复日志顺序混乱问题)
+    filtered.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
     _cachedFilteredLogs = filtered;
     return filtered;
   }
