@@ -316,9 +316,10 @@ class WindowsStartupDebugService {
     try {
       if (_debugLogFile != null) {
         final timestamp = DateTime.now().toIso8601String();
-        await _debugLogFile!.writeAsString(
+        await LargeFileManager.writeStringToFile(
+          _debugLogFile!,
           '[$timestamp] $message\n',
-          mode: FileMode.append,
+          append: true,
         );
       }
     } catch (e) {
@@ -430,9 +431,10 @@ class WindowsStartupDebugService {
       // 1. 刷新当前调试日志
       if (_debugLogFile != null) {
         // 强制刷新文件系统缓存
-        await _debugLogFile!.writeAsString(
+        await LargeFileManager.writeStringToFile(
+          _debugLogFile!,
           '',
-          mode: FileMode.append,
+          append: true,
           flush: true,
         );
       }
@@ -471,9 +473,10 @@ class WindowsStartupDebugService {
 
       // 6. 最后再次强制刷新调试日志文件
       if (_debugLogFile != null) {
-        await _debugLogFile!.writeAsString(
+        await LargeFileManager.writeStringToFile(
+          _debugLogFile!,
           '',
-          mode: FileMode.append,
+          append: true,
           flush: true,
         );
       }
@@ -482,9 +485,10 @@ class WindowsStartupDebugService {
       try {
         await _writeDebugLog('日志刷新过程中发生错误: $e');
         if (_debugLogFile != null) {
-          await _debugLogFile!.writeAsString(
+          await LargeFileManager.writeStringToFile(
+            _debugLogFile!,
             '',
-            mode: FileMode.append,
+            append: true,
             flush: true,
           );
         }
