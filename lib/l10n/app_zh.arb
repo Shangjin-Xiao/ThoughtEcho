@@ -1726,6 +1726,15 @@
   "desktopInstructionsStep3": "3. 双击文件在浏览器中打开",
   "annualReportHtmlTitle": "心迹 {year} 年度报告",
   "generationTimeLabel": "生成时间: {time}",
+  "askNoteTitle": "问笔记",
+  "noteInfoTitle": "笔记信息",
+  "meUser": "我",
+  "aiAssistantUser": "AI助手",
+  "aiAssistantWelcome": "你好！我是你的笔记助手。你可以问我关于这篇笔记的任何问题，我会基于笔记内容为你提供深度解答。\n\n📝 笔记内容概览：\n{preview}\n\n💡 你可以试试这些问题：\n• 这篇笔记的核心思想是什么？\n• 从这篇笔记中能得到什么启发？\n• 如何将这篇笔记的想法应用到实际生活中？\n• 这篇笔记反映了什么样的思维模式？",
+  "thinkingInProgress": "正在思考中...",
+  "aiMisunderstoodQuestion": "抱歉，我没能理解这个问题。请尝试换个方式问我。",
+  "aiResponseError": "抱歉，回答时出现了错误：{error}",
+  "viewNoteInfo": "查看笔记信息",
   "formattedDate": "{month}月{day}日",
   "@formattedDate": {
     "placeholders": {
