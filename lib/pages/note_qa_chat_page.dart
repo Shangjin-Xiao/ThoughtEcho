@@ -7,6 +7,7 @@ import 'package:flutter_chat_types/flutter_chat_types.dart' show PartialText;
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
+import '../gen_l10n/app_localizations.dart';
 import '../models/quote_model.dart';
 import '../services/ai_service.dart';
 import '../utils/app_logger.dart';
@@ -23,6 +24,7 @@ class NoteQAChatPage extends StatefulWidget {
 }
 
 class _NoteQAChatPageState extends State<NoteQAChatPage> {
+  AppLocalizations get l10n => AppLocalizations.of(context);
   late final InMemoryChatController _chatController;
   late final User _user;
   late final User _assistant;
@@ -31,28 +33,34 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
   bool _isResponding = false;
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _aiService = Provider.of<AIService>(context, listen: false);
+    _user = User(id: 'user', name: l10n.meUser);
+    _assistant = User(id: 'assistant', name: l10n.aiAssistantUser);
+  }
+
+  @override
   void initState() {
     super.initState();
-    _aiService = Provider.of<AIService>(context, listen: false);
-    _user = const User(id: 'user', name: '我');
-    _assistant = const User(id: 'assistant', name: 'AI助手');
     _chatController = InMemoryChatController();
     // 添加欢迎消息
-    _chatController.insertMessage(
-      TextMessage(
-        authorId: _assistant.id,
-        createdAt: DateTime.now(),
-        id: const Uuid().v4(),
-        text:
-            '你好！我是你的笔记助手。你可以问我关于这篇笔记的任何问题，我会基于笔记内容为你提供深度解答。\n\n📝 笔记内容概览：\n${_getQuotePreview()}\n\n💡 你可以试试这些问题：\n• 这篇笔记的核心思想是什么？\n• 从这篇笔记中能得到什么启发？\n• 如何将这篇笔记的想法应用到实际生活中？\n• 这篇笔记反映了什么样的思维模式？',
-      ),
-    );
-    // 如果有初始问题，自动发送
-    if (widget.initialQuestion != null && widget.initialQuestion!.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _chatController.insertMessage(
+        TextMessage(
+          authorId: _assistant.id,
+          createdAt: DateTime.now(),
+          id: const Uuid().v4(),
+          text: l10n.aiAssistantWelcome(_getQuotePreview()),
+        ),
+      );
+
+      // 如果有初始问题，自动发送
+      if (widget.initialQuestion != null &&
+          widget.initialQuestion!.isNotEmpty) {
         _handleSendPressed(PartialText(text: widget.initialQuestion!));
-      });
-    }
+      }
+    });
   }
 
   @override
@@ -95,7 +103,7 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
       authorId: _assistant.id,
       createdAt: DateTime.now(),
       id: 'loading',
-      text: '正在思考中...',
+      text: l10n.thinkingInProgress,
     );
     _chatController.insertMessage(loadingMessage);
 
@@ -137,7 +145,7 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
                 id: 'loading',
                 text: fullResponse.isNotEmpty
                     ? fullResponse
-                    : '抱歉，我没能理解这个问题。请尝试换个方式问我。',
+                    : l10n.aiMisunderstoodQuestion,
               );
               _chatController.updateMessage(loadingMsg, finalMsg);
             }
@@ -155,7 +163,7 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
                 authorId: _assistant.id,
                 createdAt: DateTime.now(),
                 id: 'loading',
-                text: '抱歉，回答时出现了错误：${error.toString()}',
+                text: l10n.aiResponseError(error.toString()),
               );
               _chatController.updateMessage(loadingMsg, errorMsg);
             }
@@ -174,7 +182,7 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
             authorId: _assistant.id,
             createdAt: DateTime.now(),
             id: 'loading',
-            text: '抱歉，发生了错误：${e.toString()}',
+            text: l10n.aiResponseError(e.toString()),
           );
           _chatController.updateMessage(loadingMsg, errorMsg);
         }
@@ -189,7 +197,7 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('问笔记'),
+        title: Text(l10n.askNoteTitle),
         backgroundColor: theme.colorScheme.surface,
         elevation: 0,
         scrolledUnderElevation: 1,
@@ -197,7 +205,7 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
           IconButton(
             icon: const Icon(Icons.info_outline),
             onPressed: _showNoteInfo,
-            tooltip: '查看笔记信息',
+            tooltip: l10n.viewNoteInfo,
           ),
         ],
       ),
@@ -210,7 +218,7 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
         resolveUser: (id) async {
           if (id == _user.id) return _user;
           if (id == _assistant.id) return _assistant;
-          return User(id: id, name: '未知');
+          return User(id: id, name: l10n.unknown);
         },
       ),
     );
@@ -220,23 +228,26 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('笔记信息'),
+        title: Text(l10n.noteInfoTitle),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
               if (widget.quote.source != null) ...[
-                Text('来源', style: Theme.of(context).textTheme.labelMedium),
+                Text(l10n.source,
+                    style: Theme.of(context).textTheme.labelMedium),
                 const SizedBox(height: 4),
                 Text(widget.quote.source!),
                 const SizedBox(height: 16),
               ],
-              Text('创建时间', style: Theme.of(context).textTheme.labelMedium),
+              Text(l10n.createdAt,
+                  style: Theme.of(context).textTheme.labelMedium),
               const SizedBox(height: 4),
               Text(DateTime.parse(widget.quote.date).toString()),
               const SizedBox(height: 16),
-              Text('内容', style: Theme.of(context).textTheme.labelMedium),
+              Text(l10n.content,
+                  style: Theme.of(context).textTheme.labelMedium),
               const SizedBox(height: 4),
               Text(
                 widget.quote.content,
@@ -249,7 +260,7 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('关闭'),
+            child: Text(l10n.close),
           ),
         ],
       ),
