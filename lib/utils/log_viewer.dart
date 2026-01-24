@@ -72,8 +72,14 @@ class LogViewer {
 
       if (filePath != null) {
         final file = File(filePath);
-        await file.writeAsString(content);
-        AppLogger.i('日志已导出到: $filePath', source: 'LogViewer');
+        // 使用流式导出，避免 OOM 风险
+        await logService.exportLogsToFile(
+          file,
+          minLevel: minLevel,
+          startDate: startDate,
+          endDate: endDate,
+        );
+        AppLogger.i('日志已流式导出到: $filePath', source: 'LogViewer');
         return filePath;
       }
 
