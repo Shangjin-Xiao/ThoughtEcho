@@ -842,16 +842,31 @@ class MediaReferenceService {
 
       final databaseService = DatabaseService();
       // 媒体引用迁移需要处理所有笔记（包括隐藏笔记）
-      final quotes =
-          await databaseService.getAllQuotes(excludeHiddenNotes: false);
-
+      // 修复：使用分页加载以避免内存溢出
       int migratedCount = 0;
+      const int pageSize = 200;
+      var offset = 0;
 
-      for (final quote in quotes) {
-        final success = await syncQuoteMediaReferences(quote);
-        if (success) {
-          migratedCount++;
+      while (true) {
+        final quotes = await databaseService.getUserQuotes(
+          offset: offset,
+          limit: pageSize,
+          excludeHiddenNotes: false,
+        );
+        if (quotes.isEmpty) break;
+
+        for (final quote in quotes) {
+          final success = await syncQuoteMediaReferences(quote);
+          if (success) {
+            migratedCount++;
+          }
         }
+
+        offset += quotes.length;
+        if (quotes.length < pageSize) break;
+
+        // 让出事件循环，避免长时间阻塞UI
+        await Future.delayed(const Duration(milliseconds: 0));
       }
 
       logDebug('迁移完成，共处理 $migratedCount 个笔记');

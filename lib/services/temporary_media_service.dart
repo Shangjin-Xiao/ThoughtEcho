@@ -4,6 +4,7 @@ import 'package:path_provider/path_provider.dart';
 import '../utils/app_logger.dart';
 import '../services/streaming_file_processor.dart';
 import '../services/large_file_manager.dart' as lfm;
+import 'draft_service.dart'; // 导入草稿服务
 
 /// 临时媒体文件管理服务
 ///
@@ -294,9 +295,18 @@ class TemporaryMediaService {
 
       final now = DateTime.now();
 
+      // 获取所有草稿中引用的媒体文件，防止误删
+      final draftMediaPaths = await DraftService().getAllMediaPathsInDrafts();
+      logDebug('发现 ${draftMediaPaths.length} 个被草稿引用的媒体文件，将跳过清理');
+
       await for (final entity in tempMediaDir.list(recursive: true)) {
         if (entity is File) {
           try {
+            // 如果文件被草稿引用，跳过清理
+            if (draftMediaPaths.contains(entity.path)) {
+              continue;
+            }
+
             final stat = await entity.stat();
             final age = now.difference(stat.modified);
 

@@ -94,7 +94,9 @@ class AIService extends ChangeNotifier {
       );
 
       final content = _requestHelper.parseResponse(response);
-      logDebug('AI连接测试成功: $content');
+      final preview =
+          content.length > 20 ? '${content.substring(0, 20)}...' : content;
+      logDebug('AI连接测试成功: $preview');
       return true;
     } catch (e) {
       logDebug('AI连接测试失败: $e');
@@ -1229,7 +1231,9 @@ class AIService extends ChangeNotifier {
         );
 
         final content = _requestHelper.parseResponse(response);
-        logDebug('AI连接测试成功: $content');
+        final preview =
+            content.length > 20 ? '${content.substring(0, 20)}...' : content;
+        logDebug('AI连接测试成功: $preview');
       },
       context: 'AI连接测试',
     );

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:thoughtecho/services/unified_log_service.dart';
+import 'large_file_manager.dart';
 
 /// Windows启动调试服务
 /// 专门用于Windows平台的启动调试和错误诊断
@@ -105,7 +106,8 @@ class WindowsStartupDebugService {
       final debugDir = Directory(path.join(appDir.path, 'debug'));
       final crashFile = File(path.join(debugDir.path, _crashReportFileName));
 
-      await crashFile.writeAsString(json.encode(crashReport));
+      await LargeFileManager.writeStringToFile(
+          crashFile, json.encode(crashReport));
       await _writeDebugLog('崩溃报告已保存: ${crashFile.path}');
     } catch (e) {
       await _writeDebugLog('保存崩溃报告失败: $e');
@@ -228,7 +230,7 @@ class WindowsStartupDebugService {
       final reportFile = File(
         path.join(exportDir.path, 'diagnostic_report.txt'),
       );
-      await reportFile.writeAsString(diagnosticReport);
+      await LargeFileManager.writeStringToFile(reportFile, diagnosticReport);
 
       // 复制日志数据库文件
       try {
@@ -339,7 +341,8 @@ class WindowsStartupDebugService {
         'debugInfo': _debugInfo,
       };
 
-      await progressFile.writeAsString(json.encode(progressData));
+      await LargeFileManager.writeStringToFile(
+          progressFile, json.encode(progressData));
     } catch (e) {
       await _writeDebugLog('保存初始化进度失败: $e');
     }
@@ -411,7 +414,7 @@ class WindowsStartupDebugService {
 注意: 这是自动生成的调试指南，旨在帮助解决启动问题。
 ''';
 
-      await guideFile.writeAsString(guide);
+      await LargeFileManager.writeStringToFile(guideFile, guide);
       await _writeDebugLog('启动指南已创建: ${guideFile.path}');
     } catch (e) {
       await _writeDebugLog('创建启动指南失败: $e');
@@ -456,7 +459,8 @@ class WindowsStartupDebugService {
         final finalReportFile = File(
           path.join(debugDir.path, 'final_diagnostic_report.txt'),
         );
-        await finalReportFile.writeAsString(diagnosticReport);
+        await LargeFileManager.writeStringToFile(
+            finalReportFile, diagnosticReport);
         await _writeDebugLog('最终诊断报告已保存: ${finalReportFile.path}');
       } catch (e) {
         await _writeDebugLog('生成最终诊断报告失败: $e');

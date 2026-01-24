@@ -131,10 +131,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       final quotes = await databaseService.getAllQuotes();
 
       // 调试：打印获取到的所有笔记数量
-      AppLogger.d('getAllQuotes 返回笔记数: ${quotes.length}');
+      AppLogger.d('getAllQuotes returned notes count: ${quotes.length}');
       // 打印每条笔记的日期（前10条）
       for (var i = 0; i < quotes.length && i < 10; i++) {
-        AppLogger.d('  原始笔记[$i]: date=${quotes[i].date}');
+        AppLogger.d('  Raw note[$i]: date=${quotes[i].date}');
       }
 
       // 根据选择的时间范围筛选笔记
@@ -160,7 +160,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       setState(() {
         _isLoadingData = false;
       });
-      AppLogger.e('加载周期数据失败', error: e);
+      AppLogger.e('Failed to load period data', error: e);
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -283,8 +283,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         );
         weatherIcon = WeatherCodeMapper.getIcon(mostWeather);
 
-        // 如果返回的是"未知"，说明mostWeather可能已经是中文描述
-        if (weatherDisplay == '未知') {
+        // 如果返回的是未知描述，说明mostWeather可能已经是描述
+        if (weatherDisplay == l10n.weatherUnknown) {
           weatherDisplay = mostWeather;
           // 反向匹配：根据中文描述找到key以获取更准确的图标
           final key = WeatherCodeMapper.getKeyByDescription(mostWeather);
@@ -301,7 +301,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       _mostTopTag = topTagName;
       _notesPreview = samples.isEmpty ? null : samples;
 
-      // 设置显示用的中文文本和图标
+      // 设置显示用的文本和图标
       _mostDayPeriodDisplay = dayPeriodDisplay;
       _mostDayPeriodIcon = dayPeriodIcon;
       _mostWeatherDisplay = weatherDisplay;
@@ -412,10 +412,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     } else {
       // 调试：记录本地生成洞察的参数
       AppLogger.d(
-        '开始本地生成洞察 - useAI: $useAI, periodLabel: $periodLabel, activeDays: $activeDays, noteCount: $noteCount, totalWordCount: $_totalWordCount',
+        'Start generating local insight - useAI: $useAI, periodLabel: $periodLabel, activeDays: $activeDays, noteCount: $noteCount, totalWordCount: $_totalWordCount',
       );
       AppLogger.d(
-        '本地生成洞察参数 - mostTimePeriod: ${_mostDayPeriodDisplay ?? _mostDayPeriod}, mostWeather: ${_mostWeatherDisplay ?? _mostWeather}, topTag: $_mostTopTag',
+        'Local insight parameters - mostTimePeriod: ${_mostDayPeriodDisplay ?? _mostDayPeriod}, mostWeather: ${_mostWeatherDisplay ?? _mostWeather}, topTag: $_mostTopTag',
       );
 
       final local = context.read<AIService>().buildLocalReportInsight(
@@ -430,7 +430,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
       // 调试：记录本地生成的结果
       AppLogger.d(
-        '本地生成洞察结果 - 长度: ${local.length}, 内容: ${local.isNotEmpty ? local.substring(0, local.length > 50 ? 50 : local.length) : "空字符串"}',
+        'Local insight result - length: ${local.length}, content: ${local.isNotEmpty ? local.substring(0, local.length > 50 ? 50 : local.length) : "empty"}',
       );
 
       setState(() {
@@ -475,9 +475,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     }
 
     // 调试日志
-    AppLogger.d('筛选条件: period=$_selectedPeriod, selectedDate=$_selectedDate');
-    AppLogger.d('筛选范围: startDate=$startDate, endDate=$endDate');
-    AppLogger.d('总笔记数: ${quotes.length}');
+    AppLogger.d(
+        'Filter conditions: period=$_selectedPeriod, selectedDate=$_selectedDate');
+    AppLogger.d('Filter range: startDate=$startDate, endDate=$endDate');
+    AppLogger.d('Total notes: ${quotes.length}');
 
     final filtered = quotes.where((quote) {
       final quoteDateTime = DateTime.parse(quote.date);
@@ -490,10 +491,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       return isInRange;
     }).toList();
 
-    AppLogger.d('筛选后笔记数: ${filtered.length}');
+    AppLogger.d('Filtered notes count: ${filtered.length}');
     // 打印前5条笔记的日期以便调试
     for (var i = 0; i < filtered.length && i < 5; i++) {
-      AppLogger.d('  笔记[$i]: ${filtered[i].date}');
+      AppLogger.d('  Note[$i]: ${filtered[i].date}');
     }
 
     return filtered;
@@ -528,11 +529,12 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       );
 
       logDebug(
-        '已保存洞察到历史记录: ${_insightText.substring(0, _insightText.length > 50 ? 50 : _insightText.length)}...',
+        'Saved insight to history: ${_insightText.substring(0, _insightText.length > 50 ? 50 : _insightText.length)}...',
         source: 'AIPeriodicReportPage',
       );
     } catch (e) {
-      logError('保存洞察到历史记录失败: $e', error: e, source: 'AIPeriodicReportPage');
+      logError('Failed to save insight to history: $e',
+          error: e, source: 'AIPeriodicReportPage');
     }
   }
 
@@ -572,7 +574,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       setState(() {
         _isGeneratingCards = false;
       });
-      AppLogger.e('生成精选卡片失败', error: e);
+      AppLogger.e('Failed to generate featured cards', error: e);
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -618,7 +620,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       setState(() {
         _isLoadingMoreCards = false;
       });
-      AppLogger.e('加载更多卡片失败', error: e);
+      AppLogger.e('Failed to load more cards', error: e);
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -2422,7 +2424,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       regenerateCallback = () async {
         final newCard = await _aiCardService!.generateCard(
           note: quoteForCard!,
-          isRegeneration: true, brandName: AppLocalizations.of(context).appTitle,
+          isRegeneration: true,
+          brandName: AppLocalizations.of(context).appTitle,
         );
         if (mounted) {
           setState(() {

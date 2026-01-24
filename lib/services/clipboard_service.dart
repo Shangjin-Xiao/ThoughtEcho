@@ -95,7 +95,7 @@ class ClipboardService extends ChangeNotifier {
 
       final content = data.text!;
       logDebug(
-        '检测到新的剪贴板内容: ${content.length > 20 ? '${content.substring(0, 20)}...' : content}',
+        '检测到新的剪贴板内容: ${content.length > 20 ? '${content.substring(0, 20)}...' : content} (已脱敏)',
       );
 
       // 内容过长或过短不处理
@@ -113,7 +113,8 @@ class ClipboardService extends ChangeNotifier {
       String? source = extractedInfo['source'];
       String? matchedSubstring = extractedInfo['matched_substring']; // 获取匹配到的子串
 
-      logDebug('从剪贴板提取信息 - 作者: $author, 出处: $source, 匹配子串: $matchedSubstring');
+      logDebug(
+          '从剪贴板提取信息 - 作者: $author, 出处: $source, 匹配子串长度: ${matchedSubstring?.length}');
 
       // 如果提取到了元数据，从原始内容中移除匹配的子串
       final displayContent = (matchedSubstring != null)

@@ -1,6 +1,8 @@
 {
   "@@locale": "en",
   "appTitle": "ThoughtEcho",
+  "draftRestored": "Draft automatically restored",
+  "draftSaved": "Draft saved",
   "cancel": "Cancel",
   "confirm": "Confirm",
   "delete": "Delete",
