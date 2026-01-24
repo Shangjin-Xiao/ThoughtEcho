@@ -2803,6 +2803,11 @@ class DatabaseService extends ChangeNotifier {
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
         await _updateCategoriesStream();
+
+        // 修复：导入/恢复完成后必须重建媒体引用，确保引用表准确
+        logInfo('导入完成，开始重建媒体引用记录...');
+        await MediaReferenceService.migrateExistingQuotes();
+
         notifyListeners();
         logDebug('通过回退方式成功添加分类');
       } catch (retryError) {
