@@ -93,20 +93,11 @@ class SmartPushService extends ChangeNotifier {
           'SmartPushService settings: enabled=${_settings.enabled}, dailyQuoteEnabled=${_settings.dailyQuotePushEnabled}');
 
       // 请求精确闹钟权限（Android 12+）
+      // 移除自动请求，改为在 UI 层（SmartPushSettingsPage）引导用户开启
       if (!kIsWeb && Platform.isAndroid) {
         final canScheduleExact = await _canScheduleExactAlarms();
         if (!canScheduleExact) {
-          AppLogger.i('精确闹钟权限不可用，尝试请求权限');
-          try {
-            final androidPlugin =
-                _notificationsPlugin.resolvePlatformSpecificImplementation<
-                    AndroidFlutterLocalNotificationsPlugin>();
-            if (androidPlugin != null) {
-              await androidPlugin.requestExactAlarmsPermission();
-            }
-          } catch (e) {
-            AppLogger.w('请求精确闹钟权限失败，将使用降级方案', error: e);
-          }
+          AppLogger.i('精确闹钟权限不可用，将使用 WorkManager 降级方案');
         }
       }
 
