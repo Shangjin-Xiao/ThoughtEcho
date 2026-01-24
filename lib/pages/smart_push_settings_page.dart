@@ -208,6 +208,68 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
             // 每日一言独立推送（始终显示，不依赖推送模式）
             _buildDailyQuoteCard(l10n, theme, colorScheme),
 
+            // 精确闹钟权限提醒（如果未授予）
+            FutureBuilder<bool>(
+              future:
+                  context.read<SmartPushService>().checkExactAlarmPermission(),
+              builder: (context, snapshot) {
+                if (snapshot.hasData && snapshot.data == false) {
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 16),
+                    child: Material(
+                      color: colorScheme.errorContainer.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(16),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(16),
+                        onTap: () async {
+                          final smartPushService =
+                              context.read<SmartPushService>();
+                          await smartPushService.requestExactAlarmPermission();
+                          setState(() {}); // 刷新页面状态
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Row(
+                            children: [
+                              Icon(Icons.warning_amber_rounded,
+                                  color: colorScheme.error),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      l10n.smartPushExactAlarmTitle,
+                                      style:
+                                          theme.textTheme.titleSmall?.copyWith(
+                                        color: colorScheme.onErrorContainer,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      l10n.smartPushExactAlarmHint,
+                                      style:
+                                          theme.textTheme.bodySmall?.copyWith(
+                                        color: colorScheme.onErrorContainer,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Icon(Icons.chevron_right,
+                                  color: colorScheme.error),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
+
             // 自定义模式：显示完整高级选项
             if (_settings.pushMode == PushMode.custom) ...[
               const SizedBox(height: 16),
@@ -342,7 +404,38 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                       context: context,
                       builder: (ctx) => AlertDialog(
                         title: Text(l10n.smartPushExactAlarmTitle),
-                        content: Text(l10n.smartPushExactAlarmMessage),
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(l10n.smartPushExactAlarmMessage),
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(Icons.info_outline,
+                                      size: 16, color: colorScheme.primary),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      l10n.smartPushExactAlarmHint,
+                                      style:
+                                          theme.textTheme.bodySmall?.copyWith(
+                                        color: colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(ctx, false),
