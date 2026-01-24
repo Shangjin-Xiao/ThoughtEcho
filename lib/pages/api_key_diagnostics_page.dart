@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../gen_l10n/app_localizations.dart';
 import '../services/api_key_manager.dart';
 import '../services/settings_service.dart';
 
@@ -12,6 +13,7 @@ class ApiKeyDiagnosticsPage extends StatefulWidget {
 }
 
 class _ApiKeyDiagnosticsPageState extends State<ApiKeyDiagnosticsPage> {
+  AppLocalizations get l10n => AppLocalizations.of(context);
   String _diagnosticResult = '';
   bool _isLoading = false;
 
@@ -19,7 +21,7 @@ class _ApiKeyDiagnosticsPageState extends State<ApiKeyDiagnosticsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('API密钥诊断'),
+        title: Text(l10n.apiKeyDiagnosticsTitle),
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
       ),
       body: Padding(
@@ -27,14 +29,14 @@ class _ApiKeyDiagnosticsPageState extends State<ApiKeyDiagnosticsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'API密钥诊断工具',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            Text(
+              l10n.apiKeyDiagnosticsTool,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            const Text(
-              '此工具将检查API密钥的存储和获取情况，帮助诊断401认证错误。',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
+            Text(
+              l10n.apiKeyDiagnosticsDesc,
+              style: const TextStyle(fontSize: 14, color: Colors.grey),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
@@ -45,13 +47,14 @@ class _ApiKeyDiagnosticsPageState extends State<ApiKeyDiagnosticsPage> {
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('运行诊断'),
+                  : Text(l10n.runDiagnostics),
             ),
             const SizedBox(height: 24),
             if (_diagnosticResult.isNotEmpty) ...[
-              const Text(
-                '诊断结果:',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              Text(
+                l10n.diagnosticResultLabel,
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Expanded(
@@ -88,8 +91,8 @@ class _ApiKeyDiagnosticsPageState extends State<ApiKeyDiagnosticsPage> {
     });
 
     final buffer = StringBuffer();
-    buffer.writeln('=== API密钥诊断报告 ===');
-    buffer.writeln('时间: ${DateTime.now()}');
+    buffer.writeln(l10n.diagnosticReportHeader);
+    buffer.writeln(l10n.diagnosticReportTime(DateTime.now().toString()));
     buffer.writeln();
 
     try {
@@ -105,33 +108,41 @@ class _ApiKeyDiagnosticsPageState extends State<ApiKeyDiagnosticsPage> {
       final currentProvider = multiSettings.currentProvider;
 
       // 1. 多供应商配置检查
-      buffer.writeln('1. 多供应商配置...');
-      buffer.writeln('   - 当前供应商: ${currentProvider?.name ?? "未选择"}');
-      buffer.writeln('   - 可用供应商数量: ${multiSettings.providers.length}');
+      buffer.writeln(l10n.diagnosticMultiProviderCheck);
+      buffer.writeln(l10n.diagnosticCurrentProvider(
+          currentProvider?.name ?? l10n.notSelectedStatus));
       buffer.writeln(
-        '   - 已启用供应商: ${multiSettings.providers.where((p) => p.isEnabled).length}',
+          l10n.diagnosticAvailableProviders(multiSettings.providers.length));
+      buffer.writeln(
+        l10n.diagnosticEnabledProviders(
+            multiSettings.providers.where((p) => p.isEnabled).length),
       );
       buffer.writeln();
 
       if (currentProvider != null) {
         // 2. 当前供应商详情
-        buffer.writeln('2. 当前供应商详情...');
-        buffer.writeln('   - ID: ${currentProvider.id}');
-        buffer.writeln('   - 名称: ${currentProvider.name}');
-        buffer.writeln('   - API URL: ${currentProvider.apiUrl}');
-        buffer.writeln('   - 模型: ${currentProvider.model}');
-        buffer.writeln('   - 已启用: ${currentProvider.isEnabled ? "是" : "否"}');
+        buffer.writeln(l10n.diagnosticProviderDetails);
+        buffer.writeln(l10n.diagnosticProviderId(currentProvider.id));
+        buffer.writeln(l10n.diagnosticProviderName(currentProvider.name));
+        buffer.writeln(l10n.diagnosticProviderUrl(currentProvider.apiUrl));
+        buffer.writeln(l10n.diagnosticProviderModel(currentProvider.model));
+        buffer.writeln(l10n.diagnosticProviderEnabled(
+            currentProvider.isEnabled ? l10n.yesStatus : l10n.noStatus));
         buffer.writeln();
 
         // 3. API密钥检查
-        buffer.writeln('3. API密钥检查...');
+        buffer.writeln(l10n.diagnosticApiKeyCheck);
         final hasApiKeyInSettings = currentProvider.apiKey.trim().isNotEmpty;
-        buffer.writeln('   - 设置中有密钥: ${hasApiKeyInSettings ? "是" : "否"}');
+        buffer.writeln(l10n.diagnosticApiKeyInSettings(
+            hasApiKeyInSettings ? l10n.yesStatus : l10n.noStatus));
 
         if (hasApiKeyInSettings) {
-          buffer.writeln('   - 设置中密钥长度: ${currentProvider.apiKey.length}');
           buffer.writeln(
-            '   - 设置中密钥前缀: ${currentProvider.apiKey.length > 15 ? "${currentProvider.apiKey.substring(0, 15)}..." : currentProvider.apiKey}',
+              l10n.diagnosticApiKeyLength(currentProvider.apiKey.length));
+          buffer.writeln(
+            l10n.diagnosticApiKeyPrefix(currentProvider.apiKey.length > 15
+                ? "${currentProvider.apiKey.substring(0, 15)}..."
+                : currentProvider.apiKey),
           );
         }
 
@@ -140,64 +151,76 @@ class _ApiKeyDiagnosticsPageState extends State<ApiKeyDiagnosticsPage> {
           currentProvider.id,
         );
         final hasSecureApiKey = secureApiKey.isNotEmpty;
-        buffer.writeln('   - 安全存储中有密钥: ${hasSecureApiKey ? "是" : "否"}');
+        buffer.writeln(l10n.diagnosticSecureApiKeyExists(
+            hasSecureApiKey ? l10n.yesStatus : l10n.noStatus));
 
         if (hasSecureApiKey) {
-          buffer.writeln('   - 安全存储密钥长度: ${secureApiKey.length}');
+          buffer
+              .writeln(l10n.diagnosticSecureApiKeyLength(secureApiKey.length));
           buffer.writeln(
-            '   - 安全存储密钥前缀: ${secureApiKey.length > 15 ? "${secureApiKey.substring(0, 15)}..." : secureApiKey}',
+            l10n.diagnosticSecureApiKeyPrefix(secureApiKey.length > 15
+                ? "${secureApiKey.substring(0, 15)}..."
+                : secureApiKey),
           );
         }
         buffer.writeln();
 
         // 4. 密钥验证
-        buffer.writeln('4. 密钥验证...');
+        buffer.writeln(l10n.diagnosticApiKeyValidation);
         final isValidAsync = await apiKeyManager.hasValidProviderApiKey(
           currentProvider.id,
         );
-        buffer.writeln('   - 异步验证: ${isValidAsync ? "通过" : "失败"}');
+        buffer.writeln(l10n.diagnosticAsyncValidation(
+            isValidAsync ? l10n.passStatus : l10n.failStatus));
 
         if (hasSecureApiKey) {
           final isFormatValid = apiKeyManager.isValidApiKeyFormat(secureApiKey);
-          buffer.writeln('   - 格式验证: ${isFormatValid ? "通过" : "失败"}');
+          buffer.writeln(l10n.diagnosticFormatValidation(
+              isFormatValid ? l10n.passStatus : l10n.failStatus));
         }
         buffer.writeln();
       } else {
-        buffer.writeln('2. 错误: 未选择当前供应商');
+        buffer.writeln(l10n.diagnosticErrorNoProvider);
         buffer.writeln();
       }
 
       // 5. 所有供应商状态
-      buffer.writeln('5. 所有供应商状态...');
+      buffer.writeln(l10n.diagnosticAllProvidersStatus);
       for (final provider in multiSettings.providers) {
         final hasKey = await apiKeyManager.hasValidProviderApiKey(provider.id);
         buffer.writeln(
-          '   - ${provider.name}: ${hasKey ? "✓" : "✗"} ${provider.isEnabled ? "(已启用)" : "(已禁用)"}',
+          l10n.diagnosticProviderStatusItem(
+              provider.name,
+              hasKey ? "✓" : "✗",
+              provider.isEnabled
+                  ? "(${l10n.settingsLocationEnabled})"
+                  : "(${l10n.locationServiceDisabled})"),
         );
       }
       buffer.writeln();
 
       // 6. 建议
-      buffer.writeln('6. 建议...');
+      buffer.writeln(l10n.diagnosticSuggestions);
       if (currentProvider == null) {
-        buffer.writeln('   - 请选择一个AI服务商');
+        buffer.writeln(l10n.diagnosticSuggestionSelectProvider);
       } else if (!currentProvider.isEnabled) {
-        buffer.writeln('   - 请启用当前选择的AI服务商');
+        buffer.writeln(l10n.diagnosticSuggestionEnableProvider);
       } else {
         final hasValidKey = await apiKeyManager.hasValidProviderApiKey(
           currentProvider.id,
         );
         if (!hasValidKey) {
-          buffer.writeln('   - 请为 ${currentProvider.name} 配置有效的API密钥');
+          buffer.writeln(
+              l10n.diagnosticSuggestionConfigureKey(currentProvider.name));
         } else {
-          buffer.writeln('   - ✓ API密钥配置正常');
+          buffer.writeln(l10n.diagnosticSuggestionNormal);
         }
       }
 
       buffer.writeln();
-      buffer.writeln('=== 诊断完成 ===');
+      buffer.writeln(l10n.diagnosticComplete);
     } catch (e) {
-      buffer.writeln('诊断过程中发生错误: $e');
+      buffer.writeln(l10n.diagnosticError(e.toString()));
     }
 
     setState(() {

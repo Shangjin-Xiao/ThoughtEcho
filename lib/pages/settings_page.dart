@@ -1047,37 +1047,38 @@ class SettingsPageState extends State<SettingsPage> {
     final locationService =
         Provider.of<LocationService>(context, listen: false);
     final currentLocale = settingsService.localeCode;
+    final l10n = AppLocalizations.of(context);
 
     String getLanguageName(String? code) {
       switch (code) {
         case 'zh':
-          return '简体中文';
+          return l10n.languageChinese;
         case 'en':
-          return 'English';
+          return l10n.languageEnglish;
         case 'ja':
-          return '日本語';
+          return l10n.languageJapanese;
         case 'ko':
-          return '한국어';
+          return l10n.languageKorean;
         case 'es':
-          return 'Español';
+          return l10n.languageSpanish;
         case 'fr':
-          return 'Français';
+          return l10n.languageFrench;
         case 'de':
-          return 'Deutsch';
+          return l10n.languageGerman;
         default:
-          return '跟随系统';
+          return l10n.languageFollowSystem;
       }
     }
 
     return ListTile(
-      title: const Text('语言 / Language'),
+      title: Text(l10n.languageSettings),
       subtitle: Text(getLanguageName(currentLocale)),
       leading: const Icon(Icons.translate),
       onTap: () {
         showDialog(
           context: context,
           builder: (dialogContext) => AlertDialog(
-            title: const Text('选择语言 / Select Language'),
+            title: Text(l10n.selectLanguage),
             content: StatefulBuilder(
               builder: (context, setState) {
                 return RadioGroup<String?>(
@@ -1090,34 +1091,37 @@ class SettingsPageState extends State<SettingsPage> {
                   },
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
-                    children: const [
+                    children: [
                       RadioListTile<String?>(
-                        title: Text('跟随系统 / Follow System'),
+                        title: Text(l10n.languageFollowSystem),
                         value: null,
                       ),
-                      RadioListTile<String?>(title: Text('简体中文'), value: 'zh'),
                       RadioListTile<String?>(
-                        title: Text('English'),
+                        title: Text(l10n.languageChinese),
+                        value: 'zh',
+                      ),
+                      RadioListTile<String?>(
+                        title: const Text('English'),
                         value: 'en',
                       ),
                       RadioListTile<String?>(
-                        title: Text('日本語'),
+                        title: const Text('日本語'),
                         value: 'ja',
                       ),
                       RadioListTile<String?>(
-                        title: Text('한국어'),
+                        title: const Text('한국어'),
                         value: 'ko',
                       ),
                       RadioListTile<String?>(
-                        title: Text('Español'),
+                        title: const Text('Español'),
                         value: 'es',
                       ),
                       RadioListTile<String?>(
-                        title: Text('Français'),
+                        title: const Text('Français'),
                         value: 'fr',
                       ),
                       RadioListTile<String?>(
-                        title: Text('Deutsch'),
+                        title: const Text('Deutsch'),
                         value: 'de',
                       ),
                     ],
@@ -1125,6 +1129,12 @@ class SettingsPageState extends State<SettingsPage> {
                 );
               },
             ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: Text(l10n.cancel),
+              ),
+            ],
           ),
         );
       },
@@ -1586,12 +1596,13 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('内容长度：${result.length}字符'),
-                  Text('HTML格式：${isHtml ? '✅' : '❌'}'),
-                  Text('JSON格式：${isJson ? '⚠️' : '✅'}'),
-                  Text('包含HTML标签：${containsHtmlTags ? '✅' : '❌'}'),
+                  Text(l10n.contentLengthLabel(result.length)),
+                  Text(l10n.htmlFormatLabel(isHtml ? '✅' : '❌')),
+                  Text(l10n.jsonFormatLabel(isJson ? '⚠️' : '✅')),
+                  Text(
+                      l10n.containsHtmlTagsLabel(containsHtmlTags ? '✅' : '❌')),
                   const SizedBox(height: 10),
-                  const Text('前100字符：'),
+                  Text(l10n.first100CharsLabel),
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
@@ -1638,8 +1649,8 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
           if (mounted) {
             Navigator.pop(context);
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('测试失败：AI返回了空内容'),
+              SnackBar(
+                content: Text(l10n.testFailedEmptyContent),
                 duration: AppConstants.snackBarDurationError,
               ),
             );
@@ -1650,12 +1661,12 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
         if (mounted) {
           Navigator.pop(context); // 关闭加载对话框
 
-          String errorMessage = '测试失败：$e';
+          String errorMessage = l10n.testFailed(e.toString());
           if (e.toString().contains('API Key')) {
-            errorMessage = '测试失败：请先在AI设置中配置有效的API Key';
+            errorMessage = l10n.testFailedApiKey;
           } else if (e.toString().contains('network') ||
               e.toString().contains('连接')) {
-            errorMessage = '测试失败：网络连接异常';
+            errorMessage = l10n.testFailedNetwork;
           }
 
           ScaffoldMessenger.of(context).showSnackBar(

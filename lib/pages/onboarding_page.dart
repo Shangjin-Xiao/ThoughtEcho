@@ -247,12 +247,14 @@ class _OnboardingPageState extends State<OnboardingPage>
                   type: LottieAnimationType.pulseLoading,
                   width: s,
                   height: s,
-                  semanticLabel: '正在准备',
+                  semanticLabel:
+                      AppLocalizations.of(context).onboardingPreparing,
                 );
               },
             ),
             const SizedBox(height: 20),
-            Text('正在准备...', style: Theme.of(context).textTheme.titleMedium),
+            Text(AppLocalizations.of(context).onboardingPreparing,
+                style: Theme.of(context).textTheme.titleMedium),
           ],
         ),
       ),
@@ -262,6 +264,7 @@ class _OnboardingPageState extends State<OnboardingPage>
   /// 错误视图
   Widget _buildErrorView() {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       body: Center(
@@ -277,7 +280,7 @@ class _OnboardingPageState extends State<OnboardingPage>
               ),
               const SizedBox(height: 20),
               Text(
-                AppLocalizations.of(context).onboardingError,
+                l10n.onboardingError,
                 style: theme.textTheme.headlineSmall,
               ),
               const SizedBox(height: 12),
@@ -290,7 +293,7 @@ class _OnboardingPageState extends State<OnboardingPage>
               FilledButton(
                 onPressed: _navigateToHome,
                 child: Text(
-                  AppLocalizations.of(context).onboardingContinueUsing,
+                  l10n.onboardingContinueUsing,
                 ),
               ),
             ],
