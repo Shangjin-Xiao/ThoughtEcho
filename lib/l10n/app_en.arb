@@ -1691,6 +1691,41 @@
       }
     }
   },
+  "detectedAIJSONFormat": "⚠️ Detected AI returned JSON data\n\nThis indicates that the AI model might have misunderstood the request, returning data analysis instead of an HTML report.\n\nContent returned:\n{json}\n\nPossible causes:\n• AI confused annual report generation with content analysis\n• Prompt needs further optimization\n• Model version or configuration issue\n\nSuggested solutions:\n1. Regenerate report (AI might correct the error)\n2. Check model configuration in AI settings\n3. Try using native Flutter report feature\n4. Update AI prompt configuration\n\nFor technical support, please save this error message and contact the developer.",
+  "@detectedAIJSONFormat": {
+    "placeholders": {
+      "json": {
+        "type": "String"
+      }
+    }
+  },
+  "detectedAbnormalFormat": "⚠️ Detected abnormal data format\n\nAI returned JSON data that could not be parsed correctly, which might be due to:\n• Network transport issues\n• AI service exception\n• Data format error\n\nOriginal content:\n{content}\n\nSuggested to regenerate the report or use the native report feature.",
+  "@detectedAbnormalFormat": {
+    "placeholders": {
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "aiGeneratedTextContent": "📄 AI Generated Text Content\n\n{content}\n\n💡 Tip: AI returned a plain text summary instead of an HTML report.\nThis might be because the model understood the content but did not output it in HTML format.\n\nFull content can be viewed in a browser, and the system will automatically wrap it in HTML format.",
+  "@aiGeneratedTextContent": {
+    "placeholders": {
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "htmlReportCopiedSteps": "HTML report content copied to clipboard. Please follow these steps:",
+  "browserInstructionsStep1": "1. Open browser (Chrome/Safari, etc.)",
+  "browserInstructionsStep2": "2. Open a new blank page or tab",
+  "browserInstructionsStep3": "3. In the address bar, enter: data:text/html,",
+  "browserInstructionsStep4": "4. Paste the copied content",
+  "browserInstructionsStep5": "5. Press enter to view the report",
+  "desktopInstructionsStep1": "1. Create a new text file and paste content",
+  "desktopInstructionsStep2": "2. Save the file with .html extension",
+  "desktopInstructionsStep3": "3. Double-click the file to open in browser",
+  "annualReportHtmlTitle": "ThoughtEcho {year} Annual Report",
+  "generationTimeLabel": "Generated at: {time}",
   "formattedDate": "{month}/{day}",
   "@formattedDate": {
     "placeholders": {
