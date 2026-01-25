@@ -41,6 +41,7 @@ class NoteFullEditorPage extends StatefulWidget {
   final Quote? initialQuote;
   final List<NoteCategory>? allTags;
   final bool isRestoredDraft; // 新增：标记是否为恢复的草稿
+  final String? restoredDraftId; // 新增：恢复草稿的原始ID
 
   const NoteFullEditorPage({
     super.key,
@@ -48,6 +49,7 @@ class NoteFullEditorPage extends StatefulWidget {
     this.initialQuote,
     this.allTags,
     this.isRestoredDraft = false, // 默认为 false
+    this.restoredDraftId, // 恢复草稿的原始ID
   });
 
   @override
@@ -741,11 +743,18 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   }
 
   String _buildDraftStorageKey() {
+    // 1. 如果明确指定了恢复草稿的ID，优先使用它
+    if (widget.restoredDraftId != null && widget.restoredDraftId!.isNotEmpty) {
+      return widget.restoredDraftId!;
+    }
+    // 2. 如果是编辑现有笔记，使用笔记ID
     if (widget.initialQuote?.id != null &&
         widget.initialQuote!.id!.isNotEmpty) {
-      return 'draft_${widget.initialQuote!.id}';
+      return widget.initialQuote!.id!;
     }
-    return 'draft_new_${widget.initialContent.hashCode}';
+    // 3. 新建笔记，使用初始内容的哈希值作为临时ID
+    // 注意：如果是恢复的草稿，应优先使用 restoredDraftId
+    return 'new_note_${widget.initialContent.hashCode}';
   }
 
   void _attachDraftListener() {
@@ -1291,6 +1300,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   }
 
   Future<void> _saveContent() async {
+    // 立即取消草稿保存定时器，防止在保存过程中再次触发草稿保存
+    _draftSaveTimer?.cancel();
+    _draftLoaded = false; // 标记草稿已处理，防止后续监听再次开启定时器
+
     final db = Provider.of<DatabaseService>(context, listen: false);
 
     final l10n = AppLocalizations.of(context);

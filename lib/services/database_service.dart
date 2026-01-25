@@ -2981,6 +2981,11 @@ class DatabaseService extends ChangeNotifier {
     });
   }
 
+  /// 刷新笔记流数据（公开方法）
+  void refreshQuotes() {
+    _refreshQuotesStream();
+  }
+
   // 在增删改后刷新分页流数据
   void _refreshQuotesStream() {
     if (_quotesController != null && !_quotesController!.isClosed) {

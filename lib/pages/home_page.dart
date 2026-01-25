@@ -456,12 +456,13 @@ class _HomePageState extends State<HomePage>
         final deltaContent = draftData['deltaContent'] as String?;
 
         Quote? initialQuote;
+        Quote? original;
 
         if (!isNew) {
           // 如果是现有笔记，尝试从数据库获取原始信息
           try {
             final db = context.read<DatabaseService>();
-            final original = await db.getQuoteById(draftId);
+            original = await db.getQuoteById(draftId);
             if (original != null) {
               // 使用草稿内容覆盖原始笔记内容
               initialQuote = original.copyWith(
@@ -479,6 +480,8 @@ class _HomePageState extends State<HomePage>
                 weather: draftData['weather'] as String?,
                 temperature: draftData['temperature'] as String?,
               );
+            } else {
+              logDebug('恢复草稿时发现原始笔记已删除，将作为新笔记处理');
             }
           } catch (e) {
             logDebug('恢复草稿时获取原始笔记失败: $e');
@@ -488,7 +491,7 @@ class _HomePageState extends State<HomePage>
         if (initialQuote == null) {
           // 新建笔记或找不到原始笔记，构造新的Quote
           initialQuote = Quote(
-            id: isNew ? null : draftId,
+            id: (isNew || original == null) ? null : draftId,
             content: plainText,
             deltaContent: deltaContent,
             date: DateTime.now().toIso8601String(),
@@ -510,17 +513,24 @@ class _HomePageState extends State<HomePage>
 
         // 导航到全屏编辑器
         if (mounted) {
-          await Navigator.push(
+          final saved = await Navigator.push<bool>(
             context,
             MaterialPageRoute(
               builder: (context) => NoteFullEditorPage(
                 initialContent: initialQuote!.content,
                 initialQuote: initialQuote,
                 isRestoredDraft: true, // 标记为恢复的草稿
+                restoredDraftId: draftId, // 传递恢复草稿的原始ID，确保 key 稳定
                 // 如果有标签信息，也可以传递 allTags，但这通常由编辑器自己加载
               ),
             ),
           );
+
+          // 如果保存成功返回，强制刷新列表
+          if (saved == true && mounted) {
+            logDebug('编辑器保存成功返回，触发列表刷新');
+            context.read<DatabaseService>().refreshQuotes();
+          }
           return true; // 已处理恢复
         }
       }
