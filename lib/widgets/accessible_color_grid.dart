@@ -71,90 +71,85 @@ class AccessibleColorGrid extends StatelessWidget {
             spacing: 12,
             runSpacing: 12,
             alignment: WrapAlignment.start,
-            children:
-                presetColors.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final color = entry.value;
-                  String? colorHex;
-                  if (color != Colors.transparent) {
-                    colorHex =
-                        '#${color.toARGB32().toRadixString(16).substring(2)}';
-                  }
+            children: presetColors.asMap().entries.map((entry) {
+              final index = entry.key;
+              final color = entry.value;
+              String? colorHex;
+              if (color != Colors.transparent) {
+                colorHex =
+                    '#${color.toARGB32().toRadixString(16).substring(2)}';
+              }
 
-                  final bool isSelected =
-                      color == Colors.transparent
-                          ? selectedColorHex == null
-                          : selectedColorHex == colorHex;
+              final bool isSelected = color == Colors.transparent
+                  ? selectedColorHex == null
+                  : selectedColorHex == colorHex;
 
-                  // Generate accessible label
-                  String label;
-                  if (color == Colors.transparent) {
-                    label = l10n.noColor;
-                  } else {
-                    // Try to map colors to simple names based on index/row if possible,
-                    // or just use generic "Color option X".
-                    // Row 1 (0-7): Light variants
-                    // Row 2 (8-14): Normal variants
-                    // Row 3 (15-21): Deep variants (though duplicates in code)
-                    // We can use simple heuristics or just index.
-                    label = '${l10n.color} ${index + 1}';
-                  }
+              // Generate accessible label
+              String label;
+              if (color == Colors.transparent) {
+                label = l10n.noColor;
+              } else {
+                // Try to map colors to simple names based on index/row if possible,
+                // or just use generic "Color option X".
+                // Row 1 (0-7): Light variants
+                // Row 2 (8-14): Normal variants
+                // Row 3 (15-21): Deep variants (though duplicates in code)
+                // We can use simple heuristics or just index.
+                label = '${l10n.color} ${index + 1}';
+              }
 
-                  return Semantics(
-                    label: label,
-                    selected: isSelected,
-                    button: true,
-                    child: InkWell(
-                      onTap: () => onColorSelected(color),
+              return Semantics(
+                label: label,
+                selected: isSelected,
+                button: true,
+                child: InkWell(
+                  onTap: () => onColorSelected(color),
+                  borderRadius: BorderRadius.circular(21),
+                  child: Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: color,
                       borderRadius: BorderRadius.circular(21),
-                      child: Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: color,
-                          borderRadius: BorderRadius.circular(21),
-                          border: Border.all(
-                            color:
-                                isSelected
-                                    ? colorScheme.primary
-                                    : color == Colors.transparent
-                                    ? Colors.grey.applyOpacity(0.5)
-                                    : Colors.transparent,
-                            width: 2,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.applyOpacity(0.05),
-                              spreadRadius: 1,
-                              blurRadius: 3,
-                              offset: const Offset(0, 1),
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child:
-                              isSelected
-                                  ? Icon(
-                                    Icons.check_circle,
-                                    color:
-                                        color == Colors.transparent ||
-                                                color.computeLuminance() > 0.7
-                                            ? colorScheme.primary
-                                            : Colors.white,
-                                    size: 24,
-                                  )
-                                  : color == Colors.transparent
-                                  ? const Icon(
-                                    Icons.block,
-                                    color: Colors.grey,
-                                    size: 18,
-                                  )
-                                  : null,
-                        ),
+                      border: Border.all(
+                        color: isSelected
+                            ? colorScheme.primary
+                            : color == Colors.transparent
+                                ? Colors.grey.applyOpacity(0.5)
+                                : Colors.transparent,
+                        width: 2,
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.applyOpacity(0.05),
+                          spreadRadius: 1,
+                          blurRadius: 3,
+                          offset: const Offset(0, 1),
+                        ),
+                      ],
                     ),
-                  );
-                }).toList(),
+                    child: Center(
+                      child: isSelected
+                          ? Icon(
+                              Icons.check_circle,
+                              color: color == Colors.transparent ||
+                                      color.computeLuminance() > 0.7
+                                  ? colorScheme.primary
+                                  : Colors.white,
+                              size: 24,
+                            )
+                          : color == Colors.transparent
+                              ? const Icon(
+                                  Icons.block,
+                                  color: Colors.grey,
+                                  size: 18,
+                                )
+                              : null,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
           ),
         ],
       ),

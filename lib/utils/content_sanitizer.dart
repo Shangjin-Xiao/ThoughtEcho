@@ -29,18 +29,21 @@ class ContentSanitizer {
       return html;
     }
 
-    final cspTag = '<meta http-equiv="Content-Security-Policy" content="$_defaultCsp">';
+    final cspTag =
+        '<meta http-equiv="Content-Security-Policy" content="$_defaultCsp">';
 
     // Try to find <head> tag (case-insensitive), preserving attributes
     final headRegex = RegExp(r'(<head[^>]*>)', caseSensitive: false);
     if (headRegex.hasMatch(html)) {
-      return html.replaceFirstMapped(headRegex, (match) => '${match.group(0)}\n    $cspTag');
+      return html.replaceFirstMapped(
+          headRegex, (match) => '${match.group(0)}\n    $cspTag');
     }
 
     // Try to find <html> tag, preserving attributes
     final htmlRegex = RegExp(r'(<html[^>]*>)', caseSensitive: false);
     if (htmlRegex.hasMatch(html)) {
-      return html.replaceFirstMapped(htmlRegex, (match) => '${match.group(0)}\n<head>\n    $cspTag\n</head>');
+      return html.replaceFirstMapped(htmlRegex,
+          (match) => '${match.group(0)}\n<head>\n    $cspTag\n</head>');
     }
 
     // If no structure, just prepend it

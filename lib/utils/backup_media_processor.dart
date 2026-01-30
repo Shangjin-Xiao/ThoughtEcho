@@ -152,8 +152,8 @@ class BackupMediaProcessor {
         // 检查文件是否可以处理（使用缓存的结果）
         if (await _canProcessFileQuickly(filePath)) {
           // 生成相对路径，并统一使用正斜杠以确保 ZIP 跨平台兼容
-          final relativePath = path.relative(filePath, from: appDirPath)
-              .replaceAll(r'\', '/');
+          final relativePath =
+              path.relative(filePath, from: appDirPath).replaceAll(r'\', '/');
           return MapEntry(relativePath, filePath);
         }
 
@@ -406,7 +406,8 @@ class BackupMediaProcessor {
       final referencedFiles = <String>[];
 
       // 预先构建引用快照，避免单文件多次扫描
-      final snapshot = await MediaReferenceService.buildReferenceSnapshotForBackup();
+      final snapshot =
+          await MediaReferenceService.buildReferenceSnapshotForBackup();
       final appDir = await getApplicationDocumentsDirectory();
       final appPath = path.normalize(appDir.path);
 
@@ -419,12 +420,10 @@ class BackupMediaProcessor {
         );
         final canonicalKey =
             MediaReferenceService.canonicalKeyForBackup(normalizedPath);
-        final hasStoredRefs = snapshot.storedIndex[canonicalKey]
-                ?.values
+        final hasStoredRefs = snapshot.storedIndex[canonicalKey]?.values
                 .any((refs) => refs.isNotEmpty) ??
             false;
-        final hasQuoteRefs = snapshot.quoteIndex[canonicalKey]
-                ?.values
+        final hasQuoteRefs = snapshot.quoteIndex[canonicalKey]?.values
                 .any((refs) => refs.isNotEmpty) ??
             false;
 

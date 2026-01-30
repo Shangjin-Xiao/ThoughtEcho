@@ -1017,8 +1017,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
         final secureContent = ContentSanitizer.injectCsp(widget.htmlContent);
 
         // 保存文件
-        await LargeFileManager.writeStringToFile(
-            reportFile, secureContent);
+        await LargeFileManager.writeStringToFile(reportFile, secureContent);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
