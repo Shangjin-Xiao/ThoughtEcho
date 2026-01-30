@@ -3114,6 +3114,9 @@
   "unsavedChangesDesc": "You have unsaved edits. Do you want to discard these changes?",
   "continueEditing": "Continue Editing",
   "discardChanges": "Discard Changes",
+  "actionFavorite": "Favorite",
+  "actionUnfavorite": "Unfavorite",
+  "moreOptions": "More options",
 
   "localAiFeatures": "Local AI Features",
   "localAiFeaturesPreview": "Preview",
@@ -3304,8 +3307,5 @@
   "smartPushExactAlarmTitle": "Exact Alarm Permission",
   "smartPushExactAlarmMessage": "To ensure notifications arrive on time, please grant exact alarm permission. You can still use push without it, but timing may vary by a few minutes.",
   "smartPushGoToSettings": "Go to Settings",
-  "recommended": "Recommended",
-  "actionFavorite": "Favorite",
-  "actionUnfavorite": "Unfavorite",
-  "moreOptions": "More options"
+  "recommended": "Recommended"
 }

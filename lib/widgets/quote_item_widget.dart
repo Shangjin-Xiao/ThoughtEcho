@@ -767,8 +767,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
 
                   // 更多操作按钮
                   PopupMenuButton<String>(
-                    key: widget.moreButtonGuideKey, // 功能引导 key
                     tooltip: l10n.moreOptions,
+                    key: widget.moreButtonGuideKey, // 功能引导 key
                     icon: Icon(Icons.more_vert, color: iconColor),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),

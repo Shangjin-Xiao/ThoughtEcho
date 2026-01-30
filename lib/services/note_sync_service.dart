@@ -7,6 +7,7 @@ import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
 import 'package:thoughtecho/services/thoughtecho_discovery_service.dart';
+import 'package:thoughtecho/services/mdns_discovery_service.dart';
 import 'package:thoughtecho/services/localsend/localsend_server.dart';
 import 'package:thoughtecho/services/localsend/localsend_send_provider.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
@@ -15,6 +16,7 @@ import 'package:thoughtecho/models/merge_report.dart';
 import 'package:http/http.dart' as http;
 import 'device_identity_manager.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/utils/ios_local_network_permission.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 
 /// 同步状态枚举

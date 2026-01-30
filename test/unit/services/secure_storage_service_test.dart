@@ -8,8 +8,7 @@ import 'package:thoughtecho/utils/mmkv_ffi_fix.dart'; // Import SafeMMKV
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  const MethodChannel channel =
-      MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
+  const MethodChannel channel = MethodChannel('plugins.it_nomads.com/flutter_secure_storage');
 
   final Map<String, String> storage = {};
 
@@ -26,8 +25,7 @@ void main() {
     await safeMMKV.clear();
 
     // Mock FlutterSecureStorage
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(
       channel,
       (MethodCall methodCall) async {
         if (methodCall.method == 'read') {
@@ -75,9 +73,7 @@ void main() {
     expect(await service.getProviderApiKey('anthropic'), null);
   });
 
-  test(
-      'should migrate legacy data from SharedPreferences to FlutterSecureStorage',
-      () async {
+  test('should migrate legacy data from SharedPreferences to FlutterSecureStorage', () async {
     // 1. Setup legacy data using SafeMMKV directly to ensure it persists in the singleton
     final legacyKeys = {'openai': 'sk-legacy-key'};
     final legacyJson = jsonEncode(legacyKeys);
