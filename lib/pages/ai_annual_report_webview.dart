@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
 import '../services/large_file_manager.dart';
 import '../constants/app_constants.dart';
+import '../utils/content_sanitizer.dart';
 import '../gen_l10n/app_localizations.dart';
 
 class AIAnnualReportWebView extends StatefulWidget {
@@ -425,6 +426,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'none'; object-src 'none'; style-src 'unsafe-inline'; img-src data: https:; font-src data: https:; connect-src 'none'; media-src 'none'; frame-src 'none'; child-src 'none';">
     <title>${l10n.annualReportHtmlTitle(widget.year.toString())}</title>
     <style>
         body {
@@ -475,6 +477,9 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
 </html>
 ''';
       }
+
+      // 注入CSP头部（双重保障：针对AI生成的已有HTML结构的情况）
+      contentToWrite = ContentSanitizer.injectCsp(contentToWrite);
 
       // 方法1：尝试使用Data URI在浏览器中直接打开
       try {
@@ -894,6 +899,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'none'; object-src 'none'; style-src 'unsafe-inline'; img-src data: https:; font-src data: https:; connect-src 'none'; media-src 'none'; frame-src 'none'; child-src 'none';">
     <title>${l10n.annualReportHtmlTitle(widget.year.toString())}</title>
     <style>
         body {
@@ -935,6 +941,9 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
 </html>
 ''';
       }
+
+      // 注入CSP头部
+      contentToShare = ContentSanitizer.injectCsp(contentToShare);
 
       await LargeFileManager.writeStringToFile(htmlFile, contentToShare);
 
@@ -1004,9 +1013,12 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
         final fileName = 'annual_report_${widget.year}_$timestamp.html';
         final reportFile = File('${reportsDir.path}/$fileName');
 
+        // 注入CSP头部
+        final secureContent = ContentSanitizer.injectCsp(widget.htmlContent);
+
         // 保存文件
         await LargeFileManager.writeStringToFile(
-            reportFile, widget.htmlContent);
+            reportFile, secureContent);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
