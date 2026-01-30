@@ -30,7 +30,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    
+
     return Scaffold(
       appBar: AppBar(title: Text(l10n.tagManagement)),
       body: SingleChildScrollView(
@@ -652,10 +652,12 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
     final bool isHiddenTag = category.id == DatabaseService.hiddenTagId;
     // 隐藏标签使用国际化名称
     final String displayName = isHiddenTag ? l10n.hiddenTag : category.name;
-    
+
     return InkWell(
       onTap: isHiddenTag ? null : () => _editCategory(context, category),
-      onLongPress: (isDefault || isHiddenTag) ? null : () => _deleteCategory(context, category),
+      onLongPress: (isDefault || isHiddenTag)
+          ? null
+          : () => _deleteCategory(context, category),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(
