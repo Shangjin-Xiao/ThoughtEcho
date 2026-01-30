@@ -1490,5 +1490,8 @@
         "type": "int"
       }
     }
-  }
+  },
+  "actionFavorite": "즐겨찾기",
+  "actionUnfavorite": "즐겨찾기 해제",
+  "moreOptions": "더 많은 옵션"
 }
