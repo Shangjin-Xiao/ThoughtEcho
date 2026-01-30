@@ -19,8 +19,6 @@ class CardTemplates {
       'M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zm0-12H5V6h14v2z';
   static const String _locationIcon =
       'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z';
-  static const String _weatherSunIcon =
-      'M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h3v-2H2v2zm17 0h3v-2h-3v2zM11 2v3h2V2h-2zm0 17v3h2v-3h-2zM5.99 4.58l-2.12 2.12 1.41 1.41 2.12-2.12-1.41-1.41zm14.14 14.14l-2.12 2.12 1.41 1.41 2.12-2.12-1.41-1.41zM5.99 19.42l2.12 2.12 1.41-1.41-2.12-2.12-1.41 1.41zm14.14-14.14l2.12-2.12-1.41-1.41-2.12 2.12 1.41 1.41z';
   static const String _quoteIcon =
       'M6 17h3l2-4V7H5v6h3l-2 4zm8 0h3l2-4V7h-6v6h3l-2 4z';
 
@@ -1023,11 +1021,6 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#881337',
     final maxLines = _calculateMaxLines(contentAreaHeight);
     final textLines = _wrapText(
         content, 20, maxLines); // Monospace fits more chars? Adjusted width.
-    final metaText = _buildMetaText(
-        date: date,
-        location: location,
-        weather: weather,
-        temperature: temperature);
     final brandText =
         _buildBrandText(author: author, source: source, brandName: brandName);
 
@@ -1037,8 +1030,6 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#881337',
         contentFontSize;
 
     // 生成行号
-    final lineNumbers =
-        List.generate(textLines.length, (i) => (i + 1).toString()).join('\n');
     String renderLineNumbers(
       int count,
       double startY,
@@ -1397,7 +1388,6 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#ffffff',
     const contentAreaTop = 200.0;
     const contentAreaHeight = 280.0;
     final maxLines = _calculateMaxLines(contentAreaHeight);
-    final textLines = _wrapText(content, 18, maxLines);
     final metaText = _buildMetaText(
         date: date,
         location: location,
