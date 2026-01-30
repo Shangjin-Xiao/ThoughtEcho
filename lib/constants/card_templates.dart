@@ -295,15 +295,15 @@ class CardTemplates {
 
     final contentHeight = textLines.length * contentFontSize * _lineHeight;
     final contentStartY = contentAreaTop +
-      (contentAreaHeight - contentHeight) / 2 +
-      contentFontSize;
+        (contentAreaHeight - contentHeight) / 2 +
+        contentFontSize;
 
     final buffer = StringBuffer();
     final lineSpacing = contentFontSize * _lineHeight;
     for (int i = 0; i < textLines.length; i++) {
       final y = contentStartY + i * lineSpacing;
       buffer.writeln(
-        '<text x="60" y="${y.toStringAsFixed(1)}" text-anchor="start" fill="#22d3ee" font-family="Courier New, monospace" font-size="${contentFontSize.toStringAsFixed(0)}" font-weight="bold" filter="url(#neonGlow)">${_escape(textLines[i])}</text>');
+          '<text x="60" y="${y.toStringAsFixed(1)}" text-anchor="start" fill="#22d3ee" font-family="Courier New, monospace" font-size="${contentFontSize.toStringAsFixed(0)}" font-weight="bold" filter="url(#neonGlow)">${_escape(textLines[i])}</text>');
     }
     final renderedText = buffer.toString();
 
@@ -1026,8 +1026,8 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#881337',
 
     final contentHeight = textLines.length * contentFontSize * _lineHeight;
     final contentStartY = contentAreaTop +
-      (contentAreaHeight - contentHeight) / 2 +
-      contentFontSize;
+        (contentAreaHeight - contentHeight) / 2 +
+        contentFontSize;
 
     // 生成行号
     String renderLineNumbers(
@@ -1071,7 +1071,7 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#881337',
         final y = contentStartY + i * lineSpacing;
         // 简单的语法高亮模拟：奇数行白色，偶数行浅蓝 (太复杂，统一用亮色)
         buffer.writeln(
-        '<text x="70" y="$y" text-anchor="start" fill="#d4d4d4" font-family="monospace" font-size="${contentFontSize.toStringAsFixed(0)}">${_escape(textLines[i])}</text>');
+            '<text x="70" y="$y" text-anchor="start" fill="#d4d4d4" font-family="monospace" font-size="${contentFontSize.toStringAsFixed(0)}">${_escape(textLines[i])}</text>');
       }
       return buffer.toString();
     })()}
