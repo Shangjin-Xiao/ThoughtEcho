@@ -230,6 +230,54 @@ class MediaReferenceService {
     }
   }
 
+  static Future<_CleanupPlan> _planOrphanCleanup() async {
+    final snapshot = await _buildReferenceSnapshot();
+    final allMediaFiles = await _getAllMediaFiles();
+
+    final candidates = <_OrphanCandidate>[];
+    final missingReferences = <String, Map<String, Set<String>>>{};
+
+    for (final filePath in allMediaFiles) {
+      final normalizedPath = await _normalizeFilePath(filePath);
+      final canonicalKey = _canonicalComparisonKey(normalizedPath);
+
+      final storedVariants = snapshot.storedIndex[canonicalKey];
+      final quoteVariants = snapshot.quoteIndex[canonicalKey];
+
+      final hasStoredRefs = storedVariants != null &&
+          storedVariants.values.any((refs) => refs.isNotEmpty);
+      final hasQuoteRefs = quoteVariants != null &&
+          quoteVariants.values.any((refs) => refs.isNotEmpty);
+
+      if (hasQuoteRefs) {
+        final variants = quoteVariants;
+        if (!hasStoredRefs) {
+          missingReferences[canonicalKey] = variants.map(
+            (variantPath, ids) => MapEntry(variantPath, Set<String>.from(ids)),
+          );
+        }
+        continue;
+      }
+
+      if (hasStoredRefs) {
+        continue;
+      }
+
+      candidates.add(
+        _OrphanCandidate(
+          absolutePath: filePath,
+          normalizedPath: normalizedPath,
+          canonicalKey: canonicalKey,
+        ),
+      );
+    }
+
+    return _CleanupPlan(
+      candidates: candidates,
+      missingReferenceIndex: missingReferences,
+    );
+  }
+
   /// 迭代式构建清理计划，避免一次性加载所有笔记
   static Future<_CleanupPlan> _planOrphanCleanupStreamed() async {
     final storedIndex = await _fetchStoredReferenceIndex();

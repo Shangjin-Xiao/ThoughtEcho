@@ -697,12 +697,12 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
 
                   // 心形按钮（如果启用）
                   if (widget.onFavorite != null) ...[
-                    Material(
-                      color: Colors.transparent,
-                      child: Tooltip(
-                        message: quote.favoriteCount > 0
-                            ? l10n.actionUnfavorite
-                            : l10n.actionFavorite,
+                    Tooltip(
+                      message: quote.favoriteCount > 0
+                          ? l10n.actionUnfavorite
+                          : l10n.actionFavorite,
+                      child: Material(
+                        color: Colors.transparent,
                         child: InkWell(
                           key: widget.favoriteButtonGuideKey,
                           onTap: widget.onFavorite,

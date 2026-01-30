@@ -519,6 +519,31 @@ class BackupService {
     }
   }
 
+  /// 聚合所有结构化数据到一个Map中
+  Future<Map<String, dynamic>> _gatherStructuredData(
+    bool includeMediaFiles,
+  ) async {
+    final notesData = await _databaseService.exportDataAsMap();
+    final settingsData = _settingsService.getAllSettingsForBackup();
+    final aiAnalysisData = await _aiAnalysisDbService.exportAnalysesAsList();
+    final deviceId = settingsData['device_id'];
+
+    // 处理笔记数据中的媒体文件路径
+    Map<String, dynamic> processedNotesData = notesData;
+    if (includeMediaFiles) {
+      processedNotesData = await _convertMediaPathsInNotesForBackup(notesData);
+    }
+
+    return {
+      'version': _backupVersion,
+      'createdAt': DateTime.now().toIso8601String(),
+      'device_id': deviceId,
+      'notes': processedNotesData,
+      'settings': settingsData,
+      'ai_analysis': aiAnalysisData,
+    };
+  }
+
   /// 检查备份数据是否包含媒体文件
   Future<bool> _checkBackupHasMediaFiles(
     Map<String, dynamic> backupData,
@@ -526,6 +551,51 @@ class BackupService {
     // 检查版本信息和备份内容来判断是否包含媒体文件
     final version = backupData['version'] as String?;
     return version == _backupVersion;
+  }
+
+  /// 在备份时将笔记数据中的媒体文件绝对路径转换为相对路径
+  Future<Map<String, dynamic>> _convertMediaPathsInNotesForBackup(
+    Map<String, dynamic> notesData,
+  ) async {
+    final appDir = await getApplicationDocumentsDirectory();
+    final appPath = appDir.path;
+
+    // 深拷贝数据
+    final processedData = Map<String, dynamic>.from(notesData);
+
+    if (processedData.containsKey('quotes')) {
+      final quotes = List<Map<String, dynamic>>.from(processedData['quotes']);
+
+      for (final quote in quotes) {
+        if (quote.containsKey('deltaContent') &&
+            quote['deltaContent'] != null) {
+          final deltaContent = quote['deltaContent'] as String;
+          try {
+            final deltaJson = await LargeFileManager.processLargeJson<dynamic>(
+              deltaContent,
+              encode: false,
+            );
+            final convertedDelta = _convertDeltaMediaPaths(
+              deltaJson,
+              appPath,
+              true,
+            );
+            quote['deltaContent'] =
+                await LargeFileManager.processLargeJson<String>(
+              convertedDelta as Map<String, dynamic>,
+              encode: true,
+            );
+          } catch (e) {
+            logDebug('处理笔记 ${quote['id']} 的富文本内容时出错: $e');
+            // 如果处理失败，保持原内容不变
+          }
+        }
+      }
+
+      processedData['quotes'] = quotes;
+    }
+
+    return processedData;
   }
 
   /// 在还原时将笔记数据中的媒体文件相对路径转换为当前环境的绝对路径
