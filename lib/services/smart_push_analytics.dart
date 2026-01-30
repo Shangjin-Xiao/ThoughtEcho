@@ -444,7 +444,6 @@ class SmartPushAnalytics extends ChangeNotifier {
   Future<Map<String, dynamic>> getAnalyticsStats() async {
     final metrics = await _getNotificationMetrics();
     final scores = await _getContentScores();
-    final heatmap = await calculateResponsivenessHeatmap();
     final optimalWindows = await getOptimalPushWindows();
 
     // 计算整体点击率

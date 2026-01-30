@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../gen_l10n/app_localizations.dart';
 
 /// AI 操作按钮组件
-/// 
+///
 /// 提供 AI 纠错和识别来源功能
 class AIActionButtons extends StatelessWidget {
   final String text;

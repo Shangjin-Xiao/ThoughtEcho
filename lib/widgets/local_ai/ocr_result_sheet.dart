@@ -3,7 +3,7 @@ import '../../gen_l10n/app_localizations.dart';
 import 'ai_action_buttons.dart'; // 导入 AI 操作按钮组件
 
 /// OCR 识别结果编辑底部弹出组件
-/// 
+///
 /// 显示 OCR 识别结果并提供编辑、AI纠错、识别来源等操作
 class OCRResultSheet extends StatefulWidget {
   final String recognizedText;
@@ -67,7 +67,8 @@ class _OCRResultSheetState extends State<OCRResultSheet> {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.onSurfaceVariant.withOpacity(0.35),
+                      color:
+                          theme.colorScheme.onSurfaceVariant.withOpacity(0.35),
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
@@ -115,7 +116,6 @@ class _OCRResultSheetState extends State<OCRResultSheet> {
                         ),
                       ),
                       const SizedBox(height: 12),
-
                       AIActionButtons(
                         text: _textController.text,
                         onCorrectionResult: widget.onTextChanged,

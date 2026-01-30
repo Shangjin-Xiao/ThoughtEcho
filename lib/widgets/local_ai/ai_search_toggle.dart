@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../gen_l10n/app_localizations.dart';
 
 /// AI 搜索切换按钮组件
-/// 
+///
 /// 在搜索框旁显示，点击切换普通搜索和 AI 语义搜索模式
 class AISearchToggle extends StatelessWidget {
   final bool isAIMode;
