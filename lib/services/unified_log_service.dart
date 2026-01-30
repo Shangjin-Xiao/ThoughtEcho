@@ -1050,8 +1050,9 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
       // 1. 先写内存中的日志
       final filteredMemoryLogs = _memoryLogs.where((log) {
         if (minLevel != null && log.level.index < minLevel.index) return false;
-        if (startDate != null && log.timestamp.isBefore(startDate))
+        if (startDate != null && log.timestamp.isBefore(startDate)) {
           return false;
+        }
         if (endDate != null && log.timestamp.isAfter(endDate)) return false;
         return true;
       });
