@@ -4,6 +4,7 @@ import 'package:workmanager/workmanager.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
+import 'package:thoughtecho/services/network_service.dart';
 import 'package:thoughtecho/services/smart_push_service.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
@@ -30,6 +31,9 @@ void callbackDispatcher() {
 
       final databaseService = DatabaseService();
       await databaseService.init();
+
+      // 初始化网络服务（后台获取一言需要）
+      await NetworkService.instance.init();
 
       final locationService = LocationService();
       try {
@@ -99,6 +103,9 @@ void backgroundPushCallback(int id) async {
     final databaseService = DatabaseService();
     await databaseService.init();
 
+    // 初始化网络服务（后台获取一言需要）
+    await NetworkService.instance.init();
+
     final locationService = LocationService();
     try {
       await locationService.init();
@@ -152,6 +159,9 @@ void backgroundPeriodicCheck() async {
     final databaseService = DatabaseService();
     await databaseService.init();
 
+    // 初始化网络服务（后台获取一言需要）
+    await NetworkService.instance.init();
+
     final locationService = LocationService();
     try {
       await locationService.init();
@@ -170,7 +180,7 @@ void backgroundPeriodicCheck() async {
     final now = DateTime.now();
     final settings = pushService.settings;
 
-    if (!settings.enabled) {
+    if (!settings.enabled && !settings.dailyQuotePushEnabled) {
       AppLogger.d('推送未启用，跳过检查');
       return;
     }

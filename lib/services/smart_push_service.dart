@@ -342,7 +342,7 @@ class SmartPushService extends ChangeNotifier {
       AppLogger.i('智能推送设置已保存');
 
       // 更新计划任务
-      if (_settings.enabled) {
+      if (_settings.enabled || _settings.dailyQuotePushEnabled) {
         await scheduleNextPush();
       } else {
         await _cancelAllSchedules();
@@ -996,7 +996,7 @@ class SmartPushService extends ChangeNotifier {
       AppLogger.d(
           '检查每日一言推送: 设定时间=${slot.formattedTime}, 当前时间=${now.hour}:${now.minute}, 差距=$diff分钟');
 
-      if (diff <= 5) {
+      if (diff <= 10) {
         // 使用 Warning 级别确保后台日志被持久化
         AppLogger.w('时间匹配，执行每日一言推送 (diff=$diff分钟)');
         await _performDailyQuotePush(isBackground: true);
@@ -1012,7 +1012,7 @@ class SmartPushService extends ChangeNotifier {
         final slotTime =
             DateTime(now.year, now.month, now.day, slot.hour, slot.minute);
         final diff = now.difference(slotTime).inMinutes.abs();
-        if (diff <= 5) {
+        if (diff <= 10) {
           await _performSmartPush(isBackground: true);
           break; // 只要命中一个时间槽就执行，避免重复
         }

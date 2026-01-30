@@ -1126,6 +1126,10 @@ class AICardGenerationService {
       .replaceAll('<', '&lt;')
       .replaceAll('>', '&gt;');
 
+  // 检测是否包含中文
+  bool _containsChinese(String text) =>
+      RegExp(r'[\u4e00-\u9fff]').hasMatch(text);
+
   // 天气本地化映射 - 多语言支持
   // Key: 英文标准名（小写）, Value: Map<languageCode, localizedName>
   static const Map<String, Map<String, String>> _weatherLocalizations = {

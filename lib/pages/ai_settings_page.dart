@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:math' as math;
 import '../services/settings_service.dart';
 import '../services/ai_service.dart';
 import '../models/ai_settings.dart';
@@ -591,9 +592,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
     final l10n = AppLocalizations.of(context);
     if (value == null || value.isEmpty) return l10n.apiUrlRequired;
     final uri = Uri.tryParse(value);
-    if (uri == null || !uri.hasScheme || (!uri.scheme.startsWith('http'))) {
+    if (uri == null || !uri.hasScheme || (!uri.scheme.startsWith('http')))
       return l10n.invalidUrl;
-    }
     return null;
   }
 

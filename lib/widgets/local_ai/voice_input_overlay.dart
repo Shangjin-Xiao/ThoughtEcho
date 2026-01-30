@@ -112,8 +112,7 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                           backgroundColor: Colors.white.withOpacity(0.1),
                           highlightColor: Colors.white.withOpacity(0.2),
                         ),
-                        tooltip: MaterialLocalizations.of(context)
-                            .closeButtonTooltip,
+                        tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
                       ),
                     ),
                   ),
@@ -141,8 +140,7 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color:
-                                      colorScheme.primary.withOpacity(opacity),
+                                  color: colorScheme.primary.withOpacity(opacity),
                                   width: 2,
                                 ),
                               ),
@@ -213,15 +211,13 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                   const SizedBox(height: 24),
 
                   // 实时转写内容展示
-                  if (widget.transcribedText != null &&
-                      widget.transcribedText!.isNotEmpty)
+                  if (widget.transcribedText != null && widget.transcribedText!.isNotEmpty)
                     Container(
                       margin: const EdgeInsets.symmetric(horizontal: 32),
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.1),
-                        borderRadius:
-                            BorderRadius.circular(AppTheme.cardRadius),
+                        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                         border: Border.all(
                           color: Colors.white.withOpacity(0.1),
                         ),
@@ -253,15 +249,10 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                       children: [
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
-                          transform: Matrix4.translationValues(
-                              0, willTriggerOCR ? -10 : 0, 0),
+                          transform: Matrix4.translationValues(0, willTriggerOCR ? -10 : 0, 0),
                           child: Icon(
-                            willTriggerOCR
-                                ? Icons.document_scanner_rounded
-                                : Icons.keyboard_arrow_up_rounded,
-                            color: willTriggerOCR
-                                ? colorScheme.primaryContainer
-                                : Colors.white,
+                            willTriggerOCR ? Icons.document_scanner_rounded : Icons.keyboard_arrow_up_rounded,
+                            color: willTriggerOCR ? colorScheme.primaryContainer : Colors.white,
                             size: 32,
                           ),
                         ),
@@ -269,12 +260,8 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                         Text(
                           l10n.voiceRecordingHint,
                           style: theme.textTheme.labelLarge?.copyWith(
-                            color: willTriggerOCR
-                                ? colorScheme.primaryContainer
-                                : Colors.white.withOpacity(0.8),
-                            fontWeight: willTriggerOCR
-                                ? FontWeight.bold
-                                : FontWeight.normal,
+                            color: willTriggerOCR ? colorScheme.primaryContainer : Colors.white.withOpacity(0.8),
+                            fontWeight: willTriggerOCR ? FontWeight.bold : FontWeight.normal,
                           ),
                         ),
                         const SizedBox(height: 8),

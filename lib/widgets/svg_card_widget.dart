@@ -527,9 +527,7 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
   Future<void> _handleRegenerate() async {
     if ((widget.onRegenerate == null &&
             widget.onRegenerateWithExclude == null) ||
-        _isRegenerating) {
-      return;
-    }
+        _isRegenerating) return;
 
     setState(() {
       _isRegenerating = true;
