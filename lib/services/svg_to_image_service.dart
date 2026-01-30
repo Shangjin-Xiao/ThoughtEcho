@@ -174,46 +174,10 @@ class SvgToImageService {
   }
 
   /// 标准化SVG内容以确保正确渲染
-  static String _normalizeSvgForRendering(
-    String svgContent,
-    int width,
-    int height,
-  ) {
-    String normalized = svgContent.trim();
-
-    // 确保SVG有xmlns命名空间
-    if (!normalized.contains('xmlns=')) {
-      normalized = normalized.replaceFirst(
-        '<svg',
-        '<svg xmlns="http://www.w3.org/2000/svg"',
-      );
-    }
-
-    final inferredSize = _inferSvgIntrinsicSize(normalized);
-
-    AppLogger.d(
-      'SVG内在尺寸: ${inferredSize.$1}x${inferredSize.$2}',
-      source: 'SvgToImageService',
-    );
-
-    // 移除现有的width、height、viewBox属性（避免重复或无效值导致错位）
-    normalized = normalized
-        .replaceAll(RegExp(r'\s+width="[^"]*"'), '')
-        .replaceAll(RegExp(r'\s+height="[^"]*"'), '')
-        .replaceAll(RegExp(r'\s+viewBox="[^"]*"'), '')
-        .replaceAll(RegExp(r'\s+preserveAspectRatio="[^"]*"'), '');
-
-    // 统一设置标准属性：使用推断的viewBox，并显式设置width/height防止百分比导致裁剪
-    normalized = normalized.replaceFirst(
-      '<svg',
-      '<svg viewBox="0 0 ${inferredSize.$1} ${inferredSize.$2}" width="${inferredSize.$1}" height="${inferredSize.$2}" preserveAspectRatio="xMidYMid meet"',
-    );
-
-    return normalized;
-  }
 
   /// 推断SVG的内在尺寸，优先使用合法viewBox，其次使用数值width/height，
   /// 若为百分比或无效则从首个大矩形推断，最后回退到400x600。
+  // ignore: unused_element
   static (String, String) _inferSvgIntrinsicSize(String svgContent) {
     // 1) 优先使用合法的viewBox
     final viewBoxMatch = RegExp(r'viewBox="([^"]+)"').firstMatch(svgContent);
@@ -251,6 +215,7 @@ class SvgToImageService {
   }
 
   /// 仅接受数值维度，忽略百分比/空/非数字，避免 100% 导致视窗被错置。
+  // ignore: unused_element
   static double? _parseNumericDimension(String? raw) {
     if (raw == null || raw.trim().isEmpty) return null;
     if (raw.contains('%')) return null;
@@ -452,26 +417,9 @@ class SvgToImageService {
   }
 
   /// 改进的SVG内容绘制
-  static Future<void> _drawSvgContentImproved(
-    Canvas canvas,
-    String svgContent,
-    int width,
-    int height,
-  ) async {
-    // 解析所有渐变定义
-    final gradients = _parseAllGradients(svgContent);
-
-    // 绘制背景矩形（通常是第一个rect元素）
-    _drawBackgroundRect(canvas, svgContent, width, height, gradients);
-
-    // 绘制其他形状
-    _drawAllShapes(canvas, svgContent, width, height, gradients);
-
-    // 绘制文本
-    _drawAllText(canvas, svgContent, width, height);
-  }
 
   /// 解析所有渐变定义
+  // ignore: unused_element
   static Map<String, Gradient> _parseAllGradients(String svgContent) {
     final gradients = <String, Gradient>{};
 
@@ -581,6 +529,7 @@ class SvgToImageService {
   }
 
   /// 解析百分比值
+  // ignore: unused_element
   static double _parsePercentage(String? value) {
     if (value == null) return 0.0;
     final trimmed = value.trim().replaceAll('%', '');
@@ -588,6 +537,7 @@ class SvgToImageService {
   }
 
   /// 解析标签属性，兼容任意顺序及style内联写法
+  // ignore: unused_element
   static Map<String, String> _parseAttributes(String tag) {
     final attrs = <String, String>{};
     final attrRegex = RegExp(r'([a-zA-Z_:][\w:.-]*)\s*=\s*"([^"]*)"');
@@ -598,6 +548,7 @@ class SvgToImageService {
   }
 
   /// 从属性或style中提取填充色
+  // ignore: unused_element
   static String _extractFill(
     Map<String, String> attrs, {
     String defaultColor = '#000000',
@@ -609,6 +560,7 @@ class SvgToImageService {
   }
 
   /// 从属性或style中提取透明度
+  // ignore: unused_element
   static double _extractOpacity(
     Map<String, String> attrs, {
     String attributeKey = 'fill-opacity',
@@ -621,6 +573,7 @@ class SvgToImageService {
   }
 
   /// 从属性或style中提取数值字体大小
+  // ignore: unused_element
   static double _extractFontSize(
     Map<String, String> attrs, {
     double defaultSize = 14.0,
@@ -633,6 +586,7 @@ class SvgToImageService {
   }
 
   /// 从style中解析键值
+  // ignore: unused_element
   static String? _parseStyleValue(String? style, String key) {
     if (style == null) return null;
     final regex = RegExp('$key\\s*:\\s*([^;]+)', caseSensitive: false);
@@ -641,6 +595,7 @@ class SvgToImageService {
   }
 
   /// 将数值字符串转换为double，容忍%或px后缀
+  // ignore: unused_element
   static double _parseDimension(String? value) {
     if (value == null) return 0;
     final cleaned = value.replaceAll(RegExp('[^0-9.-]'), '');
@@ -648,6 +603,7 @@ class SvgToImageService {
   }
 
   /// 绘制背景矩形
+  // ignore: unused_element
   static void _drawBackgroundRect(
     Canvas canvas,
     String svgContent,
@@ -694,6 +650,7 @@ class SvgToImageService {
   }
 
   /// 绘制所有形状
+  // ignore: unused_element
   static void _drawAllShapes(
     Canvas canvas,
     String svgContent,
@@ -783,6 +740,7 @@ class SvgToImageService {
   }
 
   /// 绘制所有文本
+  // ignore: unused_element
   static void _drawAllText(
     Canvas canvas,
     String svgContent,
@@ -851,6 +809,7 @@ class SvgToImageService {
   }
 
   /// 渲染回退图片
+  // ignore: unused_element
   static Future<Uint8List> _renderFallbackImage(
     String svgContent,
     int width,
@@ -881,6 +840,7 @@ class SvgToImageService {
   }
 
   /// 解析颜色
+  // ignore: unused_element
   static Color _parseColor(String colorString) {
     final raw = colorString.trim();
     if (raw.isEmpty) return Colors.black;
@@ -980,6 +940,7 @@ class SvgToImageService {
   }
 
   /// 将外部 opacity（如 fill-opacity/stop-opacity）与颜色本身 alpha 合并（乘法），而不是直接覆盖。
+  // ignore: unused_element
   static Color _applyOpacityMultiplier(Color color, double opacity) {
     final safeOpacity = opacity.isFinite ? opacity.clamp(0.0, 1.0) : 1.0;
     final base = color.a;
@@ -988,6 +949,7 @@ class SvgToImageService {
   }
 
   /// 绘制占位符内容
+  // ignore: unused_element
   static void _drawPlaceholderContent(
     Canvas canvas,
     int width,
