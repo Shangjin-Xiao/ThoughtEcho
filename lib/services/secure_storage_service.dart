@@ -83,13 +83,13 @@ class SecureStorageService {
 
         // 只有在数据成功转移或确认为多余时，才删除旧的不安全数据
         if (copySuccess) {
-           try {
-             await legacyStorage.remove(_providerApiKeysKey);
-             logDebug('遗留不安全数据已清除');
-           } catch (e) {
-             // 这是一个严重的安全隐患，但不能让应用崩溃
-             logDebug('CRITICAL: 删除遗留不安全数据失败! 密钥仍可能存在于 SafeMMKV 中: $e');
-           }
+          try {
+            await legacyStorage.remove(_providerApiKeysKey);
+            logDebug('遗留不安全数据已清除');
+          } catch (e) {
+            // 这是一个严重的安全隐患，但不能让应用崩溃
+            logDebug('CRITICAL: 删除遗留不安全数据失败! 密钥仍可能存在于 SafeMMKV 中: $e');
+          }
         }
       }
     } catch (e) {
@@ -159,8 +159,8 @@ class SecureStorageService {
         logDebug('已删除 Provider $providerId 的API密钥');
       }
     } catch (e) {
-       logDebug('删除API密钥失败: $e');
-       rethrow;
+      logDebug('删除API密钥失败: $e');
+      rethrow;
     }
   }
 

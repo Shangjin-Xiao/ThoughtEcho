@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../gen_l10n/app_localizations.dart';
 
 /// 图片文字区域选择组件
-/// 
+///
 /// 显示检测到的文字区域，用户点选识别
 class ImageTextSelector extends StatefulWidget {
   final String imagePath;

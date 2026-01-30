@@ -77,6 +77,7 @@ class AppTheme with ChangeNotifier {
       ),
     );
   }
+
   static const String _customColorKey = 'custom_color';
   static const String _useCustomColorKey = 'use_custom_color';
   static const String _themeModeKey = 'theme_mode';
