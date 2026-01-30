@@ -80,7 +80,8 @@ void main() {
         toRelative: true,
       );
       // 验证生成的相对路径使用正斜杠
-      final relativePath = toRelativeResult[0]['insert']['image'] as String;
+      final relativePath =
+          toRelativeResult[0]['insert']['image'] as String;
       expect(relativePath.contains(r'\'), isFalse,
           reason: '相对路径应该使用正斜杠，便于跨平台兼容');
       expect(relativePath, 'media/images/photo.jpg');
@@ -98,7 +99,8 @@ void main() {
         appPath: unixAppPath,
         toRelative: false,
       );
-      final restoredUnixPath = restoredUnix[0]['insert']['image'] as String;
+      final restoredUnixPath =
+          restoredUnix[0]['insert']['image'] as String;
       // 路径应该被正确转换
       expect(restoredUnixPath.contains('media'), isTrue);
       expect(restoredUnixPath.contains('photo.jpg'), isTrue);

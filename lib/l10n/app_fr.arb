@@ -1490,8 +1490,5 @@
         "type": "int"
       }
     }
-  },
-  "actionFavorite": "Favori",
-  "actionUnfavorite": "Retirer favori",
-  "moreOptions": "Plus d'options"
+  }
 }

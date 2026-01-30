@@ -348,9 +348,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
               ),
             ),
             // 如果是隐藏标签且需要验证，显示锁图标
-            if (isHiddenTag &&
-                widget.requireBiometricForHidden &&
-                !_hiddenTagUnlocked) ...[
+            if (isHiddenTag && widget.requireBiometricForHidden && !_hiddenTagUnlocked) ...[
               const SizedBox(width: 4),
               Icon(
                 Icons.lock_outline,
@@ -376,10 +374,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
     final isHiddenTag = tag.id == DatabaseService.hiddenTagId;
 
     // 如果是隐藏标签且需要验证
-    if (isHiddenTag &&
-        selected &&
-        widget.requireBiometricForHidden &&
-        !_hiddenTagUnlocked) {
+    if (isHiddenTag && selected && widget.requireBiometricForHidden && !_hiddenTagUnlocked) {
       // 执行生物识别验证
       final authenticated = await _biometricService.authenticate(
         localizedReason: l10n.biometricAuthReason,

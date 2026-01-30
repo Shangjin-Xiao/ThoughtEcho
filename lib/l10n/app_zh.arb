@@ -3314,7 +3314,7 @@
   "smartPushExactAlarmMessage": "为确保推送准时送达，需要授予精确闹钟权限。不授权也可使用，但推送时间可能有几分钟误差。",
   "smartPushGoToSettings": "去设置",
   "recommended": "推荐",
-  "actionFavorite": "珍藏",
-  "actionUnfavorite": "取消珍藏",
+  "actionFavorite": "收藏",
+  "actionUnfavorite": "取消收藏",
   "moreOptions": "更多选项"
 }
