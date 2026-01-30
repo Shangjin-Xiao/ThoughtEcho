@@ -488,9 +488,7 @@ class _HomePageState extends State<HomePage>
           }
         }
 
-        if (initialQuote == null) {
-          // 新建笔记或找不到原始笔记，构造新的Quote
-          initialQuote = Quote(
+        initialQuote ??= Quote(
             id: (isNew || original == null) ? null : draftId,
             content: plainText,
             deltaContent: deltaContent,
@@ -509,7 +507,6 @@ class _HomePageState extends State<HomePage>
             temperature: draftData['temperature'] as String?,
             editSource: 'fullscreen',
           );
-        }
 
         // 导航到全屏编辑器
         if (mounted) {

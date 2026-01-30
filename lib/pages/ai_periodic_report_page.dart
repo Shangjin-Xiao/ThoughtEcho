@@ -365,7 +365,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
       // 获取历史洞察上下文
       final previousInsights =
-          await insightService.getPreviousInsightsContext();
+          insightService.getPreviousInsightsContext();
 
       // 准备完整的笔记内容用于AI分析
       final fullNotesContent = _periodQuotes.map((quote) {

@@ -387,7 +387,7 @@ class SmartPushAnalytics extends ChangeNotifier {
     scores[contentType] = newScore;
     await _saveContentScores(scores);
 
-    AppLogger.d('更新内容得分: $contentType = $newScore (${success}/${total})');
+    AppLogger.d('更新内容得分: $contentType = $newScore ($success/$total)');
   }
 
   Future<Map<String, double>> _getContentScores() async {
@@ -444,7 +444,6 @@ class SmartPushAnalytics extends ChangeNotifier {
   Future<Map<String, dynamic>> getAnalyticsStats() async {
     final metrics = await _getNotificationMetrics();
     final scores = await _getContentScores();
-    final heatmap = await calculateResponsivenessHeatmap();
     final optimalWindows = await getOptimalPushWindows();
 
     // 计算整体点击率
