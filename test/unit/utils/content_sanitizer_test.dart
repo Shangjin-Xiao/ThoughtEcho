@@ -3,8 +3,10 @@ import 'package:thoughtecho/utils/content_sanitizer.dart';
 
 void main() {
   group('ContentSanitizer', () {
-    const expectedCspContent = "default-src 'none'; script-src 'none'; object-src 'none'; style-src 'unsafe-inline'; img-src data: https:; font-src data: https:; connect-src 'none'; media-src 'none'; frame-src 'none'; child-src 'none';";
-    const expectedCspTag = '<meta http-equiv="Content-Security-Policy" content="$expectedCspContent">';
+    const expectedCspContent =
+        "default-src 'none'; script-src 'none'; object-src 'none'; style-src 'unsafe-inline'; img-src data: https:; font-src data: https:; connect-src 'none'; media-src 'none'; frame-src 'none'; child-src 'none';";
+    const expectedCspTag =
+        '<meta http-equiv="Content-Security-Policy" content="$expectedCspContent">';
 
     test('injectCsp returns unchanged HTML if CSP already exists', () {
       const html = '''
@@ -32,7 +34,8 @@ void main() {
 ''';
       final result = ContentSanitizer.injectCsp(html);
       expect(result, contains(expectedCspTag));
-      expect(result, contains('<head>\n    $expectedCspTag\n    <title>Test</title>'));
+      expect(result,
+          contains('<head>\n    $expectedCspTag\n    <title>Test</title>'));
     });
 
     test('injectCsp injects CSP into <head> with attributes', () {
@@ -47,10 +50,15 @@ void main() {
 ''';
       final result = ContentSanitizer.injectCsp(html);
       expect(result, contains(expectedCspTag));
-      expect(result, contains('<head profile="http://example.com">\n    $expectedCspTag\n    <title>Test</title>'));
+      expect(
+          result,
+          contains(
+              '<head profile="http://example.com">\n    $expectedCspTag\n    <title>Test</title>'));
     });
 
-    test('injectCsp creates <head> and injects CSP if <html> exists but no <head>', () {
+    test(
+        'injectCsp creates <head> and injects CSP if <html> exists but no <head>',
+        () {
       const html = '''
 <!DOCTYPE html>
 <html>
@@ -59,7 +67,8 @@ void main() {
 ''';
       final result = ContentSanitizer.injectCsp(html);
       expect(result, contains(expectedCspTag));
-      expect(result, contains('<html>\n<head>\n    $expectedCspTag\n</head>\n<body>'));
+      expect(result,
+          contains('<html>\n<head>\n    $expectedCspTag\n</head>\n<body>'));
     });
 
     test('injectCsp creates <head> when <html> has attributes', () {
@@ -71,7 +80,10 @@ void main() {
 ''';
       final result = ContentSanitizer.injectCsp(html);
       expect(result, contains(expectedCspTag));
-      expect(result, contains('<html lang="en">\n<head>\n    $expectedCspTag\n</head>\n<body>'));
+      expect(
+          result,
+          contains(
+              '<html lang="en">\n<head>\n    $expectedCspTag\n</head>\n<body>'));
     });
 
     test('injectCsp prepends CSP if no html structure exists', () {

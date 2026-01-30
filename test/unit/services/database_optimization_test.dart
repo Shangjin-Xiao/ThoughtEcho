@@ -44,7 +44,7 @@ void main() {
             favorite_count INTEGER DEFAULT 0
           )
         ''');
-        await db.execute('''
+      await db.execute('''
           CREATE TABLE categories(
             id TEXT PRIMARY KEY,
             name TEXT NOT NULL,
@@ -53,7 +53,7 @@ void main() {
             last_modified TEXT
           )
         ''');
-        await db.execute('''
+      await db.execute('''
           CREATE TABLE quote_tags(
             quote_id TEXT NOT NULL,
             tag_id TEXT NOT NULL,
@@ -61,8 +61,8 @@ void main() {
           )
         ''');
 
-        // Mock media_references table if needed, though not used in these tests
-        await db.execute('''
+      // Mock media_references table if needed, though not used in these tests
+      await db.execute('''
           CREATE TABLE media_references (
             id TEXT PRIMARY KEY,
             file_path TEXT NOT NULL,
@@ -82,7 +82,8 @@ void main() {
       await db.close();
     });
 
-    test('getUserQuotes should return partial quote (null aiAnalysis)', () async {
+    test('getUserQuotes should return partial quote (null aiAnalysis)',
+        () async {
       final id = const Uuid().v4();
       final fullQuote = Quote(
         id: id,
@@ -97,7 +98,8 @@ void main() {
       final fetchedQuote = quotes.firstWhere((q) => q.id == id);
 
       expect(fetchedQuote.content, equals('Test content'));
-      expect(fetchedQuote.aiAnalysis, isNull, reason: 'aiAnalysis should be excluded in list view');
+      expect(fetchedQuote.aiAnalysis, isNull,
+          reason: 'aiAnalysis should be excluded in list view');
     });
 
     test('getQuoteById should return full quote', () async {
