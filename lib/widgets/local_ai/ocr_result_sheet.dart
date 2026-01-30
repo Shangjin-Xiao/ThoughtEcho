@@ -67,7 +67,8 @@ class _OCRResultSheetState extends State<OCRResultSheet> {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.onSurfaceVariant.withOpacity(0.35),
+                      color:
+                          theme.colorScheme.onSurfaceVariant.withOpacity(0.35),
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
@@ -115,7 +116,6 @@ class _OCRResultSheetState extends State<OCRResultSheet> {
                         ),
                       ),
                       const SizedBox(height: 12),
-
                       AIActionButtons(
                         text: _textController.text,
                         onCorrectionResult: widget.onTextChanged,

@@ -655,7 +655,9 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
 
     return InkWell(
       onTap: isHiddenTag ? null : () => _editCategory(context, category),
-      onLongPress: (isDefault || isHiddenTag) ? null : () => _deleteCategory(context, category),
+      onLongPress: (isDefault || isHiddenTag)
+          ? null
+          : () => _deleteCategory(context, category),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         child: Row(

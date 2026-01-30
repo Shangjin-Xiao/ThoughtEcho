@@ -56,9 +56,11 @@ class LocalAISettings {
       ocrEnabled: json['ocrEnabled'] as bool? ?? true,
       aiSearchEnabled: json['aiSearchEnabled'] as bool? ?? true,
       aiCorrectionEnabled: json['aiCorrectionEnabled'] as bool? ?? true,
-      sourceRecognitionEnabled: json['sourceRecognitionEnabled'] as bool? ?? true,
+      sourceRecognitionEnabled:
+          json['sourceRecognitionEnabled'] as bool? ?? true,
       smartTagsEnabled: json['smartTagsEnabled'] as bool? ?? true,
-      noteClassificationEnabled: json['noteClassificationEnabled'] as bool? ?? true,
+      noteClassificationEnabled:
+          json['noteClassificationEnabled'] as bool? ?? true,
       emotionDetectionEnabled: json['emotionDetectionEnabled'] as bool? ?? true,
       relatedNotesEnabled: json['relatedNotesEnabled'] as bool? ?? true,
     );
@@ -99,10 +101,13 @@ class LocalAISettings {
       ocrEnabled: ocrEnabled ?? this.ocrEnabled,
       aiSearchEnabled: aiSearchEnabled ?? this.aiSearchEnabled,
       aiCorrectionEnabled: aiCorrectionEnabled ?? this.aiCorrectionEnabled,
-      sourceRecognitionEnabled: sourceRecognitionEnabled ?? this.sourceRecognitionEnabled,
+      sourceRecognitionEnabled:
+          sourceRecognitionEnabled ?? this.sourceRecognitionEnabled,
       smartTagsEnabled: smartTagsEnabled ?? this.smartTagsEnabled,
-      noteClassificationEnabled: noteClassificationEnabled ?? this.noteClassificationEnabled,
-      emotionDetectionEnabled: emotionDetectionEnabled ?? this.emotionDetectionEnabled,
+      noteClassificationEnabled:
+          noteClassificationEnabled ?? this.noteClassificationEnabled,
+      emotionDetectionEnabled:
+          emotionDetectionEnabled ?? this.emotionDetectionEnabled,
       relatedNotesEnabled: relatedNotesEnabled ?? this.relatedNotesEnabled,
     );
   }
