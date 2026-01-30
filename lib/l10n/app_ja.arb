@@ -3161,5 +3161,8 @@
   "smartPushExactAlarmTitle": "正確なアラーム権限",
   "smartPushExactAlarmMessage": "正確な時間に通知するために権限が必要です。",
   "smartPushGoToSettings": "設定へ",
-  "recommended": "推奨"
+  "recommended": "推奨",
+  "actionFavorite": "お気に入り",
+  "actionUnfavorite": "お気に入り解除",
+  "moreOptions": "その他のオプション"
 }
