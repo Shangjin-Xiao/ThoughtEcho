@@ -9,5 +9,8 @@
   "languageKorean": "한국어",
   "languageSpanish": "Español",
   "languageFrench": "Français",
-  "languageGerman": "Deutsch"
+  "languageGerman": "Deutsch",
+  "actionFavorite": "Favorito",
+  "actionUnfavorite": "Quitar favorito",
+  "moreOptions": "Más opciones"
 }
