@@ -92,7 +92,7 @@ class _HomePageState extends State<HomePage>
   // --- 每日提示相关状态和逻辑 ---
   String _accumulatedPromptText = ''; // Accumulated text for daily prompt
   StreamSubscription<String>?
-      _promptSubscription; // Stream subscription for daily prompt
+  _promptSubscription; // Stream subscription for daily prompt
   bool _isGeneratingDailyPrompt = false; // Loading state for daily prompt
   // 获取每日提示的方法
   Future<void> _fetchDailyPrompt({bool initialLoad = false}) async {
@@ -148,8 +148,8 @@ class _HomePageState extends State<HomePage>
 
       // 获取最近的周期洞察（本周、上周、本月、上月）
       final insightHistoryService = context.read<InsightHistoryService>();
-      final recentInsights =
-          await insightHistoryService.formatRecentInsightsForDailyPrompt();
+      final recentInsights = await insightHistoryService
+          .formatRecentInsightsForDailyPrompt();
       logDebug('获取到 ${recentInsights.length} 条最近的周期洞察', source: 'HomePage');
 
       // Call the new stream method with environment context and historical insights
@@ -191,11 +191,11 @@ class _HomePageState extends State<HomePage>
             final l10n = AppLocalizations.of(context);
             final fallbackPrompt =
                 DailyPromptGenerator.generatePromptBasedOnContext(
-              l10n,
-              city: city,
-              weather: weather,
-              temperature: temperature,
-            );
+                  l10n,
+                  city: city,
+                  weather: weather,
+                  temperature: temperature,
+                );
 
             setState(() {
               _accumulatedPromptText = fallbackPrompt;
@@ -209,8 +209,8 @@ class _HomePageState extends State<HomePage>
           // Stream finished, update loading state and trim the accumulated text
           if (mounted) {
             setState(() {
-              _accumulatedPromptText =
-                  _accumulatedPromptText.trim(); // 去除前后空白字符
+              _accumulatedPromptText = _accumulatedPromptText
+                  .trim(); // 去除前后空白字符
               _isGeneratingDailyPrompt = false; // Stop loading on done
             });
             // 移除每日思考生成完成的弹窗通知
@@ -228,11 +228,11 @@ class _HomePageState extends State<HomePage>
 
         final fallbackPrompt =
             DailyPromptGenerator.generatePromptBasedOnContext(
-          l10n,
-          city: locationService.city,
-          weather: weatherService.currentWeather,
-          temperature: weatherService.temperature,
-        );
+              l10n,
+              city: locationService.city,
+              weather: weatherService.currentWeather,
+              temperature: weatherService.temperature,
+            );
 
         setState(() {
           _accumulatedPromptText = fallbackPrompt;
@@ -497,7 +497,8 @@ class _HomePageState extends State<HomePage>
             date: DateTime.now().toIso8601String(),
             sourceAuthor: draftData['author'] as String?,
             sourceWork: draftData['work'] as String?,
-            tagIds: (draftData['tagIds'] as List?)
+            tagIds:
+                (draftData['tagIds'] as List?)
                     ?.map((e) => e.toString())
                     .toList() ??
                 [],
@@ -764,8 +765,8 @@ class _HomePageState extends State<HomePage>
 
     final allShown =
         FeatureGuideHelper.hasShown(context, 'settings_preferences') &&
-            FeatureGuideHelper.hasShown(context, 'settings_startup') &&
-            FeatureGuideHelper.hasShown(context, 'settings_theme');
+        FeatureGuideHelper.hasShown(context, 'settings_startup') &&
+        FeatureGuideHelper.hasShown(context, 'settings_theme');
     if (allShown) {
       return;
     }
@@ -870,16 +871,16 @@ class _HomePageState extends State<HomePage>
 
         final position = await locationService
             .getCurrentLocation(
-          highAccuracy: false, // 使用低精度模式，更快
-          skipPermissionRequest: true,
-        )
+              highAccuracy: false, // 使用低精度模式，更快
+              skipPermissionRequest: true,
+            )
             .timeout(
-          const Duration(seconds: 8), // 设置超时
-          onTimeout: () {
-            logDebug('位置获取超时');
-            return null;
-          },
-        );
+              const Duration(seconds: 8), // 设置超时
+              onTimeout: () {
+                logDebug('位置获取超时');
+                return null;
+              },
+            );
 
         if (!mounted) return;
 
@@ -981,8 +982,10 @@ class _HomePageState extends State<HomePage>
 
   // FAB 长按处理 - 显示语音录制浮层
   void _onFABLongPress() {
-    final settingsService =
-        Provider.of<SettingsService>(context, listen: false);
+    final settingsService = Provider.of<SettingsService>(
+      context,
+      listen: false,
+    );
     final localAISettings = settingsService.localAISettings;
 
     // 检查是否启用了本地AI和语音转文字功能，未启用则直接返回无反应
@@ -1022,12 +1025,11 @@ class _HomePageState extends State<HomePage>
         );
       },
       transitionBuilder: (context, animation, secondaryAnimation, child) {
-        final curved =
-            CurvedAnimation(parent: animation, curve: Curves.easeOut);
-        return FadeTransition(
-          opacity: curved,
-          child: child,
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOut,
         );
+        return FadeTransition(opacity: curved, child: child);
       },
       transitionDuration: const Duration(milliseconds: 180),
     );
@@ -1037,9 +1039,7 @@ class _HomePageState extends State<HomePage>
     if (!mounted) return;
 
     await Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (context) => const OCRCapturePage(),
-      ),
+      MaterialPageRoute<void>(builder: (context) => const OCRCapturePage()),
     );
 
     if (!mounted) return;
@@ -1228,7 +1228,9 @@ class _HomePageState extends State<HomePage>
     try {
       // 生成卡片
       final card = await _aiCardService!.generateCard(
-          note: quote, brandName: AppLocalizations.of(context).appTitle);
+        note: quote,
+        brandName: AppLocalizations.of(context).appTitle,
+      );
 
       // 关闭加载对话框
       if (mounted) Navigator.of(context).pop();
@@ -1456,7 +1458,8 @@ class _HomePageState extends State<HomePage>
     final isConnected = connectivityService.isConnected;
     final hasPermission = locationService.hasLocationPermission;
     final hasCoordinates = locationService.hasCoordinates;
-    final hasCity = locationService.city != null &&
+    final hasCity =
+        locationService.city != null &&
         !locationService.city!.contains("Throttled!");
     final hasWeather = weatherService.currentWeather != null;
 
@@ -1560,8 +1563,8 @@ class _HomePageState extends State<HomePage>
     final locationService = Provider.of<LocationService>(context);
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    final aiService =
-        context.watch<AIService>(); // Watch AIService for key changes
+    final aiService = context
+        .watch<AIService>(); // Watch AIService for key changes
     final settingsService = context
         .watch<SettingsService>(); // Watch SettingsService for settings changes
 
@@ -1569,7 +1572,8 @@ class _HomePageState extends State<HomePage>
     final bool servicesInitialized = context.watch<bool>();
 
     // Determine if AI is configured (including checking for valid API Key)
-    final bool isAiConfigured = aiService.hasValidApiKey() &&
+    final bool isAiConfigured =
+        aiService.hasValidApiKey() &&
         settingsService.aiSettings.apiUrl.isNotEmpty &&
         settingsService.aiSettings.model.isNotEmpty;
 
@@ -1596,71 +1600,67 @@ class _HomePageState extends State<HomePage>
         appBar: _currentIndex == 1
             ? null // 记录页不需要标题栏
             : _currentIndex == 0
-                ? AppBar(
-                    automaticallyImplyLeading: false,
-                    leadingWidth: NavigationToolbar.kMiddleSpacing,
-                    leading: const SizedBox.shrink(),
-                    titleSpacing: 0, // 左侧保留默认留白，且让标题充分利用空间
-                    title: Consumer<ConnectivityService>(
-                      builder: (context, connectivityService, child) {
-                        final locale = Localizations.localeOf(context);
-                        final isEnglish = locale.languageCode == 'en';
+            ? AppBar(
+                automaticallyImplyLeading: false,
+                leadingWidth: NavigationToolbar.kMiddleSpacing,
+                leading: const SizedBox.shrink(),
+                titleSpacing: 0, // 左侧保留默认留白，且让标题充分利用空间
+                title: Consumer<ConnectivityService>(
+                  builder: (context, connectivityService, child) {
+                    final locale = Localizations.localeOf(context);
+                    final isEnglish = locale.languageCode == 'en';
 
-                        Widget titleWidget;
-                        if (!connectivityService.isConnected) {
-                          titleWidget = Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.wifi_off,
-                                size: 16,
-                                color: Colors.red,
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                AppLocalizations.of(context).appTitleOffline,
-                              ),
-                            ],
-                          );
-                        } else {
-                          titleWidget = Text(
-                            AppLocalizations.of(context).appTitle,
-                          );
-                        }
-
-                        // 英文标题使用 FittedBox 自动缩放以完整显示，不显示省略号
-                        // 中文标题本身很短，不需要特殊处理
-                        if (isEnglish) {
-                          return FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: titleWidget,
-                          );
-                        }
-                        return titleWidget;
-                      },
-                    ),
-                    actions: [
-                      // 显示服务初始化状态指示器
-                      if (!servicesInitialized)
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 8.0),
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                    Widget titleWidget;
+                    if (!connectivityService.isConnected) {
+                      titleWidget = Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.wifi_off,
+                            size: 16,
+                            color: Colors.red,
                           ),
-                        ),
+                          const SizedBox(width: 4),
+                          Text(AppLocalizations.of(context).appTitleOffline),
+                        ],
+                      );
+                    } else {
+                      titleWidget = Text(AppLocalizations.of(context).appTitle);
+                    }
 
-                      // 显示位置和天气信息（支持多种状态）
-                      _buildLocationWeatherDisplay(
-                        context,
-                        locationService,
-                        weatherService,
+                    // 英文标题使用 FittedBox 自动缩放以完整显示，不显示省略号
+                    // 中文标题本身很短，不需要特殊处理
+                    if (isEnglish) {
+                      return FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: titleWidget,
+                      );
+                    }
+                    return titleWidget;
+                  },
+                ),
+                actions: [
+                  // 显示服务初始化状态指示器
+                  if (!servicesInitialized)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 8.0),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
                       ),
-                    ],
-                  )
-                : AppBar(toolbarHeight: 0),
+                    ),
+
+                  // 显示位置和天气信息（支持多种状态）
+                  _buildLocationWeatherDisplay(
+                    context,
+                    locationService,
+                    weatherService,
+                  ),
+                ],
+              )
+            : AppBar(toolbarHeight: 0),
         body: IndexedStack(
           index: _currentIndex,
           children: [
@@ -1685,7 +1685,8 @@ class _HomePageState extends State<HomePage>
                             child: Container(
                               key: _dailyQuoteGuideKey, // 功能引导 key
                               constraints: BoxConstraints(
-                                minHeight: screenHeight *
+                                minHeight:
+                                    screenHeight *
                                     (isVerySmallScreen
                                         ? 0.55
                                         : 0.50), // 极小屏幕调整比例
@@ -1695,11 +1696,11 @@ class _HomePageState extends State<HomePage>
                                 onAddQuote:
                                     (content, author, work, hitokotoData) =>
                                         _showAddQuoteDialog(
-                                  prefilledContent: content,
-                                  prefilledAuthor: author,
-                                  prefilledWork: work,
-                                  hitokotoData: hitokotoData,
-                                ),
+                                          prefilledContent: content,
+                                          prefilledAuthor: author,
+                                          prefilledWork: work,
+                                          hitokotoData: hitokotoData,
+                                        ),
                               ),
                             ),
                           ), // 每日提示部分 - 固定在底部，紧凑布局
@@ -1719,8 +1720,8 @@ class _HomePageState extends State<HomePage>
                               screenWidth > 600
                                   ? 18.0
                                   : (isVerySmallScreen
-                                      ? 10.0
-                                      : 14.0), // 动态调整内边距
+                                        ? 10.0
+                                        : 14.0), // 动态调整内边距
                             ),
                             decoration: BoxDecoration(
                               color: theme.colorScheme.surface,
@@ -1744,8 +1745,8 @@ class _HomePageState extends State<HomePage>
                                       size: screenWidth > 600
                                           ? 22
                                           : (isVerySmallScreen
-                                              ? 16
-                                              : 18), // 动态调整图标大小
+                                                ? 16
+                                                : 18), // 动态调整图标大小
                                     ),
                                     SizedBox(
                                       width: isVerySmallScreen ? 4 : 6,
@@ -1754,16 +1755,16 @@ class _HomePageState extends State<HomePage>
                                       AppLocalizations.of(
                                         context,
                                       ).todayThoughts,
-                                      style:
-                                          theme.textTheme.titleMedium?.copyWith(
-                                        color: theme.colorScheme.primary,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: screenWidth > 600
-                                            ? 16
-                                            : (isVerySmallScreen
-                                                ? 13
-                                                : 15), // 动态调整字体
-                                      ),
+                                      style: theme.textTheme.titleMedium
+                                          ?.copyWith(
+                                            color: theme.colorScheme.primary,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: screenWidth > 600
+                                                ? 16
+                                                : (isVerySmallScreen
+                                                      ? 13
+                                                      : 15), // 动态调整字体
+                                          ),
                                     ),
                                   ],
                                 ),
@@ -1803,14 +1804,16 @@ class _HomePageState extends State<HomePage>
                                                   ).fetchingDefaultPrompt,
                                             style: theme.textTheme.bodySmall
                                                 ?.copyWith(
-                                              color: theme.colorScheme.onSurface
-                                                  .withAlpha(160),
-                                              fontSize: screenWidth > 600
-                                                  ? 13
-                                                  : (isVerySmallScreen
-                                                      ? 10
-                                                      : 12), // 动态调整字体
-                                            ),
+                                                  color: theme
+                                                      .colorScheme
+                                                      .onSurface
+                                                      .withAlpha(160),
+                                                  fontSize: screenWidth > 600
+                                                      ? 13
+                                                      : (isVerySmallScreen
+                                                            ? 10
+                                                            : 12), // 动态调整字体
+                                                ),
                                             textAlign: TextAlign.center,
                                           ),
                                         ],
@@ -1819,27 +1822,30 @@ class _HomePageState extends State<HomePage>
                                         _accumulatedPromptText.isNotEmpty
                                             ? _accumulatedPromptText.trim()
                                             : (isAiConfigured
-                                                ? AppLocalizations.of(
-                                                    context,
-                                                  ).waitingForTodayThoughts
-                                                : AppLocalizations.of(
-                                                    context,
-                                                  ).noTodayThoughts),
+                                                  ? AppLocalizations.of(
+                                                      context,
+                                                    ).waitingForTodayThoughts
+                                                  : AppLocalizations.of(
+                                                      context,
+                                                    ).noTodayThoughts),
                                         style: theme.textTheme.bodyMedium
                                             ?.copyWith(
-                                          height: 1.4,
-                                          fontSize: screenWidth > 600
-                                              ? 15
-                                              : (isVerySmallScreen
-                                                  ? 12
-                                                  : 14), // 动态调整字体
-                                          color:
-                                              _accumulatedPromptText.isNotEmpty
-                                                  ? theme.textTheme.bodyMedium
-                                                      ?.color
+                                              height: 1.4,
+                                              fontSize: screenWidth > 600
+                                                  ? 15
+                                                  : (isVerySmallScreen
+                                                        ? 12
+                                                        : 14), // 动态调整字体
+                                              color:
+                                                  _accumulatedPromptText
+                                                      .isNotEmpty
+                                                  ? theme
+                                                        .textTheme
+                                                        .bodyMedium
+                                                        ?.color
                                                   : theme.colorScheme.onSurface
-                                                      .withAlpha(120),
-                                        ),
+                                                        .withAlpha(120),
+                                            ),
                                         textAlign: TextAlign.center,
                                         maxLines: isVerySmallScreen
                                             ? 2
@@ -2002,13 +2008,16 @@ class _HomePageState extends State<HomePage>
 
     return SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
-      statusBarIconBrightness:
-          statusIconsShouldBeDark ? Brightness.dark : Brightness.light,
-      statusBarBrightness:
-          statusIconsShouldBeDark ? Brightness.light : Brightness.dark,
+      statusBarIconBrightness: statusIconsShouldBeDark
+          ? Brightness.dark
+          : Brightness.light,
+      statusBarBrightness: statusIconsShouldBeDark
+          ? Brightness.light
+          : Brightness.dark,
       systemNavigationBarColor: navColor,
-      systemNavigationBarIconBrightness:
-          navIconsShouldBeDark ? Brightness.dark : Brightness.light,
+      systemNavigationBarIconBrightness: navIconsShouldBeDark
+          ? Brightness.dark
+          : Brightness.light,
       systemNavigationBarDividerColor: Colors.transparent,
       systemNavigationBarContrastEnforced: false,
     );

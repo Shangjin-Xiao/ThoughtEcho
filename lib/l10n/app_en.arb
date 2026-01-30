@@ -3114,6 +3114,9 @@
   "unsavedChangesDesc": "You have unsaved edits. Do you want to discard these changes?",
   "continueEditing": "Continue Editing",
   "discardChanges": "Discard Changes",
+  "actionFavorite": "Favorite",
+  "actionUnfavorite": "Unfavorite",
+  "moreOptions": "More options",
 
   "localAiFeatures": "Local AI Features",
   "localAiFeaturesPreview": "Preview",

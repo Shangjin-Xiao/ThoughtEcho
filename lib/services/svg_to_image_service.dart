@@ -198,9 +198,9 @@ class SvgToImageService {
 
     // 3) 如果根节点给的是百分比或0，尝试从第一个rect推断背景尺寸
     if (w == null || h == null) {
-      final rectMatch =
-          RegExp(r'<rect[^>]*width="([^"]+)"[^>]*height="([^"]+)"')
-              .firstMatch(svgContent);
+      final rectMatch = RegExp(
+        r'<rect[^>]*width="([^"]+)"[^>]*height="([^"]+)"',
+      ).firstMatch(svgContent);
       if (rectMatch != null) {
         w = _parseNumericDimension(rectMatch.group(1)) ?? w;
         h = _parseNumericDimension(rectMatch.group(2)) ?? h;
@@ -322,8 +322,9 @@ class SvgToImageService {
       source: 'SvgToImageService',
     );
 
-    final safeScale =
-        scaleFactor.isFinite && scaleFactor > 0 ? scaleFactor : 1.0;
+    final safeScale = scaleFactor.isFinite && scaleFactor > 0
+        ? scaleFactor
+        : 1.0;
 
     final outputSize = Size(width.toDouble(), height.toDouble());
     final fit = switch (renderMode) {
@@ -384,10 +385,7 @@ class SvgToImageService {
       child: SizedBox(
         width: outputSize.width,
         height: outputSize.height,
-        child: ColoredBox(
-          color: backgroundColor,
-          child: content,
-        ),
+        child: ColoredBox(color: backgroundColor, child: content),
       ),
     );
 
@@ -747,8 +745,11 @@ class SvgToImageService {
     int width,
     int height,
   ) {
-    final textRegex =
-        RegExp(r'<text[^>]*>.*?<\/text>', dotAll: true, caseSensitive: false);
+    final textRegex = RegExp(
+      r'<text[^>]*>.*?<\/text>',
+      dotAll: true,
+      caseSensitive: false,
+    );
 
     for (final match in textRegex.allMatches(svgContent)) {
       try {
@@ -756,15 +757,18 @@ class SvgToImageService {
         final attrs = _parseAttributes(rawTag);
         double x = _parseDimension(attrs['x']);
         final y = _parseDimension(attrs['y']);
-        final anchor = attrs['text-anchor'] ??
+        final anchor =
+            attrs['text-anchor'] ??
             _parseStyleValue(attrs['style'], 'text-anchor') ??
             'start';
         final fill = _extractFill(attrs, defaultColor: '#000000');
         final fontSize = _extractFontSize(attrs, defaultSize: 14.0);
         final opacity = _extractOpacity(attrs, defaultOpacity: 1.0);
 
-        final contentMatch =
-            RegExp(r'>\s*(.*?)\s*<\/text>', dotAll: true).firstMatch(rawTag);
+        final contentMatch = RegExp(
+          r'>\s*(.*?)\s*<\/text>',
+          dotAll: true,
+        ).firstMatch(rawTag);
         String text = contentMatch?.group(1) ?? '';
 
         // 解码HTML实体
