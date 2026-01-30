@@ -573,7 +573,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                                 Flexible(
                                                   child: Text(
                                                     l10n.confirmDeleteTag,
-                                                    overflow: TextOverflow.ellipsis,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
                                                   ),
                                                 ),
                                               ],
