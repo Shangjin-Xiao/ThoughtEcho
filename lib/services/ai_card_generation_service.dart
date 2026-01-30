@@ -1127,6 +1127,7 @@ class AICardGenerationService {
       .replaceAll('>', '&gt;');
 
   // 检测是否包含中文
+  // ignore: unused_element
   bool _containsChinese(String text) =>
       RegExp(r'[\u4e00-\u9fff]').hasMatch(text);
 

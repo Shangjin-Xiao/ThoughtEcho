@@ -6,7 +6,7 @@ import '../services/settings_service.dart';
 import '../theme/app_theme.dart';
 
 /// 本地 AI 功能设置页面
-/// 
+///
 /// 显示并管理所有设备端 AI 功能的开关设置
 class LocalAISettingsPage extends StatefulWidget {
   const LocalAISettingsPage({super.key});
@@ -212,7 +212,7 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
           // 功能分组
           if (localAISettings.enabled) ...[
             const SizedBox(height: 16),
-            
+
             // 输入增强组
             _buildFeatureGroup(
               context: context,

@@ -230,6 +230,7 @@ class MediaReferenceService {
     }
   }
 
+  // ignore: unused_element
   static Future<_CleanupPlan> _planOrphanCleanup() async {
     final snapshot = await _buildReferenceSnapshot();
     final allMediaFiles = await _getAllMediaFiles();

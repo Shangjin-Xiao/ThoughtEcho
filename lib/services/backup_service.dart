@@ -520,6 +520,7 @@ class BackupService {
   }
 
   /// 聚合所有结构化数据到一个Map中
+  // ignore: unused_element
   Future<Map<String, dynamic>> _gatherStructuredData(
     bool includeMediaFiles,
   ) async {
