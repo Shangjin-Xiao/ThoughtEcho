@@ -301,7 +301,12 @@ class SmartPushService extends ChangeNotifier {
   }
 
   /// 仅供后台 Isolate 使用：加载设置
+  ///
+  /// 后台 Isolate 与前台主 Isolate 不共享状态，因此必须重新初始化时区、设置、通知等。
+  /// 时区初始化是必须的，否则 `_nextInstanceOfTime` 中使用的 `tz.local` 会抛出
+  /// `LateInitializationError`。
   Future<void> loadSettingsForBackground() async {
+    await _initializeTimezone();
     await _loadSettings();
     await _initializeNotifications();
   }
