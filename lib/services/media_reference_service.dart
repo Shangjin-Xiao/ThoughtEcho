@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'package:meta/meta.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
@@ -18,6 +19,12 @@ import 'database_service.dart';
 class MediaReferenceService {
   static const String _tableName = 'media_references';
   static Database? _database;
+
+  /// 设置测试用的数据库实例
+  @visibleForTesting
+  static void setDatabaseForTesting(Database db) {
+    _database = db;
+  }
 
   /// 获取数据库实例
   static Future<Database> get database async {
@@ -479,16 +486,49 @@ class MediaReferenceService {
   ) async {
     int healed = 0;
 
-    for (final variants in missingIndex.values) {
-      for (final entry in variants.entries) {
-        final filePath = entry.key;
-        for (final quoteId in entry.value) {
-          final success = await addReference(filePath, quoteId);
-          if (success) {
-            healed++;
+    try {
+      final db = await database;
+      final batch = db.batch();
+
+      // 获取应用目录路径缓存，避免循环中多次获取
+      final appDir = await getApplicationDocumentsDirectory();
+      final appPath = path.normalize(appDir.path);
+
+      int batchCount = 0;
+
+      for (final variants in missingIndex.values) {
+        for (final entry in variants.entries) {
+          final filePath = entry.key;
+
+          // 使用缓存的 appPath 进行标准化
+          final normalizedPath = await _normalizeFilePath(
+            filePath,
+            cachedAppPath: appPath,
+          );
+
+          for (final quoteId in entry.value) {
+            batch.insert(
+              _tableName,
+              {
+                'id': const Uuid().v4(),
+                'file_path': normalizedPath,
+                'quote_id': quoteId,
+                'created_at': DateTime.now().toIso8601String(),
+              },
+              conflictAlgorithm: ConflictAlgorithm.ignore, // 忽略重复引用
+            );
+            batchCount++;
           }
         }
       }
+
+      if (batchCount > 0) {
+        await batch.commit(noResult: true);
+        healed = batchCount;
+        logDebug('批量修复完成，共处理 $healed 条引用');
+      }
+    } catch (e) {
+      logDebug('批量修复媒体引用失败: $e');
     }
 
     return healed;
@@ -765,7 +805,10 @@ class MediaReferenceService {
   }
 
   /// 标准化文件路径（转换为相对路径）
-  static Future<String> _normalizeFilePath(String filePath) async {
+  static Future<String> _normalizeFilePath(
+    String filePath, {
+    String? cachedAppPath,
+  }) async {
     try {
       if (filePath.isEmpty) {
         return filePath;
@@ -782,8 +825,8 @@ class MediaReferenceService {
 
       sanitized = path.normalize(sanitized);
 
-      final appDir = await getApplicationDocumentsDirectory();
-      final appPath = path.normalize(appDir.path);
+      final appPath = cachedAppPath ??
+          path.normalize((await getApplicationDocumentsDirectory()).path);
 
       if (sanitized.startsWith(appPath)) {
         return path.normalize(path.relative(sanitized, from: appPath));
