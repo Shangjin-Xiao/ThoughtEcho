@@ -64,6 +64,7 @@ void main() {
     await service.importAnalysesFromList(analyses);
     stopwatch.stop();
 
+    // ignore: avoid_print
     print(
         'Time taken to import $count analyses: ${stopwatch.elapsedMilliseconds} ms');
 
