@@ -3321,5 +3321,7 @@
   "settingsUserManual": "User Manual",
   "settingsUserManualDesc": "Learn how to use ThoughtEcho features",
   "manualTitle": "User Manual",
-  "manualLoadFailed": "Failed to load manual content"
+  "manualLoadFailed": "Failed to load manual content",
+  "viewing": "Viewing...",
+  "backToAnalysis": "Back to Analysis"
 }

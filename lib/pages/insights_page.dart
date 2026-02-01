@@ -576,7 +576,7 @@ class _InsightsPageState extends State<InsightsPage> {
               },
               label: Text(
                 _isGenerating
-                    ? 'Viewing...' // TODO: Add to l10n "Viewing..." or "Back to Analysis"
+                    ? l10n.viewing
                     : (_accumulatedInsightsText.isNotEmpty && !_isLoading)
                         ? l10n
                             .viewHistory // Reuse "View History" or similar, or just "View Result"
