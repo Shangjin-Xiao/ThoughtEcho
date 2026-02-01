@@ -3307,5 +3307,9 @@
   "smartPushExactAlarmTitle": "Exact Alarm Permission",
   "smartPushExactAlarmMessage": "To ensure notifications arrive on time, please grant exact alarm permission. You can still use push without it, but timing may vary by a few minutes.",
   "smartPushGoToSettings": "Go to Settings",
-  "recommended": "Recommended"
+  "recommended": "Recommended",
+  "settingsUserManual": "User Manual",
+  "settingsUserManualDesc": "Learn how to use ThoughtEcho features",
+  "manualTitle": "User Manual",
+  "manualLoadFailed": "Failed to load manual content"
 }

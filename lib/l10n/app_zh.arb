@@ -3316,5 +3316,9 @@
   "recommended": "推荐",
   "actionFavorite": "收藏",
   "actionUnfavorite": "取消收藏",
-  "moreOptions": "更多选项"
+  "moreOptions": "更多选项",
+  "settingsUserManual": "用户手册",
+  "settingsUserManualDesc": "了解如何使用心迹的各项功能",
+  "manualTitle": "用户手册",
+  "manualLoadFailed": "无法加载手册内容"
 }
