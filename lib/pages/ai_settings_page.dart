@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:math' as math;
 import '../services/settings_service.dart';
 import '../services/ai_service.dart';
 import '../models/ai_settings.dart';
