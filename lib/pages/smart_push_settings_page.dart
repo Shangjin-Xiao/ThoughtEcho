@@ -287,67 +287,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
             // 每日一言独立推送（始终显示，不依赖推送模式）
             _buildDailyQuoteCard(l10n, theme, colorScheme),
 
-            // 精确闹钟权限提醒（如果未授予）
-            FutureBuilder<bool>(
-              future:
-                  context.read<SmartPushService>().checkExactAlarmPermission(),
-              builder: (context, snapshot) {
-                if (snapshot.hasData && snapshot.data == false) {
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 16),
-                    child: Material(
-                      color: colorScheme.errorContainer.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(16),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(16),
-                        onTap: () async {
-                          final smartPushService =
-                              context.read<SmartPushService>();
-                          await smartPushService.requestExactAlarmPermission();
-                          setState(() {}); // 刷新页面状态
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Row(
-                            children: [
-                              Icon(Icons.warning_amber_rounded,
-                                  color: colorScheme.error),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      l10n.smartPushExactAlarmTitle,
-                                      style:
-                                          theme.textTheme.titleSmall?.copyWith(
-                                        color: colorScheme.onErrorContainer,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      l10n.smartPushExactAlarmHint,
-                                      style:
-                                          theme.textTheme.bodySmall?.copyWith(
-                                        color: colorScheme.onErrorContainer,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Icon(Icons.chevron_right,
-                                  color: colorScheme.error),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                }
-                return const SizedBox.shrink();
-              },
-            ),
+            // 权限状态卡片（检测所有必需权限）
+            _buildPermissionStatusCard(l10n, theme, colorScheme),
 
             // 自定义模式：显示完整高级选项
             if (_settings.pushMode == PushMode.custom) ...[
@@ -1390,6 +1331,332 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
             ],
           ],
         ),
+      ),
+    );
+  }
+
+  /// 权限状态卡片
+  ///
+  /// 显示所有推送相关权限的状态，并提供快捷修复入口
+  Widget _buildPermissionStatusCard(
+      AppLocalizations l10n, ThemeData theme, ColorScheme colorScheme) {
+    // 只有在启用了任何推送功能时才显示权限检查
+    if (!_settings.enabled && !_settings.dailyQuotePushEnabled) {
+      return const SizedBox.shrink();
+    }
+
+    return FutureBuilder<PushPermissionStatus>(
+      future: context.read<SmartPushService>().getPushPermissionStatus(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const SizedBox.shrink();
+        }
+
+        final status = snapshot.data!;
+
+        // 如果所有权限都已授予且不需要自启动提醒，则不显示卡片
+        if (status.allPermissionsGranted && !status.needsAutoStartPermission) {
+          return const SizedBox.shrink();
+        }
+
+        return Padding(
+          padding: const EdgeInsets.only(top: 16),
+          child: Card(
+            elevation: 0,
+            color: colorScheme.errorContainer.withValues(alpha: 0.3),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+              side: BorderSide(color: colorScheme.error.withValues(alpha: 0.3)),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded,
+                          color: colorScheme.error, size: 24),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          l10n.smartPushPermissionWarningTitle,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: colorScheme.onErrorContainer,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    l10n.smartPushPermissionWarningDesc,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onErrorContainer.withValues(alpha: 0.8),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // 通知权限
+                  _buildPermissionItem(
+                    icon: Icons.notifications_outlined,
+                    title: l10n.smartPushNotificationPermission,
+                    isGranted: status.notificationEnabled,
+                    onTap: status.notificationEnabled
+                        ? null
+                        : () async {
+                            final smartPushService =
+                                context.read<SmartPushService>();
+                            await smartPushService
+                                .requestNotificationPermission();
+                            setState(() {});
+                          },
+                    theme: theme,
+                    colorScheme: colorScheme,
+                  ),
+
+                  // 精确闹钟权限 (Android 12+)
+                  if (status.sdkVersion >= 31)
+                    _buildPermissionItem(
+                      icon: Icons.alarm_outlined,
+                      title: l10n.smartPushExactAlarmTitle,
+                      isGranted: status.exactAlarmEnabled,
+                      onTap: status.exactAlarmEnabled
+                          ? null
+                          : () async {
+                              final smartPushService =
+                                  context.read<SmartPushService>();
+                              await smartPushService
+                                  .requestExactAlarmPermission();
+                              setState(() {});
+                            },
+                      theme: theme,
+                      colorScheme: colorScheme,
+                    ),
+
+                  // 电池优化豁免
+                  _buildPermissionItem(
+                    icon: Icons.battery_saver_outlined,
+                    title: l10n.smartPushBatteryOptimization,
+                    isGranted: status.batteryOptimizationExempted,
+                    onTap: status.batteryOptimizationExempted
+                        ? null
+                        : () async {
+                            final smartPushService =
+                                context.read<SmartPushService>();
+                            await smartPushService
+                                .requestBatteryOptimizationExemption();
+                            setState(() {});
+                          },
+                    theme: theme,
+                    colorScheme: colorScheme,
+                  ),
+
+                  // 自启动权限（如果是需要的厂商）
+                  if (status.needsAutoStartPermission)
+                    _buildAutoStartItem(
+                      smartPushService: context.read<SmartPushService>(),
+                      manufacturer: status.manufacturer,
+                      l10n: l10n,
+                      theme: theme,
+                      colorScheme: colorScheme,
+                    ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// 构建单个权限项
+  Widget _buildPermissionItem({
+    required IconData icon,
+    required String title,
+    required bool isGranted,
+    required VoidCallback? onTap,
+    required ThemeData theme,
+    required ColorScheme colorScheme,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          child: Row(
+            children: [
+              Icon(
+                isGranted ? Icons.check_circle : icon,
+                size: 20,
+                color: isGranted ? Colors.green : colorScheme.error,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onErrorContainer,
+                    decoration:
+                        isGranted ? TextDecoration.lineThrough : null,
+                  ),
+                ),
+              ),
+              if (!isGranted)
+                Icon(
+                  Icons.chevron_right,
+                  size: 20,
+                  color: colorScheme.error,
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 自启动权限项（带厂商特定指引）
+  Widget _buildAutoStartItem({
+    required SmartPushService smartPushService,
+    required String manufacturer,
+    required AppLocalizations l10n,
+    required ThemeData theme,
+    required ColorScheme colorScheme,
+  }) {
+    final instructions =
+        smartPushService.getAutoStartInstructions(manufacturer);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: InkWell(
+        onTap: () {
+          _showAutoStartInstructionsDialog(
+            manufacturer: manufacturer,
+            instructions: instructions,
+            l10n: l10n,
+            theme: theme,
+            colorScheme: colorScheme,
+          );
+        },
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+          child: Row(
+            children: [
+              Icon(
+                Icons.rocket_launch_outlined,
+                size: 20,
+                color: colorScheme.error,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.smartPushAutoStartPermission,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onErrorContainer,
+                      ),
+                    ),
+                    Text(
+                      l10n.smartPushAutoStartHint,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color:
+                            colorScheme.onErrorContainer.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.help_outline,
+                size: 20,
+                color: colorScheme.error,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// 显示自启动设置指引对话框
+  void _showAutoStartInstructionsDialog({
+    required String manufacturer,
+    required String instructions,
+    required AppLocalizations l10n,
+    required ThemeData theme,
+    required ColorScheme colorScheme,
+  }) {
+    final displayManufacturer =
+        manufacturer.isNotEmpty ? manufacturer.toUpperCase() : l10n.smartPushUnknownManufacturer;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.rocket_launch_outlined, color: colorScheme.primary),
+            const SizedBox(width: 8),
+            Expanded(child: Text(l10n.smartPushAutoStartTitle)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                displayManufacturer,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: colorScheme.onPrimaryContainer,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              l10n.smartPushAutoStartInstructions,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: colorScheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                instructions,
+                style: theme.textTheme.bodyMedium,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              l10n.smartPushAutoStartNote,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.confirm),
+          ),
+        ],
       ),
     );
   }
