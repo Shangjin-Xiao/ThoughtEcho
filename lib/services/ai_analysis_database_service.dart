@@ -410,13 +410,54 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
     List<Map<String, dynamic>> analyses,
   ) async {
     try {
-      int count = 0;
-      for (var item in analyses) {
-        final analysis = AIAnalysis.fromJson(item);
-        await saveAnalysis(analysis);
-        count++;
+      if (analyses.isEmpty) return 0;
+
+      if (kIsWeb) {
+        // Web平台保持原有逻辑，因为是内存操作，速度很快
+        int count = 0;
+        for (var item in analyses) {
+          final analysis = AIAnalysis.fromJson(item);
+          await saveAnalysis(analysis);
+          count++;
+        }
+        return count;
+      } else {
+        // 非Web平台使用Batch优化
+        AppLogger.i('开始批量导入AI分析，共 ${analyses.length} 条',
+            source: 'AIAnalysisDB');
+        final db = await database;
+        final batch = db.batch();
+        int count = 0;
+
+        for (var item in analyses) {
+          final analysis = AIAnalysis.fromJson(item);
+
+          // 复制saveAnalysis中的逻辑：ID生成和时间戳处理
+          final newAnalysis = analysis.copyWith(
+            id: analysis.id ?? _uuid.v4(),
+            createdAt: analysis.createdAt.isNotEmpty
+                ? analysis.createdAt
+                : DateTime.now().toIso8601String(),
+          );
+
+          final jsonData = newAnalysis.toJson();
+          batch.insert(
+            'ai_analyses',
+            jsonData,
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+          count++;
+        }
+
+        await batch.commit(noResult: true);
+        AppLogger.i('批量导入完成', source: 'AIAnalysisDB');
+
+        // 批量操作完成后统一通知一次
+        notifyListeners();
+        _notifyAnalysesChanged();
+
+        return count;
       }
-      return count;
     } catch (e) {
       AppLogger.e('从List恢复AI分析失败: $e', error: e, source: 'AIAnalysisDB');
       return 0;
