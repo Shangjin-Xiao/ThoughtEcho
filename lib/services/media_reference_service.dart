@@ -291,7 +291,7 @@ class MediaReferenceService {
     final storedIndex = await _fetchStoredReferenceIndex();
     final quoteIndex = await _collectQuoteReferenceIndexStreamed();
     final snapshot =
-        _ReferenceSnapshot(storedIndex: storedIndex, quoteIndex: quoteIndex);
+        ReferenceSnapshot(storedIndex: storedIndex, quoteIndex: quoteIndex);
     final allMediaFiles = await _getAllMediaFiles();
     final candidates = <_OrphanCandidate>[];
     final missingReferences = <String, Map<String, Set<String>>>{};
@@ -338,7 +338,7 @@ class MediaReferenceService {
   }
 
   /// 提供给备份使用的引用快照（避免重复全量扫描）
-  static Future<_ReferenceSnapshot> buildReferenceSnapshotForBackup() async {
+  static Future<ReferenceSnapshot> buildReferenceSnapshotForBackup() async {
     return _buildReferenceSnapshot();
   }
 
@@ -378,10 +378,10 @@ class MediaReferenceService {
     return _canonicalComparisonKey(value);
   }
 
-  static Future<_ReferenceSnapshot> _buildReferenceSnapshot() async {
+  static Future<ReferenceSnapshot> _buildReferenceSnapshot() async {
     final storedIndex = await _fetchStoredReferenceIndex();
     final quoteIndex = await _collectQuoteReferenceIndex();
-    return _ReferenceSnapshot(storedIndex: storedIndex, quoteIndex: quoteIndex);
+    return ReferenceSnapshot(storedIndex: storedIndex, quoteIndex: quoteIndex);
   }
 
   static Future<Map<String, Map<String, Set<String>>>>
@@ -922,11 +922,11 @@ class MediaReferenceService {
   }
 }
 
-class _ReferenceSnapshot {
+class ReferenceSnapshot {
   final Map<String, Map<String, Set<String>>> storedIndex;
   final Map<String, Map<String, Set<String>>> quoteIndex;
 
-  const _ReferenceSnapshot({
+  const ReferenceSnapshot({
     required this.storedIndex,
     required this.quoteIndex,
   });
