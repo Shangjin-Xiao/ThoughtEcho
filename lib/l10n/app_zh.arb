@@ -3332,5 +3332,7 @@
   "manualTitle": "用户手册",
   "manualLoadFailed": "无法加载手册内容",
   "viewing": "查看中...",
-  "backToAnalysis": "回到分析"
+  "backToAnalysis": "回到分析",
+  "userGuide": "用户指南",
+  "userGuideDesc": "了解如何使用心迹的各项功能"
 }

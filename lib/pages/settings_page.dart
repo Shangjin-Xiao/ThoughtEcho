@@ -28,6 +28,7 @@ import 'annual_report_page.dart';
 import 'ai_annual_report_webview.dart';
 import 'license_page.dart' as license;
 import 'preferences_detail_page.dart';
+import 'user_guide_page.dart';
 import '../utils/feature_guide_helper.dart';
 import 'storage_management_page.dart';
 import 'local_ai_settings_page.dart'; // 导入本地 AI 设置页面
@@ -887,6 +888,22 @@ class SettingsPageState extends State<SettingsPage> {
                                 url: _websiteUrl,
                               ),
                               const SizedBox(height: 16),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  Navigator.pop(dialogContext);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const UserGuidePage(),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.help_outline),
+                                label: Text(l10n.userGuide),
+                                style: _primaryButtonStyle(context),
+                              ),
+                              const SizedBox(height: 8),
                               ElevatedButton.icon(
                                 onPressed: () {
                                   Navigator.pop(dialogContext);
