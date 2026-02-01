@@ -25,6 +25,7 @@ class AnnualReportPage extends StatefulWidget {
   State<AnnualReportPage> createState() => _AnnualReportPageState();
 }
 
+// ignore: deprecated_member_use_from_same_package
 class _AnnualReportPageState extends State<AnnualReportPage>
     with TickerProviderStateMixin {
   late AnimationController _controller;

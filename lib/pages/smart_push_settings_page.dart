@@ -400,11 +400,12 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                   final smartPushService = context.read<SmartPushService>();
 
                   // 1. 请求通知权限
+                  final messenger = ScaffoldMessenger.of(context);
                   final hasNotificationPermission =
                       await smartPushService.requestNotificationPermission();
                   if (!hasNotificationPermission) {
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
+                    if (!mounted) return;
+                    messenger.showSnackBar(
                       SnackBar(
                         content: Text(l10n.smartPushPermissionRequired),
                         backgroundColor: colorScheme.error,
@@ -418,7 +419,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                   final hasExactAlarmPermission =
                       await smartPushService.checkExactAlarmPermission();
                   if (!hasExactAlarmPermission) {
-                    if (!context.mounted) return;
+                    if (!mounted) return;
                     // 没有精确闹钟权限，询问用户是否授权
                     final shouldRequest = await showDialog<bool>(
                       context: context,

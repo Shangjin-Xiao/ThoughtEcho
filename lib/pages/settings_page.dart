@@ -1236,6 +1236,7 @@ class SettingsPageState extends State<SettingsPage> {
           context,
           MaterialPageRoute(
             builder: (context) =>
+                // ignore: deprecated_member_use, deprecated_member_use_from_same_package
                 AnnualReportPage(year: currentYear, quotes: thisYearQuotes),
           ),
         );

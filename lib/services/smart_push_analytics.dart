@@ -72,7 +72,7 @@ class SmartPushAnalytics extends ChangeNotifier {
 
   /// 计算用户响应性热图（24小时分布）
   ///
-  /// 返回: Map<hour, score> 其中 score 是该小时的响应性得分 (0.0-1.0)
+  /// 返回: Map[hour, score] 其中 score 是该小时的响应性得分 (0.0-1.0)
   Future<Map<int, double>> calculateResponsivenessHeatmap() async {
     final records = await _getAppOpenRecords();
     final heatmap = <int, double>{};
@@ -391,7 +391,7 @@ class SmartPushAnalytics extends ChangeNotifier {
     scores[contentType] = newScore;
     await _saveContentScores(scores);
 
-    AppLogger.d('更新内容得分: $contentType = $newScore (${success}/${total})');
+    AppLogger.d('更新内容得分: $contentType = $newScore ($success/$total)');
   }
 
   Future<Map<String, double>> _getContentScores() async {
