@@ -3,13 +3,17 @@ import 'package:flutter/foundation.dart';
 import '../utils/app_logger.dart';
 import 'mmkv_service.dart';
 
+/// 推送检查结果
+class PushCheckResult {
+  final bool allowed;
+  final String? reason;
+
+  const PushCheckResult({required this.allowed, this.reason});
+
+  static const PushCheckResult ok = PushCheckResult(allowed: true);
+}
+
 /// SOTA 智能推送分析服务
-///
-/// 实现基于用户行为的自适应推送算法：
-/// 1. 响应性热图 - 追踪用户 App 打开时间，找到最佳推送时段
-/// 2. 疲劳预防 - 虚拟预算系统 + 冷却机制
-/// 3. Thompson Sampling - 内容选择的探索-利用平衡
-/// 4. 效果追踪 - Time-to-Open, 交互反馈学习
 class SmartPushAnalytics extends ChangeNotifier {
   final MMKVService _mmkv;
   final Random _random = Random();

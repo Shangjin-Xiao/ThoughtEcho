@@ -3323,5 +3323,7 @@
   "manualTitle": "User Manual",
   "manualLoadFailed": "Failed to load manual content",
   "viewing": "Viewing...",
-  "backToAnalysis": "Back to Analysis"
+  "backToAnalysis": "Back to Analysis",
+  "userGuide": "User Guide",
+  "userGuideDesc": "Learn how to use ThoughtEcho features"
 }

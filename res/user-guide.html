@@ -716,3 +716,526 @@
     <div class="main-container">
         <main class="content">
             <div class="content-wrapper">
+                <!-- Chinese Version -->
+                <div class="lang-zh">
+                    <h1 id="manual-title-zh">心迹 (ThoughtEcho) 用户手册</h1>
+                    <p>欢迎使用心迹，您的专属 AI 灵感笔记本。本手册将帮助您快速了解应用的全部功能。</p>
+                    
+                    <h2 id="quick-start-zh">1. 快速入门</h2>
+                    <section>
+                        <h3>首次启动</h3>
+                        <ul>
+                            <li>应用会显示引导页面，介绍核心功能</li>
+                            <li>可选择语言偏好和一言类型</li>
+                            <li>如有旧版数据，支持自动迁移</li>
+                        </ul>
+                        <h3>主页界面</h3>
+                        <ul>
+                            <li><strong>底部导航</strong>：首页、笔记列表、洞察、设置</li>
+                            <li><strong>每日灵感</strong>：显示一言和 AI 生成的写作提示</li>
+                            <li><strong>快速捕获按钮（+）</strong>：
+                                <ul>
+                                    <li>短按：快速添加笔记</li>
+                                    <li>长按：语音输入</li>
+                                </ul>
+                            </li>
+                            <li><strong>剪贴板检测</strong>：切回应用时自动检测剪贴板内容并提示保存</li>
+                        </ul>
+                    </section>
+
+                    <h2 id="ai-config-zh">2. AI 服务配置</h2>
+                    <section>
+                        <div class="tip-box warning">
+                            <p>⚠️ <strong>重要</strong>：AI 功能需要配置 API Key 才能使用</p>
+                        </div>
+                        <p><strong>访问路径</strong>：设置 → AI 助手设置</p>
+                        
+                        <h3>支持的服务商</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>服务商</th>
+                                    <th>API 地址</th>
+                                    <th>默认模型</th>
+                                    <th>说明</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>OpenAI</strong></td>
+                                    <td><code>https://api.openai.com/v1/chat/completions</code></td>
+                                    <td>gpt-4o</td>
+                                    <td>官方 OpenAI 服务</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>OpenRouter</strong></td>
+                                    <td><code>https://openrouter.ai/api/v1/chat/completions</code></td>
+                                    <td>openai/gpt-4o</td>
+                                    <td>多模型聚合平台</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>SiliconFlow</strong></td>
+                                    <td><code>https://api.siliconflow.cn/v1/chat/completions</code></td>
+                                    <td>(用户自选)</td>
+                                    <td>国内 AI 服务</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>DeepSeek</strong></td>
+                                    <td><code>https://api.deepseek.com/v1/chat/completions</code></td>
+                                    <td>deepseek-chat</td>
+                                    <td>国产大模型</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Anthropic Claude</strong></td>
+                                    <td><code>https://api.anthropic.com/v1/messages</code></td>
+                                    <td>claude-3.7-sonnet-latest</td>
+                                    <td>Claude 系列模型</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Ollama (本地)</strong></td>
+                                    <td><code>http://localhost:11434/v1/chat/completions</code></td>
+                                    <td>(用户自选)</td>
+                                    <td>本地运行开源模型</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>LMStudio (本地)</strong></td>
+                                    <td><code>http://localhost:1234/v1/chat/completions</code></td>
+                                    <td>(用户自选)</td>
+                                    <td>本地模型推理</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>自定义</strong></td>
+                                    <td>(用户配置)</td>
+                                    <td>(用户配置)</td>
+                                    <td>兼容 OpenAI API 格式的任意服务</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <h3>详细配置步骤</h3>
+                        <h4>云服务商配置（以 OpenAI 为例）</h4>
+                        <ol>
+                            <li>打开「设置」→「AI 助手设置」</li>
+                            <li>点击「添加服务商」或选择预设服务商</li>
+                            <li>选择「OpenAI」预设</li>
+                            <li>在 API Key 输入框中填入您的密钥（以 <code>sk-</code> 开头）</li>
+                            <li>可选：修改模型名称（如 <code>gpt-4o</code>、<code>gpt-4-turbo</code>）</li>
+                            <li>可选：调整温度参数（0-2，越高越有创意）</li>
+                            <li>可选：调整最大 Token 数（默认 32000）</li>
+                            <li>点击「测试连接」验证配置</li>
+                            <li>保存设置</li>
+                        </ol>
+
+                        <h4>本地 AI 配置（Ollama）</h4>
+                        <ol>
+                            <li><strong>安装 Ollama</strong>
+                                <ul>
+                                    <li>访问 <a href="https://ollama.ai" target="_blank">ollama.ai</a> 下载安装</li>
+                                    <li>运行 <code>ollama pull llama3.1</code> 下载模型</li>
+                                </ul>
+                            </li>
+                            <li><strong>在心迹中配置</strong>
+                                <ul>
+                                    <li>打开「AI 助手设置」</li>
+                                    <li>选择「Ollama」预设</li>
+                                    <li>API 地址保持默认：<code>http://localhost:11434/v1/chat/completions</code></li>
+                                    <li>模型名称填写您下载的模型（如 <code>llama3.1</code>）</li>
+                                    <li>API Key 可留空</li>
+                                    <li>测试连接并保存</li>
+                                </ul>
+                            </li>
+                        </ol>
+
+                        <div class="tip-box security">
+                            <p>🔐 <strong>安全机制</strong>：</p>
+                            <ul>
+                                <li>API Key 使用 <code>flutter_secure_storage</code> 加密存储</li>
+                                <li>密钥不会以明文形式保存在配置文件中</li>
+                                <li>密钥不会包含在备份文件中</li>
+                                <li>支持 API Key 格式验证（OpenAI: <code>sk-*</code>，OpenRouter: <code>sk_*</code> 或 <code>or_*</code>）</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <h2 id="editor-zh">3. 富文本编辑器</h2>
+                    <section>
+                        <h3>工具栏功能（11 组）</h3>
+                        <div class="card-grid">
+                            <div class="feature-card">
+                                <h4>历史操作</h4>
+                                <p>支持撤销 (Undo) 和重做 (Redo)。</p>
+                            </div>
+                            <div class="feature-card">
+                                <h4>文字样式</h4>
+                                <p>加粗 (B)、斜体 (I)、下划线 (U)、删除线。</p>
+                            </div>
+                            <div class="feature-card">
+                                <h4>标题</h4>
+                                <p>支持 H1-H6 多级标题切换。</p>
+                            </div>
+                            <div class="feature-card">
+                                <h4>媒体插入</h4>
+                                <p>支持图片、视频、音频（文件/URL/拍摄）。</p>
+                            </div>
+                        </div>
+
+                        <h3>AI 辅助功能（✨ 按钮）</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>功能</th>
+                                    <th>说明</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>智能分析来源</strong></td>
+                                    <td>分析笔记内容，猜测作者、出处，并给出置信度和解释</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>润色文本</strong></td>
+                                    <td>AI 改进文字表达，流式显示润色结果，可一键应用</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>续写</strong></td>
+                                    <td>AI 根据上下文继续您的思路，流式生成内容</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>深度分析</strong></td>
+                                    <td>对笔记进行综合分析，生成 Markdown 格式的洞察</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>问笔记</strong></td>
+                                    <td>打开单独的对话页面，针对笔记内容提问交流</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </section>
+
+                    <h2 id="note-mgmt-zh">4. 笔记管理</h2>
+                    <section>
+                        <h3>排序与筛选</h3>
+                        <p>支持按时间、名称、喜爱度排序。提供多维筛选：标签、天气（晴、阴、雨等）、时间段（早、中、晚）。</p>
+                        
+                        <h3>AI 卡片生成（20 种模板）</h3>
+                        <p>点击「生成卡片」后，AI 会根据笔记内容生成 SVG 格式的精美卡片。风格包括：Knowledge (极光渐变), Mindful (纸张纹理), Neon Cyber (霓虹线条) 等。</p>
+                    </section>
+
+                    <h2 id="ai-features-zh">5. AI 功能</h2>
+                    <section>
+                        <h3>每日灵感</h3>
+                        <p>基于时间、天气、位置等上下文，AI 生成个性化的写作提示。流式生成，实时显示。</p>
+                        
+                        <h3>周期性报告</h3>
+                        <p>提供周报、月报、年报。包含笔记统计、字数分析、活跃趋势以及 AI 生成的诗意洞察。</p>
+                        
+                        <h3>分析维度</h3>
+                        <ul>
+                            <li><strong>综合分析</strong>：全方位概览主题与情感。</li>
+                            <li><strong>情感分析</strong>：识别深层情绪与触发因素。</li>
+                            <li><strong>思维导图</strong>：提取核心思想节点。</li>
+                            <li><strong>成长分析</strong>：制定 30 天行动计划。</li>
+                        </ul>
+                    </section>
+
+                    <h2 id="sync-zh">6. 设备同步</h2>
+                    <section>
+                        <p>使用 <strong>LocalSend</strong> 协议进行局域网 P2P 同步，无需云服务器。支持多平台：Android, iOS, Windows, macOS, Linux。</p>
+                        <div class="tip-box">
+                            <p><strong>同步策略</strong>：采用 LWW (Last-Write-Wins) 策略，自动识别并合并最新修改。</p>
+                        </div>
+                    </section>
+
+                    <h2 id="backup-zh">7. 备份与恢复</h2>
+                    <section>
+                        <p>推荐使用 <strong>ZIP 格式</strong> (v1.2.0+)，包含 <code>backup_data.json</code> 和 <code>media/</code> 媒体库。支持合并与覆盖两种恢复模式。</p>
+                    </section>
+
+                    <h2 id="settings-zh">8. 设置详解</h2>
+                    <section>
+                        <p>支持个性化定制：位置天气开关、多国语言、动态颜色 (Material You)、生物识别认证、一言类型筛选等。</p>
+                    </section>
+
+                    <h2 id="dev-mode-zh">9. 开发者模式</h2>
+                    <section>
+                        <p>在「关于心迹」页面连续点击图标 3 次激活。提供本地 AI 预览、日志实时监控、数据库调试信息等进阶功能。</p>
+                    </section>
+
+                    <h2 id="faq-zh">10. 常见问题</h2>
+                    <section>
+                        <p><strong>Q: AI 响应很慢？</strong><br>A: 本地 AI 受设备性能限制，云服务可能受网络波动影响。建议尝试更轻量的模型或调整 <code>max_tokens</code>。</p>
+                        <p><strong>Q: 同步发现不到设备？</strong><br>A: 请确保在同一 Wi-Fi 下，检查防火墙设置。iOS 设备需开启本地网络权限。</p>
+                    </section>
+                </div>
+
+                <!-- English Version -->
+                <div class="lang-en">
+                    <h1 id="manual-title-en">ThoughtEcho User Manual</h1>
+                    <p>Welcome to ThoughtEcho, your personal AI-powered inspiration notebook. This manual will help you understand all features of the app.</p>
+                    
+                    <h2 id="quick-start-en">1. Getting Started</h2>
+                    <section>
+                        <h3>First Launch</h3>
+                        <ul>
+                            <li>App displays onboarding pages introducing core features</li>
+                            <li>Choose language preferences and Hitokoto types</li>
+                            <li>Supports automatic migration from older versions</li>
+                        </ul>
+                        <h3>Home Interface</h3>
+                        <ul>
+                            <li><strong>Bottom Navigation</strong>: Home, Notes, Insights, Settings</li>
+                            <li><strong>Daily Inspiration</strong>: Shows Hitokoto quote and AI writing prompts</li>
+                            <li><strong>Quick Capture Button (+)</strong>:
+                                <ul>
+                                    <li>Short press: Quick add note</li>
+                                    <li>Long press: Voice input</li>
+                                </ul>
+                            </li>
+                            <li><strong>Clipboard Detection</strong>: Auto-detects clipboard content when returning to app</li>
+                        </ul>
+                    </section>
+
+                    <h2 id="ai-config-en">2. AI Service Configuration</h2>
+                    <section>
+                        <div class="tip-box warning">
+                            <p>⚠️ <strong>Important</strong>: AI features require API Key configuration</p>
+                        </div>
+                        <p><strong>Access Path</strong>: Settings → AI Assistant Settings</p>
+                        
+                        <h3>Supported Providers</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Provider</th>
+                                    <th>API URL</th>
+                                    <th>Default Model</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>OpenAI</strong></td>
+                                    <td><code>https://api.openai.com/v1/chat/completions</code></td>
+                                    <td>gpt-4o</td>
+                                    <td>Official OpenAI service</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>OpenRouter</strong></td>
+                                    <td><code>https://openrouter.ai/api/v1/chat/completions</code></td>
+                                    <td>openai/gpt-4o</td>
+                                    <td>Multi-model aggregation</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>DeepSeek</strong></td>
+                                    <td><code>https://api.deepseek.com/v1/chat/completions</code></td>
+                                    <td>deepseek-chat</td>
+                                    <td>Chinese LLM</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Ollama (Local)</strong></td>
+                                    <td><code>http://localhost:11434/v1/chat/completions</code></td>
+                                    <td>(custom)</td>
+                                    <td>Local open-source models</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>LMStudio (Local)</strong></td>
+                                    <td><code>http://localhost:1234/v1/chat/completions</code></td>
+                                    <td>(custom)</td>
+                                    <td>Local model inference</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="tip-box security">
+                            <p>🔐 <strong>Security</strong>: Keys are encrypted via <code>flutter_secure_storage</code> and never included in backups.</p>
+                        </div>
+                    </section>
+
+                    <h2 id="editor-en">3. Rich Text Editor</h2>
+                    <section>
+                        <h3>Toolbar & AI</h3>
+                        <p>Comprehensive editing tools plus AI ✨ features: <strong>Smart Analyze</strong>, <strong>Polish Text</strong>, <strong>Continue Writing</strong>, and <strong>Deep Analysis</strong>.</p>
+                        <p>Auto-save keeps your drafts safe every 2 seconds.</p>
+                    </section>
+
+                    <h2 id="note-mgmt-en">4. Note Management</h2>
+                    <section>
+                        <p>Sort by time, name, or favorites. Filter by tags, weather, and creation periods. Generate 20+ styles of AI cards for social sharing.</p>
+                    </section>
+
+                    <h2 id="ai-features-en">5. AI Features</h2>
+                    <section>
+                        <h3>Insights & Reports</h3>
+                        <p>Weekly, Monthly, and Yearly reports with AI-generated poetic insights. Advanced analysis including <strong>Emotional Analysis</strong> and <strong>Mindmapping</strong>.</p>
+                    </section>
+
+                    <h2 id="sync-en">6. Device Sync</h2>
+                    <section>
+                        <p>LAN P2P synchronization using <strong>LocalSend</strong>. Cross-platform support for Android, iOS, Windows, and macOS. Uses Last-Write-Wins (LWW) conflict resolution.</p>
+                    </section>
+
+                    <h2 id="backup-en">7. Backup & Restore</h2>
+                    <section>
+                        <p>ZIP backups including all media files. Supports Overwrite and Merge restore modes for flexible data management.</p>
+                    </section>
+
+                    <h2 id="settings-en">8. Settings Guide</h2>
+                    <section>
+                        <p>Customize language, Material You dynamic colors, biometric authentication, and smart push notifications.</p>
+                    </section>
+
+                    <h2 id="dev-mode-en">9. Developer Mode</h2>
+                    <section>
+                        <p>Triple-tap the icon in "About" to unlock advanced debugging tools, log persistence, and experimental local AI settings.</p>
+                    </section>
+
+                    <h2 id="faq-en">10. FAQ</h2>
+                    <section>
+                        <p><strong>Q: AI not working?</strong><br>A: Verify API Key, check connection, and ensure sufficient balance/quota.</p>
+                        <p><strong>Q: Sync failing?</strong><br>A: Ensure same Wi-Fi, disable VPNs, and grant local network permissions on mobile.</p>
+                    </section>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p class="lang-zh">© 2024 心迹 ThoughtEcho | <a href="index.html">返回首页</a></p>
+        <p class="lang-en">© 2024 ThoughtEcho | <a href="index.html">Back to Home</a></p>
+    </footer>
+
+    <!-- Back to Top -->
+    <button class="back-to-top" id="backToTop">↑</button>
+
+    <script>
+        // ==================== 状态管理 ====================
+        const state = {
+            theme: localStorage.getItem('theme') || 'light',
+            lang: localStorage.getItem('lang') || 'zh'
+        };
+
+        // ==================== 主题切换 ====================
+        const themeToggle = document.getElementById('themeToggle');
+        
+        function applyTheme(theme) {
+            document.documentElement.setAttribute('data-theme', theme);
+            themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+            localStorage.setItem('theme', theme);
+        }
+
+        themeToggle.addEventListener('click', () => {
+            state.theme = state.theme === 'dark' ? 'light' : 'dark';
+            applyTheme(state.theme);
+        });
+
+        applyTheme(state.theme);
+
+        // ==================== 语言切换 ====================
+        const langToggle = document.getElementById('langToggle');
+        
+        function applyLang(lang) {
+            if (lang === 'en') {
+                document.body.classList.add('lang-en');
+                langToggle.textContent = '中';
+            } else {
+                document.body.classList.remove('lang-en');
+                langToggle.textContent = 'EN';
+            }
+            localStorage.setItem('lang', lang);
+            generateTOC(); // 语言切换后重绘目录
+        }
+
+        langToggle.addEventListener('click', () => {
+            state.lang = state.lang === 'en' ? 'zh' : 'en';
+            applyLang(state.lang);
+        });
+
+        applyLang(state.lang);
+
+        // ==================== 目录生成 ====================
+        function generateTOC() {
+            const container = document.querySelector(state.lang === 'en' ? '.lang-en' : '.lang-zh');
+            const headers = container.querySelectorAll('h2, h3');
+            const tocList = document.getElementById('tocList');
+            const mobileTocList = document.getElementById('mobileTocList');
+            
+            tocList.innerHTML = '';
+            mobileTocList.innerHTML = '';
+
+            headers.forEach((header, index) => {
+                const id = header.id || `section-${state.lang}-${index}`;
+                header.id = id;
+
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = `#${id}`;
+                a.textContent = header.textContent;
+                a.className = header.tagName === 'H2' ? 'toc-h2' : 'toc-h3';
+                
+                li.appendChild(a);
+                tocList.appendChild(li);
+                mobileTocList.appendChild(li.cloneNode(true));
+            });
+        }
+
+        // ==================== 滚动监听 (Scroll Spy) ====================
+        window.addEventListener('scroll', () => {
+            const sections = document.querySelectorAll('h2, h3');
+            const navLinks = document.querySelectorAll('.toc-list a');
+            const backToTop = document.getElementById('backToTop');
+            
+            let current = '';
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                if (pageYOffset >= sectionTop - 100) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href').substring(1) === current) {
+                    link.classList.add('active');
+                }
+            });
+
+            // 回到顶部按钮可见性
+            if (window.scrollY > 300) {
+                backToTop.classList.add('visible');
+            } else {
+                backToTop.classList.remove('visible');
+            }
+        });
+
+        // ==================== 移动端目录面板 ====================
+        const mobileTocBtn = document.getElementById('mobileTocBtn');
+        const mobileTocClose = document.getElementById('mobileTocClose');
+        const mobileTocPanel = document.getElementById('mobileTocPanel');
+        const mobileTocOverlay = document.getElementById('mobileTocOverlay');
+
+        function toggleMobileTOC() {
+            mobileTocPanel.classList.toggle('active');
+            mobileTocOverlay.classList.toggle('active');
+        }
+
+        mobileTocBtn.addEventListener('click', toggleMobileTOC);
+        mobileTocClose.addEventListener('click', toggleMobileTOC);
+        mobileTocOverlay.addEventListener('click', toggleMobileTOC);
+
+        // 点击目录项后自动关闭
+        document.getElementById('mobileTocList').addEventListener('click', (e) => {
+            if (e.target.tagName === 'A') toggleMobileTOC();
+        });
+
+        // ==================== 回到顶部 ====================
+        document.getElementById('backToTop').addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // 初始化生成目录
+        generateTOC();
+    </script>
+</body>
+</html>
