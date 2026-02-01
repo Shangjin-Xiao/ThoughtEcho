@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="心迹用户指南 - ThoughtEcho User Guide">
+    <meta name="theme-color" content="#a67c52">
+    <title>心迹用户指南 - ThoughtEcho User Guide</title>
+    <link rel="icon" type="image/png" href="icon.png"/>
+    <link rel="canonical" href="https://shangjin-xiao.github.io/ThoughtEcho/user-guide.html">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Sans:wght@300;400;500;700&family=Long+Cang&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+
+    <style>
+        /* ==================== CSS 变量 ==================== */
+        :root {
+            --paper-white: #fefdfb;
+            --paper-cream: #f9f6f0;
+            --paper-yellow: #fff9e6;
+            --paper-pink: #fff0f5;
+            --paper-blue: #f0f8ff;
+            --paper-green: #f0fff4;
+            --line-color: #d4c5b9;
+            --ink-dark: #2c2416;
+            --ink-medium: #5a4a3a;
+            --ink-light: #8b7355;
+            --accent-brown: #a67c52;
+            --accent-orange: #d4895b;
+            --accent-blue: #5d94b8;
+            --accent-green: #7ca982;
+            --accent-red: #c66b6b;
+            --shadow-soft: rgba(0, 0, 0, 0.08);
+            --shadow-medium: rgba(0, 0, 0, 0.12);
+            --shadow-hard: rgba(0, 0, 0, 0.2);
+            --nav-bg: rgba(254, 253, 251, 0.85);
+            --toc-width: 280px;
+        }
+
+        [data-theme="dark"] {
+            --paper-white: #2a2520;
+            --paper-cream: #342e28;
+            --paper-yellow: #3d3630;
+            --paper-pink: #3d3035;
+            --paper-blue: #2d3540;
+            --paper-green: #2d3a30;
+            --line-color: #4a4037;
+            --ink-dark: #e8dfd5;
+            --ink-medium: #d4c5b9;
+            --ink-light: #b8a99a;
+            --nav-bg: rgba(42, 37, 32, 0.85);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+            scroll-padding-top: 90px;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', 'Noto Sans', 'ZCOOL XiaoWei', serif;
+            background: var(--paper-cream);
+            color: var(--ink-dark);
+            line-height: 1.8;
+            overflow-x: hidden;
+            position: relative;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        body.lang-en {
+            font-family: 'Noto Sans', 'Noto Sans SC', 'ZCOOL XiaoWei', serif;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                repeating-linear-gradient(0deg, transparent, transparent 32px, var(--line-color) 32px, var(--line-color) 33px),
+                url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            opacity: 0.35;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        .handwriting {
+            font-family: 'Caveat', 'Long Cang', cursive;
+        }
+
+        body.lang-en .handwriting {
+            font-family: 'Caveat', cursive;
+        }
+
+        /* ==================== 导航栏 ==================== */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: var(--nav-bg);
+            border-bottom: 3px solid var(--accent-brown);
+            box-shadow: 0 3px 12px var(--shadow-soft);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+            color: var(--ink-dark);
+            transition: transform 0.3s ease;
+        }
+
+        .nav-brand:hover {
+            transform: translateY(-2px);
+        }
+
+        .nav-logo img {
+            width: 42px;
+            height: 42px;
+        }
+
+        .nav-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--ink-dark);
+            font-family: 'ZCOOL XiaoWei', serif;
+        }
+
+        .nav-actions {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .theme-toggle, .lang-toggle {
+            width: 40px;
+            height: 40px;
+            border: 2px solid var(--accent-brown);
+            background: var(--paper-yellow);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            box-shadow: 2px 2px 4px var(--shadow-soft);
+        }
+
+        .lang-toggle {
+            border-color: var(--accent-blue);
+            background: var(--paper-blue);
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--accent-blue);
+        }
+
+        .theme-toggle:hover, .lang-toggle:hover {
+            transform: scale(1.05);
+            box-shadow: 3px 3px 8px var(--shadow-medium);
+        }
+
+        .btn-home {
+            padding: 0.6rem 1.2rem;
+            background: var(--accent-brown);
+            color: var(--paper-white);
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            box-shadow: 3px 3px 0 var(--shadow-hard);
+            transition: all 0.2s ease;
+            font-size: 0.9rem;
+        }
+
+        .btn-home:hover {
+            transform: translate(2px, 2px);
+            box-shadow: 1px 1px 0 var(--shadow-hard);
+        }
+
+        /* ==================== 主体布局 ==================== */
+        .main-container {
+            display: flex;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding-top: 80px;
+        }
+
+        /* ==================== 侧边目录 ==================== */
+        .toc-sidebar {
+            width: var(--toc-width);
+            position: fixed;
+            top: 80px;
+            left: calc((100vw - 1400px) / 2);
+            height: calc(100vh - 80px);
+            overflow-y: auto;
+            padding: 2rem 1rem;
+            background: var(--paper-white);
+            border-right: 2px solid var(--line-color);
+        }
+
+        @media (max-width: 1500px) {
+            .toc-sidebar {
+                left: 0;
+            }
+        }
+
+        .toc-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--accent-brown);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--accent-brown);
+        }
+
+        .toc-list {
+            list-style: none;
+        }
+
+        .toc-list li {
+            margin-bottom: 0.3rem;
+        }
+
+        .toc-list a {
+            color: var(--ink-medium);
+            text-decoration: none;
+            font-size: 0.9rem;
+            display: block;
+            padding: 0.4rem 0.6rem;
+            border-radius: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .toc-list a:hover {
+            background: var(--paper-yellow);
+            color: var(--accent-brown);
+        }
+
+        .toc-list a.active {
+            background: var(--accent-brown);
+            color: var(--paper-white);
+        }
+
+        .toc-list .toc-h2 {
+            font-weight: 600;
+        }
+
+        .toc-list .toc-h3 {
+            padding-left: 1.2rem;
+            font-size: 0.85rem;
+        }
+
+        /* ==================== 内容区域 ==================== */
+        .content {
+            flex: 1;
+            margin-left: var(--toc-width);
+            padding: 2rem 3rem;
+            max-width: calc(100% - var(--toc-width));
+        }
+
+        .content-wrapper {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .content h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: var(--ink-dark);
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 4px solid var(--accent-brown);
+            font-family: 'ZCOOL XiaoWei', serif;
+        }
+
+        .content h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--accent-brown);
+            margin-top: 3rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--line-color);
+        }
+
+        .content h3 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--ink-dark);
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .content h4 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--ink-medium);
+            margin-top: 1.5rem;
+            margin-bottom: 0.8rem;
+        }
+
+        .content p {
+            margin-bottom: 1rem;
+            color: var(--ink-medium);
+        }
+
+        .content ul, .content ol {
+            margin-bottom: 1rem;
+            padding-left: 1.5rem;
+        }
+
+        .content li {
+            margin-bottom: 0.5rem;
+            color: var(--ink-medium);
+        }
+
+        .content strong {
+            color: var(--ink-dark);
+        }
+
+        .content code {
+            background: var(--paper-yellow);
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9em;
+            color: var(--accent-red);
+        }
+
+        .content pre {
+            background: var(--paper-white);
+            border: 2px solid var(--line-color);
+            border-radius: 8px;
+            padding: 1rem;
+            overflow-x: auto;
+            margin-bottom: 1rem;
+        }
+
+        .content pre code {
+            background: none;
+            padding: 0;
+            color: var(--ink-dark);
+        }
+
+        /* ==================== 表格样式 ==================== */
+        .content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+            background: var(--paper-white);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px var(--shadow-soft);
+        }
+
+        .content th, .content td {
+            padding: 0.8rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--line-color);
+        }
+
+        .content th {
+            background: var(--accent-brown);
+            color: var(--paper-white);
+            font-weight: 600;
+        }
+
+        .content tr:hover {
+            background: var(--paper-yellow);
+        }
+
+        /* ==================== 提示框 ==================== */
+        .tip-box {
+            background: var(--paper-blue);
+            border-left: 4px solid var(--accent-blue);
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .tip-box.warning {
+            background: var(--paper-yellow);
+            border-left-color: var(--accent-orange);
+        }
+
+        .tip-box.security {
+            background: var(--paper-green);
+            border-left-color: var(--accent-green);
+        }
+
+        .tip-box strong {
+            color: var(--accent-blue);
+        }
+
+        .tip-box.warning strong {
+            color: var(--accent-orange);
+        }
+
+        .tip-box.security strong {
+            color: var(--accent-green);
+        }
+
+        /* ==================== 卡片网格 ==================== */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .feature-card {
+            background: var(--paper-white);
+            border: 2px solid var(--line-color);
+            border-radius: 12px;
+            padding: 1.2rem;
+            transition: all 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px var(--shadow-medium);
+            border-color: var(--accent-brown);
+        }
+
+        .feature-card h4 {
+            margin-top: 0;
+            color: var(--accent-brown);
+        }
+
+        .feature-card p {
+            font-size: 0.9rem;
+            margin-bottom: 0;
+        }
+
+        /* ==================== 语言切换 ==================== */
+        .lang-zh, .lang-en {
+            display: none;
+        }
+
+        body:not(.lang-en) .lang-zh {
+            display: block;
+        }
+
+        body.lang-en .lang-en {
+            display: block;
+        }
+
+        /* ==================== 响应式设计 ==================== */
+        @media (max-width: 1024px) {
+            .toc-sidebar {
+                display: none;
+            }
+
+            .content {
+                margin-left: 0;
+                max-width: 100%;
+                padding: 2rem 1.5rem;
+            }
+
+            .mobile-toc-btn {
+                display: flex;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav-container {
+                padding: 0.8rem 1rem;
+            }
+
+            .nav-title {
+                font-size: 1.2rem;
+            }
+
+            .btn-home span {
+                display: none;
+            }
+
+            .content {
+                padding: 1.5rem 1rem;
+            }
+
+            .content h1 {
+                font-size: 1.8rem;
+            }
+
+            .content h2 {
+                font-size: 1.4rem;
+            }
+
+            .card-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* ==================== 移动端目录按钮 ==================== */
+        .mobile-toc-btn {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: var(--accent-brown);
+            color: var(--paper-white);
+            border: none;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 15px var(--shadow-hard);
+            z-index: 900;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .mobile-toc-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1100;
+        }
+
+        .mobile-toc-overlay.active {
+            display: block;
+        }
+
+        .mobile-toc-panel {
+            position: fixed;
+            top: 0;
+            left: -100%;
+            width: 80%;
+            max-width: 300px;
+            height: 100%;
+            background: var(--paper-white);
+            z-index: 1200;
+            padding: 2rem 1rem;
+            overflow-y: auto;
+            transition: left 0.3s ease;
+        }
+
+        .mobile-toc-panel.active {
+            left: 0;
+        }
+
+        .mobile-toc-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            width: 36px;
+            height: 36px;
+            background: var(--paper-yellow);
+            border: 2px solid var(--accent-brown);
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* ==================== 回到顶部 ==================== */
+        .back-to-top {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 45px;
+            height: 45px;
+            background: var(--accent-blue);
+            color: var(--paper-white);
+            border: none;
+            border-radius: 50%;
+            font-size: 1.3rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px var(--shadow-medium);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 800;
+        }
+
+        .back-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .back-to-top:hover {
+            transform: scale(1.1);
+            background: var(--accent-brown);
+        }
+
+        /* ==================== 滚动条 ==================== */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--paper-cream);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--line-color);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-brown);
+        }
+
+        /* ==================== 页脚 ==================== */
+        .footer {
+            background: var(--paper-white);
+            border-top: 3px solid var(--accent-brown);
+            padding: 2rem;
+            text-align: center;
+            margin-left: var(--toc-width);
+        }
+
+        @media (max-width: 1024px) {
+            .footer {
+                margin-left: 0;
+            }
+        }
+
+        .footer p {
+            color: var(--ink-light);
+            font-size: 0.9rem;
+        }
+
+        .footer a {
+            color: var(--accent-brown);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav>
+        <div class="nav-container">
+            <a href="index.html" class="nav-brand">
+                <div class="nav-logo">
+                    <img src="icon.png" alt="ThoughtEcho Logo">
+                </div>
+                <span class="nav-title lang-zh">心迹用户指南</span>
+                <span class="nav-title lang-en">User Guide</span>
+            </a>
+            <div class="nav-actions">
+                <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">🌙</button>
+                <button class="lang-toggle" id="langToggle">EN</button>
+                <a href="index.html" class="btn-home">
+                    <span class="lang-zh">返回首页</span>
+                    <span class="lang-en">Home</span>
+                    🏠
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 侧边目录 -->
+    <aside class="toc-sidebar" id="tocSidebar">
+        <h3 class="toc-title lang-zh">📑 目录</h3>
+        <h3 class="toc-title lang-en">📑 Contents</h3>
+        <ul class="toc-list" id="tocList">
+            <!-- 动态生成 -->
+        </ul>
+    </aside>
+
+    <!-- 移动端目录 -->
+    <button class="mobile-toc-btn" id="mobileTocBtn">📑</button>
+    <div class="mobile-toc-overlay" id="mobileTocOverlay"></div>
+    <div class="mobile-toc-panel" id="mobileTocPanel">
+        <button class="mobile-toc-close" id="mobileTocClose">✕</button>
+        <h3 class="toc-title lang-zh">📑 目录</h3>
+        <h3 class="toc-title lang-en">📑 Contents</h3>
+        <ul class="toc-list" id="mobileTocList">
+            <!-- 动态生成 -->
+        </ul>
+    </div>
+
+    <!-- 主内容 -->
+    <div class="main-container">
+        <main class="content">
+            <div class="content-wrapper">
