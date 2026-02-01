@@ -29,7 +29,9 @@ class AnnualReportDemoPage extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => AnnualReportPage(
+                    builder: (context) =>
+                        // ignore: deprecated_member_use, deprecated_member_use_from_same_package
+                        AnnualReportPage(
                       year: 2024,
                       quotes: _generateSampleData(),
                     ),
@@ -56,7 +58,9 @@ class AnnualReportDemoPage extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const AnnualReportPage(
+                    builder: (context) => const
+                        // ignore: deprecated_member_use, deprecated_member_use_from_same_package
+                        AnnualReportPage(
                       year: 2024,
                       quotes: [], // 空数据演示
                     ),
