@@ -33,7 +33,8 @@
   
   <p>
     <a href="#-english-version"><b>English</b></a> • 
-    <a href="#-中文版本"><b>中文</b></a>
+    <a href="#-中文版本"><b>中文</b></a> •
+    <a href="docs/USER_MANUAL.md"><b>用户手册 / User Manual</b></a>
   </p>
   
 </div>
@@ -182,6 +183,7 @@
         • 性能优化与稳定性提升<br>
         • 用户体验改进<br>
         • 多设备同步功能<br>
+        • 国际化多语言支持<br>
         • 桌面端应用支持
       </td>
       <td>
@@ -191,7 +193,6 @@
         • OCR拍照识别摘录<br>
         • AI自动提取作者出处<br><br>
         <b>🌍 用户体验提升</b><br>
-        • 国际化多语言支持<br>
         • 仿真3D笔记本界面<br>
         • 智能内容分类<br>
         • 地图选点添加位置<br><br>
@@ -418,6 +419,7 @@ ThoughtEcho is more than just a note-taking app—it's your **personal AI-powere
         • Performance optimization<br>
         • User experience improvements<br>
         • Multi-device sync support<br>
+        • Internationalization support<br>
         • Desktop application support
       </td>
       <td>
@@ -426,7 +428,6 @@ ThoughtEcho is more than just a note-taking app—it's your **personal AI-powere
         • OCR text recognition<br>
         • AI author extraction<br>
         • Map location selection<br>
-        • Internationalization support<br>
         • 3D notebook interface<br>
         • Smart categorization<br>
         • Offline AI capabilities<br>

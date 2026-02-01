@@ -1,7 +1,7 @@
 # PROJECT KNOWLEDGE BASE
 
-**Generated:** 2026-01-17T02:30:00Z
-**Commit:** d00320a
+**Generated:** 2026-01-31T03:30:00Z
+**Commit:** updated-from-repo
 **Branch:** main
 
 ## OVERVIEW
@@ -14,12 +14,12 @@ ThoughtEcho (心迹) - Flutter 3.x 跨平台笔记应用，集成 AI 分析、�
 ThoughtEcho/
 ├── lib/
 │   ├── main.dart           # 入口点 + Provider 注入 + 紧急恢复
-│   ├── controllers/        # UI 控制器 (search, onboarding)
-│   ├── models/             # 数据模型 (Quote, NoteCategory, AISettings)
-│   ├── pages/              # 页面组件 (33 files)
-│   ├── services/           # 业务逻辑服务 (78 files) → 见子目录 AGENTS.md
-│   ├── utils/              # 共享工具类 (50 files)
-│   ├── widgets/            # UI 组件 (34 files)
+│   ├── controllers/        # UI 控制器 → 见子目录 AGENTS.md
+│   ├── models/             # 数据模型 → 见子目录 AGENTS.md
+│   ├── pages/              # 页面组件 → 见子目录 AGENTS.md
+│   ├── services/           # 业务逻辑服务 → 见子目录 AGENTS.md
+│   ├── utils/              # 共享工具类 → 见子目录 AGENTS.md
+│   ├── widgets/            # UI 组件 → 见子目录 AGENTS.md
 │   ├── theme/              # 主题定义
 │   ├── constants/          # 常量 (卡片模板, AI prompts)
 │   └── gen_l10n/           # 国际化生成文件
@@ -120,6 +120,49 @@ flutter gen-l10n
 # Windows MSIX
 pwsh ./scripts/build_msix_ci.ps1
 ```
+
+## USER DOCUMENTATION
+
+| 文档 | 位置 | 说明 |
+|------|------|------|
+| 用户手册 (双语) | `docs/USER_MANUAL.md` | GitHub 主入口，包含中英文完整指南 |
+| 中文用户手册 | `assets/docs/user_manual_zh.md` | 详细中文操作指南 |
+| 英文用户手册 | `assets/docs/user_manual_en.md` | 详细英文操作指南 |
+| 网站用户指南 | `res/user-guide.html` | 网站版用户指南，双语切换 |
+| 项目网站 | `res/index.html` | 项目主页，包含功能介绍和下载链接 |
+
+### 文档维护规范
+- 新增功能后**必须**同步更新用户手册
+- 用户手册内容必须基于实际代码，**禁止编造功能**
+- 保持中英文版本同步更新
+- 网站 HTML 需匹配 `res/index.html` 的设计风格
+
+## AI SERVICE CONFIGURATION
+
+支持的 AI 服务商配置（用户手册核心内容）：
+
+| 服务商 | API URL | 默认模型 |
+|--------|---------|----------|
+| OpenAI | `https://api.openai.com/v1/chat/completions` | gpt-4o |
+| OpenRouter | `https://openrouter.ai/api/v1/chat/completions` | openai/gpt-4o |
+| SiliconFlow | `https://api.siliconflow.cn/v1/chat/completions` | (用户自选) |
+| DeepSeek | `https://api.deepseek.com/v1/chat/completions` | deepseek-chat |
+| Anthropic | `https://api.anthropic.com/v1/messages` | claude-3.7-sonnet-latest |
+| Ollama (本地) | `http://localhost:11434/v1/chat/completions` | (用户自选) |
+| LMStudio (本地) | `http://localhost:1234/v1/chat/completions` | (用户自选) |
+
+配置入口：`lib/pages/ai_settings_page.dart`
+密钥管理：`lib/services/api_key_manager.dart` (flutter_secure_storage 加密存储)
+
+## DEVELOPER MODE
+
+**激活方式**：设置 → 关于心迹 → 连续点击应用图标 3 次
+
+开发者功能（仅开发者模式可见）：
+- 日志中心 (`LogsSettingsPage`)
+- 本地 AI 设置 (`LocalAISettingsPage`) - 实验性
+- 存储管理 (`StorageManagementPage`)
+- 数据库调试信息
 
 ## NOTES
 
