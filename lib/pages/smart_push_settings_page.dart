@@ -1393,7 +1393,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                   Text(
                     l10n.smartPushPermissionWarningDesc,
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onErrorContainer.withValues(alpha: 0.8),
+                      color:
+                          colorScheme.onErrorContainer.withValues(alpha: 0.8),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -1500,8 +1501,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                   title,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onErrorContainer,
-                    decoration:
-                        isGranted ? TextDecoration.lineThrough : null,
+                    decoration: isGranted ? TextDecoration.lineThrough : null,
                   ),
                 ),
               ),
@@ -1592,8 +1592,9 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
     required ThemeData theme,
     required ColorScheme colorScheme,
   }) {
-    final displayManufacturer =
-        manufacturer.isNotEmpty ? manufacturer.toUpperCase() : l10n.smartPushUnknownManufacturer;
+    final displayManufacturer = manufacturer.isNotEmpty
+        ? manufacturer.toUpperCase()
+        : l10n.smartPushUnknownManufacturer;
 
     showDialog(
       context: context,
