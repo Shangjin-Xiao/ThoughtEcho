@@ -236,12 +236,11 @@ class SmartPushAnalytics extends ChangeNotifier {
   // 2. 疲劳预防系统
   // ============================================================
 
-  /// 检查是否可以发送推送（基于疲劳预算）
-  Future<bool> canSendNotification(String contentType) async {
+  /// 获取推送被跳过的原因（如果可以发送则返回 null）
+  Future<String?> getSkipReason(String contentType) async {
     // 1. 检查冷却期
     if (await _isInCooldown()) {
-      AppLogger.d('用户处于冷却期，跳过推送');
-      return false;
+      return '用户处于冷却期 (Dismissal Cooldown)';
     }
 
     // 2. 检查疲劳预算
@@ -249,10 +248,20 @@ class SmartPushAnalytics extends ChangeNotifier {
     final cost = contentTypeCosts[contentType] ?? 3.0;
 
     if (budget < cost) {
-      AppLogger.d('疲劳预算不足: $budget < $cost');
-      return false;
+      return '疲劳预算不足 (Budget: ${budget.toStringAsFixed(1)} < Cost: $cost)';
     }
 
+    return null;
+  }
+
+  /// 检查是否可以发送推送（基于疲劳预算）
+  Future<bool> canSendNotification(String contentType) async {
+    final skipReason = await getSkipReason(contentType);
+    if (skipReason != null) {
+      // 保留一个 debug 日志，但主要的告警日志将由调用方记录
+      AppLogger.d('SOTA 疲劳预防：跳过推送，原因: $skipReason');
+      return false;
+    }
     return true;
   }
 

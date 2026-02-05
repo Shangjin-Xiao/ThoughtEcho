@@ -47,6 +47,7 @@ class SmartPushService extends ChangeNotifier {
 
   static const String _settingsKey = 'smart_push_settings_v2';
   static const String _legacySettingsKey = 'smart_push_settings';
+  static const String _autoStartGrantedKey = 'smart_push_auto_start_granted';
   static const int _androidAlarmId = 888;
   static const int _dailyQuoteAlarmId = 988;
   static const String _notificationChannelId = 'smart_push_channel';
@@ -82,6 +83,17 @@ class SmartPushService extends ChangeNotifier {
   /// 设置天气服务（延迟注入）
   void setWeatherService(WeatherService service) {
     _weatherService = service;
+  }
+
+  /// 获取自启动权限是否已手动授予（仅用于持久化状态，因为 Android 无法检测该权限）
+  Future<bool> getAutoStartGranted() async {
+    return _mmkv.getBool(_autoStartGrantedKey) ?? false;
+  }
+
+  /// 设置自启动权限已手动授予
+  Future<void> setAutoStartGranted(bool granted) async {
+    await _mmkv.setBool(_autoStartGrantedKey, granted);
+    notifyListeners();
   }
 
   /// 初始化服务
@@ -637,6 +649,7 @@ class SmartPushService extends ChangeNotifier {
         manufacturer: '',
         sdkVersion: 0,
         needsAutoStartPermission: false,
+        autoStartGranted: true,
       );
     }
 
@@ -645,6 +658,7 @@ class SmartPushService extends ChangeNotifier {
     final batteryExempted = await checkBatteryOptimizationExempted();
     final manufacturer = await getDeviceManufacturer();
     final sdkVersion = await getAndroidSdkVersion();
+    final autoStartGranted = await getAutoStartGranted();
 
     // 这些厂商的 ROM 通常需要额外的自启动权限
     final autoStartManufacturers = [
@@ -674,6 +688,7 @@ class SmartPushService extends ChangeNotifier {
       manufacturer: manufacturer,
       sdkVersion: sdkVersion,
       needsAutoStartPermission: needsAutoStart,
+      autoStartGranted: autoStartGranted,
     );
   }
 
@@ -1154,14 +1169,23 @@ class SmartPushService extends ChangeNotifier {
   /// 检查并触发推送（核心逻辑）
   Future<void> checkAndPush({bool isBackground = false}) async {
     final now = DateTime.now();
+    AppLogger.i(
+        '开始检查推送条件 (isBackground: $isBackground, time: ${now.hour}:${now.minute})');
 
     // 如果是前台手动调用（非后台），默认执行智能推送检查（或根据上下文）
     if (!isBackground) {
-      if (_settings.enabled) await _performSmartPush();
+      AppLogger.d('前台手动触发，检查智能推送是否启用');
+      if (_settings.enabled) {
+        AppLogger.i('执行前台智能推送...');
+        await _performSmartPush();
+      } else {
+        AppLogger.w('智能推送未启用，忽略前台触发');
+      }
       return;
     }
 
     // 后台逻辑：判断当前时间命中了哪个任务
+    AppLogger.d('正在进行后台时间匹配检查...');
 
     // 1. 检查每日一言
     if (_settings.dailyQuotePushEnabled) {
@@ -1170,31 +1194,41 @@ class SmartPushService extends ChangeNotifier {
           DateTime(now.year, now.month, now.day, slot.hour, slot.minute);
       final diff = now.difference(slotTime).inMinutes.abs();
 
-      AppLogger.d(
-          '检查每日一言推送: 设定时间=${slot.formattedTime}, 当前时间=${now.hour}:${now.minute}, 差距=$diff分钟');
+      AppLogger.d('每日一言时间匹配检查: 设定=${slot.formattedTime}, 差距=$diff分钟');
 
       if (diff <= 10) {
         // 使用 Warning 级别确保后台日志被持久化
-        AppLogger.w('时间匹配，执行每日一言推送 (diff=$diff分钟)');
+        AppLogger.w('时间匹配成功，准备执行每日一言推送');
         await _performDailyQuotePush(isBackground: true);
-      } else {
-        AppLogger.d('时间不匹配，跳过每日一言推送');
       }
     }
 
     // 2. 检查常规智能推送
     if (_settings.enabled && _settings.shouldPushToday()) {
+      AppLogger.d('智能推送已启用且频率允许，检查时间槽');
       for (final slot in _settings.pushTimeSlots) {
         if (!slot.enabled) continue;
         final slotTime =
             DateTime(now.year, now.month, now.day, slot.hour, slot.minute);
         final diff = now.difference(slotTime).inMinutes.abs();
+
+        AppLogger.d('智能推送时间槽检查: 设定=${slot.formattedTime}, 差距=$diff分钟');
+
         if (diff <= 10) {
+          AppLogger.w('时间匹配成功，准备执行智能推送 (Slot: ${slot.formattedTime})');
           await _performSmartPush(isBackground: true);
           break; // 只要命中一个时间槽就执行，避免重复
         }
       }
+    } else {
+      if (!_settings.enabled) {
+        AppLogger.d('智能推送未启用');
+      } else if (!_settings.shouldPushToday()) {
+        AppLogger.d('智能推送今日不活跃 (根据频率设置)');
+      }
     }
+
+    AppLogger.i('推送条件检查结束');
   }
 
   /// 手动触发推送（用于测试，绕过 enabled 检查）
@@ -1207,8 +1241,9 @@ class SmartPushService extends ChangeNotifier {
   Future<void> _performDailyQuotePush({bool isBackground = false}) async {
     try {
       // SOTA: 疲劳预防检查
-      if (!await _analytics.canSendNotification('dailyQuote')) {
-        AppLogger.d('SOTA 疲劳预防：跳过每日一言推送');
+      final skipReason = await _analytics.getSkipReason('dailyQuote');
+      if (skipReason != null) {
+        AppLogger.w('每日一言推送被跳过: $skipReason');
         if (!isBackground) {
           await scheduleNextPush();
         }
@@ -1260,8 +1295,9 @@ class SmartPushService extends ChangeNotifier {
         final contentType = _settings.pushMode == PushMode.dailyQuote
             ? 'dailyQuote'
             : 'smartContent';
-        if (!await _analytics.canSendNotification(contentType)) {
-          AppLogger.d('SOTA 疲劳预防：跳过本次推送');
+        final smartSkipReason = await _analytics.getSkipReason(contentType);
+        if (smartSkipReason != null) {
+          AppLogger.w('智能推送被跳过: $smartSkipReason');
           // 仍然重新调度下次推送
           if (!isBackground) {
             await scheduleNextPush();
@@ -2126,6 +2162,9 @@ class PushPermissionStatus {
   /// 是否需要自启动权限（基于厂商判断）
   final bool needsAutoStartPermission;
 
+  /// 自启动权限是否已手动授予
+  final bool autoStartGranted;
+
   const PushPermissionStatus({
     required this.notificationEnabled,
     required this.exactAlarmEnabled,
@@ -2133,18 +2172,22 @@ class PushPermissionStatus {
     required this.manufacturer,
     required this.sdkVersion,
     required this.needsAutoStartPermission,
+    required this.autoStartGranted,
   });
 
   /// 检查所有关键权限是否都已授予
   bool get allPermissionsGranted =>
-      notificationEnabled && exactAlarmEnabled && batteryOptimizationExempted;
+      notificationEnabled &&
+      exactAlarmEnabled &&
+      batteryOptimizationExempted &&
+      (!needsAutoStartPermission || autoStartGranted);
 
   /// 是否需要显示权限引导
   bool get needsPermissionGuide =>
       !notificationEnabled ||
       !exactAlarmEnabled ||
       !batteryOptimizationExempted ||
-      needsAutoStartPermission;
+      (needsAutoStartPermission && !autoStartGranted);
 
   /// 获取未授权的权限数量
   int get missingPermissionCount {
@@ -2152,7 +2195,7 @@ class PushPermissionStatus {
     if (!notificationEnabled) count++;
     if (!exactAlarmEnabled) count++;
     if (!batteryOptimizationExempted) count++;
-    if (needsAutoStartPermission) count++; // 自启动权限无法检测，始终提示
+    if (needsAutoStartPermission && !autoStartGranted) count++;
     return count;
   }
 }
