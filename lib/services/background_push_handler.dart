@@ -97,21 +97,27 @@ void backgroundPushCallback(int id) async {
 
   try {
     // 3. 初始化基础服务
+    AppLogger.i('正在初始化后台基础服务...');
     final mmkvService = MMKVService();
     await mmkvService.init();
+    AppLogger.d('MMKV 初始化完成');
 
     final databaseService = DatabaseService();
     await databaseService.init();
+    AppLogger.d('数据库初始化完成');
 
     // 初始化网络服务（后台获取一言需要）
     await NetworkService.instance.init();
+    AppLogger.d('网络服务初始化完成');
 
     final locationService = LocationService();
     try {
       await locationService.init();
+      AppLogger.d('位置服务初始化完成');
     } catch (e) {
       AppLogger.w('后台初始化位置服务失败: $e');
     }
+    AppLogger.i('后台基础服务初始化全部完成');
 
     // 4. 创建并运行 SmartPushService 的一次性检查
     final pushService = SmartPushService(
