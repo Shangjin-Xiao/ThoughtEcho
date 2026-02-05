@@ -181,61 +181,21 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
           await smartPushService.checkExactAlarmPermission();
 
       if (!hasExactAlarmPermission && mounted) {
-        final l10n = AppLocalizations.of(context);
-        final theme = Theme.of(context);
-        final colorScheme = theme.colorScheme;
-
-        final shouldRequest = await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text(l10n.smartPushExactAlarmTitle),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(l10n.smartPushExactAlarmMessage),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.info_outline,
-                          size: 16, color: colorScheme.primary),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          l10n.smartPushExactAlarmHint,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: Text(l10n.cancel),
+        // 直接申请精确闹钟权限（无需询问）
+        final granted = await smartPushService.requestExactAlarmPermission();
+        if (!granted && mounted) {
+          final l10n = AppLocalizations.of(context);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(l10n.exactAlarmDeniedHint),
+                behavior: SnackBarBehavior.floating,
               ),
-              FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: Text(l10n.smartPushGoToSettings),
-              ),
-            ],
-          ),
-        );
-
-        if (shouldRequest == true && mounted) {
-          await smartPushService.requestExactAlarmPermission();
-          // 刷新页面状态以移除警告卡片
+            );
+          }
+        }
+        // 刷新页面状态以更新警告卡片
+        if (mounted) {
           setState(() {});
         }
       }
@@ -419,59 +379,18 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                       await smartPushService.checkExactAlarmPermission();
                   if (!hasExactAlarmPermission) {
                     if (!context.mounted) return;
-                    // 没有精确闹钟权限，询问用户是否授权
-                    final shouldRequest = await showDialog<bool>(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: Text(l10n.smartPushExactAlarmTitle),
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(l10n.smartPushExactAlarmMessage),
-                            const SizedBox(height: 12),
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: colorScheme.surfaceContainerHighest,
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Icon(Icons.info_outline,
-                                      size: 16, color: colorScheme.primary),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      l10n.smartPushExactAlarmHint,
-                                      style:
-                                          theme.textTheme.bodySmall?.copyWith(
-                                        color: colorScheme.onSurfaceVariant,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                    // 直接申请精确闹钟权限（无需询问）
+                    final granted =
+                        await smartPushService.requestExactAlarmPermission();
+                    if (!granted && context.mounted) {
+                      // 显示降级提示
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(AppLocalizations.of(context)
+                              .exactAlarmDeniedHint),
+                          behavior: SnackBarBehavior.floating,
                         ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(ctx, false),
-                            child: Text(l10n.cancel),
-                          ),
-                          FilledButton(
-                            onPressed: () => Navigator.pop(ctx, true),
-                            child: Text(l10n.smartPushGoToSettings),
-                          ),
-                        ],
-                      ),
-                    );
-
-                    if (shouldRequest == true) {
-                      // 跳转到系统设置授权
-                      await smartPushService.requestExactAlarmPermission();
+                      );
                     }
                   }
                 }
@@ -1459,6 +1378,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                     _buildAutoStartItem(
                       smartPushService: context.read<SmartPushService>(),
                       manufacturer: status.manufacturer,
+                      isGranted: status.autoStartGranted,
                       l10n: l10n,
                       theme: theme,
                       colorScheme: colorScheme,
@@ -1522,6 +1442,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
   Widget _buildAutoStartItem({
     required SmartPushService smartPushService,
     required String manufacturer,
+    required bool isGranted,
     required AppLocalizations l10n,
     required ThemeData theme,
     required ColorScheme colorScheme,
@@ -1547,9 +1468,9 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
           child: Row(
             children: [
               Icon(
-                Icons.rocket_launch_outlined,
+                isGranted ? Icons.check_circle : Icons.rocket_launch_outlined,
                 size: 20,
-                color: colorScheme.error,
+                color: isGranted ? Colors.green : colorScheme.error,
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -1560,6 +1481,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                       l10n.smartPushAutoStartPermission,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: colorScheme.onErrorContainer,
+                        decoration:
+                            isGranted ? TextDecoration.lineThrough : null,
                       ),
                     ),
                     Text(
@@ -1573,9 +1496,11 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                 ),
               ),
               Icon(
-                Icons.help_outline,
+                isGranted ? Icons.chevron_right : Icons.help_outline,
                 size: 20,
-                color: colorScheme.error,
+                color: isGranted
+                    ? colorScheme.onSurfaceVariant.withValues(alpha: 0.5)
+                    : colorScheme.error,
               ),
             ],
           ),
@@ -1653,6 +1578,19 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
           ],
         ),
         actions: [
+          TextButton(
+            onPressed: () async {
+              final smartPushService =
+                  Provider.of<SmartPushService>(context, listen: false);
+              await smartPushService.setAutoStartGranted(true);
+              if (mounted) {
+                Navigator.of(context).pop();
+                // 刷新状态
+                setState(() {});
+              }
+            },
+            child: Text(l10n.iHaveConfigured),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(l10n.confirm),
