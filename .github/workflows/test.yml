@@ -23,7 +23,7 @@ permissions:
   checks: write
 
 env:
-  FLUTTER_VERSION: 'latest'
+  FLUTTER_VERSION: ''
 
 jobs:
   code-quality:
@@ -38,7 +38,6 @@ jobs:
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: ${{ env.FLUTTER_VERSION }}
         channel: 'stable'
         cache: true
 
