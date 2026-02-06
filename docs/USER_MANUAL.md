@@ -20,8 +20,7 @@
 6. [设备同步](#6-设备同步)
 7. [备份与恢复](#7-备份与恢复)
 8. [设置详解](#8-设置详解)
-9. [开发者模式](#9-开发者模式)
-10. [常见问题](#10-常见问题)
+9. [常见问题](#9-常见问题)
 
 ---
 
@@ -661,44 +660,7 @@ backup_file.zip
 
 ---
 
-## 9. 开发者模式
-
-### 激活方法
-
-1. 进入「设置」→「关于心迹」
-2. 在 2 秒内**连续点击应用图标 3 次**
-3. 看到「开发者模式已启用」提示
-4. 再次三连击可关闭开发者模式
-
-### 开发者功能
-
-| 功能 | 可见性 | 位置 |
-|------|--------|------|
-| **本地 AI 功能** | 仅开发者 | 设置 → 偏好 → 本地 AI |
-| **日志设置** | 仅开发者 | 设置 → 日志 |
-| **调试信息对话框** | 仅 Debug 构建 | 设置 → 调试信息 |
-| **新版标签 UI** | 仅开发者 | 分类 → 标签设置（预览） |
-
-### 调试功能（仅 Debug 模式）
-
-- **数据库状态检查**
-  - 连接信息
-  - 表结构
-  - 记录数量
-- **日志统计**
-  - 各级别事件数量
-  - 错误指标
-- **详细信息对话框**
-
-### 日志持久化
-
-- 启用开发者模式时自动持久化日志
-- 禁用开发者模式时暂停持久化
-- 与统一日志服务集成
-
----
-
-## 10. 常见问题
+## 9. 常见问题
 
 ### AI 相关
 
@@ -781,8 +743,7 @@ Welcome to ThoughtEcho, your personal AI-powered inspiration notebook. This manu
 6. [Device Sync](#6-device-sync)
 7. [Backup & Restore](#7-backup--restore)
 8. [Settings Guide](#8-settings-guide)
-9. [Developer Mode](#9-developer-mode)
-10. [FAQ](#10-faq)
+9. [FAQ](#9-faq)
 
 ---
 
@@ -1422,44 +1383,7 @@ Direct JSON backup without ZIP compression, auto-detected and converted on impor
 
 ---
 
-## 9. Developer Mode
-
-### Activation Method
-
-1. Go to "Settings" → "About ThoughtEcho"
-2. **Triple-tap the app icon within 2 seconds**
-3. See "Developer mode enabled" message
-4. Triple-tap again to disable
-
-### Developer Features
-
-| Feature | Visibility | Location |
-|---------|------------|----------|
-| **Local AI Features** | Dev Only | Settings → Preferences → Local AI |
-| **Logs Settings** | Dev Only | Settings → Logs |
-| **Debug Info Dialog** | Debug Build Only | Settings → Debug Info |
-| **New Tag UI** | Dev Only | Category → Tag Settings (Preview) |
-
-### Debug Features (Debug Mode Only)
-
-- **Database Status Check**
-  - Connection info
-  - Table schemas
-  - Record counts
-- **Log Statistics**
-  - Event counts by level
-  - Error metrics
-- **Detailed Info Dialog**
-
-### Log Persistence
-
-- Logs automatically persist when dev mode enabled
-- Logs pause persistence when dev mode disabled
-- Integrated with unified log service
-
----
-
-## 10. FAQ
+## 9. FAQ
 
 ### AI Related
 
