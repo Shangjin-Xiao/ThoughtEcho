@@ -473,7 +473,7 @@
         window.addEventListener('resize', syncNavHeightVar);
         if (document.fonts && document.fonts.ready) {
             document.fonts.ready.then(syncNavHeightVar).catch(() => {
-                console.warn('Font loading failed');
+                console.warn('Unable to sync navigation height after font loading');
             });
         }
 
