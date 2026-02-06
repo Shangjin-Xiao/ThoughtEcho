@@ -7,19 +7,19 @@ Welcome to ThoughtEcho, your personal AI-powered inspiration notebook. This manu
 ## 1. AI Service Configuration
 
 ### Supported AI Providers
-- **OpenAI** (gpt-4o)
-- **Anthropic Claude** (claude-3.7-sonnet-latest)
-- **DeepSeek** (deepseek-chat)
-- **OpenRouter** (multi-model platform)
-- **SiliconFlow** (China-based service)
-- **Ollama** (local open-source models)
-- **LMStudio** (local inference)
-- Other OpenAI API compatible services
+- **OpenAI** (The official service behind ChatGPT)
+- **Anthropic Claude** (Intelligent conversation assistant)
+- **DeepSeek** (Chinese large language model)
+- **OpenRouter** (Platform with multiple model choices)
+- **SiliconFlow** (Domestic AI service)
+- **Ollama** (Run AI for free on your own computer)
+- **LMStudio** (Local AI inference)
+- Other compatible services
 
 ### Quick Setup
 1. Open "Settings" → "AI Assistant Settings"
 2. Select or add a provider
-3. Enter API Key (encrypted secure storage)
+3. Enter API Key (saved safely on your device)
 4. Click "Test Connection" to verify
 5. Save settings
 
@@ -29,23 +29,23 @@ Welcome to ThoughtEcho, your personal AI-powered inspiration notebook. This manu
 
 ### Toolbar Features
 - **Basic Styling**: Bold, Italic, Underline, Strikethrough
-- **Headers**: H1-H6 multi-level headings
+- **Headers**: Multi-level headings
 - **Text Controls**: Font size, font family, colors, alignment
-- **Lists & Layout**: Ordered/unordered lists, indent, blockquote, code block
+- **Lists & Layout**: Ordered/unordered lists, indent, quotes, code blocks
 - **Media Insertion**: Images, videos, audio
 
 ### AI Assistant Features (✨ button)
-- **Smart Analyze Source**: Auto-detect author and origin
+- **Automatically find author and origin**: Automatically identify author and origin
 - **Polish Text**: Improve writing style
 - **Continue Writing**: AI continues your thoughts
 - **Deep Analysis**: Generate summary and insights
-- **Ask Note**: Dialogue about content with AI
+- **Ask Note**: Chat about content with AI
 
 ### Auto Features
 - Auto-save drafts every 2 seconds
 - Auto-capture location and weather
-- Media file reference management
-- Large file memory optimization
+- Auto-manage media files
+- The app automatically handles large files for you
 
 ## 3. AI Features
 
@@ -64,7 +64,7 @@ Personalized writing prompts based on time, weather, and history.
 **Analysis Styles**: Professional, Friendly, Humorous, Literary
 
 ### Annual Report
-Beautiful HTML annual summary with statistics, AI insights, data visualization.
+Beautiful annual summary with statistics, AI insights, and chart displays.
 
 ## 4. Note Management
 
@@ -80,18 +80,18 @@ Beautiful HTML annual summary with statistics, AI insights, data visualization.
 - **AI analysis**: Generate insights
 
 ### Search
-Full-text search (title + content), 500ms debounce optimization, real-time highlighting.
+Search titles and content. You can see the results as they appear, with highlights.
 
 ## 5. Multi-device Sync
 
-### LocalSend Protocol
-LAN P2P sync without cloud servers.
+### Sync Method
+Directly sync between devices on the same WiFi network, no cloud server required.
 
 ### Sync Flow
-1. Auto-discover devices on same WiFi
+1. The app will look for your other devices automatically on the same WiFi
 2. Select target device
 3. Send/receive data
-4. Auto-merge using "Last Write Wins" strategy
+4. Intelligently merge notes (The app keeps your most recent changes)
 
 ### Supported Platforms
 Android, iOS, Windows, macOS, Linux (Web limited)
@@ -103,23 +103,23 @@ Android, iOS, Windows, macOS, Linux (Web limited)
 - **JSON Format**: Legacy version compatible
 
 ### Backup Features
-- Streaming export, prevents memory overflow
-- Chunked processing, real-time progress
-- Memory monitoring, smart abort
+- Real-time progress display
+- The app automatically handles large files for you
+- Automatic memory management
 
 ### Restore Modes
-- **Overwrite**: Clear then import (device reset)
-- **Merge**: Smart merge data (multi-device sync)
-- **Append**: Simple append (compatibility mode)
+- **Overwrite**: Clear everything then import (use for new devices)
+- **Merge**: Intelligently merge data (sync from other devices)
+- **Append**: Simple addition (add supplemental data)
 
 **Access Path**: Settings → Backup & Restore
 
 ## 7. Theme & Personalization
 
 ### Theme Settings
-- Light/Dark/System
-- 10 presets + custom color picker
-- Dynamic color (Android 12+)
+- Light/Dark/Follow System
+- 10 preset colors + custom color picker
+- Auto-match wallpaper color (Android only)
 
 ### Preferences
 - Clipboard monitoring
