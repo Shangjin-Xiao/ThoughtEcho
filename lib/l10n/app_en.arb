@@ -3339,5 +3339,8 @@
   "viewing": "Viewing...",
   "backToAnalysis": "Back to Analysis",
   "userGuide": "User Guide",
-  "userGuideDesc": "Learn how to use ThoughtEcho features"
+  "userGuideDesc": "Learn how to use ThoughtEcho features",
+  "userGuideSearchHint": "Search user guide...",
+  "userGuideNoResults": "No results found",
+  "userGuideOnlineDoc": "Full Online Documentation"
 }

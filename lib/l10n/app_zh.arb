@@ -3348,5 +3348,8 @@
   "viewing": "查看中...",
   "backToAnalysis": "回到分析",
   "userGuide": "用户指南",
-  "userGuideDesc": "了解如何使用心迹的各项功能"
+  "userGuideDesc": "了解如何使用心迹的各项功能",
+  "userGuideSearchHint": "搜索用户指南...",
+  "userGuideNoResults": "未找到相关内容",
+  "userGuideOnlineDoc": "完整在线文档"
 }
