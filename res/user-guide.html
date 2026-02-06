@@ -394,7 +394,7 @@
                 <span class="lang-en">ThoughtEcho User Guide</span>
             </div>
             <div class="nav-actions">
-                <button class="toc-toggle" id="tocToggle" aria-controls="tocSidebar" aria-expanded="false">
+                <button class="toc-toggle" id="tocToggle" aria-controls="tocSidebar" aria-expanded="false" aria-label="Toggle table of contents">
                     <span class="lang-zh">目录</span>
                     <span class="lang-en">Contents</span>
                 </button>
@@ -563,19 +563,23 @@
             });
         }
 
+        let tocClickBound = false;
+
+        function handleTocLinkClick(event) {
+            const link = event.target.closest('a');
+            if (!link) return;
+            if (document.body.classList.contains('toc-open')) {
+                closeToc();
+            }
+        }
+
         // 生成目录
         function generateTOC() {
             const tocList = document.getElementById('tocList');
             tocList.innerHTML = '';
-            if (!tocList.dataset.clickBound) {
-                tocList.addEventListener('click', event => {
-                    const link = event.target.closest('a');
-                    if (!link) return;
-                    if (document.body.classList.contains('toc-open')) {
-                        closeToc();
-                    }
-                });
-                tocList.dataset.clickBound = 'true';
+            if (!tocClickBound) {
+                tocList.addEventListener('click', handleTocLinkClick);
+                tocClickBound = true;
             }
 
             const isEnglish = document.body.dataset.lang === 'en';
