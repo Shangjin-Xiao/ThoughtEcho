@@ -3296,7 +3296,7 @@ cd ThoughtEcho</code></pre>
         syncNavHeightVar();
         if (document.fonts && document.fonts.ready) {
             document.fonts.ready.then(syncNavHeightVar).catch(() => {
-                console.warn('Unable to sync navigation height after font loading');
+                console.warn('Font loading detection failed; navigation height may be inaccurate');
             });
         }
         window.addEventListener('resize', syncNavHeightVar);

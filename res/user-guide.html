@@ -442,6 +442,20 @@
             gfm: true
         });
 
+        function syncNavHeightVar() {
+            var nav = document.querySelector('nav');
+            if (!nav) return;
+            document.documentElement.style.setProperty('--nav-h', nav.offsetHeight + 'px');
+        }
+
+        syncNavHeightVar();
+        window.addEventListener('resize', syncNavHeightVar);
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(syncNavHeightVar).catch(() => {
+                console.warn('Font loading detection failed; navigation height may be inaccurate');
+            });
+        }
+
         // 语言状态管理：使用 data-lang 属性而非 class，避免 .lang-en 规则误隐藏 body
         function switchPageLang(targetLang) {
             document.body.dataset.lang = targetLang;
@@ -462,20 +476,6 @@
             switchPageLang(nextLang);
             generateTOC();
         });
-
-        function syncNavHeightVar() {
-            var nav = document.querySelector('nav');
-            if (!nav) return;
-            document.documentElement.style.setProperty('--nav-h', nav.offsetHeight + 'px');
-        }
-
-        syncNavHeightVar();
-        window.addEventListener('resize', syncNavHeightVar);
-        if (document.fonts && document.fonts.ready) {
-            document.fonts.ready.then(syncNavHeightVar).catch(() => {
-                console.warn('Unable to sync navigation height after font loading');
-            });
-        }
 
         function closeToc() {
             document.body.classList.remove('toc-open');
@@ -567,6 +567,16 @@
         function generateTOC() {
             const tocList = document.getElementById('tocList');
             tocList.innerHTML = '';
+            if (!tocList.dataset.clickBound) {
+                tocList.addEventListener('click', event => {
+                    const link = event.target.closest('a');
+                    if (!link) return;
+                    if (document.body.classList.contains('toc-open')) {
+                        closeToc();
+                    }
+                });
+                tocList.dataset.clickBound = 'true';
+            }
 
             const isEnglish = document.body.dataset.lang === 'en';
             const content = document.getElementById(isEnglish ? 'content-en' : 'content-zh');
@@ -581,14 +591,6 @@
                 li.appendChild(a);
                 tocList.appendChild(li);
             });
-
-            tocList.onclick = event => {
-                const link = event.target.closest('a');
-                if (!link) return;
-                if (document.body.classList.contains('toc-open')) {
-                    closeToc();
-                }
-            };
 
             // 滚动监听
             setupScrollSpy();
