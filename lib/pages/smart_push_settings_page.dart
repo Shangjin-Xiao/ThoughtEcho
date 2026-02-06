@@ -1273,8 +1273,9 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
 
         final status = snapshot.data!;
 
-        // 如果所有权限都已授予且不需要自启动提醒，则不显示卡片
-        if (status.allPermissionsGranted && !status.needsAutoStartPermission) {
+        // 如果所有权限都已授予，则不显示警告卡片
+        // 注意：allPermissionsGranted 已包含自启动权限的判断
+        if (status.allPermissionsGranted) {
           return const SizedBox.shrink();
         }
 
