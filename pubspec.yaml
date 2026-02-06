@@ -179,5 +179,5 @@ flutter:
   assets:
     - assets/lottie/
     - assets/icon.png
-    - assets/docs/
+    - docs/
     - LICENSE
