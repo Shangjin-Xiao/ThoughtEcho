@@ -455,7 +455,7 @@
         window.addEventListener('resize', syncNavHeightVar);
         if (document.fonts && document.fonts.ready) {
             document.fonts.ready.then(syncNavHeightVar).catch(() => {
-                console.warn('Font loading detection failed; navigation height may be inaccurate.');
+                console.warn('Font loading detection unavailable; navigation height will sync on next resize event.');
             });
         }
 
@@ -497,8 +497,8 @@
 
         function toggleToc() {
             if (!tocToggle) return;
-            var isOpen = document.body.classList.toggle('toc-open');
-            tocToggle.setAttribute('aria-expanded', String(isOpen));
+            var isTocOpen = document.body.classList.toggle('toc-open');
+            tocToggle.setAttribute('aria-expanded', String(isTocOpen));
         }
 
         if (tocToggle) {
@@ -576,7 +576,8 @@
 
         function handleTocLinkClick(event) {
             const link = event.target.closest('a');
-            if (!link || !link.getAttribute('href') || !link.getAttribute('href').startsWith('#')) return;
+            const href = link?.getAttribute('href');
+            if (!link || !href || !href.startsWith('#')) return;
             if (document.body.classList.contains('toc-open')) {
                 closeToc();
             }
