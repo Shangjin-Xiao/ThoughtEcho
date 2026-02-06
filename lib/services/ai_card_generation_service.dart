@@ -103,13 +103,10 @@ class AICardGenerationService {
       // 2. 调用AI生成SVG
       final svgContent = await _generateSVGContent(prompt);
 
-      // 3. 清理和验证SVG
-      var cleanedSVG = _cleanSVGContent(svgContent);
-
-      // 4. 补全缺失的底部元数据（AI 可能忽略）
-      cleanedSVG = _ensureMetadataPresence(
+      // 3. 在后台 isolate 中处理 SVG (清理 + 元数据补全)
+      final processingData = AICardProcessingData(
+        svgContent: svgContent,
         brandName: brandName,
-        cleanedSVG,
         date: _formatDate(note.date, languageCode: languageCode),
         location: note.location,
         weather: note.weather,
@@ -119,6 +116,22 @@ class AICardGenerationService {
         dayPeriod: note.dayPeriod,
         languageCode: languageCode,
       );
+
+      final result = await compute(processSVGTask, processingData);
+
+      // 4. 重放日志
+      for (final log in result.logs) {
+        if (log.startsWith('ERROR:')) {
+          AppLogger.e(log.substring(7), source: 'AICardGeneration');
+        } else if (log.startsWith('WARN:')) {
+          AppLogger.w(log.substring(6), source: 'AICardGeneration');
+        } else {
+          // 降级为 debug 日志，避免 info 刷屏
+          AppLogger.d(log, source: 'AICardGeneration');
+        }
+      }
+
+      final cleanedSVG = result.svg;
 
       AppLogger.i(
         'AI生成SVG成功，长度: ${cleanedSVG.length}',
@@ -496,13 +509,41 @@ class AICardGenerationService {
     }
   }
 
-  /// 清理SVG内容
-  String _cleanSVGContent(String response) {
-    AppLogger.d(
-      '开始清理SVG内容，原始长度: ${response.length}',
-      source: 'AICardGeneration',
-    );
+  /// Isolate worker function
+  static Future<AICardProcessingResult> processSVGTask(
+      AICardProcessingData data) async {
+    final logs = <String>[];
+    logs.add('DEBUG: 开始清理SVG内容，原始长度: ${data.svgContent.length}');
 
+    try {
+      // 1. Clean SVG
+      String cleaned = _cleanSVGContentStatic(data.svgContent, logs);
+
+      // 2. Ensure Metadata
+      cleaned = _ensureMetadataPresenceStatic(
+        cleaned,
+        brandName: data.brandName,
+        date: data.date,
+        location: data.location,
+        weather: data.weather,
+        temperature: data.temperature,
+        author: data.author,
+        source: data.source,
+        dayPeriod: data.dayPeriod,
+        languageCode: data.languageCode,
+        logs: logs,
+      );
+
+      logs.add('DEBUG: SVG处理完成，最终长度: ${cleaned.length}');
+      return AICardProcessingResult(svg: cleaned, logs: logs);
+    } catch (e) {
+      logs.add('ERROR: SVG处理失败: $e');
+      rethrow;
+    }
+  }
+
+  /// 静态清理SVG内容 (用于Isolate)
+  static String _cleanSVGContentStatic(String response, List<String> logs) {
     String cleaned = response.trim();
 
     // 移除常见的markdown标记和说明文字
@@ -554,17 +595,14 @@ class AICardGenerationService {
     if (!foundSvgStart ||
         !cleaned.contains('<svg') ||
         !cleaned.contains('</svg>')) {
-      AppLogger.w('未找到完整SVG，尝试字符串提取...', source: 'AICardGeneration');
+      logs.add('WARN: 未找到完整SVG，尝试字符串提取...');
 
       final svgStartIndex = response.indexOf('<svg');
       if (svgStartIndex >= 0) {
         final svgEndIndex = response.lastIndexOf('</svg>');
         if (svgEndIndex > svgStartIndex) {
           cleaned = response.substring(svgStartIndex, svgEndIndex + 6);
-          AppLogger.i(
-            '字符串提取成功，SVG长度: ${cleaned.length}',
-            source: 'AICardGeneration',
-          );
+          logs.add('INFO: 字符串提取成功，SVG长度: ${cleaned.length}');
         }
       }
     }
@@ -578,11 +616,9 @@ class AICardGenerationService {
     cleaned = _normalizeSVGAttributes(cleaned);
 
     // 验证SVG内容安全性
-    if (!_isSafeSVGContent(cleaned)) {
+    if (!_isSafeSVGContent(cleaned, logs)) {
       throw const AICardGenerationException('SVG内容包含不安全的元素');
     }
-
-    AppLogger.d('SVG清理完成，最终长度: ${cleaned.length}', source: 'AICardGeneration');
 
     return cleaned;
   }
@@ -1068,8 +1104,8 @@ class AICardGenerationService {
     }
   }
 
-  /// 如果AI未输出底部元数据，则添加一个简单信息块
-  String _ensureMetadataPresence(
+  /// 静态元数据补全 (用于Isolate)
+  static String _ensureMetadataPresenceStatic(
     String svg, {
     required String brandName,
     required String? date,
@@ -1080,6 +1116,7 @@ class AICardGenerationService {
     String? source,
     String? dayPeriod,
     String languageCode = 'zh',
+    List<String>? logs,
   }) {
     final lower = svg.toLowerCase();
     final hasDate = date != null && lower.contains(date.toLowerCase());
@@ -1121,14 +1158,14 @@ class AICardGenerationService {
     return svg.substring(0, idx) + injection + svg.substring(idx);
   }
 
-  String _escape(String v) => v
+  static String _escape(String v) => v
       .replaceAll('&', '&amp;')
       .replaceAll('<', '&lt;')
       .replaceAll('>', '&gt;');
 
   // 检测是否包含中文
   // ignore: unused_element
-  bool _containsChinese(String text) =>
+  static bool _containsChinese(String text) =>
       RegExp(r'[\u4e00-\u9fff]').hasMatch(text);
 
   // 天气本地化映射 - 多语言支持
@@ -1231,7 +1268,8 @@ class AICardGenerationService {
 
   /// 本地化天气字符串
   /// [languageCode] 语言代码 ('zh', 'en', 'ja', 'fr', etc.)
-  String? _localizeWeather(String? weather, {String languageCode = 'zh'}) {
+  static String? _localizeWeather(String? weather,
+      {String languageCode = 'zh'}) {
     if (weather == null || weather.trim().isEmpty) return null;
     final w = weather.toLowerCase().trim();
 
@@ -1284,7 +1322,8 @@ class AICardGenerationService {
   };
 
   /// 本地化时间段字符串
-  String? _localizeDayPeriod(String? period, {String languageCode = 'zh'}) {
+  static String? _localizeDayPeriod(String? period,
+      {String languageCode = 'zh'}) {
     if (period == null || period.trim().isEmpty) return null;
     final p = period.toLowerCase().trim();
 
@@ -1299,7 +1338,7 @@ class AICardGenerationService {
   }
 
   /// 验证SVG基本结构
-  bool _isValidSVGStructure(String svgContent) {
+  static bool _isValidSVGStructure(String svgContent) {
     if (svgContent.trim().isEmpty) return false;
 
     // 基本结构检查
@@ -1324,7 +1363,7 @@ class AICardGenerationService {
   }
 
   /// 标准化SVG属性
-  String _normalizeSVGAttributes(String svgContent) {
+  static String _normalizeSVGAttributes(String svgContent) {
     String normalized = svgContent;
 
     // 确保SVG有正确的命名空间
@@ -1354,7 +1393,7 @@ class AICardGenerationService {
   }
 
   /// 推断SVG内在尺寸，忽略百分比/无效尺寸，防止viewBox被错误设置为100导致裁剪
-  (String, String) _inferSvgIntrinsicSize(String svgContent) {
+  static (String, String) _inferSvgIntrinsicSize(String svgContent) {
     // 1) 优先使用合法的viewBox
     final viewBoxMatch = RegExp(r'viewBox="([^"]+)"').firstMatch(svgContent);
     if (viewBoxMatch != null) {
@@ -1390,7 +1429,7 @@ class AICardGenerationService {
     return (w.toString(), h.toString());
   }
 
-  double? _parseNumericDimension(String? raw) {
+  static double? _parseNumericDimension(String? raw) {
     if (raw == null || raw.trim().isEmpty) return null;
     if (raw.contains('%')) return null;
     final cleaned = raw.replaceAll(RegExp('[^0-9.-]'), '');
@@ -1401,7 +1440,7 @@ class AICardGenerationService {
   }
 
   /// 验证SVG内容安全性
-  bool _isSafeSVGContent(String svgContent) {
+  static bool _isSafeSVGContent(String svgContent, [List<String>? logs]) {
     // 检查是否包含潜在危险的元素
     final dangerousElements = [
       '<script',
@@ -1418,11 +1457,54 @@ class AICardGenerationService {
     final lowerContent = svgContent.toLowerCase();
     for (final dangerous in dangerousElements) {
       if (lowerContent.contains(dangerous)) {
-        AppLogger.w('发现不安全的SVG元素: $dangerous', source: 'AICardGeneration');
+        final msg = '发现不安全的SVG元素: $dangerous';
+        if (logs != null) {
+          logs.add('WARN: $msg');
+        } else {
+          AppLogger.w(msg, source: 'AICardGeneration');
+        }
         return false;
       }
     }
 
     return true;
   }
+}
+
+/// DTO for passing data to the isolate
+class AICardProcessingData {
+  final String svgContent;
+  final String brandName;
+  final String? date;
+  final String? location;
+  final String? weather;
+  final String? temperature;
+  final String? author;
+  final String? source;
+  final String? dayPeriod;
+  final String languageCode;
+
+  AICardProcessingData({
+    required this.svgContent,
+    required this.brandName,
+    required this.date,
+    this.location,
+    this.weather,
+    this.temperature,
+    this.author,
+    this.source,
+    this.dayPeriod,
+    this.languageCode = 'zh',
+  });
+}
+
+/// DTO for returning results from the isolate
+class AICardProcessingResult {
+  final String svg;
+  final List<String> logs;
+
+  AICardProcessingResult({
+    required this.svg,
+    required this.logs,
+  });
 }
