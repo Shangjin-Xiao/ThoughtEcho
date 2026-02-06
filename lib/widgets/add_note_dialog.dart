@@ -198,6 +198,29 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                     (_newLatitude != null ||
                         _cachedLocationService?.currentPosition != null)) {
                   _fetchWeatherForNewNote();
+                } else if (autoWeather && !_includeLocation) {
+                  // 位置获取失败，天气也无法获取，取消天气选中并提示
+                  if (mounted) {
+                    setState(() {
+                      _includeWeather = false;
+                    });
+                    if (context.mounted) {
+                      final l10n = AppLocalizations.of(context);
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: Text(l10n.weatherFetchFailedTitle),
+                          content: Text(l10n.locationAndWeatherUnavailable),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              child: Text(l10n.iKnow),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                  }
                 }
               } else if (autoWeather) {
                 // 没有勾选位置但勾选了天气，尝试用缓存的位置获取天气
