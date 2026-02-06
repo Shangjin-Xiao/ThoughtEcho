@@ -655,7 +655,8 @@ class SettingsService extends ChangeNotifier {
         if (hasSecureKey) {
           // 安全存储中已有密钥，遗留的明文密钥是冗余的，可以直接清除
           shouldClear = true;
-          logDebug('Found redundant plaintext API key in AISettings. Clearing.');
+          logDebug(
+              'Found redundant plaintext API key in AISettings. Clearing.');
         } else {
           // 安全存储中没有密钥，尝试迁移
           await apiKeyManager.saveProviderApiKey(
