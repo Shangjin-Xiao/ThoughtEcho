@@ -22,7 +22,8 @@ class QuoteItemWidget extends StatefulWidget {
   final Function() onDelete;
   final Function() onAskAI;
   final Function()? onGenerateCard;
-  final Function()? onFavorite; // 新增：心形按钮点击回调
+  final Function()? onFavorite; // 心形按钮点击回调
+  final Function()? onLongPressFavorite; // 心形按钮长按回调（清除收藏）
   final String? searchQuery;
 
   /// 自定义标签显示的构建器函数，接收一个标签对象，返回一个Widget
@@ -44,7 +45,8 @@ class QuoteItemWidget extends StatefulWidget {
     required this.onDelete,
     required this.onAskAI,
     this.onGenerateCard,
-    this.onFavorite, // 新增：心形按钮点击回调
+    this.onFavorite, // 心形按钮点击回调
+    this.onLongPressFavorite, // 心形按钮长按回调（清除收藏）
     this.tagBuilder,
     this.searchQuery,
     this.favoriteButtonGuideKey,
@@ -698,14 +700,15 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                   // 心形按钮（如果启用）
                   if (widget.onFavorite != null) ...[
                     Tooltip(
-                      message: quote.favoriteCount > 0
-                          ? l10n.actionUnfavorite
-                          : l10n.actionFavorite,
+                      message: l10n.actionFavorite,
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
                           key: widget.favoriteButtonGuideKey,
                           onTap: widget.onFavorite,
+                          onLongPress: quote.favoriteCount > 0
+                              ? widget.onLongPressFavorite
+                              : null,
                           borderRadius: BorderRadius.circular(20),
                           child: Padding(
                             padding: const EdgeInsets.all(8.0),

@@ -3328,6 +3328,18 @@
   "recommended": "推荐",
   "actionFavorite": "收藏",
   "actionUnfavorite": "取消收藏",
+  "clearFavoriteTitle": "清除收藏",
+  "clearFavoriteMessage": "确定要清除这条笔记的 {count} 次收藏吗？",
+  "@clearFavoriteMessage": {
+    "description": "清除收藏确认消息",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clearFavoriteSuccess": "已清除收藏",
+  "clearFavoriteFailed": "清除收藏失败",
   "moreOptions": "更多选项",
   "settingsUserManual": "用户手册",
   "settingsUserManualDesc": "了解如何使用心迹的各项功能",

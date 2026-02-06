@@ -35,7 +35,8 @@ class NoteListView extends StatefulWidget {
   final Function(Quote) onDelete;
   final Function(Quote) onAskAI;
   final Function(Quote)? onGenerateCard;
-  final Function(Quote)? onFavorite; // 新增：心形按钮点击回调
+  final Function(Quote)? onFavorite; // 心形按钮点击回调
+  final Function(Quote)? onLongPressFavorite; // 心形按钮长按回调（清除收藏）
   final bool isLoadingTags; // 新增标签加载状态参数
   final List<String> selectedWeathers; // 新增天气筛选参数
   final List<String> selectedDayPeriods; // 新增时间段筛选参数
@@ -60,7 +61,8 @@ class NoteListView extends StatefulWidget {
     required this.onDelete,
     required this.onAskAI,
     this.onGenerateCard,
-    this.onFavorite, // 新增：心形按钮点击回调
+    this.onFavorite, // 心形按钮点击回调
+    this.onLongPressFavorite, // 心形按钮长按回调（清除收藏）
     this.isLoadingTags = false, // 默认为false
     this.selectedWeathers = const [],
     this.selectedDayPeriods = const [],
@@ -1234,6 +1236,9 @@ class NoteListViewState extends State<NoteListView> {
                       : null,
                   onFavorite: widget.onFavorite != null
                       ? () => widget.onFavorite!(quote)
+                      : null,
+                  onLongPressFavorite: widget.onLongPressFavorite != null
+                      ? () => widget.onLongPressFavorite!(quote)
                       : null,
                   favoriteButtonGuideKey: attachFavoriteGuideKey
                       ? widget.favoriteButtonGuideKey

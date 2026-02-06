@@ -4276,6 +4276,93 @@ class DatabaseService extends ChangeNotifier {
     });
   }
 
+  /// 重置心形点击次数为0（清除收藏）
+  Future<void> resetFavoriteCount(String quoteId) async {
+    if (quoteId.isEmpty) {
+      throw ArgumentError('笔记ID不能为空');
+    }
+
+    if (kIsWeb) {
+      final index = _memoryStore.indexWhere((q) => q.id == quoteId);
+      if (index != -1) {
+        _memoryStore[index] = _memoryStore[index].copyWith(
+          favoriteCount: 0,
+        );
+        logDebug(
+          'Web平台清除收藏: quoteId=$quoteId',
+          source: 'ResetFavorite',
+        );
+      }
+
+      final curIndex = _currentQuotes.indexWhere((q) => q.id == quoteId);
+      if (curIndex != -1) {
+        _currentQuotes[curIndex] = _currentQuotes[curIndex].copyWith(
+          favoriteCount: 0,
+        );
+      }
+
+      if (_quotesController != null && !_quotesController!.isClosed) {
+        _quotesController!.add(List.from(_currentQuotes));
+      }
+      notifyListeners();
+      return;
+    }
+
+    return _executeWithLock('resetFavorite_$quoteId', () async {
+      try {
+        final index = _currentQuotes.indexWhere((q) => q.id == quoteId);
+        final oldCount =
+            index != -1 ? _currentQuotes[index].favoriteCount : null;
+        logDebug(
+          '清除收藏操作开始: quoteId=$quoteId, 内存旧值=$oldCount',
+          source: 'ResetFavorite',
+        );
+
+        final db = await safeDatabase;
+        await db.transaction((txn) async {
+          final updateCount = await txn.rawUpdate(
+            'UPDATE quotes SET favorite_count = 0, last_modified = ? WHERE id = ?',
+            [DateTime.now().toUtc().toIso8601String(), quoteId],
+          );
+
+          if (updateCount == 0) {
+            logWarning(
+              '清除收藏失败: 数据库中未找到quoteId=$quoteId',
+              source: 'ResetFavorite',
+            );
+          } else {
+            logInfo(
+              '清除收藏成功: quoteId=$quoteId, 旧值=$oldCount, 新值=0',
+              source: 'ResetFavorite',
+            );
+          }
+        });
+
+        // 更新内存中的笔记列表
+        if (index != -1) {
+          _currentQuotes[index] = _currentQuotes[index].copyWith(
+            favoriteCount: 0,
+          );
+          logDebug(
+            '内存缓存已更新: 新值=0',
+            source: 'ResetFavorite',
+          );
+        }
+        if (_quotesController != null && !_quotesController!.isClosed) {
+          _quotesController!.add(List.from(_currentQuotes));
+        }
+        notifyListeners();
+      } catch (e) {
+        logError(
+          '清除收藏时出错: quoteId=$quoteId, error=$e',
+          error: e,
+          source: 'ResetFavorite',
+        );
+        rethrow;
+      }
+    });
+  }
+
   /// 获取本周期内点心最多的笔记
   Future<List<Quote>> getMostFavoritedQuotesThisWeek({int limit = 5}) async {
     if (kIsWeb) {

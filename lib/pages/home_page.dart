@@ -1196,6 +1196,69 @@ class _HomePageState extends State<HomePage>
     }
   }
 
+  // 处理心形按钮长按（清除收藏）
+  void _handleLongPressFavorite(Quote quote) async {
+    if (quote.favoriteCount <= 0) return;
+
+    final l10n = AppLocalizations.of(context);
+
+    // 显示确认对话框
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.clearFavoriteTitle),
+        content: Text(l10n.clearFavoriteMessage(quote.favoriteCount)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text(l10n.confirm),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+    if (!mounted) return;
+
+    try {
+      final db = Provider.of<DatabaseService>(context, listen: false);
+      await db.resetFavoriteCount(quote.id!);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.favorite_border, color: Colors.white, size: 16),
+              const SizedBox(width: 8),
+              Text(l10n.clearFavoriteSuccess),
+            ],
+          ),
+          duration: const Duration(milliseconds: 1500),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.clearFavoriteFailed),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   // 显示AI问答聊天界面
   void _showAIQuestionDialog(Quote quote) {
     Navigator.of(context).push(
@@ -1883,6 +1946,9 @@ class _HomePageState extends State<HomePage>
                       onFavorite: settingsService.showFavoriteButton
                           ? _handleFavoriteClick
                           : null, // 根据设置控制心形按钮显示
+                      onLongPressFavorite: settingsService.showFavoriteButton
+                          ? _handleLongPressFavorite
+                          : null, // 长按清除收藏
                       isLoadingTags: _isLoadingTags, // 传递标签加载状态
                       selectedWeathers: _selectedWeathers,
                       selectedDayPeriods: _selectedDayPeriods,
