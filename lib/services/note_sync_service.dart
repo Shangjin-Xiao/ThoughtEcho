@@ -280,13 +280,6 @@ class NoteSyncService extends ChangeNotifier {
     await createSyncPackage(targetDevice); // 使用默认包含媒体文件
   }
 
-  /// (Deprecated) 旧receiveAndMerge逻辑已废弃，直接调用processSyncPackage
-  @Deprecated(
-    'Legacy receive logic replaced by processSyncPackage; will be removed in future release',
-  )
-  Future<void> receiveAndMergeNotes(String backupFilePath) =>
-      processSyncPackage(backupFilePath);
-
   /// 创建同步包并发送到指定设备（若对方需要先审批，先走意向握手，再打包发送）
   /// [includeMediaFiles] 是否包含媒体文件（默认包含）
   Future<String> createSyncPackage(

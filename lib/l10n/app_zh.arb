@@ -216,6 +216,32 @@
   "pleaseWait": "请稍候...",
   "close": "关闭",
   "ok": "好的",
+  "timeJustNow": "刚刚",
+  "timeMinutesAgo": "{count}分钟前",
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeHoursAgo": "{count}小时前",
+  "@timeHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeDaysAgo": "{count}天前",
+  "@timeDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeYesterday": "昨天",
   "exactAlarmDeniedHint": "精确闹钟权限被拒绝，推送时间可能不准确",
   "error": "错误",
   "success": "成功",

@@ -216,6 +216,32 @@
   "pleaseWait": "Please wait...",
   "close": "Close",
   "ok": "OK",
+  "timeJustNow": "Just now",
+  "timeMinutesAgo": "{count} mins ago",
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeHoursAgo": "{count} hours ago",
+  "@timeHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeDaysAgo": "{count} days ago",
+  "@timeDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeYesterday": "Yesterday",
   "exactAlarmDeniedHint": "Exact alarm permission denied, push timing may be inaccurate",
   "error": "Error",
   "success": "Success",

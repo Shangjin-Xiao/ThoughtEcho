@@ -127,12 +127,69 @@ class TimeUtils {
     }
   } */
 
+  /// 相对时间格式（仅日期范围 + 时间），用于列表场景（本地化版本）
+  /// - 今天：HH:mm
+  /// - 昨天：昨天 HH:mm
+  /// - 7天内：EEE HH:mm
+  /// - 当年：MM-dd HH:mm
+  /// - 往年：yyyy-MM-dd HH:mm
+  static String formatRelativeDateTimeLocalized(
+      BuildContext context, DateTime dateTime) {
+    final l10n = AppLocalizations.of(context);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final weekAgo = now.subtract(const Duration(days: 7));
+    final dateOnly = DateTime(dateTime.year, dateTime.month, dateTime.day);
+
+    if (dateOnly == today) {
+      return DateFormat('HH:mm').format(dateTime);
+    } else if (dateOnly == yesterday) {
+      return '${l10n.timeYesterday} ${DateFormat('HH:mm').format(dateTime)}';
+    } else if (dateTime.isAfter(weekAgo)) {
+      final locale = Localizations.localeOf(context).toString();
+      return DateFormat('EEE HH:mm', locale).format(dateTime);
+    } else if (dateTime.year == now.year) {
+      return DateFormat('MM-dd HH:mm').format(dateTime);
+    } else {
+      return DateFormat('yyyy-MM-dd HH:mm').format(dateTime);
+    }
+  }
+
+  /// 模糊时间格式（刚刚、几分钟前、几小时前、几天前），支持国际化
+  static String formatElapsedRelativeTimeLocalized(
+      BuildContext context, DateTime dateTime) {
+    final l10n = AppLocalizations.of(context);
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inDays > 0) {
+      return l10n.timeDaysAgo(difference.inDays);
+    } else if (difference.inHours > 0) {
+      return l10n.timeHoursAgo(difference.inHours);
+    } else if (difference.inMinutes > 0) {
+      return l10n.timeMinutesAgo(difference.inMinutes);
+    } else {
+      return l10n.timeJustNow;
+    }
+  }
+
+  /// 仅返回时间部分（HH:mm），用于需要和日期分离显示的场景
+  static String formatQuoteTime(DateTime dateTime) =>
+      DateFormat('HH:mm').format(dateTime);
+
+  /// 兼容旧代码：调用 formatRelativeDateTime
+  @Deprecated('请使用 formatRelativeDateTimeLocalized 或 formatQuoteTime 拆分后的方法')
+  static String formatTime(DateTime dateTime) =>
+      formatRelativeDateTime(dateTime);
+
   /// 相对时间格式（仅日期范围 + 时间），用于列表场景
   /// - 今天：HH:mm
   /// - 昨天：昨天 HH:mm
   /// - 7天内：EEE HH:mm
   /// - 当年：MM-dd HH:mm
   /// - 往年：yyyy-MM-dd HH:mm
+  @Deprecated('请使用 formatRelativeDateTimeLocalized')
   static String formatRelativeDateTime(DateTime dateTime) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -152,15 +209,6 @@ class TimeUtils {
       return DateFormat('yyyy-MM-dd HH:mm').format(dateTime);
     }
   }
-
-  /// 仅返回时间部分（HH:mm），用于需要和日期分离显示的场景
-  static String formatQuoteTime(DateTime dateTime) =>
-      DateFormat('HH:mm').format(dateTime);
-
-  /// 兼容旧代码：调用 formatRelativeDateTime
-  @Deprecated('请使用 formatRelativeDateTime 或 formatQuoteTime 拆分后的方法')
-  static String formatTime(DateTime dateTime) =>
-      formatRelativeDateTime(dateTime);
 
   /// 格式化日期（仅日期部分）
   /// 格式：2025年6月21日
