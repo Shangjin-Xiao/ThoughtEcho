@@ -539,9 +539,12 @@
                     throw new Error('无法解析 Markdown 结构');
                 }
 
+                // 修复图片路径 (res/screenshot -> screenshot)
+                const fixImagePath = (md) => md.replace(/\]\(res\/screenshot\//g, '](screenshot/');
+
                 // 渲染
-                contentZh.innerHTML = marked.parse(zhMatch[1]);
-                contentEn.innerHTML = marked.parse(enMatch[1]);
+                contentZh.innerHTML = marked.parse(fixImagePath(zhMatch[1]));
+                contentEn.innerHTML = marked.parse(fixImagePath(enMatch[1]));
 
                 // 为标题添加 ID
                 addHeadingIds(contentZh);

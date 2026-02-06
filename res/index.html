@@ -261,6 +261,7 @@
             position: relative;
             padding: 0.25rem 0;
             transition: color 0.3s ease;
+            display: inline-block; /* Fix alignment */
         }
 
         .nav-links a::after {
@@ -2059,6 +2060,10 @@
             .nav-links a {
                 padding: 1rem;
                 border-bottom: 1px solid var(--line-color);
+                display: block; /* Full width on mobile */
+            }
+            .nav-links a::after {
+                content: none; /* Disable hover underline on mobile */
             }
             .mobile-menu-btn {
                 display: flex;
