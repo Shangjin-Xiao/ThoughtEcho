@@ -97,6 +97,13 @@
 		<string>processing</string>
 	</array>
 	
+	<!-- BGTaskScheduler 允许的任务标识符 (iOS 13+) -->
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.shangjin.thoughtecho.backgroundPush</string>
+		<string>com.shangjin.thoughtecho.periodicCheck</string>
+	</array>
+	
 	<!-- Bonjour 服务配置（用于本地网络设备发现）-->
 	<!-- 注意：UDP 组播发现需要声明 _udp 服务类型来触发本地网络权限对话框 -->
 	<key>NSBonjourServices</key>
