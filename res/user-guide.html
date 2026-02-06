@@ -444,7 +444,10 @@
 
         function syncNavHeightVar() {
             var nav = document.querySelector('nav');
-            if (!nav) return;
+            if (!nav) {
+                console.warn('Navigation height sync skipped; nav not found.');
+                return;
+            }
             document.documentElement.style.setProperty('--nav-h', nav.offsetHeight + 'px');
         }
 
@@ -452,7 +455,7 @@
         window.addEventListener('resize', syncNavHeightVar);
         if (document.fonts && document.fonts.ready) {
             document.fonts.ready.then(syncNavHeightVar).catch(() => {
-                console.warn('Font loading detection failed; navigation height may be inaccurate');
+                console.warn('Font loading detection failed; navigation height may be inaccurate. Refresh if the menu looks misaligned.');
             });
         }
 
