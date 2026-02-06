@@ -3296,7 +3296,7 @@ cd ThoughtEcho</code></pre>
         syncNavHeightVar();
         if (document.fonts && document.fonts.ready) {
             document.fonts.ready.then(syncNavHeightVar).catch(() => {
-                console.warn('Font loading detection failed; navigation height may be inaccurate. Refresh if the menu looks misaligned.');
+                console.warn('Font loading detection failed; navigation height may be inaccurate.');
             });
         }
         window.addEventListener('resize', syncNavHeightVar);
