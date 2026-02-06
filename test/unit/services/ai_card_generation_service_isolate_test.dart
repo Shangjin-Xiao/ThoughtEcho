@@ -29,7 +29,7 @@ void main() {
 
       // Verify Logs
       expect(result.logs, isNotEmpty);
-      expect(result.logs.any((l) => l.contains('DEBUG:')), isTrue);
+      expect(result.logs.any((l) => l.level == 'DEBUG'), isTrue);
     });
 
     test('processSVGTask rejects unsafe SVG', () async {
