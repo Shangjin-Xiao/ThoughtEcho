@@ -965,6 +965,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   }
 
   /// 编辑模式下的天气对话框
+  /// 注：天气编辑模式下暂时采用简化逻辑，此方法保留以备将来扩展
+  // ignore: unused_element
   Future<void> _showWeatherDialogInEditor(
     BuildContext context,
     ThemeData theme,
@@ -1221,6 +1223,185 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         _showLocation = false;
         _showWeather = false;
       });
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.cannotGetLocationTitle),
+          content: Text(l10n.locationFetchFailedNoNetwork),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.iKnow),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  /// 新建模式下获取位置和天气，失败时调用回调取消选中
+  /// 用于天气按钮点击时的处理
+  Future<void> _fetchLocationWeatherWithFailCallback(
+      VoidCallback onFail) async {
+    final locationService = Provider.of<LocationService>(
+      context,
+      listen: false,
+    );
+    final weatherService = Provider.of<WeatherService>(context, listen: false);
+
+    // 检查并请求权限
+    if (!locationService.hasLocationPermission) {
+      bool permissionGranted =
+          await locationService.requestLocationPermission();
+      if (!permissionGranted) {
+        if (mounted && context.mounted) {
+          final l10n = AppLocalizations.of(context);
+          onFail();
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text(l10n.cannotGetLocationTitle),
+              content: Text(l10n.cannotGetLocationPermissionShort),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(l10n.iKnow),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
+    }
+
+    final position = await locationService.getCurrentLocation();
+    if (position != null && mounted) {
+      final location = locationService.getFormattedLocation();
+
+      setState(() {
+        _location = location.isNotEmpty ? location : null;
+        _latitude = position.latitude;
+        _longitude = position.longitude;
+      });
+
+      // 获取天气
+      try {
+        await weatherService.getWeatherData(
+          position.latitude,
+          position.longitude,
+        );
+        if (mounted) {
+          setState(() {
+            _weather = weatherService.currentWeather;
+            _temperature = weatherService.temperature;
+          });
+          // 天气获取失败（无数据）
+          if (_weather == null) {
+            final l10n = AppLocalizations.of(context);
+            onFail();
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: Text(l10n.weatherFetchFailedTitle),
+                content: Text(l10n.weatherFetchFailedDesc),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text(l10n.iKnow),
+                  ),
+                ],
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        logError('获取天气数据失败', error: e, source: 'NoteFullEditorPage');
+        if (mounted) {
+          final l10n = AppLocalizations.of(context);
+          onFail();
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text(l10n.weatherFetchFailedTitle),
+              content: Text(l10n.weatherFetchFailedDesc),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(l10n.iKnow),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+    } else if (mounted) {
+      // 位置获取失败
+      final l10n = AppLocalizations.of(context);
+      onFail();
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.cannotGetLocationTitle),
+          content: Text(l10n.locationFetchFailedNoNetwork),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.iKnow),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  /// 新建模式下获取位置，失败时调用回调取消选中
+  Future<void> _fetchLocationForNewNoteWithFailCallback(
+      VoidCallback onFail) async {
+    final locationService = Provider.of<LocationService>(
+      context,
+      listen: false,
+    );
+
+    // 检查并请求权限
+    if (!locationService.hasLocationPermission) {
+      bool permissionGranted =
+          await locationService.requestLocationPermission();
+      if (!permissionGranted) {
+        if (mounted && context.mounted) {
+          final l10n = AppLocalizations.of(context);
+          onFail();
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text(l10n.cannotGetLocationTitle),
+              content: Text(l10n.cannotGetLocationPermissionShort),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(l10n.iKnow),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
+    }
+
+    final position = await locationService.getCurrentLocation();
+    if (position != null && mounted) {
+      final location = locationService.getFormattedLocation();
+
+      setState(() {
+        _location = location.isNotEmpty ? location : null;
+        _latitude = position.latitude;
+        _longitude = position.longitude;
+      });
+    } else if (mounted) {
+      // 位置获取失败
+      final l10n = AppLocalizations.of(context);
+      onFail();
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -2344,21 +2525,38 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                                 // 编辑模式下统一弹对话框（只有已保存的笔记才是编辑模式）
                                                 if (widget.initialQuote?.id !=
                                                     null) {
+                                                  // 编辑模式：使用完整对话框（包含移除、更新地址等选项）
                                                   await _showLocationDialogInEditor(
                                                     context,
                                                     theme,
                                                   );
+                                                  // 刷新 BottomSheet 内的 UI
+                                                  setState(() {});
                                                   return;
                                                 }
                                                 // 新建模式
                                                 if (value &&
                                                     _location == null &&
                                                     _latitude == null) {
-                                                  _fetchLocationWeather();
+                                                  // 先设置为选中，获取失败后会在回调中取消
+                                                  this.setState(() {
+                                                    _showLocation = true;
+                                                  });
+                                                  setState(() {});
+                                                  await _fetchLocationForNewNoteWithFailCallback(
+                                                      () {
+                                                    // 失败回调：取消选中
+                                                    this.setState(() {
+                                                      _showLocation = false;
+                                                    });
+                                                    setState(() {});
+                                                  });
+                                                } else {
+                                                  this.setState(() {
+                                                    _showLocation = value;
+                                                  });
+                                                  setState(() {});
                                                 }
-                                                setState(() {
-                                                  _showLocation = value;
-                                                });
                                               },
                                               selectedColor: theme
                                                   .colorScheme.primaryContainer,
@@ -2406,19 +2604,57 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                             // 编辑模式下统一弹对话框（只有已保存的笔记才是编辑模式）
                                             if (widget.initialQuote?.id !=
                                                 null) {
-                                              await _showWeatherDialogInEditor(
-                                                context,
-                                                theme,
-                                              );
+                                              // 编辑模式：如果没有天气数据，直接弹窗提示，不改变选中状态
+                                              if (_originalWeather == null) {
+                                                final l10n =
+                                                    AppLocalizations.of(
+                                                        context);
+                                                await showDialog(
+                                                  context: context,
+                                                  builder: (ctx) => AlertDialog(
+                                                    title: Text(
+                                                        l10n.cannotAddWeather),
+                                                    content: Text(l10n
+                                                        .cannotAddWeatherDesc),
+                                                    actions: [
+                                                      TextButton(
+                                                        onPressed: () =>
+                                                            Navigator.pop(ctx),
+                                                        child: Text(l10n.iKnow),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                );
+                                                return;
+                                              }
+                                              // 有天气数据时才允许切换
+                                              this.setState(() {
+                                                _showWeather = value;
+                                              });
+                                              setState(() {});
                                               return;
                                             }
                                             // 新建模式
                                             if (value && _weather == null) {
-                                              _fetchLocationWeather();
+                                              // 先设置为选中，获取失败后会在回调中取消
+                                              this.setState(() {
+                                                _showWeather = true;
+                                              });
+                                              setState(() {});
+                                              await _fetchLocationWeatherWithFailCallback(
+                                                  () {
+                                                // 失败回调：取消选中
+                                                this.setState(() {
+                                                  _showWeather = false;
+                                                });
+                                                setState(() {});
+                                              });
+                                            } else {
+                                              this.setState(() {
+                                                _showWeather = value;
+                                              });
+                                              setState(() {});
                                             }
-                                            setState(() {
-                                              _showWeather = value;
-                                            });
                                           },
                                           selectedColor: theme
                                               .colorScheme.primaryContainer,
