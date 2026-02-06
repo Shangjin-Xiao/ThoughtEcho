@@ -47,7 +47,8 @@ void main() {
     });
 
     test('processSVGTask handles missing metadata gracefully', () async {
-      const rawSvg = '<svg xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" /></svg>';
+      const rawSvg =
+          '<svg xmlns="http://www.w3.org/2000/svg"><rect width="100" height="100" /></svg>';
       final data = AICardProcessingData(
         svgContent: rawSvg,
         brandName: 'TestBrand',
