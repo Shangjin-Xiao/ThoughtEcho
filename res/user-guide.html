@@ -539,8 +539,10 @@
                     throw new Error('无法解析 Markdown 结构');
                 }
 
-                // 修复图片路径 (res/screenshot -> screenshot)
-                const fixImagePath = (md) => md.replace(/\]\(res\/screenshot\//g, '](screenshot/');
+                // 修复图片路径 (../res/screenshot/ 和 res/screenshot/ -> screenshot/)
+                const fixImagePath = (md) => md
+                    .replace(/\]\(\.\.\/res\/screenshot\//g, '](screenshot/')
+                    .replace(/\]\(res\/screenshot\//g, '](screenshot/');
 
                 // 渲染
                 contentZh.innerHTML = marked.parse(fixImagePath(zhMatch[1]));
