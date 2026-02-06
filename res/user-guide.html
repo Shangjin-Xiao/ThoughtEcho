@@ -44,8 +44,13 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
         html {
-            scroll-behavior: smooth;
             scroll-padding-top: var(--nav-h, 80px);
+        }
+
+        @media (prefers-reduced-motion: no-preference) {
+            html {
+                scroll-behavior: smooth;
+            }
         }
 
         body {
@@ -467,7 +472,7 @@
         syncNavHeightVar();
         window.addEventListener('resize', syncNavHeightVar);
         if (document.fonts && document.fonts.ready) {
-            document.fonts.ready.then(syncNavHeightVar);
+            document.fonts.ready.then(syncNavHeightVar).catch(() => {});
         }
 
         function closeToc() {
