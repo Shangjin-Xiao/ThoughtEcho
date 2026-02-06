@@ -35,10 +35,18 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       
-    - name: Setup Flutter
+    - name: Setup Flutter (latest)
+      if: ${{ github.event.inputs.flutter_version == 'latest' || github.event.inputs.flutter_version == '' }}
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: ${{ github.event.inputs.flutter_version || 'latest' }}
+        channel: 'stable'
+        cache: true
+        
+    - name: Setup Flutter (pinned)
+      if: ${{ github.event.inputs.flutter_version != 'latest' && github.event.inputs.flutter_version != '' }}
+      uses: subosito/flutter-action@v2
+      with:
+        flutter-version: ${{ github.event.inputs.flutter_version }}
         channel: 'stable'
         cache: true
         
@@ -251,7 +259,7 @@ jobs:
         Copy-Item -Path "$buildPath/*" -Destination "release_temp/" -Recurse
         
         # 创建版本信息文件内容
-        $versionInfo = "ThoughtEcho Windows版本信息`n版本: $version`n构建类型: $buildType`n构建时间: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`nFlutter版本: ${{ github.event.inputs.flutter_version || '3.29.2' }}`n提交: ${{ github.sha }}`n`n使用说明:`n1. 解压到任意文件夹`n2. 双击 thoughtecho.exe 启动应用`n3. 如遇问题请查看 logs 文件夹下的日志文件`n`n注意事项:`n- 首次启动可能需要等待数秒`n- 确保系统已安装Visual C++ Redistributable`n- 建议在解压后将整个文件夹添加到杀毒软件白名单"
+        $versionInfo = "ThoughtEcho Windows版本信息`n版本: $version`n构建类型: $buildType`n构建时间: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')`nFlutter版本: ${{ github.event.inputs.flutter_version || 'latest' }}`n提交: ${{ github.sha }}`n`n使用说明:`n1. 解压到任意文件夹`n2. 双击 thoughtecho.exe 启动应用`n3. 如遇问题请查看 logs 文件夹下的日志文件`n`n注意事项:`n- 首次启动可能需要等待数秒`n- 确保系统已安装Visual C++ Redistributable`n- 建议在解压后将整个文件夹添加到杀毒软件白名单"
         $versionInfo | Out-File -FilePath "release_temp/VERSION_INFO.txt" -Encoding UTF8
         $versionInfo | Out-File -FilePath "release_temp/版本信息.txt" -Encoding UTF8
 
@@ -353,7 +361,7 @@ jobs:
         Write-Output "### 📋 构建信息" >> $env:GITHUB_STEP_SUMMARY
         Write-Output "- **应用版本**: $version" >> $env:GITHUB_STEP_SUMMARY
         Write-Output "- **构建类型**: $buildType" >> $env:GITHUB_STEP_SUMMARY
-        Write-Output "- **Flutter版本**: ${{ github.event.inputs.flutter_version || '3.29.2' }}" >> $env:GITHUB_STEP_SUMMARY
+        Write-Output "- **Flutter版本**: ${{ github.event.inputs.flutter_version || 'latest' }}" >> $env:GITHUB_STEP_SUMMARY
         Write-Output "- **提交哈希**: ${{ github.sha }}" >> $env:GITHUB_STEP_SUMMARY
         Write-Output "" >> $env:GITHUB_STEP_SUMMARY
         Write-Output "### 📦 发布文件" >> $env:GITHUB_STEP_SUMMARY
