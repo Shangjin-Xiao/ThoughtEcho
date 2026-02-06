@@ -249,7 +249,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                 decoration: BoxDecoration(
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurfaceVariant.withOpacity(0.4),
+                  ).colorScheme.onSurfaceVariant.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -308,7 +308,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                       backgroundColor: Theme.of(context)
                           .colorScheme
                           .surfaceContainerHighest
-                          .withOpacity(0.5),
+                          .withValues(alpha: 0.5),
                     ),
                   ),
                 ],
@@ -360,7 +360,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                           color: Theme.of(context)
                               .colorScheme
                               .surfaceContainerHighest
-                              .withOpacity(0.5),
+                              .withValues(alpha: 0.5),
                           borderRadius: BorderRadius.circular(8),
                           border: Border(
                             left: BorderSide(
@@ -974,6 +974,7 @@ $positiveQuotesText
     Navigator.push(
       context,
       MaterialPageRoute(
+        // ignore: deprecated_member_use_from_same_package
         builder: (context) => AnnualReportPage(year: year, quotes: quotes),
       ),
     );

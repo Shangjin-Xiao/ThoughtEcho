@@ -699,7 +699,7 @@ class _InsightsPageState extends State<InsightsPage> {
               color: theme.colorScheme.surfaceContainerLow,
               borderRadius: BorderRadius.circular(AppTheme.cardRadius),
               border: Border.all(
-                color: theme.colorScheme.outline.withOpacity(0.1),
+                color: theme.colorScheme.outline.withValues(alpha: 0.1),
               ),
             ),
             child: Wrap(
@@ -741,7 +741,7 @@ class _InsightsPageState extends State<InsightsPage> {
                     side: BorderSide(
                       color: isSelected
                           ? Colors.transparent
-                          : theme.colorScheme.outline.withOpacity(0.3),
+                          : theme.colorScheme.outline.withValues(alpha: 0.3),
                     ),
                   ),
                   tooltip: style['description'],
@@ -761,7 +761,7 @@ class _InsightsPageState extends State<InsightsPage> {
               borderRadius: BorderRadius.circular(AppTheme.cardRadius),
               border: _showCustomPrompt
                   ? Border.all(
-                      color: theme.colorScheme.outline.withOpacity(0.2))
+                      color: theme.colorScheme.outline.withValues(alpha: 0.2))
                   : null,
             ),
             padding:
@@ -816,7 +816,8 @@ class _InsightsPageState extends State<InsightsPage> {
                         borderRadius:
                             BorderRadius.circular(AppTheme.inputRadius),
                         borderSide: BorderSide(
-                          color: theme.colorScheme.outline.withOpacity(0.3),
+                          color:
+                              theme.colorScheme.outline.withValues(alpha: 0.3),
                         ),
                       ),
                       filled: true,
@@ -839,7 +840,7 @@ class _InsightsPageState extends State<InsightsPage> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(AppTheme.cardRadius),
               side: BorderSide(
-                color: theme.colorScheme.outline.withOpacity(0.2),
+                color: theme.colorScheme.outline.withValues(alpha: 0.2),
               ),
             ),
             color: theme.colorScheme.surface, // Clean surface
@@ -847,7 +848,8 @@ class _InsightsPageState extends State<InsightsPage> {
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.secondaryContainer.withOpacity(0.5),
+                  color: theme.colorScheme.secondaryContainer
+                      .withValues(alpha: 0.5),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -962,19 +964,20 @@ class _InsightsPageState extends State<InsightsPage> {
     return Card(
       margin: const EdgeInsets.only(bottom: 12), // Increased spacing
       elevation: isSelected ? 4 : 0.5, // Better elevation
-      shadowColor: theme.shadowColor.withOpacity(0.2),
+      shadowColor: theme.shadowColor.withValues(alpha: 0.2),
       shape: RoundedRectangleBorder(
         borderRadius:
             BorderRadius.circular(AppTheme.cardRadius), // Use AppTheme
         side: BorderSide(
           color: isSelected
               ? theme.colorScheme.primary
-              : theme.colorScheme.outline.withOpacity(0.1), // Subtle border
+              : theme.colorScheme.outline
+                  .withValues(alpha: 0.1), // Subtle border
           width: isSelected ? 2 : 1,
         ),
       ),
       color: isSelected
-          ? theme.colorScheme.primaryContainer.withOpacity(0.3)
+          ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
           : theme.cardColor,
       child: InkWell(
         onTap: () {
@@ -1156,7 +1159,7 @@ class _InsightsPageState extends State<InsightsPage> {
                             ),
                             blockquoteDecoration: BoxDecoration(
                               color: theme.colorScheme.surfaceContainerHighest
-                                  .withOpacity(0.5),
+                                  .withValues(alpha: 0.5),
                               borderRadius: BorderRadius.circular(8),
                               border: Border(
                                 left: BorderSide(

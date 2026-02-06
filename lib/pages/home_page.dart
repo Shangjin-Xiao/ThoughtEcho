@@ -488,28 +488,25 @@ class _HomePageState extends State<HomePage>
           }
         }
 
-        if (initialQuote == null) {
-          // 新建笔记或找不到原始笔记，构造新的Quote
-          initialQuote = Quote(
-            id: (isNew || original == null) ? null : draftId,
-            content: plainText,
-            deltaContent: deltaContent,
-            date: DateTime.now().toIso8601String(),
-            sourceAuthor: draftData['author'] as String?,
-            sourceWork: draftData['work'] as String?,
-            tagIds: (draftData['tagIds'] as List?)
-                    ?.map((e) => e.toString())
-                    .toList() ??
-                [],
-            colorHex: draftData['colorHex'] as String?,
-            location: draftData['location'] as String?,
-            latitude: (draftData['latitude'] as num?)?.toDouble(),
-            longitude: (draftData['longitude'] as num?)?.toDouble(),
-            weather: draftData['weather'] as String?,
-            temperature: draftData['temperature'] as String?,
-            editSource: 'fullscreen',
-          );
-        }
+        initialQuote ??= Quote(
+          id: (isNew || original == null) ? null : draftId,
+          content: plainText,
+          deltaContent: deltaContent,
+          date: DateTime.now().toIso8601String(),
+          sourceAuthor: draftData['author'] as String?,
+          sourceWork: draftData['work'] as String?,
+          tagIds: (draftData['tagIds'] as List?)
+                  ?.map((e) => e.toString())
+                  .toList() ??
+              [],
+          colorHex: draftData['colorHex'] as String?,
+          location: draftData['location'] as String?,
+          latitude: (draftData['latitude'] as num?)?.toDouble(),
+          longitude: (draftData['longitude'] as num?)?.toDouble(),
+          weather: draftData['weather'] as String?,
+          temperature: draftData['temperature'] as String?,
+          editSource: 'fullscreen',
+        );
 
         // 导航到全屏编辑器
         if (mounted) {

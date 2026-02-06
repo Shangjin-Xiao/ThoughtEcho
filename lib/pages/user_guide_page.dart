@@ -96,8 +96,9 @@ class _UserGuidePageState extends State<UserGuidePage> {
       final String langMarker =
           isZh ? '<div id="-中文版本">' : '<div id="-english-version">';
       final int startIndex = fullContent.indexOf(langMarker);
-      if (startIndex == -1)
+      if (startIndex == -1) {
         throw Exception('Language block not found: $langMarker');
+      }
 
       final int contentStart = startIndex + langMarker.length;
       final int endIndex = fullContent.indexOf('</div>', contentStart);
@@ -143,20 +144,30 @@ class _UserGuidePageState extends State<UserGuidePage> {
     // Helper for icons based on chapter title/index
     IconData getIcon(String title, int index) {
       final t = title.toLowerCase();
-      if (t.contains('快速') || t.contains('started'))
+      if (t.contains('快速') || t.contains('started')) {
         return Icons.rocket_launch_outlined;
-      if (t.contains('ai')) return Icons.auto_awesome_outlined;
-      if (t.contains('编辑器') || t.contains('editor'))
+      }
+      if (t.contains('ai')) {
+        return Icons.auto_awesome_outlined;
+      }
+      if (t.contains('编辑器') || t.contains('editor')) {
         return Icons.edit_note_outlined;
-      if (t.contains('管理') || t.contains('management'))
+      }
+      if (t.contains('管理') || t.contains('management')) {
         return Icons.library_books_outlined;
-      if (t.contains('同步') || t.contains('sync')) return Icons.sync_outlined;
-      if (t.contains('备份') || t.contains('backup'))
+      }
+      if (t.contains('同步') || t.contains('sync')) {
+        return Icons.sync_outlined;
+      }
+      if (t.contains('备份') || t.contains('backup')) {
         return Icons.backup_outlined;
-      if (t.contains('设置') || t.contains('settings'))
+      }
+      if (t.contains('设置') || t.contains('settings')) {
         return Icons.tune_outlined;
-      if (t.contains('常见') || t.contains('faq'))
+      }
+      if (t.contains('常见') || t.contains('faq')) {
         return Icons.help_outline_rounded;
+      }
 
       final defaults = [
         Icons.info_outline,
