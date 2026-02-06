@@ -12,6 +12,17 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Sans:wght@300;400;500;700&family=Long+Cang&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+    <!-- 防止字体加载导致的文字闪烁：先隐藏，字体就绪或超时后再显示 -->
+    <script>
+        (function(){
+            document.documentElement.style.visibility = 'hidden';
+            var reveal = function(){ document.documentElement.style.visibility = ''; };
+            if (document.fonts && document.fonts.ready) {
+                document.fonts.ready.then(reveal);
+            }
+            setTimeout(reveal, 800);
+        })();
+    </script>
     
     <!-- Marked.js -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -38,7 +49,6 @@
             line-height: 1.8;
         }
         
-        body.lang-en { font-family: 'Noto Sans', sans-serif; }
         
         /* 导航栏 */
         nav {
@@ -228,11 +238,64 @@
             margin-bottom: 1.5rem;
             border-radius: 0 8px 8px 0;
         }
+
+        /* 手册内嵌图片：圆角阴影 + 居中 + 限制最大宽度 */
+        .content img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 1.5rem auto;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+            border: 2px solid var(--line-color);
+        }
+
+        /* 列表优化 */
+        .content ul, .content ol {
+            margin-bottom: 1rem;
+            padding-left: 1.8rem;
+            color: var(--ink-medium);
+        }
+        .content li {
+            margin-bottom: 0.35rem;
+        }
+
+        /* 链接样式 */
+        .content a {
+            color: var(--accent-blue);
+            text-decoration: underline dotted;
+            transition: color 0.2s;
+        }
+        .content a:hover {
+            color: var(--accent-brown);
+        }
+
+        /* h4 样式 */
+        .content h4 {
+            font-size: 1.1rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: var(--ink-dark);
+        }
+
+        /* 表格滚动容器（移动端防溢出） */
+        .content table {
+            display: block;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* TOC 层级缩进 */
+        .toc-list .toc-h3 {
+            padding-left: 1.6rem;
+            font-size: 0.92em;
+        }
         
-        /* 语言切换 */
+        /* 语言切换 — 使用 data 属性避免 body 自身被 .lang-en 隐藏 */
         .lang-zh, .lang-en { display: none; }
-        body:not(.lang-en) .lang-zh { display: block; }
-        body.lang-en .lang-en { display: block; }
+        body[data-lang="zh"] .lang-zh { display: block; }
+        body[data-lang="en"] .lang-en { display: block; }
+        body[data-lang="en"] { font-family: 'Noto Sans', sans-serif; }
         
         /* 响应式 */
         @media (max-width: 1024px) {
@@ -296,18 +359,23 @@
             gfm: true
         });
 
-        // 语言切换
-        const langToggle = document.getElementById('langToggle');
-        langToggle.addEventListener('click', () => {
-            document.body.classList.toggle('lang-en');
-            localStorage.setItem('lang', document.body.classList.contains('lang-en') ? 'en' : 'zh');
+        // 语言状态管理：使用 data-lang 属性而非 class，避免 .lang-en 规则误隐藏 body
+        function switchPageLang(targetLang) {
+            document.body.dataset.lang = targetLang;
+            document.documentElement.lang = targetLang === 'en' ? 'en' : 'zh-CN';
+            localStorage.setItem('lang', targetLang);
+        }
+
+        // 恢复上次语言偏好，默认中文
+        switchPageLang(localStorage.getItem('lang') === 'en' ? 'en' : 'zh');
+
+        // 绑定切换按钮
+        var langToggle = document.getElementById('langToggle');
+        langToggle.addEventListener('click', function () {
+            var nextLang = document.body.dataset.lang === 'en' ? 'zh' : 'en';
+            switchPageLang(nextLang);
             generateTOC();
         });
-
-        // 恢复语言设置
-        if (localStorage.getItem('lang') === 'en') {
-            document.body.classList.add('lang-en');
-        }
 
         // 加载 Markdown
         async function loadManual() {
@@ -379,8 +447,8 @@
             const tocList = document.getElementById('tocList');
             tocList.innerHTML = '';
 
-            const isEn = document.body.classList.contains('lang-en');
-            const content = document.getElementById(isEn ? 'content-en' : 'content-zh');
+            const isEnglish = document.body.dataset.lang === 'en';
+            const content = document.getElementById(isEnglish ? 'content-en' : 'content-zh');
             const headings = content.querySelectorAll('h2, h3');
 
             headings.forEach(h => {
