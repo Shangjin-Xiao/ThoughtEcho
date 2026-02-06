@@ -51,16 +51,15 @@
 
 ### 支持的服务商
 
-| 服务商 | API 地址 | 默认模型 | 说明 |
-|--------|----------|----------|------|
-| **OpenAI** | `https://api.openai.com/v1/chat/completions` | gpt-4o | 官方 OpenAI 服务 |
-| **OpenRouter** | `https://openrouter.ai/api/v1/chat/completions` | openai/gpt-4o | 多模型聚合平台 |
-| **SiliconFlow** | `https://api.siliconflow.cn/v1/chat/completions` | (用户自选) | 国内 AI 服务 |
-| **DeepSeek** | `https://api.deepseek.com/v1/chat/completions` | deepseek-chat | 国产大模型 |
-| **Anthropic Claude** | `https://api.anthropic.com/v1/messages` | claude-3.7-sonnet-latest | Claude 系列模型 |
-| **Ollama (本地)** | `http://localhost:11434/v1/chat/completions` | (用户自选) | 本地运行开源模型 |
-| **LMStudio (本地)** | `http://localhost:1234/v1/chat/completions` | (用户自选) | 本地模型推理 |
-| **自定义** | (用户配置) | (用户配置) | 兼容 OpenAI API 格式的任意服务 |
+心迹支持多种主流 AI 服务：
+
+- **OpenAI** - ChatGPT 背后的官方服务
+- **Anthropic Claude** - 智能对话助手
+- **DeepSeek** - 国产大语言模型
+- **OpenRouter** - 可选择多种模型的聚合平台
+- **SiliconFlow** - 国内 AI 服务
+- **Ollama / LMStudio** - 在您自己的电脑上免费运行 AI（无需联网）
+- **自定义服务** - 支持其他兼容服务
 
 ### 详细配置步骤
 
@@ -68,25 +67,22 @@
 1. 打开「设置」→「AI 助手设置」
 2. 点击「添加服务商」或选择预设服务商
 3. 选择「OpenAI」预设
-4. 在 API Key 输入框中填入您的密钥（以 `sk-` 开头）
-5. 可选：修改模型名称（如 `gpt-4o`、`gpt-4-turbo`）
-6. 可选：调整温度参数（0-2，越高越有创意）
-7. 可选：调整最大 Token 数（默认 32000）
-8. 点击「测试连接」验证配置
-9. 保存设置
+4. 在 API Key 输入框中填入您的密钥
+5. 可选：选择其他模型
+6. 点击「测试连接」验证配置
+7. 保存设置
 
 #### 本地 AI 配置（Ollama）
 
+本地 AI 可以在您的电脑上免费运行，无需付费，也不需要联网。
+
 1. **安装 Ollama**
    - 访问 [ollama.ai](https://ollama.ai) 下载安装
-   - 运行 `ollama pull llama3.1` 下载模型
 
 2. **在心迹中配置**
    - 打开「AI 助手设置」
    - 选择「Ollama」预设
-   - API 地址保持默认：`http://localhost:11434/v1/chat/completions`
-   - 模型名称填写您下载的模型（如 `llama3.1`）
-   - API Key 可留空
+   - 填写您下载的模型名称
    - 测试连接并保存
 
 #### 本地 AI 配置（LMStudio）
@@ -94,28 +90,25 @@
 1. **安装 LMStudio**
    - 访问 [lmstudio.ai](https://lmstudio.ai) 下载安装
    - 下载您需要的模型
-   - 启动本地服务器（左侧栏 Local Server）
+   - 启动本地服务器
 
 2. **在心迹中配置**
    - 选择「LMStudio」预设
-   - API 地址：`http://localhost:1234/v1/chat/completions`
-   - 模型名称填写已加载的模型
-   - API Key 可留空
+   - 填写已加载的模型名称
+   - 测试连接并保存
 
 ### API Key 安全说明
 
-> 🔐 **安全机制**：
-> - API Key 使用 `flutter_secure_storage` 加密存储
-> - 密钥不会以明文形式保存在配置文件中
-> - 密钥不会包含在备份文件中
-> - 支持 API Key 格式验证（OpenAI: `sk-*`，OpenRouter: `sk_*` 或 `or_*`）
+> 🔐 **您的密钥是安全的**：
+> - 您的 API Key 安全地保存在您的设备上。
+> - 密钥不会被包含在备份文件中
+> - 应用会自动验证密钥格式
 
 ### 多服务商支持
 
-心迹支持同时配置多个 AI 服务商，具有自动故障转移功能：
-- 当主服务商不可用时，自动切换到备用服务商
-- 失败的服务商会有 5 分钟冷却期
-- 可设置服务商优先级
+心迹支持同时配置多个 AI 服务商：
+- 当一个服务不可用时，自动切换到其他服务
+- 可设置服务商的使用优先级
 
 ---
 
@@ -123,53 +116,22 @@
 
 ![富文本编辑器](../res/screenshot/note_full_editor_page.dart.jpg)
 
-### 工具栏功能（11 组）
+### 工具栏功能
 
-#### 历史操作
-- **撤销**：撤销上一步操作
-- **重做**：重做已撤销的操作
+编辑器提供丰富的文字排版工具：
 
-#### 文字样式
-- **加粗**：`Ctrl/Cmd + B`
-- **斜体**：`Ctrl/Cmd + I`
-- **下划线**：`Ctrl/Cmd + U`
-- **删除线**：添加删除线效果
-
-#### 标题
-- **标题样式**：支持 H1-H6 多级标题
-
-#### 字体控制
-- **字号选择**：调整文字大小
-- **字体选择**：更换字体
-
-#### 文字颜色
-- **文字颜色**：设置文字前景色
-- **背景高亮**：设置文字背景色
-
-#### 文本对齐
-- **左对齐/居中/右对齐/两端对齐**
-
-#### 列表
-- **有序列表**：数字编号列表
-- **无序列表**：项目符号列表
-- **增加缩进**
-- **减少缩进**
-
-#### 块元素
-- **引用块**：添加引用样式
-- **代码块**：添加代码格式
-
-#### 链接
-- **插入/编辑链接**
-
-#### 媒体插入
-- **插入图片**：支持从文件、相机、URL 导入
-- **插入视频**：支持从文件、相机、URL 导入
-- **插入音频**：支持从文件、录音、URL 导入
-
-#### 工具
-- **清除格式**：移除选中文字的所有格式
-- **搜索**：在文档中搜索内容
+- **撤销/重做** - 撤销或恢复操作
+- **文字样式** - 加粗、斜体、下划线、删除线
+- **标题** - 支持多级标题
+- **字体控制** - 调整字号和字体
+- **文字颜色** - 设置文字颜色和背景高亮
+- **文本对齐** - 左对齐、居中、右对齐、两端对齐
+- **列表** - 有序列表、无序列表、缩进控制
+- **引用和代码** - 添加引用块或代码格式
+- **链接** - 插入或编辑链接
+- **媒体** - 插入图片、视频、音频
+- **清除格式** - 移除所有格式
+- **搜索** - 在文档中搜索内容
 
 ### AI 辅助功能（✨ 按钮）
 
@@ -177,38 +139,37 @@
 
 | 功能 | 说明 |
 |------|------|
-| **智能分析来源** | 分析笔记内容，猜测作者、出处，并给出置信度和解释 |
-| **润色文本** | AI 改进文字表达，流式显示润色结果，可一键应用 |
-| **续写** | AI 根据上下文继续您的思路，流式生成内容 |
-| **深度分析** | 对笔记进行综合分析，生成 Markdown 格式的洞察 |
-| **问笔记** | 打开单独的对话页面，针对笔记内容提问交流 |
+| **自动查找作者和出处** | 自动识别笔记的作者和出处 |
+| **润色文本** | AI 帮您改进文字表达 |
+| **续写** | AI 根据上下文继续您的思路 |
+| **深度分析** | 生成笔记的总结和洞察 |
+| **问笔记** | 针对笔记内容与 AI 对话交流 |
 
-### 元数据编辑面板
+### 附加信息编辑面板
 
-点击编辑器顶部的 ✏️ 按钮或「编辑元数据」，可编辑：
+点击编辑器顶部的 ✏️ 按钮或「编辑附加信息」，可编辑笔记的附加信息：
 
 #### 来源信息
-- **作者**：笔记的作者
-- **出处**：来源作品/书籍/网站
-- 支持 AI 自动分析识别
+- **作者**：填写笔记的作者姓名
+- **出处**：填写来源作品、书籍或网站
+- 可以点击 AI 按钮自动识别作者和出处
 
 #### 颜色标记
-- 21 种预设颜色（浅色和深色系列）
-- 支持自定义颜色选择器
-- 可移除颜色标记
+- 提供 21 种预设颜色供选择
+- 也可以使用颜色选择器自定义颜色
+- 点击「移除」可清除颜色标记
 
 #### 标签选择
-- 多选标签
-- 可搜索的标签列表
-- 可展开/折叠的标签区域
-- 显示已选标签数量
+- 可以为笔记添加多个标签
+- 支持搜索查找标签
+- 标签区域可以展开或折叠
+- 顶部会显示已选择的标签数量
 
 #### 位置和天气
-- **位置开关**：开启后自动获取当前位置
-- **天气开关**：开启后自动获取当前天气
-- 编辑模式下可修改位置
-- 过去日期可手动选择天气
-- 记录经纬度坐标
+- **位置开关**：开启后会自动获取您当前的位置
+- **天气开关**：开启后会自动获取当前天气信息
+- 在编辑模式下可以手动修改位置
+- 如果是记录过去的事情，可以手动选择当时的天气
 
 ### 自动保存
 
@@ -292,7 +253,7 @@
 - **Polaroid** - 拍立得风格
 - **Magazine** - 杂志排版风格
 
-**卡片元数据**：自动包含作者、日期、位置、天气、温度、时段等信息。
+**卡片附加信息**：自动包含作者、日期、位置、天气、温度、时段等信息。
 
 ---
 
@@ -300,18 +261,13 @@
 
 ### 每日灵感
 
-**功能说明**：基于时间、天气、位置等上下文，AI 生成个性化的写作提示。
-
-**生成逻辑**：
-- **早晨/白天**：行动导向（目标、勇气、选择、专注）
-- **傍晚/夜间**：反思导向（情感、意义、宽恕、感恩）
-- **下午**：稳定与当下意识
+AI 会根据时间、天气、位置等情况，为您生成个性化的写作提示。
 
 **特点**：
-- 流式生成，实时显示
-- 支持多语言（中文 15-30 字，英文 8-18 词）
-- 离线时使用本地确定性生成器作为后备
-- 可结合历史笔记洞察进行个性化推荐
+- 早晨/白天的提示更偏向行动（目标、勇气、选择、专注）
+- 傍晚/夜间的提示更偏向反思（情感、意义、宽恕、感恩）
+- 支持中英文等多种语言
+- 没有网络时也可以使用本地生成功能
 
 ### 周期性报告
 
@@ -323,12 +279,12 @@
 - **年报**：全年笔记统计
 
 **报告内容**：
-- 笔记总数、总字数、活跃天数
+- 笔记总数、总字数、活跃天数统计
 - 最常见的创作时段（早晨/下午/傍晚/夜间）
 - 天气模式分析
-- 高频标签统计
-- AI 生成的诗意洞察（流式显示）
-- 精选笔记卡片生成（6 张一组，自动翻页）
+- 常用标签统计
+- AI 生成的诗意洞察
+- 精选笔记卡片展示
 
 ### AI 洞察分析
 
@@ -349,12 +305,12 @@
 
 | 风格 | 说明 |
 |------|------|
-| **专业** | 清晰、客观、结构化语言，使用专业术语 |
-| **友好** | 温暖、鼓励、导师式建议，支持性语调 |
-| **幽默** | 机智、善用比喻、轻松观察 |
-| **文学** | 诗意语言、文学引用、美学表达 |
+| **专业** | 清晰、客观的专业分析 |
+| **友好** | 温暖、鼓励的建议 |
+| **幽默** | 轻松有趣的表达方式 |
+| **文学** | 富有诗意的语言风格 |
 
-**输出格式**：Markdown 结构，包含洞察、证据、可行建议、反思问题。
+分析结果以清晰的结构呈现，包含洞察、证据、建议和反思问题。
 
 ### 年度报告
 
@@ -370,7 +326,7 @@
 **特点**：
 - 响应式设计，适配移动端（最大宽度 414px）
 - 现代 CSS 设计（flexbox、圆角、阴影、emoji 图标）
-- 低温度参数（0.3）确保输出稳定
+- 优化后的设置确保生成的内容稳定且准确。
 
 ### 问笔记聊天
 
@@ -379,10 +335,10 @@
 **功能说明**：针对特定笔记内容与 AI 进行对话。
 
 **特点**：
-- 上下文感知：AI 基于笔记内容回答
-- 专业助手人设：只回答与笔记相关的问题
-- 承认信息不足：不会编造内容
-- 支持流式响应：实时显示回答
+- AI 能够理解笔记内容并回答相关问题
+- 只回答与笔记相关的内容，不会随意扩展
+- 如果笔记中没有相关信息，AI 会直接告诉您
+- 您可以边看边读 AI 生成的回答。
 
 ---
 
@@ -390,70 +346,39 @@
 
 ![设备同步](../res/screenshot/note_sync.jpg)
 
-### LocalSend 协议
+### 同步方式
 
-心迹使用 LocalSend 协议进行局域网 P2P 同步，无需云服务器。
-
-**协议版本**：2.1（支持回退到 1.0）
-
-**核心端点**：
-- `/info` - 设备信息与能力发现
-- `/register` - 设备注册握手
-- `/prepare-upload` - 会话初始化
-- `/upload` - 文件传输
-- `/cancel` - 取消会话
-
-**HTTP 服务端口**：53320
-
-### 设备发现
-
-#### UDP 组播发现（主要）
-- **组播地址**：`224.0.0.170`
-- **组播端口**：53317
-- **发现超时**：30 秒
-- **公告间隔**：5 秒
-- **设备过期**：40 秒（未收到公告则移除）
-
-#### mDNS/Bonjour（备用）
-- **服务类型**：`_thoughtecho._tcp`
-- 同时扫描：`_localsend._tcp`（兼容 LocalSend）
-- 用于 UDP 组播失败时（特别是 iOS）
+心迹支持在同一 WiFi 网络下的设备间直接同步，无需云服务器。
 
 ### 同步流程
 
-1. **设备发现**：自动扫描局域网内的心迹设备
-2. **连接建立**：选择目标设备并建立连接
-3. **数据传输**：发送/接收笔记数据
-4. **合并处理**：使用 LWW 策略合并数据
+1. **寻找设备**：应用会自动在同一 WiFi 网络中寻找您的其他心迹设备
+2. **选择设备**：从列表中选择要同步的目标设备
+3. **传输数据**：发送或接收笔记数据
+4. **自动合并**：智能合并两台设备的笔记
 
-### 合并策略（Last-Write-Wins）
+### 合并规则
 
-**决策逻辑**：
-```
-如果 远程时间戳 > 本地时间戳 → 使用远程数据
-如果 本地时间戳 > 远程时间戳 → 使用本地数据
-如果 时间戳相等：
-  - 内容不同 → 保留本地，记录冲突
-  - 内容相同 → 使用本地（幂等）
-```
+当两台设备有相同笔记时，应用会：
+- 应用会保留您最后一次修改的内容
+- 如果修改时间相同但内容不同，会记录为冲突供您处理
 
-**合并报告统计**：
-- 新增笔记数
-- 更新笔记数
-- 跳过笔记数（本地更新）
-- 冲突笔记数
-- 错误记录
+同步完成后会显示：
+- 新增了多少条笔记
+- 更新了多少条笔记
+- 跳过了多少条笔记（因为本地版本更新）
+- 是否有冲突需要处理
 
 ### 支持平台
 
-| 平台 | 支持情况 | 说明 |
-|------|----------|------|
-| **Android** | ✅ 完整支持 | UDP 组播、HTTP |
-| **iOS** | ✅ 完整支持 | UDP 组播（需网络权限）、mDNS 备用 |
-| **Windows** | ✅ 完整支持 | UDP 组播、HTTP |
-| **macOS** | ✅ 完整支持 | UDP 组播、HTTP |
-| **Linux** | ✅ 完整支持 | UDP 组播、HTTP |
-| **Web** | ⚠️ 受限 | 无 UDP/本地网络访问 |
+| 平台 | 支持情况 |
+|------|----------|
+| Android | ✅ 完整支持 |
+| iOS | ✅ 完整支持 |
+| Windows | ✅ 完整支持 |
+| macOS | ✅ 完整支持 |
+| Linux | ✅ 完整支持 |
+| Web | ⚠️ 功能受限 |
 
 ---
 
@@ -463,67 +388,43 @@
 
 ### 备份格式
 
-#### ZIP 格式（推荐，版本 1.2.0）
+心迹的备份文件为 ZIP 格式，包含：
+- 所有笔记数据
+- 图片、视频、音频等媒体文件
 
-```
-backup_file.zip
-├── backup_data.json  (结构化数据)
-└── media/            (媒体文件)
-    ├── images/
-    ├── videos/
-    └── audio/
-```
+旧版本的 JSON 格式备份也可以导入，应用会自动识别和转换。
 
-**JSON 数据结构**：
-```json
-{
-  "version": "1.2.0",
-  "createdAt": "ISO8601 时间戳",
-  "device_id": "设备指纹",
-  "notes": {
-    "categories": [...],
-    "quotes": [...]
-  },
-  "settings": {...},
-  "ai_analysis": [...]
-}
-```
+### 备份的优势
 
-#### 旧版 JSON 格式（兼容）
-
-直接 JSON 备份，无 ZIP 压缩，导入时自动检测并转换。
-
-### 备份特点
-
-- **流式导出**：通过 IOSink 增量写入 JSON
-- **分块读取**：防止内存溢出
-- **批量处理**：每 50 条笔记分页
-- **进度回调**：5% JSON、25% 媒体、35% 压缩
-- **内存监控**：检测内存压力，必要时中止
+- 备份过程会显示进度
+- 即使笔记很多也不会卡顿
+- 应用会自动为您管理大型文件
 
 ### 恢复模式
 
+导入备份时可以选择三种模式：
+
 | 模式 | 说明 | 适用场景 |
 |------|------|----------|
-| **覆盖** | 清除所有现有数据后导入 | 设备重置/完整恢复 |
-| **合并** | 使用 LWW 策略合并数据 | 从其他设备同步 |
-| **追加** | 简单追加数据（旧版行为） | 兼容性导入 |
+| **覆盖** | 清空当前所有数据，完全替换为备份内容 | 换新设备，想完整恢复数据 |
+| **合并** | 智能合并备份和当前数据 | 从其他设备同步数据 |
+| **追加** | 直接添加备份中的笔记 | 导入补充数据 |
 
-### 备份操作
+### 备份操作步骤
 
 **访问路径**：设置 → 备份与恢复
 
-1. **创建备份**
-   - 点击「创建备份」
-   - 选择保存位置
-   - 等待备份完成（显示进度）
-   - 备份文件保存为 `.zip` 格式
+#### 创建备份
+1. 点击「创建备份」按钮
+2. 选择保存位置
+3. 等待备份完成（会显示进度条）
+4. 备份文件会保存为 `.zip` 格式
 
-2. **恢复备份**
-   - 点击「恢复备份」
-   - 选择备份文件（`.zip` 或 `.json`）
-   - 选择恢复模式（覆盖/合并）
-   - 等待恢复完成
+#### 恢复备份
+1. 点击「恢复备份」按钮
+2. 选择备份文件（支持 `.zip` 或旧版 `.json` 格式）
+3. 选择恢复模式（覆盖、合并或追加）
+4. 等待恢复完成
 
 ---
 
@@ -533,26 +434,17 @@ backup_file.zip
 
 ### 位置与天气
 
-- **位置服务开关**：启用/禁用位置权限
-- **位置状态显示**：
-  - ✅ 位置已启用且服务运行中
-  - ⚠️ 权限已授予但服务禁用
-  - ❌ 未授予权限
-- **城市搜索**：手动配置位置的交互式城市搜索
-- **当前地址显示**：显示格式化位置或「未设置」
+- **位置服务开关**：控制是否允许应用获取您的位置
+- **位置状态**：
+  - ✅ 位置功能已开启
+  - ⚠️ 已允许权限但功能未启用
+  - ❌ 未允许位置权限
+- **城市搜索**：可以手动搜索并设置位置
+- **当前地址**：显示您设置的位置或「未设置」
 
 ### 语言设置
 
-| 代码 | 语言 | 显示名称 |
-|------|------|----------|
-| null | 跟随系统 | Follow System |
-| zh | 中文 | 中文 |
-| en | 英文 | English |
-| ja | 日文 | 日本語 |
-| ko | 韩文 | 한국어 |
-| es | 西班牙文 | Español |
-| fr | 法文 | Français |
-| de | 德文 | Deutsch |
+应用支持多种语言，包括中文、英文、日文、韩文、西班牙文、法文、德文等。也可以选择跟随系统语言。
 
 ### 主题设置
 
@@ -564,12 +456,10 @@ backup_file.zip
 - 🔄 **跟随系统**：自动跟随系统设置
 
 #### 颜色自定义
-- **动态颜色**：使用 Material You 自适应颜色，从设备壁纸提取
+- **动态颜色**：从您的手机壁纸提取颜色作为主题色（Android 12+ 支持）
 - **自定义主题色**：
-  - 10 种预设颜色：蓝色、红色、绿色、紫色、橙色、青色、粉色、靛蓝、琥珀、青色
-  - 自定义颜色选择器（色轮选择）
-  - 完整色谱选择
-  - 色调/变体选择
+  - 10 种预设颜色可选
+  - 也可以使用颜色选择器自由选择任意颜色
 
 ### 偏好设置
 
@@ -674,30 +564,28 @@ A:
 **Q: 本地 AI (Ollama/LMStudio) 无法连接？**  
 A:
 1. 确保本地 AI 服务已启动
-2. 检查端口是否正确（Ollama: 11434, LMStudio: 1234）
-3. 确保防火墙允许本地连接
+2. 检查连接地址是否正确
+3. 确保防火墙允许连接
 4. 检查模型是否已下载并加载
 
 **Q: AI 响应很慢？**  
 A:
-1. 本地 AI 受设备性能限制，可尝试更小的模型
-2. 云服务可能因网络延迟较慢
-3. 可在设置中降低 max_tokens 参数
-
-### 同步相关
+1. 本地 AI 取决于您的电脑性能，可尝试使用更小的模型
+2. 云服务可能因网络问题较慢
+3. 您可以尝试在设置中降低回复长度
 
 **Q: 同步失败？**  
 A: 
-1. 确保两台设备在同一局域网
-2. 关闭防火墙/VPN 后重试
-3. 检查设备是否正确显示在发现列表中
-4. 尝试手动输入设备 IP 地址
+1. 确保两台设备在同一网络
+2. 关闭防火墙或网络代理后重试
+3. 检查设备是否出现在列表中
+4. 尝试手动输入对方设备的地址
 
 **Q: 设备发现不到？**  
 A:
-1. 检查 Wi-Fi 是否连接到同一网络
-2. 部分路由器可能阻止 UDP 组播，尝试 mDNS 发现
-3. iOS 设备确保已授予本地网络权限
+1. 检查 WiFi 是否连接到同一网络
+2. 部分路由器设置可能会影响设备发现
+3. 苹果设备（iOS）请确保已允许访问本地网络权限
 
 ### 隐私安全
 
@@ -711,7 +599,7 @@ A:
 A:
 1. 所有数据本地存储，不会自动上传云端
 2. AI 功能会将笔记内容发送到 AI 服务商处理
-3. API Key 加密存储，不会导出
+3. 您的 API Key 安全地保存在设备上，不会导出
 
 ### 其他
 
@@ -774,16 +662,15 @@ Welcome to ThoughtEcho, your personal AI-powered inspiration notebook. This manu
 
 ### Supported Providers
 
-| Provider | API URL | Default Model | Notes |
-|----------|---------|---------------|-------|
-| **OpenAI** | `https://api.openai.com/v1/chat/completions` | gpt-3.5-turbo | Official OpenAI service |
-| **OpenRouter** | `https://openrouter.ai/api/v1/chat/completions` | meta-llama/llama-3.1-8b-instruct:free | Multi-model aggregation |
-| **SiliconFlow** | `https://api.siliconflow.cn/v1/chat/completions` | (custom) | Chinese AI service |
-| **DeepSeek** | `https://api.deepseek.com/v1/chat/completions` | deepseek-chat | Chinese LLM |
-| **Anthropic Claude** | `https://api.anthropic.com/v1/messages` | claude-3-haiku-20240307 | Claude models |
-| **Ollama (Local)** | `http://localhost:11434/v1/chat/completions` | (custom) | Local open-source models |
-| **LMStudio (Local)** | `http://localhost:1234/v1/chat/completions` | (custom) | Local model inference |
-| **Custom** | (user configured) | (user configured) | Any OpenAI API compatible service |
+ThoughtEcho supports various mainstream AI services:
+
+- **OpenAI** - The official service behind ChatGPT
+- **Anthropic Claude** - Intelligent conversation assistant
+- **DeepSeek** - Chinese large language model
+- **OpenRouter** - Multi-model aggregation platform
+- **SiliconFlow** - China-based AI service
+- **Ollama / LMStudio** - Run AI for free on your own computer (no internet needed)
+- **Custom Services** - Supports other compatible services
 
 ### Configuration Steps
 
@@ -791,25 +678,22 @@ Welcome to ThoughtEcho, your personal AI-powered inspiration notebook. This manu
 1. Open "Settings" → "AI Assistant Settings"
 2. Click "Add Provider" or select a preset
 3. Choose "OpenAI" preset
-4. Enter your API Key (starts with `sk-`)
-5. Optional: Modify model name (e.g., `gpt-4o`, `gpt-4-turbo`)
-6. Optional: Adjust temperature (0-2, higher = more creative)
-7. Optional: Adjust max tokens (default 32000)
-8. Click "Test Connection" to verify
-9. Save settings
+4. Enter your API Key
+5. Optional: Select a different model
+6. Click "Test Connection" to verify
+7. Save settings
 
 #### Local AI Setup (Ollama)
 
+Local AI runs on your own computer for free, no internet or payment required.
+
 1. **Install Ollama**
    - Visit [ollama.ai](https://ollama.ai) to download
-   - Run `ollama pull llama3.1` to download a model
 
 2. **Configure in ThoughtEcho**
    - Open "AI Assistant Settings"
    - Select "Ollama" preset
-   - Keep default API URL: `http://localhost:11434/v1/chat/completions`
-   - Enter model name (e.g., `llama3.1`)
-   - API Key can be left empty
+   - Enter your downloaded model name
    - Test connection and save
 
 #### Local AI Setup (LMStudio)
@@ -817,27 +701,24 @@ Welcome to ThoughtEcho, your personal AI-powered inspiration notebook. This manu
 1. **Install LMStudio**
    - Visit [lmstudio.ai](https://lmstudio.ai) to download
    - Download your preferred model
-   - Start local server (Local Server in sidebar)
+   - Start local server
 
 2. **Configure in ThoughtEcho**
    - Select "LMStudio" preset
-   - API URL: `http://localhost:1234/v1/chat/completions`
    - Enter loaded model name
-   - API Key can be left empty
+   - Test connection and save
 
 ### API Key Security
 
-> 🔐 **Security Features**:
-> - API Keys encrypted using `flutter_secure_storage`
-> - Keys never stored in plain text in config files
-> - Keys not included in backup files
-> - Supports format validation (OpenAI: `sk-*`, OpenRouter: `sk_*` or `or_*`)
+> 🔐 **Your keys are safe**:
+> - Your API Keys are saved safely on your device.
+> - Keys are not included in backup files
+> - Automatic key format validation
 
 ### Multi-Provider Support
 
-ThoughtEcho supports multiple AI providers with automatic failover:
-- Automatically switches to backup provider when primary is unavailable
-- Failed providers have 5-minute cooldown
+ThoughtEcho supports configuring multiple AI providers:
+- Automatically switches to another service when one is unavailable
 - Provider priority can be configured
 
 ---
@@ -846,53 +727,22 @@ ThoughtEcho supports multiple AI providers with automatic failover:
 
 ![Rich Text Editor](../res/screenshot/note_full_editor_page.dart.jpg)
 
-### Toolbar Features (11 Groups)
+### Toolbar Features
 
-#### History
-- **Undo**: Undo last action
-- **Redo**: Redo undone action
+The editor provides rich text formatting tools:
 
-#### Text Styling
-- **Bold**: `Ctrl/Cmd + B`
-- **Italic**: `Ctrl/Cmd + I`
-- **Underline**: `Ctrl/Cmd + U`
-- **Strikethrough**: Add strikethrough effect
-
-#### Headers
-- **Header Style**: Support for H1-H6 headings
-
-#### Font Controls
-- **Font Size**: Adjust text size
-- **Font Family**: Change font
-
-#### Text Colors
-- **Text Color**: Set foreground color
-- **Background Highlight**: Set background color
-
-#### Alignment
-- **Left/Center/Right/Justify**
-
-#### Lists
-- **Ordered List**: Numbered list
-- **Unordered List**: Bullet list
-- **Increase Indent**
-- **Decrease Indent**
-
-#### Block Elements
-- **Blockquote**: Add quote styling
-- **Code Block**: Add code formatting
-
-#### Links
-- **Insert/Edit Link**
-
-#### Media Insertion
-- **Insert Image**: From file, camera, or URL
-- **Insert Video**: From file, camera, or URL
-- **Insert Audio**: From file, recording, or URL
-
-#### Tools
-- **Clear Formatting**: Remove all formatting from selection
-- **Search**: Search within document
+- **Undo/Redo** - Undo or redo operations
+- **Text Styling** - Bold, italic, underline, strikethrough
+- **Headers** - Multiple heading levels
+- **Font Controls** - Adjust font size and family
+- **Text Colors** - Set text color and background highlight
+- **Alignment** - Left, center, right, justify
+- **Lists** - Ordered lists, unordered lists, indent control
+- **Quotes and Code** - Add blockquote or code formatting
+- **Links** - Insert or edit links
+- **Media** - Insert images, videos, audio
+- **Clear Formatting** - Remove all formatting
+- **Search** - Search within document
 
 ### AI Assistant Features (✨ Button)
 
@@ -900,45 +750,44 @@ Click the ✨ button at the top of the editor for:
 
 | Feature | Description |
 |---------|-------------|
-| **Smart Analyze Source** | Analyzes note content, guesses author/source with confidence and explanation |
-| **Polish Text** | AI improves writing, streams results, one-click apply |
+| **Automatically find author and origin** | Automatically identify author and source |
+| **Polish Text** | AI helps improve your writing |
 | **Continue Writing** | AI continues your thoughts based on context |
-| **Deep Analysis** | Comprehensive analysis with Markdown insights |
-| **Ask Note** | Opens separate chat page for Q&A about note content |
+| **Deep Analysis** | Generate summary and insights |
+| **Ask Note** | Chat with AI about note content |
 
-### Metadata Editing Panel
+### Extra Information Panel
 
-Click ✏️ button or "Edit Metadata" to access:
+Click ✏️ button or "Edit Extra Information" to edit note information:
 
 #### Source Information
-- **Author**: Note author
-- **Source**: Origin work/book/website
-- Supports AI auto-detection
+- **Author**: Enter the author's name
+- **Source**: Enter the source work, book, or website
+- Click AI button to auto-detect author and source
 
 #### Color Tags
-- 21 preset colors (light and dark variants)
-- Custom color picker
-- Color removal option
+- 21 preset colors available
+- Custom color picker for any color
+- Click "Remove" to clear color tag
 
 #### Tag Selection
-- Multi-select tags
-- Searchable tag list
-- Expandable/collapsible tag section
-- Selected tag count display
+- Add multiple tags to notes
+- Search to find tags
+- Tag section can be expanded or collapsed
+- Shows count of selected tags at top
 
 #### Location & Weather
-- **Location Toggle**: Auto-fetch current location when enabled
+- **Location Toggle**: Auto-fetch your current location when enabled
 - **Weather Toggle**: Auto-fetch current weather when enabled
-- Edit mode allows location modification
-- Manual weather selection for past dates
-- Coordinates tracking (latitude/longitude)
+- Can manually modify location in edit mode
+- Manual weather selection for past events
 
 ### Auto-Save
 
-- **Draft Auto-Save**: Saves draft every 2 seconds
+- **Draft Auto-Save**: Automatically saves draft every 2 seconds
 - **Draft Recovery**: Restore last draft when reopening editor
 - **Manual Save**: Click 💾 button in toolbar
-- **Save Progress**: Real-time status and progress bar
+- **Save Progress**: Shows real-time save status and progress
 
 ---
 
@@ -1015,7 +864,7 @@ Clicking "Generate Card" creates SVG format cards based on note content.
 - **Polaroid** - Instant photo aesthetic
 - **Magazine** - Publication-style layout
 
-**Card Metadata**: Automatically includes author, date, location, weather, temperature, time period.
+**Card extra information**: Automatically includes author, date, location, weather, temperature, time period.
 
 ---
 
@@ -1023,18 +872,13 @@ Clicking "Generate Card" creates SVG format cards based on note content.
 
 ### Daily Inspiration
 
-**Description**: AI generates personalized writing prompts based on time, weather, location context.
-
-**Generation Logic**:
-- **Morning/Daytime**: Action-oriented (goals, courage, choices, focus)
-- **Evening/Night**: Reflection-oriented (emotions, meaning, forgiveness, gratitude)
-- **Afternoon**: Stability and present-moment awareness
+AI generates personalized writing prompts based on time, weather, and location.
 
 **Features**:
-- Streaming generation, real-time display
-- Multi-language support (Chinese 15-30 chars, English 8-18 words)
-- Offline fallback using local deterministic generator
-- Can integrate historical note insights for personalization
+- Morning/daytime prompts focus on action (goals, courage, choices, focus)
+- Evening/night prompts focus on reflection (emotions, meaning, forgiveness, gratitude)
+- Supports multiple languages including Chinese and English
+- Works offline with local generation
 
 ### Periodic Reports
 
@@ -1046,12 +890,12 @@ Clicking "Generate Card" creates SVG format cards based on note content.
 - **Yearly**: Full year statistics
 
 **Report Content**:
-- Total notes, word count, active days
-- Most common creation time period
+- Total notes, word count, active days statistics
+- Most common creation time period (morning/afternoon/evening/night)
 - Weather pattern analysis
-- Top tag statistics
-- AI-generated poetic insights (streaming)
-- Featured note cards (6 per batch, auto-pagination)
+- Frequently used tags
+- AI-generated poetic insights
+- Featured note cards display
 
 ### AI Insight Analysis
 
@@ -1072,40 +916,39 @@ Clicking "Generate Card" creates SVG format cards based on note content.
 
 | Style | Description |
 |-------|-------------|
-| **Professional** | Clear, objective, structured language with expert terminology |
-| **Friendly** | Warm, encouraging, mentor-like advice with supportive tone |
-| **Humorous** | Witty, uses analogies, light-hearted observations |
-| **Literary** | Poetic language, literary references, aesthetic expression |
+| **Professional** | Clear, objective professional analysis |
+| **Friendly** | Warm, encouraging advice |
+| **Humorous** | Light-hearted, witty observations |
+| **Literary** | Poetic, aesthetic language |
 
-**Output Format**: Markdown structured with insights, evidence, actionable advice, reflection questions.
+Analysis results are presented in a clear structure with insights, evidence, suggestions, and reflection questions.
 
 ### Annual Report
 
-**Description**: Generates beautiful HTML format annual summary.
+Generates a beautiful annual summary in HTML format.
 
 **Report Content**:
-- Gradient header design
-- Annual statistics cards (notes, words, active days)
+- Beautiful header design with gradients
+- Annual statistics (notes, words, active days)
 - AI-generated annual insights
-- Data recap section
+- Data overview section
 - Encouraging closing message
 
 **Features**:
-- Responsive design, mobile-friendly (max-width 414px)
-- Modern CSS design (flexbox, rounded corners, shadows, emoji icons)
-- Low temperature (0.3) ensures stable output
+- Mobile-friendly responsive design
+- Modern, clean visual style
 
 ### Note Q&A Chat
 
 ![AI Q&A](../res/screenshot/note_qa_chat_page.jpg)
 
-**Description**: Chat with AI about specific note content.
+Chat with AI about specific note content.
 
 **Features**:
-- Context-aware: AI answers based on note content
-- Professional assistant persona: Only answers note-related questions
-- Acknowledges insufficient information: Won't fabricate content
-- Streaming response support: Real-time answer display
+- AI understands note content and answers related questions
+- Only answers questions related to the note
+- Tells you directly if information isn't in the note
+- You can see the results as they appear.
 
 ---
 
@@ -1113,70 +956,43 @@ Clicking "Generate Card" creates SVG format cards based on note content.
 
 ![Device Sync](../res/screenshot/note_sync.jpg)
 
-### LocalSend Protocol
+## 6. Device Sync
 
-ThoughtEcho uses LocalSend protocol for LAN P2P sync, no cloud server required.
+![Device Sync](../res/screenshot/note_sync.jpg)
 
-**Protocol Version**: 2.1 (with fallback to 1.0)
+### Sync Method
 
-**Core Endpoints**:
-- `/info` - Device info and capability discovery
-- `/register` - Device registration handshake
-- `/prepare-upload` - Session initialization
-- `/upload` - File transfer
-- `/cancel` - Cancel session
-
-**HTTP Server Port**: 53320
-
-### Device Discovery
-
-#### UDP Multicast (Primary)
-- **Multicast Address**: `224.0.0.170`
-- **Multicast Port**: 53317
-- **Discovery Timeout**: 30 seconds
-- **Announcement Interval**: 5 seconds
-- **Device Expiry**: 40 seconds (removed if no announcement)
-
-#### mDNS/Bonjour (Fallback)
-- **Service Type**: `_thoughtecho._tcp`
-- Also scans: `_localsend._tcp` (LocalSend compatible)
-- Used when UDP multicast fails (especially iOS)
+ThoughtEcho supports direct sync between devices on the same WiFi network, no cloud server required.
 
 ### Sync Process
 
-1. **Device Discovery**: Auto-scan for ThoughtEcho devices on LAN
-2. **Connection Establishment**: Select target device and connect
-3. **Data Transfer**: Send/receive note data
-4. **Merge Processing**: Use LWW strategy to merge data
+1. **Looking for Devices**: The app will look for your other devices automatically
+2. **Select Device**: Choose target device from list
+3. **Transfer Data**: Send or receive note data
+4. **Auto-Merge**: Intelligently merge notes from both devices
 
-### Merge Strategy (Last-Write-Wins)
+### Merge Rules
 
-**Decision Logic**:
-```
-If remote timestamp > local timestamp → Use remote data
-If local timestamp > remote timestamp → Use local data
-If timestamps equal:
-  - Content differs → Keep local, log conflict
-  - Content same → Use local (idempotent)
-```
+When both devices have the same note:
+- The app keeps your most recent changes.
+- If modified at the same time but different content, log as conflict for your review
 
-**Merge Report Statistics**:
-- Inserted notes count
-- Updated notes count
-- Skipped notes count (local was newer)
-- Conflict notes count
-- Error records
+After sync completes, shows:
+- How many notes were added
+- How many notes were updated
+- How many notes were skipped (because local version was newer)
+- Whether there are conflicts to resolve
 
 ### Supported Platforms
 
-| Platform | Support | Notes |
-|----------|---------|-------|
-| **Android** | ✅ Full | UDP multicast, HTTP |
-| **iOS** | ✅ Full | UDP multicast (requires network permission), mDNS fallback |
-| **Windows** | ✅ Full | UDP multicast, HTTP |
-| **macOS** | ✅ Full | UDP multicast, HTTP |
-| **Linux** | ✅ Full | UDP multicast, HTTP |
-| **Web** | ⚠️ Limited | No UDP/local network access |
+| Platform | Support |
+|----------|---------|
+| Android | ✅ Full Support |
+| iOS | ✅ Full Support |
+| Windows | ✅ Full Support |
+| macOS | ✅ Full Support |
+| Linux | ✅ Full Support |
+| Web | ⚠️ Limited |
 
 ---
 
@@ -1186,67 +1002,43 @@ If timestamps equal:
 
 ### Backup Formats
 
-#### ZIP Format (Recommended, Version 1.2.0)
+ThoughtEcho backup files are in ZIP format, containing:
+- All note data
+- Media files (images, videos, audio)
 
-```
-backup_file.zip
-├── backup_data.json  (structured data)
-└── media/            (media files)
-    ├── images/
-    ├── videos/
-    └── audio/
-```
+Legacy JSON format backups can also be imported, the app will automatically recognize and convert them.
 
-**JSON Data Structure**:
-```json
-{
-  "version": "1.2.0",
-  "createdAt": "ISO8601 timestamp",
-  "device_id": "device fingerprint",
-  "notes": {
-    "categories": [...],
-    "quotes": [...]
-  },
-  "settings": {...},
-  "ai_analysis": [...]
-}
-```
+### Backup Advantages
 
-#### Legacy JSON Format (Compatible)
-
-Direct JSON backup without ZIP compression, auto-detected and converted on import.
-
-### Backup Features
-
-- **Streaming Export**: Incremental JSON writing via IOSink
-- **Chunked Reading**: Prevents memory overflow
-- **Batch Processing**: 50 notes per page
-- **Progress Callbacks**: 5% JSON, 25% media, 35% compression
-- **Memory Monitoring**: Detects pressure, aborts if necessary
+- Backup process shows progress
+- Handles large amounts of notes without slowing down
+- The app automatically handles large files for you.
 
 ### Restore Modes
 
+When importing a backup, you can choose from three modes:
+
 | Mode | Description | Use Case |
 |------|-------------|----------|
-| **Overwrite** | Clears all existing data before import | Device reset/full restore |
-| **Merge** | Uses LWW strategy to merge data | Sync from other device |
-| **Append** | Simple data append (legacy behavior) | Compatibility import |
+| **Overwrite** | Clear all current data and replace with backup | Switching to new device, want complete restore |
+| **Merge** | Intelligently merge backup with current data | Syncing data from another device |
+| **Append** | Directly add notes from backup | Importing supplemental data |
 
-### Backup Operations
+### Backup Operation Steps
 
 **Access Path**: Settings → Backup & Restore
 
-1. **Create Backup**
-   - Click "Create Backup"
-   - Select save location
-   - Wait for completion (shows progress)
-   - Backup saved as `.zip` file
+#### Create Backup
+1. Click "Create Backup" button
+2. Select save location
+3. Wait for completion (progress bar shown)
+4. Backup file saved as `.zip` format
 
-2. **Restore Backup**
-   - Click "Restore Backup"
-   - Select backup file (`.zip` or `.json`)
-   - Choose restore mode (Overwrite/Merge)
-   - Wait for completion
+#### Restore Backup
+1. Click "Restore Backup" button
+2. Select backup file (supports `.zip` or legacy `.json` format)
+3. Choose restore mode (Overwrite, Merge, or Append)
+4. Wait for completion
 
 ---
 
@@ -1256,26 +1048,17 @@ Direct JSON backup without ZIP compression, auto-detected and converted on impor
 
 ### Location & Weather
 
-- **Location Service Toggle**: Enable/disable location permission
-- **Location Status Display**:
-  - ✅ Location enabled and service running
-  - ⚠️ Permission granted but service disabled
-  - ❌ No permission granted
-- **City Search**: Interactive city search for manual location configuration
-- **Current Address Display**: Shows formatted location or "Not Set"
+- **Location Service Toggle**: Control whether app can access your location
+- **Location Status**:
+  - ✅ Location feature enabled
+  - ⚠️ Permission granted but feature not enabled
+  - ❌ Location permission not granted
+- **City Search**: Manually search and set location
+- **Current Address**: Shows your set location or "Not Set"
 
 ### Language Settings
 
-| Code | Language | Display Name |
-|------|----------|--------------|
-| null | System Default | Follow System |
-| zh | Chinese | 中文 |
-| en | English | English |
-| ja | Japanese | 日本語 |
-| ko | Korean | 한국어 |
-| es | Spanish | Español |
-| fr | French | Français |
-| de | German | Deutsch |
+The app supports multiple languages including Chinese, English, Japanese, Korean, Spanish, French, German, etc. You can also choose to follow system language.
 
 ### Theme Settings
 
@@ -1287,12 +1070,10 @@ Direct JSON backup without ZIP compression, auto-detected and converted on impor
 - 🔄 **Follow System**: Auto-sync with system setting
 
 #### Color Customization
-- **Dynamic Color**: Uses Material You adaptive colors from device wallpaper
+- **Dynamic Color**: Extract colors from your phone wallpaper as theme color (Android 12+ support)
 - **Custom Theme Color**:
-  - 10 preset colors: Blue, Red, Green, Purple, Orange, Teal, Pink, Indigo, Amber, Cyan
-  - Custom color picker (wheel selection)
-  - Full color spectrum selection
-  - Shade/variation selection
+  - 10 preset colors available
+  - Use color picker to freely choose any color
 
 ### Preferences
 
@@ -1397,30 +1178,30 @@ A:
 **Q: Can't connect to local AI (Ollama/LMStudio)?**  
 A:
 1. Ensure local AI service is running
-2. Check port is correct (Ollama: 11434, LMStudio: 1234)
-3. Ensure firewall allows local connections
+2. Check if the connection address is correct
+3. Ensure firewall allows the connection
 4. Check if model is downloaded and loaded
 
 **Q: AI responses are slow?**  
 A:
-1. Local AI is limited by device performance, try smaller models
-2. Cloud services may be slow due to network latency
-3. Try reducing max_tokens parameter in settings
+1. Local AI depends on your computer's performance, try using a smaller model
+2. Cloud services may be slow due to network issues
+3. You can try reducing the response length in settings
 
 ### Sync Related
 
 **Q: Sync failing?**  
 A: 
-1. Ensure both devices are on same LAN
-2. Try disabling firewall/VPN
-3. Check if device appears in discovery list
-4. Try manually entering device IP address
+1. Ensure both devices are on the same network
+2. Try disabling firewall or VPN
+3. Check if the device appears in the list
+4. Try manually entering the other device's address
 
 **Q: Device not discovered?**  
 A:
-1. Check if Wi-Fi is connected to same network
-2. Some routers may block UDP multicast, try mDNS discovery
-3. iOS devices: ensure local network permission is granted
+1. Check if WiFi is connected to the same network
+2. Some router settings might interfere with discovery
+3. For iPhone/iPad (iOS): ensure local network permission is granted
 
 ### Privacy & Security
 
@@ -1434,7 +1215,7 @@ A:
 A:
 1. All data stored locally, not auto-uploaded to cloud
 2. AI features send note content to AI provider for processing
-3. API Keys are encrypted, not exported
+3. Your API Keys are saved safely on your device, not exported
 
 ### Other
 
