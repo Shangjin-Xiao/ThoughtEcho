@@ -510,7 +510,8 @@ class SmartPushService extends ChangeNotifier {
           // 用户可以手动在设置中开启
         }
 
-        return notificationsEnabled;
+        // 精确闹钟权限需要通知权限作为前提
+        return canScheduleExact && notificationsEnabled;
       }
       return true;
     } catch (e) {
