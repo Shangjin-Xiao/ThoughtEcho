@@ -470,15 +470,6 @@ class AIService extends ChangeNotifier {
     );
   }
 
-  // 保留旧的generateDailyPrompt方法，以防其他地方仍在使用
-  // 它将直接返回DailyPromptGenerator的当前提示
-  // 保留旧的generateDailyPrompt方法，但已弃用，需要 AppLocalizations 参数
-  @Deprecated('使用 streamGenerateDailyPrompt 替代')
-  String generateDailyPrompt(AppLocalizations l10n) {
-    logDebug('调用了旧的generateDailyPrompt方法，建议切换到streamGenerateDailyPrompt');
-    return DailyPromptGenerator.getDefaultPrompt(l10n);
-  }
-
   Future<String> generateInsights(
     List<Quote> quotes, {
     String analysisType = 'comprehensive',

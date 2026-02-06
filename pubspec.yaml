@@ -1,7 +1,7 @@
 name: thoughtecho
 description: 一款帮助你记录和分析思想的应用。
 publish_to: 'none'
-version: 1.0.0+1
+version: 3.4.0+1
 
 environment:
   sdk: '>=3.5.0 <4.0.0'
@@ -130,7 +130,7 @@ msix_config:
   identity_name: Shangjinyun.330094822087A
   
   # MSIX 版本号（4位格式，最后一位必须为0以符合 Store 要求）
-  msix_version: 1.0.0.0
+  msix_version: 3.4.0.0
   
   # 发布者证书 DN（必须与 Store 中的 Package/Identity/Publisher 完全一致）
   # 这是 Microsoft Store 分配给你的发布者标识符
