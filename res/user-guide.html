@@ -472,7 +472,9 @@
         syncNavHeightVar();
         window.addEventListener('resize', syncNavHeightVar);
         if (document.fonts && document.fonts.ready) {
-            document.fonts.ready.then(syncNavHeightVar).catch(() => {});
+            document.fonts.ready.then(syncNavHeightVar).catch(() => {
+                console.warn('Font loading failed');
+            });
         }
 
         function closeToc() {
@@ -580,13 +582,13 @@
                 tocList.appendChild(li);
             });
 
-            tocList.querySelectorAll('a').forEach(link => {
-                link.addEventListener('click', () => {
-                    if (document.body.classList.contains('toc-open')) {
-                        closeToc();
-                    }
-                });
-            });
+            tocList.onclick = event => {
+                const link = event.target.closest('a');
+                if (!link) return;
+                if (document.body.classList.contains('toc-open')) {
+                    closeToc();
+                }
+            };
 
             // 滚动监听
             setupScrollSpy();
