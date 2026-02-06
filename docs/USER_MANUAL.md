@@ -40,6 +40,8 @@
   - 长按：语音输入
 - **剪贴板检测**：切回应用时自动检测剪贴板内容并提示保存
 
+![主页界面](../res/screenshot/home_page.jpg)
+
 ---
 
 ## 2. AI 服务配置
@@ -119,6 +121,8 @@
 ---
 
 ## 3. 富文本编辑器
+
+![富文本编辑器](../res/screenshot/note_full_editor_page.dart.jpg)
 
 ### 工具栏功能（11 组）
 
@@ -218,6 +222,8 @@
 
 ## 4. 笔记管理
 
+![笔记列表](../res/screenshot/note_list_view.jpg)
+
 ### 排序选项（3 种）
 
 | 排序方式 | 说明 |
@@ -229,6 +235,8 @@
 每种排序均支持升序/降序切换。
 
 ### 筛选选项（3 类）
+
+![筛选与排序](../res/screenshot/note_filter_sort_sheet.dart.jpg)
 
 #### 标签筛选
 - 按自定义分类标签筛选
@@ -325,6 +333,8 @@
 
 ### AI 洞察分析
 
+![洞察分析](../res/screenshot/insights_page.jpg)
+
 **访问路径**：洞察 → AI 洞察
 
 #### 分析类型（4 种）
@@ -365,6 +375,8 @@
 
 ### 问笔记聊天
 
+![AI 问答](../res/screenshot/note_qa_chat_page.jpg)
+
 **功能说明**：针对特定笔记内容与 AI 进行对话。
 
 **特点**：
@@ -376,6 +388,8 @@
 ---
 
 ## 6. 设备同步
+
+![设备同步](../res/screenshot/note_sync.jpg)
 
 ### LocalSend 协议
 
@@ -446,6 +460,8 @@
 
 ## 7. 备份与恢复
 
+![备份与恢复](../res/screenshot/backup_restore_page.jpg)
+
 ### 备份格式
 
 #### ZIP 格式（推荐，版本 1.2.0）
@@ -514,6 +530,8 @@ backup_file.zip
 
 ## 8. 设置详解
 
+![设置界面](../res/screenshot/preferences_detail_page.jpg)
+
 ### 位置与天气
 
 - **位置服务开关**：启用/禁用位置权限
@@ -538,6 +556,8 @@ backup_file.zip
 | de | 德文 | Deutsch |
 
 ### 主题设置
+
+![主题设置](../res/screenshot/theme_settings_page.jpg)
 
 #### 主题模式
 - 🌞 **浅色模式**：手动浅色主题
@@ -781,6 +801,8 @@ Welcome to ThoughtEcho, your personal AI-powered inspiration notebook. This manu
   - Long press: Voice input
 - **Clipboard Detection**: Auto-detects clipboard content when returning to app
 
+![Home Interface](../res/screenshot/home_page.jpg)
+
 ---
 
 ## 2. AI Service Configuration
@@ -860,6 +882,8 @@ ThoughtEcho supports multiple AI providers with automatic failover:
 ---
 
 ## 3. Rich Text Editor
+
+![Rich Text Editor](../res/screenshot/note_full_editor_page.dart.jpg)
 
 ### Toolbar Features (11 Groups)
 
@@ -959,6 +983,8 @@ Click ✏️ button or "Edit Metadata" to access:
 
 ## 4. Note Management
 
+![Note List](../res/screenshot/note_list_view.jpg)
+
 ### Sorting Options (3 Types)
 
 | Sort Type | Description |
@@ -970,6 +996,8 @@ Click ✏️ button or "Edit Metadata" to access:
 Each supports ascending/descending toggle.
 
 ### Filter Options (3 Categories)
+
+![Filter & Sort](../res/screenshot/note_filter_sort_sheet.dart.jpg)
 
 #### Tag Filtering
 - Filter by custom category tags
@@ -1066,6 +1094,8 @@ Clicking "Generate Card" creates SVG format cards based on note content.
 
 ### AI Insight Analysis
 
+![Insights](../res/screenshot/insights_page.jpg)
+
 **Access Path**: Insights → AI Insights
 
 #### Analysis Types (4 Types)
@@ -1106,6 +1136,8 @@ Clicking "Generate Card" creates SVG format cards based on note content.
 
 ### Note Q&A Chat
 
+![AI Q&A](../res/screenshot/note_qa_chat_page.jpg)
+
 **Description**: Chat with AI about specific note content.
 
 **Features**:
@@ -1117,6 +1149,8 @@ Clicking "Generate Card" creates SVG format cards based on note content.
 ---
 
 ## 6. Device Sync
+
+![Device Sync](../res/screenshot/note_sync.jpg)
 
 ### LocalSend Protocol
 
@@ -1187,6 +1221,8 @@ If timestamps equal:
 
 ## 7. Backup & Restore
 
+![Backup & Restore](../res/screenshot/backup_restore_page.jpg)
+
 ### Backup Formats
 
 #### ZIP Format (Recommended, Version 1.2.0)
@@ -1255,6 +1291,8 @@ Direct JSON backup without ZIP compression, auto-detected and converted on impor
 
 ## 8. Settings Guide
 
+![Settings](../res/screenshot/preferences_detail_page.jpg)
+
 ### Location & Weather
 
 - **Location Service Toggle**: Enable/disable location permission
@@ -1279,6 +1317,8 @@ Direct JSON backup without ZIP compression, auto-detected and converted on impor
 | de | German | Deutsch |
 
 ### Theme Settings
+
+![Theme Settings](../res/screenshot/theme_settings_page.jpg)
 
 #### Theme Modes
 - 🌞 **Light Mode**: Manual light theme

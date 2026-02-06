@@ -24,6 +24,16 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Sans:wght@300;400;500;700&family=Long+Cang&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+    <!-- 字体闪烁防护：等待字体就绪后再显示页面内容，最多等 800ms -->
+    <script>
+        (function(){
+            var root = document.documentElement;
+            root.style.visibility = 'hidden';
+            var show = function(){ root.style.visibility = ''; };
+            if (document.fonts && document.fonts.ready) { document.fonts.ready.then(show); }
+            setTimeout(show, 800);
+        })();
+    </script>
     
     <script type="module" src="https://get.microsoft.com/badge/ms-store-badge.bundled.js"></script>
 
@@ -2013,7 +2023,7 @@
             .nav-links {
                 display: none;
                 position: fixed;
-                top: 62px;
+                top: var(--mobile-nav-h, 62px);
                 left: 0;
                 right: 0;
                 background: var(--paper-white);
@@ -2027,7 +2037,7 @@
             .mobile-menu-overlay {
                 display: block;
                 position: fixed;
-                top: 62px;
+                top: var(--mobile-nav-h, 62px);
                 left: 0;
                 right: 0;
                 bottom: 0;
@@ -3275,6 +3285,14 @@ cd ThoughtEcho</code></pre>
         const mobileMenuBtn = document.getElementById('mobileMenuBtn');
         const navLinks = document.getElementById('navLinks');
         const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
+
+        // 动态计算导航栏实际高度，防止下拉菜单与导航栏错位
+        function syncNavHeightVar() {
+            var measuredH = document.querySelector('nav').offsetHeight;
+            document.documentElement.style.setProperty('--mobile-nav-h', measuredH + 'px');
+        }
+        syncNavHeightVar();
+        window.addEventListener('resize', syncNavHeightVar);
 
         mobileMenuBtn.setAttribute('aria-controls', 'navLinks');
         mobileMenuBtn.setAttribute('aria-expanded', 'false');
