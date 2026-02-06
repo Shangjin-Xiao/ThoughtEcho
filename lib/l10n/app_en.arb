@@ -3117,6 +3117,18 @@
   "discardChanges": "Discard Changes",
   "actionFavorite": "Favorite",
   "actionUnfavorite": "Unfavorite",
+  "clearFavoriteTitle": "Clear Favorite",
+  "clearFavoriteMessage": "Are you sure you want to clear {count} favorite(s) from this note?",
+  "@clearFavoriteMessage": {
+    "description": "Clear favorite confirmation message",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clearFavoriteSuccess": "Favorite cleared",
+  "clearFavoriteFailed": "Failed to clear favorite",
   "moreOptions": "More options",
 
   "localAiFeatures": "Local AI Features",
