@@ -38,10 +38,16 @@
             --accent-blue: #5d94b8;
             --line-color: #d4c5b9;
             --toc-width: 280px;
+            --nav-h: 80px;
         }
         
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
+        html {
+            scroll-behavior: smooth;
+            scroll-padding-top: var(--nav-h, 80px);
+        }
+
         body {
             font-family: 'Noto Sans SC', sans-serif;
             background: var(--paper-cream);
@@ -93,12 +99,17 @@
         }
         
         button:hover { opacity: 0.9; }
+
+        .toc-toggle {
+            display: none;
+            background: var(--accent-blue);
+        }
         
         /* 主容器 */
         .main-container {
             display: flex;
             max-width: 1400px;
-            margin: 80px auto 0;
+            margin: var(--nav-h, 80px) auto 0;
             padding: 2rem;
         }
         
@@ -106,8 +117,8 @@
         .toc-sidebar {
             width: var(--toc-width);
             position: fixed;
-            top: 80px;
-            height: calc(100vh - 80px);
+            top: var(--nav-h, 80px);
+            height: calc(100vh - var(--nav-h, 80px));
             overflow-y: auto;
             padding: 2rem 1rem;
             background: var(--paper-white);
@@ -134,6 +145,21 @@
         .toc-list a.active {
             background: var(--accent-brown);
             color: white;
+        }
+
+        .toc-overlay {
+            display: none;
+            position: fixed;
+            top: var(--nav-h, 80px);
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(44, 36, 22, 0.35);
+            backdrop-filter: blur(2px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 900;
         }
         
         /* 内容区 */
@@ -299,11 +325,57 @@
         
         /* 响应式 */
         @media (max-width: 1024px) {
-            .toc-sidebar { display: none; }
+            .toc-toggle { display: inline-flex; }
+            .toc-sidebar {
+                display: block;
+                width: min(82vw, 320px);
+                transform: translateX(-105%);
+                transition: transform 0.25s ease;
+                box-shadow: 4px 0 16px rgba(0,0,0,0.15);
+                z-index: 950;
+            }
+            body.toc-open .toc-sidebar {
+                transform: translateX(0);
+            }
+            .toc-overlay { display: block; }
+            body.toc-open .toc-overlay {
+                opacity: 1;
+                pointer-events: auto;
+            }
             .content {
                 margin-left: 0;
                 max-width: 100%;
                 padding: 2rem 1.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav-container {
+                padding: 0.8rem 1rem;
+                flex-wrap: wrap;
+                gap: 0.75rem;
+            }
+            .nav-title {
+                font-size: 1.1rem;
+            }
+            .nav-actions {
+                width: 100%;
+                justify-content: flex-end;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            button {
+                padding: 0.5rem 0.9rem;
+                font-size: 0.85rem;
+            }
+            .content {
+                padding: 1.5rem 1.1rem;
+            }
+            .content h1 {
+                font-size: 2rem;
+            }
+            .content h2 {
+                font-size: 1.5rem;
             }
         }
     </style>
@@ -317,6 +389,10 @@
                 <span class="lang-en">ThoughtEcho User Guide</span>
             </div>
             <div class="nav-actions">
+                <button class="toc-toggle" id="tocToggle" aria-controls="tocSidebar" aria-expanded="false">
+                    <span class="lang-zh">目录</span>
+                    <span class="lang-en">Contents</span>
+                </button>
                 <button id="langToggle">EN/中文</button>
                 <button onclick="location.href='index.html'">
                     <span class="lang-zh">返回首页</span>
@@ -326,8 +402,10 @@
         </div>
     </nav>
 
+    <div class="toc-overlay" id="tocOverlay"></div>
+
     <!-- 侧边目录 -->
-    <aside class="toc-sidebar">
+    <aside class="toc-sidebar" id="tocSidebar">
         <h3 class="lang-zh">📑 目录</h3>
         <h3 class="lang-en">📑 Contents</h3>
         <ul class="toc-list" id="tocList"></ul>
@@ -364,6 +442,7 @@
             document.body.dataset.lang = targetLang;
             document.documentElement.lang = targetLang === 'en' ? 'en' : 'zh-CN';
             localStorage.setItem('lang', targetLang);
+            syncNavHeightVar();
         }
 
         // 恢复上次语言偏好，默认中文
@@ -371,11 +450,46 @@
 
         // 绑定切换按钮
         var langToggle = document.getElementById('langToggle');
+        var tocToggle = document.getElementById('tocToggle');
+        var tocOverlay = document.getElementById('tocOverlay');
         langToggle.addEventListener('click', function () {
             var nextLang = document.body.dataset.lang === 'en' ? 'zh' : 'en';
             switchPageLang(nextLang);
             generateTOC();
         });
+
+        function syncNavHeightVar() {
+            var nav = document.querySelector('nav');
+            if (!nav) return;
+            document.documentElement.style.setProperty('--nav-h', nav.offsetHeight + 'px');
+        }
+
+        syncNavHeightVar();
+        window.addEventListener('resize', syncNavHeightVar);
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(syncNavHeightVar);
+        }
+
+        function closeToc() {
+            document.body.classList.remove('toc-open');
+            if (tocToggle) {
+                tocToggle.setAttribute('aria-expanded', 'false');
+            }
+        }
+
+        function toggleToc() {
+            if (!tocToggle) return;
+            var isOpen = document.body.classList.toggle('toc-open');
+            tocToggle.setAttribute('aria-expanded', String(isOpen));
+        }
+
+        if (tocToggle) {
+            tocToggle.addEventListener('click', toggleToc);
+        }
+
+        if (tocOverlay) {
+            tocOverlay.addEventListener('click', closeToc);
+        }
 
         // 加载 Markdown
         async function loadManual() {
@@ -459,6 +573,14 @@
                 a.className = h.tagName === 'H3' ? 'toc-h3' : 'toc-h2';
                 li.appendChild(a);
                 tocList.appendChild(li);
+            });
+
+            tocList.querySelectorAll('a').forEach(link => {
+                link.addEventListener('click', () => {
+                    if (document.body.classList.contains('toc-open')) {
+                        closeToc();
+                    }
+                });
             });
 
             // 滚动监听
