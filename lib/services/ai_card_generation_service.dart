@@ -121,13 +121,20 @@ class AICardGenerationService {
 
       // 4. 重放日志
       for (final log in result.logs) {
-        if (log.startsWith('ERROR:')) {
-          AppLogger.e(log.substring(7), source: 'AICardGeneration');
-        } else if (log.startsWith('WARN:')) {
-          AppLogger.w(log.substring(6), source: 'AICardGeneration');
-        } else {
-          // 降级为 debug 日志，避免 info 刷屏
-          AppLogger.d(log, source: 'AICardGeneration');
+        switch (log.level) {
+          case 'ERROR':
+            AppLogger.e(log.message, source: 'AICardGeneration');
+            break;
+          case 'WARN':
+            AppLogger.w(log.message, source: 'AICardGeneration');
+            break;
+          case 'INFO':
+            AppLogger.i(log.message, source: 'AICardGeneration');
+            break;
+          case 'DEBUG':
+          default:
+            AppLogger.d(log.message, source: 'AICardGeneration');
+            break;
         }
       }
 
@@ -509,11 +516,14 @@ class AICardGenerationService {
     }
   }
 
-  /// Isolate worker function
+  /// Isolate worker function responsible for cleaning SVG and injecting metadata.
+  ///
+  /// This runs in a background isolate to prevent UI jank.
   static Future<AICardProcessingResult> processSVGTask(
       AICardProcessingData data) async {
-    final logs = <String>[];
-    logs.add('DEBUG: 开始清理SVG内容，原始长度: ${data.svgContent.length}');
+    final logs = <AICardProcessingLog>[];
+    logs.add(AICardProcessingLog(
+        'DEBUG', '开始清理SVG内容，原始长度: ${data.svgContent.length}'));
 
     try {
       // 1. Clean SVG
@@ -534,16 +544,17 @@ class AICardGenerationService {
         logs: logs,
       );
 
-      logs.add('DEBUG: SVG处理完成，最终长度: ${cleaned.length}');
+      logs.add(AICardProcessingLog('DEBUG', 'SVG处理完成，最终长度: ${cleaned.length}'));
       return AICardProcessingResult(svg: cleaned, logs: logs);
     } catch (e) {
-      logs.add('ERROR: SVG处理失败: $e');
+      logs.add(AICardProcessingLog('ERROR', 'SVG处理失败: $e'));
       rethrow;
     }
   }
 
   /// 静态清理SVG内容 (用于Isolate)
-  static String _cleanSVGContentStatic(String response, List<String> logs) {
+  static String _cleanSVGContentStatic(
+      String response, List<AICardProcessingLog> logs) {
     String cleaned = response.trim();
 
     // 移除常见的markdown标记和说明文字
@@ -595,14 +606,15 @@ class AICardGenerationService {
     if (!foundSvgStart ||
         !cleaned.contains('<svg') ||
         !cleaned.contains('</svg>')) {
-      logs.add('WARN: 未找到完整SVG，尝试字符串提取...');
+      logs.add(AICardProcessingLog('WARN', '未找到完整SVG，尝试字符串提取...'));
 
       final svgStartIndex = response.indexOf('<svg');
       if (svgStartIndex >= 0) {
         final svgEndIndex = response.lastIndexOf('</svg>');
         if (svgEndIndex > svgStartIndex) {
           cleaned = response.substring(svgStartIndex, svgEndIndex + 6);
-          logs.add('INFO: 字符串提取成功，SVG长度: ${cleaned.length}');
+          logs.add(
+              AICardProcessingLog('INFO', '字符串提取成功，SVG长度: ${cleaned.length}'));
         }
       }
     }
@@ -1116,7 +1128,7 @@ class AICardGenerationService {
     String? source,
     String? dayPeriod,
     String languageCode = 'zh',
-    List<String>? logs,
+    List<AICardProcessingLog>? logs,
   }) {
     final lower = svg.toLowerCase();
     final hasDate = date != null && lower.contains(date.toLowerCase());
@@ -1440,7 +1452,8 @@ class AICardGenerationService {
   }
 
   /// 验证SVG内容安全性
-  static bool _isSafeSVGContent(String svgContent, [List<String>? logs]) {
+  static bool _isSafeSVGContent(String svgContent,
+      [List<AICardProcessingLog>? logs]) {
     // 检查是否包含潜在危险的元素
     final dangerousElements = [
       '<script',
@@ -1459,7 +1472,7 @@ class AICardGenerationService {
       if (lowerContent.contains(dangerous)) {
         final msg = '发现不安全的SVG元素: $dangerous';
         if (logs != null) {
-          logs.add('WARN: $msg');
+          logs.add(AICardProcessingLog('WARN', msg));
         } else {
           AppLogger.w(msg, source: 'AICardGeneration');
         }
@@ -1472,6 +1485,8 @@ class AICardGenerationService {
 }
 
 /// DTO for passing data to the isolate
+///
+/// Contains all necessary information to process the SVG card in a background isolate.
 class AICardProcessingData {
   final String svgContent;
   final String brandName;
@@ -1498,10 +1513,18 @@ class AICardProcessingData {
   });
 }
 
+/// Log entry generated during isolate processing
+class AICardProcessingLog {
+  final String level; // 'DEBUG', 'INFO', 'WARN', 'ERROR'
+  final String message;
+
+  AICardProcessingLog(this.level, this.message);
+}
+
 /// DTO for returning results from the isolate
 class AICardProcessingResult {
   final String svg;
-  final List<String> logs;
+  final List<AICardProcessingLog> logs;
 
   AICardProcessingResult({
     required this.svg,
