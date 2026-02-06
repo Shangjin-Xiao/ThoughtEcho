@@ -563,7 +563,7 @@
             });
         }
 
-        let tocClickBound = false;
+        const tocList = document.getElementById('tocList');
 
         function handleTocLinkClick(event) {
             const link = event.target.closest('a');
@@ -573,14 +573,14 @@
             }
         }
 
+        if (tocList) {
+            tocList.addEventListener('click', handleTocLinkClick);
+        }
+
         // 生成目录
         function generateTOC() {
-            const tocList = document.getElementById('tocList');
+            if (!tocList) return;
             tocList.innerHTML = '';
-            if (!tocClickBound) {
-                tocList.addEventListener('click', handleTocLinkClick);
-                tocClickBound = true;
-            }
 
             const isEnglish = document.body.dataset.lang === 'en';
             const content = document.getElementById(isEnglish ? 'content-en' : 'content-zh');
