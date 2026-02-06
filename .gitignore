@@ -269,3 +269,4 @@ android/local.properties
 .claude/settings.local.json
 forge.yaml
 .claude-code-router/config.json
+_flutter/
