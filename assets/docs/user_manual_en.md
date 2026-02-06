@@ -127,18 +127,7 @@ Android, iOS, Windows, macOS, Linux (Web limited)
 - Startup page selection
 - Note default behavior
 
-## 8. Developer Mode
-
-### Activation
-Settings → About ThoughtEcho → Tap app icon **3 times** consecutively
-
-### Features
-- Logs Center (view runtime logs)
-- Local AI (experimental features)
-- Storage Management (detailed storage info)
-- Database Debugging
-
-## FAQ
+## 8. FAQ
 
 **Q: AI features not working?**  
 A: Check API Key in AI settings, use "Test Connection" to verify.
