@@ -199,6 +199,7 @@
             box-shadow: 0 3px 12px var(--shadow-soft);
             backdrop-filter: blur(12px); /* 毛玻璃效果 */
             -webkit-backdrop-filter: blur(12px);
+            padding-top: env(safe-area-inset-top);
         }
 
         .nav-container {
@@ -3274,6 +3275,7 @@ cd ThoughtEcho</code></pre>
             }
 
             localStorage.setItem('lang', normalized);
+            syncNavHeightVar();
         }
 
         applyLanguage(localStorage.getItem('lang') || 'zh');
@@ -3292,6 +3294,11 @@ cd ThoughtEcho</code></pre>
             document.documentElement.style.setProperty('--mobile-nav-h', measuredH + 'px');
         }
         syncNavHeightVar();
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(syncNavHeightVar).catch(() => {
+                console.warn('Font loading detection unavailable; navigation height will sync on next resize event.');
+            });
+        }
         window.addEventListener('resize', syncNavHeightVar);
 
         mobileMenuBtn.setAttribute('aria-controls', 'navLinks');
