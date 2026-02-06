@@ -394,7 +394,7 @@
                 <span class="lang-en">ThoughtEcho User Guide</span>
             </div>
             <div class="nav-actions">
-                <button class="toc-toggle" id="tocToggle" aria-controls="tocSidebar" aria-expanded="false" aria-label="Toggle table of contents">
+                <button class="toc-toggle" id="tocToggle" aria-controls="tocSidebar" aria-expanded="false">
                     <span class="lang-zh">目录</span>
                     <span class="lang-en">Contents</span>
                 </button>
@@ -459,11 +459,18 @@
             });
         }
 
+        var langToggle = document.getElementById('langToggle');
+        var tocToggle = document.getElementById('tocToggle');
+        var tocOverlay = document.getElementById('tocOverlay');
+
         // 语言状态管理：使用 data-lang 属性而非 class，避免 .lang-en 规则误隐藏 body
         function switchPageLang(targetLang) {
             document.body.dataset.lang = targetLang;
             document.documentElement.lang = targetLang === 'en' ? 'en' : 'zh-CN';
             localStorage.setItem('lang', targetLang);
+            if (tocToggle) {
+                tocToggle.setAttribute('aria-label', targetLang === 'en' ? 'Toggle table of contents' : '切换目录');
+            }
             syncNavHeightVar();
         }
 
@@ -471,9 +478,6 @@
         switchPageLang(localStorage.getItem('lang') === 'en' ? 'en' : 'zh');
 
         // 绑定切换按钮
-        var langToggle = document.getElementById('langToggle');
-        var tocToggle = document.getElementById('tocToggle');
-        var tocOverlay = document.getElementById('tocOverlay');
         langToggle.addEventListener('click', function () {
             var nextLang = document.body.dataset.lang === 'en' ? 'zh' : 'en';
             switchPageLang(nextLang);
@@ -570,7 +574,7 @@
 
         function handleTocLinkClick(event) {
             const link = event.target.closest('a');
-            if (!link) return;
+            if (!link || !link.getAttribute('href') || !link.getAttribute('href').startsWith('#')) return;
             if (document.body.classList.contains('toc-open')) {
                 closeToc();
             }
