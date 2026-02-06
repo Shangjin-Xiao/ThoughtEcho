@@ -1,3 +1,4 @@
+// ignore_for_file: deprecated_member_use_from_same_package
 import 'package:flutter/material.dart';
 import '../models/quote_model.dart';
 import 'annual_report_page.dart';

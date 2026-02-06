@@ -112,14 +112,6 @@ class MockNoteSyncService extends _i1.Mock implements _i2.NoteSyncService {
       ) as _i4.Future<void>);
 
   @override
-  _i4.Future<void> receiveAndMergeNotes(String? backupFilePath) =>
-      (super.noSuchMethod(
-        Invocation.method(#receiveAndMergeNotes, [backupFilePath]),
-        returnValue: _i4.Future<void>.value(),
-        returnValueForMissingStub: _i4.Future<void>.value(),
-      ) as _i4.Future<void>);
-
-  @override
   _i4.Future<String> createSyncPackage(
     _i5.Device? targetDevice, {
     bool? includeMediaFiles = true,

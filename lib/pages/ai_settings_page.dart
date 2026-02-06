@@ -591,8 +591,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
     final l10n = AppLocalizations.of(context);
     if (value == null || value.isEmpty) return l10n.apiUrlRequired;
     final uri = Uri.tryParse(value);
-    if (uri == null || !uri.hasScheme || (!uri.scheme.startsWith('http')))
+    if (uri == null || !uri.hasScheme || (!uri.scheme.startsWith('http'))) {
       return l10n.invalidUrl;
+    }
     return null;
   }
 

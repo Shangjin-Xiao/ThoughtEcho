@@ -1203,7 +1203,7 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#2C1810',
       buffer.writeln(
           '<rect x="40" y="${y - _contentFontSize + 4}" width="${estimatedWidth + 20}" height="${_contentFontSize + 4}" fill="#FFD700" stroke="black" stroke-width="2"/>');
       buffer.writeln(
-          '<text x="50" y="$y" text-anchor="start" fill="#000000" font-family="Arial Black, Impact, sans-serif" font-size="${_contentFontSize}" font-weight="900">${_escape(textLines[i])}</text>');
+          '<text x="50" y="$y" text-anchor="start" fill="#000000" font-family="Arial Black, Impact, sans-serif" font-size="$_contentFontSize" font-weight="900">${_escape(textLines[i])}</text>');
     }
     final renderedText = buffer.toString();
 
@@ -1428,7 +1428,7 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#ffffff',
       // 前两行缩进以避开首字母
       double x = (i < 2) ? 100.0 : 40.0;
       buffer.writeln(
-          '<text x="$x" y="$y" text-anchor="start" fill="#333333" font-family="Georgia, serif" font-size="${_contentFontSize}">${_escape(remainingLines[i])}</text>');
+          '<text x="$x" y="$y" text-anchor="start" fill="#333333" font-family="Georgia, serif" font-size="$_contentFontSize">${_escape(remainingLines[i])}</text>');
     }
     final renderedText = buffer.toString();
 
