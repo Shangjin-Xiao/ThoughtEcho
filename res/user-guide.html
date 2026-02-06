@@ -462,6 +462,10 @@
         var langToggle = document.getElementById('langToggle');
         var tocToggle = document.getElementById('tocToggle');
         var tocOverlay = document.getElementById('tocOverlay');
+        const tocList = document.getElementById('tocList');
+        if (!tocList) {
+            console.warn('TOC list container not found.');
+        }
 
         // 语言状态管理：使用 data-lang 属性而非 class，避免 .lang-en 规则误隐藏 body
         function switchPageLang(targetLang) {
@@ -569,8 +573,6 @@
                 }
             });
         }
-
-        const tocList = document.getElementById('tocList');
 
         function handleTocLinkClick(event) {
             const link = event.target.closest('a');
