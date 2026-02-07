@@ -1490,5 +1490,11 @@
         "type": "int"
       }
     }
-  }
+  },
+  "tileNoLocationPermission": "위치 없음",
+  "tileOffline": "오프라인",
+  "tileNoNetwork": "네트워크 없음",
+  "tileLoading": "로딩 중...",
+  "tileNoWeather": "날씨 없음",
+  "tileCachedSuffix": "(캐시)"
 }

@@ -3164,5 +3164,11 @@
   "recommended": "推奨",
   "actionFavorite": "お気に入り",
   "actionUnfavorite": "お気に入り解除",
-  "moreOptions": "その他のオプション"
+  "moreOptions": "その他のオプション",
+  "tileNoLocationPermission": "位置情報なし",
+  "tileOffline": "オフライン",
+  "tileNoNetwork": "ネットワークなし",
+  "tileLoading": "読み込み中...",
+  "tileNoWeather": "天気なし",
+  "tileCachedSuffix": "(キャッシュ)"
 }

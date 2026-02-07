@@ -89,6 +89,9 @@ class _HomePageState extends State<HomePage>
   // AI卡片生成服务
   AICardGenerationService? _aiCardService;
 
+  // 网络恢复监听
+  ConnectivityService? _connectivityService;
+
   // --- 每日提示相关状态和逻辑 ---
   String _accumulatedPromptText = ''; // Accumulated text for daily prompt
   StreamSubscription<String>?
@@ -300,6 +303,13 @@ class _HomePageState extends State<HomePage>
         context,
         listen: false,
       );
+      final connectivityService = Provider.of<ConnectivityService>(
+        context,
+        listen: false,
+      );
+
+      // 先刷新网络状态
+      final isConnected = await connectivityService.checkConnectionNow();
 
       // 如果有位置权限，重新获取位置和天气
       if (locationService.hasLocationPermission &&
@@ -312,12 +322,18 @@ class _HomePageState extends State<HomePage>
         if (!mounted) return;
 
         if (position != null) {
+          // 联网时尝试解析离线坐标的地址
+          if (isConnected && locationService.isOfflineLocation) {
+            logDebug('尝试解析离线位置的地址...');
+            await locationService.resolveOfflineLocation();
+          }
+
           logDebug('位置获取成功，开始刷新天气数据...');
-          // 强制刷新天气数据
+          // 仅联网时强制刷新天气，离线时使用缓存避免冲掉已有数据
           await weatherService.getWeatherData(
             position.latitude,
             position.longitude,
-            forceRefresh: true,
+            forceRefresh: isConnected,
           );
           logDebug('天气数据刷新完成: ${weatherService.currentWeather}');
         } else {
@@ -369,6 +385,15 @@ class _HomePageState extends State<HomePage>
 
       // 先初始化位置和天气，然后再获取每日提示
       _initLocationAndWeatherThenFetchPrompt();
+
+      // 监听网络恢复，自动刷新位置和天气
+      if (mounted) {
+        _connectivityService = Provider.of<ConnectivityService>(
+          context,
+          listen: false,
+        );
+        _connectivityService!.addListener(_onConnectivityChanged);
+      }
     });
 
     // 根据初始页面尝试触发对应的功能引导
@@ -395,8 +420,18 @@ class _HomePageState extends State<HomePage>
     _aiTabController.dispose();
     // 移除生命周期观察器
     WidgetsBinding.instance.removeObserver(this);
-    _promptSubscription?.cancel(); // Cancel daily prompt subscription
+    _promptSubscription?.cancel();
+    _connectivityService?.removeListener(_onConnectivityChanged);
     super.dispose();
+  }
+
+  /// 网络状态变化回调：恢复联网时自动刷新位置和天气
+  void _onConnectivityChanged() {
+    final isConnected = _connectivityService?.isConnected ?? false;
+    if (isConnected && mounted) {
+      logDebug('网络已恢复，自动刷新位置和天气...');
+      _refreshLocationAndWeather();
+    }
   }
 
   @override
@@ -1513,6 +1548,7 @@ class _HomePageState extends State<HomePage>
     WeatherService weatherService,
   ) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final connectivityService = Provider.of<ConnectivityService>(context);
     final isConnected = connectivityService.isConnected;
     final hasPermission = locationService.hasLocationPermission;
@@ -1520,48 +1556,54 @@ class _HomePageState extends State<HomePage>
     final hasCity = locationService.city != null &&
         !locationService.city!.contains("Throttled!");
     final hasWeather = weatherService.currentWeather != null;
+    final isCached = weatherService.state == WeatherServiceState.cached;
 
-    // 决定显示什么文字
     String locationText;
     String weatherText;
     IconData weatherIcon;
 
     if (!hasPermission) {
-      // 无定位权限
-      locationText = '无定位';
+      locationText = l10n.tileNoLocationPermission;
       weatherText = '--';
       weatherIcon = Icons.cloud_off;
-    } else if (!isConnected && !hasCity) {
-      // 离线且无城市
-      if (hasCoordinates) {
-        locationText = LocationService.formatCoordinates(
-          locationService.currentPosition!.latitude,
-          locationService.currentPosition!.longitude,
-        );
-      } else {
-        locationText = '无网络';
-      }
-      weatherText = '离线';
-      weatherIcon = Icons.cloud_off;
-    } else if (hasCity && hasWeather) {
-      // 正常状态
+    } else if (hasCity) {
       locationText = locationService.getDisplayLocation();
-      final l10n = AppLocalizations.of(context);
-      weatherText =
-          '${WeatherService.getLocalizedWeatherDescription(l10n, weatherService.currentWeather!)}'
-          '${weatherService.temperature != null && weatherService.temperature!.isNotEmpty ? ' ${weatherService.temperature}' : ''}';
-      weatherIcon = weatherService.getWeatherIconData();
+      if (hasWeather) {
+        weatherText =
+            '${WeatherService.getLocalizedWeatherDescription(l10n, weatherService.currentWeather!)}'
+            '${weatherService.temperature != null && weatherService.temperature!.isNotEmpty ? ' ${weatherService.temperature}' : ''}'
+            '${isCached && !isConnected ? ' ${l10n.tileCachedSuffix}' : ''}';
+        weatherIcon = weatherService.getWeatherIconData();
+      } else {
+        weatherText = l10n.tileNoWeather;
+        weatherIcon = Icons.cloud_off;
+      }
     } else if (hasCoordinates) {
-      // 有坐标但未解析
       locationText = LocationService.formatCoordinates(
         locationService.currentPosition!.latitude,
         locationService.currentPosition!.longitude,
       );
-      weatherText = '加载中...';
-      weatherIcon = Icons.cloud_queue;
+      if (hasWeather) {
+        weatherText =
+            '${WeatherService.getLocalizedWeatherDescription(l10n, weatherService.currentWeather!)}'
+            '${weatherService.temperature != null && weatherService.temperature!.isNotEmpty ? ' ${weatherService.temperature}' : ''}'
+            '${isCached && !isConnected ? ' ${l10n.tileCachedSuffix}' : ''}';
+        weatherIcon = weatherService.getWeatherIconData();
+      } else if (isConnected) {
+        weatherText = l10n.tileLoading;
+        weatherIcon = Icons.cloud_queue;
+      } else {
+        weatherText = l10n.tileNoWeather;
+        weatherIcon = Icons.cloud_off;
+      }
+    } else if (!isConnected) {
+      locationText = l10n.tileNoNetwork;
+      weatherText = l10n.tileOffline;
+      weatherIcon = Icons.cloud_off;
     } else {
-      // 什么都没有，不显示
-      return const SizedBox.shrink();
+      locationText = l10n.tileLoading;
+      weatherText = l10n.tileLoading;
+      weatherIcon = Icons.cloud_queue;
     }
 
     return Padding(
