@@ -332,12 +332,12 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                       quote.location,
                                     ).isNotEmpty)
                                 ? LocationService.formatLocationForDisplay(
-                                  quote.location,
-                                )
+                                    quote.location,
+                                  )
                                 : LocationService.formatCoordinates(
-                                  quote.latitude,
-                                  quote.longitude,
-                                ),
+                                    quote.latitude,
+                                    quote.longitude,
+                                  ),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: secondaryTextColor,
                               fontSize: 12,

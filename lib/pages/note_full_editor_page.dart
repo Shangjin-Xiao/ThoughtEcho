@@ -2680,12 +2680,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                               (_location != null &&
                                                       LocationService
                                                           .formatLocationForDisplay(
-                                                            _location,
-                                                          ).isNotEmpty)
+                                                        _location,
+                                                      ).isNotEmpty)
                                                   ? LocationService
                                                       .formatLocationForDisplay(
-                                                        _location,
-                                                      )
+                                                      _location,
+                                                    )
                                                   : ((_latitude != null &&
                                                           _longitude != null)
                                                       ? '📍 ${LocationService.formatCoordinates(_latitude, _longitude)}'
