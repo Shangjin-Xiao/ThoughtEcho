@@ -1063,8 +1063,7 @@ class SettingsPageState extends State<SettingsPage> {
     final settingsService = Provider.of<SettingsService>(context);
     final locationService =
         Provider.of<LocationService>(context, listen: false);
-    final weatherService =
-        Provider.of<WeatherService>(context, listen: false);
+    final weatherService = Provider.of<WeatherService>(context, listen: false);
     final currentLocale = settingsService.localeCode;
     final l10n = AppLocalizations.of(context);
 
