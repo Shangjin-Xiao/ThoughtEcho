@@ -612,7 +612,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     // 编辑模式：显示原始位置
     if (widget.initialQuote != null) {
       if (_originalLocation != null && _originalLocation!.isNotEmpty) {
-        return _originalLocation!;
+        return LocationService.formatLocationForDisplay(_originalLocation);
       }
       if (_originalLatitude != null && _originalLongitude != null) {
         return LocationService.formatCoordinates(
@@ -625,7 +625,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
     // 新建模式：只显示实时获取的位置
     if (_newLocation != null && _newLocation!.isNotEmpty) {
-      return _newLocation!;
+      return LocationService.formatLocationForDisplay(_newLocation);
     }
     if (_newLatitude != null && _newLongitude != null) {
       return LocationService.formatCoordinates(_newLatitude, _newLongitude);
@@ -666,7 +666,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       content = hasOnlyCoordinates
           ? l10n.locationUpdateHint(LocationService.formatCoordinates(
               _originalLatitude, _originalLongitude))
-          : l10n.locationRemoveHint(_originalLocation ?? "");
+          : l10n.locationRemoveHint(
+              LocationService.formatLocationForDisplay(_originalLocation),
+            );
       actions = [
         if (_includeLocation)
           TextButton(

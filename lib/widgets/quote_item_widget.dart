@@ -327,18 +327,17 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                           const SizedBox(width: 2),
                           Text(
                             // 优先显示文字位置，没有文字位置时显示坐标
-                            quote.location != null
-                                ? (quote.location!.split(',').length >= 3
-                                    ? (quote.location!.split(',').length >= 4
-                                        ? '${quote.location!.split(',')[2]}·${quote.location!.split(',')[3]}' // 显示 "城市·区县"
-                                        : quote.location!.split(
-                                            ',',
-                                          )[2]) // 只有城市
-                                    : quote.location!)
+                            (quote.location != null &&
+                                    LocationService.formatLocationForDisplay(
+                                      quote.location,
+                                    ).isNotEmpty)
+                                ? LocationService.formatLocationForDisplay(
+                                  quote.location,
+                                )
                                 : LocationService.formatCoordinates(
-                                    quote.latitude,
-                                    quote.longitude,
-                                  ),
+                                  quote.latitude,
+                                  quote.longitude,
+                                ),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: secondaryTextColor,
                               fontSize: 12,
