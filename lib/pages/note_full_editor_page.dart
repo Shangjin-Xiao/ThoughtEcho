@@ -1285,6 +1285,24 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         _longitude = position.longitude;
       });
 
+      // 有坐标但没有地址时，弹窗提示用户已保存坐标
+      if (location.isEmpty && context.mounted) {
+        final l10n = AppLocalizations.of(context);
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.cannotGetLocationTitle),
+            content: Text(l10n.locationFetchFailedNoNetwork),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(l10n.iKnow),
+              ),
+            ],
+          ),
+        );
+      }
+
       // 获取天气
       try {
         await weatherService.getWeatherData(
@@ -1336,14 +1354,14 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         }
       }
     } else if (mounted) {
-      // 位置获取失败
+      // 位置获取失败 - 用于天气按钮场景，显示天气相关错误
       final l10n = AppLocalizations.of(context);
       onFail();
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
-          title: Text(l10n.cannotGetLocationTitle),
-          content: Text(l10n.locationFetchFailedNoNetwork),
+          title: Text(l10n.weatherFetchFailedTitle),
+          content: Text(l10n.locationAndWeatherUnavailable),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
@@ -1398,15 +1416,33 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         _latitude = position.latitude;
         _longitude = position.longitude;
       });
+
+      // 有坐标但没有地址时，弹窗提示用户已保存坐标
+      if (location.isEmpty && context.mounted) {
+        final l10n = AppLocalizations.of(context);
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.cannotGetLocationTitle),
+            content: Text(l10n.locationFetchFailedNoNetwork),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(l10n.iKnow),
+              ),
+            ],
+          ),
+        );
+      }
     } else if (mounted) {
-      // 位置获取失败
+      // 位置获取失败 - 用于位置按钮场景
       final l10n = AppLocalizations.of(context);
       onFail();
       showDialog(
         context: context,
         builder: (ctx) => AlertDialog(
           title: Text(l10n.cannotGetLocationTitle),
-          content: Text(l10n.locationFetchFailedNoNetwork),
+          content: Text(l10n.cannotGetLocationDesc),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
