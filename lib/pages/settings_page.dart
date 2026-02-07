@@ -613,18 +613,52 @@ class SettingsPageState extends State<SettingsPage> {
                     );
                   },
                 ),
-                // 智能推送
-                ListTile(
-                  title: Text(l10n.smartPushTitle),
-                  subtitle: Text(l10n.smartPushDesc),
-                  leading: const Icon(Icons.notifications_active_outlined),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const SmartPushSettingsPage(),
+                // 智能推送 (Beta) - 仅开发者模式显示
+                Consumer<SettingsService>(
+                  builder: (context, settingsService, _) {
+                    if (!settingsService.appSettings.developerMode) {
+                      return const SizedBox.shrink();
+                    }
+                    return ListTile(
+                      title: Row(
+                        children: [
+                          Text(l10n.smartPushTitle),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primaryContainer,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'Beta',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onPrimaryContainer,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
+                      subtitle: Text(l10n.smartPushDesc),
+                      leading: const Icon(Icons.notifications_active_outlined),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SmartPushSettingsPage(),
+                          ),
+                        );
+                      },
                     );
                   },
                 ),
