@@ -266,8 +266,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       _originalTemperature = widget.initialQuote!.temperature;
 
       // 根据现有笔记的位置和天气信息设置复选框状态
-      _includeLocation = widget.initialQuote!.location != null
-          || (widget.initialQuote!.latitude != null && widget.initialQuote!.longitude != null);
+      _includeLocation = widget.initialQuote!.location != null ||
+          (widget.initialQuote!.latitude != null &&
+              widget.initialQuote!.longitude != null);
       _includeWeather = widget.initialQuote!.weather != null;
 
       // 添加标签
@@ -428,7 +429,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
     // 检查并请求权限（与全屏编辑器一致）
     if (!locationService.hasLocationPermission) {
-      bool permissionGranted = await locationService.requestLocationPermission();
+      bool permissionGranted =
+          await locationService.requestLocationPermission();
       if (!permissionGranted) {
         if (mounted && context.mounted) {
           final l10n = AppLocalizations.of(context);
