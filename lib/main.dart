@@ -440,6 +440,7 @@ Future<void> main() async {
             logDebug('开始预初始化位置服务...');
             // 设置语言代码，确保位置显示使用正确的语言
             locationService.currentLocaleCode = settingsService.localeCode;
+            weatherService.currentLocaleCode = settingsService.localeCode;
             await locationService.init();
             logDebug('位置服务预初始化完成');
 

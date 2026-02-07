@@ -1063,6 +1063,8 @@ class SettingsPageState extends State<SettingsPage> {
     final settingsService = Provider.of<SettingsService>(context);
     final locationService =
         Provider.of<LocationService>(context, listen: false);
+    final weatherService =
+        Provider.of<WeatherService>(context, listen: false);
     final currentLocale = settingsService.localeCode;
     final l10n = AppLocalizations.of(context);
 
@@ -1102,8 +1104,9 @@ class SettingsPageState extends State<SettingsPage> {
                   groupValue: currentLocale,
                   onChanged: (value) async {
                     await settingsService.setLocale(value);
-                    // 同步更新位置服务的语言设置
+                    // 同步更新位置和天气服务的语言设置
                     locationService.currentLocaleCode = value;
+                    weatherService.currentLocaleCode = value;
                     if (dialogContext.mounted) Navigator.pop(dialogContext);
                   },
                   child: Column(

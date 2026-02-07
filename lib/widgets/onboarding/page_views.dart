@@ -6,6 +6,7 @@ import '../../config/onboarding_config.dart';
 import '../../controllers/onboarding_controller.dart';
 import '../../services/settings_service.dart';
 import '../../services/location_service.dart';
+import '../../services/weather_service.dart';
 
 /// 欢迎页面组件
 class WelcomePageView extends StatefulWidget {
@@ -127,8 +128,11 @@ class _WelcomePageViewState extends State<WelcomePageView>
     final settingsService = context.read<SettingsService>();
     final locationService = context.read<LocationService>();
     settingsService.setLocale(selectedCode.isEmpty ? null : selectedCode);
-    // 同步更新位置服务的语言设置
+    // 同步更新位置和天气服务的语言设置
     locationService.currentLocaleCode =
+        selectedCode.isEmpty ? null : selectedCode;
+    final weatherService = context.read<WeatherService>();
+    weatherService.currentLocaleCode =
         selectedCode.isEmpty ? null : selectedCode;
   }
 
