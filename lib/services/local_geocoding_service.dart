@@ -15,6 +15,15 @@ class LocalGeocodingService {
   // 使用默认地理编码库
   static final GeoCode _geoCode = GeoCode();
 
+  // 串行化 setLocaleIdentifier + placemarkFromCoordinates，避免竞态
+  static Future<void> _geocodingQueue = Future.value();
+
+  static Future<T> _runSerialized<T>(Future<T> Function() task) {
+    final next = _geocodingQueue.then((_) => task());
+    _geocodingQueue = next.then((_) {}, onError: (_) {});
+    return next;
+  }
+
   // 缓存相关
   static const _geocodeCacheKey = 'geocode_cache';
   static const _cacheDuration = Duration(days: 30); // 地理编码缓存30天
@@ -97,33 +106,33 @@ class LocalGeocodingService {
     String? localeCode,
   }) async {
     try {
-      final bool isEnglish = localeCode == 'en';
-
       // Windows平台：跳过系统地理编码（不支持），返回 null 让调用者使用在线服务
       if (!kIsWeb && Platform.isWindows) {
         logDebug('Windows平台：系统地理编码不支持，将使用在线服务');
         return null;
       }
 
-      // 英文环境：跳过系统地理编码（无法控制语言），返回 null 让调用者使用在线服务
-      if (isEnglish) {
-        logDebug('英文环境：跳过系统地理编码，使用在线服务');
-        return null;
-      }
+      // 构建 locale identifier 用于系统地理编码
+      final localeIdentifier = _buildLocaleIdentifier(localeCode);
 
-      // 首先尝试从缓存读取（只对中文环境使用缓存）
-      final cachedAddress = await _getFromCache(latitude, longitude);
+      // 首先尝试从缓存读取（含语言匹配）
+      final cachedAddress =
+          await _getFromCache(latitude, longitude, localeIdentifier);
       if (cachedAddress != null) {
         logDebug('使用缓存的地理编码数据');
         return cachedAddress;
       }
 
-      // 中文环境：使用系统提供的地理编码功能
+      // 使用系统提供的地理编码功能，通过 setLocaleIdentifier 控制返回语言
+      // 串行化执行以避免全局 locale 状态的竞态条件
       try {
-        final placemarks = await geocoding.placemarkFromCoordinates(
-          latitude,
-          longitude,
-        );
+        final placemarks = await _runSerialized(() async {
+          await geocoding.setLocaleIdentifier(localeIdentifier);
+          return await geocoding.placemarkFromCoordinates(
+            latitude,
+            longitude,
+          );
+        });
 
         if (placemarks.isNotEmpty) {
           final place = placemarks.first;
@@ -140,7 +149,7 @@ class LocalGeocodingService {
           };
 
           // 缓存结果
-          await _saveToCache(latitude, longitude, addressInfo);
+          await _saveToCache(latitude, longitude, addressInfo, localeIdentifier);
 
           return addressInfo;
         }
@@ -167,7 +176,7 @@ class LocalGeocodingService {
         };
 
         // 缓存结果
-        await _saveToCache(latitude, longitude, addressInfo);
+        await _saveToCache(latitude, longitude, addressInfo, localeIdentifier);
 
         return addressInfo;
       } catch (e) {
@@ -182,10 +191,11 @@ class LocalGeocodingService {
     }
   }
 
-  /// 从缓存读取地理编码数据
+  /// 从缓存读取地理编码数据（需匹配语言）
   static Future<Map<String, String?>?> _getFromCache(
     double latitude,
     double longitude,
+    String localeIdentifier,
   ) async {
     try {
       // 使用MMKV
@@ -207,6 +217,13 @@ class LocalGeocodingService {
             if ((cachedLat - latitude).abs() < 0.005 &&
                 (cachedLon - longitude).abs() < 0.005) {
               final addressData = entry.value as Map<String, dynamic>;
+
+              // 检查语言是否匹配（旧缓存无 locale 字段则跳过）
+              final cachedLocale = addressData['locale'] as String?;
+              if (cachedLocale != null && cachedLocale != localeIdentifier) {
+                continue;
+              }
+
               final timestamp = DateTime.parse(
                 addressData['timestamp'] as String,
               );
@@ -237,11 +254,12 @@ class LocalGeocodingService {
     }
   }
 
-  /// 保存地理编码结果到缓存
+  /// 保存地理编码结果到缓存（含语言标识）
   static Future<void> _saveToCache(
     double latitude,
     double longitude,
     Map<String, String?> addressInfo,
+    String localeIdentifier,
   ) async {
     try {
       // 使用MMKV
@@ -260,10 +278,11 @@ class LocalGeocodingService {
         }
       }
 
-      // 添加新条目
+      // 添加新条目（包含语言标识，避免切换语言后返回错误语言的缓存）
       final key = '$latitude,$longitude';
       final dataWithTimestamp = Map<String, dynamic>.from(addressInfo)
-        ..['timestamp'] = DateTime.now().toIso8601String();
+        ..['timestamp'] = DateTime.now().toIso8601String()
+        ..['locale'] = localeIdentifier;
 
       cacheData[key] = dataWithTimestamp;
 
@@ -298,6 +317,26 @@ class LocalGeocodingService {
       await storage.setString(_geocodeCacheKey, json.encode(cacheData));
     } catch (e) {
       logDebug('保存地理编码数据到MMKV缓存失败: $e');
+    }
+  }
+
+  /// 根据语言代码构建系统地理编码使用的 locale identifier
+  /// 格式: languageCode_countryCode (如 'zh_CN', 'en_US', 'ja_JP')
+  static String _buildLocaleIdentifier(String? localeCode) {
+    final lang =
+        (localeCode ?? '').toLowerCase().split(RegExp(r'[_-]')).first;
+    switch (lang) {
+      case 'zh':
+        return 'zh_CN';
+      case 'ja':
+        return 'ja_JP';
+      case 'ko':
+        return 'ko_KR';
+      case 'fr':
+        return 'fr_FR';
+      case 'en':
+      default:
+        return 'en_US';
     }
   }
 

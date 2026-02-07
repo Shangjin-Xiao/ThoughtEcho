@@ -1,11 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:convert';
-import 'dart:io';
 import '../services/network_service.dart';
 // import '../utils/dio_network_utils.dart'; // 导入dio网络工具
 import 'local_geocoding_service.dart'; // 导入本地地理编码服务
 import '../utils/app_logger.dart';
+import '../utils/i18n_language.dart';
 
 class CityInfo {
   final String name; // 城市名称
@@ -29,6 +29,20 @@ class CityInfo {
 }
 
 class LocationService extends ChangeNotifier {
+  static const String kAddressPending = '__address_pending__';
+  static const String kAddressFailed = '__address_failed__';
+  static const String _legacyPending = '位置待解析';
+  static const String _legacyFailed = '地址解析失败';
+
+  static bool isPendingMarker(String? s) =>
+      s == kAddressPending || s == _legacyPending;
+
+  static bool isFailedMarker(String? s) =>
+      s == kAddressFailed || s == _legacyFailed;
+
+  static bool isNonDisplayMarker(String? s) =>
+      s == null || s.isEmpty || isPendingMarker(s) || isFailedMarker(s);
+
   Position? _currentPosition;
   String? _currentAddress;
   bool _hasLocationPermission = false;
@@ -61,19 +75,8 @@ class LocationService extends ChangeNotifier {
   }
 
   /// 获取 API 调用使用的语言参数
-  String get _apiLanguageParam {
-    // 如果设置了语言代码，使用它
-    if (_currentLocaleCode != null) {
-      if (_currentLocaleCode!.startsWith('zh')) return 'zh';
-      if (_currentLocaleCode!.startsWith('en')) return 'en';
-    }
-    // 否则使用系统语言
-    try {
-      final systemLocale = Platform.localeName;
-      if (systemLocale.startsWith('zh')) return 'zh';
-    } catch (_) {}
-    return 'en';
-  }
+  String get _apiLanguageParam =>
+      I18nLanguage.appLanguageOrSystem(_currentLocaleCode);
 
   // 地址组件
   String? _country;
@@ -88,10 +91,7 @@ class LocationService extends ChangeNotifier {
 
   /// 检查当前是否处于离线状态（有坐标但没有解析出地址）
   bool get isOfflineLocation =>
-      _currentPosition != null &&
-      (_currentAddress == null ||
-          _currentAddress!.isEmpty ||
-          _currentAddress == '位置待解析');
+      _currentPosition != null && isNonDisplayMarker(_currentAddress);
 
   /// 检查是否有有效坐标
   bool get hasCoordinates => _currentPosition != null;
@@ -315,8 +315,7 @@ class LocationService extends ChangeNotifier {
         _province = null;
         _city = null;
         _district = null;
-        _currentAddress =
-            _apiLanguageParam == 'en' ? 'Address resolution failed' : '地址解析失败';
+        _currentAddress = kAddressFailed;
         notifyListeners();
       }
     } catch (e) {
@@ -325,8 +324,7 @@ class LocationService extends ChangeNotifier {
       _province = null;
       _city = null;
       _district = null;
-      _currentAddress =
-          _apiLanguageParam == 'en' ? 'Address resolution failed' : '地址解析失败';
+      _currentAddress = kAddressFailed;
       notifyListeners();
     }
   }
@@ -338,9 +336,8 @@ class LocationService extends ChangeNotifier {
           'https://nominatim.openstreetmap.org/reverse?format=json&lat=${_currentPosition!.latitude}&lon=${_currentPosition!.longitude}&zoom=18&addressdetails=1';
 
       // 根据语言设置构建 Accept-Language 头
-      final acceptLanguage = _apiLanguageParam == 'zh'
-          ? 'zh-CN,zh;q=0.9,en;q=0.8'
-          : 'en-US,en;q=0.9,zh;q=0.8';
+      final acceptLanguage =
+          I18nLanguage.buildAcceptLanguage(_apiLanguageParam);
 
       final response = await NetworkService.instance.get(
         url,
@@ -541,9 +538,8 @@ class LocationService extends ChangeNotifier {
       logDebug('Nominatim搜索URL: $url');
 
       // 根据语言设置构建 Accept-Language 头
-      final acceptLanguage = _apiLanguageParam == 'zh'
-          ? 'zh-CN,zh;q=0.9,en;q=0.8'
-          : 'en-US,en;q=0.9,zh;q=0.8';
+      final acceptLanguage =
+          I18nLanguage.buildAcceptLanguage(_apiLanguageParam);
 
       final response = await NetworkService.instance.get(
         url,
@@ -785,10 +781,7 @@ class LocationService extends ChangeNotifier {
     }
 
     // 如果有格式化地址，返回地址
-    if (_currentAddress != null &&
-        _currentAddress!.isNotEmpty &&
-        _currentAddress != '位置待解析' &&
-        _currentAddress != '地址解析失败') {
+    if (_currentAddress != null && !isNonDisplayMarker(_currentAddress)) {
       return _currentAddress!;
     }
 
@@ -825,11 +818,11 @@ class LocationService extends ChangeNotifier {
       headingAccuracy: 0,
     );
 
-    if (address != null && address.isNotEmpty) {
+    if (address != null && address.isNotEmpty && !isNonDisplayMarker(address)) {
       parseLocationString(address);
     } else {
-      // 离线状态标记
-      _currentAddress = '位置待解析';
+      // 离线状态标记（保留 failed 标记以区分状态）
+      _currentAddress = isFailedMarker(address) ? kAddressFailed : kAddressPending;
       _country = null;
       _province = null;
       _city = null;
@@ -847,9 +840,7 @@ class LocationService extends ChangeNotifier {
     try {
       logDebug('尝试解析离线位置...');
       await getAddressFromLatLng();
-      return _currentAddress != null &&
-          _currentAddress != '位置待解析' &&
-          _currentAddress != '地址解析失败';
+      return _currentAddress != null && !isNonDisplayMarker(_currentAddress);
     } catch (e) {
       logDebug('解析离线位置失败: $e');
       return false;

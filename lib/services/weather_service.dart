@@ -23,6 +23,16 @@ class WeatherService extends ChangeNotifier {
   final WeatherCacheManager _cacheManager = WeatherCacheManager();
   bool _isInitialized = false;
 
+  // 当前语言设置
+  String? _currentLocaleCode;
+
+  String? get currentLocaleCode => _currentLocaleCode;
+  set currentLocaleCode(String? code) {
+    if (_currentLocaleCode == code) return;
+    _currentLocaleCode = code;
+    notifyListeners();
+  }
+
   // Getters
   WeatherData? get currentWeatherData => _currentWeatherData;
   WeatherServiceState get state => _state;
@@ -112,7 +122,7 @@ class WeatherService extends ChangeNotifier {
     } catch (e) {
       logError('获取天气数据失败: $e', error: e);
       _lastError = e.toString();
-      _currentWeatherData = WeatherData.error('获取天气数据失败: $e');
+      _currentWeatherData = WeatherData.error();
       _setState(WeatherServiceState.error);
     }
   }
@@ -128,8 +138,7 @@ class WeatherService extends ChangeNotifier {
           '?latitude=$latitude'
           '&longitude=$longitude'
           '&current=temperature_2m,weather_code,wind_speed_10m'
-          '&timezone=auto'
-          '&language=zh_cn';
+          '&timezone=auto';
 
       final response = await NetworkService.instance
           .get(url, timeoutSeconds: timeout.inSeconds)
@@ -288,9 +297,9 @@ class WeatherService extends ChangeNotifier {
 
   /// 设置模拟天气数据（兼容性方法）
   void setMockWeatherData() {
-    _currentWeatherData = WeatherData.error('天气数据获取失败');
+    _currentWeatherData = WeatherData.error();
     _setState(WeatherServiceState.error);
-    _lastError = '天气数据获取失败';
+    _lastError = 'weather_fetch_failed';
     logDebug('天气数据获取失败，显示错误状态');
   }
 
