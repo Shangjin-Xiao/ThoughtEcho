@@ -502,7 +502,7 @@ AI 会根据时间、天气、位置等情况，为您生成个性化的写作�
 - 确保至少选择一种类型
 - 标题显示类型数量
 
-### 智能推送设置
+### 智能推送设置 (Beta - 开发者模式)
 
 #### 推送模式
 
@@ -1116,7 +1116,7 @@ The app supports multiple languages including Chinese, English, Japanese, Korean
 - Ensures at least one type selected
 - Header shows type count
 
-### Smart Push Settings
+### Smart Push Settings (Beta - Developer Mode)
 
 #### Push Modes
 
