@@ -5,7 +5,8 @@ void main() {
   group('LocationService.formatLocationForDisplay', () {
     test('formats full CSV correctly', () {
       const input = 'China,Beijing,Beijing,Chaoyang';
-      expect(LocationService.formatLocationForDisplay(input), 'Beijing·Chaoyang');
+      expect(
+          LocationService.formatLocationForDisplay(input), 'Beijing·Chaoyang');
     });
 
     test('formats CSV with missing district correctly', () {
@@ -40,7 +41,8 @@ void main() {
 
     test('returns original string for non-CSV', () {
       const input = 'Some Random String';
-      expect(LocationService.formatLocationForDisplay(input), 'Some Random String');
+      expect(LocationService.formatLocationForDisplay(input),
+          'Some Random String');
     });
 
     test('returns empty string for null', () {
