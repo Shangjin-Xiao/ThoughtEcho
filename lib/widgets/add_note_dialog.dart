@@ -266,7 +266,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       _originalTemperature = widget.initialQuote!.temperature;
 
       // 根据现有笔记的位置和天气信息设置复选框状态
-      _includeLocation = widget.initialQuote!.location != null;
+      _includeLocation = widget.initialQuote!.location != null
+          || (widget.initialQuote!.latitude != null && widget.initialQuote!.longitude != null);
       _includeWeather = widget.initialQuote!.weather != null;
 
       // 添加标签
@@ -424,6 +425,33 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   Future<void> _fetchLocationForNewNote() async {
     final locationService = _cachedLocationService;
     if (locationService == null) return;
+
+    // 检查并请求权限（与全屏编辑器一致）
+    if (!locationService.hasLocationPermission) {
+      bool permissionGranted = await locationService.requestLocationPermission();
+      if (!permissionGranted) {
+        if (mounted && context.mounted) {
+          final l10n = AppLocalizations.of(context);
+          setState(() {
+            _includeLocation = false;
+          });
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text(l10n.cannotGetLocationTitle),
+              content: Text(l10n.cannotGetLocationPermissionShort),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(l10n.iKnow),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
+    }
 
     try {
       final position = await locationService.getCurrentLocation();
@@ -680,6 +708,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
           if (formattedAddress != null && formattedAddress.isNotEmpty) {
             setState(() {
               _originalLocation = formattedAddress;
+              _includeLocation = true;
             });
             if (context.mounted) {
               final l10n = AppLocalizations.of(context);
@@ -1638,12 +1667,12 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                           _cachedLocationService
                                               ?.getFormattedLocation())
                                   : null,
-                              latitude: _includeLocation
+                              latitude: (_includeLocation || _includeWeather)
                                   ? (isEditing
                                       ? _originalLatitude
                                       : _newLatitude)
                                   : null,
-                              longitude: _includeLocation
+                              longitude: (_includeLocation || _includeWeather)
                                   ? (isEditing
                                       ? _originalLongitude
                                       : _newLongitude)

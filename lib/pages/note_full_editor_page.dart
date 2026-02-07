@@ -786,8 +786,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         'tagIds': _selectedTagIds,
         'colorHex': _selectedColorHex,
         'location': _showLocation ? _location : null,
-        'latitude': _showLocation ? _latitude : null,
-        'longitude': _showLocation ? _longitude : null,
+        'latitude': (_showLocation || _showWeather) ? _latitude : null,
+        'longitude': (_showLocation || _showWeather) ? _longitude : null,
         'weather': _showWeather ? _weather : null,
         'temperature': _showWeather ? _temperature : null,
         'timestamp': DateTime.now().toIso8601String(),
@@ -1219,24 +1219,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       }
     } else if (mounted) {
       // 位置获取失败
-      final l10n = AppLocalizations.of(context);
       setState(() {
         _showLocation = false;
         _showWeather = false;
       });
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(l10n.cannotGetLocationTitle),
-          content: Text(l10n.locationFetchFailedNoNetwork),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(l10n.iKnow),
-            ),
-          ],
-        ),
-      );
     }
   }
 
@@ -1360,38 +1346,25 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       }
     }
 
-    final position = await locationService.getCurrentLocation();
-    if (position != null && mounted) {
-      final location = locationService.getFormattedLocation();
+    try {
+      final position = await locationService.getCurrentLocation();
+      if (position != null && mounted) {
+        final location = locationService.getFormattedLocation();
 
-      setState(() {
-        _location = location.isNotEmpty ? location : null;
-        _latitude = position.latitude;
-        _longitude = position.longitude;
-      });
+        setState(() {
+          _location = location.isNotEmpty ? location : null;
+          _latitude = position.latitude;
+          _longitude = position.longitude;
+        });
 
-      // 有坐标但没有地址时，弹窗提示用户已保存坐标
-      if (location.isEmpty && context.mounted) {
-        final l10n = AppLocalizations.of(context);
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text(l10n.cannotGetLocationTitle),
-            content: Text(l10n.locationFetchFailedNoNetwork),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: Text(l10n.iKnow),
-              ),
-            ],
-          ),
-        );
+        return (permissionDenied: false, position: position);
       }
 
-      return (permissionDenied: false, position: position);
+      return (permissionDenied: false, position: null);
+    } catch (e) {
+      logError('获取位置失败', error: e, source: 'NoteFullEditorPage');
+      return (permissionDenied: false, position: null);
     }
-
-    return (permissionDenied: false, position: null);
   }
 
   /// 新建模式下获取位置，失败时调用回调取消选中

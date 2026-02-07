@@ -1490,5 +1490,11 @@
         "type": "int"
       }
     }
-  }
+  },
+  "tileNoLocationPermission": "Pas de localisation",
+  "tileOffline": "Hors ligne",
+  "tileNoNetwork": "Pas de réseau",
+  "tileLoading": "Chargement...",
+  "tileNoWeather": "Pas de météo",
+  "tileCachedSuffix": "(Cache)"
 }

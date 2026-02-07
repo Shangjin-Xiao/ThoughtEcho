@@ -3368,5 +3368,11 @@
   "userGuideDesc": "Learn how to use ThoughtEcho features",
   "userGuideSearchHint": "Search user guide...",
   "userGuideNoResults": "No results found",
-  "userGuideOnlineDoc": "Full Online Documentation"
+  "userGuideOnlineDoc": "Full Online Documentation",
+  "tileNoLocationPermission": "No Location",
+  "tileOffline": "Offline",
+  "tileNoNetwork": "No Network",
+  "tileLoading": "Loading...",
+  "tileNoWeather": "No Weather",
+  "tileCachedSuffix": "(Cached)"
 }

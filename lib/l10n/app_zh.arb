@@ -3377,5 +3377,11 @@
   "userGuideDesc": "了解如何使用心迹的各项功能",
   "userGuideSearchHint": "搜索用户指南...",
   "userGuideNoResults": "未找到相关内容",
-  "userGuideOnlineDoc": "完整在线文档"
+  "userGuideOnlineDoc": "完整在线文档",
+  "tileNoLocationPermission": "无定位",
+  "tileOffline": "离线",
+  "tileNoNetwork": "无网络",
+  "tileLoading": "加载中...",
+  "tileNoWeather": "无天气",
+  "tileCachedSuffix": "(缓存)"
 }
