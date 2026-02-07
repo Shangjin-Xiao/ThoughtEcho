@@ -822,7 +822,8 @@ class LocationService extends ChangeNotifier {
       parseLocationString(address);
     } else {
       // 离线状态标记（保留 failed 标记以区分状态）
-      _currentAddress = isFailedMarker(address) ? kAddressFailed : kAddressPending;
+      _currentAddress =
+          isFailedMarker(address) ? kAddressFailed : kAddressPending;
       _country = null;
       _province = null;
       _city = null;
