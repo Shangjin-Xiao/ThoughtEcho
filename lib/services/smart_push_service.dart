@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
@@ -13,6 +13,9 @@ import 'package:device_info_plus/device_info_plus.dart';
 
 import '../models/smart_push_settings.dart';
 import '../models/quote_model.dart';
+import '../models/note_category.dart';
+import '../pages/note_full_editor_page.dart';
+import '../main.dart' show navigatorKey;
 import 'database_service.dart';
 import 'mmkv_service.dart';
 import 'location_service.dart';
@@ -413,6 +416,7 @@ class SmartPushService extends ChangeNotifier {
   void _onNotificationTap(NotificationResponse response) {
     AppLogger.i('通知被点击: ${response.payload}');
 
+    String? noteId;
     // SOTA: 记录用户点击交互（正向反馈）
     // payload 格式: "contentType:xxx|noteId:yyy" 或 "dailyQuote"
     try {
@@ -421,16 +425,20 @@ class SmartPushService extends ChangeNotifier {
         String? contentType;
 
         if (payload.contains('contentType:')) {
-          // 解析 contentType
+          // 解析 contentType 和 noteId
           final parts = payload.split('|');
           for (final part in parts) {
             if (part.startsWith('contentType:')) {
               contentType = part.substring('contentType:'.length);
-              break;
+            } else if (part.startsWith('noteId:')) {
+              noteId = part.substring('noteId:'.length);
             }
           }
         } else if (payload == 'dailyQuote') {
           contentType = 'dailyQuote';
+        } else {
+          // 兼容旧版本 payload 只有 noteId 的情况
+          noteId = payload;
         }
 
         if (contentType != null && contentType.isNotEmpty) {
@@ -443,7 +451,42 @@ class SmartPushService extends ChangeNotifier {
       AppLogger.w('解析通知 payload 失败', error: e);
     }
 
-    // TODO: 可以在这里处理打开特定笔记的逻辑
+    // 处理打开特定笔记的逻辑
+    if (noteId != null && noteId.isNotEmpty) {
+      _navigateToNote(noteId);
+    }
+  }
+
+  /// 导航到特定笔记
+  Future<void> _navigateToNote(String noteId) async {
+    try {
+      // 获取笔记详情
+      final note = await _databaseService.getQuoteById(noteId);
+      if (note == null) {
+        AppLogger.w('导航失败：数据库中未找到笔记 $noteId');
+        return;
+      }
+
+      // 获取所有标签，供编辑器使用
+      final categories = await _databaseService.getCategories();
+
+      if (navigatorKey.currentState != null) {
+        navigatorKey.currentState!.push(
+          MaterialPageRoute(
+            builder: (context) => NoteFullEditorPage(
+              initialContent: note.content,
+              initialQuote: note,
+              allTags: categories,
+            ),
+          ),
+        );
+        AppLogger.i('已成功触发导航至笔记: $noteId');
+      } else {
+        AppLogger.w('导航失败：navigatorKey.currentState 为空，可能应用尚未完全启动');
+      }
+    } catch (e) {
+      AppLogger.e('执行通知导航逻辑出错', error: e);
+    }
   }
 
   /// 请求通知权限
