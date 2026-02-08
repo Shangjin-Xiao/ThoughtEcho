@@ -732,7 +732,11 @@ class LocationService extends ChangeNotifier {
   /// 输入格式: "国家,省份,城市,区县" (可能包含空字符串)
   /// 输出格式: "城市·区县" 或 "城市" 或 "省份" 或 "国家"
   static String formatLocationForDisplay(String? locationString) {
-    if (locationString == null || locationString.isEmpty) return '';
+    if (locationString == null ||
+        locationString.isEmpty ||
+        isNonDisplayMarker(locationString)) {
+      return '';
+    }
 
     final parts = locationString.split(',');
     // 如果不是预期的CSV格式，直接返回原字符串
