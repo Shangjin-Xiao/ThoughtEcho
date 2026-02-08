@@ -13,7 +13,6 @@ import 'package:device_info_plus/device_info_plus.dart';
 
 import '../models/smart_push_settings.dart';
 import '../models/quote_model.dart';
-import '../models/note_category.dart';
 import '../pages/note_full_editor_page.dart';
 import '../main.dart' show navigatorKey;
 import 'database_service.dart';
@@ -433,7 +432,7 @@ class SmartPushService extends ChangeNotifier {
               contentType = part.substring('contentType:'.length);
             } else if (part.startsWith('noteId:')) {
               final id = part.substring('noteId:'.length);
-              // 验证 noteId 格式
+              // 验证 noteId 格式 (UUID)
               if (RegExp(r'^[0-9a-fA-F-]{32,36}$').hasMatch(id)) {
                 noteId = id;
               }
@@ -460,7 +459,9 @@ class SmartPushService extends ChangeNotifier {
 
     // 处理打开特定笔记的逻辑
     if (noteId != null && noteId.isNotEmpty) {
-      _navigateToNote(noteId);
+      _navigateToNote(noteId).catchError((e) {
+        AppLogger.e('通知导航失败', error: e);
+      });
     }
   }
 
@@ -475,7 +476,7 @@ class SmartPushService extends ChangeNotifier {
       }
 
       // 获取所有标签，供编辑器使用
-      final List<NoteCategory> categories = await _databaseService.getCategories();
+      final categories = await _databaseService.getCategories();
 
       // 重试机制：等待 navigatorKey.currentState 就绪 (例如冷启动场景)
       int retryCount = 0;
