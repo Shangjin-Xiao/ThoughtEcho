@@ -1,7 +1,7 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
@@ -13,12 +13,15 @@ import 'package:device_info_plus/device_info_plus.dart';
 
 import '../models/smart_push_settings.dart';
 import '../models/quote_model.dart';
+import '../pages/note_full_editor_page.dart';
+import '../main.dart' show navigatorKey;
 import 'database_service.dart';
 import 'mmkv_service.dart';
 import 'location_service.dart';
 import 'weather_service.dart';
 import 'network_service.dart';
 import '../utils/app_logger.dart';
+import '../utils/platform_helper.dart';
 import 'background_push_handler.dart';
 import 'smart_push_analytics.dart';
 
@@ -108,7 +111,7 @@ class SmartPushService extends ChangeNotifier {
 
       // 请求精确闹钟权限（Android 12+）
       // 移除自动请求，改为在 UI 层（SmartPushSettingsPage）引导用户开启
-      if (!kIsWeb && Platform.isAndroid) {
+      if (PlatformHelper.isAndroid) {
         final canScheduleExact = await _canScheduleExactAlarms();
         if (!canScheduleExact) {
           AppLogger.i('精确闹钟权限不可用，将使用 WorkManager 降级方案');
@@ -120,7 +123,7 @@ class SmartPushService extends ChangeNotifier {
         await scheduleNextPush();
 
         // 仅当精确闹钟权限不可用时，才注册周期性备用任务（省电）
-        if (!kIsWeb && Platform.isAndroid) {
+        if (PlatformHelper.isAndroid) {
           final canScheduleExact = await _canScheduleExactAlarms();
           if (!canScheduleExact) {
             await _registerPeriodicFallbackTask();
@@ -146,7 +149,7 @@ class SmartPushService extends ChangeNotifier {
   /// 当 Android 12+ 精确闹钟权限被拒绝或系统限制后台执行时，
   /// 这个周期性任务（每15分钟）会检查是否有遗漏的推送
   Future<void> _registerPeriodicFallbackTask() async {
-    if (kIsWeb) return;
+    if (!PlatformHelper.isAndroid && !PlatformHelper.isIOS) return;
 
     try {
       // 注册周期性任务（最小间隔15分钟）
@@ -163,7 +166,7 @@ class SmartPushService extends ChangeNotifier {
 
   /// 取消周期性备用任务
   Future<void> _cancelPeriodicFallbackTask() async {
-    if (kIsWeb) return;
+    if (!PlatformHelper.isAndroid && !PlatformHelper.isIOS) return;
 
     try {
       await Workmanager().cancelByUniqueName('smart_push_periodic_check');
@@ -177,7 +180,7 @@ class SmartPushService extends ChangeNotifier {
   ///
   /// Android 12+ 需要 SCHEDULE_EXACT_ALARM 权限，Android 14+ 默认不授予
   Future<bool> _canScheduleExactAlarms() async {
-    if (kIsWeb || !Platform.isAndroid) return true;
+    if (!PlatformHelper.isAndroid) return true;
 
     try {
       final androidPlugin =
@@ -271,7 +274,7 @@ class SmartPushService extends ChangeNotifier {
 
     try {
       // Android: 通过 MethodChannel 获取系统时区
-      if (Platform.isAndroid) {
+      if (PlatformHelper.isAndroid) {
         const channel = MethodChannel('com.shangjin.thoughtecho/timezone');
         try {
           final String? timeZone = await channel.invokeMethod('getTimeZone');
@@ -392,7 +395,7 @@ class SmartPushService extends ChangeNotifier {
     );
 
     // 创建通知频道（Android 8.0+）
-    if (!kIsWeb && Platform.isAndroid) {
+    if (PlatformHelper.isAndroid) {
       final androidPlugin =
           _notificationsPlugin.resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>();
@@ -413,6 +416,7 @@ class SmartPushService extends ChangeNotifier {
   void _onNotificationTap(NotificationResponse response) {
     AppLogger.i('通知被点击: ${response.payload}');
 
+    String? noteId;
     // SOTA: 记录用户点击交互（正向反馈）
     // payload 格式: "contentType:xxx|noteId:yyy" 或 "dailyQuote"
     try {
@@ -421,16 +425,26 @@ class SmartPushService extends ChangeNotifier {
         String? contentType;
 
         if (payload.contains('contentType:')) {
-          // 解析 contentType
+          // 解析 contentType 和 noteId
           final parts = payload.split('|');
           for (final part in parts) {
             if (part.startsWith('contentType:')) {
               contentType = part.substring('contentType:'.length);
-              break;
+            } else if (part.startsWith('noteId:')) {
+              final id = part.substring('noteId:'.length);
+              // 验证 noteId 格式 (UUID)
+              if (RegExp(r'^[0-9a-fA-F-]{32,36}$').hasMatch(id)) {
+                noteId = id;
+              }
             }
           }
         } else if (payload == 'dailyQuote') {
           contentType = 'dailyQuote';
+        } else {
+          // 兼容旧版本 payload 只有 noteId 的情况，验证格式
+          if (RegExp(r'^[0-9a-fA-F-]{32,36}$').hasMatch(payload)) {
+            noteId = payload;
+          }
         }
 
         if (contentType != null && contentType.isNotEmpty) {
@@ -443,13 +457,59 @@ class SmartPushService extends ChangeNotifier {
       AppLogger.w('解析通知 payload 失败', error: e);
     }
 
-    // TODO: 可以在这里处理打开特定笔记的逻辑
+    // 处理打开特定笔记的逻辑
+    if (noteId != null && noteId.isNotEmpty) {
+      _navigateToNote(noteId).catchError((e) {
+        AppLogger.e('通知导航失败', error: e);
+      });
+    }
+  }
+
+  /// 导航到特定笔记
+  Future<void> _navigateToNote(String noteId) async {
+    try {
+      // 获取笔记详情
+      final note = await _databaseService.getQuoteById(noteId);
+      if (note == null) {
+        AppLogger.d('通知导航已取消：数据库中未找到笔记 $noteId');
+        return;
+      }
+
+      // 获取所有标签，供编辑器使用
+      final categories = await _databaseService.getCategories();
+
+      // 重试机制：等待 navigatorKey.currentState 就绪 (例如冷启动场景)
+      int retryCount = 0;
+      const maxRetries = 15;
+      while (navigatorKey.currentState == null && retryCount < maxRetries) {
+        AppLogger.d('等待 navigatorKey 就绪... ($retryCount)');
+        await Future.delayed(const Duration(milliseconds: 300));
+        retryCount++;
+      }
+
+      if (navigatorKey.currentState != null) {
+        navigatorKey.currentState!.push(
+          MaterialPageRoute(
+            builder: (context) => NoteFullEditorPage(
+              initialContent: note.content,
+              initialQuote: note,
+              allTags: categories,
+            ),
+          ),
+        );
+        AppLogger.i('已成功触发导航至笔记: $noteId');
+      } else {
+        AppLogger.w('通知导航失败：navigatorKey.currentState 在多次重试后仍为空');
+      }
+    } catch (e) {
+      AppLogger.e('执行通知导航逻辑出错', error: e);
+    }
   }
 
   /// 请求通知权限
   Future<bool> requestNotificationPermission() async {
     try {
-      if (!kIsWeb && Platform.isAndroid) {
+      if (PlatformHelper.isAndroid) {
         final androidPlugin =
             _notificationsPlugin.resolvePlatformSpecificImplementation<
                 AndroidFlutterLocalNotificationsPlugin>();
@@ -459,7 +519,7 @@ class SmartPushService extends ChangeNotifier {
         }
       }
 
-      if (!kIsWeb && Platform.isIOS) {
+      if (PlatformHelper.isIOS) {
         final iosPlugin =
             _notificationsPlugin.resolvePlatformSpecificImplementation<
                 IOSFlutterLocalNotificationsPlugin>();
@@ -485,7 +545,7 @@ class SmartPushService extends ChangeNotifier {
   /// 注意：SCHEDULE_EXACT_ALARM 不是运行时权限，需要用户在设置中手动开启
   /// Android 14+ 默认拒绝此权限
   Future<bool> checkExactAlarmPermission() async {
-    if (kIsWeb || !Platform.isAndroid) return true;
+    if (!PlatformHelper.isAndroid) return true;
 
     try {
       final androidPlugin =
@@ -522,7 +582,7 @@ class SmartPushService extends ChangeNotifier {
 
   /// 请求精确闹钟权限（引导用户到设置页面）
   Future<bool> requestExactAlarmPermission() async {
-    if (kIsWeb || !Platform.isAndroid) return true;
+    if (!PlatformHelper.isAndroid) return true;
 
     try {
       final androidPlugin =
@@ -552,7 +612,7 @@ class SmartPushService extends ChangeNotifier {
   /// 返回 true 表示已豁免电池优化（推送可以正常工作）
   /// 返回 false 表示未豁免（可能导致推送被系统杀死）
   Future<bool> checkBatteryOptimizationExempted() async {
-    if (kIsWeb || !Platform.isAndroid) return true;
+    if (!PlatformHelper.isAndroid) return true;
 
     try {
       final status = await Permission.ignoreBatteryOptimizations.status;
@@ -569,7 +629,7 @@ class SmartPushService extends ChangeNotifier {
   ///
   /// 会弹出系统对话框让用户确认
   Future<bool> requestBatteryOptimizationExemption() async {
-    if (kIsWeb || !Platform.isAndroid) return true;
+    if (!PlatformHelper.isAndroid) return true;
 
     try {
       final status = await Permission.ignoreBatteryOptimizations.request();
@@ -584,7 +644,7 @@ class SmartPushService extends ChangeNotifier {
 
   /// 获取设备制造商
   Future<String> getDeviceManufacturer() async {
-    if (kIsWeb || !Platform.isAndroid) return '';
+    if (!PlatformHelper.isAndroid) return '';
 
     try {
       final deviceInfo = DeviceInfoPlugin();
@@ -598,7 +658,7 @@ class SmartPushService extends ChangeNotifier {
 
   /// 获取 Android SDK 版本
   Future<int> getAndroidSdkVersion() async {
-    if (kIsWeb || !Platform.isAndroid) return 0;
+    if (!PlatformHelper.isAndroid) return 0;
 
     try {
       final deviceInfo = DeviceInfoPlugin();
@@ -621,8 +681,7 @@ class SmartPushService extends ChangeNotifier {
 
   /// 检查通知权限
   Future<bool> checkNotificationPermission() async {
-    if (kIsWeb) return true;
-    if (!Platform.isAndroid) return true;
+    if (!PlatformHelper.isAndroid) return true;
 
     try {
       final androidPlugin =
@@ -763,7 +822,7 @@ class SmartPushService extends ChangeNotifier {
       // 每日一言每天都推，不受 frequency 限制
       final scheduledDate = _nextInstanceOfTime(slot.hour, slot.minute);
 
-      if (!kIsWeb && Platform.isAndroid) {
+      if (PlatformHelper.isAndroid) {
         // 先检查精确闹钟权限
         final canScheduleExact = await _canScheduleExactAlarms();
 
@@ -987,7 +1046,7 @@ class SmartPushService extends ChangeNotifier {
   Future<void> _scheduleSingleAlarm(
       int idIndex, tz.TZDateTime scheduledDate, PushTimeSlot slot) async {
     // 1. Android: 优先使用 AlarmManager 实现精确定时
-    if (!kIsWeb && Platform.isAndroid) {
+    if (PlatformHelper.isAndroid) {
       // 先检查精确闹钟权限
       final canScheduleExact = await _canScheduleExactAlarms();
 
@@ -1017,7 +1076,7 @@ class SmartPushService extends ChangeNotifier {
       await _scheduleWorkManagerFallback(idIndex, scheduledDate, slot);
     }
     // 2. iOS: 使用 WorkManager 注册后台任务
-    else if (!kIsWeb && Platform.isIOS) {
+    else if (PlatformHelper.isIOS) {
       // iOS 使用本地通知作为用户可见的提醒
       await _scheduleLocalNotification(idIndex, scheduledDate, slot);
 
@@ -1125,7 +1184,7 @@ class SmartPushService extends ChangeNotifier {
 
   Future<void> _cancelAllSchedules() async {
     await _notificationsPlugin.cancelAll();
-    if (!kIsWeb && Platform.isAndroid) {
+    if (PlatformHelper.isAndroid) {
       // 取消常规推送
       for (int i = 0; i < 10; i++) {
         await AndroidAlarmManager.cancel(_androidAlarmId + i);
