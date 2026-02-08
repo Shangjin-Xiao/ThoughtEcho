@@ -55,14 +55,16 @@ void main() {
 
     test('returns empty string for pending marker', () {
       expect(
-        LocationService.formatLocationForDisplay(LocationService.kAddressPending),
+        LocationService.formatLocationForDisplay(
+            LocationService.kAddressPending),
         '',
       );
     });
 
     test('returns empty string for failed marker', () {
       expect(
-        LocationService.formatLocationForDisplay(LocationService.kAddressFailed),
+        LocationService.formatLocationForDisplay(
+            LocationService.kAddressFailed),
         '',
       );
     });
