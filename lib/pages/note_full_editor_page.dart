@@ -851,7 +851,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                 _originalLongitude,
               ),
             )
-          : l10n.locationRemoveHint(_originalLocation ?? _location ?? "");
+          : l10n.locationRemoveHint(
+              LocationService.formatLocationForDisplay(
+                _originalLocation ?? _location,
+              ),
+            );
       actions = [
         if (_showLocation)
           TextButton(
@@ -2673,8 +2677,16 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                           Expanded(
                                             child: Text(
                                               // 优先显示地址，没有地址时显示坐标
-                                              _location ??
-                                                  ((_latitude != null &&
+                                              (_location != null &&
+                                                      LocationService
+                                                          .formatLocationForDisplay(
+                                                        _location,
+                                                      ).isNotEmpty)
+                                                  ? LocationService
+                                                      .formatLocationForDisplay(
+                                                      _location,
+                                                    )
+                                                  : ((_latitude != null &&
                                                           _longitude != null)
                                                       ? '📍 ${LocationService.formatCoordinates(_latitude, _longitude)}'
                                                       : l10n

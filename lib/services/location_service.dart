@@ -728,6 +728,47 @@ class LocationService extends ChangeNotifier {
     return '$_country,$_province,$_city${_district != null ? ',$_district' : ''}';
   }
 
+  /// 解析并格式化存储的位置字符串用于显示
+  /// 输入格式: "国家,省份,城市,区县" (可能包含空字符串)
+  /// 输出格式: "城市·区县" 或 "城市" 或 "省份" 或 "国家"
+  static String formatLocationForDisplay(String? locationString) {
+    if (locationString == null ||
+        locationString.isEmpty ||
+        isNonDisplayMarker(locationString)) {
+      return '';
+    }
+
+    final parts = locationString.split(',');
+    // 如果不是预期的CSV格式，直接返回原字符串
+    if (parts.length < 3) return locationString;
+
+    final country = parts[0].trim();
+    final province = parts[1].trim();
+    final city = parts[2].trim();
+    final district = parts.length > 3 ? parts[3].trim() : '';
+
+    // 优先显示 城市·区县
+    if (city.isNotEmpty) {
+      if (district.isNotEmpty) {
+        return '$city·$district';
+      }
+      return city;
+    }
+
+    // 城市为空，降级显示省份
+    if (province.isNotEmpty) {
+      return province;
+    }
+
+    // 省份也为空，显示国家
+    if (country.isNotEmpty) {
+      return country;
+    }
+
+    // 全空，返回空或原字符串
+    return '';
+  }
+
   // 获取显示格式的位置，如"广州市·天河区"（中文）或 "Guangzhou · Tianhe"（英文）
   String getDisplayLocation() {
     if (_city == null) return '';
