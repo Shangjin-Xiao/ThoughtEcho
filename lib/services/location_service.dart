@@ -725,12 +725,12 @@ class LocationService extends ChangeNotifier {
   // 获取格式化位置(国家,省份,城市,区县)
   String getFormattedLocation() {
     if (_currentAddress == null) return '';
-    return '$_country,$_province,$_city${_district != null ? ',$_district' : ''}';
+    return '${_country ?? ''},${_province ?? ''},${_city ?? ''}${_district != null && _district!.isNotEmpty ? ',$_district' : ''}';
   }
 
   /// 解析并格式化存储的位置字符串用于显示
   /// 输入格式: "国家,省份,城市,区县" (可能包含空字符串)
-  /// 输出格式: "城市·区县" 或 "城市" 或 "省份" 或 "国家"
+  /// 输出格式: "城市·区县" 或 "省份·区县" 或 "城市" 或 "省份" 或 "国家"
   static String formatLocationForDisplay(String? locationString) {
     if (locationString == null ||
         locationString.isEmpty ||
@@ -739,7 +739,6 @@ class LocationService extends ChangeNotifier {
     }
 
     final parts = locationString.split(',');
-    // 如果不是预期的CSV格式，直接返回原字符串
     if (parts.length < 3) return locationString;
 
     final country = parts[0].trim();
@@ -747,7 +746,6 @@ class LocationService extends ChangeNotifier {
     final city = parts[2].trim();
     final district = parts.length > 3 ? parts[3].trim() : '';
 
-    // 优先显示 城市·区县
     if (city.isNotEmpty) {
       if (district.isNotEmpty) {
         return '$city·$district';
@@ -755,43 +753,51 @@ class LocationService extends ChangeNotifier {
       return city;
     }
 
-    // 城市为空，降级显示省份
+    // city 为空时（日本等地址结构），组合 province + district
     if (province.isNotEmpty) {
+      if (district.isNotEmpty) {
+        return '$province·$district';
+      }
       return province;
     }
 
-    // 省份也为空，显示国家
     if (country.isNotEmpty) {
       return country;
     }
 
-    // 全空，返回空或原字符串
     return '';
   }
 
   // 获取显示格式的位置，如"广州市·天河区"（中文）或 "Guangzhou · Tianhe"（英文）
   String getDisplayLocation() {
-    if (_city == null) return '';
-
-    // 根据语言设置决定显示格式
     final bool isChinese = _apiLanguageParam == 'zh';
-    String cityDisplay;
+    final separator = isChinese ? '·' : ' · ';
+    final hasCity = _city != null && _city!.isNotEmpty;
+    final hasDistrict = _district != null && _district!.isNotEmpty;
+    final hasProvince = _province != null && _province!.isNotEmpty;
 
-    if (isChinese) {
-      // 中文：如果城市名已经包含"市"，不再添加
-      cityDisplay = _city!.endsWith('市') ? _city! : '$_city市';
-    } else {
-      // 英文：不添加后缀
-      cityDisplay = _city!;
-    }
-
-    // 如果有区县信息，添加分隔符和区县名称
-    if (_district != null && _district!.isNotEmpty) {
-      final separator = isChinese ? '·' : ' · ';
-      return '$cityDisplay$separator$_district';
-    } else {
+    if (hasCity) {
+      String cityDisplay;
+      if (isChinese) {
+        cityDisplay = _city!.endsWith('市') ? _city! : '$_city市';
+      } else {
+        cityDisplay = _city!;
+      }
+      if (hasDistrict) {
+        return '$cityDisplay$separator$_district';
+      }
       return cityDisplay;
     }
+
+    // city 为空时（日本等地址结构），组合 province + district
+    if (hasProvince) {
+      if (hasDistrict) {
+        return '$_province$separator$_district';
+      }
+      return _province!;
+    }
+
+    return '';
   }
 
   /// 格式化坐标显示（用于离线状态或简单显示）
@@ -816,9 +822,10 @@ class LocationService extends ChangeNotifier {
 
   /// 获取位置显示文本（优先地址，离线时显示坐标）
   String getLocationDisplayText() {
-    // 如果有城市信息，返回友好格式
-    if (_city != null && _city!.isNotEmpty) {
-      return getDisplayLocation();
+    // 如果有城市或省份信息，返回友好格式
+    final display = getDisplayLocation();
+    if (display.isNotEmpty) {
+      return display;
     }
 
     // 如果有格式化地址，返回地址

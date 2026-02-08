@@ -19,9 +19,15 @@ void main() {
       expect(LocationService.formatLocationForDisplay(input), 'Beijing');
     });
 
-    test('formats CSV with missing city correctly (The Bug Case)', () {
+    test('formats CSV with missing city correctly (province only)', () {
       const input = 'Japan,Chiba,,';
       expect(LocationService.formatLocationForDisplay(input), 'Chiba');
+    });
+
+    test('formats CSV with missing city but has district (Japan style)', () {
+      const input = 'Japan,Tokyo,,Shinjuku';
+      expect(
+          LocationService.formatLocationForDisplay(input), 'Tokyo·Shinjuku');
     });
 
     test('formats CSV with missing city and district correctly', () {
