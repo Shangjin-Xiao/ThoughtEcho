@@ -563,7 +563,7 @@ class MediaFileService {
   }
 
   /// 获取内存使用建议
-  static String getMemoryUsageAdvice(List<String> filePaths) {
+  static Future<String> getMemoryUsageAdvice(List<String> filePaths) async {
     int totalSize = 0;
     int largeFileCount = 0;
     const largeFileThreshold = 100 * 1024 * 1024; // 100MB
@@ -571,7 +571,7 @@ class MediaFileService {
     for (final filePath in filePaths) {
       try {
         final file = File(filePath);
-        final stat = file.statSync();
+        final stat = await file.stat();
         totalSize += stat.size;
 
         if (stat.size > largeFileThreshold) {
