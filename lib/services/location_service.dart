@@ -755,8 +755,16 @@ class LocationService extends ChangeNotifier {
       return city;
     }
 
-    // 城市为空，降级显示省份
+    // 城市为空，降级显示省份·区县 或 省份
+    // 这种情况在日本等地很常见（Tokyo Prefecture, Shinjuku District）
     if (province.isNotEmpty) {
+      if (district.isNotEmpty) {
+        return '$province·$district';
+      }
+      // 如果城市和区县都为空，尝试显示 国家·省份，避免只显示省份太宽泛
+      if (country.isNotEmpty && country != province) {
+        return '$country·$province';
+      }
       return province;
     }
 
@@ -771,27 +779,54 @@ class LocationService extends ChangeNotifier {
 
   // 获取显示格式的位置，如"广州市·天河区"（中文）或 "Guangzhou · Tianhe"（英文）
   String getDisplayLocation() {
-    if (_city == null) return '';
+    // 优先显示 城市·区县
+    if (_city != null && _city!.isNotEmpty) {
+      // 根据语言设置决定显示格式
+      final bool isChinese = _apiLanguageParam == 'zh';
+      String cityDisplay;
 
-    // 根据语言设置决定显示格式
-    final bool isChinese = _apiLanguageParam == 'zh';
-    String cityDisplay;
+      if (isChinese) {
+        // 中文：如果城市名已经包含"市"，不再添加
+        cityDisplay = _city!.endsWith('市') ? _city! : '$_city市';
+      } else {
+        // 英文：不添加后缀
+        cityDisplay = _city!;
+      }
 
-    if (isChinese) {
-      // 中文：如果城市名已经包含"市"，不再添加
-      cityDisplay = _city!.endsWith('市') ? _city! : '$_city市';
-    } else {
-      // 英文：不添加后缀
-      cityDisplay = _city!;
+      // 如果有区县信息，添加分隔符和区县名称
+      if (_district != null && _district!.isNotEmpty) {
+        final separator = isChinese ? '·' : ' · ';
+        return '$cityDisplay$separator$_district';
+      } else {
+        return cityDisplay;
+      }
     }
 
-    // 如果有区县信息，添加分隔符和区县名称
-    if (_district != null && _district!.isNotEmpty) {
-      final separator = isChinese ? '·' : ' · ';
-      return '$cityDisplay$separator$_district';
-    } else {
-      return cityDisplay;
+    // 城市为空，降级显示省份·区县 或 省份
+    // 这种情况在日本等地很常见（Tokyo Prefecture, Shinjuku District）
+    if (_province != null && _province!.isNotEmpty) {
+      if (_district != null && _district!.isNotEmpty) {
+        final bool isChinese = _apiLanguageParam == 'zh';
+        final separator = isChinese ? '·' : ' · ';
+        return '$_province$separator$_district';
+      }
+
+      // 如果城市和区县都为空，尝试显示 国家·省份，避免只显示省份太宽泛
+      if (_country != null && _country!.isNotEmpty && _country != _province) {
+        final bool isChinese = _apiLanguageParam == 'zh';
+        final separator = isChinese ? '·' : ' · ';
+        return '$_country$separator$_province';
+      }
+
+      return _province!;
     }
+
+    // 省份也为空，显示国家
+    if (_country != null && _country!.isNotEmpty) {
+      return _country!;
+    }
+
+    return '';
   }
 
   /// 格式化坐标显示（用于离线状态或简单显示）
@@ -902,10 +937,10 @@ class LocationService extends ChangeNotifier {
 
     final parts = locationString.split(',');
     if (parts.length >= 3) {
-      _country = parts[0];
-      _province = parts[1];
-      _city = parts[2];
-      _district = parts.length >= 4 ? parts[3] : null;
+      _country = parts[0].trim();
+      _province = parts[1].trim();
+      _city = parts[2].trim();
+      _district = parts.length >= 4 ? parts[3].trim() : null;
 
       // 构建显示地址
       _currentAddress = '$_country, $_province, $_city';

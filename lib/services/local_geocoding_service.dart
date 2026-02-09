@@ -141,7 +141,11 @@ class LocalGeocodingService {
           final addressInfo = <String, String?>{
             'country': place.country,
             'province': place.administrativeArea,
-            'city': place.locality ?? place.subAdministrativeArea,
+            // 优先使用 locality (City)，如果为空则使用 subAdministrativeArea (District/County)
+            // 解决日本等地 locality 为空导致只显示 Province 的问题
+            'city': (place.locality != null && place.locality!.isNotEmpty)
+                ? place.locality
+                : place.subAdministrativeArea,
             'district': place.subLocality,
             'street': place.thoroughfare,
             'formatted_address': _formatAddress(place),
