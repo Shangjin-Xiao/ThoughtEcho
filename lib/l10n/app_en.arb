@@ -2521,6 +2521,17 @@
   "weatherFetchFailed": "Weather fetch failed",
   "pleaseSelectCityFirst": "Please select a city or enable location service first",
   "useCurrentLocation": "Use Current Location",
+  "useFreeOnlineReverseGeocoding": "Use free online reverse geocoding",
+  "onlineReverseGeocodingNeedsLocation": "Please get current location first",
+  "onlineReverseGeocodingFailed": "Online reverse geocoding failed",
+  "onlineReverseGeocodingSuccess": "Online reverse geocoding updated: {address}",
+  "@onlineReverseGeocodingSuccess": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
   "weatherProvidedBy": "Weather data provided by Open-Meteo",
   "processing": "Processing...",
   "searchingCity": "Searching cities...",
