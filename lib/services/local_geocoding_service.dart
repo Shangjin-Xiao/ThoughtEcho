@@ -116,8 +116,11 @@ class LocalGeocodingService {
       final localeIdentifier = _buildLocaleIdentifier(localeCode);
 
       // 首先尝试从缓存读取（含语言匹配）
-      final cachedAddress =
-          await _getFromCache(latitude, longitude, localeIdentifier);
+      final cachedAddress = await _getFromCache(
+        latitude,
+        longitude,
+        localeIdentifier,
+      );
       if (cachedAddress != null) {
         logDebug('使用缓存的地理编码数据');
         return cachedAddress;
@@ -128,21 +131,34 @@ class LocalGeocodingService {
       try {
         final placemarks = await _runSerialized(() async {
           await geocoding.setLocaleIdentifier(localeIdentifier);
-          return await geocoding.placemarkFromCoordinates(
-            latitude,
-            longitude,
-          );
+          return await geocoding.placemarkFromCoordinates(latitude, longitude);
         });
 
         if (placemarks.isNotEmpty) {
           final place = placemarks.first;
 
           // 构建地址信息，确保所有值都是字符串类型或null
+          final placeCountry = place.country?.trim();
+          final placeProvince = place.administrativeArea?.trim();
+          final placeLocality = place.locality?.trim();
+          final placeSubAdminArea = place.subAdministrativeArea?.trim();
+          final placeSubLocality = place.subLocality?.trim();
           final addressInfo = <String, String?>{
-            'country': place.country,
-            'province': place.administrativeArea,
-            'city': place.locality ?? place.subAdministrativeArea,
-            'district': place.subLocality,
+            'country': (placeCountry != null && placeCountry.isNotEmpty)
+                ? placeCountry
+                : null,
+            'province': (placeProvince != null && placeProvince.isNotEmpty)
+                ? placeProvince
+                : null,
+            'city': (placeLocality != null && placeLocality.isNotEmpty)
+                ? placeLocality
+                : ((placeSubAdminArea != null && placeSubAdminArea.isNotEmpty)
+                    ? placeSubAdminArea
+                    : null),
+            'district':
+                (placeSubLocality != null && placeSubLocality.isNotEmpty)
+                    ? placeSubLocality
+                    : null,
             'street': place.thoroughfare,
             'formatted_address': _formatAddress(place),
             'source': 'system', // 标记数据来源
@@ -150,7 +166,11 @@ class LocalGeocodingService {
 
           // 缓存结果
           await _saveToCache(
-              latitude, longitude, addressInfo, localeIdentifier);
+            latitude,
+            longitude,
+            addressInfo,
+            localeIdentifier,
+          );
 
           return addressInfo;
         }
