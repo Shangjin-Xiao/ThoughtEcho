@@ -6,7 +6,9 @@ void main() {
     test('formats full CSV correctly', () {
       const input = 'China,Beijing,Beijing,Chaoyang';
       expect(
-          LocationService.formatLocationForDisplay(input), 'Beijing·Chaoyang');
+        LocationService.formatLocationForDisplay(input),
+        'Beijing·Chaoyang',
+      );
     });
 
     test('formats CSV with missing district correctly', () {
@@ -19,20 +21,25 @@ void main() {
       expect(LocationService.formatLocationForDisplay(input), 'Beijing');
     });
 
-    test('formats CSV with missing city correctly (province only)', () {
-      const input = 'Japan,Chiba,,';
-      expect(LocationService.formatLocationForDisplay(input), 'Chiba');
-    });
+    test(
+      'formats CSV with missing district and different province correctly',
+      () {
+        const input = 'China,Zhejiang,Hangzhou,';
+        expect(
+          LocationService.formatLocationForDisplay(input),
+          'Zhejiang·Hangzhou',
+        );
+      },
+    );
 
     test('formats CSV with missing city but has district (Japan style)', () {
       const input = 'Japan,Tokyo,,Shinjuku';
-      expect(
-          LocationService.formatLocationForDisplay(input), 'Tokyo·Shinjuku');
+      expect(LocationService.formatLocationForDisplay(input), 'Tokyo·Shinjuku');
     });
 
     test('formats CSV with missing city and district correctly', () {
       const input = 'Japan,Chiba,,';
-      expect(LocationService.formatLocationForDisplay(input), 'Chiba');
+      expect(LocationService.formatLocationForDisplay(input), 'Japan·Chiba');
     });
 
     test('formats CSV with missing city, district, province correctly', () {
@@ -47,8 +54,10 @@ void main() {
 
     test('returns original string for non-CSV', () {
       const input = 'Some Random String';
-      expect(LocationService.formatLocationForDisplay(input),
-          'Some Random String');
+      expect(
+        LocationService.formatLocationForDisplay(input),
+        'Some Random String',
+      );
     });
 
     test('returns empty string for null', () {
@@ -62,7 +71,8 @@ void main() {
     test('returns empty string for pending marker', () {
       expect(
         LocationService.formatLocationForDisplay(
-            LocationService.kAddressPending),
+          LocationService.kAddressPending,
+        ),
         '',
       );
     });
@@ -70,7 +80,8 @@ void main() {
     test('returns empty string for failed marker', () {
       expect(
         LocationService.formatLocationForDisplay(
-            LocationService.kAddressFailed),
+          LocationService.kAddressFailed,
+        ),
         '',
       );
     });

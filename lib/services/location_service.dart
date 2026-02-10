@@ -329,6 +329,24 @@ class LocationService extends ChangeNotifier {
     }
   }
 
+  /// 开发者模式：强制使用免费的在线反向地理编码（Nominatim）
+  /// 返回 true 表示解析成功并更新了地址信息
+  Future<bool> refreshAddressFromOnlineReverseGeocoding() async {
+    if (_currentPosition == null) {
+      logDebug('没有位置信息，无法使用在线反向地理编码');
+      return false;
+    }
+
+    try {
+      await _getAddressFromLatLngOnline();
+      notifyListeners();
+      return true;
+    } catch (e) {
+      logDebug('开发者模式在线反向地理编码失败: $e');
+      return false;
+    }
+  }
+
   // 使用在线服务获取地址（备用方法）
   Future<void> _getAddressFromLatLngOnline() async {
     try {
@@ -336,8 +354,9 @@ class LocationService extends ChangeNotifier {
           'https://nominatim.openstreetmap.org/reverse?format=json&lat=${_currentPosition!.latitude}&lon=${_currentPosition!.longitude}&zoom=18&addressdetails=1';
 
       // 根据语言设置构建 Accept-Language 头
-      final acceptLanguage =
-          I18nLanguage.buildAcceptLanguage(_apiLanguageParam);
+      final acceptLanguage = I18nLanguage.buildAcceptLanguage(
+        _apiLanguageParam,
+      );
 
       final response = await NetworkService.instance.get(
         url,
@@ -362,11 +381,13 @@ class LocationService extends ChangeNotifier {
               address['village'];
           _district = address['district'] ?? address['suburb'];
 
-          // 组合完整地址显示
-          _currentAddress = '$_country, $_province, $_city';
-          if (_district != null && _district!.isNotEmpty) {
-            _currentAddress = '$_currentAddress, $_district';
-          }
+          // 组合完整地址显示（过滤空值，避免出现 "null" 字面量）
+          final parts = [_country, _province, _city, _district]
+              .whereType<String>()
+              .map((part) => part.trim())
+              .where((part) => part.isNotEmpty)
+              .toList();
+          _currentAddress = parts.isNotEmpty ? parts.join(', ') : null;
 
           logDebug('在线地址解析成功: $_currentAddress');
         }
@@ -538,8 +559,9 @@ class LocationService extends ChangeNotifier {
       logDebug('Nominatim搜索URL: $url');
 
       // 根据语言设置构建 Accept-Language 头
-      final acceptLanguage =
-          I18nLanguage.buildAcceptLanguage(_apiLanguageParam);
+      final acceptLanguage = I18nLanguage.buildAcceptLanguage(
+        _apiLanguageParam,
+      );
 
       final response = await NetworkService.instance.get(
         url,
@@ -750,6 +772,9 @@ class LocationService extends ChangeNotifier {
       if (district.isNotEmpty) {
         return '$city·$district';
       }
+      if (province.isNotEmpty && province != city) {
+        return '$province·$city';
+      }
       return city;
     }
 
@@ -757,6 +782,9 @@ class LocationService extends ChangeNotifier {
     if (province.isNotEmpty) {
       if (district.isNotEmpty) {
         return '$province·$district';
+      }
+      if (country.isNotEmpty && country != province) {
+        return '$country·$province';
       }
       return province;
     }
@@ -786,6 +814,9 @@ class LocationService extends ChangeNotifier {
       if (hasDistrict) {
         return '$cityDisplay$separator$_district';
       }
+      if (hasProvince && _province != _city) {
+        return '$_province$separator$cityDisplay';
+      }
       return cityDisplay;
     }
 
@@ -793,6 +824,10 @@ class LocationService extends ChangeNotifier {
     if (hasProvince) {
       if (hasDistrict) {
         return '$_province$separator$_district';
+      }
+      final hasCountry = _country != null && _country!.isNotEmpty;
+      if (hasCountry && _country != _province) {
+        return '$_country$separator$_province';
       }
       return _province!;
     }
@@ -909,16 +944,25 @@ class LocationService extends ChangeNotifier {
 
     final parts = locationString.split(',');
     if (parts.length >= 3) {
-      _country = parts[0];
-      _province = parts[1];
-      _city = parts[2];
-      _district = parts.length >= 4 ? parts[3] : null;
-
-      // 构建显示地址
-      _currentAddress = '$_country, $_province, $_city';
-      if (_district != null && _district!.isNotEmpty) {
-        _currentAddress = '$_currentAddress, $_district';
+      String? normalizePart(String? value) {
+        final trimmed = value?.trim();
+        return (trimmed == null || trimmed.isEmpty) ? null : trimmed;
       }
+
+      _country = normalizePart(parts[0]);
+      _province = normalizePart(parts[1]);
+      _city = normalizePart(parts[2]);
+      _district = parts.length >= 4 ? normalizePart(parts[3]) : null;
+
+      final addressParts = <String?>[
+        _country,
+        _province,
+        _city,
+        _district,
+      ].whereType<String>().toList();
+
+      _currentAddress =
+          addressParts.isNotEmpty ? addressParts.join(', ') : null;
     }
   }
 }
