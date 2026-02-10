@@ -161,8 +161,8 @@ class LocalGeocodingService {
                     : null,
             'street':
                 (placeThoroughfare != null && placeThoroughfare.isNotEmpty)
-                ? placeThoroughfare
-                : null,
+                    ? placeThoroughfare
+                    : null,
             'formatted_address': _formatAddress(place),
             'source': 'system', // 标记数据来源
           };
