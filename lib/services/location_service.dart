@@ -369,11 +369,13 @@ class LocationService extends ChangeNotifier {
               address['village'];
           _district = address['district'] ?? address['suburb'];
 
-          // 组合完整地址显示
-          _currentAddress = '$_country, $_province, $_city';
-          if (_district != null && _district!.isNotEmpty) {
-            _currentAddress = '$_currentAddress, $_district';
-          }
+          // 组合完整地址显示（过滤空值，避免出现 "null" 字面量）
+          final parts = [_country, _province, _city, _district]
+              .whereType<String>()
+              .map((part) => part.trim())
+              .where((part) => part.isNotEmpty)
+              .toList();
+          _currentAddress = parts.isNotEmpty ? parts.join(', ') : null;
 
           logDebug('在线地址解析成功: $_currentAddress');
         }
