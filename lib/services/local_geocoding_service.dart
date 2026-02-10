@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:geocoding/geocoding.dart' as geocoding;
-import 'package:geocode/geocode.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:async';
 import 'dart:convert';
@@ -11,9 +10,6 @@ import '../utils/app_logger.dart'; // 导入日志工具
 ///import '../utils/app_logger.dart'; 本地地理编码服务类
 /// 优先使用系统级SDK获取地理位置并进行反向地理编码
 class LocalGeocodingService {
-  // 使用默认地理编码库
-  static final GeoCode _geoCode = GeoCode();
-
   // 串行化 setLocaleIdentifier + placemarkFromCoordinates，避免竞态
   static Future<void> _geocodingQueue = Future.value();
 
@@ -181,40 +177,6 @@ class LocalGeocodingService {
         logDebug('系统地理编码失败，尝试使用备用方法: $e');
       }
 
-      // 如果系统方法失败，使用GeoCode库
-      try {
-        final address = await _geoCode.reverseGeocoding(
-          latitude: latitude,
-          longitude: longitude,
-        );
-
-        final country = address.countryName?.trim();
-        final province = address.region?.trim();
-        final city = address.city?.trim();
-        final district = address.streetNumber?.toString().trim();
-        final street = address.streetAddress?.trim();
-
-        final addressInfo = <String, String?>{
-          'country': (country != null && country.isNotEmpty) ? country : null,
-          'province':
-              (province != null && province.isNotEmpty) ? province : null,
-          'city': (city != null && city.isNotEmpty) ? city : null,
-          // 将 int? 类型转换为 String?
-          'district':
-              (district != null && district.isNotEmpty) ? district : null,
-          'street': (street != null && street.isNotEmpty) ? street : null,
-          'formatted_address': _formatAddressFromGeoCode(address),
-          'source': 'geocode', // 标记数据来源
-        };
-
-        // 缓存结果
-        await _saveToCache(latitude, longitude, addressInfo, localeIdentifier);
-
-        return addressInfo;
-      } catch (e) {
-        logDebug('备用地理编码也失败: $e');
-      }
-
       // 如果所有方法都失败，则返回null，不使用本地估算
       return null;
     } catch (e) {
@@ -262,7 +224,22 @@ class LocalGeocodingService {
 
               // 检查是否过期
               if (DateTime.now().difference(timestamp) < _cacheDuration) {
-                // 转换成期望的格式，确保所有值都是String类型或null
+                // 检查缓存中是否包含限流脏数据，如果是则跳过
+                final cachedValues = [
+                  addressData['country'],
+                  addressData['province'],
+                  addressData['city'],
+                  addressData['district'],
+                  addressData['street'],
+                  addressData['formatted_address'],
+                ];
+                final hasThrottled = cachedValues.any(
+                  (v) => v is String && v.contains('Throttled'),
+                );
+                if (hasThrottled) {
+                  continue;
+                }
+
                 return {
                   'country': addressData['country'] as String?,
                   'province': addressData['province'] as String?,
@@ -398,25 +375,6 @@ class LocalGeocodingService {
     // 如果找不到详细地址，至少返回国家信息
     if (addressComponents.isEmpty && place.country != null) {
       return place.country!;
-    }
-
-    return addressComponents.join(', ');
-  }
-
-  /// 使用GeoCode库的Address格式化地址
-  static String _formatAddressFromGeoCode(Address address) {
-    List<String> addressComponents = [];
-
-    if (address.countryName != null && address.countryName!.isNotEmpty) {
-      addressComponents.add(address.countryName!);
-    }
-
-    if (address.region != null && address.region!.isNotEmpty) {
-      addressComponents.add(address.region!);
-    }
-
-    if (address.city != null && address.city!.isNotEmpty) {
-      addressComponents.add(address.city!);
     }
 
     return addressComponents.join(', ');

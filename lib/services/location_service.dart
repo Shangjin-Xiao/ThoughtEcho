@@ -48,6 +48,7 @@ class LocationService extends ChangeNotifier {
   bool _hasLocationPermission = false;
   bool _isLocationServiceEnabled = false;
   bool _isLoading = false;
+  int _geocodeToken = 0;
 
   // 城市搜索结果
   List<CityInfo> _searchResults = [];
@@ -275,57 +276,79 @@ class LocationService extends ChangeNotifier {
   }
 
   // 根据经纬度获取地址信息
+  // 优先级：缓存 → 系统SDK → Nominatim在线 → 系统SDK部分结果
   Future<void> getAddressFromLatLng() async {
     if (_currentPosition == null) {
       logDebug('没有位置信息，无法获取地址');
       return;
     }
 
+    final token = ++_geocodeToken;
+
     try {
       logDebug('开始通过经纬度获取地址信息...');
 
-      // 使用系统SDK获取地址信息，传入语言参数
-      final addressInfo = await LocalGeocodingService.getAddressFromCoordinates(
-        _currentPosition!.latitude,
-        _currentPosition!.longitude,
+      final lat = _currentPosition!.latitude;
+      final lon = _currentPosition!.longitude;
+
+      // Step 1: 系统SDK解析（含缓存）
+      final systemResult =
+          await LocalGeocodingService.getAddressFromCoordinates(
+        lat,
+        lon,
         localeCode: _apiLanguageParam,
       );
 
-      // 如果本地解析成功
-      if (addressInfo != null) {
-        _country = addressInfo['country'];
-        _province = addressInfo['province'];
-        _city = addressInfo['city'];
-        _district = addressInfo['district'];
-        _currentAddress = addressInfo['formatted_address'];
+      if (token != _geocodeToken) return;
 
+      // Step 2: 系统结果完整（有城市信息），直接使用
+      if (systemResult != null && _isAddressSufficient(systemResult)) {
+        _applyAddressResult(systemResult);
         logDebug(
-          '本地地址解析成功: $_currentAddress (国家:$_country, 省份:$_province, 城市:$_city, 区县:$_district)',
+          '系统地址解析成功: $_currentAddress (国家:$_country, 省份:$_province, 城市:$_city, 区县:$_district)',
         );
-        notifyListeners();
         return;
       }
 
-      // 如果本地解析失败（或英文环境跳过），使用在线服务 (Nominatim)
+      if (systemResult != null) {
+        logDebug(
+          '系统地址解析不完整(缺少城市)，尝试在线补充: ${systemResult['formatted_address']}',
+        );
+      } else {
+        logDebug('系统地址解析失败，尝试在线解析');
+      }
+
+      // Step 3: 系统结果不完整或为空，尝试 Nominatim 在线解析
       try {
-        await _getAddressFromLatLngOnline();
+        final onlineResult = await _reverseGeocodeWithNominatim(lat, lon);
+        if (token != _geocodeToken) return;
+        if (onlineResult != null) {
+          _applyAddressResult(onlineResult);
+          logDebug(
+            '在线地址解析成功: $_currentAddress (国家:$_country, 省份:$_province, 城市:$_city, 区县:$_district)',
+          );
+          return;
+        }
       } catch (e) {
         logDebug('在线地址解析失败: $e');
-        _country = null;
-        _province = null;
-        _city = null;
-        _district = null;
-        _currentAddress = kAddressFailed;
-        notifyListeners();
       }
+
+      if (token != _geocodeToken) return;
+
+      // Step 4: Nominatim 失败，使用系统SDK的部分结果（有总比没有好）
+      if (systemResult != null) {
+        _applyAddressResult(systemResult);
+        logDebug(
+          '使用系统部分结果: $_currentAddress (国家:$_country, 省份:$_province, 城市:$_city, 区县:$_district)',
+        );
+        return;
+      }
+
+      // Step 5: 全部失败
+      _applyAddressResult(null);
     } catch (e) {
       logDebug('获取地址信息失败: $e');
-      _country = null;
-      _province = null;
-      _city = null;
-      _district = null;
-      _currentAddress = kAddressFailed;
-      notifyListeners();
+      if (token == _geocodeToken) _applyAddressResult(null);
     }
   }
 
@@ -338,62 +361,104 @@ class LocationService extends ChangeNotifier {
     }
 
     try {
-      await _getAddressFromLatLngOnline();
-      notifyListeners();
-      return true;
+      final result = await _reverseGeocodeWithNominatim(
+        _currentPosition!.latitude,
+        _currentPosition!.longitude,
+      );
+      if (result != null) {
+        _applyAddressResult(result);
+        return true;
+      }
+      return false;
     } catch (e) {
       logDebug('开发者模式在线反向地理编码失败: $e');
       return false;
     }
   }
 
-  // 使用在线服务获取地址（备用方法）
-  Future<void> _getAddressFromLatLngOnline() async {
+  /// 判断地址结果是否满足显示需求（至少有城市信息）
+  bool _isAddressSufficient(Map<String, String?> addr) {
+    final city = addr['city'];
+    return city != null && city.isNotEmpty;
+  }
+
+  /// 将地址结果应用到内部状态，null 表示失败
+  void _applyAddressResult(Map<String, String?>? result) {
+    if (result != null) {
+      _country = result['country'];
+      _province = result['province'];
+      _city = result['city'];
+      _district = result['district'];
+      _currentAddress = result['formatted_address'];
+    } else {
+      _country = null;
+      _province = null;
+      _city = null;
+      _district = null;
+      _currentAddress = kAddressFailed;
+    }
+    notifyListeners();
+  }
+
+  /// Nominatim 在线反向地理编码，返回地址 Map 或 null
+  Future<Map<String, String?>?> _reverseGeocodeWithNominatim(
+    double latitude,
+    double longitude,
+  ) async {
+    final url =
+        'https://nominatim.openstreetmap.org/reverse?format=json&lat=$latitude&lon=$longitude&zoom=18&addressdetails=1';
+
+    final acceptLanguage = I18nLanguage.buildAcceptLanguage(
+      _apiLanguageParam,
+    );
+
+    final response = await NetworkService.instance.get(
+      url,
+      headers: {
+        'Accept-Language': acceptLanguage,
+        'User-Agent': 'ThoughtEcho App',
+      },
+      timeoutSeconds: 15,
+    );
+
+    if (response.statusCode != 200) {
+      logDebug('Nominatim 返回非200状态码: ${response.statusCode}');
+      return null;
+    }
+
     try {
-      final url =
-          'https://nominatim.openstreetmap.org/reverse?format=json&lat=${_currentPosition!.latitude}&lon=${_currentPosition!.longitude}&zoom=18&addressdetails=1';
+      final decoded = json.decode(response.body);
+      if (decoded is! Map<String, dynamic>) return null;
 
-      // 根据语言设置构建 Accept-Language 头
-      final acceptLanguage = I18nLanguage.buildAcceptLanguage(
-        _apiLanguageParam,
-      );
+      final address = decoded['address'];
+      if (address is! Map) return null;
 
-      final response = await NetworkService.instance.get(
-        url,
-        headers: {
-          'Accept-Language': acceptLanguage,
-          'User-Agent': 'ThoughtEcho App',
-        },
-        timeoutSeconds: 15,
-      );
+      String? s(dynamic v) =>
+          (v is String && v.trim().isNotEmpty) ? v.trim() : null;
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+      final country = s(address['country']);
+      final province = s(address['state'] ?? address['province']);
+      final city = s(address['city'] ??
+          address['county'] ??
+          address['town'] ??
+          address['village']);
+      final district = s(address['district'] ?? address['suburb']);
 
-        // 解析国家、省、市、区信息
-        if (data.containsKey('address')) {
-          final address = data['address'];
-          _country = address['country'];
-          _province = address['state'] ?? address['province'];
-          _city = address['city'] ??
-              address['county'] ??
-              address['town'] ??
-              address['village'];
-          _district = address['district'] ?? address['suburb'];
+      final parts =
+          [country, province, city, district].whereType<String>().toList();
+      final formattedAddress = parts.isNotEmpty ? parts.join(', ') : null;
 
-          // 组合完整地址显示（过滤空值，避免出现 "null" 字面量）
-          final parts = [_country, _province, _city, _district]
-              .whereType<String>()
-              .map((part) => part.trim())
-              .where((part) => part.isNotEmpty)
-              .toList();
-          _currentAddress = parts.isNotEmpty ? parts.join(', ') : null;
-
-          logDebug('在线地址解析成功: $_currentAddress');
-        }
-      }
+      return <String, String?>{
+        'country': country,
+        'province': province,
+        'city': city,
+        'district': district,
+        'formatted_address': formattedAddress,
+        'source': 'nominatim',
+      };
     } catch (e) {
-      throw Exception('在线地址解析调用失败: $e');
+      logDebug('Nominatim 响应解析失败: $e');
+      return null;
     }
   }
 
@@ -746,8 +811,15 @@ class LocationService extends ChangeNotifier {
 
   // 获取格式化位置(国家,省份,城市,区县)
   String getFormattedLocation() {
-    if (_currentAddress == null) return '';
-    return '${_country ?? ''},${_province ?? ''},${_city ?? ''}${_district != null && _district!.isNotEmpty ? ',$_district' : ''}';
+    if (isNonDisplayMarker(_currentAddress)) return '';
+    final parts = [
+      _country ?? '',
+      _province ?? '',
+      _city ?? '',
+      _district ?? '',
+    ];
+    if (parts.every((p) => p.trim().isEmpty)) return '';
+    return parts.join(',');
   }
 
   /// 解析并格式化存储的位置字符串用于显示

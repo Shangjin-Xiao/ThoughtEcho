@@ -1553,8 +1553,8 @@ class _HomePageState extends State<HomePage>
     final isConnected = connectivityService.isConnected;
     final hasPermission = locationService.hasLocationPermission;
     final hasCoordinates = locationService.hasCoordinates;
-    final hasCity = locationService.city != null &&
-        !locationService.city!.contains("Throttled!");
+    final hasCity =
+        locationService.city != null && locationService.city!.isNotEmpty;
     final hasWeather = weatherService.currentWeather != null;
     final isCached = weatherService.state == WeatherServiceState.cached;
 
