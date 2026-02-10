@@ -2530,6 +2530,17 @@
   "weatherFetchFailed": "天气获取失败",
   "pleaseSelectCityFirst": "请先选择城市或启用位置服务",
   "useCurrentLocation": "使用当前位置",
+  "useFreeOnlineReverseGeocoding": "使用免费在线反向地理编码",
+  "onlineReverseGeocodingNeedsLocation": "请先获取当前位置",
+  "onlineReverseGeocodingFailed": "在线反向地理编码失败",
+  "onlineReverseGeocodingSuccess": "在线反向地理编码已更新：{address}",
+  "@onlineReverseGeocodingSuccess": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
   "weatherProvidedBy": "天气数据由 Open-Meteo 提供",
   "processing": "正在处理...",
   "searchingCity": "搜索城市中...",

@@ -97,6 +97,32 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
     }
   }
 
+  Future<void> _useOnlineReverseGeocoding() async {
+    final locationService = Provider.of<LocationService>(
+      context,
+      listen: false,
+    );
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final l10n = AppLocalizations.of(context);
+
+    final success =
+        await locationService.refreshAddressFromOnlineReverseGeocoding();
+    if (!mounted) return;
+
+    messenger?.showSnackBar(
+      SnackBar(
+        content: Text(
+          success
+              ? l10n.onlineReverseGeocodingSuccess(
+                  locationService.currentAddress ?? l10n.unknownLocation,
+                )
+              : l10n.onlineReverseGeocodingFailed,
+        ),
+        duration: Duration(seconds: success ? 2 : 3),
+      ),
+    );
+  }
+
   Future<void> _selectCity(CityInfo cityInfo) async {
     widget.weatherController.clearMessages();
     final success = await widget.weatherController.selectCityAndUpdateWeather(
@@ -117,6 +143,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
   Widget build(BuildContext context) {
     final locationService = Provider.of<LocationService>(context);
     final weatherService = Provider.of<WeatherService>(context);
+    final settingsService = Provider.of<SettingsService>(context);
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
 
@@ -325,6 +352,35 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                     minimumSize: const Size.fromHeight(50),
                   ),
                   onPressed: controller.isLoading ? null : _useCurrentLocation,
+                ),
+              ),
+
+            // 开发者模式：使用免费的在线反向地理编码
+            if (settingsService.appSettings.developerMode)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.public),
+                  label: Text(l10n.useFreeOnlineReverseGeocoding),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(44),
+                  ),
+                  onPressed: controller.isLoading
+                      ? null
+                      : (locationService.currentPosition == null
+                          ? () {
+                              ScaffoldMessenger.maybeOf(
+                                context,
+                              )?.showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    l10n.onlineReverseGeocodingNeedsLocation,
+                                  ),
+                                  duration: const Duration(seconds: 3),
+                                ),
+                              );
+                            }
+                          : _useOnlineReverseGeocoding),
                 ),
               ),
 

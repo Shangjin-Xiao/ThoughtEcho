@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'dart:io';
 import 'package:geocoding/geocoding.dart' as geocoding;
 import 'package:geocode/geocode.dart';
 import 'package:geolocator/geolocator.dart';
@@ -107,7 +106,7 @@ class LocalGeocodingService {
   }) async {
     try {
       // Windows平台：跳过系统地理编码（不支持），返回 null 让调用者使用在线服务
-      if (!kIsWeb && Platform.isWindows) {
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
         logDebug('Windows平台：系统地理编码不支持，将使用在线服务');
         return null;
       }
@@ -116,8 +115,11 @@ class LocalGeocodingService {
       final localeIdentifier = _buildLocaleIdentifier(localeCode);
 
       // 首先尝试从缓存读取（含语言匹配）
-      final cachedAddress =
-          await _getFromCache(latitude, longitude, localeIdentifier);
+      final cachedAddress = await _getFromCache(
+        latitude,
+        longitude,
+        localeIdentifier,
+      );
       if (cachedAddress != null) {
         logDebug('使用缓存的地理编码数据');
         return cachedAddress;
@@ -128,29 +130,50 @@ class LocalGeocodingService {
       try {
         final placemarks = await _runSerialized(() async {
           await geocoding.setLocaleIdentifier(localeIdentifier);
-          return await geocoding.placemarkFromCoordinates(
-            latitude,
-            longitude,
-          );
+          return await geocoding.placemarkFromCoordinates(latitude, longitude);
         });
 
         if (placemarks.isNotEmpty) {
           final place = placemarks.first;
 
           // 构建地址信息，确保所有值都是字符串类型或null
+          final placeCountry = place.country?.trim();
+          final placeProvince = place.administrativeArea?.trim();
+          final placeLocality = place.locality?.trim();
+          final placeSubAdminArea = place.subAdministrativeArea?.trim();
+          final placeSubLocality = place.subLocality?.trim();
+          final placeThoroughfare = place.thoroughfare?.trim();
           final addressInfo = <String, String?>{
-            'country': place.country,
-            'province': place.administrativeArea,
-            'city': place.locality ?? place.subAdministrativeArea,
-            'district': place.subLocality,
-            'street': place.thoroughfare,
+            'country': (placeCountry != null && placeCountry.isNotEmpty)
+                ? placeCountry
+                : null,
+            'province': (placeProvince != null && placeProvince.isNotEmpty)
+                ? placeProvince
+                : null,
+            'city': (placeLocality != null && placeLocality.isNotEmpty)
+                ? placeLocality
+                : ((placeSubAdminArea != null && placeSubAdminArea.isNotEmpty)
+                    ? placeSubAdminArea
+                    : null),
+            'district':
+                (placeSubLocality != null && placeSubLocality.isNotEmpty)
+                    ? placeSubLocality
+                    : null,
+            'street':
+                (placeThoroughfare != null && placeThoroughfare.isNotEmpty)
+                    ? placeThoroughfare
+                    : null,
             'formatted_address': _formatAddress(place),
             'source': 'system', // 标记数据来源
           };
 
           // 缓存结果
           await _saveToCache(
-              latitude, longitude, addressInfo, localeIdentifier);
+            latitude,
+            longitude,
+            addressInfo,
+            localeIdentifier,
+          );
 
           return addressInfo;
         }
@@ -165,13 +188,21 @@ class LocalGeocodingService {
           longitude: longitude,
         );
 
+        final country = address.countryName?.trim();
+        final province = address.region?.trim();
+        final city = address.city?.trim();
+        final district = address.streetNumber?.toString().trim();
+        final street = address.streetAddress?.trim();
+
         final addressInfo = <String, String?>{
-          'country': address.countryName,
-          'province': address.region,
-          'city': address.city,
+          'country': (country != null && country.isNotEmpty) ? country : null,
+          'province':
+              (province != null && province.isNotEmpty) ? province : null,
+          'city': (city != null && city.isNotEmpty) ? city : null,
           // 将 int? 类型转换为 String?
-          'district': address.streetNumber?.toString(),
-          'street': address.streetAddress,
+          'district':
+              (district != null && district.isNotEmpty) ? district : null,
+          'street': (street != null && street.isNotEmpty) ? street : null,
           'formatted_address': _formatAddressFromGeoCode(address),
           'source': 'geocode', // 标记数据来源
         };
