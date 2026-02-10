@@ -191,19 +191,21 @@ void backgroundPeriodicCheck() async {
       return;
     }
 
-    // 检查常规推送时间槽（扩大窗口到±10分钟，因为周期性任务不精确）
+    // 检查常规推送时间（使用持久化的实际调度时间，兼容智能模式）
     bool pushedRegular = false;
-    if (settings.shouldPushToday()) {
-      for (final slot in settings.pushTimeSlots) {
-        if (!slot.enabled) continue;
+    if (settings.enabled && settings.shouldPushToday()) {
+      final scheduledSlots = pushService.getScheduledTimesForToday();
+      final slotsToCheck = scheduledSlots.isNotEmpty
+          ? scheduledSlots
+          : settings.pushTimeSlots.where((s) => s.enabled).toList();
 
+      for (final slot in slotsToCheck) {
         final slotTime =
             DateTime(now.year, now.month, now.day, slot.hour, slot.minute);
         final diff = now.difference(slotTime).inMinutes;
 
-        // 在时间槽之后0-10分钟内触发（避免重复推送）
         if (diff >= 0 && diff <= 10) {
-          AppLogger.i('周期性检查：当前时间接近推送时间槽 ${slot.formattedTime}，触发推送');
+          AppLogger.i('周期性检查：匹配到推送时间 ${slot.hour}:${slot.minute}，触发推送');
           await pushService.checkAndPush(isBackground: true);
           pushedRegular = true;
           break;

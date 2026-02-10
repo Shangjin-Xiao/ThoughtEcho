@@ -55,6 +55,7 @@ class SmartPushService extends ChangeNotifier {
   static const int _dailyQuoteAlarmId = 988;
   static const String _notificationChannelId = 'smart_push_channel';
   static const String _notificationChannelName = '智能推送';
+  static const String _scheduledTimesKey = 'smart_push_scheduled_times_today';
 
   SmartPushSettings _settings = SmartPushSettings.defaultSettings();
   SmartPushSettings get settings => _settings;
@@ -779,6 +780,39 @@ class SmartPushService extends ChangeNotifier {
     return '请在系统设置中找到应用管理，然后允许心迹自启动和后台运行';
   }
 
+  /// 持久化今日实际调度的推送时间（供后台周期性检查使用）
+  Future<void> _persistScheduledTimes(List<PushTimeSlot> slots) async {
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final timesStr = slots.map((s) => '${s.hour}:${s.minute}').join(',');
+    await _mmkv.setString(_scheduledTimesKey, '$today|$timesStr');
+    AppLogger.d('已持久化今日推送时间: $timesStr');
+  }
+
+  /// 获取今日实际调度的推送时间（后台周期性检查用）
+  List<PushTimeSlot> getScheduledTimesForToday() {
+    try {
+      final data = _mmkv.getString(_scheduledTimesKey);
+      if (data == null || data.isEmpty) return [];
+
+      final parts = data.split('|');
+      if (parts.length != 2) return [];
+
+      final today = DateTime.now().toIso8601String().substring(0, 10);
+      if (parts[0] != today) return [];
+
+      return parts[1].split(',').map((timeStr) {
+        final timeParts = timeStr.split(':');
+        return PushTimeSlot(
+          hour: int.tryParse(timeParts[0]) ?? 8,
+          minute: int.tryParse(timeParts.length > 1 ? timeParts[1] : '0') ?? 0,
+        );
+      }).toList();
+    } catch (e) {
+      AppLogger.w('读取今日推送时间失败', error: e);
+      return [];
+    }
+  }
+
   /// 规划下一次推送
   Future<void> scheduleNextPush() async {
     // 只有当两个推送都关闭时才取消所有计划并返回
@@ -805,6 +839,9 @@ class SmartPushService extends ChangeNotifier {
         slotsToSchedule =
             _settings.pushTimeSlots.where((s) => s.enabled).toList();
       }
+
+      // 持久化今日实际调度的时间（供后台周期性检查使用）
+      await _persistScheduledTimes(slotsToSchedule);
 
       for (int i = 0; i < slotsToSchedule.length; i++) {
         final slot = slotsToSchedule[i];
@@ -1227,6 +1264,9 @@ class SmartPushService extends ChangeNotifier {
   }
 
   /// 检查并触发推送（核心逻辑）
+  ///
+  /// 当 isBackground == true 时，表示由 AlarmManager/WorkManager 触发，
+  /// 直接执行推送，不再做时间槽匹配（调度器已经在正确的时间触发了我们）。
   Future<void> checkAndPush({bool isBackground = false}) async {
     final now = DateTime.now();
     AppLogger.i(
@@ -1244,42 +1284,37 @@ class SmartPushService extends ChangeNotifier {
       return;
     }
 
-    // 后台逻辑：判断当前时间命中了哪个任务
-    AppLogger.d('正在进行后台时间匹配检查...');
+    // 后台逻辑：由 AlarmManager/WorkManager 触发，直接执行推送
+    // 不再做时间槽匹配，因为智能模式下调度时间与 _settings.pushTimeSlots 不一致
+    AppLogger.w('后台推送触发，直接执行推送 (time: ${now.hour}:${now.minute})');
 
-    // 1. 检查每日一言
+    // 防重复：距上次推送不足 3 分钟则跳过
+    if (_settings.lastPushTime != null) {
+      final sinceLastPush = now.difference(_settings.lastPushTime!);
+      if (sinceLastPush.inMinutes < 3) {
+        AppLogger.i('跳过推送：距上次推送仅 ${sinceLastPush.inSeconds} 秒');
+        return;
+      }
+    }
+
+    // 1. 尝试每日一言推送（如果启用且当前时间接近每日一言时间）
     if (_settings.dailyQuotePushEnabled) {
       final slot = _settings.dailyQuotePushTime;
       final slotTime =
           DateTime(now.year, now.month, now.day, slot.hour, slot.minute);
       final diff = now.difference(slotTime).inMinutes.abs();
 
-      AppLogger.d('每日一言时间匹配检查: 设定=${slot.formattedTime}, 差距=$diff分钟');
-
-      if (diff <= 10) {
-        // 使用 Warning 级别确保后台日志被持久化
-        AppLogger.w('时间匹配成功，准备执行每日一言推送');
+      if (diff <= 30) {
+        AppLogger.w('后台触发每日一言推送 (距设定时间 $diff 分钟)');
         await _performDailyQuotePush(isBackground: true);
+        return;
       }
     }
 
-    // 2. 检查常规智能推送
+    // 2. 尝试常规智能推送
     if (_settings.enabled && _settings.shouldPushToday()) {
-      AppLogger.d('智能推送已启用且频率允许，检查时间槽');
-      for (final slot in _settings.pushTimeSlots) {
-        if (!slot.enabled) continue;
-        final slotTime =
-            DateTime(now.year, now.month, now.day, slot.hour, slot.minute);
-        final diff = now.difference(slotTime).inMinutes.abs();
-
-        AppLogger.d('智能推送时间槽检查: 设定=${slot.formattedTime}, 差距=$diff分钟');
-
-        if (diff <= 10) {
-          AppLogger.w('时间匹配成功，准备执行智能推送 (Slot: ${slot.formattedTime})');
-          await _performSmartPush(isBackground: true);
-          break; // 只要命中一个时间槽就执行，避免重复
-        }
-      }
+      AppLogger.w('后台触发智能推送');
+      await _performSmartPush(isBackground: true);
     } else {
       if (!_settings.enabled) {
         AppLogger.d('智能推送未启用');
@@ -1994,8 +2029,19 @@ class SmartPushService extends ChangeNotifier {
     }
   }
 
-  /// 从位置字符串提取区名
+  /// 从位置字符串提取区/城市名，用于同地点比较
+  /// 支持 CSV 格式 ("国家,省份,城市,区县") 和显示格式 ("城市·区县")
   String? _extractDistrict(String location) {
+    if (location.contains(',')) {
+      final parts = location.split(',');
+      if (parts.length >= 4 && parts[3].trim().isNotEmpty) {
+        return parts[3].trim();
+      }
+      if (parts.length >= 3 && parts[2].trim().isNotEmpty) {
+        return parts[2].trim();
+      }
+    }
+
     if (location.contains('·')) {
       final parts = location.split('·');
       if (parts.length >= 2) {
