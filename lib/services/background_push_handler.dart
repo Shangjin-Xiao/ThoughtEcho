@@ -135,7 +135,8 @@ void backgroundPushCallback(int id) async {
 
     // 6. 重新调度下一次推送（关键步骤！）
     // 因为 oneShotAt 是一次性的，需要在执行完后重新调度
-    await pushService.scheduleNextPush();
+    // 使用 fromBackground: true 避免 cancelAll() 清除刚显示的通知
+    await pushService.scheduleNextPush(fromBackground: true);
 
     AppLogger.w('后台推送任务完成，已重新调度下次推送');
   } catch (e, stack) {
