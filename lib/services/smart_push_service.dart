@@ -411,6 +411,7 @@ class SmartPushService extends ChangeNotifier {
         );
       }
     }
+    _notificationPluginReady = true;
   }
 
   /// 通知点击回调 - SOTA 效果追踪
@@ -814,16 +815,29 @@ class SmartPushService extends ChangeNotifier {
   }
 
   /// 规划下一次推送
-  Future<void> scheduleNextPush() async {
+  ///
+  /// [fromBackground] 为 true 时，仅取消 AlarmManager 定时器并重新调度，
+  /// 不调用 cancelAll() 以避免清除正在显示或即将显示的通知。
+  Future<void> scheduleNextPush({bool fromBackground = false}) async {
     // 只有当两个推送都关闭时才取消所有计划并返回
     if (!_settings.enabled && !_settings.dailyQuotePushEnabled) {
       await _cancelAllSchedules();
       return;
     }
 
-    // 取消现有的计划（为了重新规划）
-    await _cancelAllSchedules();
-    AppLogger.d('已取消现有推送计划，准备重新规划');
+    if (fromBackground) {
+      // 后台只取消 AlarmManager 定时器，不取消本地通知
+      if (PlatformHelper.isAndroid) {
+        for (int i = 0; i < 10; i++) {
+          await AndroidAlarmManager.cancel(_androidAlarmId + i);
+        }
+        await AndroidAlarmManager.cancel(_dailyQuoteAlarmId);
+      }
+      AppLogger.d('后台重新调度：仅取消 AlarmManager 定时器');
+    } else {
+      await _cancelAllSchedules();
+      AppLogger.d('已取消现有推送计划，准备重新规划');
+    }
 
     // 1. 规划常规推送 (仅当 enabled 为 true 时)
     if (_settings.enabled && _settings.shouldPushToday()) {
@@ -1154,6 +1168,7 @@ class SmartPushService extends ChangeNotifier {
       int id, tz.TZDateTime scheduledDate, PushTimeSlot slot,
       {bool isDailyQuote = false}) async {
     try {
+      await _ensureNotificationReady();
       // 尝试预计算要推送的内容
       _PushContent? content;
       if (isDailyQuote) {
@@ -1209,7 +1224,6 @@ class SmartPushService extends ChangeNotifier {
         details,
         androidScheduleMode: scheduleMode,
         payload: content?.noteId,
-        matchDateTimeComponents: DateTimeComponents.time,
       );
 
       AppLogger.i(
@@ -1794,20 +1808,61 @@ class SmartPushService extends ChangeNotifier {
     }
   }
 
+  bool _notificationPluginReady = false;
+
+  Future<void> _ensureNotificationReady() async {
+    if (_notificationPluginReady) return;
+    try {
+      const androidSettings =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
+      const iosSettings = DarwinInitializationSettings(
+        requestAlertPermission: false,
+        requestBadgePermission: false,
+        requestSoundPermission: false,
+      );
+      const initSettings = InitializationSettings(
+        android: androidSettings,
+        iOS: iosSettings,
+      );
+      await _notificationsPlugin.initialize(initSettings);
+
+      if (PlatformHelper.isAndroid) {
+        final androidPlugin =
+            _notificationsPlugin.resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>();
+        if (androidPlugin != null) {
+          await androidPlugin.createNotificationChannel(
+            const AndroidNotificationChannel(
+              _notificationChannelId,
+              _notificationChannelName,
+              description: '回顾过去的笔记和每日一言',
+              importance: Importance.high,
+            ),
+          );
+        }
+      }
+      _notificationPluginReady = true;
+      AppLogger.d('通知插件就绪（后台安全初始化）');
+    } catch (e) {
+      AppLogger.e('_ensureNotificationReady 失败', error: e);
+    }
+  }
+
   /// 显示通知
   Future<void> _showNotification(
     Quote note, {
     String title = '心迹',
     String contentType = '',
   }) async {
-    // 构建更优雅的通知内容
+    await _ensureNotificationReady();
+
     final body = _buildNotificationBody(note);
 
     final androidDetails = AndroidNotificationDetails(
       _notificationChannelId,
       _notificationChannelName,
       channelDescription: '回顾过去的笔记和每日一言',
-      importance: Importance.high,
+      importance: Importance.max,
       priority: Priority.high,
       showWhen: true,
       styleInformation: body.length > 50
@@ -1830,7 +1885,6 @@ class SmartPushService extends ChangeNotifier {
       iOS: iosDetails,
     );
 
-    // SOTA: 构建包含 contentType 的 payload 用于效果追踪
     String payload = '';
     if (contentType.isNotEmpty) {
       payload = 'contentType:$contentType';
@@ -1841,13 +1895,18 @@ class SmartPushService extends ChangeNotifier {
       payload = note.id ?? '';
     }
 
-    await _notificationsPlugin.show(
-      DateTime.now().millisecondsSinceEpoch % 100000,
-      title,
-      body,
-      details,
-      payload: payload,
-    );
+    try {
+      await _notificationsPlugin.show(
+        DateTime.now().millisecondsSinceEpoch % 100000,
+        title,
+        body,
+        details,
+        payload: payload,
+      );
+      AppLogger.i('通知已成功发送: $title');
+    } catch (e, stack) {
+      AppLogger.e('通知发送失败 (_notificationsPlugin.show)', error: e, stackTrace: stack);
+    }
   }
 
   /// 构建通知正文
