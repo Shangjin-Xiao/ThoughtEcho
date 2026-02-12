@@ -580,7 +580,6 @@ class BackupService {
       final deltaContent = quoteMap[deltaField];
       if (deltaContent is String &&
           (deltaContent.contains('media/') ||
-              deltaContent.contains(r'media\') ||
               RegExp(r'media\\+').hasMatch(deltaContent))) {
         return true;
       }
