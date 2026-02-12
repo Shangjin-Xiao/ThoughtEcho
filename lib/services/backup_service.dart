@@ -600,28 +600,50 @@ class BackupService {
 
     if (processedData.containsKey('quotes')) {
       final quotes = List<Map<String, dynamic>>.from(processedData['quotes']);
+      int successCount = 0;
+      int failureCount = 0;
+      int skippedCount = 0;
 
       for (final quote in quotes) {
         final deltaField = _resolveQuoteDeltaField(quote);
-        if (deltaField != null && quote[deltaField] != null) {
-          final deltaContent = quote[deltaField] as String;
-          try {
-            final deltaJson = await LargeFileManager.processLargeJson<dynamic>(
-              deltaContent,
-              encode: false,
-            );
-            final convertedDelta = _convertDeltaMediaPaths(
-              deltaJson,
-              appPath,
-              true,
-            );
-            quote[deltaField] = jsonEncode(convertedDelta);
-          } catch (e) {
-            logDebug('处理笔记 ${quote['id']} 的富文本内容时出错: $e');
-            // 如果处理失败，保持原内容不变
-          }
+        if (deltaField == null) {
+          skippedCount++;
+          continue;
+        }
+
+        if (quote[deltaField] == null) {
+          skippedCount++;
+          continue;
+        }
+
+        final deltaContent = quote[deltaField] as String;
+        try {
+          final deltaJson = await LargeFileManager.processLargeJson<dynamic>(
+            deltaContent,
+            encode: false,
+          );
+          final convertedDelta = _convertDeltaMediaPaths(
+            deltaJson,
+            appPath,
+            true,
+          );
+          quote[deltaField] = jsonEncode(convertedDelta);
+          successCount++;
+          logDebug(
+            '处理笔记 ${quote['id']} 的富文本内容成功 (field: $deltaField)',
+          );
+        } catch (e) {
+          failureCount++;
+          logDebug(
+            '处理笔记 ${quote['id']} 的富文本内容时出错 (field: $deltaField): $e',
+          );
+          // 如果处理失败，保持原内容不变
         }
       }
+
+      logDebug(
+        '媒体路径转换完成 - 成功: $successCount, 失败: $failureCount, 跳过: $skippedCount',
+      );
 
       processedData['quotes'] = quotes;
     }
@@ -641,28 +663,50 @@ class BackupService {
 
     if (processedData.containsKey('quotes')) {
       final quotes = List<Map<String, dynamic>>.from(processedData['quotes']);
+      int successCount = 0;
+      int failureCount = 0;
+      int skippedCount = 0;
 
       for (final quote in quotes) {
         final deltaField = _resolveQuoteDeltaField(quote);
-        if (deltaField != null && quote[deltaField] != null) {
-          final deltaContent = quote[deltaField] as String;
-          try {
-            final deltaJson = await LargeFileManager.processLargeJson<dynamic>(
-              deltaContent,
-              encode: false,
-            );
-            final convertedDelta = _convertDeltaMediaPaths(
-              deltaJson,
-              appPath,
-              false,
-            );
-            quote[deltaField] = jsonEncode(convertedDelta);
-          } catch (e) {
-            logDebug('处理笔记 ${quote['id']} 的富文本内容时出错: $e');
-            // 如果处理失败，保持原内容不变
-          }
+        if (deltaField == null) {
+          skippedCount++;
+          continue;
+        }
+
+        if (quote[deltaField] == null) {
+          skippedCount++;
+          continue;
+        }
+
+        final deltaContent = quote[deltaField] as String;
+        try {
+          final deltaJson = await LargeFileManager.processLargeJson<dynamic>(
+            deltaContent,
+            encode: false,
+          );
+          final convertedDelta = _convertDeltaMediaPaths(
+            deltaJson,
+            appPath,
+            false,
+          );
+          quote[deltaField] = jsonEncode(convertedDelta);
+          successCount++;
+          logDebug(
+            '还原笔记 ${quote['id']} 的富文本内容成功 (field: $deltaField)',
+          );
+        } catch (e) {
+          failureCount++;
+          logDebug(
+            '还原笔记 ${quote['id']} 的富文本内容时出错 (field: $deltaField): $e',
+          );
+          // 如果处理失败，保持原内容不变
         }
       }
+
+      logDebug(
+        '媒体路径还原完成 - 成功: $successCount, 失败: $failureCount, 跳过: $skippedCount',
+      );
 
       processedData['quotes'] = quotes;
     }
@@ -781,16 +825,22 @@ class BackupService {
         if (originalPath.startsWith(appPath)) {
           // 生成相对路径，并统一使用正斜杠以确保跨平台兼容
           final relativePath = path.relative(originalPath, from: appPath);
-          return relativePath.replaceAll(r'\', '/');
+          final converted = relativePath.replaceAll(r'\', '/');
+          logDebug('媒体路径转换: $originalPath -> $converted');
+          return converted;
         }
+        logDebug('媒体路径保持不变(非应用路径): $originalPath');
         return originalPath; // 如果不是应用内路径，保持不变
       } else {
         // 还原时：相对路径 -> 绝对路径
         if (!path.isAbsolute(originalPath)) {
           // 将路径中的正斜杠转换为当前平台的路径分隔符
           final normalizedPath = originalPath.replaceAll('/', path.separator);
-          return path.join(appPath, normalizedPath);
+          final absolutePath = path.join(appPath, normalizedPath);
+          logDebug('媒体路径还原: $originalPath -> $absolutePath');
+          return absolutePath;
         }
+        logDebug('媒体路径保持不变(已是绝对路径): $originalPath');
         return originalPath; // 如果已经是绝对路径，保持不变
       }
     } catch (e) {
