@@ -145,7 +145,9 @@ void main() {
         'deltaContent',
       );
       expect(
-          BackupService.testResolveQuoteDeltaField({'content': 'x'}), isNull);
+        BackupService.testResolveQuoteDeltaField({'content': 'x'}),
+        isNull,
+      );
     });
 
     test('prefers delta_content when both keys present', () {
