@@ -568,9 +568,9 @@ class BackupService {
       final quotes = List<Map<String, dynamic>>.from(processedData['quotes']);
 
       for (final quote in quotes) {
-        if (quote.containsKey('deltaContent') &&
-            quote['deltaContent'] != null) {
-          final deltaContent = quote['deltaContent'] as String;
+        final deltaField = _resolveQuoteDeltaField(quote);
+        if (deltaField != null && quote[deltaField] != null) {
+          final deltaContent = quote[deltaField] as String;
           try {
             final deltaJson = await LargeFileManager.processLargeJson<dynamic>(
               deltaContent,
@@ -581,8 +581,7 @@ class BackupService {
               appPath,
               true,
             );
-            quote['deltaContent'] =
-                await LargeFileManager.processLargeJson<String>(
+            quote[deltaField] = await LargeFileManager.processLargeJson<String>(
               convertedDelta as Map<String, dynamic>,
               encode: true,
             );
@@ -613,9 +612,9 @@ class BackupService {
       final quotes = List<Map<String, dynamic>>.from(processedData['quotes']);
 
       for (final quote in quotes) {
-        if (quote.containsKey('deltaContent') &&
-            quote['deltaContent'] != null) {
-          final deltaContent = quote['deltaContent'] as String;
+        final deltaField = _resolveQuoteDeltaField(quote);
+        if (deltaField != null && quote[deltaField] != null) {
+          final deltaContent = quote[deltaField] as String;
           try {
             final deltaJson = await LargeFileManager.processLargeJson<dynamic>(
               deltaContent,
@@ -626,8 +625,7 @@ class BackupService {
               appPath,
               false,
             );
-            quote['deltaContent'] =
-                await LargeFileManager.processLargeJson<String>(
+            quote[deltaField] = await LargeFileManager.processLargeJson<String>(
               convertedDelta as Map<String, dynamic>,
               encode: true,
             );
@@ -642,6 +640,21 @@ class BackupService {
     }
 
     return processedData;
+  }
+
+  @visibleForTesting
+  static String? testResolveQuoteDeltaField(Map<String, dynamic> quote) {
+    return _resolveQuoteDeltaField(quote);
+  }
+
+  static String? _resolveQuoteDeltaField(Map<String, dynamic> quote) {
+    if (quote.containsKey('delta_content')) {
+      return 'delta_content';
+    }
+    if (quote.containsKey('deltaContent')) {
+      return 'deltaContent';
+    }
+    return null;
   }
 
   /// 递归处理 Delta JSON 中的媒体文件路径
