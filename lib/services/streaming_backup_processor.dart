@@ -133,35 +133,39 @@ class StreamingBackupProcessor {
 
     // 提取媒体文件到应用目录 (排除数据文件本身 & 目录)
     if (extractMediaFiles) {
-      final appDir = await getApplicationDocumentsDirectory();
-      for (final f in archive) {
-        if (f.isFile && f.name != dataFile.name) {
-          try {
-            // 将 ZIP 条目名中的正斜杠转换为当前平台的路径分隔符
-            // ZIP 格式标准使用正斜杠，但在 Windows 上需要转换为反斜杠
-            final normalizedName = f.name.replaceAll('/', p.separator);
-            final safeRelativePath = _normalizeSafeRelativePath(normalizedName);
-            if (safeRelativePath == null) {
-              logWarning('跳过不安全的ZIP条目: ${f.name}',
-                  source: 'StreamingBackupProcessor');
-              continue;
-            }
+      try {
+        final appDir = await getApplicationDocumentsDirectory();
+        for (final f in archive) {
+          if (f.isFile && f.name != dataFile.name) {
+            try {
+              // 将 ZIP 条目名中的正斜杠转换为当前平台的路径分隔符
+              // ZIP 格式标准使用正斜杠，但在 Windows 上需要转换为反斜杠
+              final normalizedName = f.name.replaceAll('/', p.separator);
+              final safeRelativePath = _normalizeSafeRelativePath(normalizedName);
+              if (safeRelativePath == null) {
+                logWarning('跳过不安全的ZIP条目: ${f.name}',
+                    source: 'StreamingBackupProcessor');
+                continue;
+              }
 
-            final targetPath = p.join(appDir.path, safeRelativePath);
-            final targetDir = Directory(p.dirname(targetPath));
-            if (!await targetDir.exists()) {
-              await targetDir.create(recursive: true);
+              final targetPath = p.join(appDir.path, safeRelativePath);
+              final targetDir = Directory(p.dirname(targetPath));
+              if (!await targetDir.exists()) {
+                await targetDir.create(recursive: true);
+              }
+              final outFile = File(targetPath);
+              await outFile.writeAsBytes(f.content as List<int>, flush: true);
+              logDebug('已解压媒体文件: ${f.name} -> $targetPath');
+            } catch (e) {
+              logWarning('媒体文件解压失败: ${f.name}, $e',
+                  source: 'StreamingBackupProcessor');
             }
-            final outFile = File(targetPath);
-            await outFile.writeAsBytes(f.content as List<int>, flush: true);
-            logDebug('已解压媒体文件: ${f.name} -> $targetPath');
-          } catch (e) {
-            logWarning('媒体文件解压失败: ${f.name}, $e',
-                source: 'StreamingBackupProcessor');
           }
         }
+        logDebug('媒体文件已解压到应用目录', source: 'StreamingBackupProcessor');
+      } catch (e) {
+        logWarning('媒体文件解压失败: $e', source: 'StreamingBackupProcessor');
       }
-      logDebug('媒体文件已解压到应用目录', source: 'StreamingBackupProcessor');
     } else {
       logDebug('仅验证ZIP结构，跳过媒体文件解压', source: 'StreamingBackupProcessor');
     }
