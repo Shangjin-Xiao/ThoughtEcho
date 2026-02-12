@@ -133,4 +133,19 @@ void main() {
       );
     });
   });
+
+  group('Quote delta field detection', () {
+    test('supports snake_case and camelCase keys', () {
+      expect(
+        BackupService.testResolveQuoteDeltaField({'delta_content': '{}'}),
+        'delta_content',
+      );
+      expect(
+        BackupService.testResolveQuoteDeltaField({'deltaContent': '{}'}),
+        'deltaContent',
+      );
+      expect(
+          BackupService.testResolveQuoteDeltaField({'content': 'x'}), isNull);
+    });
+  });
 }

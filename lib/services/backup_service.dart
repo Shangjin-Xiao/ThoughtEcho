@@ -549,9 +549,43 @@ class BackupService {
   Future<bool> _checkBackupHasMediaFiles(
     Map<String, dynamic> backupData,
   ) async {
-    // 检查版本信息和备份内容来判断是否包含媒体文件
+    // 优先：当前版本备份默认包含媒体相对路径，需要转换
     final version = backupData['version'] as String?;
-    return version == _backupVersion;
+    if (version == _backupVersion) {
+      return true;
+    }
+
+    // 兼容旧版本：扫描 Delta 中是否存在相对媒体路径（media/ 或 media\）
+    final notes = backupData['notes'];
+    if (notes is! Map<String, dynamic>) {
+      return false;
+    }
+
+    final quotesRaw = notes['quotes'];
+    if (quotesRaw is! List) {
+      return false;
+    }
+
+    for (final quote in quotesRaw) {
+      if (quote is! Map) {
+        continue;
+      }
+
+      final quoteMap = Map<String, dynamic>.from(quote);
+      final deltaField = _resolveQuoteDeltaField(quoteMap);
+      if (deltaField == null) {
+        continue;
+      }
+
+      final deltaContent = quoteMap[deltaField];
+      if (deltaContent is String &&
+          (deltaContent.contains('media/') ||
+              deltaContent.contains(r'media\'))) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /// 在备份时将笔记数据中的媒体文件绝对路径转换为相对路径
@@ -568,9 +602,9 @@ class BackupService {
       final quotes = List<Map<String, dynamic>>.from(processedData['quotes']);
 
       for (final quote in quotes) {
-        if (quote.containsKey('deltaContent') &&
-            quote['deltaContent'] != null) {
-          final deltaContent = quote['deltaContent'] as String;
+        final deltaField = _resolveQuoteDeltaField(quote);
+        if (deltaField != null && quote[deltaField] != null) {
+          final deltaContent = quote[deltaField] as String;
           try {
             final deltaJson = await LargeFileManager.processLargeJson<dynamic>(
               deltaContent,
@@ -581,11 +615,7 @@ class BackupService {
               appPath,
               true,
             );
-            quote['deltaContent'] =
-                await LargeFileManager.processLargeJson<String>(
-              convertedDelta as Map<String, dynamic>,
-              encode: true,
-            );
+            quote[deltaField] = jsonEncode(convertedDelta);
           } catch (e) {
             logDebug('处理笔记 ${quote['id']} 的富文本内容时出错: $e');
             // 如果处理失败，保持原内容不变
@@ -613,9 +643,9 @@ class BackupService {
       final quotes = List<Map<String, dynamic>>.from(processedData['quotes']);
 
       for (final quote in quotes) {
-        if (quote.containsKey('deltaContent') &&
-            quote['deltaContent'] != null) {
-          final deltaContent = quote['deltaContent'] as String;
+        final deltaField = _resolveQuoteDeltaField(quote);
+        if (deltaField != null && quote[deltaField] != null) {
+          final deltaContent = quote[deltaField] as String;
           try {
             final deltaJson = await LargeFileManager.processLargeJson<dynamic>(
               deltaContent,
@@ -626,11 +656,7 @@ class BackupService {
               appPath,
               false,
             );
-            quote['deltaContent'] =
-                await LargeFileManager.processLargeJson<String>(
-              convertedDelta as Map<String, dynamic>,
-              encode: true,
-            );
+            quote[deltaField] = jsonEncode(convertedDelta);
           } catch (e) {
             logDebug('处理笔记 ${quote['id']} 的富文本内容时出错: $e');
             // 如果处理失败，保持原内容不变
@@ -642,6 +668,21 @@ class BackupService {
     }
 
     return processedData;
+  }
+
+  @visibleForTesting
+  static String? testResolveQuoteDeltaField(Map<String, dynamic> quote) {
+    return _resolveQuoteDeltaField(quote);
+  }
+
+  static String? _resolveQuoteDeltaField(Map<String, dynamic> quote) {
+    if (quote.containsKey('delta_content')) {
+      return 'delta_content';
+    }
+    if (quote.containsKey('deltaContent')) {
+      return 'deltaContent';
+    }
+    return null;
   }
 
   /// 递归处理 Delta JSON 中的媒体文件路径
