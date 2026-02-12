@@ -159,5 +159,149 @@ void main() {
         'delta_content',
       );
     });
+
+    test('handles empty and null quotes', () {
+      expect(
+        BackupService.testResolveQuoteDeltaField({}),
+        isNull,
+      );
+      expect(
+        BackupService.testResolveQuoteDeltaField({'other_field': 'value'}),
+        isNull,
+      );
+    });
+  });
+
+  group('Delta structure variations', () {
+    test('handles Map-type Delta (Quill Delta as Map)', () {
+      const appPath = '/app/documents';
+      // Some Quill Delta payloads are Map instead of List
+      final deltaMap = {
+        'ops': [
+          {
+            'insert': {'image': '/app/documents/media/images/photo.png'},
+          },
+          {'insert': 'caption\n'},
+        ],
+      };
+
+      // 备份: 绝对 -> 相对
+      final toRelative = BackupService.testConvertDeltaMediaPaths(
+        deltaMap,
+        appPath: appPath,
+        toRelative: true,
+      );
+      expect(toRelative, isA<Map>());
+      final ops = (toRelative as Map)['ops'] as List;
+      String norm(dynamic v) => v.toString().replaceAll('\\', '/');
+      expect(norm(ops[0]['insert']['image']), 'media/images/photo.png');
+
+      // 还原: 相对 -> 绝对
+      final restored = BackupService.testConvertDeltaMediaPaths(
+        toRelative,
+        appPath: appPath,
+        toRelative: false,
+      );
+      final restoredOps = (restored as Map)['ops'] as List;
+      expect(
+        norm(restoredOps[0]['insert']['image']),
+        '/app/documents/media/images/photo.png',
+      );
+    });
+
+    test('handles nested custom blocks with audio', () {
+      const appPath = '/app/documents';
+      final deltaWithCustom = [
+        {
+          'insert': {
+            'custom': {
+              'type': 'audio-player',
+              'audio': '/app/documents/media/audios/recording.m4a',
+            },
+          },
+        },
+      ];
+
+      final toRelative = BackupService.testConvertDeltaMediaPaths(
+        deltaWithCustom,
+        appPath: appPath,
+        toRelative: true,
+      );
+      String norm(dynamic v) => v.toString().replaceAll('\\', '/');
+      expect(
+        norm(toRelative[0]['insert']['custom']['audio']),
+        'media/audios/recording.m4a',
+      );
+
+      final restored = BackupService.testConvertDeltaMediaPaths(
+        toRelative,
+        appPath: appPath,
+        toRelative: false,
+      );
+      expect(
+        norm(restored[0]['insert']['custom']['audio']),
+        '/app/documents/media/audios/recording.m4a',
+      );
+    });
+
+    test('handles mixed media types in single Delta', () {
+      const appPath = '/app/documents';
+      final mixedDelta = [
+        {'insert': 'Title\n'},
+        {
+          'insert': {'image': '/app/documents/media/images/pic1.jpg'},
+        },
+        {'insert': 'Description\n'},
+        {
+          'insert': {'video': '/app/documents/media/videos/clip.mp4'},
+        },
+        {
+          'insert': {
+            'custom': {'audio': '/app/documents/media/audios/sound.mp3'},
+          },
+        },
+        {'insert': 'End\n'},
+      ];
+
+      final toRelative = BackupService.testConvertDeltaMediaPaths(
+        mixedDelta,
+        appPath: appPath,
+        toRelative: true,
+      );
+      String norm(dynamic v) => v.toString().replaceAll('\\', '/');
+      expect(norm(toRelative[1]['insert']['image']), 'media/images/pic1.jpg');
+      expect(norm(toRelative[3]['insert']['video']), 'media/videos/clip.mp4');
+      expect(
+        norm(toRelative[4]['insert']['custom']['audio']),
+        'media/audios/sound.mp3',
+      );
+
+      // Verify text content is preserved
+      expect(toRelative[0]['insert'], 'Title\n');
+      expect(toRelative[2]['insert'], 'Description\n');
+      expect(toRelative[5]['insert'], 'End\n');
+    });
+
+    test('preserves non-app paths unchanged', () {
+      const appPath = '/app/documents';
+      // External or web URLs should not be modified
+      final externalDelta = [
+        {
+          'insert': {'image': 'https://example.com/image.png'},
+        },
+        {
+          'insert': {'video': '/other/path/video.mp4'},
+        },
+      ];
+
+      final toRelative = BackupService.testConvertDeltaMediaPaths(
+        externalDelta,
+        appPath: appPath,
+        toRelative: true,
+      );
+      // Paths not under appPath should remain unchanged
+      expect(toRelative[0]['insert']['image'], 'https://example.com/image.png');
+      expect(toRelative[1]['insert']['video'], '/other/path/video.mp4');
+    });
   });
 }
