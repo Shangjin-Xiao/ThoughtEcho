@@ -151,8 +151,8 @@ void main() {
     test('prefers delta_content when both keys present', () {
       expect(
         BackupService.testResolveQuoteDeltaField({
-          'delta_content': '{}',
-          'deltaContent': '{}',
+          'delta_content': '{"preferred":true}',
+          'deltaContent': '{"other":true}',
         }),
         'delta_content',
       );
