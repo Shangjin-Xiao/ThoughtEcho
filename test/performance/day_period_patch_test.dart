@@ -49,14 +49,11 @@ void main() {
           'CREATE TABLE quote_tags(quote_id TEXT, tag_id TEXT, PRIMARY KEY (quote_id, tag_id))');
       await db.execute(
           'CREATE TABLE media_references(id TEXT PRIMARY KEY, file_path TEXT, quote_id TEXT, created_at TEXT)');
-
-      // We don't need full service.init() because we set the test database and created tables manually
-      // But we need to ensure service knows database is ready if needed,
-      // though patchQuotesDayPeriod checks _database != null which we set.
     });
 
     tearDown(() async {
       await db.close();
+      DatabaseService.clearTestDatabase();
     });
 
     test('patchQuotesDayPeriod correctly updates day_period based on time',
@@ -92,10 +89,42 @@ void main() {
         });
       }
 
+      // Add empty string day_period case
+      await db.insert('quotes', {
+        'id': 'empty_day_period',
+        'content': 'test',
+        'date': '2023-10-27T09:00:00',
+        'day_period': '', // Empty string
+      });
+
+      // Add existing day_period case (should NOT be overwritten)
+      await db.insert('quotes', {
+        'id': 'existing_day_period',
+        'content': 'test',
+        'date': '2023-10-27T02:00:00', // Midnight time
+        'day_period': 'morning', // But marked as morning manually
+      });
+
+      // Add invalid date case (should be skipped due to strftime check)
+      await db.insert('quotes', {
+        'id': 'invalid_date',
+        'content': 'test',
+        'date': 'not-a-date',
+        'day_period': null,
+      });
+
+      // Add empty date case
+      await db.insert('quotes', {
+        'id': 'empty_date',
+        'content': 'test',
+        'date': '',
+        'day_period': null,
+      });
+
       // 2. Run the patch
       await service.patchQuotesDayPeriod();
 
-      // 3. Verify
+      // 3. Verify standard cases
       for (final testCase in testCases) {
         final result = await db.query('quotes',
             columns: ['day_period'],
@@ -105,6 +134,33 @@ void main() {
         expect(actual, equals(testCase['expected']),
             reason: 'Failed for time ${testCase['date']}');
       }
+
+      // Verify empty string day_period was patched
+      final emptyResult = await db.query('quotes',
+          columns: ['day_period'],
+          where: 'id = ?',
+          whereArgs: ['empty_day_period']);
+      expect(emptyResult.first['day_period'], equals('morning'));
+
+      // Verify existing day_period was NOT overwritten
+      final existingResult = await db.query('quotes',
+          columns: ['day_period'],
+          where: 'id = ?',
+          whereArgs: ['existing_day_period']);
+      expect(existingResult.first['day_period'],
+          equals('morning')); // Still morning, not midnight
+
+      // Verify invalid date was skipped (remains null)
+      final invalidResult = await db.query('quotes',
+          columns: ['day_period'],
+          where: 'id = ?',
+          whereArgs: ['invalid_date']);
+      expect(invalidResult.first['day_period'], isNull);
+
+      // Verify empty date was skipped (remains null)
+      final emptyDateResult = await db.query('quotes',
+          columns: ['day_period'], where: 'id = ?', whereArgs: ['empty_date']);
+      expect(emptyDateResult.first['day_period'], isNull);
     });
   });
 }

@@ -267,6 +267,12 @@ class DatabaseService extends ChangeNotifier {
     _database = testDb;
   }
 
+  /// Test method to clear the test database instance
+  @visibleForTesting
+  static void clearTestDatabase() {
+    _database = null;
+  }
+
   /// 修复：初始化数据库，增加并发控制
   Future<void> init() async {
     // 修复：检查服务是否已销毁
@@ -4998,6 +5004,8 @@ class DatabaseService extends ChangeNotifier {
         END
         WHERE (day_period IS NULL OR day_period = '')
           AND date IS NOT NULL
+          AND date != ''
+          AND strftime('%H', date) IS NOT NULL
       ''');
 
       if (count > 0) {
