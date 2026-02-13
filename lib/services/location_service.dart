@@ -301,33 +301,40 @@ class LocationService extends ChangeNotifier {
 
       if (token != _geocodeToken) return;
 
-      // Step 2: 系统结果完整（有城市信息），直接使用
-      if (systemResult != null && _isAddressSufficient(systemResult)) {
+      // Step 2: 系统结果已达到首选展示格式（优先“省份·城市”）时，直接使用
+      if (systemResult != null && _isPreferredDisplayReady(systemResult)) {
         _applyAddressResult(systemResult);
         logDebug(
-          '系统地址解析成功: $_currentAddress (国家:$_country, 省份:$_province, 城市:$_city, 区县:$_district)',
+          '系统地址解析成功(首选格式): $_currentAddress (国家:$_country, 省份:$_province, 城市:$_city, 区县:$_district)',
         );
         return;
       }
 
       if (systemResult != null) {
-        logDebug(
-          '系统地址解析不完整(缺少城市)，尝试在线补充: ${systemResult['formatted_address']}',
-        );
+        logDebug('系统地址解析未达到首选格式，尝试在线补充: ${systemResult['formatted_address']}');
       } else {
         logDebug('系统地址解析失败，尝试在线解析');
       }
 
-      // Step 3: 系统结果不完整或为空，尝试 Nominatim 在线解析
+      // Step 3: 系统不完整时走在线补充（在线优先补齐，再逐步回退）
+      Map<String, String?>? onlineResult;
+      Map<String, String?>? mergedResult;
       try {
-        final onlineResult = await _reverseGeocodeWithNominatim(lat, lon);
+        onlineResult = await _reverseGeocodeWithNominatim(lat, lon);
         if (token != _geocodeToken) return;
         if (onlineResult != null) {
-          _applyAddressResult(onlineResult);
-          logDebug(
-            '在线地址解析成功: $_currentAddress (国家:$_country, 省份:$_province, 城市:$_city, 区县:$_district)',
+          mergedResult = _mergeAddressResult(
+            preferred: onlineResult,
+            fallback: systemResult,
           );
-          return;
+
+          if (_isPreferredDisplayReady(mergedResult)) {
+            _applyAddressResult(mergedResult);
+            logDebug(
+              '在线补充后达到首选格式: $_currentAddress (国家:$_country, 省份:$_province, 城市:$_city, 区县:$_district)',
+            );
+            return;
+          }
         }
       } catch (e) {
         logDebug('在线地址解析失败: $e');
@@ -335,16 +342,43 @@ class LocationService extends ChangeNotifier {
 
       if (token != _geocodeToken) return;
 
-      // Step 4: Nominatim 失败，使用系统SDK的部分结果（有总比没有好）
-      if (systemResult != null) {
+      // Step 4: 在线未达到首选时，优先使用系统可展示结果
+      if (systemResult != null && _isAddressSufficient(systemResult)) {
         _applyAddressResult(systemResult);
         logDebug(
-          '使用系统部分结果: $_currentAddress (国家:$_country, 省份:$_province, 城市:$_city, 区县:$_district)',
+          '在线补充后仍不理想，回退系统结果: $_currentAddress (国家:$_country, 省份:$_province, 城市:$_city, 区县:$_district)',
         );
         return;
       }
 
-      // Step 5: 全部失败
+      // Step 5: 系统也不足时，使用合并结果（尽可能保留信息）
+      if (mergedResult != null && _isAddressSufficient(mergedResult)) {
+        _applyAddressResult(mergedResult);
+        logDebug(
+          '使用在线+系统合并结果: $_currentAddress (国家:$_country, 省份:$_province, 城市:$_city, 区县:$_district)',
+        );
+        return;
+      }
+
+      // Step 6: 仍有在线部分结果时使用在线部分结果
+      if (onlineResult != null && _isAddressSufficient(onlineResult)) {
+        _applyAddressResult(onlineResult);
+        logDebug(
+          '使用在线部分结果: $_currentAddress (国家:$_country, 省份:$_province, 城市:$_city, 区县:$_district)',
+        );
+        return;
+      }
+
+      // Step 7: 仍有系统部分结果时回退系统
+      if (systemResult != null) {
+        _applyAddressResult(systemResult);
+        logDebug(
+          '最终回退系统部分结果: $_currentAddress (国家:$_country, 省份:$_province, 城市:$_city, 区县:$_district)',
+        );
+        return;
+      }
+
+      // Step 8: 全部失败
       _applyAddressResult(null);
     } catch (e) {
       logDebug('获取地址信息失败: $e');
@@ -366,7 +400,18 @@ class LocationService extends ChangeNotifier {
         _currentPosition!.longitude,
       );
       if (result != null) {
-        _applyAddressResult(result);
+        final merged = _mergeAddressResult(
+          preferred: result,
+          fallback: {
+            'country': _country,
+            'province': _province,
+            'city': _city,
+            'district': _district,
+            'formatted_address': _currentAddress,
+            'source': 'state',
+          },
+        );
+        _applyAddressResult(merged);
         return true;
       }
       return false;
@@ -376,10 +421,66 @@ class LocationService extends ChangeNotifier {
     }
   }
 
-  /// 判断地址结果是否满足显示需求（至少有城市信息）
+  /// 首选展示格式是否可用（例如“浙江省·杭州市”）
+  bool _isPreferredDisplayReady(Map<String, String?> addr) {
+    final city = addr['city']?.trim();
+    final province = addr['province']?.trim();
+    return city != null &&
+        city.isNotEmpty &&
+        province != null &&
+        province.isNotEmpty;
+  }
+
+  /// 判断地址结果是否可用于降级展示（城市或省份至少其一可用）。
   bool _isAddressSufficient(Map<String, String?> addr) {
-    final city = addr['city'];
-    return city != null && city.isNotEmpty;
+    final city = addr['city']?.trim();
+    final province = addr['province']?.trim();
+    return (city != null && city.isNotEmpty) ||
+        (province != null && province.isNotEmpty);
+  }
+
+  /// 合并地址结果：优先使用 preferred，缺失字段回退到 fallback。
+  Map<String, String?> _mergeAddressResult({
+    required Map<String, String?> preferred,
+    Map<String, String?>? fallback,
+  }) {
+    if (fallback == null) return preferred;
+
+    String? pick(String key) {
+      final preferredValue = preferred[key]?.trim();
+      if (preferredValue != null && preferredValue.isNotEmpty) {
+        return preferredValue;
+      }
+      final fallbackValue = fallback[key]?.trim();
+      return (fallbackValue != null && fallbackValue.isNotEmpty)
+          ? fallbackValue
+          : null;
+    }
+
+    final country = pick('country');
+    final province = pick('province');
+    final city = pick('city');
+    final district = pick('district');
+    final street = pick('street');
+
+    final formattedAddress = [
+      country,
+      province,
+      city,
+      district,
+    ].whereType<String>().join(', ');
+
+    return <String, String?>{
+      'country': country,
+      'province': province,
+      'city': city,
+      'district': district,
+      'street': street,
+      'formatted_address': formattedAddress.isNotEmpty
+          ? formattedAddress
+          : pick('formatted_address'),
+      'source': preferred['source'] ?? fallback['source'],
+    };
   }
 
   /// 将地址结果应用到内部状态，null 表示失败
@@ -408,9 +509,7 @@ class LocationService extends ChangeNotifier {
     final url =
         'https://nominatim.openstreetmap.org/reverse?format=json&lat=$latitude&lon=$longitude&zoom=18&addressdetails=1';
 
-    final acceptLanguage = I18nLanguage.buildAcceptLanguage(
-      _apiLanguageParam,
-    );
+    final acceptLanguage = I18nLanguage.buildAcceptLanguage(_apiLanguageParam);
 
     final response = await NetworkService.instance.get(
       url,
@@ -437,15 +536,44 @@ class LocationService extends ChangeNotifier {
           (v is String && v.trim().isNotEmpty) ? v.trim() : null;
 
       final country = s(address['country']);
-      final province = s(address['state'] ?? address['province']);
-      final city = s(address['city'] ??
-          address['county'] ??
-          address['town'] ??
-          address['village']);
-      final district = s(address['district'] ?? address['suburb']);
+      final province = s(
+        address['state'] ??
+            address['province'] ??
+            address['region'] ??
+            address['state_district'] ??
+            address['prefecture'],
+      );
 
-      final parts =
-          [country, province, city, district].whereType<String>().toList();
+      final county = s(address['county']);
+      String? city = s(
+        address['city'] ??
+            address['municipality'] ??
+            address['town'] ??
+            address['village'] ??
+            county,
+      );
+
+      // 日本等地区可能出现 city=东京、county=新宿区；优先把更细粒度行政区用于 city 展示
+      if ((city == null || (province != null && city == province)) &&
+          county != null &&
+          county != province) {
+        city = county;
+      }
+
+      final district = s(
+        address['city_district'] ??
+            address['district'] ??
+            address['suburb'] ??
+            address['quarter'] ??
+            address['neighbourhood'],
+      );
+
+      final parts = [
+        country,
+        province,
+        city,
+        district,
+      ].whereType<String>().toList();
       final formattedAddress = parts.isNotEmpty ? parts.join(', ') : null;
 
       return <String, String?>{
@@ -879,7 +1007,7 @@ class LocationService extends ChangeNotifier {
     if (hasCity) {
       String cityDisplay;
       if (isChinese) {
-        cityDisplay = _city!.endsWith('市') ? _city! : '$_city市';
+        cityDisplay = _formatChineseCityDisplay(_city!);
       } else {
         cityDisplay = _city!;
       }
@@ -905,6 +1033,42 @@ class LocationService extends ChangeNotifier {
     }
 
     return '';
+  }
+
+  /// 中文城市显示格式化：仅在明确是“城市名”时补全“市”后缀
+  /// 避免把“新宿区”“Naka ward”这类行政区/英文名称错误显示成“新宿区市”“Naka ward市”
+  String _formatChineseCityDisplay(String city) {
+    final trimmed = city.trim();
+    if (trimmed.isEmpty) return trimmed;
+
+    const adminSuffixes = {
+      '市',
+      '区',
+      '县',
+      '镇',
+      '乡',
+      '村',
+      '盟',
+      '旗',
+      '郡',
+      '町',
+    };
+
+    if (adminSuffixes.any(trimmed.endsWith)) {
+      return trimmed;
+    }
+
+    // 自治州等行政单位不补“市”
+    if (trimmed.endsWith('自治州')) {
+      return trimmed;
+    }
+
+    // 对包含拉丁字符/数字的名称不强制补“市”
+    if (RegExp(r'[A-Za-z0-9]').hasMatch(trimmed)) {
+      return trimmed;
+    }
+
+    return '$trimmed市';
   }
 
   /// 格式化坐标显示（用于离线状态或简单显示）
