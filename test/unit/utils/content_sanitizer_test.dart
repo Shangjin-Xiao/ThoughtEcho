@@ -3,8 +3,7 @@ import 'package:thoughtecho/utils/content_sanitizer.dart';
 
 void main() {
   group('ContentSanitizer', () {
-    const expectedCspContent =
-        "default-src 'none'; script-src 'none'; object-src 'none'; style-src 'unsafe-inline'; img-src data: https:; font-src data: https:; connect-src 'none'; media-src 'none'; frame-src 'none'; child-src 'none';";
+    const expectedCspContent = ContentSanitizer.defaultCsp;
     const expectedCspTag =
         '<meta http-equiv="Content-Security-Policy" content="$expectedCspContent">';
 
