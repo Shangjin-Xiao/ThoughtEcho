@@ -1628,9 +1628,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                   valueListenable: _contentController,
                   builder: (context, value, child) {
                     final bool isContentEmpty = value.text.trim().isEmpty;
-                    final bool canSave = !_isLoadingFullQuote &&
-                        !_isSaving &&
-                        !isContentEmpty;
+                    final bool canSave =
+                        !_isLoadingFullQuote && !_isSaving && !isContentEmpty;
 
                     return FilledButton(
                       style: FilledButton.styleFrom(
@@ -1648,8 +1647,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
                               try {
                                 // 获取当前时间段
-                                final String currentDayPeriodKey =
-                                    TimeUtils.getCurrentDayPeriodKey(); // 使用 Key
+                                final String currentDayPeriodKey = TimeUtils
+                                    .getCurrentDayPeriodKey(); // 使用 Key
 
                                 // 创建或更新笔记
                                 // 使用实时获取的位置（新建）或原始位置（编辑）
@@ -1684,18 +1683,18 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                               _cachedLocationService
                                                   ?.getFormattedLocation())
                                       : null,
-                                  latitude: (_includeLocation ||
-                                          _includeWeather)
-                                      ? (isEditing
-                                          ? _originalLatitude
-                                          : _newLatitude)
-                                      : null,
-                                  longitude: (_includeLocation ||
-                                          _includeWeather)
-                                      ? (isEditing
-                                          ? _originalLongitude
-                                          : _newLongitude)
-                                      : null,
+                                  latitude:
+                                      (_includeLocation || _includeWeather)
+                                          ? (isEditing
+                                              ? _originalLatitude
+                                              : _newLatitude)
+                                          : null,
+                                  longitude:
+                                      (_includeLocation || _includeWeather)
+                                          ? (isEditing
+                                              ? _originalLongitude
+                                              : _newLongitude)
+                                          : null,
                                   weather: _includeWeather
                                       ? (isEditing
                                           ? _originalWeather
