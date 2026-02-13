@@ -37,6 +37,11 @@ void main() {
       expect(LocationService.formatLocationForDisplay(input), 'Tokyo·Shinjuku');
     });
 
+    test('formats Japan prefecture + ward correctly', () {
+      const input = '日本,东京,新宿区,';
+      expect(LocationService.formatLocationForDisplay(input), '东京·新宿区');
+    });
+
     test('formats CSV with missing city and district correctly', () {
       const input = 'Japan,Chiba,,';
       expect(LocationService.formatLocationForDisplay(input), 'Japan·Chiba');
