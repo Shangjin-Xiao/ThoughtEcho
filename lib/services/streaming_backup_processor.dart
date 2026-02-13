@@ -141,7 +141,8 @@ class StreamingBackupProcessor {
               // 将 ZIP 条目名中的正斜杠转换为当前平台的路径分隔符
               // ZIP 格式标准使用正斜杠，但在 Windows 上需要转换为反斜杠
               final normalizedName = f.name.replaceAll('/', p.separator);
-              final safeRelativePath = _normalizeSafeRelativePath(normalizedName);
+              final safeRelativePath =
+                  _normalizeSafeRelativePath(normalizedName);
               if (safeRelativePath == null) {
                 logWarning('跳过不安全的ZIP条目: ${f.name}',
                     source: 'StreamingBackupProcessor');
