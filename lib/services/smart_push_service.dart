@@ -1905,7 +1905,8 @@ class SmartPushService extends ChangeNotifier {
       );
       AppLogger.i('通知已成功发送: $title');
     } catch (e, stack) {
-      AppLogger.e('通知发送失败 (_notificationsPlugin.show)', error: e, stackTrace: stack);
+      AppLogger.e('通知发送失败 (_notificationsPlugin.show)',
+          error: e, stackTrace: stack);
     }
   }
 

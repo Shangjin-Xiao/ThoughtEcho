@@ -267,6 +267,12 @@ class DatabaseService extends ChangeNotifier {
     _database = testDb;
   }
 
+  /// Test method to clear the test database instance
+  @visibleForTesting
+  static void clearTestDatabase() {
+    _database = null;
+  }
+
   /// 修复：初始化数据库，增加并发控制
   Future<void> init() async {
     // 修复：检查服务是否已销毁
@@ -4981,63 +4987,31 @@ class DatabaseService extends ChangeNotifier {
       }
 
       final db = _database!;
-      // 性能优化：仅查询需要补全 day_period 的记录，且只获取必要的列
-      // 避免全表扫描和加载所有字段导致的大内存占用
-      final List<Map<String, dynamic>> maps = await db.query(
-        'quotes',
-        columns: ['id', 'date'],
-        where: 'day_period IS NULL OR day_period = ""',
-      );
 
-      if (maps.isEmpty) {
+      // 优化：使用原生 SQL 批量更新，避免 Dart 层面的大量数据传输和循环处理
+      // 逻辑与 TimeUtils 及 Dart 实现保持一致：
+      // 05-07: dawn, 08-11: morning, 12-16: afternoon,
+      // 17-19: dusk, 20-22: evening, 其他: midnight
+      final count = await db.rawUpdate('''
+        UPDATE quotes
+        SET day_period = CASE
+          WHEN CAST(strftime('%H', date) AS INTEGER) >= 5 AND CAST(strftime('%H', date) AS INTEGER) < 8 THEN 'dawn'
+          WHEN CAST(strftime('%H', date) AS INTEGER) >= 8 AND CAST(strftime('%H', date) AS INTEGER) < 12 THEN 'morning'
+          WHEN CAST(strftime('%H', date) AS INTEGER) >= 12 AND CAST(strftime('%H', date) AS INTEGER) < 17 THEN 'afternoon'
+          WHEN CAST(strftime('%H', date) AS INTEGER) >= 17 AND CAST(strftime('%H', date) AS INTEGER) < 20 THEN 'dusk'
+          WHEN CAST(strftime('%H', date) AS INTEGER) >= 20 AND CAST(strftime('%H', date) AS INTEGER) < 23 THEN 'evening'
+          ELSE 'midnight'
+        END
+        WHERE (day_period IS NULL OR day_period = '')
+          AND date IS NOT NULL
+          AND date != ''
+          AND strftime('%H', date) IS NOT NULL
+      ''');
+
+      if (count > 0) {
+        logDebug('已批量补全 $count 条记录的 day_period 字段');
+      } else {
         logDebug('没有需要补全 day_period 字段的记录');
-        return;
-      }
-
-      // 使用 Batch 批量更新，大幅提升性能
-      final batch = db.batch();
-      int patchedCount = 0;
-
-      for (final map in maps) {
-        // 解析时间
-        String? dateStr = map['date'];
-        if (dateStr == null || dateStr.isEmpty) continue;
-        DateTime? dt;
-        try {
-          dt = DateTime.parse(dateStr);
-        } catch (_) {
-          continue;
-        }
-        // 推算时间段key
-        final hour = dt.hour;
-        String dayPeriodKey;
-        if (hour >= 5 && hour < 8) {
-          dayPeriodKey = 'dawn';
-        } else if (hour >= 8 && hour < 12) {
-          dayPeriodKey = 'morning';
-        } else if (hour >= 12 && hour < 17) {
-          dayPeriodKey = 'afternoon';
-        } else if (hour >= 17 && hour < 20) {
-          dayPeriodKey = 'dusk';
-        } else if (hour >= 20 && hour < 23) {
-          dayPeriodKey = 'evening';
-        } else {
-          dayPeriodKey = 'midnight';
-        }
-
-        // 添加到 batch
-        batch.update(
-          'quotes',
-          {'day_period': dayPeriodKey},
-          where: 'id = ?',
-          whereArgs: [map['id']],
-        );
-        patchedCount++;
-      }
-
-      if (patchedCount > 0) {
-        await batch.commit(noResult: true);
-        logDebug('已补全 $patchedCount 条记录的 day_period 字段');
       }
     } catch (e) {
       logDebug('补全 day_period 字段失败: $e');
