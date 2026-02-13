@@ -58,6 +58,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   String? _aiSummary;
   Quote? _fullInitialQuote;
   bool _isLoadingFullQuote = false;
+  bool _isSaving = false;
 
   // 优化：内部维护标签列表，支持动态更新
   List<NoteCategory> _availableTags = [];
@@ -1623,161 +1624,184 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                   child: Text(l10n.cancel),
                 ),
                 const SizedBox(width: 8),
-                FilledButton(
-                  style: FilledButton.styleFrom(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        AppTheme.buttonRadius,
+                ValueListenableBuilder<TextEditingValue>(
+                  valueListenable: _contentController,
+                  builder: (context, value, child) {
+                    final bool isContentEmpty = value.text.trim().isEmpty;
+                    final bool canSave = !_isLoadingFullQuote &&
+                        !_isSaving &&
+                        !isContentEmpty;
+
+                    return FilledButton(
+                      style: FilledButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.buttonRadius,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                  onPressed: _isLoadingFullQuote
-                      ? null
-                      : () async {
-                          if (_contentController.text.isNotEmpty) {
-                            // 获取当前时间段
-                            final String currentDayPeriodKey =
-                                TimeUtils.getCurrentDayPeriodKey(); // 使用 Key
+                      onPressed: canSave
+                          ? () async {
+                              setState(() {
+                                _isSaving = true;
+                              });
 
-                            // 创建或更新笔记
-                            // 使用实时获取的位置（新建）或原始位置（编辑）
-                            final isEditing = widget.initialQuote != null;
-                            final baseQuote =
-                                _fullInitialQuote ?? widget.initialQuote;
+                              try {
+                                // 获取当前时间段
+                                final String currentDayPeriodKey =
+                                    TimeUtils.getCurrentDayPeriodKey(); // 使用 Key
 
-                            final Quote quote = Quote(
-                              id: widget.initialQuote?.id ?? const Uuid().v4(),
-                              content: _contentController.text,
-                              date: widget.initialQuote?.date ??
-                                  DateTime.now().toIso8601String(),
-                              aiAnalysis: _aiSummary,
-                              source: _formatSource(
-                                _authorController.text,
-                                _workController.text,
-                              ),
-                              sourceAuthor: _authorController.text,
-                              sourceWork: _workController.text,
-                              tagIds: _selectedTagIds,
-                              sentiment: baseQuote?.sentiment,
-                              keywords: baseQuote?.keywords,
-                              summary: baseQuote?.summary,
-                              categoryId: _selectedCategory?.id ??
-                                  widget.initialQuote?.categoryId,
-                              colorHex: _selectedColorHex,
-                              location: _includeLocation
-                                  ? (isEditing
-                                      ? _originalLocation
-                                      : _newLocation ??
-                                          _cachedLocationService
-                                              ?.getFormattedLocation())
-                                  : null,
-                              latitude: (_includeLocation || _includeWeather)
-                                  ? (isEditing
-                                      ? _originalLatitude
-                                      : _newLatitude)
-                                  : null,
-                              longitude: (_includeLocation || _includeWeather)
-                                  ? (isEditing
-                                      ? _originalLongitude
-                                      : _newLongitude)
-                                  : null,
-                              weather: _includeWeather
-                                  ? (isEditing
-                                      ? _originalWeather
-                                      : _cachedWeatherService?.currentWeather)
-                                  : null,
-                              temperature: _includeWeather
-                                  ? (isEditing
-                                      ? _originalTemperature
-                                      : _cachedWeatherService?.temperature)
-                                  : null,
-                              dayPeriod: widget.initialQuote?.dayPeriod ??
-                                  currentDayPeriodKey, // 保存 Key
-                              editSource:
-                                  widget.initialQuote?.editSource, // 保证兼容
-                              deltaContent:
-                                  widget.initialQuote?.deltaContent, // 保证兼容
-                            );
+                                // 创建或更新笔记
+                                // 使用实时获取的位置（新建）或原始位置（编辑）
+                                final isEditing = widget.initialQuote != null;
+                                final baseQuote =
+                                    _fullInitialQuote ?? widget.initialQuote;
 
-                            try {
-                              final db = Provider.of<DatabaseService>(
-                                context,
-                                listen: false,
-                              );
-
-                              if (widget.initialQuote != null) {
-                                // 更新已有笔记
-                                await db.updateQuote(quote);
-                                if (!context.mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      AppLocalizations.of(context).noteUpdated,
-                                    ),
-                                    duration:
-                                        AppConstants.snackBarDurationImportant,
+                                final Quote quote = Quote(
+                                  id: widget.initialQuote?.id ??
+                                      const Uuid().v4(),
+                                  content: _contentController.text,
+                                  date: widget.initialQuote?.date ??
+                                      DateTime.now().toIso8601String(),
+                                  aiAnalysis: _aiSummary,
+                                  source: _formatSource(
+                                    _authorController.text,
+                                    _workController.text,
                                   ),
+                                  sourceAuthor: _authorController.text,
+                                  sourceWork: _workController.text,
+                                  tagIds: _selectedTagIds,
+                                  sentiment: baseQuote?.sentiment,
+                                  keywords: baseQuote?.keywords,
+                                  summary: baseQuote?.summary,
+                                  categoryId: _selectedCategory?.id ??
+                                      widget.initialQuote?.categoryId,
+                                  colorHex: _selectedColorHex,
+                                  location: _includeLocation
+                                      ? (isEditing
+                                          ? _originalLocation
+                                          : _newLocation ??
+                                              _cachedLocationService
+                                                  ?.getFormattedLocation())
+                                      : null,
+                                  latitude: (_includeLocation ||
+                                          _includeWeather)
+                                      ? (isEditing
+                                          ? _originalLatitude
+                                          : _newLatitude)
+                                      : null,
+                                  longitude: (_includeLocation ||
+                                          _includeWeather)
+                                      ? (isEditing
+                                          ? _originalLongitude
+                                          : _newLongitude)
+                                      : null,
+                                  weather: _includeWeather
+                                      ? (isEditing
+                                          ? _originalWeather
+                                          : _cachedWeatherService
+                                              ?.currentWeather)
+                                      : null,
+                                  temperature: _includeWeather
+                                      ? (isEditing
+                                          ? _originalTemperature
+                                          : _cachedWeatherService?.temperature)
+                                      : null,
+                                  dayPeriod: widget.initialQuote?.dayPeriod ??
+                                      currentDayPeriodKey, // 保存 Key
+                                  editSource:
+                                      widget.initialQuote?.editSource, // 保证兼容
+                                  deltaContent:
+                                      widget.initialQuote?.deltaContent, // 保证兼容
                                 );
-                              } else {
-                                // 添加新笔记
-                                await db.addQuote(quote);
-                                if (!context.mounted) return;
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      AppLocalizations.of(context).noteSaved,
+
+                                final db = Provider.of<DatabaseService>(
+                                  context,
+                                  listen: false,
+                                );
+
+                                if (widget.initialQuote != null) {
+                                  // 更新已有笔记
+                                  await db.updateQuote(quote);
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        AppLocalizations.of(context)
+                                            .noteUpdated,
+                                      ),
+                                      duration: AppConstants
+                                          .snackBarDurationImportant,
                                     ),
-                                    duration:
-                                        AppConstants.snackBarDurationImportant,
-                                  ),
-                                );
-                              }
-
-                              // 调用保存回调
-                              if (widget.onSave != null) {
-                                widget.onSave!(quote);
-                              }
-
-                              // 在保存后请求AI推荐标签（仅新建笔记时）
-                              if (!isEditing) {
-                                await _showAIRecommendedTags(quote.content);
-                              }
-
-                              // 关闭对话框
-                              if (this.context.mounted) {
-                                Navigator.of(context).pop();
-                              }
-                            } catch (e) {
-                              if (context.mounted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      AppLocalizations.of(
-                                        context,
-                                      ).saveFailedWithError(e.toString()),
+                                  );
+                                } else {
+                                  // 添加新笔记
+                                  await db.addQuote(quote);
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        AppLocalizations.of(context).noteSaved,
+                                      ),
+                                      duration: AppConstants
+                                          .snackBarDurationImportant,
                                     ),
-                                    duration:
-                                        AppConstants.snackBarDurationError,
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
+                                  );
+                                }
+
+                                // 调用保存回调
+                                if (widget.onSave != null) {
+                                  widget.onSave!(quote);
+                                }
+
+                                // 在保存后请求AI推荐标签（仅新建笔记时）
+                                if (!isEditing) {
+                                  await _showAIRecommendedTags(quote.content);
+                                }
+
+                                // 关闭对话框
+                                if (this.context.mounted) {
+                                  Navigator.of(context).pop();
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        AppLocalizations.of(
+                                          context,
+                                        ).saveFailedWithError(e.toString()),
+                                      ),
+                                      duration:
+                                          AppConstants.snackBarDurationError,
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              } finally {
+                                if (mounted) {
+                                  setState(() {
+                                    _isSaving = false;
+                                  });
+                                }
                               }
                             }
-                          }
-                        },
-                  child: _isLoadingFullQuote
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : Text(
-                          widget.initialQuote != null
-                              ? AppLocalizations.of(context).edit
-                              : AppLocalizations.of(context).save,
-                        ),
+                          : null,
+                      child: _isLoadingFullQuote || _isSaving
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : Text(
+                              widget.initialQuote != null
+                                  ? AppLocalizations.of(context).edit
+                                  : AppLocalizations.of(context).save,
+                            ),
+                    );
+                  },
                 ),
               ],
             ),
