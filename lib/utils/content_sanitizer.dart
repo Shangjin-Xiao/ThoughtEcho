@@ -11,7 +11,7 @@ class ContentSanitizer {
   /// - style-src 'unsafe-inline': Allow inline styles (needed for the report's design)
   /// - img-src data: https: : Allow images from data URIs and HTTPS sources
   /// - font-src data: https: : Allow fonts from data URIs and HTTPS sources
-  static const String _defaultCsp =
+  static const String defaultCsp =
       "default-src 'none'; script-src 'none'; object-src 'none'; style-src 'unsafe-inline'; "
       "img-src data: https:; font-src data: https:; connect-src 'none'; "
       "media-src 'none'; frame-src 'none'; child-src 'none';";
@@ -30,7 +30,7 @@ class ContentSanitizer {
     }
 
     final cspTag =
-        '<meta http-equiv="Content-Security-Policy" content="$_defaultCsp">';
+        '<meta http-equiv="Content-Security-Policy" content="$defaultCsp">';
 
     // Try to find <head> tag (case-insensitive), preserving attributes
     final headRegex = RegExp(r'(<head[^>]*>)', caseSensitive: false);
