@@ -601,7 +601,11 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
         // 设置正确的ContentType和编码，防止乱码
         request.response.headers.contentType =
             ContentType('text', 'html', charset: 'utf-8');
-        request.response.headers.add('Access-Control-Allow-Origin', '*');
+        // 安全增强：设置Content-Security-Policy头
+        request.response.headers.add(
+          'Content-Security-Policy',
+          ContentSanitizer.defaultCsp,
+        );
 
         // 写入HTML内容
         request.response.write(htmlContent);
