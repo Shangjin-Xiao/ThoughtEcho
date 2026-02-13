@@ -43,9 +43,12 @@ void main() {
             summary TEXT
           )
         ''');
-      await db.execute('CREATE TABLE categories(id TEXT PRIMARY KEY, name TEXT, is_default BOOLEAN, icon_name TEXT, last_modified TEXT)');
-      await db.execute('CREATE TABLE quote_tags(quote_id TEXT, tag_id TEXT, PRIMARY KEY (quote_id, tag_id))');
-      await db.execute('CREATE TABLE media_references(id TEXT PRIMARY KEY, file_path TEXT, quote_id TEXT, created_at TEXT)');
+      await db.execute(
+          'CREATE TABLE categories(id TEXT PRIMARY KEY, name TEXT, is_default BOOLEAN, icon_name TEXT, last_modified TEXT)');
+      await db.execute(
+          'CREATE TABLE quote_tags(quote_id TEXT, tag_id TEXT, PRIMARY KEY (quote_id, tag_id))');
+      await db.execute(
+          'CREATE TABLE media_references(id TEXT PRIMARY KEY, file_path TEXT, quote_id TEXT, created_at TEXT)');
 
       // We don't need full service.init() because we set the test database and created tables manually
       // But we need to ensure service knows database is ready if needed,
@@ -56,7 +59,8 @@ void main() {
       await db.close();
     });
 
-    test('patchQuotesDayPeriod correctly updates day_period based on time', () async {
+    test('patchQuotesDayPeriod correctly updates day_period based on time',
+        () async {
       // 1. Insert test data with NULL day_period
       final testCases = [
         {'id': '1', 'date': '2023-10-27T06:00:00', 'expected': 'dawn'},
@@ -67,8 +71,16 @@ void main() {
         {'id': '6', 'date': '2023-10-27T02:00:00', 'expected': 'midnight'},
         {'id': '7', 'date': '2023-10-27T23:30:00', 'expected': 'midnight'},
         // Edge cases
-        {'id': '8', 'date': '2023-10-27T05:00:00', 'expected': 'dawn'}, // 5 inclusive
-        {'id': '9', 'date': '2023-10-27T08:00:00', 'expected': 'morning'}, // 8 inclusive
+        {
+          'id': '8',
+          'date': '2023-10-27T05:00:00',
+          'expected': 'dawn'
+        }, // 5 inclusive
+        {
+          'id': '9',
+          'date': '2023-10-27T08:00:00',
+          'expected': 'morning'
+        }, // 8 inclusive
       ];
 
       for (final testCase in testCases) {
@@ -86,13 +98,12 @@ void main() {
       // 3. Verify
       for (final testCase in testCases) {
         final result = await db.query('quotes',
-          columns: ['day_period'],
-          where: 'id = ?',
-          whereArgs: [testCase['id']]
-        );
+            columns: ['day_period'],
+            where: 'id = ?',
+            whereArgs: [testCase['id']]);
         final actual = result.first['day_period'];
         expect(actual, equals(testCase['expected']),
-          reason: 'Failed for time ${testCase['date']}');
+            reason: 'Failed for time ${testCase['date']}');
       }
     });
   });
