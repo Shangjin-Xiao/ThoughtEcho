@@ -91,4 +91,33 @@ void main() {
       );
     });
   });
+
+  group('LocationService.getDisplayLocation', () {
+    test(
+      'keeps English city and district unchanged when locale is English',
+      () {
+        final service = LocationService();
+        service.currentLocaleCode = 'en';
+        service.parseLocationString('Japan,Tokyo,Asakusa,Taito');
+
+        expect(service.getDisplayLocation(), 'Asakusa · Taito');
+      },
+    );
+
+    test('does not append Chinese 市 suffix in English locale', () {
+      final service = LocationService();
+      service.currentLocaleCode = 'en';
+      service.parseLocationString('China,Guangdong,Dongguan,');
+
+      expect(service.getDisplayLocation(), 'Guangdong · Dongguan');
+    });
+
+    test('Chinese locale still applies Chinese formatting rules', () {
+      final service = LocationService();
+      service.currentLocaleCode = 'zh';
+      service.parseLocationString('中国,广东,东莞,南城区');
+
+      expect(service.getDisplayLocation(), '东莞市·南城区');
+    });
+  });
 }
