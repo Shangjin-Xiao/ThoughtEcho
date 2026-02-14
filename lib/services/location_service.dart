@@ -1037,24 +1037,38 @@ class LocationService extends ChangeNotifier {
 
   /// 中文城市显示格式化：仅在明确是“城市名”时补全“市”后缀
   /// 避免把“新宿区”“Naka ward”这类行政区/英文名称错误显示成“新宿区市”“Naka ward市”
-  String _formatChineseCityDisplay(String city) {
-    final trimmed = city.trim();
-    if (trimmed.isEmpty) return trimmed;
+  bool _containsLatinOrDigit(String text) {
+    return RegExp(r'[A-Za-z0-9]').hasMatch(text);
+  }
 
+  bool _isChineseAdminDivision(String text) {
     const adminSuffixes = {
       '市',
       '区',
+      '區',
       '县',
+      '縣',
       '镇',
+      '鎮',
       '乡',
+      '鄉',
       '村',
+      '里',
       '盟',
       '旗',
       '郡',
       '町',
     };
 
-    if (adminSuffixes.any(trimmed.endsWith)) {
+    final trimmed = text.trim();
+    return adminSuffixes.any(trimmed.endsWith);
+  }
+
+  String _formatChineseCityDisplay(String city) {
+    final trimmed = city.trim();
+    if (trimmed.isEmpty) return trimmed;
+
+    if (_isChineseAdminDivision(trimmed)) {
       return trimmed;
     }
 
@@ -1064,7 +1078,7 @@ class LocationService extends ChangeNotifier {
     }
 
     // 对包含拉丁字符/数字的名称不强制补“市”
-    if (RegExp(r'[A-Za-z0-9]').hasMatch(trimmed)) {
+    if (_containsLatinOrDigit(trimmed)) {
       return trimmed;
     }
 
