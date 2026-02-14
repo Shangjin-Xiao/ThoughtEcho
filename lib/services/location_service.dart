@@ -1052,6 +1052,11 @@ class LocationService extends ChangeNotifier {
       '旗',
       '郡',
       '町',
+      // Traditional Chinese suffixes
+      '區',
+      '縣',
+      '鎮',
+      '鄉',
     };
 
     if (adminSuffixes.any(trimmed.endsWith)) {
