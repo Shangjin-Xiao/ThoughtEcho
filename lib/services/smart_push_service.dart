@@ -213,6 +213,7 @@ class SmartPushService extends ChangeNotifier {
         'android_push_fallback_$idIndex',
         kBackgroundPushTask,
         initialDelay: delay > Duration.zero ? delay : Duration.zero,
+        inputData: {'triggerKind': 'smartPush'},
       );
       AppLogger.i('已使用 WorkManager 降级方案调度推送: 延迟 ${delay.inMinutes} 分钟');
 
@@ -917,6 +918,7 @@ class SmartPushService extends ChangeNotifier {
         'daily_quote_fallback',
         kBackgroundPushTask,
         initialDelay: delay > Duration.zero ? delay : Duration.zero,
+        inputData: {'triggerKind': 'dailyQuote'},
       );
       AppLogger.i('已使用 WorkManager 调度每日一言: 延迟 ${delay.inMinutes} 分钟');
     } catch (e) {
@@ -982,24 +984,13 @@ class SmartPushService extends ChangeNotifier {
       AppLogger.w('SOTA 时间计算失败，降级到传统算法', error: e);
     }
 
-    // 2. 降级：使用传统的笔记创建时间分析
-    final allNotes = await _databaseService.getUserQuotes();
-
-    if (allNotes.length < 10) {
-      return defaultSlots;
-    }
-
-    // 分析用户笔记创建时间分布
-    final hourDistribution = List<int>.filled(24, 0);
-    for (final note in allNotes) {
-      try {
-        final noteDate = DateTime.parse(note.date);
-        hourDistribution[noteDate.hour]++;
-      } catch (_) {}
-    }
+    // 2. 降级：使用传统的笔记创建时间分析（SQL 聚合，不加载内容）
+    final hourDistribution = await _databaseService.getHourDistributionForSmartPush();
 
     final totalNotes = hourDistribution.reduce((a, b) => a + b);
-    if (totalNotes == 0) return defaultSlots;
+    if (totalNotes < 10) {
+      return defaultSlots;
+    }
 
     // 定义时间段及其权重
     final timeSlotCandidates = <_TimeSlotCandidate>[
@@ -1148,6 +1139,7 @@ class SmartPushService extends ChangeNotifier {
             networkType: NetworkType.connected, // 需要网络来获取天气/一言
           ),
           existingWorkPolicy: ExistingWorkPolicy.replace,
+          inputData: {'triggerKind': 'smartPush'},
         );
         AppLogger.i('已注册 iOS 后台任务: 延迟 ${delay.inMinutes} 分钟');
       } catch (e) {
@@ -1279,14 +1271,19 @@ class SmartPushService extends ChangeNotifier {
 
   /// 检查并触发推送（核心逻辑）
   ///
-  /// 当 isBackground == true 时，表示由 AlarmManager/WorkManager 触发，
-  /// 直接执行推送，不再做时间槽匹配（调度器已经在正确的时间触发了我们）。
-  Future<void> checkAndPush({bool isBackground = false}) async {
+  /// [triggerKind] 标识触发来源：
+  /// - 'dailyQuote': 由每日一言闹钟/任务触发
+  /// - 'smartPush': 由智能推送闹钟/任务触发
+  /// - null: 来源未知（周期性检查或前台手动调用），使用时间推断
+  Future<void> checkAndPush({
+    bool isBackground = false,
+    String? triggerKind,
+  }) async {
     final now = DateTime.now();
     AppLogger.i(
-        '开始检查推送条件 (isBackground: $isBackground, time: ${now.hour}:${now.minute})');
+        '开始检查推送条件 (isBackground: $isBackground, triggerKind: $triggerKind, time: ${now.hour}:${now.minute})');
 
-    // 如果是前台手动调用（非后台），默认执行智能推送检查（或根据上下文）
+    // 如果是前台手动调用（非后台），默认执行智能推送检查
     if (!isBackground) {
       AppLogger.d('前台手动触发，检查智能推送是否启用');
       if (_settings.enabled) {
@@ -1298,9 +1295,8 @@ class SmartPushService extends ChangeNotifier {
       return;
     }
 
-    // 后台逻辑：由 AlarmManager/WorkManager 触发，直接执行推送
-    // 不再做时间槽匹配，因为智能模式下调度时间与 _settings.pushTimeSlots 不一致
-    AppLogger.w('后台推送触发，直接执行推送 (time: ${now.hour}:${now.minute})');
+    // 后台逻辑：由 AlarmManager/WorkManager 触发
+    AppLogger.w('后台推送触发 (triggerKind: $triggerKind, time: ${now.hour}:${now.minute})');
 
     // 防重复：距上次推送不足 3 分钟则跳过
     if (_settings.lastPushTime != null) {
@@ -1311,29 +1307,47 @@ class SmartPushService extends ChangeNotifier {
       }
     }
 
-    // 1. 尝试每日一言推送（如果启用且当前时间接近每日一言时间）
-    if (_settings.dailyQuotePushEnabled) {
-      final slot = _settings.dailyQuotePushTime;
-      final slotTime =
-          DateTime(now.year, now.month, now.day, slot.hour, slot.minute);
-      final diff = now.difference(slotTime).inMinutes.abs();
-
-      if (diff <= 30) {
-        AppLogger.w('后台触发每日一言推送 (距设定时间 $diff 分钟)');
+    // 根据 triggerKind 精确路由
+    if (triggerKind == 'dailyQuote') {
+      // 明确由每日一言闹钟触发
+      if (_settings.dailyQuotePushEnabled) {
+        AppLogger.w('后台触发每日一言推送 (triggerKind: dailyQuote)');
         await _performDailyQuotePush(isBackground: true);
-        return;
+      } else {
+        AppLogger.d('每日一言推送已禁用，忽略 dailyQuote 触发');
       }
-    }
-
-    // 2. 尝试常规智能推送
-    if (_settings.enabled && _settings.shouldPushToday()) {
-      AppLogger.w('后台触发智能推送');
-      await _performSmartPush(isBackground: true);
+    } else if (triggerKind == 'smartPush') {
+      // 明确由智能推送闹钟触发
+      if (_settings.enabled && _settings.shouldPushToday()) {
+        AppLogger.w('后台触发智能推送 (triggerKind: smartPush)');
+        await _performSmartPush(isBackground: true);
+      } else {
+        AppLogger.d('智能推送未启用或今日不活跃，忽略 smartPush 触发');
+      }
     } else {
-      if (!_settings.enabled) {
-        AppLogger.d('智能推送未启用');
-      } else if (!_settings.shouldPushToday()) {
-        AppLogger.d('智能推送今日不活跃 (根据频率设置)');
+      // triggerKind 未知（周期性检查等），使用时间推断（保守窗口 ±10 分钟）
+      AppLogger.d('triggerKind 未知，使用时间推断路由');
+
+      bool handled = false;
+
+      // 尝试每日一言推送
+      if (_settings.dailyQuotePushEnabled) {
+        final slot = _settings.dailyQuotePushTime;
+        final slotTime =
+            DateTime(now.year, now.month, now.day, slot.hour, slot.minute);
+        final diff = now.difference(slotTime).inMinutes.abs();
+
+        if (diff <= 10) {
+          AppLogger.w('时间推断：触发每日一言推送 (距设定时间 $diff 分钟)');
+          await _performDailyQuotePush(isBackground: true);
+          handled = true;
+        }
+      }
+
+      // 尝试常规智能推送（即使已推送每日一言，也允许智能推送，避免遗漏）
+      if (!handled && _settings.enabled && _settings.shouldPushToday()) {
+        AppLogger.w('时间推断：触发智能推送');
+        await _performSmartPush(isBackground: true);
       }
     }
 
@@ -1536,7 +1550,7 @@ class SmartPushService extends ChangeNotifier {
   /// 4. 返回选中内容及其类型（用于效果追踪）
   Future<_SmartSelectResult> _smartSelectContent() async {
     final now = DateTime.now();
-    final allNotes = await _databaseService.getUserQuotes();
+    final allNotes = await _databaseService.getQuotesForSmartPush(limit: 500);
 
     if (allNotes.isEmpty) {
       // 没有笔记时，返回每日一言
@@ -1953,7 +1967,7 @@ class SmartPushService extends ChangeNotifier {
   /// 获取候选推送笔记
   Future<List<Quote>> getCandidateNotes() async {
     final candidates = <Quote>[];
-    final allNotes = await _databaseService.getUserQuotes();
+    final allNotes = await _databaseService.getQuotesForSmartPush(limit: 500);
 
     if (allNotes.isEmpty) return candidates;
 

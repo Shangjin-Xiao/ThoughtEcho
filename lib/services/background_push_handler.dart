@@ -56,14 +56,16 @@ void callbackDispatcher() {
       switch (task) {
         case kBackgroundPushTask:
         case Workmanager.iOSBackgroundTask: // iOS 后台处理通用入口
-          AppLogger.i('执行一次性推送检查...');
-          await pushService.checkAndPush(isBackground: true);
+          // 从 inputData 读取触发类型
+          final triggerKind = inputData?['triggerKind'] as String? ?? 'smartPush';
+          AppLogger.i('执行一次性推送检查 (triggerKind: $triggerKind)...');
+          await pushService.checkAndPush(isBackground: true, triggerKind: triggerKind);
           break;
 
         case kPeriodicCheckTask:
           // 周期性检查逻辑
           AppLogger.i('执行周期性推送检查...');
-          await pushService.checkAndPush(isBackground: true);
+          await pushService.checkAndPush(isBackground: true, triggerKind: null);
           break;
 
         default:
@@ -130,8 +132,10 @@ void backgroundPushCallback(int id) async {
     await pushService.loadSettingsForBackground();
 
     // 5. 执行检查和推送
-    AppLogger.i('执行检查和推送 (isBackground: true)');
-    await pushService.checkAndPush(isBackground: true);
+    // 根据 alarm ID 确定触发类型
+    final triggerKind = (id == 988) ? 'dailyQuote' : 'smartPush';
+    AppLogger.i('执行检查和推送 (isBackground: true, triggerKind: $triggerKind, alarmId: $id)');
+    await pushService.checkAndPush(isBackground: true, triggerKind: triggerKind);
 
     // 6. 重新调度下一次推送（关键步骤！）
     // 因为 oneShotAt 是一次性的，需要在执行完后重新调度
@@ -207,7 +211,7 @@ void backgroundPeriodicCheck() async {
 
         if (diff >= 0 && diff <= 10) {
           AppLogger.i('周期性检查：匹配到推送时间 ${slot.hour}:${slot.minute}，触发推送');
-          await pushService.checkAndPush(isBackground: true);
+          await pushService.checkAndPush(isBackground: true, triggerKind: 'smartPush');
           pushedRegular = true;
           break;
         }
@@ -223,7 +227,7 @@ void backgroundPeriodicCheck() async {
 
       if (dailyDiff >= 0 && dailyDiff <= 10) {
         AppLogger.i('周期性检查：当前时间接近每日一言时间 ${dailySlot.formattedTime}，触发推送');
-        await pushService.checkAndPush(isBackground: true);
+        await pushService.checkAndPush(isBackground: true, triggerKind: 'dailyQuote');
       }
     }
 

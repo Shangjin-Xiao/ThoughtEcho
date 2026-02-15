@@ -3456,6 +3456,122 @@ class DatabaseService extends ChangeNotifier {
     _updateQueryStats(queryType, timeMs);
   }
 
+  /// 智能推送专用轻量查询
+  ///
+  /// 不加载大字段（delta_content, ai_analysis, summary, keywords），
+  /// 不 JOIN tag 表，专为后台 isolate 设计，低内存开销。
+  Future<List<Quote>> getQuotesForSmartPush({
+    String? whereSql,
+    List<Object?>? whereArgs,
+    int limit = 200,
+    String orderBy = 'q.date DESC',
+  }) async {
+    try {
+      if (!_isInitialized) {
+        if (_isInitializing && _initCompleter != null) {
+          await _initCompleter!.future;
+        } else {
+          await init();
+        }
+      }
+
+      if (kIsWeb) {
+        // Web 平台降级：使用内存存储
+        var filtered = _memoryStore;
+        filtered.sort((a, b) {
+          final dateA = DateTime.tryParse(a.date) ?? DateTime.now();
+          final dateB = DateTime.tryParse(b.date) ?? DateTime.now();
+          return dateB.compareTo(dateA);
+        });
+        return filtered.take(limit).toList();
+      }
+
+      final db = await safeDatabase;
+
+      final conditions = <String>[];
+      final args = <Object?>[];
+
+      // 排除隐藏笔记
+      conditions.add('''
+        NOT EXISTS (
+          SELECT 1 FROM quote_tags qt_hidden
+          WHERE qt_hidden.quote_id = q.id
+          AND qt_hidden.tag_id = ?
+        )
+      ''');
+      args.add(hiddenTagId);
+
+      if (whereSql != null && whereSql.isNotEmpty) {
+        conditions.add(whereSql);
+        if (whereArgs != null) {
+          args.addAll(whereArgs);
+        }
+      }
+
+      final where = conditions.isNotEmpty
+          ? 'WHERE ${conditions.join(' AND ')}'
+          : '';
+
+      // 只取必要列，不取 delta_content/ai_analysis/summary/keywords
+      final query = '''
+        SELECT q.id, q.content, q.date, q.source, q.source_author, q.source_work,
+               q.category_id, q.color_hex, q.location, q.latitude, q.longitude,
+               q.weather, q.temperature, q.edit_source, q.day_period,
+               q.last_modified, q.favorite_count
+        FROM quotes q
+        $where
+        ORDER BY $orderBy
+        LIMIT ?
+      ''';
+      args.add(limit);
+
+      final maps = await db.rawQuery(query, args.whereType<Object>().toList());
+      return maps.map((m) => Quote.fromJson(m)).toList();
+    } catch (e) {
+      logError('getQuotesForSmartPush 失败: $e', error: e, source: 'DatabaseService');
+      return [];
+    }
+  }
+
+  /// 智能推送专用：获取笔记创建时间的小时分布（纯聚合，不加载内容）
+  Future<List<int>> getHourDistributionForSmartPush() async {
+    final distribution = List<int>.filled(24, 0);
+    try {
+      if (!_isInitialized) {
+        if (_isInitializing && _initCompleter != null) {
+          await _initCompleter!.future;
+        } else {
+          await init();
+        }
+      }
+
+      if (kIsWeb) {
+        for (final note in _memoryStore) {
+          final d = DateTime.tryParse(note.date);
+          if (d != null) distribution[d.hour]++;
+        }
+        return distribution;
+      }
+
+      final db = await safeDatabase;
+      final maps = await db.rawQuery('''
+        SELECT CAST(substr(date, 12, 2) AS INTEGER) AS h, COUNT(*) AS c
+        FROM quotes
+        GROUP BY h
+      ''');
+      for (final row in maps) {
+        final h = (row['h'] as int?) ?? 0;
+        final c = (row['c'] as int?) ?? 0;
+        if (h >= 0 && h < 24) {
+          distribution[h] = c;
+        }
+      }
+    } catch (e) {
+      logError('getHourDistributionForSmartPush 失败: $e', error: e, source: 'DatabaseService');
+    }
+    return distribution;
+  }
+
   /// 修复：获取查询性能报告
   Map<String, dynamic> getQueryPerformanceReport() {
     final report = <String, dynamic>{
