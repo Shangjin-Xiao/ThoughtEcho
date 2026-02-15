@@ -173,6 +173,30 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         _location != null || (_latitude != null && _longitude != null);
     _showWeather = _weather != null;
 
+    // 新建笔记时，自动填充默认作者、出处和标签
+    if (widget.initialQuote == null) {
+      try {
+        final settingsService =
+            Provider.of<SettingsService>(context, listen: false);
+        if (_authorController.text.isEmpty &&
+            settingsService.defaultAuthor != null &&
+            settingsService.defaultAuthor!.isNotEmpty) {
+          _authorController.text = settingsService.defaultAuthor!;
+        }
+        if (_workController.text.isEmpty &&
+            settingsService.defaultSource != null &&
+            settingsService.defaultSource!.isNotEmpty) {
+          _workController.text = settingsService.defaultSource!;
+        }
+        if (_selectedTagIds.isEmpty &&
+            settingsService.defaultTagIds.isNotEmpty) {
+          _selectedTagIds = List.from(settingsService.defaultTagIds);
+        }
+      } catch (_) {
+        // SettingsService 未注入时忽略
+      }
+    }
+
     // 新建笔记时，读取用户偏好设置自动勾选位置/天气
     if (widget.initialQuote == null) {
       // 性能优化：延迟到首帧渲染后 300ms 执行，避免与页面动画竞争

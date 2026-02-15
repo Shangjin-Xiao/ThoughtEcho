@@ -3385,5 +3385,31 @@
   "tileNoNetwork": "No Network",
   "tileLoading": "Loading...",
   "tileNoWeather": "No Weather",
-  "tileCachedSuffix": "(Cached)"
+  "tileCachedSuffix": "(Cached)",
+
+  "noteAutoFillSection": "Note Auto-Fill",
+  "noteAutoFillSectionDesc": "Auto-fill author, source, and tags when creating notes",
+  "defaultAuthor": "Default Author",
+  "defaultAuthorDesc": "Author to auto-fill when creating new notes",
+  "defaultAuthorHint": "Enter default author name",
+  "defaultSource": "Default Source",
+  "defaultSourceDesc": "Source/work to auto-fill when creating new notes",
+  "defaultSourceHint": "Enter default source or work name",
+  "defaultTags": "Default Tags",
+  "defaultTagsDesc": "Tags to auto-add when creating new notes",
+  "defaultTagsNone": "Not set",
+  "defaultTagsCount": "{count} tags selected",
+  "@defaultTagsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectDefaultTags": "Select Default Tags",
+  "autoFillEnabled": "Auto-fill enabled",
+  "clearDefaultValue": "Clear",
+  "saveDefaultValue": "Save",
+  "defaultValueSaved": "Default value saved",
+  "defaultValueCleared": "Default value cleared"
 }
