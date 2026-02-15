@@ -25,6 +25,7 @@ jobs:
       - name: 设置 Flutter 环境
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.38.6'
           channel: 'stable'
           cache: true
       
@@ -63,7 +64,6 @@ jobs:
           flutter --version
           flutter doctor -v
           flutter pub get
-          flutter pub upgrade
 
       - name: 构建发布版APK
         run: |
