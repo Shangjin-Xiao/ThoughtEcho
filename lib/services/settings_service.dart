@@ -147,6 +147,38 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 默认作者（自动填充）
+  String? get defaultAuthor => _appSettings.defaultAuthor;
+  Future<void> setDefaultAuthor(String? author) async {
+    if (author == null || author.isEmpty) {
+      _appSettings = _appSettings.copyWith(clearDefaultAuthor: true);
+    } else {
+      _appSettings = _appSettings.copyWith(defaultAuthor: author);
+    }
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  // 默认出处（自动填充）
+  String? get defaultSource => _appSettings.defaultSource;
+  Future<void> setDefaultSource(String? source) async {
+    if (source == null || source.isEmpty) {
+      _appSettings = _appSettings.copyWith(clearDefaultSource: true);
+    } else {
+      _appSettings = _appSettings.copyWith(defaultSource: source);
+    }
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  // 默认标签 ID 列表（自动填充）
+  List<String> get defaultTagIds => _appSettings.defaultTagIds;
+  Future<void> setDefaultTagIds(List<String> tagIds) async {
+    _appSettings = _appSettings.copyWith(defaultTagIds: tagIds);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
   SettingsService(this._prefs);
 
   /// 创建SettingsService实例的静态工厂方法

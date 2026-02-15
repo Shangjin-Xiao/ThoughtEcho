@@ -3394,5 +3394,31 @@
   "tileNoNetwork": "无网络",
   "tileLoading": "加载中...",
   "tileNoWeather": "无天气",
-  "tileCachedSuffix": "(缓存)"
+  "tileCachedSuffix": "(缓存)",
+
+  "noteAutoFillSection": "笔记默认填充",
+  "noteAutoFillSectionDesc": "新建笔记时自动填充作者、出处和标签",
+  "defaultAuthor": "默认作者",
+  "defaultAuthorDesc": "新建笔记时自动填充的作者",
+  "defaultAuthorHint": "输入默认作者名",
+  "defaultSource": "默认出处",
+  "defaultSourceDesc": "新建笔记时自动填充的出处/作品",
+  "defaultSourceHint": "输入默认出处或作品名",
+  "defaultTags": "默认标签",
+  "defaultTagsDesc": "新建笔记时自动添加的标签",
+  "defaultTagsNone": "未设置",
+  "defaultTagsCount": "已选 {count} 个标签",
+  "@defaultTagsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectDefaultTags": "选择默认标签",
+  "autoFillEnabled": "已启用自动填充",
+  "clearDefaultValue": "清除",
+  "saveDefaultValue": "保存",
+  "defaultValueSaved": "默认值已保存",
+  "defaultValueCleared": "默认值已清除"
 }

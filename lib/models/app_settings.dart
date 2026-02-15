@@ -16,6 +16,9 @@ class AppSettings {
   final bool developerMode; // 新增：开发者模式
   final bool autoAttachLocation; // 新增：添加笔记时自动勾选位置
   final bool autoAttachWeather; // 新增：添加笔记时自动勾选天气
+  final String? defaultAuthor; // 新增：默认作者（自动填充）
+  final String? defaultSource; // 新增：默认出处（自动填充）
+  final List<String> defaultTagIds; // 新增：默认标签 ID 列表（自动填充）
 
   AppSettings({
     this.hitokotoType = 'a,b,c,d,e,f,g,h,i,j,k', // 默认全选所有类型
@@ -35,6 +38,9 @@ class AppSettings {
     this.developerMode = false, // 默认关闭开发者模式
     this.autoAttachLocation = false, // 默认不自动勾选位置
     this.autoAttachWeather = false, // 默认不自动勾选天气
+    this.defaultAuthor, // 默认无自动填充作者
+    this.defaultSource, // 默认无自动填充出处
+    this.defaultTagIds = const [], // 默认无自动填充标签
   });
 
   Map<String, dynamic> toJson() {
@@ -56,6 +62,9 @@ class AppSettings {
       'developerMode': developerMode,
       'autoAttachLocation': autoAttachLocation,
       'autoAttachWeather': autoAttachWeather,
+      'defaultAuthor': defaultAuthor,
+      'defaultSource': defaultSource,
+      'defaultTagIds': defaultTagIds,
     };
   }
 
@@ -79,6 +88,9 @@ class AppSettings {
       developerMode: map['developerMode'] ?? false,
       autoAttachLocation: map['autoAttachLocation'] ?? false,
       autoAttachWeather: map['autoAttachWeather'] ?? false,
+      defaultAuthor: map['defaultAuthor'] as String?,
+      defaultSource: map['defaultSource'] as String?,
+      defaultTagIds: (map['defaultTagIds'] as List<dynamic>?)?.cast<String>() ?? const [],
     );
   }
 
@@ -100,6 +112,9 @@ class AppSettings {
         developerMode: false, // 默认关闭开发者模式
         autoAttachLocation: false, // 默认不自动勾选位置
         autoAttachWeather: false, // 默认不自动勾选天气
+        defaultAuthor: null,
+        defaultSource: null,
+        defaultTagIds: const [],
       );
 
   /// 使用特殊标记来区分"未指定"和"设置为null（跟随系统）"
@@ -122,6 +137,11 @@ class AppSettings {
     bool? developerMode,
     bool? autoAttachLocation,
     bool? autoAttachWeather,
+    String? defaultAuthor,
+    bool clearDefaultAuthor = false,
+    String? defaultSource,
+    bool clearDefaultSource = false,
+    List<String>? defaultTagIds,
   }) {
     return AppSettings(
       hitokotoType: hitokotoType ?? this.hitokotoType,
@@ -146,6 +166,9 @@ class AppSettings {
       developerMode: developerMode ?? this.developerMode,
       autoAttachLocation: autoAttachLocation ?? this.autoAttachLocation,
       autoAttachWeather: autoAttachWeather ?? this.autoAttachWeather,
+      defaultAuthor: clearDefaultAuthor ? null : (defaultAuthor ?? this.defaultAuthor),
+      defaultSource: clearDefaultSource ? null : (defaultSource ?? this.defaultSource),
+      defaultTagIds: defaultTagIds ?? this.defaultTagIds,
     );
   }
 }

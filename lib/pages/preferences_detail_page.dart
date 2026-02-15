@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../services/biometric_service.dart';
 import '../services/clipboard_service.dart';
+import '../services/database_service.dart';
 import '../services/settings_service.dart';
 import 'ai_settings_page.dart';
 
@@ -198,6 +199,50 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                   icon: Icons.cloud_outlined,
                   value: settings.autoAttachWeather,
                   onChanged: (v) => settings.setAutoAttachWeather(v),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 24),
+
+            // 笔记默认填充
+            _buildSectionHeader(
+              context,
+              l10n.noteAutoFillSection,
+              Icons.edit_note_outlined,
+            ),
+            const SizedBox(height: 12),
+            _buildPreferenceCard(
+              context,
+              children: [
+                _buildTextSettingTile(
+                  context: context,
+                  title: l10n.defaultAuthor,
+                  subtitle: settings.defaultAuthor?.isNotEmpty == true
+                      ? settings.defaultAuthor!
+                      : l10n.defaultAuthorDesc,
+                  icon: Icons.person_outline,
+                  currentValue: settings.defaultAuthor,
+                  hintText: l10n.defaultAuthorHint,
+                  onSave: (value) => settings.setDefaultAuthor(value),
+                ),
+                _buildDivider(),
+                _buildTextSettingTile(
+                  context: context,
+                  title: l10n.defaultSource,
+                  subtitle: settings.defaultSource?.isNotEmpty == true
+                      ? settings.defaultSource!
+                      : l10n.defaultSourceDesc,
+                  icon: Icons.book_outlined,
+                  currentValue: settings.defaultSource,
+                  hintText: l10n.defaultSourceHint,
+                  onSave: (value) => settings.setDefaultSource(value),
+                ),
+                _buildDivider(),
+                _buildTagSettingTile(
+                  context: context,
+                  settings: settings,
+                  l10n: l10n,
                 ),
               ],
             ),
@@ -432,5 +477,298 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
 
   Widget _buildDivider() {
     return const Divider(height: 1, indent: 68, endIndent: 20);
+  }
+
+  /// 构建文本设置项（点击弹出编辑对话框）
+  Widget _buildTextSettingTile({
+    required BuildContext context,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required String? currentValue,
+    required String hintText,
+    required Future<void> Function(String?) onSave,
+  }) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final hasValue = currentValue != null && currentValue.isNotEmpty;
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: hasValue
+              ? theme.colorScheme.primaryContainer
+              : theme.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          icon,
+          color: hasValue
+              ? theme.colorScheme.onPrimaryContainer
+              : theme.colorScheme.onSurfaceVariant,
+          size: 20,
+        ),
+      ),
+      title: Text(
+        title,
+        style: theme.textTheme.titleSmall?.copyWith(
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: hasValue
+              ? theme.colorScheme.primary
+              : theme.colorScheme.onSurface.withValues(alpha: 0.7),
+          fontWeight: hasValue ? FontWeight.w500 : null,
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      trailing: Icon(
+        Icons.chevron_right,
+        color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+      ),
+      onTap: () => _showTextEditDialog(
+        context: context,
+        title: title,
+        hintText: hintText,
+        currentValue: currentValue,
+        onSave: onSave,
+        l10n: l10n,
+      ),
+    );
+  }
+
+  /// 显示文本编辑对话框
+  Future<void> _showTextEditDialog({
+    required BuildContext context,
+    required String title,
+    required String hintText,
+    required String? currentValue,
+    required Future<void> Function(String?) onSave,
+    required AppLocalizations l10n,
+  }) async {
+    final controller = TextEditingController(text: currentValue ?? '');
+    final result = await showDialog<String?>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Text(title),
+          content: TextField(
+            controller: controller,
+            decoration: InputDecoration(
+              hintText: hintText,
+              border: const OutlineInputBorder(),
+            ),
+            autofocus: true,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                controller.text = '';
+                Navigator.pop(ctx, '');
+              },
+              child: Text(l10n.clearDefaultValue),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, controller.text),
+              child: Text(l10n.saveDefaultValue),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result != null) {
+      await onSave(result.isEmpty ? null : result);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result.isEmpty ? l10n.defaultValueCleared : l10n.defaultValueSaved,
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+    controller.dispose();
+  }
+
+  /// 构建标签设置项（点击弹出多选对话框）
+  Widget _buildTagSettingTile({
+    required BuildContext context,
+    required SettingsService settings,
+    required AppLocalizations l10n,
+  }) {
+    final theme = Theme.of(context);
+    final selectedIds = settings.defaultTagIds;
+    final hasValue = selectedIds.isNotEmpty;
+
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: hasValue
+              ? theme.colorScheme.primaryContainer
+              : theme.colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          Icons.label_outline,
+          color: hasValue
+              ? theme.colorScheme.onPrimaryContainer
+              : theme.colorScheme.onSurfaceVariant,
+          size: 20,
+        ),
+      ),
+      title: Text(
+        l10n.defaultTags,
+        style: theme.textTheme.titleSmall?.copyWith(
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      subtitle: Text(
+        hasValue
+            ? l10n.defaultTagsCount(selectedIds.length)
+            : l10n.defaultTagsDesc,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: hasValue
+              ? theme.colorScheme.primary
+              : theme.colorScheme.onSurface.withValues(alpha: 0.7),
+          fontWeight: hasValue ? FontWeight.w500 : null,
+        ),
+      ),
+      trailing: Icon(
+        Icons.chevron_right,
+        color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
+      ),
+      onTap: () => _showTagSelectionDialog(context, settings, l10n),
+    );
+  }
+
+  /// 显示标签多选对话框
+  Future<void> _showTagSelectionDialog(
+    BuildContext context,
+    SettingsService settings,
+    AppLocalizations l10n,
+  ) async {
+    final db = Provider.of<DatabaseService>(context, listen: false);
+    final categories = await db.getCategories();
+    final selectedIds = List<String>.from(settings.defaultTagIds);
+
+    if (!context.mounted) return;
+
+    final result = await showDialog<List<String>?>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            return AlertDialog(
+              title: Text(l10n.selectDefaultTags),
+              content: SizedBox(
+                width: double.maxFinite,
+                child: categories.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(
+                          l10n.defaultTagsNone,
+                          textAlign: TextAlign.center,
+                        ),
+                      )
+                    : ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: categories.length,
+                        itemBuilder: (_, index) {
+                          final tag = categories[index];
+                          final isSelected = selectedIds.contains(tag.id);
+                          return CheckboxListTile(
+                            value: isSelected,
+                            title: Text(tag.name),
+                            secondary: tag.iconName != null
+                                ? Icon(
+                                    _getIconData(tag.iconName!),
+                                    size: 20,
+                                  )
+                                : null,
+                            onChanged: (checked) {
+                              setDialogState(() {
+                                if (checked == true) {
+                                  selectedIds.add(tag.id);
+                                } else {
+                                  selectedIds.remove(tag.id);
+                                }
+                              });
+                            },
+                          );
+                        },
+                      ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(ctx, <String>[]);
+                  },
+                  child: Text(l10n.clearDefaultValue),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(l10n.cancel),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, selectedIds),
+                  child: Text(l10n.saveDefaultValue),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (result != null) {
+      await settings.setDefaultTagIds(result);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              result.isEmpty ? l10n.defaultValueCleared : l10n.defaultValueSaved,
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  /// 从图标名称获取 IconData
+  IconData _getIconData(String iconName) {
+    // 简单映射常用图标
+    const iconMap = <String, IconData>{
+      'favorite': Icons.favorite,
+      'star': Icons.star,
+      'bookmark': Icons.bookmark,
+      'label': Icons.label,
+      'folder': Icons.folder,
+      'movie': Icons.movie,
+      'music_note': Icons.music_note,
+      'book': Icons.book,
+      'games': Icons.games,
+      'brush': Icons.brush,
+      'language': Icons.language,
+      'psychology': Icons.psychology,
+      'emoji_emotions': Icons.emoji_emotions,
+      'auto_stories': Icons.auto_stories,
+    };
+    return iconMap[iconName] ?? Icons.label_outline;
   }
 }

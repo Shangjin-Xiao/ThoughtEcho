@@ -157,6 +157,29 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     _filteredTags = _availableTags;
     _lastSearchQuery = '';
 
+    // 新建笔记时，自动填充默认作者、出处和标签
+    if (widget.initialQuote == null) {
+      final settingsService = _readServiceOrNull<SettingsService>(context);
+      if (settingsService != null) {
+        // 仅在没有预填充值时使用默认值
+        if (_authorController.text.isEmpty &&
+            settingsService.defaultAuthor != null &&
+            settingsService.defaultAuthor!.isNotEmpty) {
+          _authorController.text = settingsService.defaultAuthor!;
+        }
+        if (_workController.text.isEmpty &&
+            settingsService.defaultSource != null &&
+            settingsService.defaultSource!.isNotEmpty) {
+          _workController.text = settingsService.defaultSource!;
+        }
+        // 自动添加默认标签
+        if (_selectedTagIds.isEmpty &&
+            settingsService.defaultTagIds.isNotEmpty) {
+          _selectedTagIds.addAll(settingsService.defaultTagIds);
+        }
+      }
+    }
+
     // 优化：完全延迟所有服务初始化和数据库监听器，避免阻塞首次绘制
     // 使用 postFrameCallback + delay 确保首帧渲染完成后再执行重量级操作
     WidgetsBinding.instance.addPostFrameCallback((_) {
