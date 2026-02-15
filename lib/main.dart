@@ -837,6 +837,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         return MaterialApp(
           navigatorKey: widget.navigatorKey,
           title: '心迹',
+          builder: (context, child) {
+            final mediaQuery = MediaQuery.of(context);
+            return MediaQuery(
+              data: mediaQuery.copyWith(boldText: false),
+              child: child ?? const SizedBox.shrink(),
+            );
+          },
           theme: appTheme.createLightThemeData(),
           darkTheme: appTheme.createDarkThemeData(),
           themeMode: appTheme.themeMode,
@@ -1000,6 +1007,13 @@ class EmergencyApp extends StatelessWidget {
     return MaterialApp(
       title: l10n.emergencyAppTitle,
       navigatorKey: navigatorKey, // 使用全局导航键
+      builder: (context, child) {
+        final mediaQuery = MediaQuery.of(context);
+        return MediaQuery(
+          data: mediaQuery.copyWith(boldText: false),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: Colors.red,
