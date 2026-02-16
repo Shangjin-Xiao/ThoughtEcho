@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'dart:convert';
@@ -49,6 +50,7 @@ class LocationService extends ChangeNotifier {
   bool _isLocationServiceEnabled = false;
   bool _isLoading = false;
   int _geocodeToken = 0;
+  Completer<void>? _initCompleter;
 
   // 城市搜索结果
   List<CityInfo> _searchResults = [];
@@ -99,6 +101,9 @@ class LocationService extends ChangeNotifier {
 
   // 初始化位置服务
   Future<void> init() async {
+    if (_initCompleter != null) return _initCompleter!.future;
+    _initCompleter = Completer<void>();
+    var initFailedWithException = false;
     logDebug('开始初始化位置服务');
     try {
       // Windows平台使用geolocator_windows插件，支持系统定位服务
@@ -119,6 +124,8 @@ class LocationService extends ChangeNotifier {
             if (position != null) {
               logDebug('初始化时获取位置: ${position.latitude}, ${position.longitude}');
             }
+          }).catchError((e) {
+            logDebug('初始化时获取位置失败: $e');
           });
         }
       } else {
@@ -127,10 +134,18 @@ class LocationService extends ChangeNotifier {
       }
 
       notifyListeners();
+      _initCompleter!.complete();
     } catch (e) {
+      initFailedWithException = true;
       logDebug('初始化位置服务错误: $e');
       _hasLocationPermission = false;
       notifyListeners();
+      _initCompleter!.complete();
+    } finally {
+      // 首次异常失败后允许后续调用重新初始化；成功时保持现有行为
+      if (initFailedWithException) {
+        _initCompleter = null;
+      }
     }
   }
 
@@ -193,6 +208,31 @@ class LocationService extends ChangeNotifier {
     } catch (e) {
       logDebug('请求位置权限失败: $e');
       return false;
+    }
+  }
+
+  /// 刷新位置服务和权限的运行时状态（供网络恢复等场景调用）
+  Future<void> refreshServiceStatus() async {
+    try {
+      final wasEnabled = _isLocationServiceEnabled;
+      final hadPermission = _hasLocationPermission;
+
+      _isLocationServiceEnabled = await Geolocator.isLocationServiceEnabled();
+
+      final permission = await Geolocator.checkPermission();
+      _hasLocationPermission = (permission == LocationPermission.whileInUse ||
+          permission == LocationPermission.always);
+
+      if (wasEnabled != _isLocationServiceEnabled ||
+          hadPermission != _hasLocationPermission) {
+        logDebug(
+          '位置状态刷新: 服务=$_isLocationServiceEnabled (was $wasEnabled), '
+          '权限=$_hasLocationPermission (was $hadPermission)',
+        );
+        notifyListeners();
+      }
+    } catch (e) {
+      logDebug('刷新位置服务状态失败: $e');
     }
   }
 
@@ -515,7 +555,8 @@ class LocationService extends ChangeNotifier {
       url,
       headers: {
         'Accept-Language': acceptLanguage,
-        'User-Agent': 'ThoughtEcho App',
+        'User-Agent':
+            'ThoughtEcho/3.4 (https://github.com/Shangjin-Xiao/ThoughtEcho)',
       },
       timeoutSeconds: 15,
     );
@@ -602,14 +643,11 @@ class LocationService extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // 添加总体超时控制
-      final results = await Future.any([
-        _searchCityWithTimeout(query),
-        Future.delayed(
-          const Duration(seconds: 12),
-          () => <CityInfo>[],
-        ), // 12秒超时返回空列表
-      ]);
+      // 添加总体超时控制（使用 .timeout 替代 Future.any 避免未完成 Future 泄漏）
+      final results = await _searchCityWithTimeout(query).timeout(
+        const Duration(seconds: 12),
+        onTimeout: () => <CityInfo>[],
+      );
 
       _searchResults = results;
       return _searchResults;
@@ -670,8 +708,11 @@ class LocationService extends ChangeNotifier {
 
   // 检测字符串是否主要包含中文字符
   bool _containsChinese(String text) {
-    // Unicode范围：CJK统一汉字 0x4E00-0x9FFF
-    final chineseRegex = RegExp(r'[\u4e00-\u9fff]');
+    // Unicode范围：CJK统一汉字 + Extension A + 兼容汉字 + 部首
+    // CJK Unified: 0x4E00-0x9FFF, Extension A: 0x3400-0x4DBF
+    // CJK Compat Ideographs: 0xF900-0xFAFF, Radicals: 0x2E80-0x2FFF
+    final chineseRegex =
+        RegExp(r'[\u2e80-\u2fff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]');
     return chineseRegex.hasMatch(text);
   }
 
@@ -760,7 +801,8 @@ class LocationService extends ChangeNotifier {
         url,
         headers: {
           'Accept-Language': acceptLanguage,
-          'User-Agent': 'ThoughtEcho App',
+          'User-Agent':
+              'ThoughtEcho/3.4 (https://github.com/Shangjin-Xiao/ThoughtEcho)',
         },
         timeoutSeconds: 15,
       );
@@ -879,11 +921,19 @@ class LocationService extends ChangeNotifier {
 
   // 使用选定的城市信息设置位置
   Future<void> setSelectedCity(CityInfo city) async {
-    try {
-      if (city.name.isEmpty || city.country.isEmpty || city.province.isEmpty) {
-        throw Exception('城市信息不完整');
-      }
+    if (city.name.isEmpty) {
+      throw Exception('City name is required');
+    }
 
+    // 保存旧状态用于回滚
+    final oldCountry = _country;
+    final oldProvince = _province;
+    final oldCity = _city;
+    final oldDistrict = _district;
+    final oldAddress = _currentAddress;
+    final oldPosition = _currentPosition;
+
+    try {
       // 手动设置位置组件
       _country = city.country;
       _province = city.province;
@@ -924,15 +974,14 @@ class LocationService extends ChangeNotifier {
       logDebug('成功设置城市: $_currentAddress');
     } catch (e) {
       logDebug('设置城市失败: $e');
-      // 重置所有状态
-      _country = null;
-      _province = null;
-      _city = null;
-      _district = null;
-      _currentAddress = null;
-      _currentPosition = null;
+      // 恢复旧状态而非清空
+      _country = oldCountry;
+      _province = oldProvince;
+      _city = oldCity;
+      _district = oldDistrict;
+      _currentAddress = oldAddress;
+      _currentPosition = oldPosition;
       notifyListeners();
-      // 重新抛出异常以便UI层处理
       rethrow;
     }
   }

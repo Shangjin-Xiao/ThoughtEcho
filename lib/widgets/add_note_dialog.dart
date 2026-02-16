@@ -826,6 +826,205 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     }
   }
 
+  /// 新建模式下的位置信息对话框
+  /// 支持查看当前坐标、手动触发地址解析、移除位置
+  Future<void> _showNewNoteLocationDialog(
+    BuildContext context,
+    ThemeData theme,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    final hasAddress = _newLocation != null && _newLocation!.isNotEmpty;
+    final hasCoordinates = _newLatitude != null && _newLongitude != null;
+    final hasOnlyCoordinates = !hasAddress && hasCoordinates;
+
+    String title;
+    String content;
+    List<Widget> actions = [];
+
+    if (!hasCoordinates) {
+      // 没有任何位置数据
+      title = l10n.cannotGetLocationTitle;
+      content = l10n.cannotGetLocationDesc;
+      actions = [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.iKnow),
+        ),
+      ];
+    } else {
+      title = l10n.locationInfo;
+      content = hasOnlyCoordinates
+          ? l10n.locationUpdateHint(
+              LocationService.formatCoordinates(_newLatitude, _newLongitude))
+          : l10n.locationRemoveHint(
+              LocationService.formatLocationForDisplay(_newLocation),
+            );
+      actions = [
+        TextButton(
+          onPressed: () => Navigator.pop(context, 'remove'),
+          child: Text(l10n.remove),
+        ),
+        if (hasOnlyCoordinates)
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'update'),
+            child: Text(l10n.updateLocation),
+          ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, 'cancel'),
+          child: Text(l10n.cancel),
+        ),
+      ];
+    }
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(content),
+        actions: actions,
+      ),
+    );
+
+    if (result == 'update' && hasCoordinates) {
+      // 尝试用坐标更新地址（优先在线 Nominatim → 回退系统 SDK）
+      try {
+        // 先尝试通过 locationService 的完整解析链
+        final locationService = _cachedLocationService;
+        if (locationService != null && locationService.hasCoordinates) {
+          await locationService.getAddressFromLatLng();
+          final resolved = locationService.getFormattedLocation();
+          if (resolved.isNotEmpty && mounted) {
+            setState(() {
+              _newLocation = resolved;
+            });
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                    content: Text(l10n.locationUpdatedTo(
+                        LocationService.formatLocationForDisplay(resolved)))),
+              );
+            }
+            return;
+          }
+        }
+
+        // 回退到直接调用 LocalGeocodingService
+        final localeCode = locationService?.currentLocaleCode;
+        final addressInfo =
+            await LocalGeocodingService.getAddressFromCoordinates(
+          _newLatitude!,
+          _newLongitude!,
+          localeCode: localeCode,
+        );
+        if (addressInfo != null && mounted) {
+          final formattedAddress = addressInfo['formatted_address'];
+          if (formattedAddress != null && formattedAddress.isNotEmpty) {
+            setState(() {
+              _newLocation = formattedAddress;
+            });
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                    content: Text(l10n.locationUpdatedTo(
+                        LocationService.formatLocationForDisplay(
+                            formattedAddress)))),
+              );
+            }
+          } else if (context.mounted) {
+            ScaffoldMessenger.of(context)
+                .showSnackBar(SnackBar(content: Text(l10n.cannotGetAddress)));
+          }
+        } else if (mounted && context.mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(l10n.cannotGetAddress)));
+        }
+      } catch (e) {
+        if (mounted && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.updateFailed(e.toString()))));
+        }
+      }
+    } else if (result == 'remove') {
+      setState(() {
+        _includeLocation = false;
+        _newLocation = null;
+        _newLatitude = null;
+        _newLongitude = null;
+      });
+    }
+  }
+
+  /// 新建模式下的天气信息对话框
+  /// 支持查看当前天气、移除天气
+  Future<void> _showNewNoteWeatherDialog(
+    BuildContext context,
+    ThemeData theme,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    final weatherService = _cachedWeatherService;
+    final hasWeatherData = weatherService?.hasData ?? false;
+
+    String title;
+    String content;
+    List<Widget> actions = [];
+
+    if (!hasWeatherData) {
+      // 没有天气数据（获取失败或离线）
+      title = l10n.weatherFetchFailedTitle;
+      content = l10n.weatherFetchFailedDesc;
+      actions = [
+        TextButton(
+          onPressed: () => Navigator.pop(context, 'remove'),
+          child: Text(l10n.remove),
+        ),
+        // 如果有坐标，允许重试获取天气
+        if (_newLatitude != null && _newLongitude != null)
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'retry'),
+            child: Text(l10n.retry),
+          ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, 'cancel'),
+          child: Text(l10n.cancel),
+        ),
+      ];
+    } else {
+      // 有天气数据
+      title = l10n.weatherInfo2;
+      final weatherDisplay = weatherService!.getFormattedWeather(l10n);
+      content = l10n.weatherRemoveHint(weatherDisplay.isNotEmpty
+          ? weatherDisplay
+          : '${weatherService.currentWeather}');
+      actions = [
+        TextButton(
+          onPressed: () => Navigator.pop(context, 'remove'),
+          child: Text(l10n.remove),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, 'cancel'),
+          child: Text(l10n.cancel),
+        ),
+      ];
+    }
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(content),
+        actions: actions,
+      ),
+    );
+
+    if (result == 'remove') {
+      setState(() {
+        _includeWeather = false;
+      });
+    } else if (result == 'retry') {
+      _fetchWeatherForNewNote();
+    }
+  }
+
   @override
   void dispose() {
     _searchDebounceTimer?.cancel();
@@ -1416,7 +1615,15 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                   await _showLocationDialog(context, theme);
                                   return;
                                 }
-                                // 新建模式
+                                // 新建模式：已有坐标/地址时弹对话框（查看/转换/移除）
+                                if (_includeLocation &&
+                                    (_newLatitude != null ||
+                                        _newLocation != null)) {
+                                  await _showNewNoteLocationDialog(
+                                      context, theme);
+                                  return;
+                                }
+                                // 新建模式：首次勾选，获取位置
                                 if (value &&
                                     _newLocation == null &&
                                     _newLatitude == null) {
@@ -1429,6 +1636,23 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                               selectedColor: theme.colorScheme.primaryContainer,
                             ),
                             // 小红点：有坐标但没地址时提示可更新
+                            if (widget.initialQuote == null &&
+                                _includeLocation &&
+                                _newLocation == null &&
+                                _newLatitude != null &&
+                                _newLongitude != null)
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                child: Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.error,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ),
                             if (widget.initialQuote != null &&
                                 _originalLocation == null &&
                                 _originalLatitude != null &&
@@ -1483,7 +1707,12 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                               await _showWeatherDialog(context, theme);
                               return;
                             }
-                            // 新建模式
+                            // 新建模式：已勾选天气时，点击弹出详情/移除对话框
+                            if (_includeWeather) {
+                              await _showNewNoteWeatherDialog(context, theme);
+                              return;
+                            }
+                            // 新建模式：首次勾选
                             if (value) {
                               setState(() {
                                 _includeWeather = true;
@@ -1690,9 +1919,17 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                               location: _includeLocation
                                   ? (isEditing
                                       ? _originalLocation
-                                      : _newLocation ??
-                                          _cachedLocationService
-                                              ?.getFormattedLocation())
+                                      : () {
+                                          final loc = _newLocation ??
+                                              _cachedLocationService
+                                                  ?.getFormattedLocation();
+                                          if ((loc == null || loc.isEmpty) &&
+                                              _newLatitude != null) {
+                                            return LocationService
+                                                .kAddressPending;
+                                          }
+                                          return loc;
+                                        }())
                                   : null,
                               latitude: (_includeLocation || _includeWeather)
                                   ? (isEditing

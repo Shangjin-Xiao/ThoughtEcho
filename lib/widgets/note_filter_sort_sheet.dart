@@ -89,7 +89,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
         : <String>[];
 
     // 性能优化：预计算常用数据和缓存映射
-    _weatherCategories = WeatherService.filterCategoryToLabel.keys.toList();
+    _weatherCategories = WeatherService.filterCategoryToKeys.keys.toList();
     _dayPeriodKeys = TimeUtils.dayPeriodKeyToLabel.keys.toList();
 
     // 预缓存天气图标（标签将在 build 时通过 _getWeatherFilterLabel 动态获取以支持国际化）

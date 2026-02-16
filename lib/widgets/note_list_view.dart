@@ -1665,7 +1665,8 @@ class NoteListViewState extends State<NoteListView> {
 
       allChips.addAll(
         categorySet.map((cat) {
-          final label = WeatherService.filterCategoryToLabel[cat] ?? cat;
+          final label =
+              WeatherService.getLocalizedFilterCategoryLabel(context, cat);
           final icon = WeatherService.getFilterCategoryIcon(cat);
           return TweenAnimationBuilder<double>(
             key: ValueKey('weather_cat_$cat'),
@@ -1706,7 +1707,7 @@ class NoteListViewState extends State<NoteListView> {
       final List<String> others =
           widget.selectedWeathers.where((k) => !knownKeys.contains(k)).toList();
       for (final k in others) {
-        final label = WeatherService.weatherKeyToLabel[k] ?? k;
+        final label = WeatherService.getLocalizedWeatherLabel(context, k);
         allChips.add(
           TweenAnimationBuilder<double>(
             key: ValueKey('weather_$k'),

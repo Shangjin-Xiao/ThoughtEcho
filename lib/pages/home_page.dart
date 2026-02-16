@@ -311,6 +311,9 @@ class _HomePageState extends State<HomePage>
       // 先刷新网络状态
       final isConnected = await connectivityService.checkConnectionNow();
 
+      // P4: 动态刷新位置服务和权限状态，防止初始化时的过期值
+      await locationService.refreshServiceStatus();
+
       // 如果有位置权限，重新获取位置和天气
       if (locationService.hasLocationPermission &&
           locationService.isLocationServiceEnabled) {
@@ -325,7 +328,12 @@ class _HomePageState extends State<HomePage>
           // 联网时尝试解析离线坐标的地址
           if (isConnected && locationService.isOfflineLocation) {
             logDebug('尝试解析离线位置的地址...');
-            await locationService.resolveOfflineLocation();
+            final resolved = await locationService.resolveOfflineLocation();
+
+            // P1: 地址解析成功后，回溯更新近期离线笔记的位置字段
+            if (resolved && mounted) {
+              _retroUpdateOfflineNoteLocations(locationService);
+            }
           }
 
           logDebug('位置获取成功，开始刷新天气数据...');
@@ -346,6 +354,45 @@ class _HomePageState extends State<HomePage>
       logDebug('刷新位置和天气信息时发生错误: $e');
       // 不抛出异常，让调用方继续执行
     }
+  }
+
+  /// P1: 回溯更新近期离线笔记的位置字段
+  /// 当网络恢复并成功解析出地址后，更新最近 24 小时内
+  /// 带有 pending/failed 位置标记的笔记
+  void _retroUpdateOfflineNoteLocations(LocationService locationService) {
+    Future.microtask(() async {
+      try {
+        final dbService = Provider.of<DatabaseService>(context, listen: false);
+        final resolvedAddress = locationService.getLocationDisplayText();
+        if (resolvedAddress.isEmpty) return;
+
+        final allQuotes = await dbService.getAllQuotes();
+        final cutoff = DateTime.now().subtract(const Duration(hours: 24));
+        int updatedCount = 0;
+
+        for (final quote in allQuotes) {
+          // 只更新 24 小时内、有坐标但地址为 pending/failed 的笔记
+          final quoteDate = DateTime.tryParse(quote.date);
+          if (quoteDate == null || quoteDate.isBefore(cutoff)) continue;
+
+          if (LocationService.isNonDisplayMarker(quote.location) &&
+              quote.latitude != null &&
+              quote.longitude != null) {
+            final updatedQuote = quote.copyWith(
+              location: resolvedAddress,
+            );
+            await dbService.updateQuote(updatedQuote);
+            updatedCount++;
+          }
+        }
+
+        if (updatedCount > 0) {
+          logDebug('P1: 回溯更新了 $updatedCount 条离线笔记的位置信息');
+        }
+      } catch (e) {
+        logDebug('回溯更新离线笔记位置失败: $e');
+      }
+    });
   }
 
   @override
@@ -918,12 +965,20 @@ class _HomePageState extends State<HomePage>
         if (position != null) {
           logDebug('位置获取成功: ${position.latitude}, ${position.longitude}');
 
+          // P10: 冷启动时检查网络状态，联网则强刷天气获取实时数据
+          final connectivityService = Provider.of<ConnectivityService>(
+            context,
+            listen: false,
+          );
+          final isConnected = connectivityService.isConnected;
+
           // 异步获取天气，不阻塞主流程
           Future.microtask(() async {
             try {
               await weatherService.getWeatherData(
                 position.latitude,
                 position.longitude,
+                forceRefresh: isConnected,
                 timeout: const Duration(seconds: 10),
               );
               logDebug('天气数据更新完成: ${weatherService.currentWeather}');
@@ -1552,58 +1607,68 @@ class _HomePageState extends State<HomePage>
     final connectivityService = Provider.of<ConnectivityService>(context);
     final isConnected = connectivityService.isConnected;
     final hasPermission = locationService.hasLocationPermission;
+    final isServiceEnabled = locationService.isLocationServiceEnabled;
     final hasCoordinates = locationService.hasCoordinates;
     final hasCity =
         locationService.city != null && locationService.city!.isNotEmpty;
-    final hasWeather = weatherService.currentWeather != null;
+    final hasWeather = weatherService.currentWeather != null &&
+        weatherService.currentWeather != 'error' &&
+        weatherService.currentWeather != 'unknown';
     final isCached = weatherService.state == WeatherServiceState.cached;
 
     String locationText;
     String weatherText;
     IconData weatherIcon;
 
-    if (!hasPermission) {
-      locationText = l10n.tileNoLocationPermission;
-      weatherText = '--';
-      weatherIcon = Icons.cloud_off;
-    } else if (hasCity) {
+    // --- 构建天气文本的辅助函数 ---
+    String buildWeatherText() {
+      return '${WeatherService.getLocalizedWeatherDescription(l10n, weatherService.currentWeather!)}'
+          '${weatherService.temperature != null && weatherService.temperature!.isNotEmpty ? ' ${weatherService.temperature}' : ''}'
+          '${isCached ? ' ${l10n.tileCachedSuffix}' : ''}';
+    }
+
+    // --- 优先级链：位置显示 ---
+    if (hasCity) {
+      // 有城市信息（可能来自 GPS 解析或手动搜索城市）
       locationText = locationService.getDisplayLocation();
-      if (hasWeather) {
-        weatherText =
-            '${WeatherService.getLocalizedWeatherDescription(l10n, weatherService.currentWeather!)}'
-            '${weatherService.temperature != null && weatherService.temperature!.isNotEmpty ? ' ${weatherService.temperature}' : ''}'
-            '${isCached && !isConnected ? ' ${l10n.tileCachedSuffix}' : ''}';
-        weatherIcon = weatherService.getWeatherIconData();
-      } else {
-        weatherText = l10n.tileNoWeather;
-        weatherIcon = Icons.cloud_off;
-      }
     } else if (hasCoordinates) {
+      // 有坐标但没有城市名（离线 GPS 或解析中）
       locationText = LocationService.formatCoordinates(
         locationService.currentPosition!.latitude,
         locationService.currentPosition!.longitude,
       );
-      if (hasWeather) {
-        weatherText =
-            '${WeatherService.getLocalizedWeatherDescription(l10n, weatherService.currentWeather!)}'
-            '${weatherService.temperature != null && weatherService.temperature!.isNotEmpty ? ' ${weatherService.temperature}' : ''}'
-            '${isCached && !isConnected ? ' ${l10n.tileCachedSuffix}' : ''}';
-        weatherIcon = weatherService.getWeatherIconData();
-      } else if (isConnected) {
-        weatherText = l10n.tileLoading;
-        weatherIcon = Icons.cloud_queue;
-      } else {
-        weatherText = l10n.tileNoWeather;
-        weatherIcon = Icons.cloud_off;
-      }
+    } else if (!isServiceEnabled) {
+      // P3: 位置服务未启用（优先于权限文案）
+      locationText = l10n.tileLocationServiceOff;
+    } else if (!hasPermission) {
+      // 有位置服务但没有权限
+      locationText = l10n.tileNoLocationPermission;
     } else if (!isConnected) {
       locationText = l10n.tileNoNetwork;
-      weatherText = l10n.tileOffline;
-      weatherIcon = Icons.cloud_off;
     } else {
       locationText = l10n.tileLoading;
+    }
+
+    // --- 优先级链：天气显示 ---
+    // P5: 不再把天气显示绑死在权限上；只要有天气数据就显示
+    if (hasWeather) {
+      weatherText = buildWeatherText();
+      weatherIcon = weatherService.getWeatherIconData();
+    } else if (!hasCoordinates && !hasCity) {
+      // 完全没有位置坐标，天气无法获取
+      if (!isConnected) {
+        weatherText = l10n.tileOffline;
+        weatherIcon = Icons.cloud_off;
+      } else {
+        weatherText = '--';
+        weatherIcon = Icons.cloud_off;
+      }
+    } else if (isConnected) {
       weatherText = l10n.tileLoading;
       weatherIcon = Icons.cloud_queue;
+    } else {
+      weatherText = l10n.tileNoWeather;
+      weatherIcon = Icons.cloud_off;
     }
 
     return Padding(

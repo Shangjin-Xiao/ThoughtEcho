@@ -1247,10 +1247,24 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       }
     } else if (mounted) {
       // 位置获取失败
+      final l10n = AppLocalizations.of(context);
       setState(() {
         _showLocation = false;
         _showWeather = false;
       });
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.cannotGetLocationTitle),
+          content: Text(l10n.cannotGetLocationDesc),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.iKnow),
+            ),
+          ],
+        ),
+      );
     }
   }
 
@@ -1598,7 +1612,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       summary: baseQuote?.summary,
       categoryId: baseQuote?.categoryId,
       colorHex: _selectedColorHex,
-      location: _showLocation ? _location : null,
+      location: _showLocation
+          ? (_location ??
+              (_latitude != null ? LocationService.kAddressPending : null))
+          : null,
       latitude: _showLocation ? _latitude : null,
       longitude: _showLocation ? _longitude : null,
       weather: _showWeather ? _weather : null,
