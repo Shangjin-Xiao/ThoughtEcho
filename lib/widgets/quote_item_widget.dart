@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:ui' as ui;
 import 'package:provider/provider.dart';
 import '../models/quote_model.dart';
 import '../models/note_category.dart';
@@ -263,26 +262,25 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
 
     // 格式化日期和时间段（支持国际化和精确时间显示）
     final DateTime quoteDate = DateTime.parse(quote.date);
-    final settingsService = context.watch<SettingsService>();
+    final showExactTime = context.select<SettingsService, bool>(
+      (s) => s.showExactTime,
+    );
     final String formattedDate = TimeUtils.formatQuoteDateLocalized(
       context,
       quoteDate,
       dayPeriod: quote.dayPeriod,
-      showExactTime: settingsService.showExactTime,
+      showExactTime: showExactTime,
     );
 
-    return AnimatedContainer(
+    return Container(
       margin: const EdgeInsets.symmetric(
         horizontal: 12,
         vertical: 6,
-      ), // 减少水平边距从16到12，垂直从8到6
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeOutQuad,
+      ),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         boxShadow: isExpanded
             ? [
-                // 轻微增强阴影，提升展开时的质感
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.06),
                   blurRadius: 12,
@@ -390,7 +388,33 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                       clipBehavior: Clip.none,
                       child: AnimatedBuilder(
                         animation: _doubleTapController,
-                        builder: (context, _) {
+                        // 将不依赖动画值的子树通过 child 传入，避免动画帧间重建
+                        child: AnimatedSwitcher(
+                          duration: QuoteItemWidget._fadeDuration,
+                          switchInCurve: Curves.easeOut,
+                          switchOutCurve: Curves.easeIn,
+                          layoutBuilder:
+                              (currentChild, previousChildren) => Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              ...previousChildren,
+                              if (currentChild != null) currentChild,
+                            ],
+                          ),
+                          child: KeyedSubtree(
+                            key: ValueKey<bool>(showFullContent),
+                            child: QuoteContent(
+                              quote: quote,
+                              style: innerTheme.textTheme.bodyLarge
+                                  ?.copyWith(
+                                color: primaryTextColor,
+                                height: 1.5,
+                              ),
+                              showFullContent: showFullContent,
+                            ),
+                          ),
+                        ),
+                        builder: (context, staticChild) {
                           final highlightOpacity = _highlightProgress.value;
                           final brightness = innerTheme.brightness;
                           final overlayStrength =
@@ -405,31 +429,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                             child: Stack(
                               clipBehavior: Clip.none,
                               children: [
-                                AnimatedSwitcher(
-                                  duration: QuoteItemWidget._fadeDuration,
-                                  switchInCurve: Curves.easeOut,
-                                  switchOutCurve: Curves.easeIn,
-                                  layoutBuilder:
-                                      (currentChild, previousChildren) => Stack(
-                                    clipBehavior: Clip.none,
-                                    children: [
-                                      ...previousChildren,
-                                      if (currentChild != null) currentChild,
-                                    ],
-                                  ),
-                                  child: KeyedSubtree(
-                                    key: ValueKey<bool>(showFullContent),
-                                    child: QuoteContent(
-                                      quote: quote,
-                                      style: innerTheme.textTheme.bodyLarge
-                                          ?.copyWith(
-                                        color: primaryTextColor,
-                                        height: 1.5,
-                                      ),
-                                      showFullContent: showFullContent,
-                                    ),
-                                  ),
-                                ),
+                                staticChild!,
                                 if (highlightOpacity > 0)
                                   Positioned.fill(
                                     child: IgnorePointer(
@@ -454,13 +454,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                       switchInCurve: Curves.easeIn,
                                       switchOutCurve: Curves.easeOut,
                                       child: (!isExpanded && needsExpansion)
-                                          ? ClipRect(
-                                              child: BackdropFilter(
-                                                filter: ui.ImageFilter.blur(
-                                                  sigmaX: 1.2,
-                                                  sigmaY: 1.2,
-                                                ),
-                                                child: Container(
+                                          ? Container(
                                                   decoration: BoxDecoration(
                                                     gradient: LinearGradient(
                                                       begin:
@@ -468,20 +462,17 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                                       end: Alignment
                                                           .bottomCenter,
                                                       colors: [
-                                                        innerTheme
-                                                            .colorScheme.surface
+                                                        cardColor
                                                             .withValues(
                                                           alpha: 0.0,
                                                         ),
-                                                        innerTheme
-                                                            .colorScheme.surface
+                                                        cardColor
                                                             .withValues(
-                                                          alpha: 0.08,
+                                                          alpha: 0.55,
                                                         ),
-                                                        innerTheme
-                                                            .colorScheme.surface
+                                                        cardColor
                                                             .withValues(
-                                                          alpha: 0.18,
+                                                          alpha: 0.92,
                                                         ),
                                                       ],
                                                       stops: const [
@@ -499,10 +490,9 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                                       vertical: 2,
                                                     ),
                                                     decoration: BoxDecoration(
-                                                      color: innerTheme
-                                                          .colorScheme.surface
+                                                      color: cardColor
                                                           .withValues(
-                                                        alpha: 0.35,
+                                                        alpha: 0.55,
                                                       ),
                                                       borderRadius:
                                                           BorderRadius.circular(
@@ -526,9 +516,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                                       ),
                                                     ),
                                                   ),
-                                                ),
-                                              ),
-                                            )
+                                                )
                                           : const SizedBox.shrink(),
                                     ),
                                   ),
@@ -593,34 +581,36 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                               widget.selectedTagIds,
                             );
 
-                            return ListView.builder(
+                            return SingleChildScrollView(
                               scrollDirection: Axis.horizontal,
                               physics: const BouncingScrollPhysics(),
-                              itemCount: sortedTagIds.length,
-                              itemBuilder: (context, index) {
-                                final tagId = sortedTagIds[index];
-                                final tag = widget.tagMap[tagId] ??
-                                    NoteCategory(
-                                      id: tagId,
-                                      name: l10n.unknownTag,
-                                    );
+                              child: Row(
+                                children: [
+                                  for (int index = 0; index < sortedTagIds.length; index++)
+                                    () {
+                                      final tagId = sortedTagIds[index];
+                                      final tag = widget.tagMap[tagId] ??
+                                          NoteCategory(
+                                            id: tagId,
+                                            name: l10n.unknownTag,
+                                          );
 
-                                // 判断是否是筛选条件中的标签
-                                final isFilteredTag =
-                                    widget.selectedTagIds.contains(tagId);
+                                      // 判断是否是筛选条件中的标签
+                                      final isFilteredTag =
+                                          widget.selectedTagIds.contains(tagId);
 
-                                return Container(
-                                  margin: EdgeInsets.only(
-                                    right:
-                                        index < sortedTagIds.length - 1 ? 8 : 0,
-                                  ),
-                                  child: widget.tagBuilder != null
-                                      ? widget.tagBuilder!(tag)
-                                      : Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 10,
-                                            vertical: 4,
-                                          ),
+                                      return Container(
+                                        margin: EdgeInsets.only(
+                                          right:
+                                              index < sortedTagIds.length - 1 ? 8 : 0,
+                                        ),
+                                        child: widget.tagBuilder != null
+                                            ? widget.tagBuilder!(tag)
+                                            : Container(
+                                                padding: const EdgeInsets.symmetric(
+                                                  horizontal: 10,
+                                                  vertical: 4,
+                                                ),
                                           decoration: BoxDecoration(
                                             color: isFilteredTag
                                                 ? baseContentColor.withValues(
@@ -685,8 +675,10 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                             ],
                                           ),
                                         ),
-                                );
-                              },
+                                      );
+                                    }(),
+                                ],
+                              ),
                             );
                           },
                         ),

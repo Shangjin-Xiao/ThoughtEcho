@@ -555,12 +555,8 @@ class _QuoteContentControllerCache {
       existing.touch();
       _cache[key] = existing;
 
-      // 修复问题2：更新 Document 以确保内容最新（防御性编程）
-      final newDocument = documentBuilder();
-      if (existing.controllers.quillController.document != newDocument) {
-        existing.controllers.quillController.document = newDocument;
-      }
-
+      // contentSignature 已包含在 key 中，相同签名意味着内容一致
+      // 跳过 documentBuilder() 避免每次 build 时重复 JSON 解析
       existing.controllers.prepareForReuse();
       return existing.controllers;
     }

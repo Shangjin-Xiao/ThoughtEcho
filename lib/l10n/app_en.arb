@@ -140,6 +140,25 @@
   "settingsClose": "Close",
   "developerModeEnabled": "🎉 Developer mode enabled!",
   "developerModeDisabled": "✅ Developer mode disabled",
+  "devFirstScrollPerfMonitorTitle": "First-scroll jank monitor (Dev)",
+  "devFirstScrollPerfMonitorDesc": "Measure frame timings for the first gesture scroll after opening Notes (not first frame)",
+  "devFirstScrollPerfResult": "First-scroll performance: total {total}, jank {jank}, avg {avgMs}ms, worst {worstMs}ms",
+  "@devFirstScrollPerfResult": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "jank": {
+        "type": "int"
+      },
+      "avgMs": {
+        "type": "String"
+      },
+      "worstMs": {
+        "type": "String"
+      }
+    }
+  },
   "emergencyRecoveryTitle": "ThoughtEcho - Data Recovery",
   "emergencyRecoveryHeading": "Database initialization failed",
   "emergencyRecoveryDescription": "The app cannot start normally. The database may be corrupted or inaccessible.\n\nYou can try backing up existing data to prevent loss, or try restarting the app.",

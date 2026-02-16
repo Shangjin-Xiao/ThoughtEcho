@@ -356,9 +356,14 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
               return child;
             }
 
+            if (frame == null) {
+              // 图片未加载时显示占位符
+              return _buildImagePlaceholder(context, width);
+            }
+
             return AnimatedOpacity(
-              opacity: frame == null ? 0.0 : 1.0,
-              duration: const Duration(milliseconds: 220),
+              opacity: 1.0,
+              duration: const Duration(milliseconds: 180),
               curve: Curves.easeOutCubic,
               child: child,
             );
@@ -452,6 +457,24 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
 
     final double bounded = logicalPixels.clamp(160.0, 2048.0);
     return bounded.round();
+  }
+
+  Widget _buildImagePlaceholder(BuildContext context, double width) {
+    final theme = Theme.of(context);
+    return Container(
+      width: width,
+      constraints: const BoxConstraints(minHeight: 80),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.3),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      alignment: Alignment.center,
+      child: Icon(
+        Icons.image_outlined,
+        color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
+        size: 32,
+      ),
+    );
   }
 
   Widget _buildErrorPlaceholder(BuildContext context, double width) {

@@ -702,6 +702,24 @@ class SettingsPageState extends State<SettingsPage> {
                     );
                   },
                 ),
+                Consumer<SettingsService>(
+                  builder: (context, settingsService, _) {
+                    if (!settingsService.appSettings.developerMode) {
+                      return const SizedBox.shrink();
+                    }
+                    return SwitchListTile(
+                      title: Text(l10n.logDebugInfo),
+                      subtitle: Text(l10n.logDebugInfoDesc),
+                      secondary: const Icon(Icons.speed_outlined),
+                      value: settingsService.enableFirstOpenScrollPerfMonitor,
+                      onChanged: (enabled) {
+                        settingsService.setEnableFirstOpenScrollPerfMonitor(
+                          enabled,
+                        );
+                      },
+                    );
+                  },
+                ),
                 // 添加日志调试信息显示（仅在Debug模式下显示）
                 if (kDebugMode) ...[
                   ListTile(

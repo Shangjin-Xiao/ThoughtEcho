@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' show FrameTiming;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -106,6 +107,10 @@ class NoteListViewState extends State<NoteListView> {
   // 修复：用于检测和恢复滚动范围异常的计数器
   int _scrollExtentCheckCounter = 0;
   static const int _maxScrollExtentChecks = 3;
+  DateTime? _lastScrollExtentCheckTime;
+  static const Duration _scrollExtentCheckInterval = Duration(
+    milliseconds: 220,
+  );
 
   // 修复：添加防抖定时器和性能优化
   Timer? _searchDebounceTimer;
@@ -115,6 +120,12 @@ class NoteListViewState extends State<NoteListView> {
   bool _isAutoScrolling = false; // 当前是否有程序驱动的滚动动画
   DateTime? _lastUserScrollTime; // 最近一次用户滚动时间
   bool _isInitializing = true; // 标记是否正在初始化，避免冷启动滚动冲突
+
+  // 开发者模式：首次打开后首次手势滑动性能监测（非首帧）
+  bool _firstOpenScrollPerfEnabled = false;
+  bool _firstOpenScrollPerfRecording = false;
+  bool _firstOpenScrollPerfCaptured = false;
+  final List<FrameTiming> _firstOpenScrollFrameTimings = <FrameTiming>[];
 
   /// 获取有效的标签列表：优先使用外部传入的，若为空则使用本地缓存
   List<NoteCategory> get _effectiveTags =>
@@ -227,17 +238,22 @@ class NoteListViewState extends State<NoteListView> {
     _lastScrollOffset = currentOffset;
 
     // 修复：检测滚动范围异常（列表提前终止的情况）
-    _checkAndFixScrollExtentAnomaly();
+    // 节流检测，避免滚动期间频繁触发数据库状态读取
+    final now = DateTime.now();
+    if (_lastScrollExtentCheckTime == null ||
+      now.difference(_lastScrollExtentCheckTime!) >=
+        _scrollExtentCheckInterval) {
+      _lastScrollExtentCheckTime = now;
+      _checkAndFixScrollExtentAnomaly();
+    }
 
     // 如果正在初始化，忽略滚动事件以避免冲突
     if (_isInitializing) {
-      logDebug('正在初始化，忽略滚动事件', source: 'NoteListView');
       return;
     }
 
     // 自动滚动过程中产生的事件不视为用户操作
     if (_isAutoScrolling) {
-      logDebug('自动滚动进行中，忽略滚动事件', source: 'NoteListView');
       return;
     }
 
@@ -246,7 +262,6 @@ class NoteListViewState extends State<NoteListView> {
       _isUserScrolling = true;
     }
 
-    final now = DateTime.now();
     _lastUserScrollTime = now;
 
     // 重置定时器
@@ -258,12 +273,81 @@ class NoteListViewState extends State<NoteListView> {
       if (_isAutoScrolling) return;
 
       if (_isUserScrolling) {
-        setState(() {
-          _isUserScrolling = false;
-        });
+        // 该状态仅用于滚动逻辑判定，不影响 UI 展示
+        // 避免滚动结束时触发整页 rebuild
+        _isUserScrolling = false;
       }
       _lastUserScrollTime = null;
     });
+  }
+
+  void _startFirstOpenScrollPerfCapture() {
+    if (!_firstOpenScrollPerfEnabled ||
+        _firstOpenScrollPerfCaptured ||
+        _firstOpenScrollPerfRecording ||
+        !_initialDataLoaded) {
+      return;
+    }
+
+    _firstOpenScrollPerfRecording = true;
+    _firstOpenScrollFrameTimings.clear();
+    WidgetsBinding.instance.addTimingsCallback(_collectFrameTimings);
+    logDebug('首次滑动性能监测开始', source: 'NoteListView.Perf');
+  }
+
+  void _collectFrameTimings(List<FrameTiming> timings) {
+    if (!_firstOpenScrollPerfRecording) {
+      return;
+    }
+    _firstOpenScrollFrameTimings.addAll(timings);
+  }
+
+  void _stopFirstOpenScrollPerfCapture() {
+    if (!_firstOpenScrollPerfRecording) {
+      return;
+    }
+
+    _firstOpenScrollPerfRecording = false;
+    _firstOpenScrollPerfCaptured = true;
+    WidgetsBinding.instance.removeTimingsCallback(_collectFrameTimings);
+
+    if (_firstOpenScrollFrameTimings.isEmpty) {
+      logDebug('首次滑动性能监测结束：未采集到帧', source: 'NoteListView.Perf');
+      return;
+    }
+
+    int jankyFrames = 0;
+    double worstFrameMs = 0;
+    int totalFrameMicros = 0;
+
+    for (final timing in _firstOpenScrollFrameTimings) {
+      final int totalMicros =
+        timing.buildDuration.inMicroseconds + timing.rasterDuration.inMicroseconds;
+      totalFrameMicros += totalMicros;
+
+      final frameMs = totalMicros / 1000.0;
+      if (frameMs > worstFrameMs) {
+        worstFrameMs = frameMs;
+      }
+
+      if (totalMicros > 16600) {
+        jankyFrames++;
+      }
+    }
+
+    final totalFrames = _firstOpenScrollFrameTimings.length;
+    final avgFrameMs = (totalFrameMicros / totalFrames) / 1000.0;
+
+    logDebug(
+      '首次滑动性能结果: total=$totalFrames, jank=$jankyFrames, '
+      'avg=${avgFrameMs.toStringAsFixed(1)}ms, '
+      'worst=${worstFrameMs.toStringAsFixed(1)}ms',
+      source: 'NoteListView.Perf',
+    );
+
+    if (!mounted) {
+      return;
+    }
   }
 
   /// 修复：检测并修复滚动范围异常
@@ -330,16 +414,6 @@ class NoteListViewState extends State<NoteListView> {
         setState(() {
           _hasMore = db.hasMoreQuotes;
           _isLoading = false;
-        });
-
-        // 强制刷新 ScrollController 以更新滚动范围
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && _scrollController.hasClients) {
-            // 触发轻微滚动以强制重新计算滚动范围
-            final currentOffset = _scrollController.offset;
-            _scrollController.jumpTo(currentOffset + 0.1);
-            _scrollController.jumpTo(currentOffset);
-          }
         });
       }
     } catch (e) {
@@ -836,6 +910,11 @@ class NoteListViewState extends State<NoteListView> {
     _searchDebounceTimer?.cancel(); // 清理防抖定时器
     _userScrollingTimer?.cancel(); // 清理用户滑动定时器
 
+    if (_firstOpenScrollPerfRecording) {
+      WidgetsBinding.instance.removeTimingsCallback(_collectFrameTimings);
+      _firstOpenScrollPerfRecording = false;
+    }
+
     for (final notifier in _expansionNotifiers.values) {
       notifier.dispose();
     }
@@ -1117,6 +1196,15 @@ class NoteListViewState extends State<NoteListView> {
     return NotificationListener<ScrollNotification>(
       key: listKey,
       onNotification: (ScrollNotification notification) {
+        if (_firstOpenScrollPerfEnabled && !_firstOpenScrollPerfCaptured) {
+          if (notification is ScrollStartNotification &&
+              notification.dragDetails != null) {
+            _startFirstOpenScrollPerfCapture();
+          } else if (notification is ScrollEndNotification) {
+            _stopFirstOpenScrollPerfCapture();
+          }
+        }
+
         // 修复：优化预加载逻辑，减少频繁触发
         if (notification is ScrollUpdateNotification) {
           final metrics = notification.metrics;
@@ -1152,8 +1240,8 @@ class NoteListViewState extends State<NoteListView> {
         controller: _scrollController, // 添加滚动控制器
         physics: const AlwaysScrollableScrollPhysics(),
         addAutomaticKeepAlives: true, // 性能优化：保持滚动位置
-        addRepaintBoundaries: true, // 性能优化：减少重绘范围
-        cacheExtent: 500, // 性能优化：预渲染500像素范围
+        addRepaintBoundaries: true, // 使用框架自动 RepaintBoundary，降低重绘开销
+        cacheExtent: AppConstants.noteListCacheExtent,
         itemCount: _quotes.length + (_hasMore ? 1 : 0),
         itemBuilder: (context, index) {
           if (index < _quotes.length) {
@@ -1198,7 +1286,7 @@ class NoteListViewState extends State<NoteListView> {
             final expansionNotifier = _obtainExpansionNotifier(quoteId);
             _expandedItems.putIfAbsent(quoteId, () => expansionNotifier.value);
 
-            return RepaintBoundary(
+            return KeyedSubtree(
               key: _itemKeys[quoteId],
               child: ValueListenableBuilder<bool>(
                 valueListenable: expansionNotifier,
@@ -1368,6 +1456,10 @@ class NoteListViewState extends State<NoteListView> {
     final searchController = Provider.of<NoteSearchController>(context);
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
+    _firstOpenScrollPerfEnabled = context.select<SettingsService, bool>(
+      (s) =>
+          s.appSettings.developerMode && s.enableFirstOpenScrollPerfMonitor,
+    );
 
     // 监听搜索控制器状态，如果搜索出错则重置本地加载状态
     if (searchController.searchError != null && _isLoading) {

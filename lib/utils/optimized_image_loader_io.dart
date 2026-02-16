@@ -25,9 +25,8 @@ ImageProvider? createOptimizedImageProvider(
   if (uri != null && uri.hasScheme) {
     if (uri.scheme == 'file') {
       final file = File.fromUri(uri);
-      if (!file.existsSync()) {
-        return null;
-      }
+      // 跳过同步 existsSync 检查，让 FileImage 自行处理不存在的情况
+      // 避免在 build 过程中阻塞 UI 线程
       return _wrapResize(FileImage(file), cacheWidth, cacheHeight);
     }
 
@@ -35,10 +34,8 @@ ImageProvider? createOptimizedImageProvider(
   }
 
   final file = File(source);
-  if (!file.existsSync()) {
-    return _wrapResize(NetworkImage(source), cacheWidth, cacheHeight);
-  }
-
+  // 跳过同步 existsSync 检查，直接尝试加载
+  // FileImage 内部会异步处理文件不存在的错误，由 errorBuilder 捕获
   return _wrapResize(FileImage(file), cacheWidth, cacheHeight);
 }
 

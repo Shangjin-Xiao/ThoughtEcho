@@ -140,6 +140,25 @@
   "settingsClose": "关闭",
   "developerModeEnabled": "🎉 开发者模式已开启！",
   "developerModeDisabled": "✅ 开发者模式已关闭",
+  "devFirstScrollPerfMonitorTitle": "首次滑动卡顿监测（开发者）",
+  "devFirstScrollPerfMonitorDesc": "监测首次打开记录页后的首次手势滑动帧耗时（非首帧）",
+  "devFirstScrollPerfResult": "首次滑动性能：总帧 {total}，卡顿帧 {jank}，平均 {avgMs}ms，最慢 {worstMs}ms",
+  "@devFirstScrollPerfResult": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "jank": {
+        "type": "int"
+      },
+      "avgMs": {
+        "type": "String"
+      },
+      "worstMs": {
+        "type": "String"
+      }
+    }
+  },
   "emergencyRecoveryTitle": "心迹 - 数据恢复",
   "emergencyRecoveryHeading": "数据库初始化失败",
   "emergencyRecoveryDescription": "应用无法正常启动。可能是数据库损坏或无法访问。\n\n您可以尝试备份现有数据以防数据丢失，或尝试重新启动应用。",

@@ -101,6 +101,16 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 开发者模式：首次打开后首次滑动卡顿监测开关
+  bool get enableFirstOpenScrollPerfMonitor =>
+      _appSettings.enableFirstOpenScrollPerfMonitor;
+  Future<void> setEnableFirstOpenScrollPerfMonitor(bool enabled) async {
+    _appSettings =
+        _appSettings.copyWith(enableFirstOpenScrollPerfMonitor: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
   // 语言设置：获取当前语言代码（null 表示跟随系统）
   String? get localeCode => _appSettings.localeCode;
 
