@@ -139,7 +139,7 @@ class TextProcessingService extends ChangeNotifier {
         _gemmaSession = await model.createSession();
       } catch (e) {
         // 兜底：兼容旧版静态 API（若插件版本仍提供该路径）
-        FlutterGemma.initialize();
+        await FlutterGemma.initialize();
         final model = await FlutterGemma.getActiveModel(maxTokens: 512);
         _gemmaSession = await model.createSession();
       }
