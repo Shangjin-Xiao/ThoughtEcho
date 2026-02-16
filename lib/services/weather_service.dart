@@ -357,9 +357,8 @@ class WeatherService extends ChangeNotifier {
     logDebug('天气数据获取失败，显示错误状态');
   }
 
-  /// 硬编码中文标签（仅用于数据库旧数据兼容），UI 显示应使用 [getLocalizedWeatherLabel]
-  @Deprecated('Use getLocalizedWeatherLabel(context, key) for UI display')
-  static const weatherKeyToLabel = {
+  /// 硬编码中文标签（仅用于数据库旧数据兼容与迁移），UI 显示应使用 [getLocalizedWeatherLabel]
+  static const legacyWeatherKeyToLabel = {
     'clear': '晴',
     'partly_cloudy': '少云',
     'cloudy': '多云',
@@ -375,6 +374,10 @@ class WeatherService extends ChangeNotifier {
     'thunderstorm_heavy': '雷暴雨',
     'unknown': '未知',
   };
+
+  /// 兼容旧代码，避免在新代码中继续使用
+  @Deprecated('Use legacyWeatherKeyToLabel for migration, or getLocalizedWeatherLabel(context, key) for UI display')
+  static const weatherKeyToLabel = legacyWeatherKeyToLabel;
 
   /// 获取天气 key 的本地化标签（UI 显示专用）
   static String getLocalizedWeatherLabel(BuildContext context, String key) {

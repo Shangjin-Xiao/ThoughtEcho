@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../gen_l10n/app_localizations.dart';
+import '../models/note_category.dart';
 import '../services/biometric_service.dart';
 import '../services/clipboard_service.dart';
 import '../services/database_service.dart';
 import '../services/settings_service.dart';
+import '../utils/icon_utils.dart';
 import 'ai_settings_page.dart';
 
 /// 二级设置页：整合常用偏好与AI快捷开关
@@ -665,6 +667,7 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
     final db = Provider.of<DatabaseService>(context, listen: false);
     final categories = await db.getCategories();
     final selectedIds = List<String>.from(settings.defaultTagIds);
+    String searchQuery = '';
 
     if (!context.mounted) return;
 
@@ -673,8 +676,22 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
       builder: (ctx) {
         return StatefulBuilder(
           builder: (ctx, setDialogState) {
+            final List<NoteCategory> filteredCategories = categories
+                .where(
+                  (tag) => tag.name
+                      .toLowerCase()
+                      .contains(searchQuery.toLowerCase().trim()),
+                )
+                .toList();
+
             return AlertDialog(
-              title: Text(l10n.selectDefaultTags),
+              title: Row(
+                children: [
+                  const Icon(Icons.label_important_outline),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(l10n.selectDefaultTags)),
+                ],
+              ),
               content: SizedBox(
                 width: double.maxFinite,
                 child: categories.isEmpty
@@ -685,32 +702,103 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                           textAlign: TextAlign.center,
                         ),
                       )
-                    : ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: categories.length,
-                        itemBuilder: (_, index) {
-                          final tag = categories[index];
-                          final isSelected = selectedIds.contains(tag.id);
-                          return CheckboxListTile(
-                            value: isSelected,
-                            title: Text(tag.name),
-                            secondary: tag.iconName != null
-                                ? Icon(
-                                    _getIconData(tag.iconName!),
-                                    size: 20,
-                                  )
-                                : null,
-                            onChanged: (checked) {
-                              setDialogState(() {
-                                if (checked == true) {
-                                  selectedIds.add(tag.id);
-                                } else {
-                                  selectedIds.remove(tag.id);
-                                }
-                              });
-                            },
-                          );
-                        },
+                    : ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 420),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                l10n.defaultTagsCount(selectedIds.length),
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            TextField(
+                              decoration: InputDecoration(
+                                hintText: l10n.searchTags,
+                                prefixIcon: const Icon(Icons.search),
+                                border: const OutlineInputBorder(),
+                                isDense: true,
+                              ),
+                              onChanged: (value) {
+                                setDialogState(() {
+                                  searchQuery = value;
+                                });
+                              },
+                            ),
+                            const SizedBox(height: 10),
+                            Flexible(
+                              child: filteredCategories.isEmpty
+                                  ? Center(child: Text(l10n.noMatchingTags))
+                                  : ListView.separated(
+                                      shrinkWrap: true,
+                                      itemCount: filteredCategories.length,
+                                      separatorBuilder: (_, __) => const Divider(
+                                        height: 1,
+                                        indent: 52,
+                                      ),
+                                      itemBuilder: (_, index) {
+                                        final tag = filteredCategories[index];
+                                        final isSelected =
+                                            selectedIds.contains(tag.id);
+                                        return ListTile(
+                                          dense: true,
+                                          contentPadding:
+                                              const EdgeInsets.symmetric(
+                                            horizontal: 4,
+                                            vertical: 2,
+                                          ),
+                                          leading: _buildTagIcon(
+                                            context,
+                                            tag.iconName,
+                                          ),
+                                          title: Text(
+                                            tag.name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          trailing: Checkbox(
+                                            value: isSelected,
+                                            onChanged: (checked) {
+                                              setDialogState(() {
+                                                if (checked == true) {
+                                                  selectedIds.add(tag.id);
+                                                } else {
+                                                  selectedIds.remove(tag.id);
+                                                }
+                                              });
+                                            },
+                                          ),
+                                          onTap: () {
+                                            setDialogState(() {
+                                              if (isSelected) {
+                                                selectedIds.remove(tag.id);
+                                              } else {
+                                                selectedIds.add(tag.id);
+                                              }
+                                            });
+                                          },
+                                        );
+                                      },
+                                    ),
+                            ),
+                          ],
+                        ),
                       ),
               ),
               actions: [
@@ -750,25 +838,21 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
     }
   }
 
-  /// 从图标名称获取 IconData
-  IconData _getIconData(String iconName) {
-    // 简单映射常用图标
-    const iconMap = <String, IconData>{
-      'favorite': Icons.favorite,
-      'star': Icons.star,
-      'bookmark': Icons.bookmark,
-      'label': Icons.label,
-      'folder': Icons.folder,
-      'movie': Icons.movie,
-      'music_note': Icons.music_note,
-      'book': Icons.book,
-      'games': Icons.games,
-      'brush': Icons.brush,
-      'language': Icons.language,
-      'psychology': Icons.psychology,
-      'emoji_emotions': Icons.emoji_emotions,
-      'auto_stories': Icons.auto_stories,
-    };
-    return iconMap[iconName] ?? Icons.label_outline;
+  Widget _buildTagIcon(BuildContext context, String? iconName) {
+    final theme = Theme.of(context);
+    final icon = iconName ?? 'label';
+
+    if (IconUtils.isEmoji(icon)) {
+      return Text(
+        IconUtils.getDisplayIcon(icon),
+        style: const TextStyle(fontSize: 20),
+      );
+    }
+
+    return Icon(
+      IconUtils.getIconData(icon),
+      size: 20,
+      color: theme.colorScheme.onSurfaceVariant,
+    );
   }
 }
