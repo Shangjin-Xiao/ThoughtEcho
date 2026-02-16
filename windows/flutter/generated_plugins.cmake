@@ -6,6 +6,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
   audioplayers_windows
   dynamic_color
   file_selector_windows
+  flutter_gemma
   flutter_secure_storage_windows
   gal
   geolocator_windows
