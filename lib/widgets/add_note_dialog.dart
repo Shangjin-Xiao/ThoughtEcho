@@ -139,6 +139,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   void initState() {
     super.initState();
 
+    // 每日一言双击添加：使用一言数据专属填充，跳过通用默认填充（作者/出处/默认标签）
+    final bool isHitokotoQuickAdd = widget.hitokotoData != null;
+
     // 初始化控制器
     _contentController = TextEditingController(
       text: widget.initialQuote?.content ?? widget.prefilledContent ?? '',
@@ -158,7 +161,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     _lastSearchQuery = '';
 
     // 新建笔记时，自动填充默认作者、出处和标签
-    if (widget.initialQuote == null) {
+    if (widget.initialQuote == null && !isHitokotoQuickAdd) {
       final settingsService = _readServiceOrNull<SettingsService>(context);
       if (settingsService != null) {
         // 仅在没有预填充值时使用默认值

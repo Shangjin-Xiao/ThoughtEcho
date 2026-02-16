@@ -4538,8 +4538,7 @@ class DatabaseService extends ChangeNotifier {
       if (weatherCheck.isNotEmpty) {
         final weather = weatherCheck.first['weather'] as String?;
         if (weather != null &&
-            WeatherService.weatherKeyToLabel.values.contains(weather)) {
-          // ignore: deprecated_member_use
+            WeatherService.legacyWeatherKeyToLabel.values.contains(weather)) {
           logDebug('检测到未迁移的weather数据，开始迁移...');
           await migrateWeatherToKey();
         }
@@ -5244,10 +5243,11 @@ class DatabaseService extends ChangeNotifier {
         for (var i = 0; i < _memoryStore.length; i++) {
           final q = _memoryStore[i];
           if (q.weather != null &&
-              WeatherService.weatherKeyToLabel.values.contains(q.weather)) {
-            // ignore: deprecated_member_use
+              WeatherService.legacyWeatherKeyToLabel.values.contains(
+                q.weather,
+              )) {
             final key = WeatherService
-                .weatherKeyToLabel.entries // ignore: deprecated_member_use
+                .legacyWeatherKeyToLabel.entries
                 .firstWhere((e) => e.value == q.weather)
                 .key;
             _memoryStore[i] = q.copyWith(weather: key);
@@ -5288,8 +5288,8 @@ class DatabaseService extends ChangeNotifier {
         // 3. 查询需要迁移的数据
         // 性能优化：仅查询值为中文标签的记录
         // 使用参数化查询而不是字符串拼接，防止潜在的 SQL 注入问题
-        final weatherLabels = WeatherService.weatherKeyToLabel.values
-            .toList(); // ignore: deprecated_member_use
+        final weatherLabels = WeatherService.legacyWeatherKeyToLabel.values
+          .toList();
         if (weatherLabels.isEmpty) {
           logDebug('没有需要迁移的 weather 标签');
           return;
@@ -5320,10 +5320,9 @@ class DatabaseService extends ChangeNotifier {
           if (id == null || weather == null || weather.isEmpty) continue;
 
           // 检查是否需要迁移（是否为中文标签）
-          if (WeatherService.weatherKeyToLabel.values.contains(weather)) {
-            // ignore: deprecated_member_use
+              if (WeatherService.legacyWeatherKeyToLabel.values.contains(weather)) {
             final key = WeatherService
-                .weatherKeyToLabel.entries // ignore: deprecated_member_use
+                .legacyWeatherKeyToLabel.entries
                 .firstWhere((e) => e.value == weather)
                 .key;
 

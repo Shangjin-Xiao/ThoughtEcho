@@ -360,12 +360,14 @@ class _HomePageState extends State<HomePage>
   /// 当网络恢复并成功解析出地址后，更新最近 24 小时内
   /// 带有 pending/failed 位置标记的笔记
   void _retroUpdateOfflineNoteLocations(LocationService locationService) {
+    if (!mounted) return;
+
+    final dbService = Provider.of<DatabaseService>(context, listen: false);
+    final resolvedAddress = locationService.getLocationDisplayText();
+    if (resolvedAddress.isEmpty) return;
+
     Future.microtask(() async {
       try {
-        final dbService = Provider.of<DatabaseService>(context, listen: false);
-        final resolvedAddress = locationService.getLocationDisplayText();
-        if (resolvedAddress.isEmpty) return;
-
         final allQuotes = await dbService.getAllQuotes();
         final cutoff = DateTime.now().subtract(const Duration(hours: 24));
         int updatedCount = 0;

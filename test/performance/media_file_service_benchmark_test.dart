@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/media_file_service.dart';
 
@@ -23,8 +24,10 @@ void main() {
     final result = await MediaFileService.getMemoryUsageAdvice(filePaths);
 
     stopwatch.stop();
-    print('Processed $fileCount files in ${stopwatch.elapsedMilliseconds} ms');
-    print('Result: $result');
+    debugPrint(
+      'Processed $fileCount files in ${stopwatch.elapsedMilliseconds} ms',
+    );
+    debugPrint('Result: $result');
 
     // 3. Cleanup
     await tempDir.delete(recursive: true);
