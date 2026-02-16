@@ -22,6 +22,8 @@ class WeatherService extends ChangeNotifier {
 
   final WeatherCacheManager _cacheManager = WeatherCacheManager();
   bool _isInitialized = false;
+  late final Future<void> _initFuture = _init();
+  final Map<String, Future<void>> _pendingWeatherRequests = {};
 
   // 当前语言设置
   String? _currentLocaleCode;
@@ -48,11 +50,6 @@ class WeatherService extends ChangeNotifier {
   String? get weatherIcon => _currentWeatherData?.iconCode;
   double? get temperatureValue => _currentWeatherData?.temperature;
 
-  // 构造函数
-  WeatherService() {
-    _init();
-  }
-
   // 初始化服务
   Future<void> _init() async {
     try {
@@ -67,16 +64,55 @@ class WeatherService extends ChangeNotifier {
 
   /// 确保服务已初始化
   Future<void> _ensureInitialized() async {
+    await _initFuture;
     if (!_isInitialized) {
-      await _init();
-    }
-    if (!_isInitialized) {
-      throw Exception('天气服务初始化失败');
+      throw Exception('Weather service initialization failed');
     }
   }
 
   /// 获取天气数据的主要方法
   Future<void> getWeatherData(
+    double latitude,
+    double longitude, {
+    bool forceRefresh = false,
+    Duration? timeout,
+  }) async {
+    final requestKey = _buildRequestKey(latitude, longitude);
+
+    // 如果同一坐标已有进行中的请求且不是强制刷新，复用
+    if (!forceRefresh) {
+      final pendingRequest = _pendingWeatherRequests[requestKey];
+      if (pendingRequest != null) {
+        return pendingRequest;
+      }
+    }
+
+    final requestFuture = _doGetWeatherData(
+      latitude,
+      longitude,
+      forceRefresh: forceRefresh,
+      timeout: timeout,
+    );
+
+    // 记录当前坐标的进行中请求，避免不同坐标间互相复用
+    _pendingWeatherRequests[requestKey] = requestFuture;
+
+    try {
+      await requestFuture;
+    } finally {
+      // 仅移除当前这次请求，避免覆盖并发中的更新请求
+      if (identical(_pendingWeatherRequests[requestKey], requestFuture)) {
+        _pendingWeatherRequests.remove(requestKey);
+      }
+    }
+  }
+
+  String _buildRequestKey(double latitude, double longitude) {
+    return '${latitude.toStringAsFixed(6)},${longitude.toStringAsFixed(6)}';
+  }
+
+  /// 获取天气数据的实际实现
+  Future<void> _doGetWeatherData(
     double latitude,
     double longitude, {
     bool forceRefresh = false,
@@ -122,6 +158,23 @@ class WeatherService extends ChangeNotifier {
     } catch (e) {
       logError('获取天气数据失败: $e', error: e);
       _lastError = e.toString();
+
+      // P2: API 失败时尝试使用过期缓存作为降级（总比空白好）
+      try {
+        final expiredCache = await _cacheManager.loadWeatherDataIgnoreExpiry(
+          latitude: latitude,
+          longitude: longitude,
+        );
+        if (expiredCache != null && expiredCache.isValid) {
+          _currentWeatherData = expiredCache;
+          _setState(WeatherServiceState.cached);
+          logDebug('API 失败，使用过期缓存降级显示: ${expiredCache.description}');
+          return;
+        }
+      } catch (_) {
+        // 过期缓存加载也失败，走原始错误逻辑
+      }
+
       _currentWeatherData = WeatherData.error();
       _setState(WeatherServiceState.error);
     }
@@ -141,8 +194,7 @@ class WeatherService extends ChangeNotifier {
           '&timezone=auto';
 
       final response = await NetworkService.instance
-          .get(url, timeoutSeconds: timeout.inSeconds)
-          .timeout(timeout);
+          .get(url, timeoutSeconds: timeout.inSeconds);
 
       if (response.statusCode != 200) {
         throw Exception('API请求失败: ${response.statusCode}');
@@ -157,13 +209,13 @@ class WeatherService extends ChangeNotifier {
       final current = data['current'] as Map<String, dynamic>;
 
       // 解析天气代码
-      final weatherCode = current['weather_code'] as int?;
+      final weatherCode = (current['weather_code'] as num?)?.toInt();
       if (weatherCode == null) {
         throw Exception('API响应格式错误: 缺少 weather_code');
       }
 
       // 解析温度
-      final temperatureValue = current['temperature_2m'] as double?;
+      final temperatureValue = (current['temperature_2m'] as num?)?.toDouble();
       String? temperatureText;
       if (temperatureValue != null) {
         temperatureText = '${temperatureValue.toStringAsFixed(0)}°C';
@@ -258,7 +310,9 @@ class WeatherService extends ChangeNotifier {
     return WeatherCodeMapper.getIconCode(key);
   }
 
-  /// 修复：检查网络连通性，使用更可靠的检测方法
+  /// 检查天气 API 是否可达
+  /// 返回 true 表示 API 不可达，应使用本地缓存
+  @Deprecated('Unused method - consider removing')
   Future<bool> shouldUseLocalWeather() async {
     try {
       // 使用天气API的健康检查端点，使用北京坐标避免海洋中心
@@ -303,7 +357,8 @@ class WeatherService extends ChangeNotifier {
     logDebug('天气数据获取失败，显示错误状态');
   }
 
-  // 静态常量映射（兼容性）
+  /// 硬编码中文标签（仅用于数据库旧数据兼容），UI 显示应使用 [getLocalizedWeatherLabel]
+  @Deprecated('Use getLocalizedWeatherLabel(context, key) for UI display')
   static const weatherKeyToLabel = {
     'clear': '晴',
     'partly_cloudy': '少云',
@@ -321,7 +376,44 @@ class WeatherService extends ChangeNotifier {
     'unknown': '未知',
   };
 
-  // 筛选用的简化天气分类映射
+  /// 获取天气 key 的本地化标签（UI 显示专用）
+  static String getLocalizedWeatherLabel(BuildContext context, String key) {
+    final l10n = AppLocalizations.of(context);
+    switch (key) {
+      case 'clear':
+        return l10n.weatherClear;
+      case 'partly_cloudy':
+        return l10n.weatherPartlyCloudy;
+      case 'cloudy':
+        return l10n.weatherCloudy;
+      case 'fog':
+        return l10n.weatherFog;
+      case 'drizzle':
+        return l10n.weatherDrizzle;
+      case 'freezing_rain':
+        return l10n.weatherFreezingRain;
+      case 'rain':
+        return l10n.weatherRain;
+      case 'snow':
+        return l10n.weatherSnow;
+      case 'snow_grains':
+        return l10n.weatherSnowGrains;
+      case 'rain_shower':
+        return l10n.weatherRainShower;
+      case 'snow_shower':
+        return l10n.weatherSnowShower;
+      case 'thunderstorm':
+        return l10n.weatherThunderstorm;
+      case 'thunderstorm_heavy':
+        return l10n.weatherThunderstormHeavy;
+      default:
+        return key;
+    }
+  }
+
+  /// 硬编码中文标签（仅用于数据库旧数据兼容），UI 显示应使用 [getLocalizedFilterCategoryLabel]
+  @Deprecated(
+      'Use getLocalizedFilterCategoryLabel(context, key) for UI display')
   static const filterCategoryToLabel = {
     'sunny': '晴',
     'rainy': '雨',

@@ -3390,6 +3390,7 @@
   "userGuideNoResults": "未找到相关内容",
   "userGuideOnlineDoc": "完整在线文档",
   "tileNoLocationPermission": "无定位",
+  "tileLocationServiceOff": "定位未开启",
   "tileOffline": "离线",
   "tileNoNetwork": "无网络",
   "tileLoading": "加载中...",
@@ -3420,5 +3421,44 @@
   "clearDefaultValue": "清除",
   "saveDefaultValue": "保存",
   "defaultValueSaved": "默认值已保存",
-  "defaultValueCleared": "默认值已清除"
+  "defaultValueCleared": "默认值已清除",
+
+  "citySelectedWeatherUpdated": "已选择城市：{cityName}，天气已更新",
+  "@citySelectedWeatherUpdated": {
+    "placeholders": {
+      "cityName": {
+        "type": "String"
+      }
+    }
+  },
+  "citySelectionError": "处理城市选择时出错：{error}",
+  "@citySelectionError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "currentLocationWeatherUpdated": "已使用当前位置：{cityName}，天气已更新",
+  "@currentLocationWeatherUpdated": {
+    "placeholders": {
+      "cityName": {
+        "type": "String"
+      }
+    }
+  },
+  "locationFetchError": "获取当前位置失败：{error}",
+  "@locationFetchError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "weatherTimeoutRetry": "天气获取超时，请稍后重试",
+  "weatherFetchFailedCheckNetwork": "天气数据获取失败，请检查网络连接",
+  "locationTimeoutCheckPermission": "位置获取超时，请检查位置权限设置",
+  "cannotGetCurrentLocation": "无法获取当前位置，请确保已授予位置权限",
+  "cannotGetSelectedCityLocation": "无法获取选中城市的位置信息",
+  "cityInfoIncomplete": "城市信息不完整"
 }

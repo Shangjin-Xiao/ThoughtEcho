@@ -3381,6 +3381,7 @@
   "userGuideNoResults": "No results found",
   "userGuideOnlineDoc": "Full Online Documentation",
   "tileNoLocationPermission": "No Location",
+  "tileLocationServiceOff": "GPS Off",
   "tileOffline": "Offline",
   "tileNoNetwork": "No Network",
   "tileLoading": "Loading...",
@@ -3411,5 +3412,44 @@
   "clearDefaultValue": "Clear",
   "saveDefaultValue": "Save",
   "defaultValueSaved": "Default value saved",
-  "defaultValueCleared": "Default value cleared"
+  "defaultValueCleared": "Default value cleared",
+
+  "citySelectedWeatherUpdated": "Selected city: {cityName}, weather updated",
+  "@citySelectedWeatherUpdated": {
+    "placeholders": {
+      "cityName": {
+        "type": "String"
+      }
+    }
+  },
+  "citySelectionError": "Error selecting city: {error}",
+  "@citySelectionError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "currentLocationWeatherUpdated": "Using current location: {cityName}, weather updated",
+  "@currentLocationWeatherUpdated": {
+    "placeholders": {
+      "cityName": {
+        "type": "String"
+      }
+    }
+  },
+  "locationFetchError": "Failed to get location: {error}",
+  "@locationFetchError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "weatherTimeoutRetry": "Weather fetch timed out, please try again later",
+  "weatherFetchFailedCheckNetwork": "Weather fetch failed, please check network connection",
+  "locationTimeoutCheckPermission": "Location fetch timed out, please check location permission",
+  "cannotGetCurrentLocation": "Cannot get current location, please ensure location permission is granted",
+  "cannotGetSelectedCityLocation": "Cannot get selected city location",
+  "cityInfoIncomplete": "City information is incomplete"
 }

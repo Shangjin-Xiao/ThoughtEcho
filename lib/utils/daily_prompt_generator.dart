@@ -68,6 +68,7 @@ class DailyPromptGenerator {
     String? weatherKey;
     if (weather != null) {
       weatherKey = WeatherService.weatherKeyToLabel.keys.firstWhere(
+        // ignore: deprecated_member_use
         (k) =>
             weather == k || weather == WeatherService.getWeatherDescription(k),
         orElse: () => weather,

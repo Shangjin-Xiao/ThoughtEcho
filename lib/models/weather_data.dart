@@ -81,7 +81,8 @@ class WeatherData {
       temperature: json['temperature']?.toDouble(),
       temperatureText: json['temperatureText'],
       iconCode: json['iconCode'] ?? 'cloudy',
-      timestamp: DateTime.parse(json['timestamp']),
+      timestamp: DateTime.tryParse(json['timestamp']?.toString() ?? '') ??
+          DateTime.now(),
       latitude: json['latitude']?.toDouble(),
       longitude: json['longitude']?.toDouble(),
     );
@@ -133,12 +134,13 @@ class WeatherData {
         other.key == key &&
         other.temperature == temperature &&
         other.latitude == latitude &&
-        other.longitude == longitude;
+        other.longitude == longitude &&
+        other.timestamp == timestamp;
   }
 
   @override
   int get hashCode {
-    return Object.hash(key, temperature, latitude, longitude);
+    return Object.hash(key, temperature, latitude, longitude, timestamp);
   }
 }
 

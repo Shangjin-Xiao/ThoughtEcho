@@ -65,7 +65,11 @@ class WeatherCacheManager {
       // 检查缓存是否过期
       final cacheExpiryString = _storage!.getString(_cacheExpiryKey);
       if (cacheExpiryString != null) {
-        final cacheExpiry = DateTime.parse(cacheExpiryString);
+        final cacheExpiry = DateTime.tryParse(cacheExpiryString);
+        if (cacheExpiry == null) {
+          logDebug('天气缓存过期时间格式无效');
+          return null;
+        }
         if (DateTime.now().isAfter(cacheExpiry)) {
           logDebug('天气缓存已过期');
           return null;
@@ -104,6 +108,34 @@ class WeatherCacheManager {
       return weatherData;
     } catch (e) {
       logError('从缓存加载天气数据失败: $e', error: e);
+      return null;
+    }
+  }
+
+  /// 加载天气数据（忽略过期时间，用于离线降级显示）
+  Future<WeatherData?> loadWeatherDataIgnoreExpiry({
+    double? latitude,
+    double? longitude,
+  }) async {
+    try {
+      if (!await _ensureInitialized()) return null;
+
+      final cacheJson = _storage!.getString(_cacheKey);
+      if (cacheJson == null) return null;
+
+      final weatherData = WeatherData.fromJson(json.decode(cacheJson));
+
+      // 仍然检查位置匹配（位置完全不相关的过期缓存没有意义）
+      if (latitude != null && longitude != null) {
+        if (!weatherData.isLocationMatch(latitude, longitude)) {
+          return null;
+        }
+      }
+
+      logDebug('加载过期天气缓存用于离线显示: ${weatherData.description}');
+      return weatherData;
+    } catch (e) {
+      logError('加载过期天气缓存失败: $e', error: e);
       return null;
     }
   }
@@ -147,7 +179,11 @@ class WeatherCacheManager {
         return null;
       }
 
-      final cacheExpiry = DateTime.parse(cacheExpiryString);
+      final cacheExpiry = DateTime.tryParse(cacheExpiryString);
+      if (cacheExpiry == null) {
+        logDebug('天气缓存过期时间格式无效');
+        return null;
+      }
       final isExpired = DateTime.now().isAfter(cacheExpiry);
 
       return {

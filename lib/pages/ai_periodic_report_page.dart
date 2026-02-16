@@ -278,8 +278,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     IconData? weatherIcon;
     if (mostWeather != null) {
       // 如果是筛选分类key，直接使用分类标签
-      if (WeatherService.filterCategoryToLabel.containsKey(mostWeather)) {
-        weatherDisplay = WeatherService.filterCategoryToLabel[mostWeather];
+      if (WeatherService.filterCategoryToKeys.containsKey(mostWeather)) {
+        weatherDisplay = WeatherService.getLocalizedFilterCategoryLabel(
+            context, mostWeather);
         weatherIcon = WeatherService.getFilterCategoryIcon(mostWeather);
       } else {
         // 否则按原逻辑处理
