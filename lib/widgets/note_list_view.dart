@@ -246,8 +246,8 @@ class NoteListViewState extends State<NoteListView> {
     // 节流检测，避免滚动期间频繁触发数据库状态读取
     final now = DateTime.now();
     if (_lastScrollExtentCheckTime == null ||
-      now.difference(_lastScrollExtentCheckTime!) >=
-        _scrollExtentCheckInterval) {
+        now.difference(_lastScrollExtentCheckTime!) >=
+            _scrollExtentCheckInterval) {
       _lastScrollExtentCheckTime = now;
       _checkAndFixScrollExtentAnomaly();
     }
@@ -373,8 +373,8 @@ class NoteListViewState extends State<NoteListView> {
       int totalIntervalMicros = 0;
 
       for (int i = 1; i < _firstOpenScrollUpdateMicros.length; i++) {
-        final int interval =
-            _firstOpenScrollUpdateMicros[i] - _firstOpenScrollUpdateMicros[i - 1];
+        final int interval = _firstOpenScrollUpdateMicros[i] -
+            _firstOpenScrollUpdateMicros[i - 1];
         if (interval > worstIntervalMicros) {
           worstIntervalMicros = interval;
         }
@@ -416,8 +416,8 @@ class NoteListViewState extends State<NoteListView> {
       }
 
       final bool hasExpandable = _quotes.take(80).any(
-        QuoteItemWidget.needsExpansionFor,
-      );
+            QuoteItemWidget.needsExpansionFor,
+          );
 
       if (!mounted) {
         return;
@@ -1395,7 +1395,7 @@ class NoteListViewState extends State<NoteListView> {
                     _expandedItems[quoteId] = expanded;
 
                     final bool requiresAlignment =
-                      QuoteItemWidget.needsExpansionFor(quote);
+                        QuoteItemWidget.needsExpansionFor(quote);
 
                     if (!expanded && requiresAlignment) {
                       final waitDuration =
@@ -1551,8 +1551,7 @@ class NoteListViewState extends State<NoteListView> {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
     _firstOpenScrollPerfEnabled = context.select<SettingsService, bool>(
-      (s) =>
-          s.appSettings.developerMode && s.enableFirstOpenScrollPerfMonitor,
+      (s) => s.appSettings.developerMode && s.enableFirstOpenScrollPerfMonitor,
     );
 
     // 监听搜索控制器状态，如果搜索出错则重置本地加载状态

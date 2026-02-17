@@ -985,7 +985,8 @@ class SmartPushService extends ChangeNotifier {
     }
 
     // 2. 降级：使用传统的笔记创建时间分析（SQL 聚合，不加载内容）
-    final hourDistribution = await _databaseService.getHourDistributionForSmartPush();
+    final hourDistribution =
+        await _databaseService.getHourDistributionForSmartPush();
 
     final totalNotes = hourDistribution.reduce((a, b) => a + b);
     if (totalNotes < 10) {
@@ -1296,7 +1297,8 @@ class SmartPushService extends ChangeNotifier {
     }
 
     // 后台逻辑：由 AlarmManager/WorkManager 触发
-    AppLogger.w('后台推送触发 (triggerKind: $triggerKind, time: ${now.hour}:${now.minute})');
+    AppLogger.w(
+        '后台推送触发 (triggerKind: $triggerKind, time: ${now.hour}:${now.minute})');
 
     // 防重复：距上次推送不足 3 分钟则跳过
     if (_settings.lastPushTime != null) {

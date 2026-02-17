@@ -394,8 +394,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                           duration: QuoteItemWidget._fadeDuration,
                           switchInCurve: Curves.easeOut,
                           switchOutCurve: Curves.easeIn,
-                          layoutBuilder:
-                              (currentChild, previousChildren) => Stack(
+                          layoutBuilder: (currentChild, previousChildren) =>
+                              Stack(
                             clipBehavior: Clip.none,
                             children: [
                               ...previousChildren,
@@ -406,8 +406,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                             key: ValueKey<bool>(showFullContent),
                             child: QuoteContent(
                               quote: quote,
-                              style: innerTheme.textTheme.bodyLarge
-                                  ?.copyWith(
+                              style: innerTheme.textTheme.bodyLarge?.copyWith(
                                 color: primaryTextColor,
                                 height: 1.5,
                               ),
@@ -599,7 +598,9 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                               physics: const BouncingScrollPhysics(),
                               child: Row(
                                 children: [
-                                  for (int index = 0; index < sortedTagIds.length; index++)
+                                  for (int index = 0;
+                                      index < sortedTagIds.length;
+                                      index++)
                                     () {
                                       final tagId = sortedTagIds[index];
                                       final tag = widget.tagMap[tagId] ??
@@ -614,80 +615,101 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
 
                                       return Container(
                                         margin: EdgeInsets.only(
-                                          right:
-                                              index < sortedTagIds.length - 1 ? 8 : 0,
+                                          right: index < sortedTagIds.length - 1
+                                              ? 8
+                                              : 0,
                                         ),
                                         child: widget.tagBuilder != null
                                             ? widget.tagBuilder!(tag)
                                             : Container(
-                                                padding: const EdgeInsets.symmetric(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
                                                   horizontal: 10,
                                                   vertical: 4,
                                                 ),
-                                          decoration: BoxDecoration(
-                                            color: isFilteredTag
-                                                ? baseContentColor.withValues(
-                                                    alpha: 0.15,
-                                                  )
-                                                : baseContentColor.withValues(
-                                                    alpha: 0.08,
+                                                decoration: BoxDecoration(
+                                                  color: isFilteredTag
+                                                      ? baseContentColor
+                                                          .withValues(
+                                                          alpha: 0.15,
+                                                        )
+                                                      : baseContentColor
+                                                          .withValues(
+                                                          alpha: 0.08,
+                                                        ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                    14,
                                                   ),
-                                            borderRadius: BorderRadius.circular(
-                                              14,
-                                            ),
-                                            border: Border.all(
-                                              color: isFilteredTag
-                                                  ? baseContentColor.withValues(
-                                                      alpha: 0.4,
-                                                    )
-                                                  : baseContentColor.withValues(
-                                                      alpha: 0.15,
-                                                    ),
-                                              width: isFilteredTag ? 1.0 : 0.5,
-                                            ),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              if (tag.iconName?.isNotEmpty ==
-                                                  true) ...[
-                                                if (IconUtils.isEmoji(
-                                                  tag.iconName!,
-                                                )) ...[
-                                                  Text(
-                                                    IconUtils.getDisplayIcon(
-                                                      tag.iconName!,
-                                                    ),
-                                                    style: const TextStyle(
-                                                      fontSize: 12,
-                                                    ),
+                                                  border: Border.all(
+                                                    color: isFilteredTag
+                                                        ? baseContentColor
+                                                            .withValues(
+                                                            alpha: 0.4,
+                                                          )
+                                                        : baseContentColor
+                                                            .withValues(
+                                                            alpha: 0.15,
+                                                          ),
+                                                    width: isFilteredTag
+                                                        ? 1.0
+                                                        : 0.5,
                                                   ),
-                                                  const SizedBox(width: 3),
-                                                ] else ...[
-                                                  Icon(
-                                                    IconUtils.getIconData(
-                                                      tag.iconName!,
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    if (tag.iconName
+                                                            ?.isNotEmpty ==
+                                                        true) ...[
+                                                      if (IconUtils.isEmoji(
+                                                        tag.iconName!,
+                                                      )) ...[
+                                                        Text(
+                                                          IconUtils
+                                                              .getDisplayIcon(
+                                                            tag.iconName!,
+                                                          ),
+                                                          style:
+                                                              const TextStyle(
+                                                            fontSize: 12,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                            width: 3),
+                                                      ] else ...[
+                                                        Icon(
+                                                          IconUtils.getIconData(
+                                                            tag.iconName!,
+                                                          ),
+                                                          size: 12,
+                                                          color:
+                                                              secondaryTextColor,
+                                                        ),
+                                                        const SizedBox(
+                                                            width: 3),
+                                                      ],
+                                                    ],
+                                                    Text(
+                                                      tag.name,
+                                                      style: theme
+                                                          .textTheme.bodySmall
+                                                          ?.copyWith(
+                                                        color:
+                                                            secondaryTextColor,
+                                                        fontSize: 11,
+                                                        fontWeight:
+                                                            isFilteredTag
+                                                                ? FontWeight
+                                                                    .w600
+                                                                : FontWeight
+                                                                    .w500,
+                                                      ),
                                                     ),
-                                                    size: 12,
-                                                    color: secondaryTextColor,
-                                                  ),
-                                                  const SizedBox(width: 3),
-                                                ],
-                                              ],
-                                              Text(
-                                                tag.name,
-                                                style: theme.textTheme.bodySmall
-                                                    ?.copyWith(
-                                                  color: secondaryTextColor,
-                                                  fontSize: 11,
-                                                  fontWeight: isFilteredTag
-                                                      ? FontWeight.w600
-                                                      : FontWeight.w500,
+                                                  ],
                                                 ),
                                               ),
-                                            ],
-                                          ),
-                                        ),
                                       );
                                     }(),
                                 ],

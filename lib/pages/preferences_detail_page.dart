@@ -595,7 +595,9 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              result.isEmpty ? l10n.defaultValueCleared : l10n.defaultValueSaved,
+              result.isEmpty
+                  ? l10n.defaultValueCleared
+                  : l10n.defaultValueSaved,
             ),
             duration: const Duration(seconds: 2),
           ),
@@ -748,7 +750,8 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                                   : ListView.separated(
                                       shrinkWrap: true,
                                       itemCount: filteredCategories.length,
-                                      separatorBuilder: (_, __) => const Divider(
+                                      separatorBuilder: (_, __) =>
+                                          const Divider(
                                         height: 1,
                                         indent: 52,
                                       ),
@@ -829,7 +832,9 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              result.isEmpty ? l10n.defaultValueCleared : l10n.defaultValueSaved,
+              result.isEmpty
+                  ? l10n.defaultValueCleared
+                  : l10n.defaultValueSaved,
             ),
             duration: const Duration(seconds: 2),
           ),

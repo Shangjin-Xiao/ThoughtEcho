@@ -89,13 +89,14 @@ class AppSettings {
       enableHiddenNotes: map['enableHiddenNotes'] ?? false,
       requireBiometricForHidden: map['requireBiometricForHidden'] ?? false,
       developerMode: map['developerMode'] ?? false,
-        enableFirstOpenScrollPerfMonitor:
+      enableFirstOpenScrollPerfMonitor:
           map['enableFirstOpenScrollPerfMonitor'] ?? false,
       autoAttachLocation: map['autoAttachLocation'] ?? false,
       autoAttachWeather: map['autoAttachWeather'] ?? false,
       defaultAuthor: map['defaultAuthor'] as String?,
       defaultSource: map['defaultSource'] as String?,
-      defaultTagIds: (map['defaultTagIds'] as List<dynamic>?)?.cast<String>() ?? const [],
+      defaultTagIds:
+          (map['defaultTagIds'] as List<dynamic>?)?.cast<String>() ?? const [],
     );
   }
 
@@ -171,12 +172,14 @@ class AppSettings {
       requireBiometricForHidden:
           requireBiometricForHidden ?? this.requireBiometricForHidden,
       developerMode: developerMode ?? this.developerMode,
-        enableFirstOpenScrollPerfMonitor: enableFirstOpenScrollPerfMonitor ??
+      enableFirstOpenScrollPerfMonitor: enableFirstOpenScrollPerfMonitor ??
           this.enableFirstOpenScrollPerfMonitor,
       autoAttachLocation: autoAttachLocation ?? this.autoAttachLocation,
       autoAttachWeather: autoAttachWeather ?? this.autoAttachWeather,
-      defaultAuthor: clearDefaultAuthor ? null : (defaultAuthor ?? this.defaultAuthor),
-      defaultSource: clearDefaultSource ? null : (defaultSource ?? this.defaultSource),
+      defaultAuthor:
+          clearDefaultAuthor ? null : (defaultAuthor ?? this.defaultAuthor),
+      defaultSource:
+          clearDefaultSource ? null : (defaultSource ?? this.defaultSource),
       defaultTagIds: defaultTagIds ?? this.defaultTagIds,
     );
   }
