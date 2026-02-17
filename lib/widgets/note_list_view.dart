@@ -126,6 +126,11 @@ class NoteListViewState extends State<NoteListView> {
   bool _firstOpenScrollPerfRecording = false;
   bool _firstOpenScrollPerfCaptured = false;
   final List<FrameTiming> _firstOpenScrollFrameTimings = <FrameTiming>[];
+  final List<int> _firstOpenScrollUpdateMicros = <int>[];
+  Timer? _firstOpenScrollStopTimer;
+
+  bool _hasExpandableQuoteCached = false;
+  bool _hasExpandableQuoteComputed = false;
 
   /// 获取有效的标签列表：优先使用外部传入的，若为空则使用本地缓存
   List<NoteCategory> get _effectiveTags =>
@@ -133,7 +138,7 @@ class NoteListViewState extends State<NoteListView> {
 
   bool get hasQuotes => _quotes.isNotEmpty;
 
-  bool get hasExpandableQuote => _quotes.any(QuoteItemWidget.needsExpansionFor);
+  bool get hasExpandableQuote => _hasExpandableQuoteCached;
 
   bool get isFilterGuideReady =>
       widget.filterButtonKey != null &&
@@ -291,6 +296,8 @@ class NoteListViewState extends State<NoteListView> {
 
     _firstOpenScrollPerfRecording = true;
     _firstOpenScrollFrameTimings.clear();
+    _firstOpenScrollUpdateMicros.clear();
+    _firstOpenScrollStopTimer?.cancel();
     WidgetsBinding.instance.addTimingsCallback(_collectFrameTimings);
     logDebug('首次滑动性能监测开始', source: 'NoteListView.Perf');
   }
@@ -307,47 +314,124 @@ class NoteListViewState extends State<NoteListView> {
       return;
     }
 
+    _firstOpenScrollStopTimer?.cancel();
+    _firstOpenScrollStopTimer = Timer(
+      const Duration(milliseconds: 180),
+      _finalizeFirstOpenScrollPerfCapture,
+    );
+  }
+
+  void _finalizeFirstOpenScrollPerfCapture() {
+    if (!_firstOpenScrollPerfRecording) {
+      return;
+    }
+
     _firstOpenScrollPerfRecording = false;
     _firstOpenScrollPerfCaptured = true;
     WidgetsBinding.instance.removeTimingsCallback(_collectFrameTimings);
 
-    if (_firstOpenScrollFrameTimings.isEmpty) {
-      logDebug('首次滑动性能监测结束：未采集到帧', source: 'NoteListView.Perf');
-      return;
-    }
+    if (_firstOpenScrollFrameTimings.isNotEmpty) {
+      int jankyFrames = 0;
+      double worstFrameMs = 0;
+      int totalFrameMicros = 0;
 
-    int jankyFrames = 0;
-    double worstFrameMs = 0;
-    int totalFrameMicros = 0;
+      for (final timing in _firstOpenScrollFrameTimings) {
+        final int totalMicros = timing.buildDuration.inMicroseconds +
+            timing.rasterDuration.inMicroseconds;
+        totalFrameMicros += totalMicros;
 
-    for (final timing in _firstOpenScrollFrameTimings) {
-      final int totalMicros =
-        timing.buildDuration.inMicroseconds + timing.rasterDuration.inMicroseconds;
-      totalFrameMicros += totalMicros;
+        final frameMs = totalMicros / 1000.0;
+        if (frameMs > worstFrameMs) {
+          worstFrameMs = frameMs;
+        }
 
-      final frameMs = totalMicros / 1000.0;
-      if (frameMs > worstFrameMs) {
-        worstFrameMs = frameMs;
+        if (totalMicros > 16600) {
+          jankyFrames++;
+        }
       }
 
-      if (totalMicros > 16600) {
-        jankyFrames++;
+      final totalFrames = _firstOpenScrollFrameTimings.length;
+      final avgFrameMs = (totalFrameMicros / totalFrames) / 1000.0;
+
+      logDebug(
+        '首次滑动性能结果(FrameTiming): total=$totalFrames, jank=$jankyFrames, '
+        'avg=${avgFrameMs.toStringAsFixed(1)}ms, '
+        'worst=${worstFrameMs.toStringAsFixed(1)}ms',
+        source: 'NoteListView.Perf',
+      );
+    } else {
+      if (_firstOpenScrollUpdateMicros.length < 2) {
+        logDebug(
+          '首次滑动性能结果(滚动事件): 样本不足，updates=${_firstOpenScrollUpdateMicros.length}',
+          source: 'NoteListView.Perf',
+        );
+        return;
       }
+
+      int jankyIntervals = 0;
+      int worstIntervalMicros = 0;
+      int totalIntervalMicros = 0;
+
+      for (int i = 1; i < _firstOpenScrollUpdateMicros.length; i++) {
+        final int interval =
+            _firstOpenScrollUpdateMicros[i] - _firstOpenScrollUpdateMicros[i - 1];
+        if (interval > worstIntervalMicros) {
+          worstIntervalMicros = interval;
+        }
+        totalIntervalMicros += interval;
+        if (interval > 20000) {
+          jankyIntervals++;
+        }
+      }
+
+      final int sampleCount = _firstOpenScrollUpdateMicros.length - 1;
+      final double avgIntervalMs = (totalIntervalMicros / sampleCount) / 1000.0;
+      final double worstIntervalMs = worstIntervalMicros / 1000.0;
+
+      logDebug(
+        '首次滑动性能结果(滚动事件回退): samples=$sampleCount, '
+        'jankIntervals=$jankyIntervals, '
+        'avgInterval=${avgIntervalMs.toStringAsFixed(1)}ms, '
+        'worstInterval=${worstIntervalMs.toStringAsFixed(1)}ms',
+        source: 'NoteListView.Perf',
+      );
     }
-
-    final totalFrames = _firstOpenScrollFrameTimings.length;
-    final avgFrameMs = (totalFrameMicros / totalFrames) / 1000.0;
-
-    logDebug(
-      '首次滑动性能结果: total=$totalFrames, jank=$jankyFrames, '
-      'avg=${avgFrameMs.toStringAsFixed(1)}ms, '
-      'worst=${worstFrameMs.toStringAsFixed(1)}ms',
-      source: 'NoteListView.Perf',
-    );
 
     if (!mounted) {
       return;
     }
+  }
+
+  void _scheduleExpandableQuoteCheck() {
+    _hasExpandableQuoteComputed = false;
+    _hasExpandableQuoteCached = false;
+
+    if (_quotes.isEmpty) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _hasExpandableQuoteComputed) {
+        return;
+      }
+
+      final bool hasExpandable = _quotes.take(80).any(
+        QuoteItemWidget.needsExpansionFor,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      _hasExpandableQuoteComputed = true;
+      if (_hasExpandableQuoteCached != hasExpandable) {
+        setState(() {
+          _hasExpandableQuoteCached = hasExpandable;
+        });
+      } else {
+        _hasExpandableQuoteCached = hasExpandable;
+      }
+    });
   }
 
   /// 修复：检测并修复滚动范围异常
@@ -520,6 +604,7 @@ class NoteListViewState extends State<NoteListView> {
             _isLoading = false;
             _pruneExpansionControllers();
           });
+          _scheduleExpandableQuoteCheck();
 
           if (widget.onGuideTargetsReady != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -759,6 +844,7 @@ class NoteListViewState extends State<NoteListView> {
             _isLoading = false;
             _pruneExpansionControllers();
           });
+          _scheduleExpandableQuoteCheck();
 
           if (widget.onGuideTargetsReady != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -909,6 +995,7 @@ class NoteListViewState extends State<NoteListView> {
 
     _searchDebounceTimer?.cancel(); // 清理防抖定时器
     _userScrollingTimer?.cancel(); // 清理用户滑动定时器
+    _firstOpenScrollStopTimer?.cancel();
 
     if (_firstOpenScrollPerfRecording) {
       WidgetsBinding.instance.removeTimingsCallback(_collectFrameTimings);
@@ -1200,6 +1287,10 @@ class NoteListViewState extends State<NoteListView> {
           if (notification is ScrollStartNotification &&
               notification.dragDetails != null) {
             _startFirstOpenScrollPerfCapture();
+          } else if (_firstOpenScrollPerfRecording &&
+              notification is ScrollUpdateNotification) {
+            _firstOpenScrollUpdateMicros
+                .add(DateTime.now().microsecondsSinceEpoch);
           } else if (notification is ScrollEndNotification) {
             _stopFirstOpenScrollPerfCapture();
           }
@@ -1258,9 +1349,11 @@ class NoteListViewState extends State<NoteListView> {
               () => GlobalKey(debugLabel: itemKey),
             );
 
-            final bool needsExpansion = QuoteItemWidget.needsExpansionFor(
-              quote,
-            );
+            final bool shouldCheckExpansionForGuide =
+                !foldGuideAssigned && widget.foldToggleGuideKey != null;
+            final bool needsExpansion = shouldCheckExpansionForGuide
+                ? QuoteItemWidget.needsExpansionFor(quote)
+                : false;
 
             final attachFavoriteGuideKey = !favoriteGuideAssigned &&
                 widget.favoriteButtonGuideKey != null &&
@@ -1301,7 +1394,8 @@ class NoteListViewState extends State<NoteListView> {
                     }
                     _expandedItems[quoteId] = expanded;
 
-                    final bool requiresAlignment = needsExpansion;
+                    final bool requiresAlignment =
+                      QuoteItemWidget.needsExpansionFor(quote);
 
                     if (!expanded && requiresAlignment) {
                       final waitDuration =

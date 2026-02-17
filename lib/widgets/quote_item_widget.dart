@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui' as ui;
 import 'package:provider/provider.dart';
 import '../models/quote_model.dart';
 import '../models/note_category.dart';
@@ -454,7 +455,13 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                       switchInCurve: Curves.easeIn,
                                       switchOutCurve: Curves.easeOut,
                                       child: (!isExpanded && needsExpansion)
-                                          ? Container(
+                                          ? ClipRect(
+                                              child: BackdropFilter(
+                                                filter: ui.ImageFilter.blur(
+                                                  sigmaX: 1.2,
+                                                  sigmaY: 1.2,
+                                                ),
+                                                child: Container(
                                                   decoration: BoxDecoration(
                                                     gradient: LinearGradient(
                                                       begin:
@@ -462,17 +469,20 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                                       end: Alignment
                                                           .bottomCenter,
                                                       colors: [
-                                                        cardColor
+                                                        innerTheme
+                                                            .colorScheme.surface
                                                             .withValues(
                                                           alpha: 0.0,
                                                         ),
-                                                        cardColor
+                                                        innerTheme
+                                                            .colorScheme.surface
                                                             .withValues(
-                                                          alpha: 0.55,
+                                                          alpha: 0.08,
                                                         ),
-                                                        cardColor
+                                                        innerTheme
+                                                            .colorScheme.surface
                                                             .withValues(
-                                                          alpha: 0.92,
+                                                          alpha: 0.18,
                                                         ),
                                                       ],
                                                       stops: const [
@@ -490,9 +500,10 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                                       vertical: 2,
                                                     ),
                                                     decoration: BoxDecoration(
-                                                      color: cardColor
+                                                      color: innerTheme
+                                                          .colorScheme.surface
                                                           .withValues(
-                                                        alpha: 0.55,
+                                                        alpha: 0.35,
                                                       ),
                                                       borderRadius:
                                                           BorderRadius.circular(
@@ -516,7 +527,9 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                                       ),
                                                     ),
                                                   ),
-                                                )
+                                                ),
+                                              ),
+                                            )
                                           : const SizedBox.shrink(),
                                     ),
                                   ),
