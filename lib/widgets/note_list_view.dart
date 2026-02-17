@@ -12,6 +12,7 @@ import '../services/database_service.dart';
 import '../utils/icon_utils.dart';
 import '../utils/lottie_animation_manager.dart';
 import '../widgets/quote_item_widget.dart';
+import '../widgets/quote_content_widget.dart';
 import '../widgets/app_loading_view.dart';
 import '../widgets/app_empty_view.dart';
 import 'note_filter_sort_sheet.dart';
@@ -276,12 +277,7 @@ class NoteListViewState extends State<NoteListView> {
     _userScrollingTimer = Timer(const Duration(milliseconds: 450), () {
       if (!mounted) return;
       if (_isAutoScrolling) return;
-
-      if (_isUserScrolling) {
-        // 该状态仅用于滚动逻辑判定，不影响 UI 展示
-        // 避免滚动结束时触发整页 rebuild
-        _isUserScrolling = false;
-      }
+      _isUserScrolling = false;
       _lastUserScrollTime = null;
     });
   }
@@ -640,6 +636,8 @@ class NoteListViewState extends State<NoteListView> {
             });
             // 冷启动保护期：设置较长的保护期，避免首次进入时的滚动冲突
             _lastUserScrollTime = DateTime.now();
+            // 预热 Document 缓存：在用户滚动前异步解析所有已加载笔记的富文本 JSON
+            QuoteContent.prewarmDocumentCache(list);
             logDebug('首次数据加载完成', source: 'NoteListView');
           }
 
@@ -845,6 +843,9 @@ class NoteListViewState extends State<NoteListView> {
             _pruneExpansionControllers();
           });
           _scheduleExpandableQuoteCheck();
+
+          // 预热新加载数据的 Document 缓存
+          QuoteContent.prewarmDocumentCache(list);
 
           if (widget.onGuideTargetsReady != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1330,8 +1331,8 @@ class NoteListViewState extends State<NoteListView> {
       child: ListView.builder(
         controller: _scrollController, // 添加滚动控制器
         physics: const AlwaysScrollableScrollPhysics(),
-        addAutomaticKeepAlives: true, // 性能优化：保持滚动位置
-        addRepaintBoundaries: true, // 使用框架自动 RepaintBoundary，降低重绘开销
+        addAutomaticKeepAlives: true, // 保持默认：图片组件依赖 keepAlive 避免重加载闪烁
+        addRepaintBoundaries: true, // 性能优化：减少重绘范围
         cacheExtent: AppConstants.noteListCacheExtent,
         itemCount: _quotes.length + (_hasMore ? 1 : 0),
         itemBuilder: (context, index) {

@@ -382,15 +382,12 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                     final needsExpansion = _needsExpansion(quote);
                     final showFullContent = isExpanded || !needsExpansion;
 
-                    return AnimatedSize(
-                      duration: QuoteItemWidget.expandCollapseDuration,
-                      curve: QuoteItemWidget._expandCurve,
-                      alignment: Alignment.topLeft,
+                    // 构建不依赖双击动画的内容子树（QuoteContent + 底部遮罩）
+                    // 作为 AnimatedBuilder 的 child 传入，避免动画 tick 时重建重型子树
+                    final contentChild = Stack(
                       clipBehavior: Clip.none,
-                      child: AnimatedBuilder(
-                        animation: _doubleTapController,
-                        // 将不依赖动画值的子树通过 child 传入，避免动画帧间重建
-                        child: AnimatedSwitcher(
+                      children: [
+                        AnimatedSwitcher(
                           duration: QuoteItemWidget._fadeDuration,
                           switchInCurve: Curves.easeOut,
                           switchOutCurve: Curves.easeIn,
@@ -414,127 +411,132 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                             ),
                           ),
                         ),
-                        builder: (context, staticChild) {
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          height: 30,
+                          child: IgnorePointer(
+                            child: AnimatedSwitcher(
+                              duration: QuoteItemWidget._fadeDuration,
+                              switchInCurve: Curves.easeIn,
+                              switchOutCurve: Curves.easeOut,
+                              child: (!isExpanded && needsExpansion)
+                                  ? ClipRect(
+                                      child: BackdropFilter(
+                                        filter: ui.ImageFilter.blur(
+                                          sigmaX: 1.2,
+                                          sigmaY: 1.2,
+                                        ),
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              begin: Alignment.topCenter,
+                                              end: Alignment.bottomCenter,
+                                              colors: [
+                                                innerTheme.colorScheme.surface
+                                                    .withValues(
+                                                  alpha: 0.0,
+                                                ),
+                                                innerTheme.colorScheme.surface
+                                                    .withValues(
+                                                  alpha: 0.08,
+                                                ),
+                                                innerTheme.colorScheme.surface
+                                                    .withValues(
+                                                  alpha: 0.18,
+                                                ),
+                                              ],
+                                              stops: const [
+                                                0.0,
+                                                0.4,
+                                                1.0,
+                                              ],
+                                            ),
+                                          ),
+                                          alignment: Alignment.center,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: innerTheme
+                                                  .colorScheme.surface
+                                                  .withValues(
+                                                alpha: 0.35,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                12,
+                                              ),
+                                            ),
+                                            child: Text(
+                                              l10n.doubleTapToViewFull,
+                                              style: innerTheme
+                                                  .textTheme.bodySmall
+                                                  ?.copyWith(
+                                                color: innerTheme
+                                                    .colorScheme.onSurface
+                                                    .withValues(
+                                                  alpha: 0.65,
+                                                ),
+                                                fontSize: 11,
+                                                fontStyle: FontStyle.italic,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                  : const SizedBox.shrink(),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+
+                    return AnimatedSize(
+                      duration: QuoteItemWidget.expandCollapseDuration,
+                      curve: QuoteItemWidget._expandCurve,
+                      alignment: Alignment.topLeft,
+                      clipBehavior: Clip.none,
+                      child: AnimatedBuilder(
+                        animation: _doubleTapController,
+                        // 将不依赖动画值的子树通过 child 传入，避免动画帧间重建
+                        child: contentChild,
+                        builder: (context, child) {
                           final highlightOpacity = _highlightProgress.value;
                           final brightness = innerTheme.brightness;
                           final overlayStrength =
                               brightness == Brightness.dark ? 0.12 : 0.05;
-                          final overlayColor = Colors.white.withValues(
-                            alpha: overlayStrength * highlightOpacity,
-                          );
 
                           return Transform.scale(
                             scale: _scaleAnimation.value,
                             alignment: Alignment.topLeft,
-                            child: Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                staticChild!,
-                                if (highlightOpacity > 0)
-                                  Positioned.fill(
-                                    child: IgnorePointer(
-                                      child: DecoratedBox(
-                                        key: const ValueKey(
-                                          'quote_item.double_tap_overlay',
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: overlayColor,
+                            child: highlightOpacity > 0
+                                ? Stack(
+                                    clipBehavior: Clip.none,
+                                    children: [
+                                      child!,
+                                      Positioned.fill(
+                                        child: IgnorePointer(
+                                          child: DecoratedBox(
+                                            key: const ValueKey(
+                                              'quote_item.double_tap_overlay',
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white.withValues(
+                                                alpha: overlayStrength *
+                                                    highlightOpacity,
+                                              ),
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  ),
-                                Positioned(
-                                  left: 0,
-                                  right: 0,
-                                  bottom: 0,
-                                  height: 30,
-                                  child: IgnorePointer(
-                                    child: AnimatedSwitcher(
-                                      duration: QuoteItemWidget._fadeDuration,
-                                      switchInCurve: Curves.easeIn,
-                                      switchOutCurve: Curves.easeOut,
-                                      child: (!isExpanded && needsExpansion)
-                                          ? ClipRect(
-                                              child: BackdropFilter(
-                                                filter: ui.ImageFilter.blur(
-                                                  sigmaX: 1.2,
-                                                  sigmaY: 1.2,
-                                                ),
-                                                child: Container(
-                                                  decoration: BoxDecoration(
-                                                    gradient: LinearGradient(
-                                                      begin:
-                                                          Alignment.topCenter,
-                                                      end: Alignment
-                                                          .bottomCenter,
-                                                      colors: [
-                                                        innerTheme
-                                                            .colorScheme.surface
-                                                            .withValues(
-                                                          alpha: 0.0,
-                                                        ),
-                                                        innerTheme
-                                                            .colorScheme.surface
-                                                            .withValues(
-                                                          alpha: 0.08,
-                                                        ),
-                                                        innerTheme
-                                                            .colorScheme.surface
-                                                            .withValues(
-                                                          alpha: 0.18,
-                                                        ),
-                                                      ],
-                                                      stops: const [
-                                                        0.0,
-                                                        0.4,
-                                                        1.0,
-                                                      ],
-                                                    ),
-                                                  ),
-                                                  alignment: Alignment.center,
-                                                  child: Container(
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                      horizontal: 8,
-                                                      vertical: 2,
-                                                    ),
-                                                    decoration: BoxDecoration(
-                                                      color: innerTheme
-                                                          .colorScheme.surface
-                                                          .withValues(
-                                                        alpha: 0.35,
-                                                      ),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                        12,
-                                                      ),
-                                                    ),
-                                                    child: Text(
-                                                      l10n.doubleTapToViewFull,
-                                                      style: innerTheme
-                                                          .textTheme.bodySmall
-                                                          ?.copyWith(
-                                                        color: innerTheme
-                                                            .colorScheme
-                                                            .onSurface
-                                                            .withValues(
-                                                          alpha: 0.65,
-                                                        ),
-                                                        fontSize: 11,
-                                                        fontStyle:
-                                                            FontStyle.italic,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            )
-                                          : const SizedBox.shrink(),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                                    ],
+                                  )
+                                : child!,
                           );
                         },
                       ),
