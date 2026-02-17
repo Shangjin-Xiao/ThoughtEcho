@@ -376,7 +376,8 @@ class WeatherService extends ChangeNotifier {
   };
 
   /// 兼容旧代码，避免在新代码中继续使用
-  @Deprecated('Use legacyWeatherKeyToLabel for migration, or getLocalizedWeatherLabel(context, key) for UI display')
+  @Deprecated(
+      'Use legacyWeatherKeyToLabel for migration, or getLocalizedWeatherLabel(context, key) for UI display')
   static const weatherKeyToLabel = legacyWeatherKeyToLabel;
 
   /// 获取天气 key 的本地化标签（UI 显示专用）

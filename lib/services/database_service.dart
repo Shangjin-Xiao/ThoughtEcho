@@ -5246,8 +5246,7 @@ class DatabaseService extends ChangeNotifier {
               WeatherService.legacyWeatherKeyToLabel.values.contains(
                 q.weather,
               )) {
-            final key = WeatherService
-                .legacyWeatherKeyToLabel.entries
+            final key = WeatherService.legacyWeatherKeyToLabel.entries
                 .firstWhere((e) => e.value == q.weather)
                 .key;
             _memoryStore[i] = q.copyWith(weather: key);
@@ -5288,8 +5287,8 @@ class DatabaseService extends ChangeNotifier {
         // 3. 查询需要迁移的数据
         // 性能优化：仅查询值为中文标签的记录
         // 使用参数化查询而不是字符串拼接，防止潜在的 SQL 注入问题
-        final weatherLabels = WeatherService.legacyWeatherKeyToLabel.values
-          .toList();
+        final weatherLabels =
+            WeatherService.legacyWeatherKeyToLabel.values.toList();
         if (weatherLabels.isEmpty) {
           logDebug('没有需要迁移的 weather 标签');
           return;
@@ -5320,9 +5319,8 @@ class DatabaseService extends ChangeNotifier {
           if (id == null || weather == null || weather.isEmpty) continue;
 
           // 检查是否需要迁移（是否为中文标签）
-              if (WeatherService.legacyWeatherKeyToLabel.values.contains(weather)) {
-            final key = WeatherService
-                .legacyWeatherKeyToLabel.entries
+          if (WeatherService.legacyWeatherKeyToLabel.values.contains(weather)) {
+            final key = WeatherService.legacyWeatherKeyToLabel.entries
                 .firstWhere((e) => e.value == weather)
                 .key;
 
