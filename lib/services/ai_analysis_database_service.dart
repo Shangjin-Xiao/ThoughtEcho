@@ -382,9 +382,7 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
   Future<int> restoreFromJson(String jsonStr) async {
     try {
       final List<dynamic> jsonList = json.decode(jsonStr);
-      final analyses = jsonList
-          .map((item) => item as Map<String, dynamic>)
-          .toList();
+      final analyses = jsonList.whereType<Map<String, dynamic>>().toList();
       return await importAnalysesFromList(analyses);
     } catch (e) {
       AppLogger.e('从JSON恢复AI分析失败: $e', error: e, source: 'AIAnalysisDB');
@@ -427,16 +425,19 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
           source: 'AIAnalysisDB',
         );
 
-        // 优化：使用 Map 进行快速查找，避免 O(N*M)
+        // 防御性写法：过滤掉 null ID 并构建 storeMap
         final Map<String, AIAnalysis> storeMap = {
-          for (var item in _memoryStore) item.id!: item,
+          for (var item in _memoryStore)
+            if (item.id != null) item.id!: item,
         };
 
         int count = 0;
         for (var item in analyses) {
           final analysis = AIAnalysis.fromJson(item);
           final newAnalysis = _prepareAnalysis(analysis);
-          storeMap[newAnalysis.id!] = newAnalysis;
+          if (newAnalysis.id != null) {
+            storeMap[newAnalysis.id!] = newAnalysis;
+          }
           count++;
         }
 
