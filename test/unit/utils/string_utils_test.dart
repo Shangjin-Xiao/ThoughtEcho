@@ -79,6 +79,7 @@ void main() {
         // If "《My Book", it won't match.
         final result = StringUtils.parseSource('《My Book');
         expect(result[1], '');
+        expect(result[0], '');
       });
     });
 
