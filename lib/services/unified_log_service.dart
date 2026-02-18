@@ -254,6 +254,12 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
   // 标志位，防止日志记录的无限递归
   bool _isLogging = false;
 
+  // 标志位，防止在 dispose 后继续操作
+  bool _isDisposed = false;
+
+  // 标志位，防止递归刷新
+  bool _isFlushing = false;
+
   // 标志位，控制是否持久化日志（默认关闭，由开发者模式控制）
   bool _isPersistenceEnabled = false;
 
@@ -270,7 +276,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
   /// 创建统一日志服务实例
   UnifiedLogService() {
-    _initialize();
+    unawaited(_initialize());
     // 监听应用生命周期，确保在后台/退出前刷新日志到数据库
     WidgetsBinding.instance.addObserver(this);
   }
@@ -573,6 +579,8 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
   /// 添加日志条目到内存缓存和待处理队列
   void _addLogEntry(LogEntry entry) {
+    if (_isDisposed) return;
+
     // 始终添加到内存缓存，以便在启用开发者模式后能看到当前的即时日志（可选）
     // 或者，如果要求"默认无日志"，也可以在这里拦截内存缓存。
     // 但通常保留内存缓存有助于查看刚刚发生的错误，且内存开销可控。
@@ -615,15 +623,19 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     }
 
     // 对错误级别的日志进行更积极的持久化，但仅当持久化启用时
-    if (_isPersistenceEnabled && entry.level == UnifiedLogLevel.error) {
+    // 如果正在刷新，则跳过以避免递归
+    if (_isPersistenceEnabled &&
+        entry.level == UnifiedLogLevel.error &&
+        !_isFlushing) {
       unawaited(flushLogs());
     }
   }
 
   /// 将待处理的日志保存到数据库
   Future<void> _savePendingLogsToDatabase() async {
-    if (_pendingLogs.isEmpty) return;
+    if (_pendingLogs.isEmpty || _isFlushing) return;
 
+    _isFlushing = true;
     final logsToSave = List<LogEntry>.from(_pendingLogs);
     _pendingLogs.clear();
 
@@ -651,18 +663,23 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     } catch (e, stackTrace) {
       _logger.severe('保存日志到数据库失败: $e', e, stackTrace);
 
-      // 如果保存失败，重新添加到待处理队列（但避免无限积累）
-      if (_pendingLogs.length < 100) {
-        _pendingLogs.addAll(logsToSave);
-        _logger.warning('已将 ${logsToSave.length} 条日志重新加入待处理队列');
-      } else {
-        _logger.warning('待处理队列已满，丢弃 ${logsToSave.length} 条日志以防止内存溢出');
+      // 如果保存失败且未被销毁，重新添加到待处理队列（但避免无限积累）
+      if (!_isDisposed) {
+        if (_pendingLogs.length < 100) {
+          _pendingLogs.addAll(logsToSave);
+          _logger.warning('已将 ${logsToSave.length} 条日志重新加入待处理队列');
+        } else {
+          _logger.warning('待处理队列已满，丢弃 ${logsToSave.length} 条日志以防止内存溢出');
+        }
       }
+    } finally {
+      _isFlushing = false;
     }
   }
 
   /// 设置新的日志级别并保存
   Future<void> setLogLevel(UnifiedLogLevel newLevel) async {
+    if (_isDisposed) return;
     if (_currentLevel != newLevel) {
       final oldLevel = _currentLevel;
       _currentLevel = newLevel;
@@ -705,6 +722,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
   /// 清除所有内存中的日志
   void clearMemoryLogs() {
+    if (_isDisposed) return;
     _memoryLogs.clear();
     if (!_notifyScheduled) {
       _notifyScheduled = true;
@@ -720,6 +738,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
   /// 清除所有存储的日志（包括数据库中的）
   Future<void> clearAllLogs() async {
+    if (_isDisposed) return;
     _memoryLogs.clear();
     _pendingLogs.clear();
 
@@ -803,6 +822,8 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     Object? error,
     StackTrace? stackTrace,
   }) {
+    if (_isDisposed) return;
+
     // 确保已初始化
     if (!_initialized) {
       // 在初始化前将日志暂存，避免竞态导致flush时丢失
@@ -856,6 +877,8 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
   /// 立即刷新所有待处理的日志到数据库
   Future<void> flushLogs() async {
+    if (_isFlushing) return;
+
     // 等待初始化完成，确保预初始化期间缓存的日志被转移
     if (_initCompleter != null && !(_initCompleter!.isCompleted)) {
       await _initCompleter!.future;
@@ -875,6 +898,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
   /// 销毁时释放资源
   @override
   void dispose() {
+    _isDisposed = true;
     try {
       WidgetsBinding.instance.removeObserver(this);
     } catch (_) {}
@@ -907,65 +931,70 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) => log(
-    UnifiedLogLevel.verbose,
-    message,
-    source: source,
-    error: error,
-    stackTrace: stackTrace,
-  );
+  }) =>
+      log(
+        UnifiedLogLevel.verbose,
+        message,
+        source: source,
+        error: error,
+        stackTrace: stackTrace,
+      );
 
   void debug(
     String message, {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) => log(
-    UnifiedLogLevel.debug,
-    message,
-    source: source,
-    error: error,
-    stackTrace: stackTrace,
-  );
+  }) =>
+      log(
+        UnifiedLogLevel.debug,
+        message,
+        source: source,
+        error: error,
+        stackTrace: stackTrace,
+      );
 
   void info(
     String message, {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) => log(
-    UnifiedLogLevel.info,
-    message,
-    source: source,
-    error: error,
-    stackTrace: stackTrace,
-  );
+  }) =>
+      log(
+        UnifiedLogLevel.info,
+        message,
+        source: source,
+        error: error,
+        stackTrace: stackTrace,
+      );
 
   void warning(
     String message, {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) => log(
-    UnifiedLogLevel.warning,
-    message,
-    source: source,
-    error: error,
-    stackTrace: stackTrace,
-  );
+  }) =>
+      log(
+        UnifiedLogLevel.warning,
+        message,
+        source: source,
+        error: error,
+        stackTrace: stackTrace,
+      );
 
   void error(
     String message, {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) => log(
-    UnifiedLogLevel.error,
-    message,
-    source: source,
-    error: error,
-    stackTrace: stackTrace,
-  );
+  }) =>
+      log(
+        UnifiedLogLevel.error,
+        message,
+        source: source,
+        error: error,
+        stackTrace: stackTrace,
+      );
 
   /// 获取日志统计摘要
   Map<String, dynamic> getLogSummary() {
@@ -990,6 +1019,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
   /// 重置日志统计信息
   void resetLogStats() {
+    if (_isDisposed) return;
     _logStats.clear();
     _lastLogTime = null;
     log(UnifiedLogLevel.info, '日志统计信息已重置', source: 'UnifiedLogService');
