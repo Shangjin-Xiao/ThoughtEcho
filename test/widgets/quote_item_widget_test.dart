@@ -3,13 +3,16 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/widgets/quote_item_widget.dart';
+import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 
 class _FakeSettingsService extends ChangeNotifier implements SettingsService {
   bool _prioritizeBoldContentInCollapse = false;
+  bool _showExactTime = false;
 
   @override
   bool get prioritizeBoldContentInCollapse => _prioritizeBoldContentInCollapse;
@@ -17,6 +20,16 @@ class _FakeSettingsService extends ChangeNotifier implements SettingsService {
   set prioritizeBoldContentInCollapse(bool value) {
     if (_prioritizeBoldContentInCollapse != value) {
       _prioritizeBoldContentInCollapse = value;
+      notifyListeners();
+    }
+  }
+
+  @override
+  bool get showExactTime => _showExactTime;
+
+  set showExactTime(bool value) {
+    if (_showExactTime != value) {
+      _showExactTime = value;
       notifyListeners();
     }
   }
@@ -63,6 +76,14 @@ void main() {
         ChangeNotifierProvider<SettingsService>.value(
           value: _FakeSettingsService(),
           child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
             home: Material(
               child: QuoteItemWidget(
                 quote: quote,
@@ -94,6 +115,14 @@ void main() {
         ChangeNotifierProvider<SettingsService>.value(
           value: _FakeSettingsService(),
           child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
             home: Material(
               child: QuoteItemWidget(
                 quote: quote,
@@ -126,6 +155,14 @@ void main() {
         ChangeNotifierProvider<SettingsService>.value(
           value: _FakeSettingsService(),
           child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
             home: Material(
               child: QuoteItemWidget(
                 quote: quote,
@@ -171,6 +208,14 @@ void main() {
         ChangeNotifierProvider<SettingsService>.value(
           value: _FakeSettingsService(),
           child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
             home: Material(
               child: QuoteItemWidget(
                 quote: quote,
@@ -225,6 +270,14 @@ void main() {
         ChangeNotifierProvider<SettingsService>.value(
           value: _FakeSettingsService(),
           child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
             home: Material(
               child: QuoteItemWidget(
                 quote: quote,
