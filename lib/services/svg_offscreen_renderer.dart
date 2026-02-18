@@ -38,7 +38,8 @@ class SvgOffscreenRenderer {
     }
 
     // 使用rootOverlay=false，尝试获取最近的Overlay
-    var overlayState = Overlay.maybeOf(context, rootOverlay: false) ??
+    var overlayState =
+        Overlay.maybeOf(context, rootOverlay: false) ??
         Overlay.maybeOf(context, rootOverlay: true);
 
     if (overlayState == null) {
@@ -180,8 +181,9 @@ class SvgOffscreenRenderer {
       // 额外延迟确保渲染管线完成
       await Future.delayed(const Duration(milliseconds: 300));
 
-      final boundary = boundaryKey.currentContext?.findRenderObject()
-          as RenderRepaintBoundary?;
+      final boundary =
+          boundaryKey.currentContext?.findRenderObject()
+              as RenderRepaintBoundary?;
       if (boundary == null) {
         throw StateError('未获取到 RenderRepaintBoundary，SVG可能未完成渲染');
       }

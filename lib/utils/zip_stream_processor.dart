@@ -262,8 +262,9 @@ class ZipStreamProcessor {
         // 使用流式解压API
         final archive = decoder.decodeBytes(bytes);
 
-        final filesToProcess =
-            archive.files.where((file) => file.isFile).toList();
+        final filesToProcess = archive.files
+            .where((file) => file.isFile)
+            .toList();
         final totalFiles = filesToProcess.length;
         sendPort.send(totalFiles); // 1. 发送总文件数
 

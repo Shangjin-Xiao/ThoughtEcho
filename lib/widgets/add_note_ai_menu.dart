@@ -171,8 +171,9 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
       // 关闭加载对话框
       Navigator.of(context).pop(); // 解析JSON结果
       try {
-        final Map<String, dynamic> sourceData =
-            result is Map<String, dynamic> ? result : jsonDecode(result);
+        final Map<String, dynamic> sourceData = result is Map<String, dynamic>
+            ? result
+            : jsonDecode(result);
 
         String? author = sourceData['author'] as String?;
         String? work = sourceData['work'] as String?;

@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/mmkv_ffi_fix.dart'; // 保留引用用于迁移
 import 'package:thoughtecho/utils/app_logger.dart';
 
@@ -54,11 +55,19 @@ class SecureStorageService {
   /// 迁移遗留的不安全数据
   Future<void> _migrateLegacyData() async {
     try {
-      // 使用局部变量，避免保存冗余的字段
+      // 1. 从 SafeMMKV 检查（可能是 MMKV 或 SharedPreferences 包装）
       final legacyStorage = SafeMMKV();
       await legacyStorage.initialize();
+      final String? mmkvData = legacyStorage.getString(_providerApiKeysKey);
 
-      final oldData = legacyStorage.getString(_providerApiKeysKey);
+      // 2. 额外显式检查 SharedPreferences（防止 SafeMMKV 使用 MMKV 时遗漏旧的 SP 数据）
+      final sp = await SharedPreferences.getInstance();
+      final String? spData = sp.getString(_providerApiKeysKey);
+
+      // 优先使用 MMKV 数据，如果不存在则使用 SP 数据
+      final oldData = (mmkvData != null && mmkvData.isNotEmpty)
+          ? mmkvData
+          : (spData != null && spData.isNotEmpty ? spData : null);
 
       if (oldData != null && oldData.isNotEmpty) {
         logDebug('发现遗留API密钥，准备迁移...');
@@ -83,13 +92,33 @@ class SecureStorageService {
 
         // 只有在数据成功转移或确认为多余时，才删除旧的不安全数据
         if (copySuccess) {
+          // 清除 SafeMMKV
           try {
-            await legacyStorage.remove(_providerApiKeysKey);
-            logDebug('遗留不安全数据已清除');
+            if (legacyStorage.containsKey(_providerApiKeysKey)) {
+              await legacyStorage.remove(_providerApiKeysKey);
+              logDebug('遗留 SafeMMKV 不安全数据已清除');
+            }
           } catch (e) {
-            // 这是一个严重的安全隐患，但不能让应用崩溃
-            logDebug('CRITICAL: 删除遗留不安全数据失败! 密钥仍可能存在于 SafeMMKV 中: $e');
+            logDebug('CRITICAL: 删除遗留 SafeMMKV 数据失败: $e');
           }
+
+          // 清除 SharedPreferences
+          try {
+            if (sp.containsKey(_providerApiKeysKey)) {
+              await sp.remove(_providerApiKeysKey);
+              logDebug('遗留 SharedPreferences 不安全数据已清除');
+            }
+          } catch (e) {
+            logDebug('CRITICAL: 删除遗留 SharedPreferences 数据失败: $e');
+          }
+        }
+      } else {
+        // 如果没有发现有效数据，也尝试清除一下可能存在的空字符串或旧 Key
+        if (sp.containsKey(_providerApiKeysKey)) {
+          await sp.remove(_providerApiKeysKey);
+        }
+        if (legacyStorage.containsKey(_providerApiKeysKey)) {
+          await legacyStorage.remove(_providerApiKeysKey);
         }
       }
     } catch (e) {

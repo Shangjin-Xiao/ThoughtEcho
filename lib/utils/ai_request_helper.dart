@@ -209,8 +209,9 @@ class AIRequestHelper {
 
   /// 解析API响应
   String parseResponse(Response response) {
-    final data =
-        response.data is String ? json.decode(response.data) : response.data;
+    final data = response.data is String
+        ? json.decode(response.data)
+        : response.data;
 
     if (data['choices'] != null &&
         data['choices'].isNotEmpty &&

@@ -73,8 +73,9 @@ class ConnectivityService extends ChangeNotifier {
   Future<bool> _checkConnectivityNative() async {
     for (final host in _probeHosts) {
       try {
-        final result = await InternetAddress.lookup(host)
-            .timeout(const Duration(seconds: 3));
+        final result = await InternetAddress.lookup(
+          host,
+        ).timeout(const Duration(seconds: 3));
         if (result.isNotEmpty && result[0].rawAddress.isNotEmpty) {
           return true;
         }
@@ -91,8 +92,9 @@ class ConnectivityService extends ChangeNotifier {
   Future<bool> _checkConnectivityWeb() async {
     try {
       final response = await NetworkService.instance.get(
-          'https://api.open-meteo.com/v1/forecast?latitude=0&longitude=0&current=temperature_2m',
-          timeoutSeconds: 5);
+        'https://api.open-meteo.com/v1/forecast?latitude=0&longitude=0&current=temperature_2m',
+        timeoutSeconds: 5,
+      );
       return response.statusCode < 500;
     } catch (_) {
       // Web 探测失败，保守假定在线

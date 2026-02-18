@@ -557,8 +557,9 @@ class SyncNetworkTester {
           try {
             final jsonResponse = jsonDecode(body) as Map<String, dynamic>;
             final sessionId = jsonResponse['sessionId'] as String?;
-            final sidLen =
-                (sessionId ?? '').length < 8 ? (sessionId ?? '').length : 8;
+            final sidLen = (sessionId ?? '').length < 8
+                ? (sessionId ?? '').length
+                : 8;
             result.addStep(
               'PREPARE端点',
               true,

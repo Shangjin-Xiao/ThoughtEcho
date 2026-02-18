@@ -66,7 +66,8 @@ void main() {
 
     // ignore: avoid_print
     print(
-        'Time taken to import $count analyses: ${stopwatch.elapsedMilliseconds} ms');
+      'Time taken to import $count analyses: ${stopwatch.elapsedMilliseconds} ms',
+    );
 
     final allAnalyses = await service.getAllAnalyses();
     expect(allAnalyses.length, count);

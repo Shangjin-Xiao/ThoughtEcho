@@ -59,9 +59,9 @@ class SignalingDiscovery extends DiscoveryMethod {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'signaling',
-        'signalingServer': signalingServer,
-      };
+    'type': 'signaling',
+    'signalingServer': signalingServer,
+  };
 
   @override
   bool operator ==(Object other) =>

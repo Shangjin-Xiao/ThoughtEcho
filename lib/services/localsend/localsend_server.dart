@@ -16,9 +16,9 @@ class LocalSendServer {
   int _port = defaultPort;
   final Set<String> _preApprovedFingerprints = {}; // 预先批准一次性
   Function(String sessionId, int totalBytes, String senderAlias)?
-      _onReceiveSessionCreated;
+  _onReceiveSessionCreated;
   Future<bool> Function(String sessionId, int totalBytes, String senderAlias)?
-      _onApprovalNeeded;
+  _onApprovalNeeded;
 
   bool get isRunning => _isRunning;
   int get port => _port;
@@ -29,9 +29,9 @@ class LocalSendServer {
     Function(String filePath)? onFileReceived,
     Function(int received, int total)? onReceiveProgress,
     Function(String sessionId, int totalBytes, String senderAlias)?
-        onReceiveSessionCreated,
+    onReceiveSessionCreated,
     Future<bool> Function(String sessionId, int totalBytes, String senderAlias)?
-        onApprovalNeeded,
+    onApprovalNeeded,
   }) async {
     if (_isRunning) return;
 

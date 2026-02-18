@@ -40,15 +40,20 @@ class CardTemplates {
     final maxLines = _calculateMaxLines(contentAreaHeight);
     final textLines = _wrapText(content, 18, maxLines);
     final metaText = _buildMetaText(
-        date: date,
-        location: location,
-        weather: weather,
-        temperature: temperature);
-    final brandText =
-        _buildBrandText(author: author, source: source, brandName: brandName);
+      date: date,
+      location: location,
+      weather: weather,
+      temperature: temperature,
+    );
+    final brandText = _buildBrandText(
+      author: author,
+      source: source,
+      brandName: brandName,
+    );
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY = contentAreaTop +
+    final contentStartY =
+        contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -119,7 +124,8 @@ class CardTemplates {
     final textLines = _wrapText(content, 18, maxLines);
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY = contentAreaTop +
+    final contentStartY =
+        contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -182,7 +188,10 @@ class CardTemplates {
   }
 
   static String _renderSotaTextLines(
-      List<String> lines, double fontSize, String color) {
+    List<String> lines,
+    double fontSize,
+    String color,
+  ) {
     final buffer = StringBuffer();
     final lineSpacing = fontSize * _lineHeight;
     for (int i = 0; i < lines.length; i++) {
@@ -211,15 +220,20 @@ class CardTemplates {
     final maxLines = _calculateMaxLines(contentAreaHeight);
     final textLines = _wrapText(content, 18, maxLines);
     final metaText = _buildMetaText(
-        date: date,
-        location: location,
-        weather: weather,
-        temperature: temperature);
-    final brandText =
-        _buildBrandText(author: author, source: source, brandName: brandName);
+      date: date,
+      location: location,
+      weather: weather,
+      temperature: temperature,
+    );
+    final brandText = _buildBrandText(
+      author: author,
+      source: source,
+      brandName: brandName,
+    );
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY = contentAreaTop +
+    final contentStartY =
+        contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -286,15 +300,20 @@ class CardTemplates {
     final maxLines = _calculateMaxLines(contentAreaHeight);
     final textLines = _wrapText(content, 20, maxLines);
     final metaText = _buildMetaText(
-        date: date,
-        location: location,
-        weather: weather,
-        temperature: temperature);
-    final brandText =
-        _buildBrandText(author: author, source: source, brandName: brandName);
+      date: date,
+      location: location,
+      weather: weather,
+      temperature: temperature,
+    );
+    final brandText = _buildBrandText(
+      author: author,
+      source: source,
+      brandName: brandName,
+    );
 
     final contentHeight = textLines.length * contentFontSize * _lineHeight;
-    final contentStartY = contentAreaTop +
+    final contentStartY =
+        contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         contentFontSize;
 
@@ -303,7 +322,8 @@ class CardTemplates {
     for (int i = 0; i < textLines.length; i++) {
       final y = contentStartY + i * lineSpacing;
       buffer.writeln(
-          '<text x="60" y="${y.toStringAsFixed(1)}" text-anchor="start" fill="#22d3ee" font-family="Courier New, monospace" font-size="${contentFontSize.toStringAsFixed(0)}" font-weight="bold" filter="url(#neonGlow)">${_escape(textLines[i])}</text>');
+        '<text x="60" y="${y.toStringAsFixed(1)}" text-anchor="start" fill="#22d3ee" font-family="Courier New, monospace" font-size="${contentFontSize.toStringAsFixed(0)}" font-weight="bold" filter="url(#neonGlow)">${_escape(textLines[i])}</text>',
+      );
     }
     final renderedText = buffer.toString();
 
@@ -372,14 +392,16 @@ class CardTemplates {
     final maxLines = _calculateMaxLines(contentAreaHeight);
     final textLines = _wrapText(content, 18, maxLines);
     final metaText = _buildMetaText(
-        date: date,
-        location: location,
-        weather: weather,
-        temperature: temperature);
+      date: date,
+      location: location,
+      weather: weather,
+      temperature: temperature,
+    );
     final authorDisplay = author ?? source ?? '';
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY = contentAreaTop +
+    final contentStartY =
+        contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -445,15 +467,20 @@ class CardTemplates {
     final maxLines = _calculateMaxLines(contentAreaHeight);
     final textLines = _wrapText(content, 18, maxLines);
     final metaText = _buildMetaText(
-        date: date,
-        location: location,
-        weather: weather,
-        temperature: temperature);
-    final brandText =
-        _buildBrandText(author: author, source: source, brandName: brandName);
+      date: date,
+      location: location,
+      weather: weather,
+      temperature: temperature,
+    );
+    final brandText = _buildBrandText(
+      author: author,
+      source: source,
+      brandName: brandName,
+    );
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY = contentAreaTop +
+    final contentStartY =
+        contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -519,15 +546,20 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#f8fafc',
     final maxLines = _calculateMaxLines(contentAreaHeight);
     final textLines = _wrapText(content, 16, maxLines);
     final metaText = _buildMetaText(
-        date: date,
-        location: location,
-        weather: weather,
-        temperature: temperature);
-    final brandText =
-        _buildBrandText(author: author, source: source, brandName: brandName);
+      date: date,
+      location: location,
+      weather: weather,
+      temperature: temperature,
+    );
+    final brandText = _buildBrandText(
+      author: author,
+      source: source,
+      brandName: brandName,
+    );
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY = contentAreaTop +
+    final contentStartY =
+        contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -583,15 +615,20 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#f8fafc',
     final maxLines = _calculateMaxLines(contentAreaHeight);
     final textLines = _wrapText(content, 18, maxLines);
     final metaText = _buildMetaText(
-        date: date,
-        location: location,
-        weather: weather,
-        temperature: temperature);
-    final brandText =
-        _buildBrandText(author: author, source: source, brandName: brandName);
+      date: date,
+      location: location,
+      weather: weather,
+      temperature: temperature,
+    );
+    final brandText = _buildBrandText(
+      author: author,
+      source: source,
+      brandName: brandName,
+    );
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY = contentAreaTop +
+    final contentStartY =
+        contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -645,15 +682,20 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#14532d',
     final maxLines = _calculateMaxLines(contentAreaHeight);
     final textLines = _wrapText(content, 17, maxLines);
     final metaText = _buildMetaText(
-        date: date,
-        location: location,
-        weather: weather,
-        temperature: temperature);
-    final brandText =
-        _buildBrandText(author: author, source: source, brandName: brandName);
+      date: date,
+      location: location,
+      weather: weather,
+      temperature: temperature,
+    );
+    final brandText = _buildBrandText(
+      author: author,
+      source: source,
+      brandName: brandName,
+    );
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY = contentAreaTop +
+    final contentStartY =
+        contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -709,15 +751,20 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#451a03',
     final maxLines = _calculateMaxLines(contentAreaHeight);
     final textLines = _wrapText(content, 16, maxLines);
     final metaText = _buildMetaText(
-        date: date,
-        location: location,
-        weather: weather,
-        temperature: temperature);
-    final brandText =
-        _buildBrandText(author: author, source: source, brandName: brandName);
+      date: date,
+      location: location,
+      weather: weather,
+      temperature: temperature,
+    );
+    final brandText = _buildBrandText(
+      author: author,
+      source: source,
+      brandName: brandName,
+    );
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY = contentAreaTop +
+    final contentStartY =
+        contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -769,15 +816,20 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#1c1917',
     final maxLines = _calculateMaxLines(contentAreaHeight);
     final textLines = _wrapText(content, 18, maxLines);
     final metaText = _buildMetaText(
-        date: date,
-        location: location,
-        weather: weather,
-        temperature: temperature);
-    final brandText =
-        _buildBrandText(author: author, source: source, brandName: brandName);
+      date: date,
+      location: location,
+      weather: weather,
+      temperature: temperature,
+    );
+    final brandText = _buildBrandText(
+      author: author,
+      source: source,
+      brandName: brandName,
+    );
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY = contentAreaTop +
+    final contentStartY =
+        contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -838,15 +890,20 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#e2e8f0',
     final maxLines = _calculateMaxLines(contentAreaHeight);
     final textLines = _wrapText(content, 17, maxLines);
     final metaText = _buildMetaText(
-        date: date,
-        location: location,
-        weather: weather,
-        temperature: temperature);
-    final brandText =
-        _buildBrandText(author: author, source: source, brandName: brandName);
+      date: date,
+      location: location,
+      weather: weather,
+      temperature: temperature,
+    );
+    final brandText = _buildBrandText(
+      author: author,
+      source: source,
+      brandName: brandName,
+    );
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY = contentAreaTop +
+    final contentStartY =
+        contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -898,15 +955,20 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#111827',
     final maxLines = _calculateMaxLines(contentAreaHeight);
     final textLines = _wrapText(content, 18, maxLines);
     final metaText = _buildMetaText(
-        date: date,
-        location: location,
-        weather: weather,
-        temperature: temperature);
-    final brandText =
-        _buildBrandText(author: author, source: source, brandName: brandName);
+      date: date,
+      location: location,
+      weather: weather,
+      temperature: temperature,
+    );
+    final brandText = _buildBrandText(
+      author: author,
+      source: source,
+      brandName: brandName,
+    );
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY = contentAreaTop +
+    final contentStartY =
+        contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -959,15 +1021,20 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#0c4a6e',
     final maxLines = _calculateMaxLines(contentAreaHeight);
     final textLines = _wrapText(content, 18, maxLines);
     final metaText = _buildMetaText(
-        date: date,
-        location: location,
-        weather: weather,
-        temperature: temperature);
-    final brandText =
-        _buildBrandText(author: author, source: source, brandName: brandName);
+      date: date,
+      location: location,
+      weather: weather,
+      temperature: temperature,
+    );
+    final brandText = _buildBrandText(
+      author: author,
+      source: source,
+      brandName: brandName,
+    );
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY = contentAreaTop +
+    final contentStartY =
+        contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -1020,12 +1087,19 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#881337',
     const lineNumberFontSize = 14.0;
     final maxLines = _calculateMaxLines(contentAreaHeight);
     final textLines = _wrapText(
-        content, 20, maxLines); // Monospace fits more chars? Adjusted width.
-    final brandText =
-        _buildBrandText(author: author, source: source, brandName: brandName);
+      content,
+      20,
+      maxLines,
+    ); // Monospace fits more chars? Adjusted width.
+    final brandText = _buildBrandText(
+      author: author,
+      source: source,
+      brandName: brandName,
+    );
 
     final contentHeight = textLines.length * contentFontSize * _lineHeight;
-    final contentStartY = contentAreaTop +
+    final contentStartY =
+        contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         contentFontSize;
 
@@ -1039,7 +1113,8 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#881337',
       final buffer = StringBuffer();
       for (int i = 0; i < count; i++) {
         buffer.writeln(
-            '<text x="50" y="${startY + i * lineSpacing}" text-anchor="end" fill="#4b5563" font-family="monospace" font-size="${fontSize.toStringAsFixed(0)}">${i + 1}</text>');
+          '<text x="50" y="${startY + i * lineSpacing}" text-anchor="end" fill="#4b5563" font-family="monospace" font-size="${fontSize.toStringAsFixed(0)}">${i + 1}</text>',
+        );
       }
       return buffer.toString();
     }
@@ -1070,8 +1145,7 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#881337',
       for (int i = 0; i < textLines.length; i++) {
         final y = contentStartY + i * lineSpacing;
         // 简单的语法高亮模拟：奇数行白色，偶数行浅蓝 (太复杂，统一用亮色)
-        buffer.writeln(
-            '<text x="70" y="$y" text-anchor="start" fill="#d4d4d4" font-family="monospace" font-size="${contentFontSize.toStringAsFixed(0)}">${_escape(textLines[i])}</text>');
+        buffer.writeln('<text x="70" y="$y" text-anchor="start" fill="#d4d4d4" font-family="monospace" font-size="${contentFontSize.toStringAsFixed(0)}">${_escape(textLines[i])}</text>');
       }
       return buffer.toString();
     })()}
@@ -1104,15 +1178,20 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#881337',
     final maxLines = _calculateMaxLines(contentAreaHeight);
     final textLines = _wrapText(content, 17, maxLines);
     final metaText = _buildMetaText(
-        date: date,
-        location: location,
-        weather: weather,
-        temperature: temperature);
-    final brandText =
-        _buildBrandText(author: author, source: source, brandName: brandName);
+      date: date,
+      location: location,
+      weather: weather,
+      temperature: temperature,
+    );
+    final brandText = _buildBrandText(
+      author: author,
+      source: source,
+      brandName: brandName,
+    );
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY = contentAreaTop +
+    final contentStartY =
+        contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -1173,16 +1252,21 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#2C1810',
     final maxLines = _calculateMaxLines(contentAreaHeight);
     final textLines = _wrapText(content, 18, maxLines);
     final metaText = _buildMetaText(
-        date: date,
-        location: location,
-        weather: weather,
-        temperature: temperature);
-    final brandText =
-        _buildBrandText(author: author, source: source, brandName: brandName);
+      date: date,
+      location: location,
+      weather: weather,
+      temperature: temperature,
+    );
+    final brandText = _buildBrandText(
+      author: author,
+      source: source,
+      brandName: brandName,
+    );
 
     // 计算内容高度，用于左对齐渲染
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY = contentAreaTop +
+    final contentStartY =
+        contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -1201,9 +1285,11 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#2C1810',
       estimatedWidth = math.min(estimatedWidth, maxTextWidth);
 
       buffer.writeln(
-          '<rect x="40" y="${y - _contentFontSize + 4}" width="${estimatedWidth + 20}" height="${_contentFontSize + 4}" fill="#FFD700" stroke="black" stroke-width="2"/>');
+        '<rect x="40" y="${y - _contentFontSize + 4}" width="${estimatedWidth + 20}" height="${_contentFontSize + 4}" fill="#FFD700" stroke="black" stroke-width="2"/>',
+      );
       buffer.writeln(
-          '<text x="50" y="$y" text-anchor="start" fill="#000000" font-family="Arial Black, Impact, sans-serif" font-size="$_contentFontSize" font-weight="900">${_escape(textLines[i])}</text>');
+        '<text x="50" y="$y" text-anchor="start" fill="#000000" font-family="Arial Black, Impact, sans-serif" font-size="$_contentFontSize" font-weight="900">${_escape(textLines[i])}</text>',
+      );
     }
     final renderedText = buffer.toString();
 
@@ -1251,15 +1337,20 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#2C1810',
     final maxLines = _calculateMaxLines(contentAreaHeight);
     final textLines = _wrapText(content, 18, maxLines);
     final metaText = _buildMetaText(
-        date: date,
-        location: location,
-        weather: weather,
-        temperature: temperature);
-    final brandText =
-        _buildBrandText(author: author, source: source, brandName: brandName);
+      date: date,
+      location: location,
+      weather: weather,
+      temperature: temperature,
+    );
+    final brandText = _buildBrandText(
+      author: author,
+      source: source,
+      brandName: brandName,
+    );
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY = contentAreaTop +
+    final contentStartY =
+        contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -1320,15 +1411,20 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#ffffff',
     final maxLines = _calculateMaxLines(contentAreaHeight);
     final textLines = _wrapText(content, 14, maxLines);
     final metaText = _buildMetaText(
-        date: date,
-        location: location,
-        weather: weather,
-        temperature: temperature);
-    final brandText =
-        _buildBrandText(author: author, source: source, brandName: brandName);
+      date: date,
+      location: location,
+      weather: weather,
+      temperature: temperature,
+    );
+    final brandText = _buildBrandText(
+      author: author,
+      source: source,
+      brandName: brandName,
+    );
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY = contentAreaTop +
+    final contentStartY =
+        contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -1389,12 +1485,16 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#ffffff',
     const contentAreaHeight = 280.0;
     final maxLines = _calculateMaxLines(contentAreaHeight);
     final metaText = _buildMetaText(
-        date: date,
-        location: location,
-        weather: weather,
-        temperature: temperature);
-    final brandText =
-        _buildBrandText(author: author, source: source, brandName: brandName);
+      date: date,
+      location: location,
+      weather: weather,
+      temperature: temperature,
+    );
+    final brandText = _buildBrandText(
+      author: author,
+      source: source,
+      brandName: brandName,
+    );
 
     // 获取首字母用于放大
     String firstChar = '';
@@ -1410,7 +1510,8 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#ffffff',
     final remainingLines = _wrapText(remainingText, 15, remainingMaxLines);
     final contentHeight =
         remainingLines.length * _contentFontSize * _lineHeight;
-    final contentStartY = contentAreaTop +
+    final contentStartY =
+        contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -1420,7 +1521,8 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#ffffff',
 
     // 首字母大写占位 (Drop Cap)
     buffer.writeln(
-        '<text x="40" y="${contentStartY + 32}" text-anchor="start" fill="#000000" font-family="Times New Roman, serif" font-size="64" font-weight="bold">${_escape(firstChar)}</text>');
+      '<text x="40" y="${contentStartY + 32}" text-anchor="start" fill="#000000" font-family="Times New Roman, serif" font-size="64" font-weight="bold">${_escape(firstChar)}</text>',
+    );
 
     // 渲染剩余行
     for (int i = 0; i < remainingLines.length; i++) {
@@ -1428,7 +1530,8 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#ffffff',
       // 前两行缩进以避开首字母
       double x = (i < 2) ? 100.0 : 40.0;
       buffer.writeln(
-          '<text x="$x" y="$y" text-anchor="start" fill="#333333" font-family="Georgia, serif" font-size="$_contentFontSize">${_escape(remainingLines[i])}</text>');
+        '<text x="$x" y="$y" text-anchor="start" fill="#333333" font-family="Georgia, serif" font-size="$_contentFontSize">${_escape(remainingLines[i])}</text>',
+      );
     }
     final renderedText = buffer.toString();
 
@@ -1730,8 +1833,10 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#ffffff',
     int maxCharsPerLine,
     int maxLines,
   ) {
-    final normalized =
-        text.replaceAll('\r\n', '\n').replaceAll('\r', '\n').trimRight();
+    final normalized = text
+        .replaceAll('\r\n', '\n')
+        .replaceAll('\r', '\n')
+        .trimRight();
     if (normalized.trim().isEmpty) {
       return [''];
     }
@@ -1901,8 +2006,11 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#ffffff',
   }
 
   /// 构建品牌文本
-  static String _buildBrandText(
-      {String? author, String? source, required String brandName}) {
+  static String _buildBrandText({
+    String? author,
+    String? source,
+    required String brandName,
+  }) {
     final parts = <String>[];
     if (author != null && author.isNotEmpty) {
       parts.add(author);

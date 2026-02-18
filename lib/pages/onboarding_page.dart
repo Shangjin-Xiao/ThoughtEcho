@@ -247,14 +247,17 @@ class _OnboardingPageState extends State<OnboardingPage>
                   type: LottieAnimationType.pulseLoading,
                   width: s,
                   height: s,
-                  semanticLabel:
-                      AppLocalizations.of(context).onboardingPreparing,
+                  semanticLabel: AppLocalizations.of(
+                    context,
+                  ).onboardingPreparing,
                 );
               },
             ),
             const SizedBox(height: 20),
-            Text(AppLocalizations.of(context).onboardingPreparing,
-                style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              AppLocalizations.of(context).onboardingPreparing,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
           ],
         ),
       ),
@@ -279,10 +282,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                 color: theme.colorScheme.error,
               ),
               const SizedBox(height: 20),
-              Text(
-                l10n.onboardingError,
-                style: theme.textTheme.headlineSmall,
-              ),
+              Text(l10n.onboardingError, style: theme.textTheme.headlineSmall),
               const SizedBox(height: 12),
               Text(
                 _errorMessage!,
@@ -292,9 +292,7 @@ class _OnboardingPageState extends State<OnboardingPage>
               const SizedBox(height: 32),
               FilledButton(
                 onPressed: _navigateToHome,
-                child: Text(
-                  l10n.onboardingContinueUsing,
-                ),
+                child: Text(l10n.onboardingContinueUsing),
               ),
             ],
           ),
@@ -450,9 +448,11 @@ class _OnboardingPageState extends State<OnboardingPage>
         );
         final currentValue =
             controller.state.getPreference<String>('hitokotoTypes') ??
-                hitokotoPreference.defaultValue as String;
-        final selectedValues =
-            currentValue.split(',').where((v) => v.isNotEmpty).toSet();
+            hitokotoPreference.defaultValue as String;
+        final selectedValues = currentValue
+            .split(',')
+            .where((v) => v.isNotEmpty)
+            .toSet();
         final options = hitokotoPreference.options ?? [];
 
         return SingleChildScrollView(
@@ -739,8 +739,9 @@ class _OnboardingPageState extends State<OnboardingPage>
             // 下一步/完成按钮
             if (OnboardingConfig.isLastPage(state.currentPageIndex))
               FilledButton.icon(
-                onPressed:
-                    state.isCompleting ? null : controller.completeOnboarding,
+                onPressed: state.isCompleting
+                    ? null
+                    : controller.completeOnboarding,
                 icon: state.isCompleting
                     ? const SizedBox(
                         width: 18,

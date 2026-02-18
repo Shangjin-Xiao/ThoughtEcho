@@ -55,8 +55,9 @@ void main() {
         date: testDate,
       );
 
-      final italicLineCount =
-          RegExp('font-style="italic"').allMatches(svg).length;
+      final italicLineCount = RegExp(
+        'font-style="italic"',
+      ).allMatches(svg).length;
       expect(italicLineCount, greaterThanOrEqualTo(4));
     });
 

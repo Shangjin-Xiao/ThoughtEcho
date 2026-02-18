@@ -105,8 +105,9 @@ class SettingsService extends ChangeNotifier {
   bool get enableFirstOpenScrollPerfMonitor =>
       _appSettings.enableFirstOpenScrollPerfMonitor;
   Future<void> setEnableFirstOpenScrollPerfMonitor(bool enabled) async {
-    _appSettings =
-        _appSettings.copyWith(enableFirstOpenScrollPerfMonitor: enabled);
+    _appSettings = _appSettings.copyWith(
+      enableFirstOpenScrollPerfMonitor: enabled,
+    );
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
     notifyListeners();
   }
@@ -374,7 +375,12 @@ class SettingsService extends ChangeNotifier {
   Future<void> _migrateDataIfNeeded() async {
     // 检查是否已经完成迁移
     if (_mmkv.getBool(_migrationCompleteKey) == true) {
-      logDebug('数据迁移已完成，不再重复执行');
+      logDebug('数据迁移已完成，检查 SP 残留...');
+      // 安全补丁：确保敏感数据不在 SP 中残留
+      if (_prefs.containsKey(_aiSettingsKey)) {
+        await _prefs.remove(_aiSettingsKey);
+        logDebug('清理了 SharedPreferences 中的残留 AI 设置');
+      }
       return;
     }
 
@@ -385,13 +391,17 @@ class SettingsService extends ChangeNotifier {
       final aiSettings = _prefs.getString(_aiSettingsKey);
       if (aiSettings != null) {
         await _mmkv.setString(_aiSettingsKey, aiSettings);
-        logDebug('AI设置已迁移到MMKV');
+        // Security: Remove from insecure SharedPreferences after migration
+        await _prefs.remove(_aiSettingsKey);
+        logDebug('AI设置已迁移到MMKV，并从SharedPreferences中清除');
       }
 
       // 迁移应用设置
       final appSettings = _prefs.getString(_appSettingsKey);
       if (appSettings != null) {
         await _mmkv.setString(_appSettingsKey, appSettings);
+        // 也可以清理
+        await _prefs.remove(_appSettingsKey);
         logDebug('应用设置已迁移到MMKV');
       }
 
@@ -679,53 +689,98 @@ class SettingsService extends ChangeNotifier {
 
   /// 迁移遗留的明文API密钥到安全存储
   Future<void> _secureLegacyApiKey() async {
-    if (_aiSettings.apiKey.isEmpty) return;
+    // 检查 MMKV 和 SharedPreferences 中是否有遗留密钥
+    final String? spAiSettingsJson = _prefs.getString(_aiSettingsKey);
+    bool hasLegacyInSp = false;
+    if (spAiSettingsJson != null) {
+      try {
+        final Map<String, dynamic> spMap = json.decode(spAiSettingsJson);
+        if (spMap.containsKey('apiKey') &&
+            spMap['apiKey'].toString().isNotEmpty) {
+          hasLegacyInSp = true;
+        }
+      } catch (_) {}
+    }
+
+    if (_aiSettings.apiKey.isEmpty && !hasLegacyInSp) return;
 
     bool shouldClear = false;
+    final legacyKey = _aiSettings.apiKey.isNotEmpty
+        ? _aiSettings.apiKey
+        : _extractApiKeyFromSettingsJson(spAiSettingsJson);
 
-    // 如果我们有当前选中的服务商
-    if (_multiAISettings.currentProviderId != null) {
-      final apiKeyManager = APIKeyManager();
-      final providerId = _multiAISettings.currentProviderId!;
-
-      try {
-        // 检查安全存储中是否已有密钥
-        final hasSecureKey = await apiKeyManager.hasValidProviderApiKey(
-          providerId,
-        );
-
-        if (hasSecureKey) {
-          // 安全存储中已有密钥，遗留的明文密钥是冗余的，可以直接清除
-          shouldClear = true;
-          logDebug(
-              'Found redundant plaintext API key in AISettings. Clearing.');
-        } else {
-          // 安全存储中没有密钥，尝试迁移
-          await apiKeyManager.saveProviderApiKey(
-            providerId,
-            _aiSettings.apiKey,
-          );
-          shouldClear = true;
-          logDebug(
-            'Migrated legacy plaintext API key to SecureStorage for provider: $providerId',
-          );
-        }
-      } catch (e) {
-        logDebug('Error securing legacy API key: $e');
-        // 出错时不清除，避免数据丢失
-      }
+    if (legacyKey == null || legacyKey.isEmpty) {
+      // 如果实际上没有有效密钥，但存在 key，也应该清理
+      shouldClear = true;
     } else {
-      // 如果没有选中的服务商，暂时不清除，因为无法确定归属
-      // 但这种情况很少见，因为通常会有默认或已配置的服务商
-      logDebug(
-        'Legacy API key found but no current provider selected. Skipping migration.',
-      );
+      // 如果我们有当前选中的服务商
+      if (_multiAISettings.currentProviderId != null) {
+        final apiKeyManager = APIKeyManager();
+        final providerId = _multiAISettings.currentProviderId!;
+
+        try {
+          // 检查安全存储中是否已有密钥
+          final hasSecureKey = await apiKeyManager.hasValidProviderApiKey(
+            providerId,
+          );
+
+          if (hasSecureKey) {
+            // 安全存储中已有密钥，遗留的明文密钥是冗余的，可以直接清除
+            shouldClear = true;
+            logDebug(
+              'Found redundant plaintext API key in AISettings. Clearing.',
+            );
+          } else {
+            // 安全存储中没有密钥，尝试迁移
+            await apiKeyManager.saveProviderApiKey(providerId, legacyKey);
+            shouldClear = true;
+            logDebug(
+              'Migrated legacy plaintext API key to SecureStorage for provider: $providerId',
+            );
+          }
+        } catch (e) {
+          logDebug('Error securing legacy API key: $e');
+          // 出错时不清除，避免数据丢失
+        }
+      } else {
+        // 如果没有选中的服务商，为了安全起见，依然应该清除明文密钥
+        // 虽然这可能导致极少数用户需要重新输入 Key，但安全性更高
+        logDebug(
+          'Legacy API key found but no current provider selected. Clearing for security.',
+        );
+        shouldClear = true;
+      }
     }
 
     if (shouldClear) {
+      // 清理 MMKV 中的密钥
       _aiSettings = _aiSettings.copyWith(apiKey: '');
       await _mmkv.setString(_aiSettingsKey, json.encode(_aiSettings.toJson()));
-      logDebug('Legacy plaintext API key cleared from AISettings.');
+
+      // 同时也清理 SharedPreferences 中的遗留数据（如果存在）
+      if (spAiSettingsJson != null) {
+        try {
+          final Map<String, dynamic> spMap = json.decode(spAiSettingsJson);
+          if (spMap.containsKey('apiKey')) {
+            spMap['apiKey'] = '';
+            await _prefs.setString(_aiSettingsKey, json.encode(spMap));
+          }
+        } catch (_) {}
+      }
+
+      logDebug('Legacy plaintext API key cleared from all insecure storages.');
     }
+  }
+
+  /// 辅助方法：从 JSON 字符串中提取 API Key
+  String? _extractApiKeyFromSettingsJson(String? jsonString) {
+    if (jsonString == null) return null;
+    try {
+      final data = json.decode(jsonString);
+      if (data is Map<String, dynamic>) {
+        return data['apiKey']?.toString();
+      }
+    } catch (_) {}
+    return null;
   }
 }

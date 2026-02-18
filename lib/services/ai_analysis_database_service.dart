@@ -374,8 +374,9 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
   Future<int> restoreFromJson(String jsonStr) async {
     try {
       final List<dynamic> jsonList = json.decode(jsonStr);
-      final analyses =
-          jsonList.map((item) => item as Map<String, dynamic>).toList();
+      final analyses = jsonList
+          .map((item) => item as Map<String, dynamic>)
+          .toList();
       return await importAnalysesFromList(analyses);
     } catch (e) {
       AppLogger.e('从JSON恢复AI分析失败: $e', error: e, source: 'AIAnalysisDB');
@@ -423,8 +424,10 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
         return count;
       } else {
         // 非Web平台使用Batch优化
-        AppLogger.i('开始批量导入AI分析，共 ${analyses.length} 条',
-            source: 'AIAnalysisDB');
+        AppLogger.i(
+          '开始批量导入AI分析，共 ${analyses.length} 条',
+          source: 'AIAnalysisDB',
+        );
         final db = await database;
         final batch = db.batch();
         int count = 0;

@@ -107,7 +107,9 @@ class WindowsStartupDebugService {
       final crashFile = File(path.join(debugDir.path, _crashReportFileName));
 
       await LargeFileManager.writeStringToFile(
-          crashFile, json.encode(crashReport));
+        crashFile,
+        json.encode(crashReport),
+      );
       await _writeDebugLog('崩溃报告已保存: ${crashFile.path}');
     } catch (e) {
       await _writeDebugLog('保存崩溃报告失败: $e');
@@ -285,13 +287,10 @@ class WindowsStartupDebugService {
 
       for (final key in vcRedistKeys) {
         try {
-          final result = await Process.run(
-              'reg',
-              [
-                'query',
-                'HKEY_LOCAL_MACHINE\\$key',
-              ],
-              runInShell: true);
+          final result = await Process.run('reg', [
+            'query',
+            'HKEY_LOCAL_MACHINE\\$key',
+          ], runInShell: true);
           await recordDebugInfo(
             'vcredist_$key',
             result.exitCode == 0 ? 'found' : 'not_found',
@@ -343,7 +342,9 @@ class WindowsStartupDebugService {
       };
 
       await LargeFileManager.writeStringToFile(
-          progressFile, json.encode(progressData));
+        progressFile,
+        json.encode(progressData),
+      );
     } catch (e) {
       await _writeDebugLog('保存初始化进度失败: $e');
     }
@@ -374,7 +375,8 @@ class WindowsStartupDebugService {
         path.join(desktop.path, 'ThoughtEcho_启动问题解决指南.txt'),
       );
 
-      final guide = '''
+      final guide =
+          '''
 === ThoughtEcho 启动问题解决指南 ===
 生成时间: ${DateTime.now().toLocal()}
 
@@ -462,7 +464,9 @@ class WindowsStartupDebugService {
           path.join(debugDir.path, 'final_diagnostic_report.txt'),
         );
         await LargeFileManager.writeStringToFile(
-            finalReportFile, diagnosticReport);
+          finalReportFile,
+          diagnosticReport,
+        );
         await _writeDebugLog('最终诊断报告已保存: ${finalReportFile.path}');
       } catch (e) {
         await _writeDebugLog('生成最终诊断报告失败: $e');

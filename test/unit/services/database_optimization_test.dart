@@ -82,25 +82,30 @@ void main() {
       await db.close();
     });
 
-    test('getUserQuotes should return partial quote (null aiAnalysis)',
-        () async {
-      final id = const Uuid().v4();
-      final fullQuote = Quote(
-        id: id,
-        content: 'Test content',
-        date: DateTime.now().toIso8601String(),
-        aiAnalysis: 'Huge AI Analysis Text',
-      );
+    test(
+      'getUserQuotes should return partial quote (null aiAnalysis)',
+      () async {
+        final id = const Uuid().v4();
+        final fullQuote = Quote(
+          id: id,
+          content: 'Test content',
+          date: DateTime.now().toIso8601String(),
+          aiAnalysis: 'Huge AI Analysis Text',
+        );
 
-      await service.addQuote(fullQuote);
+        await service.addQuote(fullQuote);
 
-      final quotes = await service.getUserQuotes();
-      final fetchedQuote = quotes.firstWhere((q) => q.id == id);
+        final quotes = await service.getUserQuotes();
+        final fetchedQuote = quotes.firstWhere((q) => q.id == id);
 
-      expect(fetchedQuote.content, equals('Test content'));
-      expect(fetchedQuote.aiAnalysis, isNull,
-          reason: 'aiAnalysis should be excluded in list view');
-    });
+        expect(fetchedQuote.content, equals('Test content'));
+        expect(
+          fetchedQuote.aiAnalysis,
+          isNull,
+          reason: 'aiAnalysis should be excluded in list view',
+        );
+      },
+    );
 
     test('getQuoteById should return full quote', () async {
       final id = const Uuid().v4();

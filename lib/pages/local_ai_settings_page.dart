@@ -392,11 +392,7 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
                     color: iconColor.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(
-                    icon,
-                    size: 18,
-                    color: iconColor,
-                  ),
+                  child: Icon(icon, size: 18, color: iconColor),
                 ),
                 const SizedBox(width: 12),
                 Text(
@@ -419,9 +415,7 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
                 color: theme.colorScheme.outline.withOpacity(0.2),
               ),
             ),
-            child: Column(
-              children: children,
-            ),
+            child: Column(children: children),
           ),
         ],
       ),

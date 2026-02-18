@@ -187,14 +187,17 @@ class WeatherService extends ChangeNotifier {
     Duration timeout = const Duration(seconds: 10),
   }) async {
     try {
-      final url = 'https://api.open-meteo.com/v1/forecast'
+      final url =
+          'https://api.open-meteo.com/v1/forecast'
           '?latitude=$latitude'
           '&longitude=$longitude'
           '&current=temperature_2m,weather_code,wind_speed_10m'
           '&timezone=auto';
 
-      final response = await NetworkService.instance
-          .get(url, timeoutSeconds: timeout.inSeconds);
+      final response = await NetworkService.instance.get(
+        url,
+        timeoutSeconds: timeout.inSeconds,
+      );
 
       if (response.statusCode != 200) {
         throw Exception('API请求失败: ${response.statusCode}');
@@ -377,7 +380,8 @@ class WeatherService extends ChangeNotifier {
 
   /// 兼容旧代码，避免在新代码中继续使用
   @Deprecated(
-      'Use legacyWeatherKeyToLabel for migration, or getLocalizedWeatherLabel(context, key) for UI display')
+    'Use legacyWeatherKeyToLabel for migration, or getLocalizedWeatherLabel(context, key) for UI display',
+  )
   static const weatherKeyToLabel = legacyWeatherKeyToLabel;
 
   /// 获取天气 key 的本地化标签（UI 显示专用）
@@ -417,7 +421,8 @@ class WeatherService extends ChangeNotifier {
 
   /// 硬编码中文标签（仅用于数据库旧数据兼容），UI 显示应使用 [getLocalizedFilterCategoryLabel]
   @Deprecated(
-      'Use getLocalizedFilterCategoryLabel(context, key) for UI display')
+    'Use getLocalizedFilterCategoryLabel(context, key) for UI display',
+  )
   static const filterCategoryToLabel = {
     'sunny': '晴',
     'rainy': '雨',

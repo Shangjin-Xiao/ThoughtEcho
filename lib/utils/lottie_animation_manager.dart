@@ -199,7 +199,8 @@ class _EnhancedLottieAnimationState extends State<EnhancedLottieAnimation>
     }
 
     return Semantics(
-      label: widget.semanticLabel ??
+      label:
+          widget.semanticLabel ??
           config.semanticLabel ??
           _getDefaultSemanticLabel(),
       child: SizedBox(

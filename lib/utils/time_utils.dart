@@ -134,7 +134,9 @@ class TimeUtils {
   /// - 当年：MM-dd HH:mm
   /// - 往年：yyyy-MM-dd HH:mm
   static String formatRelativeDateTimeLocalized(
-      BuildContext context, DateTime dateTime) {
+    BuildContext context,
+    DateTime dateTime,
+  ) {
     final l10n = AppLocalizations.of(context);
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -158,7 +160,9 @@ class TimeUtils {
 
   /// 模糊时间格式（刚刚、几分钟前、几小时前、几天前），支持国际化
   static String formatElapsedRelativeTimeLocalized(
-      BuildContext context, DateTime dateTime) {
+    BuildContext context,
+    DateTime dateTime,
+  ) {
     final l10n = AppLocalizations.of(context);
     final now = DateTime.now();
     final difference = now.difference(dateTime);

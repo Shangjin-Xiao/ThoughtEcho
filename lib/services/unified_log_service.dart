@@ -913,70 +913,65 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) =>
-      log(
-        UnifiedLogLevel.verbose,
-        message,
-        source: source,
-        error: error,
-        stackTrace: stackTrace,
-      );
+  }) => log(
+    UnifiedLogLevel.verbose,
+    message,
+    source: source,
+    error: error,
+    stackTrace: stackTrace,
+  );
 
   void debug(
     String message, {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) =>
-      log(
-        UnifiedLogLevel.debug,
-        message,
-        source: source,
-        error: error,
-        stackTrace: stackTrace,
-      );
+  }) => log(
+    UnifiedLogLevel.debug,
+    message,
+    source: source,
+    error: error,
+    stackTrace: stackTrace,
+  );
 
   void info(
     String message, {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) =>
-      log(
-        UnifiedLogLevel.info,
-        message,
-        source: source,
-        error: error,
-        stackTrace: stackTrace,
-      );
+  }) => log(
+    UnifiedLogLevel.info,
+    message,
+    source: source,
+    error: error,
+    stackTrace: stackTrace,
+  );
 
   void warning(
     String message, {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) =>
-      log(
-        UnifiedLogLevel.warning,
-        message,
-        source: source,
-        error: error,
-        stackTrace: stackTrace,
-      );
+  }) => log(
+    UnifiedLogLevel.warning,
+    message,
+    source: source,
+    error: error,
+    stackTrace: stackTrace,
+  );
 
   void error(
     String message, {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) =>
-      log(
-        UnifiedLogLevel.error,
-        message,
-        source: source,
-        error: error,
-        stackTrace: stackTrace,
-      );
+  }) => log(
+    UnifiedLogLevel.error,
+    message,
+    source: source,
+    error: error,
+    stackTrace: stackTrace,
+  );
 
   /// 获取日志统计摘要
   Map<String, dynamic> getLogSummary() {

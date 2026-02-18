@@ -56,8 +56,10 @@ class IOSLocalNetworkPermission {
       final multicastResult = await _triggerViaMulticast();
       if (multicastResult) {
         _permissionGranted = true;
-        logInfo('ios_network_permission_granted_multicast',
-            source: 'IOSNetwork');
+        logInfo(
+          'ios_network_permission_granted_multicast',
+          source: 'IOSNetwork',
+        );
         return true;
       }
 
@@ -65,8 +67,10 @@ class IOSLocalNetworkPermission {
       final broadcastResult = await _triggerViaBroadcast();
       if (broadcastResult) {
         _permissionGranted = true;
-        logInfo('ios_network_permission_granted_broadcast',
-            source: 'IOSNetwork');
+        logInfo(
+          'ios_network_permission_granted_broadcast',
+          source: 'IOSNetwork',
+        );
         return true;
       }
 

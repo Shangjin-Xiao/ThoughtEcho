@@ -739,8 +739,9 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
         final preview = entry.paragraphs.isNotEmpty
             ? entry.paragraphs.first.text
             : l10n.noLicenseContent;
-        final initials =
-            packages.isNotEmpty ? packages.trim()[0].toUpperCase() : 'P';
+        final initials = packages.isNotEmpty
+            ? packages.trim()[0].toUpperCase()
+            : 'P';
         final isExpanded = _expanded.contains(entryIndex);
 
         return Card(
@@ -795,8 +796,9 @@ class _SystemLicensesPageState extends State<SystemLicensesPage> {
                       tooltip: l10n.copyLicense,
                       onPressed: () async {
                         final messenger = ScaffoldMessenger.of(context);
-                        final paragraphs =
-                            entry.paragraphs.map((p) => p.text).toList();
+                        final paragraphs = entry.paragraphs
+                            .map((p) => p.text)
+                            .toList();
                         final full = await compute(_joinParagraphs, paragraphs);
                         if (!mounted) return;
                         await Clipboard.setData(ClipboardData(text: full));
@@ -863,29 +865,33 @@ class _ProgressiveSystemLicensesPageState
   void initState() {
     super.initState();
     // 一次性读取所有系统许可证条目并进行合并
-    LicenseRegistry.licenses.toList().then((list) {
-      final merged = _mergeEntries(list);
-      // 按包名排序
-      merged.sort(
-        (a, b) => a.packages.join('').toLowerCase().compareTo(
-              b.packages.join('').toLowerCase(),
-            ),
-      );
-      if (mounted) {
-        setState(() {
-          _entries = merged;
-          _loading = false;
+    LicenseRegistry.licenses
+        .toList()
+        .then((list) {
+          final merged = _mergeEntries(list);
+          // 按包名排序
+          merged.sort(
+            (a, b) => a.packages
+                .join('')
+                .toLowerCase()
+                .compareTo(b.packages.join('').toLowerCase()),
+          );
+          if (mounted) {
+            setState(() {
+              _entries = merged;
+              _loading = false;
+            });
+          }
+        })
+        .catchError((e) {
+          if (mounted) {
+            setState(() {
+              _entries = [];
+              _error = e.toString();
+              _loading = false;
+            });
+          }
         });
-      }
-    }).catchError((e) {
-      if (mounted) {
-        setState(() {
-          _entries = [];
-          _error = e.toString();
-          _loading = false;
-        });
-      }
-    });
   }
 
   List<_MergedLicenseEntry> _mergeEntries(List<LicenseEntry> entries) {
@@ -940,8 +946,9 @@ class _ProgressiveSystemLicensesPageState
         final preview = entry.paragraphs.isNotEmpty
             ? entry.paragraphs.first.text
             : l10n.noLicenseContent;
-        final initials =
-            packages.isNotEmpty ? packages.trim()[0].toUpperCase() : 'P';
+        final initials = packages.isNotEmpty
+            ? packages.trim()[0].toUpperCase()
+            : 'P';
 
         return Card(
           elevation: 0,
@@ -973,8 +980,9 @@ class _ProgressiveSystemLicensesPageState
                     backgroundColor: Theme.of(
                       context,
                     ).colorScheme.primaryContainer,
-                    foregroundColor:
-                        Theme.of(context).colorScheme.onPrimaryContainer,
+                    foregroundColor: Theme.of(
+                      context,
+                    ).colorScheme.onPrimaryContainer,
                     radius: 24,
                     child: Text(
                       initials,
@@ -988,9 +996,7 @@ class _ProgressiveSystemLicensesPageState
                       children: [
                         Text(
                           packages.isEmpty ? l10n.unnamed : packages,
-                          style: Theme.of(context)
-                              .textTheme
-                              .titleMedium
+                          style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 4),

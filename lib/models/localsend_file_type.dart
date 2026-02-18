@@ -1,15 +1,7 @@
 import '../gen_l10n/app_localizations.dart';
 
 /// 文件类型枚举（UI 文案通过 l10n 获取）
-enum FileType {
-  image,
-  video,
-  audio,
-  document,
-  text,
-  apk,
-  other,
-}
+enum FileType { image, video, audio, document, text, apk, other }
 
 extension FileTypeExtension on FileType {
   /// 获取本地化名称（在 UI 层调用并传入 l10n）

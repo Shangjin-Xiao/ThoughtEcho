@@ -68,8 +68,9 @@ class _VoiceResultSheetState extends State<VoiceResultSheet> {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color:
-                          theme.colorScheme.onSurfaceVariant.withOpacity(0.35),
+                      color: theme.colorScheme.onSurfaceVariant.withOpacity(
+                        0.35,
+                      ),
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
@@ -89,8 +90,9 @@ class _VoiceResultSheetState extends State<VoiceResultSheet> {
                       const Spacer(),
                       IconButton(
                         icon: const Icon(Icons.copy_rounded),
-                        tooltip:
-                            MaterialLocalizations.of(context).copyButtonLabel,
+                        tooltip: MaterialLocalizations.of(
+                          context,
+                        ).copyButtonLabel,
                         onPressed: _textController.text.trim().isEmpty
                             ? null
                             : () async {
