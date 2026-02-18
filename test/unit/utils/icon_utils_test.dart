@@ -82,13 +82,17 @@ void main() {
     });
 
     test('getLocalizedCategoryName returns localized string', () {
-      expect(IconUtils.getLocalizedCategoryName('情感', localizations), 'Emotion');
-      expect(IconUtils.getLocalizedCategoryName('思考', localizations), 'Thinking');
-      expect(IconUtils.getLocalizedCategoryName('Unknown', localizations), 'Unknown');
+      expect(
+          IconUtils.getLocalizedCategoryName('情感', localizations), 'Emotion');
+      expect(
+          IconUtils.getLocalizedCategoryName('思考', localizations), 'Thinking');
+      expect(IconUtils.getLocalizedCategoryName('Unknown', localizations),
+          'Unknown');
     });
 
     test('getLocalizedEmojiCategories returns localized map', () {
-      final localizedCategories = IconUtils.getLocalizedEmojiCategories(localizations);
+      final localizedCategories =
+          IconUtils.getLocalizedEmojiCategories(localizations);
       expect(localizedCategories.containsKey('Emotion'), isTrue);
       expect(localizedCategories['Emotion'], contains('😊'));
       expect(localizedCategories.containsKey('Thinking'), isTrue);
