@@ -33,4 +33,21 @@ void main() {
     expect(formatted, isNot(contains('夜晚')));
     expect(formatted, contains('21:15'));
   });
+
+  group('formatDateFromIso', () {
+    test('formats valid ISO date string correctly', () {
+      const isoDate = '2023-10-27T10:00:00.000Z';
+      expect(TimeUtils.formatDateFromIso(isoDate), '2023年10月27日');
+    });
+
+    test('returns original string for invalid ISO date string', () {
+      const invalidDate = 'invalid-date-string';
+      expect(TimeUtils.formatDateFromIso(invalidDate), invalidDate);
+    });
+
+    test('returns original string for empty string', () {
+      const emptyString = '';
+      expect(TimeUtils.formatDateFromIso(emptyString), emptyString);
+    });
+  });
 }
