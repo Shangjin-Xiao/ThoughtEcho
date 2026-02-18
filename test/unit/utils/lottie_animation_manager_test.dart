@@ -42,6 +42,10 @@ void main() {
           LottieAnimationManager.getAnimationPath(
               LottieAnimationType.aiThinking),
           'assets/lottie/custom_loading.json');
+      expect(
+          LottieAnimationManager.getAnimationPath(
+              LottieAnimationType.customLoading),
+          'assets/lottie/custom_loading.json');
     });
 
     test('getAnimationConfig returns correct configuration for all types', () {
