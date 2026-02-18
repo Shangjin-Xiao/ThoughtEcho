@@ -15,7 +15,8 @@ void main() {
     // Setup tables
     await db.execute('CREATE TABLE categories(id TEXT PRIMARY KEY, name TEXT)');
     await db.execute('CREATE TABLE quotes(id TEXT PRIMARY KEY, tag_ids TEXT)');
-    await db.execute('CREATE TABLE quote_tags(quote_id TEXT, tag_id TEXT, PRIMARY KEY(quote_id, tag_id))');
+    await db.execute(
+        'CREATE TABLE quote_tags(quote_id TEXT, tag_id TEXT, PRIMARY KEY(quote_id, tag_id))');
 
     // Seed data
     final uuid = const Uuid();
@@ -63,7 +64,11 @@ void main() {
         final tagIdsString = quote['tag_ids'] as String?;
         if (tagIdsString == null || tagIdsString.isEmpty) continue;
 
-        final tagIds = tagIdsString.split(',').map((id) => id.trim()).where((id) => id.isNotEmpty).toList();
+        final tagIds = tagIdsString
+            .split(',')
+            .map((id) => id.trim())
+            .where((id) => id.isNotEmpty)
+            .toList();
 
         final validTagIds = <String>[];
         for (final tagId in tagIds) {
@@ -95,7 +100,8 @@ void main() {
     print('Slow migration took: ${stopwatchSlow.elapsedMilliseconds}ms');
 
     // Verify count
-    final countSlow = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM quote_tags'));
+    final countSlow = Sqflite.firstIntValue(
+        await db.rawQuery('SELECT COUNT(*) FROM quote_tags'));
     print('Slow migration inserted $countSlow records.');
 
     // --- Cleanup for Fast Benchmark ---
@@ -114,7 +120,8 @@ void main() {
 
       // 1. Fetch all category IDs once
       final allCategories = await txn.query('categories', columns: ['id']);
-      final allCategoryIds = allCategories.map((c) => c['id'] as String).toSet();
+      final allCategoryIds =
+          allCategories.map((c) => c['id'] as String).toSet();
 
       // 2. Prepare batch
       final batch = txn.batch();
@@ -124,7 +131,11 @@ void main() {
         final tagIdsString = quote['tag_ids'] as String?;
         if (tagIdsString == null || tagIdsString.isEmpty) continue;
 
-        final tagIds = tagIdsString.split(',').map((id) => id.trim()).where((id) => id.isNotEmpty).toList();
+        final tagIds = tagIdsString
+            .split(',')
+            .map((id) => id.trim())
+            .where((id) => id.isNotEmpty)
+            .toList();
 
         // 3. In-memory check
         final validTagIds = tagIds.where((id) => allCategoryIds.contains(id));
@@ -148,13 +159,18 @@ void main() {
     print('Fast migration took: ${stopwatchFast.elapsedMilliseconds}ms');
 
     // Verify count
-    final countFast = Sqflite.firstIntValue(await db.rawQuery('SELECT COUNT(*) FROM quote_tags'));
+    final countFast = Sqflite.firstIntValue(
+        await db.rawQuery('SELECT COUNT(*) FROM quote_tags'));
     print('Fast migration inserted $countFast records.');
 
     expect(countFast, countSlow);
-    expect(stopwatchFast.elapsedMilliseconds, lessThan(stopwatchSlow.elapsedMilliseconds));
+    expect(stopwatchFast.elapsedMilliseconds,
+        lessThan(stopwatchSlow.elapsedMilliseconds));
 
-    final improvement = (stopwatchSlow.elapsedMilliseconds - stopwatchFast.elapsedMilliseconds) / stopwatchSlow.elapsedMilliseconds * 100;
+    final improvement = (stopwatchSlow.elapsedMilliseconds -
+            stopwatchFast.elapsedMilliseconds) /
+        stopwatchSlow.elapsedMilliseconds *
+        100;
     print('Performance Improvement: ${improvement.toStringAsFixed(2)}%');
 
     await db.close();
