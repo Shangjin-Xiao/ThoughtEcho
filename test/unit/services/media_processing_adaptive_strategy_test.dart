@@ -24,7 +24,9 @@ void main() {
       expect(result.name, equals('minimal'));
     });
 
-    test('should return memory conservative strategy when memory pressure is high', () {
+    test(
+        'should return memory conservative strategy when memory pressure is high',
+        () {
       final context = MemoryContext(
         pressureLevel: 2, // High
         availableMemory: 200 * 1024 * 1024,
@@ -38,7 +40,8 @@ void main() {
       expect(result.name, equals('memory_conservative'));
     });
 
-    test('should return memory conservative strategy when data size > 500MB', () {
+    test('should return memory conservative strategy when data size > 500MB',
+        () {
       final context = MemoryContext(
         pressureLevel: 1, // Normal
         availableMemory: 500 * 1024 * 1024,
@@ -52,7 +55,9 @@ void main() {
       expect(result.name, equals('memory_conservative'));
     });
 
-    test('should return default strategy when memory pressure is normal and data size is small', () {
+    test(
+        'should return default strategy when memory pressure is normal and data size is small',
+        () {
       final context = MemoryContext(
         pressureLevel: 1, // Normal
         availableMemory: 500 * 1024 * 1024,
