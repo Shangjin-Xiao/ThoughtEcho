@@ -5,7 +5,8 @@ void main() {
   group('OptimizedImageLoaderBase', () {
     group('isDataUrl', () {
       test('returns true for valid data URL', () {
-        const source = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+        const source =
+            'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
         expect(isDataUrl(source), isTrue);
       });
 
@@ -79,25 +80,25 @@ void main() {
       });
 
       test('returns null for data URL without data', () {
-         // data: is a valid scheme, but uri.data is parsed based on content.
-         // 'data:' -> uri.data is empty but not null.
-         // 'data:,' -> empty data.
-         // Let's test a case where uri.data might be problematic or simply check empty data behavior.
+        // data: is a valid scheme, but uri.data is parsed based on content.
+        // 'data:' -> uri.data is empty but not null.
+        // 'data:,' -> empty data.
+        // Let's test a case where uri.data might be problematic or simply check empty data behavior.
 
-         // 'data:' parses as scheme: data, path: empty. uri.data throws if scheme is not data.
-         // But here scheme IS data.
-         // uri.data handles parsing. If path is empty, it might be valid empty data.
-         // Let's check a case that is technically valid URI but invalid data URI format for content.
+        // 'data:' parses as scheme: data, path: empty. uri.data throws if scheme is not data.
+        // But here scheme IS data.
+        // uri.data handles parsing. If path is empty, it might be valid empty data.
+        // Let's check a case that is technically valid URI but invalid data URI format for content.
 
-         // If we pass something that Uri.parse accepts but doesn't have valid data part?
-         // 'data://test' -> scheme: data, host: test.
-         // uri.data getter: "The data of a data URI. The URI must have the scheme 'data' and no authority."
-         // So 'data://test' has authority 'test'. accessing uri.data should throw or return null?
-         // Documentation says: "If the URI does not have the 'data' scheme, or has an authority, this getter throws a StateError."
-         // The implementation of tryDecodeDataUrl catches exceptions.
+        // If we pass something that Uri.parse accepts but doesn't have valid data part?
+        // 'data://test' -> scheme: data, host: test.
+        // uri.data getter: "The data of a data URI. The URI must have the scheme 'data' and no authority."
+        // So 'data://test' has authority 'test'. accessing uri.data should throw or return null?
+        // Documentation says: "If the URI does not have the 'data' scheme, or has an authority, this getter throws a StateError."
+        // The implementation of tryDecodeDataUrl catches exceptions.
 
-         const source = 'data://test';
-         expect(tryDecodeDataUrl(source), isNull);
+        const source = 'data://test';
+        expect(tryDecodeDataUrl(source), isNull);
       });
     });
   });
