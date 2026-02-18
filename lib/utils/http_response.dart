@@ -12,7 +12,15 @@ class HttpResponse {
 
   /// 响应内容长度
   int? get contentLength {
-    final contentLengthHeader = headers['content-length'];
+    // 查找 content-length 头部（不区分大小写）
+    String? contentLengthHeader;
+    for (final entry in headers.entries) {
+      if (entry.key.toLowerCase() == 'content-length') {
+        contentLengthHeader = entry.value;
+        break;
+      }
+    }
+
     if (contentLengthHeader != null) {
       return int.tryParse(contentLengthHeader);
     }
