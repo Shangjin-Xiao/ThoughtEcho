@@ -54,31 +54,36 @@ void main() {
       const basePrompt = 'Base Prompt';
 
       test('appends friendly style', () {
-        final prompt = manager.appendAnalysisStylePrompt(basePrompt, 'friendly');
+        final prompt =
+            manager.appendAnalysisStylePrompt(basePrompt, 'friendly');
         expect(prompt, startsWith(basePrompt));
         expect(prompt, contains('友好的"你"称呼读者'));
       });
 
       test('appends humorous style', () {
-        final prompt = manager.appendAnalysisStylePrompt(basePrompt, 'humorous');
+        final prompt =
+            manager.appendAnalysisStylePrompt(basePrompt, 'humorous');
         expect(prompt, startsWith(basePrompt));
         expect(prompt, contains('幽默和风趣元素'));
       });
 
       test('appends literary style', () {
-        final prompt = manager.appendAnalysisStylePrompt(basePrompt, 'literary');
+        final prompt =
+            manager.appendAnalysisStylePrompt(basePrompt, 'literary');
         expect(prompt, startsWith(basePrompt));
         expect(prompt, contains('优美、富有文学色彩'));
       });
 
       test('appends professional style', () {
-        final prompt = manager.appendAnalysisStylePrompt(basePrompt, 'professional');
+        final prompt =
+            manager.appendAnalysisStylePrompt(basePrompt, 'professional');
         expect(prompt, startsWith(basePrompt));
         expect(prompt, contains('专业、清晰和客观'));
       });
 
       test('appends professional style as default', () {
-        final prompt = manager.appendAnalysisStylePrompt(basePrompt, 'unknown_style');
+        final prompt =
+            manager.appendAnalysisStylePrompt(basePrompt, 'unknown_style');
         expect(prompt, startsWith(basePrompt));
         expect(prompt, contains('专业、清晰和客观'));
       });
@@ -95,7 +100,8 @@ void main() {
       });
 
       test('buildUserMessage with custom prefix', () {
-        final message = manager.buildUserMessage(content, prefix: 'Custom Prefix:');
+        final message =
+            manager.buildUserMessage(content, prefix: 'Custom Prefix:');
         expect(message, contains('Custom Prefix:'));
         expect(message, contains(content));
       });
@@ -140,25 +146,29 @@ void main() {
 
       test('morning time prompt', () {
         final morning = date.add(const Duration(hours: 8)); // 8:00
-        final prompt = manager.getDailyPromptSystemPromptWithContext(testNow: morning);
+        final prompt =
+            manager.getDailyPromptSystemPromptWithContext(testNow: morning);
         expect(prompt, contains('早晨 08:00'));
       });
 
       test('afternoon time prompt', () {
         final afternoon = date.add(const Duration(hours: 14)); // 14:00
-        final prompt = manager.getDailyPromptSystemPromptWithContext(testNow: afternoon);
+        final prompt =
+            manager.getDailyPromptSystemPromptWithContext(testNow: afternoon);
         expect(prompt, contains('下午 14:00'));
       });
 
       test('evening time prompt', () {
         final evening = date.add(const Duration(hours: 20)); // 20:00
-        final prompt = manager.getDailyPromptSystemPromptWithContext(testNow: evening);
+        final prompt =
+            manager.getDailyPromptSystemPromptWithContext(testNow: evening);
         expect(prompt, contains('晚上 20:00'));
       });
 
       test('night time prompt', () {
         final night = date.add(const Duration(hours: 2)); // 02:00
-        final prompt = manager.getDailyPromptSystemPromptWithContext(testNow: night);
+        final prompt =
+            manager.getDailyPromptSystemPromptWithContext(testNow: night);
         expect(prompt, contains('深夜 02:00'));
       });
 
@@ -187,17 +197,21 @@ void main() {
       });
 
       test('language directive - zh', () {
-        final prompt = manager.getDailyPromptSystemPromptWithContext(languageCode: 'zh', testNow: date);
+        final prompt = manager.getDailyPromptSystemPromptWithContext(
+            languageCode: 'zh', testNow: date);
         expect(prompt, contains('【语言要求】请使用中文回复。'));
       });
 
       test('language directive - en', () {
-        final prompt = manager.getDailyPromptSystemPromptWithContext(languageCode: 'en', testNow: date);
-        expect(prompt, contains('【Language Requirement】Please respond in English.'));
+        final prompt = manager.getDailyPromptSystemPromptWithContext(
+            languageCode: 'en', testNow: date);
+        expect(prompt,
+            contains('【Language Requirement】Please respond in English.'));
       });
 
       test('language directive - other', () {
-        final prompt = manager.getDailyPromptSystemPromptWithContext(languageCode: 'fr', testNow: date);
+        final prompt = manager.getDailyPromptSystemPromptWithContext(
+            languageCode: 'fr', testNow: date);
         expect(prompt, contains('locale code: fr'));
       });
     });
@@ -220,7 +234,8 @@ void main() {
       });
 
       test('getReportInsightSystemPrompt includes style and language', () {
-        final prompt = manager.getReportInsightSystemPrompt('poetic', languageCode: 'zh');
+        final prompt =
+            manager.getReportInsightSystemPrompt('poetic', languageCode: 'zh');
         expect(prompt, contains('风格：文学诗意'));
         expect(prompt, contains('【语言要求】请使用中文回复。'));
       });
@@ -282,7 +297,7 @@ void main() {
         expect(output1, isNotEmpty);
       });
 
-       test('formatLocalReportInsight deterministic with seed - English', () {
+      test('formatLocalReportInsight deterministic with seed - English', () {
         final output1 = manager.formatLocalReportInsight(
           periodLabel: 'This Week',
           activeDays: 3,
