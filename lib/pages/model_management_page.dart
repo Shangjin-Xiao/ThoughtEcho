@@ -129,26 +129,33 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
         final models = _modelManager.models;
         final groupedModels = _groupModelsByType(models);
 
-        return ListView(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          children: [
-            // 存储信息卡片
-            _buildStorageCard(context, l10n, theme),
-            const SizedBox(height: 16),
+        return RefreshIndicator(
+          onRefresh: () async {
+            await _modelManager.refreshModelStatuses();
+            if (mounted) setState(() {});
+          },
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            children: [
+              // 存储信息卡片
+              _buildStorageCard(context, l10n, theme),
+              const SizedBox(height: 16),
 
-            // 按类型分组显示模型
-            for (final entry in groupedModels.entries) ...[
-              _buildModelTypeHeader(context, l10n, theme, entry.key),
-              ...entry.value.map(
-                (model) => _buildModelCard(context, l10n, theme, model),
-              ),
-              const SizedBox(height: 8),
+              // 按类型分组显示模型
+              for (final entry in groupedModels.entries) ...[
+                _buildModelTypeHeader(context, l10n, theme, entry.key),
+                ...entry.value.asMap().entries.map(
+                  (e) => _buildModelCard(context, l10n, theme, e.value, animationIndex: e.key),
+                ),
+                const SizedBox(height: 8),
+              ],
+
+              // 底部提示
+              _buildInfoCard(context, l10n, theme),
+              const SizedBox(height: 24),
             ],
-
-            // 底部提示
-            _buildInfoCard(context, l10n, theme),
-            const SizedBox(height: 24),
-          ],
+          ),
         );
       },
     );
@@ -219,7 +226,7 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${_modelManager.downloadedModels.length} ${l10n.modelDownloaded}',
+                          l10n.modelDownloadedCount(_modelManager.downloadedModels.length),
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
@@ -278,10 +285,12 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
     BuildContext context,
     AppLocalizations l10n,
     ThemeData theme,
-    LocalAIModelInfo model,
-  ) {
+    LocalAIModelInfo model, {
+    int animationIndex = 0,
+  }) {
     final statusInfo = _getStatusInfo(l10n, model.status);
     final needsPreparation = _needsPreparation(model);
+    final tags = _getModelTags(l10n, model);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -290,7 +299,10 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTheme.cardRadius),
           side: BorderSide(
-            color: theme.colorScheme.outline.withOpacity(0.2),
+            color: model.status == LocalAIModelStatus.loaded
+                ? theme.colorScheme.primary.withAlpha(80)
+                : theme.colorScheme.outline.withAlpha(50),
+            width: model.status == LocalAIModelStatus.loaded ? 1.5 : 1,
           ),
         ),
         child: InkWell(
@@ -307,11 +319,23 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            model.name,
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  model.name,
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              // 推荐标签
+                              ...tags.map((tag) => Padding(
+                                padding: const EdgeInsets.only(left: 6),
+                                child: _buildTag(theme, tag),
+                              )),
+                            ],
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -330,27 +354,32 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
                   ],
                 ),
                 const SizedBox(height: 12),
-                Row(
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
                   children: [
                     _buildInfoChip(
                       theme,
                       Icons.storage_outlined,
                       model.formattedSize,
                     ),
-                    const SizedBox(width: 8),
                     _buildInfoChip(
                       theme,
                       Icons.tag,
                       'v${model.version}',
                     ),
-                    if (needsPreparation) ...[
-                      const SizedBox(width: 8),
+                    if (needsPreparation)
                       _buildInfoChip(
                         theme,
                         Icons.unarchive_outlined,
                         l10n.modelPrepare,
                       ),
-                    ],
+                    if (_isManagedModel(model))
+                      _buildInfoChip(
+                        theme,
+                        Icons.extension_outlined,
+                        'flutter_gemma',
+                      ),
                   ],
                 ),
                 // 下载进度
@@ -666,9 +695,10 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
   }
 
   Future<bool> _promptAndSaveManagedModelUrl(LocalAIModelInfo model) async {
-    final l10n = AppLocalizations.of(context);
     final existingUrl =
         await _modelManager.getFlutterGemmaManagedModelUrl(model.id) ?? '';
+    if (!mounted) return false;
+    final l10n = AppLocalizations.of(context);
     final controller = TextEditingController(text: existingUrl);
 
     final result = await showDialog<String>(
@@ -838,7 +868,7 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
 
       final filePath = result.files.single.path;
       if (filePath == null) {
-        throw Exception('无法获取文件路径');
+        throw Exception('file_path_not_available');
       }
 
       // 显示导入进度
@@ -1065,6 +1095,16 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
     if (raw.contains('service_not_initialized')) {
       return l10n.featureNotAvailable;
     }
+    if (raw.contains('feature_not_enabled')) {
+      return l10n.featureNotEnabled;
+    }
+    if (raw.contains('file_path_not_available')) {
+      return l10n.filePathNotAvailable;
+    }
+    if (raw.contains('mlkit_not_initialized') ||
+        raw.contains('mlkit_not_available')) {
+      return l10n.featureNotAvailable;
+    }
     return raw;
   }
 
@@ -1079,6 +1119,56 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
       return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
     }
   }
+
+  /// 获取模型推荐标签
+  List<_TagInfo> _getModelTags(AppLocalizations l10n, LocalAIModelInfo model) {
+    final tags = <_TagInfo>[];
+    switch (model.id) {
+      case 'whisper-tiny':
+        tags.add(_TagInfo(text: l10n.modelLightweight, color: Colors.teal));
+        tags.add(_TagInfo(text: l10n.modelRecommended, color: Colors.amber.shade700));
+        break;
+      case 'whisper-base':
+        tags.add(_TagInfo(text: l10n.modelHighAccuracy, color: Colors.indigo));
+        break;
+      case 'gemma-2b':
+        tags.add(_TagInfo(text: l10n.modelRecommended, color: Colors.amber.shade700));
+        break;
+      case 'paligemma-3b':
+        tags.add(_TagInfo(text: l10n.modelHighAccuracy, color: Colors.indigo));
+        break;
+      default:
+        break;
+    }
+    return tags;
+  }
+
+  /// 构建推荐标签组件
+  Widget _buildTag(ThemeData theme, _TagInfo tag) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: tag.color.withAlpha(25),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: tag.color.withAlpha(80), width: 0.5),
+      ),
+      child: Text(
+        tag.text,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: tag.color,
+          letterSpacing: 0.2,
+        ),
+      ),
+    );
+  }
+}
+
+class _TagInfo {
+  final String text;
+  final Color color;
+  const _TagInfo({required this.text, required this.color});
 }
 
 class _ModelTypeInfo {

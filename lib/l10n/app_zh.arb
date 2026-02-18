@@ -3204,5 +3204,67 @@
   "containsQuoteFormat": "包含引用格式",
   "containsInsightKeywords": "包含感悟相关词汇",
   "pleaseSwitchToAsrModel": "请先下载语音识别模型",
-  "pleaseSwitchToOcrModel": "请先下载 OCR 模型"
+  "pleaseSwitchToOcrModel": "请先下载 OCR 模型",
+
+  "ocrPhotoFailed": "拍照失败: {error}",
+  "@ocrPhotoFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ocrImagePickFailed": "选择图片失败: {error}",
+  "@ocrImagePickFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ocrRecognitionFailed": "识别失败: {error}",
+  "@ocrRecognitionFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ocrClearSelection": "清空",
+  "ocrSelectAll": "全选",
+  "ocrTapToSelectHint": "点击选择文字区域 · 已选 {selected}/{total}",
+  "@ocrTapToSelectHint": {
+    "placeholders": {
+      "selected": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "ocrConfirmSelection": "确认选择 ({count})",
+  "@ocrConfirmSelection": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "filePathNotAvailable": "无法获取文件路径",
+  "modelDownloadedCount": "已下载 {count} 个模型",
+  "@modelDownloadedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "featureNotEnabled": "该功能未启用，请在设置中开启",
+  "modelRecommended": "推荐",
+  "modelLightweight": "轻量",
+  "modelHighAccuracy": "高精度",
+  "embeddingServicePlaceholder": "嵌入服务尚未完整实现",
+  "noChangesNeeded": "文本无需修改",
+  "aiCorrectionFailed": "AI 纠错失败"
 }

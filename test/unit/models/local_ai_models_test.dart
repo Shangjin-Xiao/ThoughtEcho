@@ -69,18 +69,18 @@ void main() {
 
   group('SpeechRecognitionResult Tests', () {
     test('isEmpty returns true for empty text', () {
-      const result = SpeechRecognitionResult(text: '');
+      final result = SpeechRecognitionResult(text: '');
       expect(result.isEmpty, true);
       expect(result.isNotEmpty, false);
     });
 
     test('isEmpty returns true for whitespace only', () {
-      const result = SpeechRecognitionResult(text: '   ');
+      final result = SpeechRecognitionResult(text: '   ');
       expect(result.isEmpty, true);
     });
 
     test('isNotEmpty returns true for non-empty text', () {
-      const result = SpeechRecognitionResult(text: 'Hello');
+      final result = SpeechRecognitionResult(text: 'Hello');
       expect(result.isEmpty, false);
       expect(result.isNotEmpty, true);
     });

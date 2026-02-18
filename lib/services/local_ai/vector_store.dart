@@ -1,6 +1,7 @@
 /// 向量存储服务
 ///
 /// 存储和检索文本嵌入向量，支持语义搜索
+library;
 
 import 'dart:async';
 import 'dart:convert';

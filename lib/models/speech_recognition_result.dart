@@ -1,6 +1,7 @@
 /// 语音识别结果模型
 ///
 /// 用于存储和处理语音转文字的结果
+library;
 
 /// 语音识别结果
 class SpeechRecognitionResult {
@@ -19,23 +20,24 @@ class SpeechRecognitionResult {
   /// 识别时长（毫秒）
   final int? durationMs;
 
-  /// 时间戳（可为空，在使用时提供默认值）
-  final DateTime? _timestamp;
+  /// 时间戳
+  final DateTime _timestamp;
 
-  /// 获取时间戳（如果为空则返回当前时间）
-  DateTime get timestamp => _timestamp ?? DateTime.now();
+  /// 获取时间戳
+  DateTime get timestamp => _timestamp;
 
-  const SpeechRecognitionResult({
+  SpeechRecognitionResult({
     required this.text,
     this.confidence = 1.0,
     this.languageCode,
     this.isFinal = true,
     this.durationMs,
     DateTime? timestamp,
-  }) : _timestamp = timestamp;
+  }) : _timestamp = timestamp ?? DateTime.now();
 
   /// 空结果
-  static const empty = SpeechRecognitionResult(text: '');
+  /// 空结果
+  static final empty = SpeechRecognitionResult(text: '');
 
   /// 是否为空
   bool get isEmpty => text.trim().isEmpty;

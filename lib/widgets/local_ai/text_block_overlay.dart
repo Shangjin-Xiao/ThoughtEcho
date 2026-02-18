@@ -1,6 +1,7 @@
 /// 文字区域高亮叠加层
 ///
 /// 在图片上显示检测到的文字块，带有精美的高亮效果
+library;
 
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -108,14 +109,14 @@ class _TextBlockOverlayState extends State<TextBlockOverlay>
           TextButton(
             onPressed: _deselectAll,
             child: Text(
-              '清空',
+              l10n.ocrClearSelection,
               style: TextStyle(color: theme.colorScheme.primary),
             ),
           ),
           TextButton(
             onPressed: _selectAll,
             child: Text(
-              '全选',
+              l10n.ocrSelectAll,
               style: TextStyle(color: theme.colorScheme.primary),
             ),
           ),
@@ -140,7 +141,7 @@ class _TextBlockOverlayState extends State<TextBlockOverlay>
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          '点击选择文字区域 · 已选 ${_selectedBlocks.length}/${widget.ocrResult.blocks.length}',
+                          l10n.ocrTapToSelectHint(_selectedBlocks.length, widget.ocrResult.blocks.length),
                           style: TextStyle(
                             color: theme.colorScheme.onPrimaryContainer,
                             fontSize: 14,
@@ -197,7 +198,7 @@ class _TextBlockOverlayState extends State<TextBlockOverlay>
                         ? null
                         : () => Navigator.of(context).pop(_selectedBlocks),
                     icon: const Icon(Icons.check),
-                    label: Text('确认选择 (${_selectedBlocks.length})'),
+                    label: Text(l10n.ocrConfirmSelection(_selectedBlocks.length)),
                     style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),

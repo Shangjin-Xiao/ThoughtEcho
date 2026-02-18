@@ -1,6 +1,7 @@
 /// 语音识别服务
 ///
 /// 使用 sherpa_onnx + Whisper 进行设备端语音转文字
+library;
 
 import 'dart:async';
 import 'dart:io';
@@ -776,20 +777,27 @@ class SpeechRecognitionService extends ChangeNotifier {
         return;
       }
 
-      // 更新录制时长和模拟音量
+      // 更新录制时长
+      // 注：音量级别基于时间模拟平滑波形，真实音量需要从音频流中计算
+      final timeFactor = _status.durationSeconds * 3.14;
+      final simulatedVolume = 0.3 + 0.2 * (0.5 + 0.5 * _sin(timeFactor));
       _status = _status.copyWith(
         durationSeconds: _status.durationSeconds + 0.1,
-        volumeLevel: 0.3 + (DateTime.now().millisecond % 500) / 1000,
+        volumeLevel: simulatedVolume.clamp(0.0, 1.0),
       );
       notifyListeners();
     });
   }
 
-  /// 添加音频数据（用于实时录音）
-  void addAudioSamples(List<double> samples) {
-    if (_status.isRecording) {
-      _audioBuffer.addAll(samples);
-    }
+  /// 简易正弦函数近似（避免 import dart:math）
+  static double _sin(double x) {
+    // Normalize to -PI..PI
+    x = x % (2 * 3.14159265);
+    if (x > 3.14159265) x -= 2 * 3.14159265;
+    // Taylor series approximation
+    final x3 = x * x * x;
+    final x5 = x3 * x * x;
+    return x - x3 / 6.0 + x5 / 120.0;
   }
 
   @override

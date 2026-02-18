@@ -1,6 +1,7 @@
 /// 本地 AI 模型管理器
 ///
 /// 负责模型的下载、存储、加载和生命周期管理
+library;
 
 import 'dart:async';
 import 'dart:io';
@@ -123,6 +124,28 @@ class ModelManager extends ChangeNotifier {
     } catch (e) {
       logError('模型管理器初始化失败: $e', source: 'ModelManager');
       rethrow;
+    }
+  }
+
+  /// 刷新所有模型状态（用于 pull-to-refresh）
+  Future<void> refreshModelStatuses() async {
+    if (!_initialized || _modelsDirectory == null) return;
+
+    try {
+      for (final model in LocalAIModels.all) {
+        final status = await _checkModelStatus(model);
+        final current = _modelStates[model.id];
+        if (current != null && current.status != status) {
+          _modelStates[model.id] = current.copyWith(status: status);
+        }
+        if (status == LocalAIModelStatus.downloaded) {
+          await _checkExtractedPath(model);
+        }
+      }
+      notifyListeners();
+      logInfo('模型状态已刷新', source: 'ModelManager');
+    } catch (e) {
+      logError('刷新模型状态失败: $e', source: 'ModelManager');
     }
   }
 

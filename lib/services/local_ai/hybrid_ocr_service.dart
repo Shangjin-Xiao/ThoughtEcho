@@ -3,6 +3,7 @@
 /// 智能选择使用 MLKit、Tesseract 或 VLM 进行文字识别
 /// - 印刷体（移动端） → MLKit（快速、准确）
 /// - 印刷体（桌面端） → Tesseract（轻量、兼容）
+library;
 /// - 手写/复杂场景 → VLM（准确、智能）
 
 import 'dart:async';
@@ -226,26 +227,30 @@ class HybridOCRService extends ChangeNotifier {
     return results;
   }
 
-  /// 获取当前使用的引擎
+  /// 获取当前使用的引擎标识
+  /// 返回引擎类型名称，UI 层负责本地化显示
   String getCurrentEngine() {
-    if (_preferredEngine == OCREngineType.vlm) {
-      return 'VLM (视觉语言模型)';
-    } else {
-      return '自动选择';
+    switch (_preferredEngine) {
+      case OCREngineType.vlm:
+        return 'vlm';
+      case OCREngineType.mlkit:
+        return 'mlkit';
+      case OCREngineType.auto:
+        return 'auto';
     }
   }
 
-  /// 获取引擎推荐
+  /// 获取引擎推荐标识
+  /// 返回推荐代码，UI 层负责本地化显示
   String getEngineRecommendation(bool isHandwritten) {
     if (isHandwritten) {
       if (isVLMAvailable) {
-        return '推荐使用 VLM 引擎识别手写文字';
+        return 'recommend_vlm_handwriting';
       } else {
-        return '手写文字建议下载 VLM 模型以获得更好效果';
+        return 'recommend_download_vlm';
       }
     } else {
-      // 印刷体
-      return '推荐使用自动选择';
+      return 'recommend_auto';
     }
   }
 

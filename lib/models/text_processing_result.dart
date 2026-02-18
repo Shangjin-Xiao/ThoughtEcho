@@ -1,6 +1,7 @@
 /// 文本处理结果模型
 ///
 /// 用于 LLM 文本处理功能的结果
+library;
 
 /// 来源类型
 enum SourceType {

@@ -1,6 +1,7 @@
 /// 本地 AI 模型定义
 ///
 /// 定义设备端 AI 模型的元数据和状态
+library;
 
 /// 模型类型枚举
 enum LocalAIModelType {

@@ -1,6 +1,7 @@
 /// 嵌入向量和搜索结果模型
 ///
 /// 用于语义搜索和相关笔记推荐
+library;
 
 import 'dart:math' as math;
 

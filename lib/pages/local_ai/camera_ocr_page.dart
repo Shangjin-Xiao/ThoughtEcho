@@ -87,7 +87,8 @@ class _CameraOCRPageState extends State<CameraOCRPage> {
     } catch (e) {
       debugPrint('拍照失败: $e');
       if (mounted) {
-        _showError('拍照失败: $e');
+        final l10n = AppLocalizations.of(context);
+        _showError(l10n.ocrPhotoFailed(e.toString()));
       }
     } finally {
       if (mounted) {
@@ -116,7 +117,8 @@ class _CameraOCRPageState extends State<CameraOCRPage> {
     } catch (e) {
       debugPrint('选择图片失败: $e');
       if (mounted) {
-        _showError('选择图片失败: $e');
+        final l10n = AppLocalizations.of(context);
+        _showError(l10n.ocrImagePickFailed(e.toString()));
       }
     } finally {
       if (mounted) {
@@ -192,8 +194,9 @@ class _CameraOCRPageState extends State<CameraOCRPage> {
       debugPrint('OCR 识别失败: $e');
       if (mounted) {
         // 关闭可能存在的加载对话框
-        Navigator.of(context).pop();
-        _showError('识别失败: $e');
+        Navigator.of(context, rootNavigator: true).pop();
+        final l10n = AppLocalizations.of(context);
+        _showError(l10n.ocrRecognitionFailed(e.toString()));
       }
     }
   }

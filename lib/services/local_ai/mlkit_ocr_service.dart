@@ -2,6 +2,7 @@
 ///
 /// 使用 Google MLKit 进行设备端图像文字识别
 /// 适合印刷体文字，准确率高、速度快
+library;
 
 import 'dart:async';
 
@@ -61,7 +62,9 @@ class MLKitOCRService extends ChangeNotifier {
       logInfo('MLKit OCR 服务初始化完成，脚本: $_script', source: 'MLKitOCRService');
     } catch (e) {
       logError('MLKit OCR 服务初始化失败: $e', source: 'MLKitOCRService');
-      _initialized = true; // 允许继续
+      // 初始化失败时不设置 _initialized = true，允许重试
+      // 但设置 _textRecognizer 为 null 确保安全
+      _textRecognizer = null;
     }
   }
 
@@ -106,6 +109,9 @@ class MLKitOCRService extends ChangeNotifier {
       notifyListeners();
 
       // 执行识别
+      if (_textRecognizer == null) {
+        throw StateError('mlkit_not_initialized');
+      }
       final recognizedText = await _textRecognizer!.processImage(inputImage);
 
       _status = _status.copyWith(progress: 0.8);

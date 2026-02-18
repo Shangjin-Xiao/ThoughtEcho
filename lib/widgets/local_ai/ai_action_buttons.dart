@@ -95,19 +95,20 @@ class _AIActionButtonsState extends State<AIActionButtons> {
       } else {
         // 无需修改
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.aiCorrectionApplied)),
+          SnackBar(content: Text(l10n.noChangesNeeded)),
         );
-        widget.onCorrectionResult?.call(widget.text);
       }
     } catch (e) {
       logError('AI 纠错失败: $e', source: 'AIActionButtons');
       if (!context.mounted) return;
       
-      // 如果服务不可用，直接返回原文
+      // 明确告知用户纠错失败
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.aiCorrectionApplied)),
+        SnackBar(
+          content: Text(l10n.aiCorrectionFailed),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
       );
-      widget.onCorrectionResult?.call(widget.text);
     } finally {
       if (mounted) {
         setState(() {

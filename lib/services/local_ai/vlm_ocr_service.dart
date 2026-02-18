@@ -2,6 +2,7 @@
 ///
 /// 使用视觉语言模型进行图像文字识别，特别适合手写文字
 /// 相比传统 OCR 引擎，VLM 能更好地理解上下文和手写内容
+library;
 
 import 'dart:async';
 import 'dart:io';

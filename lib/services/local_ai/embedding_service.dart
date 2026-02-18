@@ -1,6 +1,7 @@
 /// 嵌入服务
 ///
 /// 使用 flutter_gemma Gecko 模型生成文本嵌入向量
+library;
 
 import 'dart:async';
 
@@ -84,16 +85,17 @@ class EmbeddingService extends ChangeNotifier {
     }
 
     try {
-      // TODO: 集成 flutter_gemma 加载 Gecko 模型
-      logInfo('加载嵌入模型（占位实现）', source: 'EmbeddingService');
+      // 尚未集成 flutter_gemma Gecko 模型
+      // 当前为占位实现，模型下载后可标记为“已下载”但语义搜索功能还不可用
+      logInfo('加载嵌入模型（占位实现，语义搜索功能待完善）', source: 'EmbeddingService');
 
       // 模拟加载过程
-      await Future.delayed(const Duration(seconds: 1));
+      await Future.delayed(const Duration(milliseconds: 500));
 
       _modelLoaded = true;
       notifyListeners();
 
-      logInfo('嵌入模型加载完成', source: 'EmbeddingService');
+      logInfo('嵌入模型占位加载完成（功能未完整实现）', source: 'EmbeddingService');
     } catch (e) {
       logError('加载嵌入模型失败: $e', source: 'EmbeddingService');
       rethrow;
@@ -105,7 +107,7 @@ class EmbeddingService extends ChangeNotifier {
     if (!_modelLoaded) return;
 
     try {
-      // TODO: 卸载 Gecko 模型释放内存
+      // 占位：卸载 Gecko 模型释放内存
       _modelLoaded = false;
       notifyListeners();
 
@@ -126,7 +128,8 @@ class EmbeddingService extends ChangeNotifier {
     }
 
     try {
-      // TODO: 集成 flutter_gemma 生成嵌入向量
+      // 尚未集成 flutter_gemma 生成嵌入向量
+      // 当前返回占位零向量，语义搜索功能不可用
       logDebug('生成嵌入向量（占位实现）: ${text.substring(0, text.length.clamp(0, 50))}...', source: 'EmbeddingService');
 
       // 模拟生成嵌入

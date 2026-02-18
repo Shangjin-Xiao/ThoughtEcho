@@ -1,6 +1,7 @@
 /// OCR 识别结果模型
 ///
 /// 用于存储和处理图像文字识别的结果
+library;
 
 import 'dart:ui';
 

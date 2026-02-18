@@ -3204,5 +3204,67 @@
   "containsQuoteFormat": "Contains quote format",
   "containsInsightKeywords": "Contains insight-related keywords",
   "pleaseSwitchToAsrModel": "Please download speech recognition model first",
-  "pleaseSwitchToOcrModel": "Please download OCR model first"
+  "pleaseSwitchToOcrModel": "Please download OCR model first",
+
+  "ocrPhotoFailed": "Photo failed: {error}",
+  "@ocrPhotoFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ocrImagePickFailed": "Image selection failed: {error}",
+  "@ocrImagePickFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ocrRecognitionFailed": "Recognition failed: {error}",
+  "@ocrRecognitionFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ocrClearSelection": "Clear",
+  "ocrSelectAll": "Select All",
+  "ocrTapToSelectHint": "Tap to select text regions · {selected}/{total} selected",
+  "@ocrTapToSelectHint": {
+    "placeholders": {
+      "selected": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "ocrConfirmSelection": "Confirm ({count})",
+  "@ocrConfirmSelection": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "filePathNotAvailable": "File path not available",
+  "modelDownloadedCount": "{count} models downloaded",
+  "@modelDownloadedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "featureNotEnabled": "This feature is not enabled, please turn it on in settings",
+  "modelRecommended": "Recommended",
+  "modelLightweight": "Lightweight",
+  "modelHighAccuracy": "High Accuracy",
+  "embeddingServicePlaceholder": "Embedding service not fully implemented yet",
+  "noChangesNeeded": "No changes needed",
+  "aiCorrectionFailed": "AI correction failed"
 }

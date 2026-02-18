@@ -1,6 +1,7 @@
 /// 本地 AI 服务
 ///
 /// 整合所有设备端 AI 功能的入口服务
+library;
 
 import 'dart:async';
 
@@ -15,7 +16,6 @@ import '../../models/text_processing_result.dart';
 import '../../utils/app_logger.dart';
 import 'model_manager.dart';
 import 'speech_recognition_service.dart';
-import 'mlkit_ocr_service.dart';
 import 'hybrid_ocr_service.dart';
 import 'embedding_service.dart';
 import 'vector_store.dart';
@@ -257,7 +257,7 @@ class LocalAIService extends ChangeNotifier {
   /// 开始录音
   Future<void> startRecording() async {
     if (!isFeatureEnabled(LocalAIFeature.speechToText)) {
-      throw Exception('语音转文字功能未启用');
+      throw Exception('feature_not_enabled:speechToText');
     }
     await _speechService.startRecording();
   }
@@ -270,7 +270,7 @@ class LocalAIService extends ChangeNotifier {
   /// 从音频文件转写
   Future<SpeechRecognitionResult> transcribeFile(String audioPath) async {
     if (!isFeatureEnabled(LocalAIFeature.speechToText)) {
-      throw Exception('语音转文字功能未启用');
+      throw Exception('feature_not_enabled:speechToText');
     }
     return await _speechService.transcribeFile(audioPath);
   }
@@ -283,7 +283,7 @@ class LocalAIService extends ChangeNotifier {
   /// 如果需要强制使用特定引擎，请使用 [recognizeTextWithEngine]
   Future<OCRResult> recognizeText(String imagePath) async {
     if (!isFeatureEnabled(LocalAIFeature.ocr)) {
-      throw Exception('OCR 功能未启用');
+      throw Exception('feature_not_enabled:ocr');
     }
     // 使用混合 OCR 服务，自动选择最佳引擎
     return await _hybridOCRService.recognizeFromFile(imagePath);
@@ -297,7 +297,7 @@ class LocalAIService extends ChangeNotifier {
     OCREngineType engineType = OCREngineType.auto,
   }) async {
     if (!isFeatureEnabled(LocalAIFeature.ocr)) {
-      throw Exception('OCR 功能未启用');
+      throw Exception('feature_not_enabled:ocr');
     }
     return await _hybridOCRService.recognizeFromFile(
       imagePath,
@@ -328,7 +328,7 @@ class LocalAIService extends ChangeNotifier {
   /// AI 文本纠错
   Future<TextCorrectionResult> correctText(String text) async {
     if (!isFeatureEnabled(LocalAIFeature.aiCorrection)) {
-      throw Exception('AI 纠错功能未启用');
+      throw Exception('feature_not_enabled:aiCorrection');
     }
     return await _textService.correctText(text);
   }
@@ -336,7 +336,7 @@ class LocalAIService extends ChangeNotifier {
   /// 识别来源
   Future<SourceRecognitionResult> recognizeSource(String text) async {
     if (!isFeatureEnabled(LocalAIFeature.sourceRecognition)) {
-      throw Exception('来源识别功能未启用');
+      throw Exception('feature_not_enabled:sourceRecognition');
     }
     return await _textService.recognizeSource(text);
   }
@@ -344,7 +344,7 @@ class LocalAIService extends ChangeNotifier {
   /// 智能标签推荐
   Future<TagSuggestionResult> suggestTags(String content) async {
     if (!isFeatureEnabled(LocalAIFeature.smartTags)) {
-      throw Exception('智能标签功能未启用');
+      throw Exception('feature_not_enabled:smartTags');
     }
     return await _textService.suggestTags(content);
   }
@@ -352,7 +352,7 @@ class LocalAIService extends ChangeNotifier {
   /// 笔记分类
   Future<ClassificationResult> classifyNote(String content) async {
     if (!isFeatureEnabled(LocalAIFeature.noteClassification)) {
-      throw Exception('笔记分类功能未启用');
+      throw Exception('feature_not_enabled:noteClassification');
     }
     return await _textService.classifyNote(content);
   }
@@ -360,7 +360,7 @@ class LocalAIService extends ChangeNotifier {
   /// 情绪检测
   Future<EmotionResult> detectEmotion(String content) async {
     if (!isFeatureEnabled(LocalAIFeature.emotionDetection)) {
-      throw Exception('情绪检测功能未启用');
+      throw Exception('feature_not_enabled:emotionDetection');
     }
     return await _textService.detectEmotion(content);
   }
@@ -370,7 +370,7 @@ class LocalAIService extends ChangeNotifier {
   /// 语义搜索
   Future<List<SearchResult>> search(String query, {int topK = 10}) async {
     if (!isFeatureEnabled(LocalAIFeature.aiSearch)) {
-      throw Exception('AI 搜索功能未启用');
+      throw Exception('feature_not_enabled:aiSearch');
     }
     return await _vectorStore.search(query, topK: topK);
   }
@@ -379,7 +379,7 @@ class LocalAIService extends ChangeNotifier {
   Future<List<RelatedNote>> getRelatedNotes(String noteId,
       {int topK = 5}) async {
     if (!isFeatureEnabled(LocalAIFeature.relatedNotes)) {
-      throw Exception('相关笔记功能未启用');
+      throw Exception('feature_not_enabled:relatedNotes');
     }
     return await _vectorStore.getRelatedNotes(noteId, topK: topK);
   }

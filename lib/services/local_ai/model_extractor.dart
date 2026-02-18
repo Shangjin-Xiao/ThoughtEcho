@@ -1,6 +1,7 @@
 /// 模型解压工具
 ///
 /// 负责解压 tar.bz2 等压缩格式的模型文件
+library;
 
 import 'dart:io';
 import 'dart:isolate';

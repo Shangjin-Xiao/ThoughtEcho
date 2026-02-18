@@ -1,6 +1,7 @@
 /// 文本处理服务
 ///
 /// 使用 Gemma 2B LLM 进行文本纠错、来源识别、标签推荐等
+library;
 
 import 'dart:async';
 
