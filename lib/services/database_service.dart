@@ -1124,9 +1124,7 @@ class DatabaseService extends ChangeNotifier {
 
     // 优化：一次性获取所有分类ID，避免在循环中进行N+1查询
     final allCategories = await txn.query('categories', columns: ['id']);
-    final allCategoryIds = allCategories
-        .map((c) => c['id'] as String)
-        .toSet();
+    final allCategoryIds = allCategories.map((c) => c['id'] as String).toSet();
 
     int migratedCount = 0;
     int errorCount = 0;
