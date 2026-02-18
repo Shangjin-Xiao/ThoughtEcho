@@ -239,7 +239,6 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     final l10n = AppLocalizations.of(context);
     final quote = widget.quote;
     final isExpanded = widget.isExpanded;
-    // final colorScheme = Theme.of(context).colorScheme; // REMOVED unused variable
 
     // Determine the background color of the card
     // If the quote has a color, use it, otherwise use theme color
