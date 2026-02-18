@@ -59,10 +59,12 @@ void main() {
 
       test('handles null timestamps as epoch', () {
         // null vs valid -> valid is newer (remote newer -> positive)
-        expect(LWWUtils.compareTimestamps(null, '2023-01-01T10:00:00.000Z'), greaterThan(0));
+        expect(LWWUtils.compareTimestamps(null, '2023-01-01T10:00:00.000Z'),
+            greaterThan(0));
 
         // valid vs null -> valid is newer (local newer -> negative)
-        expect(LWWUtils.compareTimestamps('2023-01-01T10:00:00.000Z', null), lessThan(0));
+        expect(LWWUtils.compareTimestamps('2023-01-01T10:00:00.000Z', null),
+            lessThan(0));
 
         // null vs null -> equal
         expect(LWWUtils.compareTimestamps(null, null), 0);
@@ -71,43 +73,55 @@ void main() {
 
     group('shouldUseRemote', () {
       test('returns true when remote is newer', () {
-        expect(LWWUtils.shouldUseRemote(
-          '2023-01-01T10:00:00.000Z',
-          '2023-01-01T11:00:00.000Z',
-        ), isTrue);
+        expect(
+            LWWUtils.shouldUseRemote(
+              '2023-01-01T10:00:00.000Z',
+              '2023-01-01T11:00:00.000Z',
+            ),
+            isTrue);
       });
 
       test('returns false when local is newer or equal', () {
-        expect(LWWUtils.shouldUseRemote(
-          '2023-01-01T11:00:00.000Z',
-          '2023-01-01T10:00:00.000Z',
-        ), isFalse);
+        expect(
+            LWWUtils.shouldUseRemote(
+              '2023-01-01T11:00:00.000Z',
+              '2023-01-01T10:00:00.000Z',
+            ),
+            isFalse);
 
-        expect(LWWUtils.shouldUseRemote(
-          '2023-01-01T10:00:00.000Z',
-          '2023-01-01T10:00:00.000Z',
-        ), isFalse);
+        expect(
+            LWWUtils.shouldUseRemote(
+              '2023-01-01T10:00:00.000Z',
+              '2023-01-01T10:00:00.000Z',
+            ),
+            isFalse);
       });
     });
 
     group('shouldKeepLocal', () {
       test('returns true when local is newer or equal', () {
-        expect(LWWUtils.shouldKeepLocal(
-          '2023-01-01T11:00:00.000Z',
-          '2023-01-01T10:00:00.000Z',
-        ), isTrue);
+        expect(
+            LWWUtils.shouldKeepLocal(
+              '2023-01-01T11:00:00.000Z',
+              '2023-01-01T10:00:00.000Z',
+            ),
+            isTrue);
 
-        expect(LWWUtils.shouldKeepLocal(
-          '2023-01-01T10:00:00.000Z',
-          '2023-01-01T10:00:00.000Z',
-        ), isTrue);
+        expect(
+            LWWUtils.shouldKeepLocal(
+              '2023-01-01T10:00:00.000Z',
+              '2023-01-01T10:00:00.000Z',
+            ),
+            isTrue);
       });
 
       test('returns false when remote is newer', () {
-        expect(LWWUtils.shouldKeepLocal(
-          '2023-01-01T10:00:00.000Z',
-          '2023-01-01T11:00:00.000Z',
-        ), isFalse);
+        expect(
+            LWWUtils.shouldKeepLocal(
+              '2023-01-01T10:00:00.000Z',
+              '2023-01-01T11:00:00.000Z',
+            ),
+            isFalse);
       });
     });
 
@@ -129,7 +143,8 @@ void main() {
       });
 
       test('returns false for other timestamps', () {
-        expect(LWWUtils.isDefaultTimestamp('2023-01-01T10:00:00.000Z'), isFalse);
+        expect(
+            LWWUtils.isDefaultTimestamp('2023-01-01T10:00:00.000Z'), isFalse);
       });
     });
 
