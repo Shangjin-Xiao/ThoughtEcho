@@ -151,7 +151,6 @@ Future<void> main() async {
         }
       }
 
-
       // 初始化日志系统
       AppLogger.initialize();
 
