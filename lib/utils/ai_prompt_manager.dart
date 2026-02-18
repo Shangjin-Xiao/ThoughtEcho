@@ -1,3 +1,4 @@
+import 'package:meta/meta.dart';
 import 'dart:math' as math;
 import '../models/weather_data.dart';
 
@@ -555,8 +556,9 @@ $question''';
     String? temperature,
     String? historicalInsights, // 新增：历史洞察参考
     String? languageCode, // 新增：语言代码
+    @visibleForTesting DateTime? testNow,
   }) {
-    final now = DateTime.now();
+    final now = testNow ?? DateTime.now();
     final hour = now.hour;
     final minute = now.minute;
     final month = now.month;
@@ -764,6 +766,7 @@ $contentSection
     required int noteCount,
     required int totalWordCount,
     String? languageCode, // 新增：语言代码
+    @visibleForTesting int? seed,
   }) {
     // 根据语言选择不同的模板
     final isEnglish = languageCode != null && languageCode.startsWith('en');
@@ -785,7 +788,7 @@ $contentSection
     }
 
     // 3种风格模板（除了简约数据型和极简禅意型），随机挑选
-    final rng = math.Random();
+    final rng = seed != null ? math.Random(seed) : math.Random();
     final styleIndex = rng.nextInt(3);
 
     if (isEnglish) {
@@ -800,6 +803,7 @@ $contentSection
             activeDays,
             noteCount,
             totalWordCount,
+            rng: rng,
           );
         case 1:
           return _generatePoeticInsightEn(
@@ -810,6 +814,7 @@ $contentSection
             activeDays,
             noteCount,
             totalWordCount,
+            rng: rng,
           );
         case 2:
           return _generateGrowthMentorInsightEn(
@@ -820,6 +825,7 @@ $contentSection
             activeDays,
             noteCount,
             totalWordCount,
+            rng: rng,
           );
         default:
           return _generateWarmCompanionInsightEn(
@@ -830,6 +836,7 @@ $contentSection
             activeDays,
             noteCount,
             totalWordCount,
+            rng: rng,
           );
       }
     } else {
@@ -844,6 +851,7 @@ $contentSection
             activeDays,
             noteCount,
             totalWordCount,
+            rng: rng,
           );
         case 1: // 诗意文艺型
           return _generatePoeticInsight(
@@ -854,6 +862,7 @@ $contentSection
             activeDays,
             noteCount,
             totalWordCount,
+            rng: rng,
           );
         case 2: // 成长导师型
           return _generateGrowthMentorInsight(
@@ -864,6 +873,7 @@ $contentSection
             activeDays,
             noteCount,
             totalWordCount,
+            rng: rng,
           );
         default:
           return _generateWarmCompanionInsight(
@@ -874,6 +884,7 @@ $contentSection
             activeDays,
             noteCount,
             totalWordCount,
+            rng: rng,
           );
       }
     }
@@ -887,15 +898,16 @@ $contentSection
     String tag,
     int activeDays,
     int noteCount,
-    int totalWordCount,
-  ) {
+    int totalWordCount, {
+    math.Random? rng,
+  }) {
     final templates = [
       '$periodLabel你坚持记录了$activeDays天，写下$noteCount篇心情随笔。$time是你偏爱的书写时光，$weather相伴左右，$tag是你这段时间的关注焦点。',
       '过去$periodLabel，你用$activeDays天记录生活点滴，留下$totalWordCount字的温暖印记。$time最能激发你的表达欲，$tag贯穿其中。',
       '这$periodLabel你用心记录了$activeDays天，$noteCount篇文字承载着日常感悟。$time书写、$weather相伴，$tag是你的思绪主线。',
     ];
-    final rng = math.Random();
-    return templates[rng.nextInt(templates.length)];
+    final random = rng ?? math.Random();
+    return templates[random.nextInt(templates.length)];
   }
 
   /// 诗意文艺型洞察
@@ -906,15 +918,16 @@ $contentSection
     String tag,
     int activeDays,
     int noteCount,
-    int totalWordCount,
-  ) {
+    int totalWordCount, {
+    math.Random? rng,
+  }) {
     final templates = [
       '时光缓缓流淌，你用$activeDays个日夜编织了$noteCount段故事。$time是灵感涌动的时刻，$weather为背景，$tag是这段旅程的注脚。',
       '$periodLabel悄然而过，你在$activeDays个清晨或黄昏落笔，$totalWordCount字凝结成记忆的琥珀。$time懂你，$tag是心底的回响。',
       '笔尖轻触纸面，$activeDays天里你写下$noteCount篇心语。$time静谧，$weather如常，$tag在字里行间若隐若现。',
     ];
-    final rng = math.Random();
-    return templates[rng.nextInt(templates.length)];
+    final random = rng ?? math.Random();
+    return templates[random.nextInt(templates.length)];
   }
 
   /// 成长导师型洞察
@@ -925,15 +938,16 @@ $contentSection
     String tag,
     int activeDays,
     int noteCount,
-    int totalWordCount,
-  ) {
+    int totalWordCount, {
+    math.Random? rng,
+  }) {
     final templates = [
       '$periodLabel你保持了$activeDays天的记录习惯，积累$totalWordCount字的思考沉淀。$time适合深度思考，$tag值得持续探索。',
       '这$periodLabel你坚持了$activeDays天，$noteCount篇记录见证着你的思维轨迹。$time是高效时段，$tag或许是下一个突破口。',
       '$activeDays天的坚持展现了你的自律，$noteCount篇笔记记录着成长。$time是你的黄金时段，$tag体现了近期关注点。',
     ];
-    final rng = math.Random();
-    return templates[rng.nextInt(templates.length)];
+    final random = rng ?? math.Random();
+    return templates[random.nextInt(templates.length)];
   }
 
   // ========================= 英文本地洞察模板 =========================
@@ -946,15 +960,16 @@ $contentSection
     String tag,
     int activeDays,
     int noteCount,
-    int totalWordCount,
-  ) {
+    int totalWordCount, {
+    math.Random? rng,
+  }) {
     final templates = [
       'This $periodLabel, you journaled for $activeDays days, creating $noteCount entries. $time was your preferred writing time, with $weather in the background, and $tag emerged as your main focus.',
       'Over the past $periodLabel, you recorded $totalWordCount words across $activeDays days. $time sparked your creativity, and $tag wove through your reflections.',
       'You stayed consistent for $activeDays days this $periodLabel, writing $noteCount heartfelt entries. $time suited you best, and $tag captured your thoughts.',
     ];
-    final rng = math.Random();
-    return templates[rng.nextInt(templates.length)];
+    final random = rng ?? math.Random();
+    return templates[random.nextInt(templates.length)];
   }
 
   /// Poetic style insight (English)
@@ -965,15 +980,16 @@ $contentSection
     String tag,
     int activeDays,
     int noteCount,
-    int totalWordCount,
-  ) {
+    int totalWordCount, {
+    math.Random? rng,
+  }) {
     final templates = [
       'Time drifted gently as you wove $noteCount stories across $activeDays days. $time held your inspiration, $weather set the scene, and $tag became your quiet refrain.',
       'This $periodLabel slipped by softly, and you penned $totalWordCount words in its wake. $time understood you best, with $tag echoing through the pages.',
       'Ink met paper on $activeDays occasions, yielding $noteCount reflections. $time was serene, $weather familiar, and $tag lingered between the lines.',
     ];
-    final rng = math.Random();
-    return templates[rng.nextInt(templates.length)];
+    final random = rng ?? math.Random();
+    return templates[random.nextInt(templates.length)];
   }
 
   /// Growth mentor style insight (English)
@@ -984,14 +1000,15 @@ $contentSection
     String tag,
     int activeDays,
     int noteCount,
-    int totalWordCount,
-  ) {
+    int totalWordCount, {
+    math.Random? rng,
+  }) {
     final templates = [
       'This $periodLabel, you maintained a $activeDays-day journaling streak, accumulating $totalWordCount words of reflection. $time suits deep thinking, and $tag is worth exploring further.',
       'You stayed on track for $activeDays days, leaving $noteCount entries that map your thought process. $time was productive, and $tag may be your next breakthrough.',
       '$activeDays days of consistency show your discipline, with $noteCount notes tracking your growth. $time was your prime window, and $tag highlights your current focus.',
     ];
-    final rng = math.Random();
-    return templates[rng.nextInt(templates.length)];
+    final random = rng ?? math.Random();
+    return templates[random.nextInt(templates.length)];
   }
 }
