@@ -616,9 +616,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
     // 对错误级别的日志进行更积极的持久化，但仅当持久化启用时
     if (_isPersistenceEnabled && entry.level == UnifiedLogLevel.error) {
-      // 忽略返回的 Future，避免阻塞 UI 线程
-      // ignore: discarded_futures
-      flushLogs();
+      unawaited(flushLogs());
     }
   }
 
@@ -818,8 +816,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
       );
       _bufferDuringInit.add(entry);
       // 触发初始化（若尚未开始）
-      // ignore: discarded_futures
-      _initialize();
+      unawaited(_initialize());
       return;
     }
 
@@ -883,9 +880,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     } catch (_) {}
     _batchSaveTimer?.cancel();
     // 虽然 dispose 不能等待，但仍尽量触发一次持久化
-    // 忽略等待，防止阻塞销毁流程
-    // ignore: discarded_futures
-    _savePendingLogsToDatabase();
+    unawaited(_savePendingLogsToDatabase());
     super.dispose();
   }
 
@@ -898,8 +893,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
       case AppLifecycleState.detached:
       case AppLifecycleState.hidden:
         // 主动持久化，避免在 Android 等平台上因进程被杀导致日志丢失
-        // ignore: discarded_futures
-        _savePendingLogsToDatabase();
+        unawaited(_savePendingLogsToDatabase());
         break;
       case AppLifecycleState.resumed:
         // 无需处理
@@ -913,70 +907,65 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) =>
-      log(
-        UnifiedLogLevel.verbose,
-        message,
-        source: source,
-        error: error,
-        stackTrace: stackTrace,
-      );
+  }) => log(
+    UnifiedLogLevel.verbose,
+    message,
+    source: source,
+    error: error,
+    stackTrace: stackTrace,
+  );
 
   void debug(
     String message, {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) =>
-      log(
-        UnifiedLogLevel.debug,
-        message,
-        source: source,
-        error: error,
-        stackTrace: stackTrace,
-      );
+  }) => log(
+    UnifiedLogLevel.debug,
+    message,
+    source: source,
+    error: error,
+    stackTrace: stackTrace,
+  );
 
   void info(
     String message, {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) =>
-      log(
-        UnifiedLogLevel.info,
-        message,
-        source: source,
-        error: error,
-        stackTrace: stackTrace,
-      );
+  }) => log(
+    UnifiedLogLevel.info,
+    message,
+    source: source,
+    error: error,
+    stackTrace: stackTrace,
+  );
 
   void warning(
     String message, {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) =>
-      log(
-        UnifiedLogLevel.warning,
-        message,
-        source: source,
-        error: error,
-        stackTrace: stackTrace,
-      );
+  }) => log(
+    UnifiedLogLevel.warning,
+    message,
+    source: source,
+    error: error,
+    stackTrace: stackTrace,
+  );
 
   void error(
     String message, {
     String? source,
     Object? error,
     StackTrace? stackTrace,
-  }) =>
-      log(
-        UnifiedLogLevel.error,
-        message,
-        source: source,
-        error: error,
-        stackTrace: stackTrace,
-      );
+  }) => log(
+    UnifiedLogLevel.error,
+    message,
+    source: source,
+    error: error,
+    stackTrace: stackTrace,
+  );
 
   /// 获取日志统计摘要
   Map<String, dynamic> getLogSummary() {
