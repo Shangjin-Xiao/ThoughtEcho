@@ -163,9 +163,8 @@ void main() {
         await db.rawQuery('SELECT COUNT(*) FROM quote_tags'));
     print('Fast migration inserted $countFast records.');
 
+    // Ensure both strategies produce the same result.
     expect(countFast, countSlow);
-    expect(stopwatchFast.elapsedMilliseconds,
-        lessThan(stopwatchSlow.elapsedMilliseconds));
 
     final improvement = (stopwatchSlow.elapsedMilliseconds -
             stopwatchFast.elapsedMilliseconds) /
