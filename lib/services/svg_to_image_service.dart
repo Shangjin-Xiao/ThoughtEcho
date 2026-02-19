@@ -24,12 +24,13 @@ class SvgToImageService {
     int width = 400,
     int height = 600,
     ui.ImageByteFormat format = ui.ImageByteFormat.png,
-    Color backgroundColor = Colors.white,
+    Color backgroundColor = Colors.transparent,
     bool maintainAspectRatio = true,
     bool useCache = true,
     double scaleFactor = 1.0,
     ExportRenderMode renderMode = ExportRenderMode.contain,
     BuildContext? context,
+    double borderRadius = 0,
   }) async {
     try {
       // 验证输入参数
@@ -71,19 +72,11 @@ class SvgToImageService {
         _cacheService.smartCleanup();
       }
 
-      // 标准化SVG内容，确保正确的viewBox和尺寸属性
-      final normalizedSvg = _normalizeSvgForRendering(
-        svgContent,
-        width,
-        height,
-      );
-
-      // 预览-导出一致性：有 BuildContext 时优先用原始SVG走真实渲染；
-      // 备用/无 context 渠道使用标准化后版本，避免百分比尺寸导致裁剪。
-      final primarySvg = context != null ? svgContent : normalizedSvg;
-
+      // 关键修复：始终使用原始 SVG，不做任何标准化处理
+      // 这样保证保存时的渲染与预览完全一致
+      // flutter_svg 已能正确处理各种 SVG 格式（包括 rgb()/rgba()/style 等）
       final imageBytes = await _renderSvgToBytes(
-        primarySvg,
+        svgContent,
         width,
         height,
         format,
@@ -92,7 +85,7 @@ class SvgToImageService {
         scaleFactor,
         renderMode,
         context,
-        normalizedForFallback: normalizedSvg,
+        borderRadius,
       );
 
       // 缓存结果
@@ -114,7 +107,7 @@ class SvgToImageService {
     int width = 400,
     int height = 600,
     ui.ImageByteFormat format = ui.ImageByteFormat.png,
-    Color backgroundColor = Colors.white,
+    Color backgroundColor = Colors.transparent,
     bool maintainAspectRatio = true,
     Function(int current, int total)? onProgress,
   }) async {
@@ -181,46 +174,10 @@ class SvgToImageService {
   }
 
   /// 标准化SVG内容以确保正确渲染
-  static String _normalizeSvgForRendering(
-    String svgContent,
-    int width,
-    int height,
-  ) {
-    String normalized = svgContent.trim();
-
-    // 确保SVG有xmlns命名空间
-    if (!normalized.contains('xmlns=')) {
-      normalized = normalized.replaceFirst(
-        '<svg',
-        '<svg xmlns="http://www.w3.org/2000/svg"',
-      );
-    }
-
-    final inferredSize = _inferSvgIntrinsicSize(normalized);
-
-    AppLogger.d(
-      'SVG内在尺寸: ${inferredSize.$1}x${inferredSize.$2}',
-      source: 'SvgToImageService',
-    );
-
-    // 移除现有的width、height、viewBox属性（避免重复或无效值导致错位）
-    normalized = normalized
-        .replaceAll(RegExp(r'\s+width="[^"]*"'), '')
-        .replaceAll(RegExp(r'\s+height="[^"]*"'), '')
-        .replaceAll(RegExp(r'\s+viewBox="[^"]*"'), '')
-        .replaceAll(RegExp(r'\s+preserveAspectRatio="[^"]*"'), '');
-
-    // 统一设置标准属性：使用推断的viewBox，并显式设置width/height防止百分比导致裁剪
-    normalized = normalized.replaceFirst(
-      '<svg',
-      '<svg viewBox="0 0 ${inferredSize.$1} ${inferredSize.$2}" width="${inferredSize.$1}" height="${inferredSize.$2}" preserveAspectRatio="xMidYMid meet"',
-    );
-
-    return normalized;
-  }
 
   /// 推断SVG的内在尺寸，优先使用合法viewBox，其次使用数值width/height，
   /// 若为百分比或无效则从首个大矩形推断，最后回退到400x600。
+  // ignore: unused_element
   static (String, String) _inferSvgIntrinsicSize(String svgContent) {
     // 1) 优先使用合法的viewBox
     final viewBoxMatch = RegExp(r'viewBox="([^"]+)"').firstMatch(svgContent);
@@ -241,9 +198,9 @@ class SvgToImageService {
 
     // 3) 如果根节点给的是百分比或0，尝试从第一个rect推断背景尺寸
     if (w == null || h == null) {
-      final rectMatch =
-          RegExp(r'<rect[^>]*width="([^"]+)"[^>]*height="([^"]+)"')
-              .firstMatch(svgContent);
+      final rectMatch = RegExp(
+        r'<rect[^>]*width="([^"]+)"[^>]*height="([^"]+)"',
+      ).firstMatch(svgContent);
       if (rectMatch != null) {
         w = _parseNumericDimension(rectMatch.group(1)) ?? w;
         h = _parseNumericDimension(rectMatch.group(2)) ?? h;
@@ -258,6 +215,7 @@ class SvgToImageService {
   }
 
   /// 仅接受数值维度，忽略百分比/空/非数字，避免 100% 导致视窗被错置。
+  // ignore: unused_element
   static double? _parseNumericDimension(String? raw) {
     if (raw == null || raw.trim().isEmpty) return null;
     if (raw.contains('%')) return null;
@@ -278,9 +236,8 @@ class SvgToImageService {
     bool maintainAspectRatio,
     double scaleFactor,
     ExportRenderMode renderMode,
-    BuildContext? buildContext, {
-    String? normalizedForFallback,
-  }
+    BuildContext? buildContext,
+    double borderRadius,
   ) async {
     // 策略：优先使用真实Flutter渲染，确保与预览一致
     if (buildContext != null) {
@@ -298,6 +255,7 @@ class SvgToImageService {
           background: backgroundColor,
           mode: renderMode,
           format: format,
+          borderRadius: borderRadius,
         );
         AppLogger.i(
           'Flutter真实渲染成功，图片大小: ${result.length} bytes',
@@ -322,13 +280,14 @@ class SvgToImageService {
     try {
       AppLogger.d('使用flutter_svg备用渲染', source: 'SvgToImageService');
       return await _renderWithFlutterSvg(
-        normalizedForFallback ?? svgContent,
+        svgContent,
         width,
         height,
         format,
         backgroundColor,
         scaleFactor,
         renderMode,
+        borderRadius,
       );
     } catch (e) {
       AppLogger.w(
@@ -338,7 +297,7 @@ class SvgToImageService {
       );
       // 最终回退方案
       return await _renderFallbackImage(
-        normalizedForFallback ?? svgContent,
+        svgContent,
         width,
         height,
         format,
@@ -356,186 +315,108 @@ class SvgToImageService {
     Color backgroundColor,
     double scaleFactor,
     ExportRenderMode renderMode,
+    double borderRadius,
   ) async {
     AppLogger.d(
       '使用flutter_svg Drawable 渲染（无BuildContext）: ${width}x$height, 缩放: $scaleFactor, 模式: $renderMode',
       source: 'SvgToImageService',
     );
 
-    // flutter_svg 备用渲染：在没有 BuildContext 时，构建一个“最小渲染树”离屏渲染 SvgPicture。
-    // 这样可以复用 flutter_svg 的解析与绘制能力（支持 rgb()/rgba()/style/CSS 等），避免手写解析导致的颜色缺失。
-    //
-    // 注意：为了快速定位“导出颜色问题到底来自 flutter_svg 还是手写兜底”，这里【默认禁用】
-    // _renderWithManualSvg 的回退。flutter_svg 离屏渲染若失败，将抛出异常并由上层生成占位/错误图片。
-    try {
-      final safeScale = scaleFactor.isFinite && scaleFactor > 0
-          ? scaleFactor
-          : 1.0;
+    final safeScale =
+        scaleFactor.isFinite && scaleFactor > 0 ? scaleFactor : 1.0;
 
-      final outputSize = Size(width.toDouble(), height.toDouble());
-      final fit = switch (renderMode) {
-        ExportRenderMode.contain => BoxFit.contain,
-        ExportRenderMode.cover => BoxFit.cover,
-        ExportRenderMode.stretch => BoxFit.fill,
-      };
+    final outputSize = Size(width.toDouble(), height.toDouble());
+    final fit = switch (renderMode) {
+      ExportRenderMode.contain => BoxFit.contain,
+      ExportRenderMode.cover => BoxFit.cover,
+      ExportRenderMode.stretch => BoxFit.fill,
+    };
 
-      // 确保绑定初始化（在单元测试/后台调用中尤为重要）。
-      final binding = WidgetsFlutterBinding.ensureInitialized();
-      final views = binding.platformDispatcher.views;
-      if (views.isEmpty) {
-        throw StateError('无可用 FlutterView，无法进行离屏渲染');
-      }
-      final flutterView = views.first;
-
-      final repaintBoundary = RenderRepaintBoundary();
-
-      // 通过 RenderView + PipelineOwner 驱动一次 layout/paint。
-      final renderView = RenderView(
-        view: flutterView,
-        configuration: ViewConfiguration(
-          logicalConstraints: BoxConstraints.tight(outputSize),
-          physicalConstraints: BoxConstraints.tight(outputSize),
-          devicePixelRatio: 1.0,
-        ),
-        child: RenderPositionedBox(
-          alignment: Alignment.center,
-          child: repaintBoundary,
-        ),
-      );
-
-      final pipelineOwner = PipelineOwner();
-      pipelineOwner.rootNode = renderView;
-      renderView.prepareInitialFrame();
-
-      final focusManager = FocusManager();
-      final buildOwner = BuildOwner(focusManager: focusManager);
-
-      final rootWidget = Directionality(
-        textDirection: ui.TextDirection.ltr,
-        child: SizedBox(
-          width: outputSize.width,
-          height: outputSize.height,
-          child: ColoredBox(
-            color: backgroundColor,
-            child: flutter_svg.SvgPicture.string(
-              svgContent,
-              width: outputSize.width,
-              height: outputSize.height,
-              fit: fit,
-              allowDrawingOutsideViewBox: false,
-            ),
-          ),
-        ),
-      );
-
-      final element = RenderObjectToWidgetAdapter<RenderBox>(
-        container: repaintBoundary,
-        child: rootWidget,
-      ).attachToRenderTree(buildOwner);
-
-      // build -> layout -> paint
-      buildOwner.buildScope(element);
-      buildOwner.finalizeTree();
-      pipelineOwner.flushLayout();
-      pipelineOwner.flushCompositingBits();
-      pipelineOwner.flushPaint();
-
-      // 通过 pixelRatio 控制最终清晰度
-      final image = await repaintBoundary.toImage(pixelRatio: safeScale);
-      final byteData = await image.toByteData(format: format);
-      image.dispose();
-
-      focusManager.dispose();
-
-      if (byteData == null) {
-        throw StateError('无法生成图片字节数据');
-      }
-      return byteData.buffer.asUint8List();
-    } catch (e, st) {
-      // 为了定位问题来源：不再回退手写解析，直接抛出，让上层走最终占位/错误图。
-      AppLogger.w(
-        'flutter_svg 离屏渲染失败（已禁用手写兜底），将交由上层处理: $e',
-        error: e,
-        stackTrace: st,
-        source: 'SvgToImageService',
-      );
-      Error.throwWithStackTrace(e, st);
+    // 确保绑定初始化（在单元测试/后台调用中尤为重要）。
+    final binding = WidgetsFlutterBinding.ensureInitialized();
+    final views = binding.platformDispatcher.views;
+    if (views.isEmpty) {
+      throw StateError('无可用 FlutterView，无法进行离屏渲染');
     }
-  }
+    final flutterView = views.first;
 
-  /// 极端兜底：手写解析（不完整，但避免彻底失败）
-  ///
-  /// 当前默认不再被调用：我们优先用 flutter_svg 离屏渲染来保证与预览一致。
-  /// 若你需要对比验证，可临时恢复调用点。
-  @Deprecated('仅用于调试/回滚对比：默认不启用手写渲染兜底')
-  // ignore: unused_element
-  static Future<Uint8List> _renderWithManualSvg(
-    String svgContent,
-    int width,
-    int height,
-    ui.ImageByteFormat format,
-    Color backgroundColor,
-    double scaleFactor,
-    ExportRenderMode renderMode,
-  ) async {
-    AppLogger.d('使用手写解析兜底渲染', source: 'SvgToImageService');
+    final repaintBoundary = RenderRepaintBoundary();
 
-    final pictureRecorder = ui.PictureRecorder();
-    final canvas = Canvas(pictureRecorder);
-
-    final scaledWidth = (width * scaleFactor).round().clamp(1, 10000);
-    final scaledHeight = (height * scaleFactor).round().clamp(1, 10000);
-
-    // 应用缩放
-    canvas.scale(scaleFactor);
-
-    // 绘制背景
-    final bgPaint = Paint()..color = backgroundColor;
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, width.toDouble(), height.toDouble()),
-      bgPaint,
+    // 通过 RenderView + PipelineOwner 驱动一次 layout/paint。
+    final renderView = RenderView(
+      view: flutterView,
+      configuration: ViewConfiguration(
+        logicalConstraints: BoxConstraints.tight(outputSize),
+        physicalConstraints: BoxConstraints.tight(outputSize),
+        devicePixelRatio: 1.0,
+      ),
+      child: RenderPositionedBox(
+        alignment: Alignment.center,
+        child: repaintBoundary,
+      ),
     );
 
-    // 解析并绘制基础元素
-    await _drawSvgContentImproved(canvas, svgContent, width, height);
+    final pipelineOwner = PipelineOwner();
+    pipelineOwner.rootNode = renderView;
+    renderView.prepareInitialFrame();
 
-    final picture = pictureRecorder.endRecording();
-    final image = await picture.toImage(scaledWidth, scaledHeight);
-    final byteData = await image.toByteData(format: format);
+    final focusManager = FocusManager();
+    final buildOwner = BuildOwner(focusManager: focusManager);
 
-    try {
-      picture.dispose();
-    } catch (_) {}
-    image.dispose();
+    Widget content = flutter_svg.SvgPicture.string(
+      svgContent,
+      width: outputSize.width,
+      height: outputSize.height,
+      fit: fit,
+      allowDrawingOutsideViewBox: false,
+    );
 
-    if (byteData == null) {
-      throw Exception('无法生成图片字节数据');
+    // 如果指定了圆角，则使用ClipRRect裁剪内容
+    if (borderRadius > 0) {
+      content = ClipRRect(
+        borderRadius: BorderRadius.circular(borderRadius),
+        child: content,
+      );
     }
 
+    final rootWidget = Directionality(
+      textDirection: ui.TextDirection.ltr,
+      child: SizedBox(
+        width: outputSize.width,
+        height: outputSize.height,
+        child: ColoredBox(color: backgroundColor, child: content),
+      ),
+    );
+
+    final element = RenderObjectToWidgetAdapter<RenderBox>(
+      container: repaintBoundary,
+      child: rootWidget,
+    ).attachToRenderTree(buildOwner);
+
+    // build -> layout -> paint
+    buildOwner.buildScope(element);
+    buildOwner.finalizeTree();
+    pipelineOwner.flushLayout();
+    pipelineOwner.flushCompositingBits();
+    pipelineOwner.flushPaint();
+
+    // 通过 pixelRatio 控制最终清晰度
+    final image = await repaintBoundary.toImage(pixelRatio: safeScale);
+    final byteData = await image.toByteData(format: format);
+    image.dispose();
+
+    focusManager.dispose();
+
+    if (byteData == null) {
+      throw StateError('无法生成图片字节数据');
+    }
     return byteData.buffer.asUint8List();
   }
 
   /// 改进的SVG内容绘制
-  static Future<void> _drawSvgContentImproved(
-    Canvas canvas,
-    String svgContent,
-    int width,
-    int height,
-  ) async {
-    // 解析所有渐变定义
-    final gradients = _parseAllGradients(svgContent);
-
-    // 绘制背景矩形（通常是第一个rect元素）
-    _drawBackgroundRect(canvas, svgContent, width, height, gradients);
-
-    // 绘制其他形状
-    _drawAllShapes(canvas, svgContent, width, height, gradients);
-
-    // 绘制文本
-    _drawAllText(canvas, svgContent, width, height);
-  }
 
   /// 解析所有渐变定义
+  // ignore: unused_element
   static Map<String, Gradient> _parseAllGradients(String svgContent) {
     final gradients = <String, Gradient>{};
 
@@ -645,6 +526,7 @@ class SvgToImageService {
   }
 
   /// 解析百分比值
+  // ignore: unused_element
   static double _parsePercentage(String? value) {
     if (value == null) return 0.0;
     final trimmed = value.trim().replaceAll('%', '');
@@ -652,6 +534,7 @@ class SvgToImageService {
   }
 
   /// 解析标签属性，兼容任意顺序及style内联写法
+  // ignore: unused_element
   static Map<String, String> _parseAttributes(String tag) {
     final attrs = <String, String>{};
     final attrRegex = RegExp(r'([a-zA-Z_:][\w:.-]*)\s*=\s*"([^"]*)"');
@@ -662,6 +545,7 @@ class SvgToImageService {
   }
 
   /// 从属性或style中提取填充色
+  // ignore: unused_element
   static String _extractFill(
     Map<String, String> attrs, {
     String defaultColor = '#000000',
@@ -673,6 +557,7 @@ class SvgToImageService {
   }
 
   /// 从属性或style中提取透明度
+  // ignore: unused_element
   static double _extractOpacity(
     Map<String, String> attrs, {
     String attributeKey = 'fill-opacity',
@@ -685,6 +570,7 @@ class SvgToImageService {
   }
 
   /// 从属性或style中提取数值字体大小
+  // ignore: unused_element
   static double _extractFontSize(
     Map<String, String> attrs, {
     double defaultSize = 14.0,
@@ -697,6 +583,7 @@ class SvgToImageService {
   }
 
   /// 从style中解析键值
+  // ignore: unused_element
   static String? _parseStyleValue(String? style, String key) {
     if (style == null) return null;
     final regex = RegExp('$key\\s*:\\s*([^;]+)', caseSensitive: false);
@@ -705,6 +592,7 @@ class SvgToImageService {
   }
 
   /// 将数值字符串转换为double，容忍%或px后缀
+  // ignore: unused_element
   static double _parseDimension(String? value) {
     if (value == null) return 0;
     final cleaned = value.replaceAll(RegExp('[^0-9.-]'), '');
@@ -712,6 +600,7 @@ class SvgToImageService {
   }
 
   /// 绘制背景矩形
+  // ignore: unused_element
   static void _drawBackgroundRect(
     Canvas canvas,
     String svgContent,
@@ -758,6 +647,7 @@ class SvgToImageService {
   }
 
   /// 绘制所有形状
+  // ignore: unused_element
   static void _drawAllShapes(
     Canvas canvas,
     String svgContent,
@@ -847,14 +737,18 @@ class SvgToImageService {
   }
 
   /// 绘制所有文本
+  // ignore: unused_element
   static void _drawAllText(
     Canvas canvas,
     String svgContent,
     int width,
     int height,
   ) {
-    final textRegex =
-        RegExp(r'<text[^>]*>.*?<\/text>', dotAll: true, caseSensitive: false);
+    final textRegex = RegExp(
+      r'<text[^>]*>.*?<\/text>',
+      dotAll: true,
+      caseSensitive: false,
+    );
 
     for (final match in textRegex.allMatches(svgContent)) {
       try {
@@ -869,8 +763,10 @@ class SvgToImageService {
         final fontSize = _extractFontSize(attrs, defaultSize: 14.0);
         final opacity = _extractOpacity(attrs, defaultOpacity: 1.0);
 
-        final contentMatch =
-            RegExp(r'>\s*(.*?)\s*<\/text>', dotAll: true).firstMatch(rawTag);
+        final contentMatch = RegExp(
+          r'>\s*(.*?)\s*<\/text>',
+          dotAll: true,
+        ).firstMatch(rawTag);
         String text = contentMatch?.group(1) ?? '';
 
         // 解码HTML实体
@@ -915,6 +811,7 @@ class SvgToImageService {
   }
 
   /// 渲染回退图片
+  // ignore: unused_element
   static Future<Uint8List> _renderFallbackImage(
     String svgContent,
     int width,
@@ -945,6 +842,7 @@ class SvgToImageService {
   }
 
   /// 解析颜色
+  // ignore: unused_element
   static Color _parseColor(String colorString) {
     final raw = colorString.trim();
     if (raw.isEmpty) return Colors.black;
@@ -1044,14 +942,16 @@ class SvgToImageService {
   }
 
   /// 将外部 opacity（如 fill-opacity/stop-opacity）与颜色本身 alpha 合并（乘法），而不是直接覆盖。
+  // ignore: unused_element
   static Color _applyOpacityMultiplier(Color color, double opacity) {
     final safeOpacity = opacity.isFinite ? opacity.clamp(0.0, 1.0) : 1.0;
-    final base = color.alpha / 255.0;
+    final base = color.a;
     final combined = (base * safeOpacity).clamp(0.0, 1.0);
     return color.withValues(alpha: combined);
   }
 
   /// 绘制占位符内容
+  // ignore: unused_element
   static void _drawPlaceholderContent(
     Canvas canvas,
     int width,

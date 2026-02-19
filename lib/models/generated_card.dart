@@ -15,6 +15,17 @@ enum CardType {
   ink, // 水墨卡片（新增）
   cyberpunk, // 赛博朋克（新增）
   geometric, // 几何抽象（新增）
+  academic, // 学术/笔记（新增）
+  emotional, // 情感/日记（新增）
+  dev, // 开发者/代码（新增）
+  mindful, // 正念/自然（新增）
+  neonCyber, // 霓虹赛博（新增）
+  classicSerif, // 经典衬线（新增）
+  modernPop, // 现代波普（新增）
+  softGradient, // 柔和渐变（新增）
+  polaroid, // 拍立得（新增）
+  magazine, // 杂志排版（新增）
+  sotaModern, // SOTA 现代（旗舰新风格）
 }
 
 /// AI生成的卡片模型
@@ -55,12 +66,15 @@ class GeneratedCard {
     int width = 400,
     int height = 600,
     ui.ImageByteFormat format = ui.ImageByteFormat.png,
-    Color backgroundColor = Colors.white,
+    Color backgroundColor = Colors.transparent,
     bool maintainAspectRatio = true,
     BuildContext? context,
     double scaleFactor = 1.0,
     ExportRenderMode renderMode = ExportRenderMode.contain,
   }) async {
+    // 根据宽度按比例计算圆角（基准：宽度400时圆角12）
+    final double borderRadius = 12.0 * (width / 400.0);
+
     return await SvgToImageService.convertSvgToImage(
       svgContent,
       width: width,
@@ -71,6 +85,7 @@ class GeneratedCard {
       context: context,
       scaleFactor: scaleFactor,
       renderMode: renderMode,
+      borderRadius: borderRadius,
     );
   }
 

@@ -336,19 +336,25 @@ class MediaFileService {
       for (int i = 0; i < allEntities.length; i += batchSize) {
         cancelToken?.throwIfCancelled();
 
-        final batch = allEntities.skip(i).take(batchSize);
+        final batch = allEntities.skip(i).take(batchSize).toList();
 
-        for (final entity in batch) {
+        // 并行检查文件是否存在，显著提高 I/O 效率
+        final results = await Future.wait(batch.map((entity) async {
           try {
-            // 检查文件是否仍然存在（可能在遍历过程中被删除）
             if (await entity.exists()) {
-              allPaths.add(entity.path);
+              return entity.path;
             }
-            processedCount++;
           } catch (e) {
             logDebug('检查媒体文件失败，跳过: ${entity.path}, 错误: $e');
-            processedCount++;
           }
+          return null;
+        }));
+
+        for (final result in results) {
+          if (result != null) {
+            allPaths.add(result);
+          }
+          processedCount++;
         }
 
         // 更新进度
@@ -563,7 +569,7 @@ class MediaFileService {
   }
 
   /// 获取内存使用建议
-  static String getMemoryUsageAdvice(List<String> filePaths) {
+  static Future<String> getMemoryUsageAdvice(List<String> filePaths) async {
     int totalSize = 0;
     int largeFileCount = 0;
     const largeFileThreshold = 100 * 1024 * 1024; // 100MB
@@ -571,7 +577,7 @@ class MediaFileService {
     for (final filePath in filePaths) {
       try {
         final file = File(filePath);
-        final stat = file.statSync();
+        final stat = await file.stat();
         totalSize += stat.size;
 
         if (stat.size > largeFileThreshold) {

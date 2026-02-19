@@ -5,6 +5,7 @@ import 'package:flutter_chat_types/flutter_chat_types.dart' as types;
 import 'package:url_launcher/url_launcher.dart';
 import '../utils/chat_markdown_styles.dart';
 import '../constants/app_constants.dart';
+import '../utils/time_utils.dart';
 
 /// 支持Markdown的聊天消息气泡组件
 class MarkdownMessageBubble extends StatelessWidget {
@@ -93,8 +94,12 @@ class MarkdownMessageBubble extends StatelessWidget {
                 // 时间戳
                 const SizedBox(height: 6),
                 Text(
-                  _formatTime(
-                    message.createdAt ?? DateTime.now().millisecondsSinceEpoch,
+                  TimeUtils.formatElapsedRelativeTimeLocalized(
+                    context,
+                    DateTime.fromMillisecondsSinceEpoch(
+                      message.createdAt ??
+                          DateTime.now().millisecondsSinceEpoch,
+                    ),
                   ),
                   style: TextStyle(
                     fontSize: 11,
@@ -111,25 +116,20 @@ class MarkdownMessageBubble extends StatelessWidget {
     );
   }
 
-  String _formatTime(int timestamp) {
-    final dateTime = DateTime.fromMillisecondsSinceEpoch(timestamp);
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
+  Future<void> _handleLinkTap(String text, String? href, String title) async {
+    if (href == null || href.isEmpty) return;
 
-    if (difference.inDays > 0) {
-      return '${dateTime.month}/${dateTime.day} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
-    } else if (difference.inHours > 0) {
-      return '${difference.inHours}小时前';
-    } else if (difference.inMinutes > 0) {
-      return '${difference.inMinutes}分钟前';
-    } else {
-      return '刚刚';
-    }
-  }
+    try {
+      final uri = Uri.tryParse(href);
+      if (uri == null) return;
 
-  void _handleLinkTap(String text, String? href, String title) {
-    if (href != null) {
-      launchUrl(Uri.parse(href), mode: LaunchMode.externalApplication);
+      // 检查是否可以打开该链接
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      // 忽略链接打开失败的异常，避免崩溃
+      debugPrint('无法打开链接: $href, 错误: $e');
     }
   }
 

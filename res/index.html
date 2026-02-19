@@ -4,13 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="心迹 - 你的专属灵感摘录本。让我们一起随心记录，释放AI洞察的力量。">
+    <meta name="theme-color" content="#a67c52">
     <title>心迹 - 你的专属灵感摘录本</title>
     <link rel="icon" type="image/png" href="icon.png"/>
+    <link rel="canonical" href="https://shangjin-xiao.github.io/ThoughtEcho/">
+    
+    <!-- Open Graph / Social Media Meta Tags -->
+    <meta property="og:title" content="心迹 ThoughtEcho - 你的专属灵感摘录本">
+    <meta property="og:description" content="随心记录每一刻灵感，释放AI洞察的力量。本地优先，安全私密。">
+    <meta property="og:image" content="icon.png">
+    <meta property="og:url" content="https://shangjin-xiao.github.io/ThoughtEcho/">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="zh_CN">
+    <meta name="twitter:card" content="summary">
+    <meta name="twitter:title" content="心迹 ThoughtEcho - 你的专属灵感摘录本">
+    <meta name="twitter:description" content="随心记录每一刻灵感，释放AI洞察的力量。本地优先，安全私密。">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Sans:wght@300;400;500;700&family=Long+Cang&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+    <!-- 字体闪烁防护：等待字体就绪后再显示页面内容，最多等 800ms -->
+    <script>
+        (function(){
+            var root = document.documentElement;
+            root.style.visibility = 'hidden';
+            var show = function(){ root.style.visibility = ''; };
+            if (document.fonts && document.fonts.ready) { document.fonts.ready.then(show); }
+            setTimeout(show, 800);
+        })();
+    </script>
     
     <script type="module" src="https://get.microsoft.com/badge/ms-store-badge.bundled.js"></script>
 
@@ -35,6 +58,7 @@
             --shadow-soft: rgba(0, 0, 0, 0.08);
             --shadow-medium: rgba(0, 0, 0, 0.12);
             --shadow-hard: rgba(0, 0, 0, 0.2);
+            --nav-bg: rgba(254, 253, 251, 0.85); /* 浅色模式半透明背景 */
         }
 
         [data-theme="dark"] {
@@ -48,6 +72,7 @@
             --ink-dark: #e8dfd5;
             --ink-medium: #d4c5b9;
             --ink-light: #b8a99a;
+            --nav-bg: rgba(42, 37, 32, 0.85); /* 深色模式半透明背景 */
         }
 
         * {
@@ -58,6 +83,7 @@
 
         html {
             scroll-behavior: smooth;
+            scroll-padding-top: 90px; /* 防止固定导航栏遮挡锚点内容 */
         }
 
         body {
@@ -68,6 +94,70 @@
             overflow-x: hidden;
             position: relative;
             transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        /* ==================== 全局 UI 优化 ==================== */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--paper-cream);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--line-color);
+            border-radius: 5px;
+            border: 2px solid var(--paper-cream);
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-brown);
+        }
+
+        ::selection {
+            background: var(--accent-brown);
+            color: var(--paper-white);
+        }
+
+        /* ==================== 可访问性与交互一致性 ==================== */
+        :focus-visible {
+            outline: 3px solid var(--accent-blue);
+            outline-offset: 3px;
+        }
+
+        a, button {
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .skip-link {
+            position: absolute;
+            left: 12px;
+            top: 12px;
+            z-index: 3000;
+            padding: 0.7rem 1rem;
+            background: var(--paper-white);
+            color: var(--ink-dark);
+            border: 2px solid var(--accent-blue);
+            border-radius: 10px;
+            box-shadow: 4px 4px 0 var(--shadow-hard);
+            text-decoration: none;
+            transform: translateY(-200%);
+            transition: transform 0.2s ease;
+        }
+
+        .skip-link:focus-visible {
+            transform: translateY(0);
+        }
+
+        /* 用户偏好：减少动画 */
+        @media (prefers-reduced-motion: reduce) {
+            html {
+                scroll-behavior: auto;
+            }
+            *, *::before, *::after {
+                animation-duration: 0.001ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.001ms !important;
+            }
         }
 
         body.lang-en {
@@ -104,9 +194,12 @@
             left: 0;
             right: 0;
             z-index: 1000;
-            background: var(--paper-white);
+            background: var(--nav-bg);
             border-bottom: 3px solid var(--accent-brown);
             box-shadow: 0 3px 12px var(--shadow-soft);
+            backdrop-filter: blur(12px); /* 毛玻璃效果 */
+            -webkit-backdrop-filter: blur(12px);
+            padding-top: env(safe-area-inset-top);
         }
 
         .nav-container {
@@ -168,6 +261,7 @@
             position: relative;
             padding: 0.25rem 0;
             transition: color 0.3s ease;
+            display: inline-block; /* Fix alignment */
         }
 
         .nav-links a::after {
@@ -190,6 +284,13 @@
             width: 100%;
         }
 
+        .nav-links a.active {
+            color: var(--accent-brown);
+        }
+        .nav-links a.active::after {
+            width: 100%;
+        }
+
         .nav-actions {
             display: flex;
             gap: 1rem;
@@ -209,11 +310,10 @@
             justify-content: center;
             transition: all 0.3s ease;
             box-shadow: 2px 2px 4px var(--shadow-soft);
-            transform: rotate(2deg);
         }
 
         .theme-toggle:hover {
-            transform: rotate(-3deg) scale(1.05);
+            transform: scale(1.05);
             box-shadow: 3px 3px 8px var(--shadow-medium);
         }
 
@@ -231,12 +331,11 @@
             justify-content: center;
             transition: all 0.3s ease;
             box-shadow: 2px 2px 4px var(--shadow-soft);
-            transform: rotate(-2deg);
             color: var(--accent-blue);
         }
 
         .lang-toggle:hover {
-            transform: rotate(2deg) scale(1.05);
+            transform: scale(1.05);
             box-shadow: 3px 3px 8px var(--shadow-medium);
             background: var(--accent-blue);
             color: var(--paper-white);
@@ -281,6 +380,10 @@
         .mobile-menu-btn:hover {
             transform: scale(1.05);
             box-shadow: 3px 3px 8px var(--shadow-medium);
+        }
+
+        .mobile-menu-overlay {
+            display: none;
         }
 
         /* ==================== Hero 区域 ==================== */
@@ -337,7 +440,6 @@
             font-weight: 600;
             margin-bottom: 2rem;
             box-shadow: 3px 3px 8px var(--shadow-medium);
-            transform: rotate(-2deg);
         }
 
         .hero h1 {
@@ -421,6 +523,12 @@
 
         .hero-notebook {
             perspective: 1500px;
+            animation: notebookFloat 6s ease-in-out infinite;
+        }
+
+        @keyframes notebookFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
         }
 
         .notebook-page {
@@ -475,15 +583,34 @@
 
         .notebook-list {
             list-style: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 200px;
         }
 
         .notebook-list li {
             font-size: 1.15rem;
+            font-size: 1.3rem; /* 字号加大，更清晰 */
             color: var(--ink-medium);
             margin-bottom: 1.2rem;
+            margin-bottom: 1.6rem; /* 间距加大，更透气 */
             padding-left: 2rem;
             position: relative;
             font-family: 'Caveat', 'Long Cang', cursive;
+            transition: transform 0.3s ease, color 0.3s ease;
+            cursor: pointer;
+        }
+
+        .notebook-list a {
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .notebook-list li:hover {
+            transform: translateX(10px);
+            color: var(--accent-brown);
         }
 
         body.lang-en .notebook-list li {
@@ -520,7 +647,6 @@
             font-weight: 600;
             margin-bottom: 1.5rem;
             box-shadow: 3px 3px 8px var(--shadow-medium);
-            transform: rotate(1deg);
         }
 
         .section-title {
@@ -529,6 +655,13 @@
             color: var(--ink-dark);
             margin-bottom: 1.5rem;
             font-family: 'ZCOOL XiaoWei', serif;
+        }
+
+        .text-gradient {
+            background: linear-gradient(120deg, var(--accent-brown), var(--accent-orange), var(--accent-blue));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
         }
 
         .section-description {
@@ -550,15 +683,66 @@
             gap: 2.5rem;
         }
 
+        .feature-category {
+            margin-bottom: 6rem;
+        }
+
+        .feature-category-header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        /* 桌面端：左右交替布局，增加阅读趣味性 */
+        @media (min-width: 768px) {
+            .feature-category:nth-of-type(odd) .feature-category-header {
+                text-align: left;
+                border-left: 5px solid var(--accent-brown);
+                padding-left: 2rem;
+            }
+            .feature-category:nth-of-type(odd) .feature-category-desc {
+                margin: 0;
+            }
+
+            .feature-category:nth-of-type(even) .feature-category-header {
+                text-align: right;
+                border-right: 5px solid var(--accent-blue);
+                padding-right: 2rem;
+            }
+            .feature-category:nth-of-type(even) .feature-category-desc {
+                margin-left: auto; 
+                margin-right: 0;
+            }
+        }
+
+        .feature-category-title {
+            font-family: 'ZCOOL XiaoWei', serif;
+            font-size: 2.2rem;
+            color: var(--accent-brown);
+            margin-bottom: 1rem;
+        }
+
+        .feature-category-desc {
+            font-size: 1.1rem;
+            color: var(--ink-medium);
+            max-width: 600px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
         .sticky-note {
             background: var(--paper-yellow);
             border-radius: 6px;
+            background: var(--paper-white);
+            border: 1px solid var(--line-color);
+            border-radius: 16px;
             padding: 2.5rem 2.2rem;
             box-shadow: 0 5px 8px var(--shadow-soft), 0 12px 25px var(--shadow-soft);
+            box-shadow: 0 4px 12px var(--shadow-soft);
             position: relative;
             transform: rotate(-1.5deg);
             transition: all 0.4s ease;
-            cursor: pointer;
+            cursor: default; /* UX优化：非链接卡片不显示手型光标，避免误导点击 */
+            height: 100%;
         }
 
         .sticky-note:nth-child(2n) {
@@ -577,6 +761,9 @@
         .sticky-note:hover {
             transform: rotate(0deg) scale(1.05) translateY(-8px);
             box-shadow: 0 10px 15px var(--shadow-medium), 0 20px 40px var(--shadow-medium);
+            transform: translateY(-8px);
+            box-shadow: 0 12px 30px var(--shadow-medium);
+            border-color: var(--accent-brown);
             z-index: 10;
         }
 
@@ -588,9 +775,10 @@
             transform: translateX(-50%);
             width: 80px;
             height: 20px;
-            background: rgba(255, 255, 255, 0.4);
-            border: 1px solid rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(2px); /* 胶带磨砂质感 */
             box-shadow: 0 2px 4px var(--shadow-soft);
+            border: none;
         }
 
         .feature-icon {
@@ -677,18 +865,6 @@
 
         .screenshot-card:hover::before {
             opacity: 1;
-        }
-
-        .screenshot-card:nth-child(3n+1) {
-            transform: rotate(-1deg);
-        }
-
-        .screenshot-card:nth-child(3n+2) {
-            transform: rotate(1deg);
-        }
-
-        .screenshot-card:nth-child(3n) {
-            transform: rotate(-0.5deg);
         }
 
         .screenshot-image-wrapper {
@@ -903,6 +1079,98 @@
             border: 2px solid var(--accent-brown);
         }
 
+        /* ==================== 截图轮播（Carousel）==================== */
+        .carousel-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+            padding: 0 2.5rem;
+        }
+
+        .carousel-track-container {
+            overflow: hidden;
+            border-radius: 18px;
+        }
+
+        .carousel-track {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: transform;
+        }
+
+        .carousel-slide {
+            padding: 0 0.75rem;
+        }
+
+        .carousel-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            background: rgba(0, 0, 0, 0.35);
+            color: #fff;
+            font-size: 1.4rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 5;
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            transition: transform 0.2s ease, background 0.2s ease;
+        }
+
+        .carousel-btn:hover {
+            background: rgba(0, 0, 0, 0.5);
+            transform: translateY(-50%) scale(1.06);
+        }
+
+        .carousel-btn:active {
+            transform: translateY(-50%) scale(0.98);
+        }
+
+        .prev-btn { left: 10px; }
+        .next-btn { right: 10px; }
+
+        .carousel-dots {
+            display: flex;
+            justify-content: center;
+            gap: 0.6rem;
+            margin-top: 1.25rem;
+            flex-wrap: wrap;
+        }
+
+        .carousel-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            border: 2px solid var(--accent-brown);
+            background: transparent;
+            cursor: pointer;
+            padding: 0;
+            transition: all 0.2s ease;
+        }
+
+        .carousel-dot.active {
+            width: 26px;
+            background: var(--accent-brown);
+        }
+
+        .screenshot-image {
+            outline: none;
+        }
+
+        .screenshot-image:focus-visible img {
+            outline: 3px solid var(--accent-blue);
+            outline-offset: 4px;
+        }
+
         /* ==================== 模态框 ==================== */
         .modal {
             display: none;
@@ -911,11 +1179,11 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.9);
+            background: rgba(0, 0, 0, 0.86);
             z-index: 2000;
             justify-content: center;
             align-items: center;
-            padding: 2rem;
+            padding: 3.25rem 1.5rem 1.5rem;
         }
 
         .modal.active {
@@ -923,8 +1191,8 @@
         }
 
         .modal-content {
-            max-width: 95%;
-            max-height: 95%;
+            max-width: min(1100px, 96vw);
+            max-height: 92vh;
             position: relative;
             animation: modalZoom 0.3s ease;
         }
@@ -936,15 +1204,23 @@
 
         .modal img {
             max-width: 100%;
-            max-height: 90vh;
+            max-height: 80vh;
             border-radius: 10px;
             box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
         }
 
+        .modal-caption {
+            margin-top: 0.75rem;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 1rem;
+            line-height: 1.7;
+        }
+
         .modal-close {
             position: absolute;
-            top: -40px;
-            right: 0;
+            top: 12px;
+            right: 12px;
             color: white;
             font-size: 2rem;
             cursor: pointer;
@@ -956,7 +1232,32 @@
             align-items: center;
             justify-content: center;
             transition: transform 0.3s ease;
+            border: none;
         }
+        
+        /* ==================== 模态框导航按钮 ==================== */
+        .modal-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            z-index: 10;
+            backdrop-filter: blur(4px);
+        }
+        .modal-nav:hover { background: rgba(255, 255, 255, 0.3); transform: translateY(-50%) scale(1.1); }
+        .modal-prev { left: 20px; }
+        .modal-next { right: 20px; }
 
         .modal-close:hover {
             transform: rotate(90deg);
@@ -1009,6 +1310,7 @@
 
         .tech-tag:hover .tech-icon {
             transform: rotate(0deg) scale(1.1);
+            transform: scale(1.1);
         }
 
         .tech-info h4 {
@@ -1245,6 +1547,30 @@
             font-size: 0.95rem;
             line-height: 1.6;
         }
+        
+        /* ==================== 代码块复制按钮 ==================== */
+        .code-wrapper {
+            position: relative;
+        }
+        
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: var(--paper-white);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .copy-btn:hover { background: rgba(255, 255, 255, 0.25); }
+        .copy-btn.copied {
+            background: var(--accent-green);
+            border-color: var(--accent-green);
+        }
 
         /* ==================== 路线图 ==================== */
         .roadmap-section {
@@ -1329,6 +1655,66 @@
             color: var(--accent-brown);
             font-size: 1.4rem;
             font-weight: bold;
+        }
+
+        /* ==================== FAQ ==================== */
+        .faq-section {
+            background: var(--paper-white);
+        }
+
+        .faq-grid {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: grid;
+            gap: 1.25rem;
+        }
+
+        .faq-item {
+            background: var(--paper-cream);
+            border: 2px solid var(--line-color);
+            border-radius: 14px;
+            box-shadow: 0 6px 16px var(--shadow-soft);
+            overflow: hidden;
+            transition: border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .faq-item:hover {
+            border-color: var(--accent-brown);
+            box-shadow: 0 10px 26px var(--shadow-soft);
+        }
+
+        .faq-question {
+            width: 100%;
+            text-align: left;
+            background: transparent;
+            border: none;
+            padding: 1.25rem 1.25rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            color: var(--ink-dark);
+            font-weight: 700;
+            font-size: 1.05rem;
+        }
+
+        .faq-question::after {
+            content: '＋';
+            flex-shrink: 0;
+            color: var(--accent-brown);
+            font-size: 1.25rem;
+            transition: transform 0.2s ease;
+        }
+
+        .faq-question[aria-expanded="true"]::after {
+            content: '－';
+        }
+
+        .faq-answer {
+            padding: 0 1.25rem 1.25rem;
+            color: var(--ink-medium);
+            line-height: 1.9;
         }
 
         /* ==================== CTA ==================== */
@@ -1448,6 +1834,7 @@
 
         .social-link:hover {
             transform: rotate(3deg) scale(1.15);
+            transform: scale(1.15);
             box-shadow: 4px 4px 8px var(--shadow-medium);
         }
 
@@ -1492,6 +1879,62 @@
             color: var(--ink-light);
         }
 
+        /* ==================== 回到顶部按钮 ==================== */
+        .back-to-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            background: var(--accent-brown);
+            color: var(--paper-white);
+            border: none;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 12px var(--shadow-medium);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(20px);
+            transition: all 0.3s ease;
+            z-index: 900;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .back-to-top.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .back-to-top:hover {
+            background: var(--accent-orange);
+            transform: translateY(-5px);
+            box-shadow: 0 6px 16px var(--shadow-medium);
+        }
+
+        /* ==================== 下滑提示箭头 ==================== */
+        .scroll-indicator {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--ink-light);
+            font-size: 2rem;
+            animation: bounce 2s infinite;
+            cursor: pointer;
+            opacity: 0.6;
+            transition: opacity 0.3s ease;
+        }
+        .scroll-indicator:hover { opacity: 1; color: var(--accent-brown); }
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% { transform: translateX(-50%) translateY(0); }
+            40% { transform: translateX(-50%) translateY(-10px); }
+            60% { transform: translateX(-50%) translateY(-5px); }
+        }
+
         /* ==================== 响应式 ==================== */
         @media (max-width: 1024px) {
             .hero-container {
@@ -1518,79 +1961,8 @@
             display: none;
         }
 
-        /* 模态框样式 */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 10000;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .modal.active {
-            display: flex;
-            opacity: 1;
-        }
-
-        .modal-content {
-            position: relative;
-            max-width: 90%;
-            max-height: 90%;
-            background: var(--paper-white);
-            border-radius: 15px;
-            padding: 2rem;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-            transform: scale(0.9);
-            transition: transform 0.3s ease;
-        }
-
-        .modal.active .modal-content {
-            transform: scale(1);
-        }
-
-        .modal-close {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            width: 40px;
-            height: 40px;
-            background: var(--accent-red);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            font-size: 1.5rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s ease;
-            z-index: 10;
-        }
-
-        .modal-close:hover {
-            transform: rotate(90deg);
-            background: var(--accent-orange);
-        }
-
-        .modal img {
-            max-width: 100%;
-            max-height: 80vh;
-            border-radius: 10px;
-            display: block;
-        }
-
-        #modalCaption {
-            text-align: center;
-            margin-top: 1rem;
-            color: var(--ink-medium);
-            font-size: 1.1rem;
+        body.modal-open {
+            overflow: hidden;
         }
 
         /* 微软商店徽章高分辨率样式（小号） */
@@ -1653,7 +2025,7 @@
             .nav-links {
                 display: none;
                 position: fixed;
-                top: 62px;
+                top: var(--mobile-nav-h, 62px);
                 left: 0;
                 right: 0;
                 background: var(--paper-white);
@@ -1664,12 +2036,34 @@
                 box-shadow: 0 4px 12px var(--shadow-medium);
                 z-index: 999;
             }
+            .mobile-menu-overlay {
+                display: block;
+                position: fixed;
+                top: var(--mobile-nav-h, 62px);
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(44, 36, 22, 0.4);
+                backdrop-filter: blur(4px);
+                z-index: 998;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.3s ease;
+            }
+            .mobile-menu-overlay.active {
+                opacity: 1;
+                pointer-events: auto;
+            }
             .nav-links.active {
                 display: flex;
             }
             .nav-links a {
                 padding: 1rem;
                 border-bottom: 1px solid var(--line-color);
+                display: block; /* Full width on mobile */
+            }
+            .nav-links a::after {
+                content: none; /* Disable hover underline on mobile */
             }
             .mobile-menu-btn {
                 display: flex;
@@ -1719,15 +2113,19 @@
             .download-title {
                 font-size: 1.5rem;
             }
+            /* 移动端轮播适配：隐藏按钮，优化空间，统一布局顺序 */
+            .carousel-container { padding: 0; }
+            .carousel-btn { display: none; }
+            .carousel-slide { padding: 0; }
             .screenshot-item {
                 grid-template-columns: 1fr;
                 gap: 1.5rem;
                 padding: 2rem 1.5rem;
             }
-            .screenshot-item:nth-child(even) .screenshot-image {
+            .carousel-slide:nth-child(even) .screenshot-item .screenshot-image {
                 order: 1;
             }
-            .screenshot-item:nth-child(even) .screenshot-content {
+            .carousel-slide:nth-child(even) .screenshot-item .screenshot-content {
                 order: 2;
             }
             .arrow-doodle {
@@ -1753,11 +2151,16 @@
         }
     </style>
 </head>
-<body class="lang-zh">
+<body class="lang-zh" id="top">
+    <a class="skip-link" href="#main">
+        <span class="content-zh">跳到主要内容</span>
+        <span class="content-en">Skip to content</span>
+    </a>
     <!-- 导航栏 -->
     <nav>
+        <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
         <div class="nav-container">
-            <a href="#" class="nav-brand">
+            <a href="#top" class="nav-brand" aria-label="ThoughtEcho Home">
                 <div class="nav-logo">
                     <img src="icon.png" alt="ThoughtEcho">
                 </div>
@@ -1770,6 +2173,7 @@
                 <li><a href="#screenshots"><span class="content-zh">应用截图</span><span class="content-en">Screenshots</span></a></li>
                 <li><a href="#tech"><span class="content-zh">技术栈</span><span class="content-en">Tech Stack</span></a></li>
                 <li><a href="#quickstart"><span class="content-zh">快速开始</span><span class="content-en">Quick Start</span></a></li>
+                <li><a href="user-guide.html"><span class="content-zh">用户指南</span><span class="content-en">User Guide</span></a></li>
                 <li><a href="privacy.html"><span class="content-zh">隐私政策</span><span class="content-en">Privacy</span></a></li>
             </ul>
 
@@ -1788,6 +2192,8 @@
             </div>
         </div>
     </nav>
+
+    <main id="main" tabindex="-1">
 
     <!-- Hero -->
     <section class="hero">
@@ -1817,9 +2223,9 @@
                 </p>
 
                 <div class="hero-warning">
-                    <strong>⚠️ <span class="content-zh">友情提示：</span><span class="content-en">Heads-up:</span></strong>
-                    <span class="content-zh">这是一个与 AI 协作完成的项目，我会持续打磨体验，如遇潜在的小 bug 敬请包涵，也欢迎随时反馈。</span>
-                    <span class="content-en">This project was built in collaboration with AI—we're polishing it in the open, so thanks for your patience with any rough edges.</span>
+                    <strong>⚠️ <span class="content-zh">温馨提示：</span><span class="content-en">Friendly Tip:</span></strong>
+                    <span class="content-zh">这是一个与 AI 协作完成的项目，我会持续进行打磨与优化。为保障数据安全，建议定期备份重要文件，欢迎随时反馈建议。</span>
+                    <span class="content-en">Built with AI collaboration. We are continuously refining and optimizing the experience. For data security, periodic backups are recommended. Feel free to share your feedback.</span>
                 </div>
 
                 <div class="hero-warning content-en" style="border-left-color: var(--accent-blue); background: var(--paper-blue);">
@@ -1848,24 +2254,20 @@
                         <div class="hole"></div>
                         <div class="hole"></div>
                     </div>
-                    <div class="notebook-content">
-                        <h3 class="handwriting">
-                            <span class="content-zh">当前功能清单 ✓</span>
-                            <span class="content-en">Current Features ✓</span>
-                        </h3>
-                        <ul class="notebook-list">
-                            <li><span class="content-zh">✍️ 富文本笔记 - 支持多媒体</span><span class="content-en">✍️ Rich Text Notes - Media Support</span></li>
-                            <li><span class="content-zh">✨ AI助手 - 问答、润色、灵感</span><span class="content-en">✨ AI Assistant - Q&A, Polish, Ideas</span></li>
-                            <li><span class="content-zh">📊 洞察报告 - 趋势分析</span><span class="content-en">📊 Insights - Trend Analysis</span></li>
-                            <li><span class="content-zh">🏷️ 智能标签 - 多维筛选</span><span class="content-en">🏷️ Smart Tags - Multi-Filter</span></li>
-                            <li><span class="content-zh">🎯 卡片生成 - 精美分享</span><span class="content-en">🎯 Card Generation - Beautiful Share</span></li>
-                            <li><span class="content-zh">📦 备份中心 - 安全可靠</span><span class="content-en">📦 Backup Hub - Safe & Secure</span></li>
-                            <li><span class="content-zh">🌍 情境记录 - 位置天气</span><span class="content-en">🌍 Context Capture - Location & Weather</span></li>
-                            <li><span class="content-zh">⚡ 快速捕获 - 剪贴板检测</span><span class="content-en">⚡ Quick Capture - Clipboard Watch</span></li>
+                    <div class="notebook-content" style="display: flex; align-items: center; justify-content: center;">
+                        <ul class="notebook-list" style="margin-top: 0;">
+                            <li><a href="#feature-tailored"><span class="content-zh">🎨 专为你打造的心迹</span><span class="content-en">🎨 Tailored for You</span></a></li>
+                            <li><a href="#feature-understanding"><span class="content-zh">💡 懂你所想的心迹</span><span class="content-en">💡 Understanding You</span></a></li>
+                            <li><a href="#feature-secure"><span class="content-zh">🛡️ 安全无忧的心迹</span><span class="content-en">🛡️ Safe & Secure</span></a></li>
+                            <li><a href="#feature-open"><span class="content-zh">🚀 开放自由的心迹</span><span class="content-en">🚀 Open & Free</span></a></li>
                         </ul>
                     </div>
                 </div>
             </div>
+        </div>
+        
+        <div class="scroll-indicator" onclick="document.getElementById('features').scrollIntoView({behavior: 'smooth'})">
+            ↓
         </div>
     </section>
 
@@ -1876,7 +2278,7 @@
                 <span class="content-zh">✨ 核心功能</span>
                 <span class="content-en">✨ Core Features</span>
             </span>
-            <h2 class="section-title">
+            <h2 class="section-title text-gradient">
                 <span class="content-zh">为灵感而生</span>
                 <span class="content-en">Built for Inspiration</span>
             </h2>
@@ -1886,149 +2288,339 @@
             </p>
         </div>
 
-        <div class="features-grid">
-            <div class="sticky-note fade-in">
-                <span class="feature-icon">✍️</span>
-                <h3 class="feature-title">
-                    <span class="content-zh">富文本笔记</span>
-                    <span class="content-en">Rich Text Notes</span>
+        <!-- 分类 1: 专为你打造的心迹 -->
+        <div class="feature-category fade-in" id="feature-tailored">
+            <div class="feature-category-header">
+                <h3 class="feature-category-title">
+                    <span class="content-zh">🎨 专为你打造的心迹</span>
+                    <span class="content-en">🎨 Tailored for You</span>
                 </h3>
-                <p class="feature-description">
-                    <span class="content-zh">强大的富文本编辑器，支持文字格式化、图片、音频、视频等多种媒体形式</span>
-                    <span class="content-en">Powerful rich text editor with formatting, images, audio, video & more</span>
+                <p class="feature-category-desc">
+                    <span class="content-zh">丰富的功能模块自由组合，打造最适合你的专属记录空间</span>
+                    <span class="content-en">Freely combine rich feature modules to create your exclusive recording space</span>
                 </p>
-                <ul class="feature-list">
-                    <li><span class="content-zh">支持富文本、多媒体附件</span><span class="content-en">Rich text & media attachments</span></li>
-                    <li><span class="content-zh">大文件流式处理</span><span class="content-en">Large file streaming</span></li>
-                    <li><span class="content-zh">智能内存管理</span><span class="content-en">Smart memory management</span></li>
-                    <li><span class="content-zh">双格式存储备份</span><span class="content-en">Dual-format storage</span></li>
-                </ul>
             </div>
+            <div class="features-grid">
+                <div class="sticky-note">
+                    <span class="feature-icon">✍️</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">富文本笔记</span>
+                        <span class="content-en">Rich Text Notes</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">强大的编辑器，支持文字格式化、图片、音频、视频等多种媒体形式</span>
+                        <span class="content-en">Powerful editor with formatting, images, audio, video & more</span>
+                    </p>
+                    <ul class="feature-list">
+                        <li><span class="content-zh">多媒体附件支持</span><span class="content-en">Media attachments</span></li>
+                        <li><span class="content-zh">大文件流式处理</span><span class="content-en">Large file streaming</span></li>
+                    </ul>
+                </div>
 
-            <div class="sticky-note fade-in">
-                <span class="feature-icon">✨</span>
-                <h3 class="feature-title">
-                    <span class="content-zh">AI 助手</span>
-                    <span class="content-en">AI Assistant</span>
-                </h3>
-                <p class="feature-description">
-                    <span class="content-zh">基于笔记上下文的智能问答、内容润色、每日灵感提示</span>
-                    <span class="content-en">Context-aware Q&A, content polishing, daily inspiration prompts</span>
-                </p>
-                <ul class="feature-list">
-                    <li><span class="content-zh">笔记上下文问答</span><span class="content-en">Context-aware Q&A</span></li>
-                    <li><span class="content-zh">内容智能润色</span><span class="content-en">Smart content polishing</span></li>
-                    <li><span class="content-zh">每日灵感提示</span><span class="content-en">Daily inspiration</span></li>
-                    <li><span class="content-zh">多AI服务商支持</span><span class="content-en">Multi-AI provider support</span></li>
-                </ul>
+                <div class="sticky-note">
+                    <span class="feature-icon">🏷️</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">标签与搜索</span>
+                        <span class="content-en">Tags & Search</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">多标签筛选、智能过滤、全文搜索，快速定位所需信息</span>
+                        <span class="content-en">Multi-tag filters, smart facets, full-text search</span>
+                    </p>
+                    <ul class="feature-list">
+                        <li><span class="content-zh">多维度筛选</span><span class="content-en">Multi-dimension filter</span></li>
+                        <li><span class="content-zh">全文快速检索</span><span class="content-en">Fast full-text search</span></li>
+                    </ul>
+                </div>
+
+                <div class="sticky-note">
+                    <span class="feature-icon">🎯</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">AI 卡片生成</span>
+                        <span class="content-en">AI Card Generation</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">一键将笔记转换为精美分享卡片，多种模板随心切换</span>
+                        <span class="content-en">Convert notes into beautiful shareable cards with templates</span>
+                    </p>
+                </div>
+
+                <div class="sticky-note">
+                    <span class="feature-icon">⚡</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">快速捕获</span>
+                        <span class="content-en">Quick Capture</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">剪贴板检测、一言与每日灵感，不错过任何瞬时想法</span>
+                        <span class="content-en">Clipboard watcher, Hitokoto quotes, daily prompts</span>
+                    </p>
+                </div>
+
+                <div class="sticky-note">
+                    <span class="feature-icon">🎨</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">个性化主题</span>
+                        <span class="content-en">Personalized Themes</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">内置多种配色方案，支持深色模式，随心切换视觉风格</span>
+                        <span class="content-en">Built-in color schemes, dark mode support, switch styles anytime</span>
+                    </p>
+                </div>
+
+                <div class="sticky-note">
+                    <span class="feature-icon">🔔</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">智能推送 (Beta)</span>
+                        <span class="content-en">Smart Push (Beta)</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">每日一言与往期笔记智能回顾，唤醒尘封的记忆</span>
+                        <span class="content-en">Daily quotes & past note recall to awaken memories</span>
+                    </p>
+                </div>
             </div>
+        </div>
 
-            <div class="sticky-note fade-in">
-                <span class="feature-icon">📊</span>
-                <h3 class="feature-title">
-                    <span class="content-zh">洞察与报告</span>
-                    <span class="content-en">Insights & Reports</span>
+        <!-- 分类 2: 懂你所想的心迹 -->
+        <div class="feature-category fade-in" id="feature-understanding">
+            <div class="feature-category-header">
+                <h3 class="feature-category-title">
+                    <span class="content-zh">💡 懂你所想的心迹</span>
+                    <span class="content-en">💡 Understanding You</span>
                 </h3>
-                <p class="feature-description">
-                    <span class="content-zh">AI 周期洞察、年度报告与写作趋势分析</span>
-                    <span class="content-en">AI periodic insights, annual reports & writing trend analysis</span>
+                <p class="feature-category-desc">
+                    <span class="content-zh">AI 深度赋能，感知情境，激发灵感，成为你的第二大脑</span>
+                    <span class="content-en">AI-empowered context awareness and inspiration, becoming your second brain</span>
                 </p>
-                <ul class="feature-list">
-                    <li><span class="content-zh">AI 周期洞察</span><span class="content-en">AI periodic insights</span></li>
-                    <li><span class="content-zh">年度报告生成</span><span class="content-en">Annual report generation</span></li>
-                    <li><span class="content-zh">写作趋势分析</span><span class="content-en">Writing trend analysis</span></li>
-                    <li><span class="content-zh">数据可视化</span><span class="content-en">Data visualization</span></li>
-                </ul>
             </div>
+            <div class="features-grid">
+                <div class="sticky-note">
+                    <span class="feature-icon">✨</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">AI 助手</span>
+                        <span class="content-en">AI Assistant</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">基于笔记上下文的智能问答、内容润色、每日灵感提示</span>
+                        <span class="content-en">Context-aware Q&A, content polishing, daily inspiration</span>
+                    </p>
+                    <ul class="feature-list">
+                        <li><span class="content-zh">笔记上下文问答</span><span class="content-en">Context-aware Q&A</span></li>
+                        <li><span class="content-zh">多AI服务商支持</span><span class="content-en">Multi-AI provider support</span></li>
+                    </ul>
+                </div>
 
-            <div class="sticky-note fade-in">
-                <span class="feature-icon">🏷️</span>
-                <h3 class="feature-title">
-                    <span class="content-zh">标签与搜索</span>
-                    <span class="content-en">Tags & Search</span>
-                </h3>
-                <p class="feature-description">
-                    <span class="content-zh">多标签筛选、智能过滤、全文搜索</span>
-                    <span class="content-en">Multi-tag filters, smart facets, full-text search</span>
-                </p>
-                <ul class="feature-list">
-                    <li><span class="content-zh">多标签筛选</span><span class="content-en">Multi-tag filters</span></li>
-                    <li><span class="content-zh">智能过滤</span><span class="content-en">Smart filtering</span></li>
-                    <li><span class="content-zh">全文搜索</span><span class="content-en">Full-text search</span></li>
-                    <li><span class="content-zh">快速定位</span><span class="content-en">Quick navigation</span></li>
-                </ul>
+                <div class="sticky-note">
+                    <span class="feature-icon">🌍</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">情境记录</span>
+                        <span class="content-en">Context Capture</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">自动记录位置、天气与时间段，还原记忆发生的那一刻</span>
+                        <span class="content-en">Auto-save location, weather, and time context</span>
+                    </p>
+                </div>
+
+                <div class="sticky-note">
+                    <span class="feature-icon">📊</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">洞察与报告</span>
+                        <span class="content-en">Insights & Reports</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">周期性数据概览、AI 总结报告与写作趋势分析，看见你的成长</span>
+                        <span class="content-en">Periodic data overview, AI summaries & trend analysis</span>
+                    </p>
+                </div>
+
+                <div class="sticky-note">
+                    <span class="feature-icon">📝</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">智能润色</span>
+                        <span class="content-en">Smart Polish</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">AI 辅助优化文案，续写思路，让表达更清晰流畅</span>
+                        <span class="content-en">AI helps polish text, continue ideas, making expression clearer</span>
+                    </p>
+                </div>
+
+                <div class="sticky-note">
+                    <span class="feature-icon">🌤️</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">每日情境提示</span>
+                        <span class="content-en">Contextual Prompts</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">结合当前天气、位置与时间的个性化写作提示，激发灵感</span>
+                        <span class="content-en">Personalized prompts based on weather, location & time</span>
+                    </p>
+                </div>
             </div>
+        </div>
 
-            <div class="sticky-note fade-in">
-                <span class="feature-icon">🎯</span>
-                <h3 class="feature-title">
-                    <span class="content-zh">AI 卡片生成</span>
-                    <span class="content-en">AI Card Generation</span>
+        <!-- 分类 3: 安全无忧的心迹 -->
+        <div class="feature-category fade-in" id="feature-secure">
+            <div class="feature-category-header">
+                <h3 class="feature-category-title">
+                    <span class="content-zh">🛡️ 安全无忧的心迹</span>
+                    <span class="content-en">🛡️ Safe & Secure</span>
                 </h3>
-                <p class="feature-description">
-                    <span class="content-zh">将笔记转换为精美分享卡片</span>
-                    <span class="content-en">Convert notes into beautiful shareable cards</span>
+                <p class="feature-category-desc">
+                    <span class="content-zh">本地优先，隐私至上，端侧智能，你的数据完全由你掌控</span>
+                    <span class="content-en">Local-first, privacy-focused, on-device intelligence. Your data, fully under your control</span>
                 </p>
-                <ul class="feature-list">
-                    <li><span class="content-zh">智能排版设计</span><span class="content-en">Smart layout design</span></li>
-                    <li><span class="content-zh">多种模板风格</span><span class="content-en">Multiple templates</span></li>
-                    <li><span class="content-zh">一键导出分享</span><span class="content-en">One-click export</span></li>
-                    <li><span class="content-zh">自定义样式</span><span class="content-en">Custom styles</span></li>
-                </ul>
             </div>
+            <div class="features-grid">
+                <div class="sticky-note">
+                    <span class="feature-icon">🔒</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">本地优先</span>
+                        <span class="content-en">Local First</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">所有数据存储在本地 SQLite 数据库，不上传云端，无隐私泄露风险</span>
+                        <span class="content-en">All data stored locally in SQLite. No cloud upload, no privacy risks</span>
+                    </p>
+                </div>
 
-            <div class="sticky-note fade-in">
-                <span class="feature-icon">📦</span>
-                <h3 class="feature-title">
-                    <span class="content-zh">媒体与备份中心</span>
-                    <span class="content-en">Media & Backup Hub</span>
-                </h3>
-                <p class="feature-description">
-                    <span class="content-zh">流式处理大文件，完整备份恢复系统</span>
-                    <span class="content-en">Stream large files safely with backup/restore peace of mind</span>
-                </p>
-                <ul class="feature-list">
-                    <li><span class="content-zh">大文件流式处理</span><span class="content-en">Large file streaming</span></li>
-                    <li><span class="content-zh">ZIP 格式完整备份</span><span class="content-en">ZIP format backup</span></li>
-                    <li><span class="content-zh">一键恢复数据</span><span class="content-en">One-click restore</span></li>
-                    <li><span class="content-zh">媒体文件管理</span><span class="content-en">Media file management</span></li>
-                </ul>
+                <div class="sticky-note">
+                    <span class="feature-icon">🙈</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">隐藏笔记</span>
+                        <span class="content-en">Hidden Notes</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">支持隐藏标签功能，生物识别验证后查看，保护隐私笔记</span>
+                        <span class="content-en">Hidden tags with biometric authentication to protect private notes</span>
+                    </p>
+                </div>
+
+                <div class="sticky-note">
+                    <span class="feature-icon">💾</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">草稿自动保存</span>
+                        <span class="content-en">Auto-Save Drafts</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">编辑时自动保存草稿，异常退出不丢失，下次打开自动恢复</span>
+                        <span class="content-en">Auto-save drafts while editing, recover on next launch</span>
+                    </p>
+                </div>
+
+                <div class="sticky-note">
+                    <span class="feature-icon">📦</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">备份中心</span>
+                        <span class="content-en">Backup Hub</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">支持 ZIP 格式完整备份与恢复，数据迁移轻松自如</span>
+                        <span class="content-en">Full ZIP backup & restore. Easy data migration</span>
+                    </p>
+                </div>
+
+                <div class="sticky-note">
+                    <span class="feature-icon">🚫</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">零遥测</span>
+                        <span class="content-en">Zero Telemetry</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">拒绝任何形式的用户追踪与数据收集，纯净无干扰</span>
+                        <span class="content-en">No tracking, no analytics, no data collection. Pure & clean</span>
+                    </p>
+                </div>
+
+                <div class="sticky-note">
+                    <span class="feature-icon">🔑</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">加密存储</span>
+                        <span class="content-en">Encrypted Storage</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">API 密钥等敏感信息采用系统级加密存储，确保绝对安全</span>
+                        <span class="content-en">Sensitive info like API Keys uses system-level encryption</span>
+                    </p>
+                </div>
             </div>
+        </div>
 
-            <div class="sticky-note fade-in">
-                <span class="feature-icon">🌍</span>
-                <h3 class="feature-title">
-                    <span class="content-zh">情境记录</span>
-                    <span class="content-en">Context Capture</span>
+        <!-- 分类 4: 开放自由的心迹 -->
+        <div class="feature-category fade-in" id="feature-open">
+            <div class="feature-category-header">
+                <h3 class="feature-category-title">
+                    <span class="content-zh">🚀 开放自由的心迹</span>
+                    <span class="content-en">🚀 Open & Free</span>
                 </h3>
-                <p class="feature-description">
-                    <span class="content-zh">自动保存位置、天气（由和风天气提供）与时间段信息</span>
-                    <span class="content-en">Auto-save location, weather (powered by Open-Meteo), and time-of-day context</span>
+                <p class="feature-category-desc">
+                    <span class="content-zh">代码开源，跨端同步，拒绝厂商锁定，还你真正的数字自由</span>
+                    <span class="content-en">Open source, cross-platform sync, no vendor lock-in. True digital freedom</span>
                 </p>
-                <ul class="feature-list">
-                    <li><span class="content-zh">自动保存位置</span><span class="content-en">Auto-save location</span></li>
-                    <li><span class="content-zh">天气信息记录 (Open-Meteo)</span><span class="content-en">Weather tracking (Open-Meteo)</span></li>
-                    <li><span class="content-zh">时间段标记</span><span class="content-en">Time-of-day tags</span></li>
-                    <li><span class="content-zh">情境智能分析</span><span class="content-en">Context analysis</span></li>
-                </ul>
             </div>
+            <div class="features-grid">
+                <div class="sticky-note">
+                    <span class="feature-icon">📖</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">开源透明</span>
+                        <span class="content-en">Open Source</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">MIT 协议开源，代码完全公开，接受社区审查，安全可信</span>
+                        <span class="content-en">MIT Licensed, fully open source code, community audited</span>
+                    </p>
+                </div>
 
-            <div class="sticky-note fade-in">
-                <span class="feature-icon">⚡</span>
-                <h3 class="feature-title">
-                    <span class="content-zh">快速捕获</span>
-                    <span class="content-en">Quick Capture</span>
-                </h3>
-                <p class="feature-description">
-                    <span class="content-zh">剪贴板检测、一言与每日灵感</span>
-                    <span class="content-en">Clipboard watcher, Hitokoto quotes, daily prompts on tap</span>
-                </p>
-                <ul class="feature-list">
-                    <li><span class="content-zh">剪贴板检测</span><span class="content-en">Clipboard watch</span></li>
-                    <li><span class="content-zh">一言语录集成</span><span class="content-en">Hitokoto integration</span></li>
-                    <li><span class="content-zh">每日灵感推送</span><span class="content-en">Daily inspiration</span></li>
-                    <li><span class="content-zh">快速笔记入口</span><span class="content-en">Quick note entry</span></li>
-                </ul>
+                <div class="sticky-note">
+                    <span class="feature-icon">🔄</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">模型自由</span>
+                        <span class="content-en">Model Freedom</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">支持 OpenAI, Claude, DeepSeek 等多种服务商，随时切换</span>
+                        <span class="content-en">Support OpenAI, Claude, DeepSeek & more. Switch anytime</span>
+                    </p>
+                </div>
+
+                <div class="sticky-note">
+                    <span class="feature-icon">📱</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">全平台支持</span>
+                        <span class="content-en">All Platforms</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">Windows, Android, iOS, Web 全覆盖，随时随地记录</span>
+                        <span class="content-en">Windows, Android, iOS, Web supported. Record anywhere</span>
+                    </p>
+                </div>
+
+                <div class="sticky-note">
+                    <span class="feature-icon">🔌</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">自定义 API</span>
+                        <span class="content-en">Custom API</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">支持配置自定义 API 地址，兼容本地大模型（如 Ollama）</span>
+                        <span class="content-en">Support custom API URLs, compatible with local LLMs (e.g. Ollama)</span>
+                    </p>
+                </div>
+
+                <div class="sticky-note">
+                    <span class="feature-icon">📲</span>
+                    <h3 class="feature-title">
+                        <span class="content-zh">多端同步</span>
+                        <span class="content-en">Note Sync</span>
+                    </h3>
+                    <p class="feature-description">
+                        <span class="content-zh">局域网内多设备发现与数据同步，随时随地无缝接力</span>
+                        <span class="content-en">LAN device discovery & data sync. Seamless handover</span>
+                    </p>
+                </div>
             </div>
         </div>
     </section>
@@ -2040,7 +2632,7 @@
                 <span class="content-zh">📸 应用展示</span>
                 <span class="content-en">📸 Screenshots</span>
             </span>
-            <h2 class="section-title">
+            <h2 class="section-title text-gradient">
                 <span class="content-zh">精美界面，一触即达</span>
                 <span class="content-en">Beautiful UI, Just a Tap Away</span>
             </h2>
@@ -2054,136 +2646,142 @@
         <div class="screenshot-doodle doodle-star">✨</div>
         <div class="screenshot-doodle doodle-heart">❤️</div>
 
-        <!-- 核心功能 -->
-        <div class="screenshot-category fade-in">
-            <h3 class="category-title">
-                <span class="content-zh">核心功能</span>
-                <span class="content-en">Core Features</span>
-            </h3>
-            <div class="screenshots-grid">
-                <div class="screenshot-item fade-in">
-                    <div class="screenshot-image" onclick="openModal('screenshot/home_page.jpg', '主页')">
-                        <img src="screenshot/home_page.jpg" alt="主页">
-                    </div>
-                    <div class="screenshot-content">
-                        <div class="arrow-doodle"></div>
-                        <h4><span class="content-zh">优雅的主页</span><span class="content-en">Elegant Homepage</span></h4>
-                        <p><span class="content-zh">卡片式设计清晰展示每日灵感、近期笔记和功能入口，助你快速进入创作状态。</span><span class="content-en">Card-based design clearly displays daily inspiration, recent notes, and feature entries to help you get into a creative state quickly.</span></p>
-                    </div>
-                </div>
+        <!-- 轮播容器 -->
+        <div class="carousel-container fade-in">
+            <button class="carousel-btn prev-btn" aria-label="Previous">❮</button>
+            
+            <div class="carousel-track-container">
+                <ul class="carousel-track">
+                    <!-- 1. 主页 -->
+                    <li class="carousel-slide">
+                        <div class="screenshot-item">
+                            <div class="screenshot-image" onclick="openModal('screenshot/home_page.jpg', '主页')">
+                                <img src="screenshot/home_page.jpg" alt="主页" loading="lazy">
+                            </div>
+                            <div class="screenshot-content">
+                                <div class="arrow-doodle"></div>
+                                <h4><span class="content-zh">优雅的主页</span><span class="content-en">Elegant Homepage</span></h4>
+                                <p><span class="content-zh">卡片式设计清晰展示每日灵感、近期笔记和功能入口，助你快速进入创作状态。</span><span class="content-en">Card-based design clearly displays daily inspiration, recent notes, and feature entries to help you get into a creative state quickly.</span></p>
+                            </div>
+                        </div>
+                    </li>
 
-                <div class="screenshot-item fade-in">
-                    <div class="screenshot-content">
-                        <div class="arrow-doodle"></div>
-                        <h4><span class="content-zh">强大的富文本编辑器</span><span class="content-en">Powerful Rich Text Editor</span></h4>
-                        <p><span class="content-zh">支持标题、列表、引用等多种格式，可插入图片、音频、视频，满足你多样化的记录需求。</span><span class="content-en">Supports various formats like headings, lists, quotes, and allows inserting images, audio, and video to meet your diverse recording needs.</span></p>
-                    </div>
-                    <div class="screenshot-image" onclick="openModal('screenshot/note_full_editor_page.dart.jpg', '富文本编辑器')">
-                        <img src="screenshot/note_full_editor_page.dart.jpg" alt="富文本编辑器">
-                    </div>
-                </div>
+                    <!-- 2. 编辑器 -->
+                    <li class="carousel-slide">
+                        <div class="screenshot-item">
+                            <div class="screenshot-content">
+                                <div class="arrow-doodle"></div>
+                                <h4><span class="content-zh">强大的富文本编辑器</span><span class="content-en">Powerful Rich Text Editor</span></h4>
+                                <p><span class="content-zh">支持标题、列表、引用等多种格式，可插入图片、音频、视频，满足你多样化的记录需求。</span><span class="content-en">Supports various formats like headings, lists, quotes, and allows inserting images, audio, and video to meet your diverse recording needs.</span></p>
+                            </div>
+                            <div class="screenshot-image" onclick="openModal('screenshot/note_full_editor_page.dart.jpg', '富文本编辑器')">
+                                <img src="screenshot/note_full_editor_page.dart.jpg" alt="富文本编辑器" loading="lazy">
+                            </div>
+                        </div>
+                    </li>
+
+                    <!-- 3. AI问答 -->
+                    <li class="carousel-slide">
+                        <div class="screenshot-item">
+                            <div class="screenshot-image" onclick="openModal('screenshot/note_qa_chat_page.jpg', 'AI问答')">
+                                <img src="screenshot/note_qa_chat_page.jpg" alt="AI问答对话" loading="lazy">
+                            </div>
+                            <div class="screenshot-content">
+                                <div class="arrow-doodle"></div>
+                                <h4><span class="content-zh">AI 智能问答</span><span class="content-en">AI Q&A Chat</span></h4>
+                                <p><span class="content-zh">基于你的笔记内容，AI能够回答相关问题、提供总结、激发新灵感，成为你的私人知识助理。</span><span class="content-en">Based on your notes, the AI can answer related questions, provide summaries, and spark new ideas, becoming your personal knowledge assistant.</span></p>
+                            </div>
+                        </div>
+                    </li>
+
+                    <!-- 4. 筛选排序 -->
+                    <li class="carousel-slide">
+                        <div class="screenshot-item">
+                            <div class="screenshot-content">
+                                <div class="arrow-doodle"></div>
+                                <h4><span class="content-zh">智能筛选与排序</span><span class="content-en">Smart Filter & Sort</span></h4>
+                                <p><span class="content-zh">通过标签、内容、时间等多维度进行筛选和排序，帮你快速定位所需信息。</span><span class="content-en">Filter and sort by tags, content, time, and other dimensions to help you quickly locate the information you need.</span></p>
+                            </div>
+                            <div class="screenshot-image" onclick="openModal('screenshot/note_filter_sort_sheet.dart.jpg', '筛选排序')">
+                                <img src="screenshot/note_filter_sort_sheet.dart.jpg" alt="筛选与排序" loading="lazy">
+                            </div>
+                        </div>
+                    </li>
+
+                    <!-- 5. 洞察分析 -->
+                    <li class="carousel-slide">
+                        <div class="screenshot-item">
+                            <div class="screenshot-image" onclick="openModal('screenshot/insights_page.jpg', '洞察分析')">
+                                <img src="screenshot/insights_page.jpg" alt="洞察分析" loading="lazy">
+                            </div>
+                            <div class="screenshot-content">
+                                <div class="arrow-doodle"></div>
+                                <h4><span class="content-zh">AI 洞察分析</span><span class="content-en">AI Insights Analysis</span></h4>
+                                <p><span class="content-zh">AI 自动分析你的写作习惯、常用词汇和情感倾向，生成可视化图表，助你更好地了解自己。</span><span class="content-en">The AI automatically analyzes your writing habits, common vocabulary, and emotional tendencies, generating visual charts to help you better understand yourself.</span></p>
+                            </div>
+                        </div>
+                    </li>
+
+                    <!-- 6. 同步 -->
+                    <li class="carousel-slide">
+                        <div class="screenshot-item">
+                            <div class="screenshot-content">
+                                <div class="arrow-doodle"></div>
+                                <h4><span class="content-zh">跨设备同步</span><span class="content-en">Cross-Device Sync</span></h4>
+                                <p><span class="content-zh">通过局域网内的设备发现和数据同步功能，轻松实现多设备间的数据无缝流转。</span><span class="content-en">Seamlessly transfer data between multiple devices through local network device discovery and data synchronization.</span></p>
+                            </div>
+                            <div class="screenshot-image" onclick="openModal('screenshot/note_sync.jpg', '笔记同步')">
+                                <img src="screenshot/note_sync.jpg" alt="笔记同步" loading="lazy">
+                            </div>
+                        </div>
+                    </li>
+
+                    <!-- 7. 主题 -->
+                    <li class="carousel-slide">
+                        <div class="screenshot-item">
+                            <div class="screenshot-image" onclick="openModal('screenshot/theme_settings_page.jpg', '主题设置')">
+                                <img src="screenshot/theme_settings_page.jpg" alt="主题设置" loading="lazy">
+                            </div>
+                            <div class="screenshot-content">
+                                <div class="arrow-doodle"></div>
+                                <h4><span class="content-zh">个性化主题</span><span class="content-en">Personalized Theme</span></h4>
+                                <p><span class="content-zh">内置多种色彩主题，并支持自定义设置，打造专属于你的视觉风格。</span><span class="content-en">Built-in multiple color themes and supports custom settings to create your own unique visual style.</span></p>
+                            </div>
+                        </div>
+                    </li>
+
+                    <!-- 8. 备份 -->
+                    <li class="carousel-slide">
+                        <div class="screenshot-item">
+                            <div class="screenshot-content">
+                                <div class="arrow-doodle"></div>
+                                <h4><span class="content-zh">数据备份与恢复</span><span class="content-en">Backup & Restore</span></h4>
+                                <p><span class="content-zh">提供完整的数据备份和恢复功能，包括笔记、媒体文件和设置，保障你的数据安全。</span><span class="content-en">Provides complete data backup and recovery functions, including notes, media files, and settings, to ensure your data security.</span></p>
+                            </div>
+                            <div class="screenshot-image" onclick="openModal('screenshot/backup_restore_page.jpg', '备份恢复')">
+                                <img src="screenshot/backup_restore_page.jpg" alt="备份恢复" loading="lazy">
+                            </div>
+                        </div>
+                    </li>
+                </ul>
             </div>
-        </div>
 
-        <!-- 编辑与AI功能 -->
-        <div class="screenshot-category fade-in">
-            <h3 class="category-title">
-                <span class="content-zh">编辑与AI功能</span>
-                <span class="content-en">Editing & AI Features</span>
-            </h3>
-            <div class="screenshots-grid">
-                <div class="screenshot-item fade-in">
-                    <div class="screenshot-image" onclick="openModal('screenshot/note_qa_chat_page.jpg', 'AI问答')">
-                        <img src="screenshot/note_qa_chat_page.jpg" alt="AI问答对话">
-                    </div>
-                    <div class="screenshot-content">
-                        <div class="arrow-doodle"></div>
-                        <h4><span class="content-zh">AI 智能问答</span><span class="content-en">AI Q&A Chat</span></h4>
-                        <p><span class="content-zh">基于你的笔记内容，AI能够回答相关问题、提供总结、激发新灵感，成为你的私人知识助理。</span><span class="content-en">Based on your notes, the AI can answer related questions, provide summaries, and spark new ideas, becoming your personal knowledge assistant.</span></p>
-                    </div>
-                </div>
-
-                <div class="screenshot-item fade-in">
-                    <div class="screenshot-content">
-                        <div class="arrow-doodle"></div>
-                        <h4><span class="content-zh">智能筛选与排序</span><span class="content-en">Smart Filter & Sort</span></h4>
-                        <p><span class="content-zh">通过标签、内容、时间等多维度进行筛选和排序，帮你快速定位所需信息。</span><span class="content-en">Filter and sort by tags, content, time, and other dimensions to help you quickly locate the information you need.</span></p>
-                    </div>
-                    <div class="screenshot-image" onclick="openModal('screenshot/note_filter_sort_sheet.dart.jpg', '筛选排序')">
-                        <img src="screenshot/note_filter_sort_sheet.dart.jpg" alt="筛选与排序">
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 洞察与报告 -->
-        <div class="screenshot-category fade-in">
-            <h3 class="category-title">
-                <span class="content-zh">洞察与报告</span>
-                <span class="content-en">Insights & Reports</span>
-            </h3>
-            <div class="screenshots-grid">
-                <div class="screenshot-item fade-in">
-                    <div class="screenshot-image" onclick="openModal('screenshot/insights_page.jpg', '洞察分析')">
-                        <img src="screenshot/insights_page.jpg" alt="洞察分析">
-                    </div>
-                    <div class="screenshot-content">
-                        <div class="arrow-doodle"></div>
-                        <h4><span class="content-zh">AI 洞察分析</span><span class="content-en">AI Insights Analysis</span></h4>
-                        <p><span class="content-zh">AI 自动分析你的写作习惯、常用词汇和情感倾向，生成可视化图表，助你更好地了解自己。</span><span class="content-en">The AI automatically analyzes your writing habits, common vocabulary, and emotional tendencies, generating visual charts to help you better understand yourself.</span></p>
-                    </div>
-                </div>
-
-                <div class="screenshot-item fade-in">
-                    <div class="screenshot-content">
-                        <div class="arrow-doodle"></div>
-                        <h4><span class="content-zh">跨设备同步</span><span class="content-en">Cross-Device Sync</span></h4>
-                        <p><span class="content-zh">通过局域网内的设备发现和数据同步功能，轻松实现多设备间的数据无缝流转。</span><span class="content-en">Seamlessly transfer data between multiple devices through local network device discovery and data synchronization.</span></p>
-                    </div>
-                    <div class="screenshot-image" onclick="openModal('screenshot/note_sync.jpg', '笔记同步')">
-                        <img src="screenshot/note_sync.jpg" alt="笔记同步">
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 设置与管理 -->
-        <div class="screenshot-category fade-in">
-            <h3 class="category-title">
-                <span class="content-zh">设置与管理</span>
-                <span class="content-en">Settings & Management</span>
-            </h3>
-            <div class="screenshots-grid">
-                <div class="screenshot-item fade-in">
-                    <div class="screenshot-image" onclick="openModal('screenshot/theme_settings_page.jpg', '主题设置')">
-                        <img src="screenshot/theme_settings_page.jpg" alt="主题设置">
-                    </div>
-                    <div class="screenshot-content">
-                        <div class="arrow-doodle"></div>
-                        <h4><span class="content-zh">个性化主题</span><span class="content-en">Personalized Theme</span></h4>
-                        <p><span class="content-zh">内置多种色彩主题，并支持自定义设置，打造专属于你的视觉风格。</span><span class="content-en">Built-in multiple color themes and supports custom settings to create your own unique visual style.</span></p>
-                    </div>
-                </div>
-
-                <div class="screenshot-item fade-in">
-                    <div class="screenshot-content">
-                        <div class="arrow-doodle"></div>
-                        <h4><span class="content-zh">数据备份与恢复</span><span class="content-en">Backup & Restore</span></h4>
-                        <p><span class="content-zh">提供完整的数据备份和恢复功能，包括笔记、媒体文件和设置，保障你的数据安全。</span><span class="content-en">Provides complete data backup and recovery functions, including notes, media files, and settings, to ensure your data security.</span></p>
-                    </div>
-                    <div class="screenshot-image" onclick="openModal('screenshot/backup_restore_page.jpg', '备份恢复')">
-                        <img src="screenshot/backup_restore_page.jpg" alt="备份恢复">
-                    </div>
-                </div>
+            <button class="carousel-btn next-btn" aria-label="Next">❯</button>
+            
+            <div class="carousel-dots" id="carouselDots">
+                <!-- JS自动生成圆点 -->
             </div>
         </div>
     </section>
 
     <!-- 模态框 -->
-    <div class="modal" id="imageModal" onclick="closeModal()">
+    <div class="modal" id="imageModal" role="dialog" aria-modal="true" aria-hidden="true" aria-label="图片预览 / Image preview" onclick="closeModal()">
         <div class="modal-content" onclick="event.stopPropagation()">
-            <span class="modal-close" onclick="closeModal()">×</span>
-            <img id="modalImage" src="" alt="预览">
+            <button type="button" class="modal-close" id="modalCloseBtn" aria-label="Close" onclick="closeModal()">×</button>
+            <button type="button" class="modal-nav modal-prev" aria-label="Previous" onclick="changeImage(-1)">&#10094;</button>
+            <button type="button" class="modal-nav modal-next" aria-label="Next" onclick="changeImage(1)">&#10095;</button>
+            <img id="modalImage" src="" alt="" decoding="async">
+            <div class="modal-caption" id="modalCaption"></div>
         </div>
     </div>
 
@@ -2194,7 +2792,7 @@
                 <span class="content-zh">🛠️ 技术实力</span>
                 <span class="content-en">🛠️ Tech Power</span>
             </span>
-            <h2 class="section-title">
+            <h2 class="section-title text-gradient">
                 <span class="content-zh">现代化技术栈</span>
                 <span class="content-en">Modern Tech Stack</span>
             </h2>
@@ -2338,71 +2936,142 @@ cd ThoughtEcho</code></pre>
     <section class="section roadmap-section" id="roadmap">
         <div class="section-header fade-in">
             <span class="section-label">
-                <span class="content-zh">🗺️ 发展规划</span>
-                <span class="content-en">🗺️ Roadmap</span>
+                <span class="content-zh">📜 版本历程</span>
+                <span class="content-en">📜 Milestones</span>
             </span>
-            <h2 class="section-title">
-                <span class="content-zh">持续进化中</span>
-                <span class="content-en">Continuously Evolving</span>
+            <h2 class="section-title text-gradient">
+                <span class="content-zh">见证心迹的每一步成长</span>
+                <span class="content-en">Charting the Evolution of ThoughtEcho</span>
             </h2>
             <p class="section-description">
-                <span class="content-zh">我们正在不断完善和扩展 ThoughtEcho 的功能</span>
-                <span class="content-en">We're constantly improving and expanding ThoughtEcho</span>
+                <span class="content-zh">从灵感到产品，ThoughtEcho 始终在进化</span>
+                <span class="content-en">From inspiration to product, ThoughtEcho is always evolving</span>
             </p>
         </div>
 
         <div class="roadmap-container">
-            <div class="roadmap-card fade-in">
+            <!-- v3.3.0 -->
+            <div class="roadmap-card fade-in" style="border-color: var(--accent-brown); transform: scale(1.02); z-index: 1;">
                 <div class="roadmap-header">
-                    <span class="roadmap-icon">✅</span>
+                    <span class="roadmap-icon">❄️</span>
                     <h3 class="roadmap-title">
-                        <span class="content-zh">已完成</span>
-                        <span class="content-en">Completed</span>
+                        <span class="content-zh">v3.3.0 冬季更新</span>
+                        <span class="content-en">Winter Update</span>
                     </h3>
                 </div>
                 <ul class="roadmap-items">
-                    <li><span class="content-zh">富文本编辑器与多媒体支持</span><span class="content-en">Rich text editor with multimedia</span></li>
-                    <li><span class="content-zh">多AI服务商架构</span><span class="content-en">Multi-AI provider architecture</span></li>
-                    <li><span class="content-zh">AI卡片生成功能</span><span class="content-en">AI card generation</span></li>
-                    <li><span class="content-zh">大文件流式处理</span><span class="content-en">Large file streaming</span></li>
-                    <li><span class="content-zh">智能内存管理</span><span class="content-en">Intelligent memory management</span></li>
-                    <li><span class="content-zh">ZIP格式完整备份</span><span class="content-en">ZIP format backup</span></li>
-                    <li><span class="content-zh">Material 3现代化界面</span><span class="content-en">Material 3 interface</span></li>
-                    <li><span class="content-zh">多平台数据库适配</span><span class="content-en">Multi-platform database</span></li>
-                    <li><span class="content-zh">位置与天气记录</span><span class="content-en">Location & weather recording</span></li>
-                    <li><span class="content-zh">剪贴板智能检测</span><span class="content-en">Smart clipboard detection</span></li>
-                    <li><span class="content-zh">AI年度报告生成</span><span class="content-en">AI annual report</span></li>
-                    <li><span class="content-zh">笔记内容智能分析</span><span class="content-en">Smart content analysis</span></li>
-                    <li><span class="content-zh">性能优化与稳定性提升</span><span class="content-en">Performance optimization</span></li>
-                    <li><span class="content-zh">用户体验改进</span><span class="content-en">UX improvements</span></li>
-                    <li><span class="content-zh">多设备同步功能</span><span class="content-en">Multi-device sync</span></li>
-                    <li><span class="content-zh">桌面端应用支持</span><span class="content-en">Desktop app support</span></li>
+                    <li><span class="content-zh">🌙 深色模式全面升级，视觉层次更细腻</span><span class="content-en">Dark mode visual overhaul</span></li>
+                    <li><span class="content-zh">🌐 英语支持接近 100%，多语言无缝切换</span><span class="content-en">Full English localization</span></li>
+                    <li><span class="content-zh">🖼️ 图片缩放增强，沉浸式阅览体验</span><span class="content-en">Enhanced image zoom & preview</span></li>
+                    <li><span class="content-zh">💾 Windows 数据目录优化，迁移更省心</span><span class="content-en">Windows data storage optimized</span></li>
                 </ul>
             </div>
 
+            <!-- v3.0.0 -->
             <div class="roadmap-card fade-in">
                 <div class="roadmap-header">
-                    <span class="roadmap-icon">💡</span>
+                    <span class="roadmap-icon">🎉</span>
                     <h3 class="roadmap-title">
-                        <span class="content-zh">长期规划</span>
-                        <span class="content-en">Long Term</span>
+                        <span class="content-zh">v3.0.0 正式版</span>
+                        <span class="content-en">Stable Release</span>
                     </h3>
                 </div>
                 <ul class="roadmap-items">
-                    <li><span class="content-zh">AI自然语言搜索</span><span class="content-en">AI natural language search</span></li>
-                    <li><span class="content-zh">语音转文字输入</span><span class="content-en">Voice-to-text input</span></li>
-                    <li><span class="content-zh">OCR拍照识别摘录</span><span class="content-en">OCR text recognition</span></li>
-                    <li><span class="content-zh">AI自动提取作者出处</span><span class="content-en">AI author extraction</span></li>
-                    <li><span class="content-zh">国际化多语言支持</span><span class="content-en">Internationalization</span></li>
-                    <li><span class="content-zh">仿真3D笔记本界面</span><span class="content-en">3D notebook interface</span></li>
-                    <li><span class="content-zh">智能内容分类</span><span class="content-en">Smart categorization</span></li>
-                    <li><span class="content-zh">地图选点添加位置</span><span class="content-en">Map location selection</span></li>
-                    <li><span class="content-zh">离线语音识别</span><span class="content-en">Offline voice recognition</span></li>
-                    <li><span class="content-zh">本地OCR处理</span><span class="content-en">Local OCR processing</span></li>
-                    <li><span class="content-zh">端侧智能分析</span><span class="content-en">On-device AI analysis</span></li>
-                    <li><span class="content-zh">高级数据可视化</span><span class="content-en">Advanced data visualization</span></li>
-                    <li><span class="content-zh">更多AI集成服务</span><span class="content-en">More AI integrations</span></li>
+                    <li><span class="content-zh">🚀 稳定性深度打磨，重新定义细节体验</span><span class="content-en">Stable & Polished foundation</span></li>
+                    <li><span class="content-zh">🤖 AI 助手全面赋能（问答、润色、续写）</span><span class="content-en">Powerful AI assistant toolkit</span></li>
+                    <li><span class="content-zh">🔐 架构全面重构，为未来增长奠定基础</span><span class="content-en">Architecture refactored for scale</span></li>
                 </ul>
+            </div>
+
+            <!-- v2.0.0 -->
+            <div class="roadmap-card fade-in" style="opacity: 0.8;">
+                <div class="roadmap-header">
+                    <span class="roadmap-icon">🎨</span>
+                    <h3 class="roadmap-title">
+                        <span class="content-zh">v2.0.0 蜕变</span>
+                        <span class="content-en">Evolution</span>
+                    </h3>
+                </div>
+                <ul class="roadmap-items">
+                    <li><span class="content-zh">Material 3 现代化界面与动态配色</span><span class="content-en">Material 3 Modern UI/UX</span></li>
+                    <li><span class="content-zh">全屏编辑器与富文本多媒体支持</span><span class="content-en">Full-screen rich text editor</span></li>
+                    <li><span class="content-zh">自动记录地理位置与即时天气信息</span><span class="content-en">Auto weather & location capture</span></li>
+                </ul>
+            </div>
+
+            <!-- v1.0.0 -->
+            <div class="roadmap-card fade-in" style="opacity: 0.6;">
+                <div class="roadmap-header">
+                    <span class="roadmap-icon">🌱</span>
+                    <h3 class="roadmap-title">
+                        <span class="content-zh">v1.0.0 初始</span>
+                        <span class="content-en">Genesis</span>
+                    </h3>
+                </div>
+                <ul class="roadmap-items">
+                    <li><span class="content-zh">应用核心框架搭建，跨平台数据库适配</span><span class="content-en">Foundational core architecture</span></li>
+                    <li><span class="content-zh">基础笔记编辑能力，开启灵感捕捉之旅</span><span class="content-en">Basic note taking features</span></li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ 常见问题 -->
+    <section class="section faq-section" id="faq">
+        <div class="section-header fade-in">
+            <span class="section-label">
+                <span class="content-zh">❓ 常见问题</span>
+                <span class="content-en">❓ FAQ</span>
+            </span>
+            <h2 class="section-title text-gradient">
+                <span class="content-zh">答疑解惑</span>
+                <span class="content-en">Q & A</span>
+            </h2>
+        </div>
+
+        <div class="faq-grid">
+            <div class="faq-item fade-in">
+                <button type="button" class="faq-question" id="faq-q1" aria-expanded="false" aria-controls="faq-a1">
+                    <span class="content-zh">应用是免费的吗？</span>
+                    <span class="content-en">Is the app free?</span>
+                </button>
+                <div class="faq-answer" id="faq-a1" role="region" aria-labelledby="faq-q1" hidden>
+                    <span class="content-zh">是的，ThoughtEcho 是完全免费且开源的。你可以免费使用所有本地功能。</span>
+                    <span class="content-en">Yes, ThoughtEcho is completely free and open source. You can use all local features for free.</span>
+                </div>
+            </div>
+
+            <div class="faq-item fade-in">
+                <button type="button" class="faq-question" id="faq-q2" aria-expanded="false" aria-controls="faq-a2">
+                    <span class="content-zh">如何使用 AI 功能？</span>
+                    <span class="content-en">How to use AI features?</span>
+                </button>
+                <div class="faq-answer" id="faq-a2" role="region" aria-labelledby="faq-q2" hidden>
+                    <span class="content-zh">你需要自行申请 AI 服务商（如 OpenAI, DeepSeek）的 API Key，并在设置中填入。费用直接由服务商收取，我们不经手。</span>
+                    <span class="content-en">You need to get an API Key from an AI provider (like OpenAI, DeepSeek) and enter it in settings. You pay the provider directly.</span>
+                </div>
+            </div>
+
+            <div class="faq-item fade-in">
+                <button type="button" class="faq-question" id="faq-q3" aria-expanded="false" aria-controls="faq-a3">
+                    <span class="content-zh">我的数据安全吗？</span>
+                    <span class="content-en">Is my data safe?</span>
+                </button>
+                <div class="faq-answer" id="faq-a3" role="region" aria-labelledby="faq-q3" hidden>
+                    <span class="content-zh">绝对安全。所有数据存储在你的设备本地，不上传云端。API Key 采用系统级加密存储。</span>
+                    <span class="content-en">Absolutely. All data is stored locally on your device, not uploaded to the cloud. API Keys are stored with system-level encryption.</span>
+                </div>
+            </div>
+
+            <div class="faq-item fade-in">
+                <button type="button" class="faq-question" id="faq-q4" aria-expanded="false" aria-controls="faq-a4">
+                    <span class="content-zh">支持多设备同步吗？</span>
+                    <span class="content-en">Does it support sync?</span>
+                </button>
+                <div class="faq-answer" id="faq-a4" role="region" aria-labelledby="faq-q4" hidden>
+                    <span class="content-zh">支持局域网同步。只要设备在同一 Wi-Fi 下，即可互相发现并同步数据，无需中央服务器。</span>
+                    <span class="content-en">Yes, via LAN sync. Devices on the same Wi-Fi can discover each other and sync data without a central server.</span>
+                </div>
             </div>
         </div>
     </section>
@@ -2414,7 +3083,7 @@ cd ThoughtEcho</code></pre>
                 <span class="content-zh">立即下载</span>
                 <span class="content-en">Download Now</span>
             </span>
-            <h2 class="section-title">
+            <h2 class="section-title text-gradient">
                 <span class="content-zh">让我们一起随心迹录</span>
                 <span class="content-en">Let's freely record with ThoughtEcho</span>
             </h2>
@@ -2474,9 +3143,11 @@ cd ThoughtEcho</code></pre>
         <!-- small download note removed as requested -->
     </section>
 
+    </main>
+
     <!-- Footer -->
     <footer>
-        <div class="container">
+        <div class="footer-container">
             <div class="footer-grid">
                 <div class="footer-brand">
                     <h3>
@@ -2542,6 +3213,8 @@ cd ThoughtEcho</code></pre>
                     </ul>
                 </div>
 
+            </div>
+
             <div class="footer-bottom">
                 <p>
                     © 2025 ThoughtEcho. 
@@ -2560,12 +3233,17 @@ cd ThoughtEcho</code></pre>
         </div>
     </footer>
 
+    <!-- 回到顶部按钮 -->
+    <button id="backToTop" class="back-to-top" aria-label="Back to Top">↑</button>
+
     <script>
         // 主题切换
         const themeToggle = document.getElementById('themeToggle');
         const themeIcon = document.getElementById('themeIcon');
         const body = document.body;
         const html = document.documentElement;
+
+        const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
         // 从本地存储加载主题
         const currentTheme = localStorage.getItem('theme') || 'light';
@@ -2590,100 +3268,272 @@ cd ThoughtEcho</code></pre>
         });
 
 
-        // 语言切换
+        // 语言切换（修复：避免同时存在 lang-zh 与 lang-en 导致内容全隐藏）
         const langToggle = document.getElementById('langToggle');
         const langText = document.getElementById('langText');
-        
-        // 从本地存储加载语言
-        const currentLang = localStorage.getItem('lang') || 'zh';
-        body.classList.add(`lang-${currentLang}`);
-        langText.textContent = currentLang === 'zh' ? 'EN' : '中文';
 
-        langToggle.addEventListener('click', () => {
-            const isZh = body.classList.contains('lang-zh');
-            if (isZh) {
-                body.classList.remove('lang-zh');
-                body.classList.add('lang-en');
-                langText.textContent = '中文';
-                localStorage.setItem('lang', 'en');
-            } else {
-                body.classList.remove('lang-en');
-                body.classList.add('lang-zh');
-                langText.textContent = 'EN';
-                localStorage.setItem('lang', 'zh');
+        function getCurrentLang() {
+            return body.classList.contains('lang-en') ? 'en' : 'zh';
+        }
+
+        function applyLanguage(lang) {
+            const normalized = lang === 'en' ? 'en' : 'zh';
+            body.classList.remove('lang-zh', 'lang-en');
+            body.classList.add(`lang-${normalized}`);
+            langText.textContent = normalized === 'zh' ? 'EN' : '中文';
+
+            // 同步 html lang（利于 SEO 与读屏）
+            html.setAttribute('lang', normalized === 'zh' ? 'zh-CN' : 'en');
+
+            // 微软徽章语言（存在则同步）
+            const storeBadge = document.querySelector('ms-store-badge');
+            if (storeBadge) {
+                storeBadge.setAttribute('language', normalized === 'zh' ? 'zh-cn' : 'en-us');
             }
+
+            localStorage.setItem('lang', normalized);
+            syncNavHeightVar();
+        }
+
+        applyLanguage(localStorage.getItem('lang') || 'zh');
+        langToggle.addEventListener('click', () => {
+            applyLanguage(getCurrentLang() === 'zh' ? 'en' : 'zh');
         });
 
         // 移动端菜单
         const mobileMenuBtn = document.getElementById('mobileMenuBtn');
         const navLinks = document.getElementById('navLinks');
+        const mobileMenuOverlay = document.getElementById('mobileMenuOverlay');
 
-        mobileMenuBtn.addEventListener('click', () => {
+        // 动态计算导航栏实际高度，防止下拉菜单与导航栏错位
+        function syncNavHeightVar() {
+            var measuredH = document.querySelector('nav').offsetHeight;
+            document.documentElement.style.setProperty('--mobile-nav-h', measuredH + 'px');
+        }
+        syncNavHeightVar();
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(syncNavHeightVar).catch(() => {
+                console.warn('Font loading detection unavailable; navigation height will sync on next resize event.');
+            });
+        }
+        window.addEventListener('resize', syncNavHeightVar);
+
+        mobileMenuBtn.setAttribute('aria-controls', 'navLinks');
+        mobileMenuBtn.setAttribute('aria-expanded', 'false');
+
+        function toggleMenu() {
             navLinks.classList.toggle('active');
-        });
+            mobileMenuOverlay.classList.toggle('active');
+            const isOpen = navLinks.classList.contains('active');
+            mobileMenuBtn.innerHTML = isOpen ? '×' : '☰';
+            mobileMenuBtn.setAttribute('aria-expanded', String(isOpen));
+        }
+
+        mobileMenuBtn.addEventListener('click', toggleMenu);
+        mobileMenuOverlay.addEventListener('click', toggleMenu);
 
         // 点击导航链接后关闭菜单
         navLinks.querySelectorAll('a').forEach(link => {
             link.addEventListener('click', () => {
-                navLinks.classList.remove('active');
+                if (navLinks.classList.contains('active')) toggleMenu();
             });
         });
 
         // 图片模态框
+        let currentImageIndex = 0;
+        // 定义图片列表以便轮播
+        const screenshots = [
+            { src: 'screenshot/home_page.jpg', titleZh: '主页', titleEn: 'Homepage' },
+            { src: 'screenshot/note_full_editor_page.dart.jpg', titleZh: '富文本编辑器', titleEn: 'Rich Text Editor' },
+            { src: 'screenshot/note_qa_chat_page.jpg', titleZh: 'AI问答', titleEn: 'AI Q&A' },
+            { src: 'screenshot/note_filter_sort_sheet.dart.jpg', titleZh: '筛选排序', titleEn: 'Filter & Sort' },
+            { src: 'screenshot/insights_page.jpg', titleZh: '洞察分析', titleEn: 'Insights' },
+            { src: 'screenshot/note_sync.jpg', titleZh: '笔记同步', titleEn: 'Sync' },
+            { src: 'screenshot/theme_settings_page.jpg', titleZh: '主题设置', titleEn: 'Theme Settings' },
+            { src: 'screenshot/backup_restore_page.jpg', titleZh: '备份恢复', titleEn: 'Backup & Restore' }
+        ];
+
+        const modal = document.getElementById('imageModal');
+        const modalImage = document.getElementById('modalImage');
+        const modalCaption = document.getElementById('modalCaption');
+        const modalCloseBtn = document.getElementById('modalCloseBtn');
+        let lastActiveElement = null;
+
+        function getImageTitle(img) {
+            const lang = getCurrentLang();
+            if (!img) return '';
+            return lang === 'zh' ? img.titleZh : img.titleEn;
+        }
+
         function openModal(src, alt) {
-            const modal = document.getElementById('imageModal');
-            const modalImage = document.getElementById('modalImage');
-            const modalCaption = document.getElementById('modalCaption');
-            
+            // 查找当前点击图片的索引
+            const index = screenshots.findIndex(s => src.includes(s.src));
+            if (index !== -1) {
+                currentImageIndex = index;
+            }
+
+            const img = screenshots[currentImageIndex];
+            const title = getImageTitle(img) || alt || '';
+
+            lastActiveElement = document.activeElement;
             modal.classList.add('active');
+            modal.setAttribute('aria-hidden', 'false');
+            body.classList.add('modal-open');
+
             modalImage.src = src;
-            if (modalCaption && alt) {
-                modalCaption.textContent = alt;
+            modalImage.alt = title;
+            modalCaption.textContent = title;
+
+            // 将焦点移入对话框
+            if (modalCloseBtn) {
+                modalCloseBtn.focus({ preventScroll: true });
             }
         }
 
+        function changeImage(direction) {
+            currentImageIndex += direction;
+            
+            // 循环播放逻辑
+            if (currentImageIndex >= screenshots.length) {
+                currentImageIndex = 0;
+            } else if (currentImageIndex < 0) {
+                currentImageIndex = screenshots.length - 1;
+            }
+
+            const nextImage = screenshots[currentImageIndex];
+            const title = getImageTitle(nextImage);
+            
+            // 简单的切换效果
+            modalImage.style.opacity = '0.5';
+            setTimeout(() => {
+                modalImage.src = nextImage.src;
+                modalImage.alt = title;
+                modalCaption.textContent = title;
+                modalImage.style.opacity = '1';
+            }, 200);
+        }
+
         function closeModal() {
-            const modal = document.getElementById('imageModal');
             modal.classList.remove('active');
+            modal.setAttribute('aria-hidden', 'true');
+            body.classList.remove('modal-open');
+            modalImage.src = '';
+            modalCaption.textContent = '';
+
+            if (lastActiveElement && typeof lastActiveElement.focus === 'function') {
+                lastActiveElement.focus({ preventScroll: true });
+            }
         }
 
         // ESC 键关闭模态框
         document.addEventListener('keydown', (e) => {
+            const isModalOpen = modal.classList.contains('active');
+            if (!isModalOpen) return;
+
             if (e.key === 'Escape') {
                 closeModal();
+                return;
+            }
+            if (e.key === 'ArrowLeft') {
+                changeImage(-1);
+                return;
+            }
+            if (e.key === 'ArrowRight') {
+                changeImage(1);
+                return;
+            }
+        });
+
+        // 模态框内 Tab 焦点循环（轻量 focus trap）
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Tab') return;
+            if (!modal.classList.contains('active')) return;
+
+            const focusables = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+            const list = Array.from(focusables).filter(el => !el.hasAttribute('disabled'));
+            if (list.length === 0) return;
+
+            const first = list[0];
+            const last = list[list.length - 1];
+            if (e.shiftKey && document.activeElement === first) {
+                e.preventDefault();
+                last.focus();
+            } else if (!e.shiftKey && document.activeElement === last) {
+                e.preventDefault();
+                first.focus();
             }
         });
 
         // 滚动动画
-        const observerOptions = {
-            threshold: 0.1,
-            rootMargin: '0px 0px -100px 0px'
-        };
-
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
-                }
+        if (prefersReducedMotion) {
+            document.querySelectorAll('.fade-in, .slide-in-left, .slide-in-right, .scale-in').forEach(el => {
+                el.classList.add('visible');
             });
-        }, observerOptions);
+        } else {
+            const observerOptions = {
+                threshold: 0.1,
+                rootMargin: '0px 0px -100px 0px'
+            };
 
-        // 观察所有需要动画的元素
-        document.querySelectorAll('.fade-in, .slide-in-left, .slide-in-right, .scale-in').forEach(el => {
-            observer.observe(el);
-        });
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, observerOptions);
+
+            // 观察所有需要动画的元素
+            document.querySelectorAll('.fade-in, .slide-in-left, .slide-in-right, .scale-in').forEach(el => {
+                observer.observe(el);
+            });
+        }
 
         // 平滑滚动
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
                 e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
+                const href = this.getAttribute('href');
+                if (!href || href === '#') {
+                    window.scrollTo({ top: 0, behavior: prefersReducedMotion ? 'auto' : 'smooth' });
+                    return;
+                }
+
+                let target = null;
+                try {
+                    target = document.querySelector(href);
+                } catch (_) {
+                    // 忽略无效选择器（例如 href="#"）
+                    return;
+                }
+
                 if (target) {
                     target.scrollIntoView({
-                        behavior: 'smooth',
+                        behavior: prefersReducedMotion ? 'auto' : 'smooth',
                         block: 'start'
                     });
                 }
+            });
+        });
+
+        // FAQ 手风琴逻辑
+        document.querySelectorAll('.faq-question').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const expanded = btn.getAttribute('aria-expanded') === 'true';
+                const answerId = btn.getAttribute('aria-controls');
+                const answer = answerId ? document.getElementById(answerId) : null;
+
+                // 默认行为：只展开一个
+                document.querySelectorAll('.faq-question[aria-expanded="true"]').forEach(openBtn => {
+                    if (openBtn === btn) return;
+                    openBtn.setAttribute('aria-expanded', 'false');
+                    const id = openBtn.getAttribute('aria-controls');
+                    const panel = id ? document.getElementById(id) : null;
+                    if (panel) panel.hidden = true;
+                });
+
+                btn.setAttribute('aria-expanded', String(!expanded));
+                if (answer) answer.hidden = expanded;
             });
         });
 
@@ -2702,6 +3552,171 @@ cd ThoughtEcho</code></pre>
             
             lastScroll = currentScroll;
         });
+
+        // 滚动监听 (Scroll Spy)
+        const sections = document.querySelectorAll('section[id]');
+        const navItems = document.querySelectorAll('.nav-links a');
+
+        const scrollSpyOptions = {
+            threshold: 0.3, // 30% 可见时触发
+            rootMargin: "-10% 0px -50% 0px" // 调整触发线，使其更符合视觉中心
+        };
+
+        const scrollSpy = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const id = entry.target.getAttribute('id');
+                    navItems.forEach(link => {
+                        link.classList.toggle('active', link.getAttribute('href') === `#${id}`);
+                    });
+                }
+            });
+        }, scrollSpyOptions);
+
+        sections.forEach(section => {
+            scrollSpy.observe(section);
+        });
+
+        // 回到顶部按钮逻辑
+        const backToTopBtn = document.getElementById('backToTop');
+        
+        window.addEventListener('scroll', () => {
+            if (window.pageYOffset > 500) {
+                backToTopBtn.classList.add('visible');
+            } else {
+                backToTopBtn.classList.remove('visible');
+            }
+        });
+
+        backToTopBtn.addEventListener('click', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // ==================== 轮播图逻辑 ====================
+        const track = document.querySelector('.carousel-track');
+        const nextBtn = document.querySelector('.next-btn');
+        const prevBtn = document.querySelector('.prev-btn');
+        const dotsNav = document.getElementById('carouselDots');
+
+        if (track && nextBtn && prevBtn && dotsNav) {
+            const slides = Array.from(track.children);
+            let currentSlideIndex = 0;
+            let autoPlayInterval;
+
+            // 初始化轮播尺寸
+            track.style.width = (slides.length * 100) + '%';
+            slides.forEach(slide => {
+                slide.style.width = (100 / slides.length) + '%';
+            });
+
+            // 生成圆点
+            slides.forEach((_, index) => {
+                const dot = document.createElement('button');
+                dot.type = 'button';
+                dot.classList.add('carousel-dot');
+                if (index === 0) dot.classList.add('active');
+                dot.addEventListener('click', () => moveToSlide(index));
+                dotsNav.appendChild(dot);
+            });
+
+            const dots = Array.from(dotsNav.children);
+
+            function moveToSlide(index) {
+                if (slides.length === 0) return;
+
+                // 循环逻辑
+                if (index < 0) index = slides.length - 1;
+                if (index >= slides.length) index = 0;
+
+                // 修正：移动距离应为 (100 / slides.length) * index
+                const movePercentage = (100 / slides.length) * index;
+                track.style.transform = 'translateX(-' + movePercentage + '%)';
+
+                // 更新圆点状态
+                if (dots[currentSlideIndex]) dots[currentSlideIndex].classList.remove('active');
+                if (dots[index]) dots[index].classList.add('active');
+
+                currentSlideIndex = index;
+            }
+
+            // 按钮事件
+            nextBtn.addEventListener('click', () => {
+                moveToSlide(currentSlideIndex + 1);
+                resetAutoPlay();
+            });
+
+            prevBtn.addEventListener('click', () => {
+                moveToSlide(currentSlideIndex - 1);
+                resetAutoPlay();
+            });
+
+            // 自动播放
+            function startAutoPlay() {
+                if (prefersReducedMotion) return;
+                autoPlayInterval = setInterval(() => {
+                    moveToSlide(currentSlideIndex + 1);
+                }, 5000);
+            }
+
+            function stopAutoPlay() {
+                clearInterval(autoPlayInterval);
+            }
+
+            function resetAutoPlay() {
+                stopAutoPlay();
+                startAutoPlay();
+            }
+
+            // 鼠标悬停暂停
+            const carouselContainer = document.querySelector('.carousel-container');
+            if (carouselContainer) {
+                carouselContainer.addEventListener('mouseenter', stopAutoPlay);
+                carouselContainer.addEventListener('mouseleave', startAutoPlay);
+            }
+
+            // 触摸滑动支持 (Mobile Swipe)
+            let touchStartX = 0;
+            let touchEndX = 0;
+
+            track.addEventListener('touchstart', e => {
+                touchStartX = e.changedTouches[0].screenX;
+                stopAutoPlay();
+            }, { passive: true });
+
+            track.addEventListener('touchend', e => {
+                touchEndX = e.changedTouches[0].screenX;
+                if (touchEndX < touchStartX - 50) moveToSlide(currentSlideIndex + 1);
+                if (touchEndX > touchStartX + 50) moveToSlide(currentSlideIndex - 1);
+                startAutoPlay();
+            }, { passive: true });
+
+            startAutoPlay();
+        }
+
+        // 截图/滚动提示：键盘可触达
+        document.querySelectorAll('.screenshot-image').forEach(el => {
+            el.setAttribute('role', 'button');
+            el.setAttribute('tabindex', '0');
+            el.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    el.click();
+                }
+            });
+        });
+
+        const scrollIndicator = document.querySelector('.scroll-indicator');
+        if (scrollIndicator) {
+            scrollIndicator.setAttribute('role', 'button');
+            scrollIndicator.setAttribute('tabindex', '0');
+            scrollIndicator.setAttribute('aria-label', 'Scroll down');
+            scrollIndicator.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    scrollIndicator.click();
+                }
+            });
+        }
     </script>
 </body>
 </html>

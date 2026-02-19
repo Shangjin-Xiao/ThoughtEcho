@@ -125,33 +125,41 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
     }
   }
 
+  /// 准备用于保存的分析对象（生成ID和时间戳）
+  AIAnalysis _prepareAnalysis(AIAnalysis analysis) {
+    return analysis.copyWith(
+      id: analysis.id ?? _uuid.v4(),
+      createdAt: analysis.createdAt.isNotEmpty
+          ? analysis.createdAt
+          : DateTime.now().toIso8601String(),
+    );
+  }
+
+  /// 将分析对象保存到内存存储（Web平台）
+  void _saveToMemoryStore(AIAnalysis analysis) {
+    final existingIndex = _memoryStore.indexWhere(
+      (item) => item.id == analysis.id,
+    );
+    if (existingIndex >= 0) {
+      _memoryStore[existingIndex] = analysis;
+    } else {
+      _memoryStore.add(analysis);
+    }
+  }
+
   /// 保存AI分析结果
   Future<AIAnalysis> saveAnalysis(AIAnalysis analysis) async {
     try {
       AppLogger.i('开始保存AI分析: ${analysis.title}', source: 'AIAnalysisDB');
 
-      final newAnalysis = analysis.copyWith(
-        id: analysis.id ?? _uuid.v4(),
-        createdAt: analysis.createdAt.isNotEmpty
-            ? analysis.createdAt
-            : DateTime.now().toIso8601String(),
-      );
+      final newAnalysis = _prepareAnalysis(analysis);
 
       AppLogger.i('准备保存的分析ID: ${newAnalysis.id}', source: 'AIAnalysisDB');
 
       if (kIsWeb) {
         // Web平台使用内存存储
         AppLogger.i('使用Web内存存储', source: 'AIAnalysisDB');
-        final existingIndex = _memoryStore.indexWhere(
-          (item) => item.id == newAnalysis.id,
-        );
-        if (existingIndex >= 0) {
-          _memoryStore[existingIndex] = newAnalysis;
-          AppLogger.i('更新现有分析记录', source: 'AIAnalysisDB');
-        } else {
-          _memoryStore.add(newAnalysis);
-          AppLogger.i('添加新分析记录到内存', source: 'AIAnalysisDB');
-        }
+        _saveToMemoryStore(newAnalysis);
       } else {
         // 非Web平台使用SQLite
         AppLogger.i('使用SQLite数据库存储', source: 'AIAnalysisDB');
@@ -171,7 +179,7 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
 
       // 通知监听器数据已更新
       notifyListeners();
-      _notifyAnalysesChanged();
+      await _notifyAnalysesChanged();
 
       AppLogger.i('AI分析保存完成: ${newAnalysis.id}', source: 'AIAnalysisDB');
       return newAnalysis;
@@ -267,7 +275,7 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
 
       // 通知监听器数据已更新
       notifyListeners();
-      _notifyAnalysesChanged();
+      await _notifyAnalysesChanged();
 
       return true;
     } catch (e) {
@@ -290,7 +298,7 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
 
       // 通知监听器数据已更新
       notifyListeners();
-      _notifyAnalysesChanged();
+      await _notifyAnalysesChanged();
 
       return true;
     } catch (e) {
@@ -363,7 +371,7 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
   Stream<List<AIAnalysis>> get analysesStream => _analysesController.stream;
 
   /// 通知分析列表已更改
-  void _notifyAnalysesChanged() async {
+  Future<void> _notifyAnalysesChanged() async {
     if (!_analysesController.isClosed) {
       final analyses = await getAllAnalyses();
       _analysesController.add(analyses);
@@ -374,8 +382,7 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
   Future<int> restoreFromJson(String jsonStr) async {
     try {
       final List<dynamic> jsonList = json.decode(jsonStr);
-      final analyses =
-          jsonList.map((item) => item as Map<String, dynamic>).toList();
+      final analyses = jsonList.whereType<Map<String, dynamic>>().toList();
       return await importAnalysesFromList(analyses);
     } catch (e) {
       AppLogger.e('从JSON恢复AI分析失败: $e', error: e, source: 'AIAnalysisDB');
@@ -410,13 +417,72 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
     List<Map<String, dynamic>> analyses,
   ) async {
     try {
-      int count = 0;
-      for (var item in analyses) {
-        final analysis = AIAnalysis.fromJson(item);
-        await saveAnalysis(analysis);
-        count++;
+      if (analyses.isEmpty) return 0;
+
+      if (kIsWeb) {
+        AppLogger.i(
+          '开始批量导入AI分析(Web)，共 ${analyses.length} 条',
+          source: 'AIAnalysisDB',
+        );
+
+        // 防御性写法：过滤掉 null ID 并构建 storeMap
+        final Map<String, AIAnalysis> storeMap = {
+          for (var item in _memoryStore)
+            if (item.id != null) item.id!: item,
+        };
+
+        int count = 0;
+        for (var item in analyses) {
+          final analysis = AIAnalysis.fromJson(item);
+          final newAnalysis = _prepareAnalysis(analysis);
+          if (newAnalysis.id != null) {
+            storeMap[newAnalysis.id!] = newAnalysis;
+          }
+          count++;
+        }
+
+        // 更新原始列表
+        _memoryStore.clear();
+        _memoryStore.addAll(storeMap.values);
+
+        // 批量操作完成后统一通知一次
+        notifyListeners();
+        await _notifyAnalysesChanged();
+
+        AppLogger.i('批量导入完成(Web)', source: 'AIAnalysisDB');
+        return count;
+      } else {
+        // 非Web平台使用Batch优化
+        AppLogger.i(
+          '开始批量导入AI分析，共 ${analyses.length} 条',
+          source: 'AIAnalysisDB',
+        );
+        final db = await database;
+        final batch = db.batch();
+        int count = 0;
+
+        for (var item in analyses) {
+          final analysis = AIAnalysis.fromJson(item);
+          final newAnalysis = _prepareAnalysis(analysis);
+
+          final jsonData = newAnalysis.toJson();
+          batch.insert(
+            'ai_analyses',
+            jsonData,
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+          count++;
+        }
+
+        await batch.commit(noResult: true);
+        AppLogger.i('批量导入完成', source: 'AIAnalysisDB');
+
+        // 批量操作完成后统一通知一次
+        notifyListeners();
+        await _notifyAnalysesChanged();
+
+        return count;
       }
-      return count;
     } catch (e) {
       AppLogger.e('从List恢复AI分析失败: $e', error: e, source: 'AIAnalysisDB');
       return 0;

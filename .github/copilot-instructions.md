@@ -11,6 +11,7 @@
 - AI/密钥相关逻辑严禁硬编码敏感信息，统一通过 `APIKeyManager` 与安全存储。
 - 文档或命令给出后应在实际环境验证；对用户或 CI 依赖的命令，保持与 `scripts/`、`test/all_tests.dart` 一致。
 - 非用户明确要求时，不主动运行全量 `flutter test`、`flutter run` 或构建命令，也不要生成额外总结文档。
+- **强制使用 `load_skills`**: 调用 `delegate_task` 时，务必使用 `load_skills` 替代旧版的 `skills` 参数。
 ## 国际化规范
 - **严禁在 UI 代码中硬编码中文或任何用户可见文本**。所有用户界面文字必须通过 `AppLocalizations.of(context).keyName` 获取。
 - 新增 UI 文案时，先在 `lib/l10n/app_zh.arb`（中文）与 `lib/l10n/app_en.arb`（英文）中添加对应键值对，然后执行 `flutter gen-l10n` 生成代码后再使用。

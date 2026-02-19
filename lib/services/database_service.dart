@@ -1,7 +1,6 @@
 // ignore_for_file: unused_element, unused_field
 import 'dart:async';
 import 'dart:io';
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 // 仅在 Windows 平台下使用 sqflite_common_ffi，其它平台直接使用 sqflite 默认实现
@@ -149,20 +148,15 @@ class DatabaseService extends ChangeNotifier {
   }
 
   /// 修复：安全地通知笔记流订阅者
+  /// 性能优化：由于 _currentQuotes 已通过 _currentQuoteIds 保证唯一性，
+  /// 此处直接发送，无需再次遍历去重
   void _safeNotifyQuotesStream() {
+    // 修复：检查服务是否已销毁
+    if (_isDisposed) return;
+
     if (_quotesController != null && !_quotesController!.isClosed) {
-      // 创建去重的副本
-      final uniqueQuotes = <Quote>[];
-      final seenIds = <String>{};
-
-      for (final quote in _currentQuotes) {
-        if (quote.id != null && !seenIds.contains(quote.id)) {
-          seenIds.add(quote.id!);
-          uniqueQuotes.add(quote);
-        }
-      }
-
-      _quotesController!.add(List.from(uniqueQuotes));
+      // 直接发送当前列表的副本，已保证唯一性
+      _quotesController!.add(List.from(_currentQuotes));
     }
   }
 
@@ -190,6 +184,11 @@ class DatabaseService extends ChangeNotifier {
 
   /// 修复：安全的数据库访问方法，增加并发控制
   Future<Database> get safeDatabase async {
+    // 修复：检查服务是否已销毁
+    if (_isDisposed) {
+      throw StateError('DatabaseService 已被销毁，无法访问数据库');
+    }
+
     // Web平台使用内存存储，不需要数据库对象
     if (kIsWeb) {
       // 确保已初始化
@@ -200,11 +199,19 @@ class DatabaseService extends ChangeNotifier {
       throw UnsupportedError('Web平台使用内存存储，不支持数据库访问');
     }
 
+    // 修复：如果数据库已经打开，直接返回，避免在 init() 内部调用时死锁
+    // 这允许 init() 内部的方法（如 _updateCategoriesStream）正常工作
+    if (_database != null && _database!.isOpen) {
+      return _database!;
+    }
+
     // 如果正在初始化，等待初始化完成
+    // 注意：只有在数据库尚未打开时才等待，避免死锁
     if (_isInitializing && _initCompleter != null) {
       await _initCompleter!.future;
     }
 
+    // 再次检查数据库状态（可能在等待期间已初始化完成）
     if (_database != null && _database!.isOpen) {
       return _database!;
     }
@@ -260,8 +267,20 @@ class DatabaseService extends ChangeNotifier {
     _database = testDb;
   }
 
+  /// Test method to clear the test database instance
+  @visibleForTesting
+  static void clearTestDatabase() {
+    _database = null;
+  }
+
   /// 修复：初始化数据库，增加并发控制
   Future<void> init() async {
+    // 修复：检查服务是否已销毁
+    if (_isDisposed) {
+      logDebug('DatabaseService 已被销毁，无法初始化');
+      return;
+    }
+
     // 修复：添加严格的重复初始化检查
     if (_isInitialized) {
       logDebug('数据库已初始化，跳过重复初始化');
@@ -418,6 +437,7 @@ class DatabaseService extends ChangeNotifier {
       if (_initCompleter != null && !_initCompleter!.isCompleted) {
         _initCompleter!.completeError(e);
       }
+      _initCompleter = null; // 修复：确保在错误时也清理 completer
 
       // 尝试基本的恢复措施
       try {
@@ -788,8 +808,21 @@ class DatabaseService extends ChangeNotifier {
     // 如果数据库版本低于 11，添加 delta_content 字段用于存储富文本Delta JSON
     if (oldVersion < 11) {
       logDebug('数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 delta_content 字段');
-      await txn.execute('ALTER TABLE quotes ADD COLUMN delta_content TEXT');
-      logDebug('数据库升级：delta_content 字段添加完成');
+      try {
+        // 先检查字段是否已存在
+        final columns = await txn.rawQuery('PRAGMA table_info(quotes)');
+        final hasColumn = columns.any((col) => col['name'] == 'delta_content');
+
+        if (!hasColumn) {
+          await txn.execute('ALTER TABLE quotes ADD COLUMN delta_content TEXT');
+          logDebug('数据库升级：delta_content 字段添加完成');
+        } else {
+          logDebug('数据库升级：delta_content 字段已存在，跳过添加');
+        }
+      } catch (e) {
+        logError('delta_content 字段升级失败: $e',
+            error: e, source: 'DatabaseUpgrade');
+      }
     }
 
     // 修复：如果数据库版本低于 12，安全地创建 quote_tags 表并迁移数据
@@ -1089,8 +1122,15 @@ class DatabaseService extends ChangeNotifier {
       return;
     }
 
+    // 优化：一次性获取所有分类ID，避免在循环中进行N+1查询
+    final allCategories = await txn.query('categories', columns: ['id']);
+    final allCategoryIds = allCategories.map((c) => c['id'] as String).toSet();
+
     int migratedCount = 0;
     int errorCount = 0;
+
+    // 优化：使用batch进行批量插入
+    final batch = txn.batch();
 
     for (final quote in quotesWithTags) {
       try {
@@ -1108,26 +1148,19 @@ class DatabaseService extends ChangeNotifier {
 
         if (tagIds.isEmpty) continue;
 
-        // 验证标签ID是否存在
+        // 验证标签ID是否存在（在内存中检查）
         final validTagIds = <String>[];
         for (final tagId in tagIds) {
-          final categoryExists = await txn.query(
-            'categories',
-            where: 'id = ?',
-            whereArgs: [tagId],
-            limit: 1,
-          );
-
-          if (categoryExists.isNotEmpty) {
+          if (allCategoryIds.contains(tagId)) {
             validTagIds.add(tagId);
           } else {
             logDebug('警告：标签ID $tagId 不存在，跳过');
           }
         }
 
-        // 插入有效的标签关联
+        // 插入有效的标签关联（添加到batch）
         for (final tagId in validTagIds) {
-          await txn.insert(
+          batch.insert(
               'quote_tags',
               {
                 'quote_id': quoteId,
@@ -1141,6 +1174,15 @@ class DatabaseService extends ChangeNotifier {
         errorCount++;
         logDebug('迁移笔记 ${quote['id']} 的标签时出错: $e');
       }
+    }
+
+    // 提交批量操作
+    try {
+      await batch.commit(noResult: true);
+    } catch (e) {
+      logError('批量插入标签关联失败: $e', error: e, source: 'TagMigration');
+      // 重新抛出异常以确保迁移事务整体失败，避免在迁移未完成时删除 tag_ids 列导致数据丢失
+      rethrow;
     }
 
     logDebug('标签数据迁移完成：成功 $migratedCount 条，错误 $errorCount 条');
@@ -1393,6 +1435,7 @@ class DatabaseService extends ChangeNotifier {
     try {
       // 修复：重置状态，但不依赖流控制器
       _currentQuotes = [];
+      _currentQuoteIds.clear(); // 性能优化：同步清空 ID Set
       _watchHasMore = true;
       _isLoading = false;
       _watchOffset = 0;
@@ -1433,6 +1476,7 @@ class DatabaseService extends ChangeNotifier {
       logDebug('预加载笔记时出错: $e');
       // 确保状态一致
       _currentQuotes = [];
+      _currentQuoteIds.clear(); // 性能优化：同步清空 ID Set
       _watchHasMore = false;
 
       // 修复：确保流控制器存在
@@ -1595,6 +1639,20 @@ class DatabaseService extends ChangeNotifier {
     }
 
     return quotes;
+  }
+
+  /// 获取所有分类列表
+  Future<List<Map<String, dynamic>>> getAllCategories() async {
+    try {
+      if (kIsWeb) {
+        return _categoryStore.map((c) => c.toJson()).toList();
+      }
+      final db = database;
+      return await db.query('categories');
+    } catch (e) {
+      logDebug('获取所有分类失败: $e');
+      return [];
+    }
   }
 
   /// 检查并修复数据库结构，确保所有必要的列都存在
@@ -1925,28 +1983,28 @@ class DatabaseService extends ChangeNotifier {
   /// 返回保存的文件路径
   Future<String> exportAllData({String? customPath}) async {
     try {
-      // 调用新方法获取数据
+      // 修复 P1-2: 避免直接构建巨大的 JSON 字符串并 writeAsString 导致 OOM
+      // 1. 调用新方法获取 Map 数据（在内存中构建 Map）
       final jsonData = await exportDataAsMap();
-
-      // 转换为格式化的 JSON 字符串
-      final jsonStr = const JsonEncoder.withIndent('  ').convert(jsonData);
 
       String filePath;
       if (customPath != null) {
-        // 使用自定义路径
         filePath = customPath;
       } else {
-        // 使用默认路径
         final dir = await getApplicationDocumentsDirectory();
         final fileName = '心迹_${DateTime.now().millisecondsSinceEpoch}.json';
-        filePath = '${dir.path}/$fileName';
+        filePath = join(dir.path, fileName);
       }
 
-      final file = File(filePath);
-      await file.writeAsString(jsonStr);
-      return file.path;
+      // 2. 使用流式写入将 Map 数据转换为文件（大幅降低内存峰值占用）
+      // 修复：替换 file.writeAsString(jsonStr)，并传入 File 对象
+      logDebug('开始流式导出大文件到: $filePath');
+      await LargeFileManager.encodeJsonToFileStreaming(
+          jsonData, File(filePath));
+
+      return filePath;
     } catch (e) {
-      logDebug('数据导出失败: $e');
+      logError('数据导出失败', error: e, source: 'exportAllData');
       rethrow;
     }
   }
@@ -2341,7 +2399,7 @@ class DatabaseService extends ChangeNotifier {
       return _categoryStore;
     }
     try {
-      final db = database;
+      final db = await safeDatabase;
       final maps = await db.query('categories');
       final categories = maps.map((map) => NoteCategory.fromMap(map)).toList();
       return categories;
@@ -2390,7 +2448,7 @@ class DatabaseService extends ChangeNotifier {
         return hiddenTag;
       }
 
-      final db = database;
+      final db = await safeDatabase;
       final categoryMap = {
         'id': hiddenTagId,
         'name': '隐藏',
@@ -2437,7 +2495,7 @@ class DatabaseService extends ChangeNotifier {
         return;
       }
 
-      final db = database;
+      final db = await safeDatabase;
       await db.update(
         'categories',
         {
@@ -2470,7 +2528,7 @@ class DatabaseService extends ChangeNotifier {
         return;
       }
 
-      final db = database;
+      final db = await safeDatabase;
       // 先删除所有笔记与隐藏标签的关联
       await db.delete(
         'quote_tags',
@@ -2759,6 +2817,11 @@ class DatabaseService extends ChangeNotifier {
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
         await _updateCategoriesStream();
+
+        // 修复：导入/恢复完成后必须重建媒体引用，确保引用表准确
+        logInfo('导入完成，开始重建媒体引用记录...');
+        await MediaReferenceService.migrateExistingQuotes();
+
         notifyListeners();
         logDebug('通过回退方式成功添加分类');
       } catch (retryError) {
@@ -2932,6 +2995,11 @@ class DatabaseService extends ChangeNotifier {
     });
   }
 
+  /// 刷新笔记流数据（公开方法）
+  void refreshQuotes() {
+    _refreshQuotesStream();
+  }
+
   // 在增删改后刷新分页流数据
   void _refreshQuotesStream() {
     if (_quotesController != null && !_quotesController!.isClosed) {
@@ -2944,11 +3012,45 @@ class DatabaseService extends ChangeNotifier {
       _quotesCache = [];
       _watchHasMore = true;
       _currentQuotes = [];
+      _currentQuoteIds.clear(); // 性能优化：同步清空 ID Set
 
       // 触发重新加载
       loadMoreQuotes();
     } else {
       logDebug('笔记流无监听器或已关闭，跳过刷新');
+    }
+  }
+
+  /// 根据ID获取单个笔记的完整信息
+  Future<Quote?> getQuoteById(String id) async {
+    if (kIsWeb) {
+      try {
+        return _memoryStore.firstWhere((q) => q.id == id);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    try {
+      final db = await safeDatabase;
+
+      // 使用 GROUP_CONCAT 获取关联标签
+      final List<Map<String, dynamic>> maps = await db.rawQuery('''
+        SELECT q.*, GROUP_CONCAT(qt.tag_id) as tag_ids
+        FROM quotes q
+        LEFT JOIN quote_tags qt ON q.id = qt.quote_id
+        WHERE q.id = ?
+        GROUP BY q.id
+      ''', [id]);
+
+      if (maps.isEmpty) {
+        return null;
+      }
+
+      return Quote.fromJson(maps.first);
+    } catch (e) {
+      logDebug('获取指定ID笔记失败: $e');
+      return null;
     }
   }
 
@@ -2980,21 +3082,21 @@ class DatabaseService extends ChangeNotifier {
       _scheduleCacheCleanup();
 
       // 判断是否正在查询隐藏标签
-      final isQueryingHiddenTag = tagIds != null && tagIds.contains(hiddenTagId);
+      final isQueryingHiddenTag =
+          tagIds != null && tagIds.contains(hiddenTagId);
       // 如果正在查询隐藏标签，则不排除隐藏笔记
       final shouldExcludeHidden = excludeHiddenNotes && !isQueryingHiddenTag;
 
       if (kIsWeb) {
         // Web平台的完整筛选逻辑
         var filtered = _memoryStore;
-        
+
         // 排除隐藏笔记（除非正在查询隐藏标签）
         if (shouldExcludeHidden) {
-          filtered = filtered
-              .where((q) => !q.tagIds.contains(hiddenTagId))
-              .toList();
+          filtered =
+              filtered.where((q) => !q.tagIds.contains(hiddenTagId)).toList();
         }
-        
+
         if (tagIds != null && tagIds.isNotEmpty) {
           filtered = filtered
               .where((q) => q.tagIds.any((tag) => tagIds.contains(tag)))
@@ -3286,8 +3388,14 @@ class DatabaseService extends ChangeNotifier {
         'q.${orderByParts[0]} ${orderByParts.length > 1 ? orderByParts[1] : ''}';
 
     /// 修复：始终使用 qt.tag_id 获取所有标签
+    // 优化：指定查询列，排除大文本字段(ai_analysis, summary等)以提升列表加载性能
     final query = '''
-      SELECT q.*, GROUP_CONCAT(qt.tag_id) as tag_ids
+      SELECT
+        q.id, q.content, q.date, q.source, q.source_author, q.source_work,
+        q.category_id, q.color_hex, q.location, q.latitude, q.longitude,
+        q.weather, q.temperature, q.edit_source, q.delta_content, q.day_period,
+        q.last_modified, q.favorite_count,
+        GROUP_CONCAT(qt.tag_id) as tag_ids
       $fromClause
       $joinClause
       $where
@@ -3355,6 +3463,123 @@ class DatabaseService extends ChangeNotifier {
   /// 记录查询统计（_updateQueryStats的别名，保持代码一致性）
   void _recordQueryStats(String queryType, int timeMs) {
     _updateQueryStats(queryType, timeMs);
+  }
+
+  /// 智能推送专用轻量查询
+  ///
+  /// 不加载大字段（delta_content, ai_analysis, summary, keywords），
+  /// 不 JOIN tag 表，专为后台 isolate 设计，低内存开销。
+  Future<List<Quote>> getQuotesForSmartPush({
+    String? whereSql,
+    List<Object?>? whereArgs,
+    int limit = 200,
+    String orderBy = 'q.date DESC',
+  }) async {
+    try {
+      if (!_isInitialized) {
+        if (_isInitializing && _initCompleter != null) {
+          await _initCompleter!.future;
+        } else {
+          await init();
+        }
+      }
+
+      if (kIsWeb) {
+        // Web 平台降级：使用内存存储
+        var filtered = _memoryStore;
+        filtered.sort((a, b) {
+          final dateA = DateTime.tryParse(a.date) ?? DateTime.now();
+          final dateB = DateTime.tryParse(b.date) ?? DateTime.now();
+          return dateB.compareTo(dateA);
+        });
+        return filtered.take(limit).toList();
+      }
+
+      final db = await safeDatabase;
+
+      final conditions = <String>[];
+      final args = <Object?>[];
+
+      // 排除隐藏笔记
+      conditions.add('''
+        NOT EXISTS (
+          SELECT 1 FROM quote_tags qt_hidden
+          WHERE qt_hidden.quote_id = q.id
+          AND qt_hidden.tag_id = ?
+        )
+      ''');
+      args.add(hiddenTagId);
+
+      if (whereSql != null && whereSql.isNotEmpty) {
+        conditions.add(whereSql);
+        if (whereArgs != null) {
+          args.addAll(whereArgs);
+        }
+      }
+
+      final where =
+          conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
+
+      // 只取必要列，不取 delta_content/ai_analysis/summary/keywords
+      final query = '''
+        SELECT q.id, q.content, q.date, q.source, q.source_author, q.source_work,
+               q.category_id, q.color_hex, q.location, q.latitude, q.longitude,
+               q.weather, q.temperature, q.edit_source, q.day_period,
+               q.last_modified, q.favorite_count
+        FROM quotes q
+        $where
+        ORDER BY $orderBy
+        LIMIT ?
+      ''';
+      args.add(limit);
+
+      final maps = await db.rawQuery(query, args.whereType<Object>().toList());
+      return maps.map((m) => Quote.fromJson(m)).toList();
+    } catch (e) {
+      logError('getQuotesForSmartPush 失败: $e',
+          error: e, source: 'DatabaseService');
+      return [];
+    }
+  }
+
+  /// 智能推送专用：获取笔记创建时间的小时分布（纯聚合，不加载内容）
+  Future<List<int>> getHourDistributionForSmartPush() async {
+    final distribution = List<int>.filled(24, 0);
+    try {
+      if (!_isInitialized) {
+        if (_isInitializing && _initCompleter != null) {
+          await _initCompleter!.future;
+        } else {
+          await init();
+        }
+      }
+
+      if (kIsWeb) {
+        for (final note in _memoryStore) {
+          final d = DateTime.tryParse(note.date);
+          if (d != null) distribution[d.hour]++;
+        }
+        return distribution;
+      }
+
+      final db = await safeDatabase;
+      final maps = await db.rawQuery('''
+        SELECT CAST(substr(date, 12, 2) AS INTEGER) AS h, COUNT(*) AS c
+        FROM quotes
+        GROUP BY h
+      ''');
+      for (final row in maps) {
+        final h = (row['h'] as int?) ?? 0;
+        final c = (row['c'] as int?) ?? 0;
+        if (h >= 0 && h < 24) {
+          distribution[h] = c;
+        }
+      }
+    } catch (e) {
+      logError('getHourDistributionForSmartPush 失败: $e',
+          error: e, source: 'DatabaseService');
+    }
+    return distribution;
   }
 
   /// 修复：获取查询性能报告
@@ -3627,8 +3852,8 @@ class DatabaseService extends ChangeNotifier {
     }
 
     try {
-      final db = database;
-      
+      final db = await safeDatabase;
+
       // 修复：使用 LEFT JOIN 获取笔记及其关联的标签
       // 这样可以正确获取每个笔记的 tagIds
       final String query = '''
@@ -3644,11 +3869,11 @@ class DatabaseService extends ChangeNotifier {
         ''' : ''}
         GROUP BY q.id
       ''';
-      
+
       final List<Map<String, dynamic>> maps = excludeHiddenNotes
           ? await db.rawQuery(query, [hiddenTagId])
           : await db.rawQuery(query);
-      
+
       return maps.map((m) => Quote.fromJson(m)).toList();
     } catch (e) {
       logDebug('获取所有笔记失败: $e');
@@ -3677,9 +3902,8 @@ class DatabaseService extends ChangeNotifier {
 
       // 排除隐藏笔记
       if (shouldExcludeHidden) {
-        filtered = filtered
-            .where((q) => !q.tagIds.contains(hiddenTagId))
-            .toList();
+        filtered =
+            filtered.where((q) => !q.tagIds.contains(hiddenTagId)).toList();
       }
 
       if (tagIds != null && tagIds.isNotEmpty) {
@@ -3726,7 +3950,7 @@ class DatabaseService extends ChangeNotifier {
       return filtered.length;
     }
     try {
-      final db = database;
+      final db = await safeDatabase;
       List<String> conditions = [];
       List<dynamic> args = [];
 
@@ -3884,7 +4108,8 @@ class DatabaseService extends ChangeNotifier {
             // storedPath 可能是相对路径（相对于应用文档目录）
             String absolutePath = storedPath;
             try {
-              if (!absolutePath.startsWith('/')) {
+              // 使用 path.isAbsolute 来判断是否为绝对路径，兼容 Windows/Linux/macOS
+              if (!isAbsolute(absolutePath)) {
                 // 简单判断相对路径
                 final appDir = await getApplicationDocumentsDirectory();
                 absolutePath = join(appDir.path, storedPath);
@@ -3923,6 +4148,26 @@ class DatabaseService extends ChangeNotifier {
         rethrow;
       }
     });
+  }
+
+  /// 根据内容搜索笔记（用于媒体引用校验等内部逻辑）
+  Future<List<Quote>> searchQuotesByContent(String query) async {
+    if (kIsWeb) {
+      return _memoryStore
+          .where((q) =>
+              (q.content.contains(query)) ||
+              (q.deltaContent != null && q.deltaContent!.contains(query)))
+          .toList();
+    }
+
+    final db = await safeDatabase;
+    final List<Map<String, dynamic>> results = await db.query(
+      'quotes',
+      where: 'content LIKE ? OR delta_content LIKE ?',
+      whereArgs: ['%$query%', '%$query%'],
+    );
+
+    return results.map((map) => Quote.fromJson(map)).toList();
   }
 
   /// 修复：更新笔记内容，增加数据验证和并发控制
@@ -4008,32 +4253,32 @@ class DatabaseService extends ChangeNotifier {
                   conflictAlgorithm: ConflictAlgorithm.ignore);
             }
           }
+
+          // 3. 同步媒体引用，确保与内容更新保持原子性
+          await MediaReferenceService.syncQuoteMediaReferencesWithTransaction(
+            txn,
+            quote,
+          );
         });
 
         logDebug('笔记已成功更新，ID: ${quote.id}');
 
-        // 同步媒体文件引用
-        await MediaReferenceService.syncQuoteMediaReferences(quote);
-
         // 使用轻量级检查机制清理因内容变更而不再被引用的媒体文件
-        // 注：syncQuoteMediaReferences 已经更新了引用表，这里只需查引用计数
         for (final storedPath in oldReferencedFiles) {
           try {
             String absolutePath = storedPath;
-            try {
-              if (!absolutePath.startsWith('/')) {
-                final appDir = await getApplicationDocumentsDirectory();
-                absolutePath = join(appDir.path, storedPath);
-              }
-            } catch (_) {}
+            if (!absolutePath.startsWith('/') && !absolutePath.contains(':')) {
+              final appDir = await getApplicationDocumentsDirectory();
+              absolutePath = join(appDir.path, storedPath);
+            }
 
-            // 使用轻量级检查（仅查引用表计数）
+            // 使用增强版的 quickCheckAndDeleteIfOrphan（包含内容二次校验）
             final deleted =
                 await MediaReferenceService.quickCheckAndDeleteIfOrphan(
               absolutePath,
             );
             if (deleted) {
-              logDebug('已清理无引用媒体文件: $absolutePath (原始记录: $storedPath)');
+              logDebug('已清理无引用媒体文件: $absolutePath');
             }
           } catch (e) {
             logDebug('清理无引用媒体文件失败: $storedPath, 错误: $e');
@@ -4163,6 +4408,93 @@ class DatabaseService extends ChangeNotifier {
     });
   }
 
+  /// 重置心形点击次数为0（清除收藏）
+  Future<void> resetFavoriteCount(String quoteId) async {
+    if (quoteId.isEmpty) {
+      throw ArgumentError('笔记ID不能为空');
+    }
+
+    if (kIsWeb) {
+      final index = _memoryStore.indexWhere((q) => q.id == quoteId);
+      if (index != -1) {
+        _memoryStore[index] = _memoryStore[index].copyWith(
+          favoriteCount: 0,
+        );
+        logDebug(
+          'Web平台清除收藏: quoteId=$quoteId',
+          source: 'ResetFavorite',
+        );
+      }
+
+      final curIndex = _currentQuotes.indexWhere((q) => q.id == quoteId);
+      if (curIndex != -1) {
+        _currentQuotes[curIndex] = _currentQuotes[curIndex].copyWith(
+          favoriteCount: 0,
+        );
+      }
+
+      if (_quotesController != null && !_quotesController!.isClosed) {
+        _quotesController!.add(List.from(_currentQuotes));
+      }
+      notifyListeners();
+      return;
+    }
+
+    return _executeWithLock('resetFavorite_$quoteId', () async {
+      try {
+        final index = _currentQuotes.indexWhere((q) => q.id == quoteId);
+        final oldCount =
+            index != -1 ? _currentQuotes[index].favoriteCount : null;
+        logDebug(
+          '清除收藏操作开始: quoteId=$quoteId, 内存旧值=$oldCount',
+          source: 'ResetFavorite',
+        );
+
+        final db = await safeDatabase;
+        await db.transaction((txn) async {
+          final updateCount = await txn.rawUpdate(
+            'UPDATE quotes SET favorite_count = 0, last_modified = ? WHERE id = ?',
+            [DateTime.now().toUtc().toIso8601String(), quoteId],
+          );
+
+          if (updateCount == 0) {
+            logWarning(
+              '清除收藏失败: 数据库中未找到quoteId=$quoteId',
+              source: 'ResetFavorite',
+            );
+          } else {
+            logInfo(
+              '清除收藏成功: quoteId=$quoteId, 旧值=$oldCount, 新值=0',
+              source: 'ResetFavorite',
+            );
+          }
+        });
+
+        // 更新内存中的笔记列表
+        if (index != -1) {
+          _currentQuotes[index] = _currentQuotes[index].copyWith(
+            favoriteCount: 0,
+          );
+          logDebug(
+            '内存缓存已更新: 新值=0',
+            source: 'ResetFavorite',
+          );
+        }
+        if (_quotesController != null && !_quotesController!.isClosed) {
+          _quotesController!.add(List.from(_currentQuotes));
+        }
+        notifyListeners();
+      } catch (e) {
+        logError(
+          '清除收藏时出错: quoteId=$quoteId, error=$e',
+          error: e,
+          source: 'ResetFavorite',
+        );
+        rethrow;
+      }
+    });
+  }
+
   /// 获取本周期内点心最多的笔记
   Future<List<Quote>> getMostFavoritedQuotesThisWeek({int limit = 5}) async {
     if (kIsWeb) {
@@ -4215,7 +4547,7 @@ class DatabaseService extends ChangeNotifier {
       if (weatherCheck.isNotEmpty) {
         final weather = weatherCheck.first['weather'] as String?;
         if (weather != null &&
-            WeatherService.weatherKeyToLabel.values.contains(weather)) {
+            WeatherService.legacyWeatherKeyToLabel.values.contains(weather)) {
           logDebug('检测到未迁移的weather数据，开始迁移...');
           await migrateWeatherToKey();
         }
@@ -4435,6 +4767,7 @@ class DatabaseService extends ChangeNotifier {
 
       // 修复：在重置状态时确保原子性操作，避免竞态条件
       _currentQuotes = [];
+      _currentQuoteIds.clear(); // 性能优化：同步清空 ID Set
       _isLoading = false;
       _watchHasMore = true; // 重置分页状态
 
@@ -4525,10 +4858,15 @@ class DatabaseService extends ChangeNotifier {
         _watchHasMore = false;
         logDebug('没有更多笔记数据，设置_watchHasMore=false');
       } else {
-        // 修复：添加去重逻辑，防止重复数据
-        final existingIds = _currentQuotes.map((q) => q.id).toSet();
-        final newQuotes =
-            quotes.where((q) => !existingIds.contains(q.id)).toList();
+        // 性能优化：使用增量维护的 _currentQuoteIds 进行去重
+        // 避免每次都遍历 _currentQuotes 构建 Set
+        final newQuotes = <Quote>[];
+        for (final quote in quotes) {
+          if (quote.id != null && !_currentQuoteIds.contains(quote.id)) {
+            _currentQuoteIds.add(quote.id!);
+            newQuotes.add(quote);
+          }
+        }
 
         if (newQuotes.isNotEmpty) {
           _currentQuotes.addAll(newQuotes);
@@ -4664,6 +5002,9 @@ class DatabaseService extends ChangeNotifier {
   // 添加存储当前加载的笔记列表的变量
   List<Quote> _currentQuotes = [];
 
+  // 性能优化：增量维护的 ID Set，避免每次去重时遍历
+  final Set<String> _currentQuoteIds = {};
+
   /// 更新分类信息
   Future<void> updateCategory(
     String id,
@@ -4772,54 +5113,32 @@ class DatabaseService extends ChangeNotifier {
       }
 
       final db = _database!;
-      final List<Map<String, dynamic>> maps = await db.query('quotes');
 
-      if (maps.isEmpty) {
+      // 优化：使用原生 SQL 批量更新，避免 Dart 层面的大量数据传输和循环处理
+      // 逻辑与 TimeUtils 及 Dart 实现保持一致：
+      // 05-07: dawn, 08-11: morning, 12-16: afternoon,
+      // 17-19: dusk, 20-22: evening, 其他: midnight
+      final count = await db.rawUpdate('''
+        UPDATE quotes
+        SET day_period = CASE
+          WHEN CAST(strftime('%H', date) AS INTEGER) >= 5 AND CAST(strftime('%H', date) AS INTEGER) < 8 THEN 'dawn'
+          WHEN CAST(strftime('%H', date) AS INTEGER) >= 8 AND CAST(strftime('%H', date) AS INTEGER) < 12 THEN 'morning'
+          WHEN CAST(strftime('%H', date) AS INTEGER) >= 12 AND CAST(strftime('%H', date) AS INTEGER) < 17 THEN 'afternoon'
+          WHEN CAST(strftime('%H', date) AS INTEGER) >= 17 AND CAST(strftime('%H', date) AS INTEGER) < 20 THEN 'dusk'
+          WHEN CAST(strftime('%H', date) AS INTEGER) >= 20 AND CAST(strftime('%H', date) AS INTEGER) < 23 THEN 'evening'
+          ELSE 'midnight'
+        END
+        WHERE (day_period IS NULL OR day_period = '')
+          AND date IS NOT NULL
+          AND date != ''
+          AND strftime('%H', date) IS NOT NULL
+      ''');
+
+      if (count > 0) {
+        logDebug('已批量补全 $count 条记录的 day_period 字段');
+      } else {
         logDebug('没有需要补全 day_period 字段的记录');
-        return;
       }
-
-      int patchedCount = 0;
-      for (final map in maps) {
-        if (map['day_period'] == null ||
-            (map['day_period'] as String).isEmpty) {
-          // 解析时间
-          String? dateStr = map['date'];
-          if (dateStr == null || dateStr.isEmpty) continue;
-          DateTime? dt;
-          try {
-            dt = DateTime.parse(dateStr);
-          } catch (_) {
-            continue;
-          }
-          // 推算时间段key
-          final hour = dt.hour;
-          String dayPeriodKey;
-          if (hour >= 5 && hour < 8) {
-            dayPeriodKey = 'dawn';
-          } else if (hour >= 8 && hour < 12) {
-            dayPeriodKey = 'morning';
-          } else if (hour >= 12 && hour < 17) {
-            dayPeriodKey = 'afternoon';
-          } else if (hour >= 17 && hour < 20) {
-            dayPeriodKey = 'dusk';
-          } else if (hour >= 20 && hour < 23) {
-            dayPeriodKey = 'evening';
-          } else {
-            dayPeriodKey = 'midnight';
-          }
-          // 更新数据库
-          await db.update(
-            'quotes',
-            {'day_period': dayPeriodKey},
-            where: 'id = ?',
-            whereArgs: [map['id']],
-          );
-          patchedCount++;
-        }
-      }
-
-      logDebug('已补全 $patchedCount 条记录的 day_period 字段');
     } catch (e) {
       logDebug('补全 day_period 字段失败: $e');
       rethrow;
@@ -4855,10 +5174,19 @@ class DatabaseService extends ChangeNotifier {
           logDebug('day_period_backup列可能已存在: $e');
         }
 
+        final labelToKey = TimeUtils.dayPeriodKeyToLabel.map(
+          (k, v) => MapEntry(v, k),
+        );
+
         // 3. 查询需要迁移的数据
+        // 性能优化：仅查询值为中文标签的记录
+        final legacyLabels = labelToKey.keys.toList();
+        final placeholders = List.filled(legacyLabels.length, '?').join(',');
         final List<Map<String, dynamic>> maps = await txn.query(
           'quotes',
           columns: ['id', 'day_period'],
+          where: "day_period IN ($placeholders)",
+          whereArgs: legacyLabels,
         );
 
         if (maps.isEmpty) {
@@ -4866,12 +5194,11 @@ class DatabaseService extends ChangeNotifier {
           return;
         }
 
-        final labelToKey = TimeUtils.dayPeriodKeyToLabel.map(
-          (k, v) => MapEntry(v, k),
-        );
-
         int migratedCount = 0;
         int skippedCount = 0;
+
+        // 使用 Batch 批量更新
+        final batch = txn.batch();
 
         for (final map in maps) {
           final id = map['id'] as String?;
@@ -4881,7 +5208,7 @@ class DatabaseService extends ChangeNotifier {
 
           if (labelToKey.containsKey(dayPeriod)) {
             final key = labelToKey[dayPeriod]!;
-            await txn.update(
+            batch.update(
               'quotes',
               {'day_period': key},
               where: 'id = ?',
@@ -4891,6 +5218,10 @@ class DatabaseService extends ChangeNotifier {
           } else {
             skippedCount++;
           }
+        }
+
+        if (migratedCount > 0) {
+          await batch.commit(noResult: true);
         }
 
         logDebug('dayPeriod字段迁移完成：转换 $migratedCount 条，跳过 $skippedCount 条');
@@ -4921,8 +5252,10 @@ class DatabaseService extends ChangeNotifier {
         for (var i = 0; i < _memoryStore.length; i++) {
           final q = _memoryStore[i];
           if (q.weather != null &&
-              WeatherService.weatherKeyToLabel.values.contains(q.weather)) {
-            final key = WeatherService.weatherKeyToLabel.entries
+              WeatherService.legacyWeatherKeyToLabel.values.contains(
+                q.weather,
+              )) {
+            final key = WeatherService.legacyWeatherKeyToLabel.entries
                 .firstWhere((e) => e.value == q.weather)
                 .key;
             _memoryStore[i] = q.copyWith(weather: key);
@@ -4961,7 +5294,21 @@ class DatabaseService extends ChangeNotifier {
         }
 
         // 3. 查询需要迁移的数据
-        final maps = await txn.query('quotes', columns: ['id', 'weather']);
+        // 性能优化：仅查询值为中文标签的记录
+        // 使用参数化查询而不是字符串拼接，防止潜在的 SQL 注入问题
+        final weatherLabels =
+            WeatherService.legacyWeatherKeyToLabel.values.toList();
+        if (weatherLabels.isEmpty) {
+          logDebug('没有需要迁移的 weather 标签');
+          return;
+        }
+        final placeholders = List.filled(weatherLabels.length, '?').join(',');
+        final maps = await txn.query(
+          'quotes',
+          columns: ['id', 'weather'],
+          where: 'weather IN ($placeholders)',
+          whereArgs: weatherLabels,
+        );
 
         if (maps.isEmpty) {
           logDebug('没有需要迁移 weather 字段的记录');
@@ -4971,6 +5318,9 @@ class DatabaseService extends ChangeNotifier {
         int migratedCount = 0;
         int skippedCount = 0;
 
+        // 使用 Batch 批量更新
+        final batch = txn.batch();
+
         for (final m in maps) {
           final id = m['id'] as String?;
           final weather = m['weather'] as String?;
@@ -4978,12 +5328,12 @@ class DatabaseService extends ChangeNotifier {
           if (id == null || weather == null || weather.isEmpty) continue;
 
           // 检查是否需要迁移（是否为中文标签）
-          if (WeatherService.weatherKeyToLabel.values.contains(weather)) {
-            final key = WeatherService.weatherKeyToLabel.entries
+          if (WeatherService.legacyWeatherKeyToLabel.values.contains(weather)) {
+            final key = WeatherService.legacyWeatherKeyToLabel.entries
                 .firstWhere((e) => e.value == weather)
                 .key;
 
-            await txn.update(
+            batch.update(
               'quotes',
               {'weather': key},
               where: 'id = ?',
@@ -4993,6 +5343,10 @@ class DatabaseService extends ChangeNotifier {
           } else {
             skippedCount++;
           }
+        }
+
+        if (migratedCount > 0) {
+          await batch.commit(noResult: true);
         }
 
         logDebug('weather字段迁移完成：转换 $migratedCount 条，跳过 $skippedCount 条');
@@ -5235,6 +5589,10 @@ class DatabaseService extends ChangeNotifier {
           categoryIdRemap,
         );
       });
+
+      // 修复 P0-2：合并完成后必须重建媒体引用，确保引用表准确，防止后续孤儿清理误删文件
+      logInfo('开始重建同步后的媒体引用记录...');
+      await MediaReferenceService.migrateExistingQuotes();
 
       // 清理缓存并通知监听器，然后刷新当前流（如果存在）
       _clearAllCache();

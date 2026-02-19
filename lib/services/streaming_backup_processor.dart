@@ -88,6 +88,7 @@ class StreamingBackupProcessor {
     Function(String status)? onStatusUpdate,
     Function(int current, int total)? onProgress,
     bool Function()? shouldCancel,
+    bool extractMediaFiles = true,
   }) async {
     onStatusUpdate?.call('正在处理ZIP备份文件...');
 
@@ -131,26 +132,43 @@ class StreamingBackupProcessor {
     final map = json.decode(jsonString) as Map<String, dynamic>;
 
     // 提取媒体文件到应用目录 (排除数据文件本身 & 目录)
-    try {
-      final appDir = await getApplicationDocumentsDirectory();
-      for (final f in archive) {
-        if (f.isFile && f.name != dataFile.name) {
-          // 将 ZIP 条目名中的正斜杠转换为当前平台的路径分隔符
-          // ZIP 格式标准使用正斜杠，但在 Windows 上需要转换为反斜杠
-          final normalizedName = f.name.replaceAll('/', p.separator);
-          final targetPath = p.join(appDir.path, normalizedName);
-          final targetDir = Directory(p.dirname(targetPath));
-          if (!await targetDir.exists()) {
-            await targetDir.create(recursive: true);
+    if (extractMediaFiles) {
+      try {
+        final appDir = await getApplicationDocumentsDirectory();
+        for (final f in archive) {
+          if (f.isFile && f.name != dataFile.name) {
+            try {
+              // 将 ZIP 条目名中的正斜杠转换为当前平台的路径分隔符
+              // ZIP 格式标准使用正斜杠，但在 Windows 上需要转换为反斜杠
+              final normalizedName = f.name.replaceAll('/', p.separator);
+              final safeRelativePath =
+                  _normalizeSafeRelativePath(normalizedName);
+              if (safeRelativePath == null) {
+                logWarning('跳过不安全的ZIP条目: ${f.name}',
+                    source: 'StreamingBackupProcessor');
+                continue;
+              }
+
+              final targetPath = p.join(appDir.path, safeRelativePath);
+              final targetDir = Directory(p.dirname(targetPath));
+              if (!await targetDir.exists()) {
+                await targetDir.create(recursive: true);
+              }
+              final outFile = File(targetPath);
+              await outFile.writeAsBytes(f.content as List<int>, flush: true);
+              logDebug('已解压媒体文件: ${f.name} -> $targetPath');
+            } catch (e) {
+              logWarning('媒体文件解压失败: ${f.name}, $e',
+                  source: 'StreamingBackupProcessor');
+            }
           }
-          final outFile = File(targetPath);
-          await outFile.writeAsBytes(f.content as List<int>, flush: true);
-          logDebug('已解压媒体文件: ${f.name} -> $targetPath');
         }
+        logDebug('媒体文件已解压到应用目录', source: 'StreamingBackupProcessor');
+      } catch (e) {
+        logWarning('媒体文件解压失败: $e', source: 'StreamingBackupProcessor');
       }
-      logDebug('媒体文件已解压到应用目录', source: 'StreamingBackupProcessor');
-    } catch (e) {
-      logWarning('媒体文件解压失败: $e', source: 'StreamingBackupProcessor');
+    } else {
+      logDebug('仅验证ZIP结构，跳过媒体文件解压', source: 'StreamingBackupProcessor');
     }
 
     return map;
@@ -241,6 +259,25 @@ class StreamingBackupProcessor {
     throw Exception('无法识别的备份文件格式');
   }
 
+  static String? _normalizeSafeRelativePath(String relativePath) {
+    final normalized = p.normalize(relativePath);
+
+    if (normalized.isEmpty || normalized == '.' || normalized == p.separator) {
+      return null;
+    }
+
+    if (p.isAbsolute(normalized)) {
+      return null;
+    }
+
+    final segments = p.split(normalized);
+    if (segments.any((segment) => segment == '..' || segment.isEmpty)) {
+      return null;
+    }
+
+    return normalized;
+  }
+
   /// 验证备份文件完整性
   static Future<bool> validateBackupFile(String filePath) async {
     try {
@@ -257,7 +294,7 @@ class StreamingBackupProcessor {
       } else if (type == 'zip') {
         // 验证ZIP文件
         logDebug('验证ZIP备份文件...');
-        await processZipBackupStreaming(filePath);
+        await processZipBackupStreaming(filePath, extractMediaFiles: false);
         logDebug('ZIP备份文件验证成功');
         return true;
       }

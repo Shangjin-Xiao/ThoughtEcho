@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
 
@@ -51,6 +52,53 @@ class QuoteContent extends StatelessWidget {
   static void resetCaches() {
     _QuoteDocumentCache.clear();
     _QuoteContentControllerCache.clear();
+  }
+
+  /// 预热 Document 缓存：在数据加载后、用户滚动前，分批异步预解析富文本 JSON
+  /// 使用 Timer.run 将每批任务推入 event queue，确保让出主线程给渲染帧
+  static void prewarmDocumentCache(List<Quote> quotes) {
+    final richQuotes = quotes
+        .where(
+          (q) => q.deltaContent != null && q.editSource == 'fullscreen',
+        )
+        .toList();
+    if (richQuotes.isEmpty) return;
+
+    const batchSize = 3;
+    void processBatch(int startIndex) {
+      if (startIndex >= richQuotes.length) return;
+      final end = (startIndex + batchSize).clamp(0, richQuotes.length);
+      for (int i = startIndex; i < end; i++) {
+        final deltaContent = richQuotes[i].deltaContent!;
+        _QuoteDocumentCache.getOrCreate(
+          deltaContent: deltaContent,
+          prioritizeBold: false,
+          builder: () => _buildDocumentFromDelta(deltaContent),
+        );
+      }
+      if (end < richQuotes.length) {
+        Timer.run(() => processBatch(end));
+      }
+    }
+
+    Timer.run(() => processBatch(0));
+  }
+
+  /// 静态版本的 Document 构建，供预热缓存使用
+  static quill.Document _buildDocumentFromDelta(String deltaContent) {
+    try {
+      final decoded = jsonDecode(deltaContent);
+      if (decoded is List) {
+        return quill.Document.fromJson(decoded);
+      }
+      if (decoded is Map && decoded.containsKey('ops')) {
+        final ops = decoded['ops'];
+        if (ops is List) {
+          return quill.Document.fromJson(ops);
+        }
+      }
+    } catch (_) {}
+    return quill.Document()..insert(0, '');
   }
 
   /// 修复问题1：清理特定笔记的缓存（用于笔记删除/更新）
@@ -555,12 +603,7 @@ class _QuoteContentControllerCache {
       existing.touch();
       _cache[key] = existing;
 
-      // 修复问题2：更新 Document 以确保内容最新（防御性编程）
-      final newDocument = documentBuilder();
-      if (existing.controllers.quillController.document != newDocument) {
-        existing.controllers.quillController.document = newDocument;
-      }
-
+      // contentSignature 已包含内容哈希+长度，key 匹配即内容一致，无需重建 Document
       existing.controllers.prepareForReuse();
       return existing.controllers;
     }

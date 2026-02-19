@@ -155,7 +155,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                                 locationService.currentAddress!,
                               )
                             : l10n.cityNotSetHint)
-                        : (weatherService.currentWeather == '天气数据获取失败'
+                        : (weatherService.state == WeatherServiceState.error
                             ? l10n.weatherFetchFailed
                             : '${WeatherService.getLocalizedWeatherDescription(AppLocalizations.of(context), weatherService.currentWeather ?? 'unknown')} ${weatherService.temperature ?? ""}'),
                     style: const TextStyle(fontSize: 12),
@@ -183,7 +183,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                                 position.longitude,
                               );
                               if (!mounted) return;
-                              if (weatherService.currentWeather != '天气数据获取失败') {
+                              if (weatherService.hasValidWeatherData) {
                                 messenger?.showSnackBar(
                                   SnackBar(
                                     content: Text(l10n.weatherUpdated),
@@ -262,16 +262,15 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
               ),
             ),
 
-            // 错误或成功消息
-            if (controller.errorMessage != null ||
-                controller.successMessage != null)
+            // 操作结果消息
+            if (controller.lastResult != null)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(12.0),
                   decoration: BoxDecoration(
-                    color: controller.errorMessage != null
+                    color: !controller.lastResult!.isSuccess
                         ? theme.colorScheme.errorContainer
                         : theme.colorScheme.primaryContainer,
                     borderRadius: BorderRadius.circular(8.0),
@@ -279,10 +278,10 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                   child: Row(
                     children: [
                       Icon(
-                        controller.errorMessage != null
+                        !controller.lastResult!.isSuccess
                             ? Icons.error
                             : Icons.check_circle,
-                        color: controller.errorMessage != null
+                        color: !controller.lastResult!.isSuccess
                             ? theme.colorScheme.onErrorContainer
                             : theme.colorScheme.onPrimaryContainer,
                         size: 20,
@@ -290,9 +289,9 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          controller.errorMessage ?? controller.successMessage!,
+                          controller.lastResult!.getLocalizedMessage(l10n),
                           style: TextStyle(
-                            color: controller.errorMessage != null
+                            color: !controller.lastResult!.isSuccess
                                 ? theme.colorScheme.onErrorContainer
                                 : theme.colorScheme.onPrimaryContainer,
                           ),

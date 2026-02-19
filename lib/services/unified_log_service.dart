@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:io' show Platform;
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart' as logging;
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
@@ -205,7 +205,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
   static const String _logLevelKey = 'log_level';
   static const String _logLevelUserSetKey = 'log_level_user_set'; // 标记用户是否手动设置过
   static const int _maxInMemoryLogs = 300;
-  static const int _maxStoredLogs = 500;
+  static const int _maxStoredLogs = 1000;
   static const Duration _batchSaveInterval = Duration(seconds: 2);
 
   // 单例实例
@@ -213,6 +213,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
   // logging_flutter 的 logger
   late logging.Logger _logger;
+  bool _loggerInitialized = false;
 
   // 日志数据库服务
   final LogDatabaseService _logDb = LogDatabaseService();
@@ -238,6 +239,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
   // 提供只读访问
   List<LogEntry> get logs => List.unmodifiable(_memoryLogs);
   UnifiedLogLevel get currentLevel => _currentLevel;
+  bool get isPersistenceEnabled => _isPersistenceEnabled;
   Map<UnifiedLogLevel, int> get logStats => Map.unmodifiable(_logStats);
   DateTime? get lastLogTime => _lastLogTime;
 
@@ -252,6 +254,15 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
   // 标志位，防止日志记录的无限递归
   bool _isLogging = false;
 
+  // 标志位，防止在 dispose 后继续操作
+  bool _isDisposed = false;
+
+  // 标志位，防止递归刷新
+  bool _isFlushing = false;
+
+  // 标志位，控制是否持久化日志（默认关闭，由开发者模式控制）
+  bool _isPersistenceEnabled = false;
+
   // 日志性能监控
   int _logOperationCount = 0;
   DateTime? _lastPerformanceReset;
@@ -265,7 +276,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
   /// 创建统一日志服务实例
   UnifiedLogService() {
-    _initialize();
+    unawaited(_initialize());
     // 监听应用生命周期，确保在后台/退出前刷新日志到数据库
     WidgetsBinding.instance.addObserver(this);
   }
@@ -279,6 +290,11 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
         await _initCompleter!.future;
       } catch (_) {}
       return;
+    }
+
+    if (!_loggerInitialized) {
+      _logger = logging.Logger('ThoughtEcho');
+      _loggerInitialized = true;
     }
 
     try {
@@ -388,6 +404,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
     // 创建应用专用的 logger
     _logger = logging.Logger('ThoughtEcho');
+    _loggerInitialized = true;
 
     // 添加控制台输出处理器
     logging.Logger.root.onRecord.listen((record) {
@@ -483,7 +500,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
   /// 从数据库加载最近的日志
   Future<void> _loadRecentLogs() async {
     try {
-      final results = await _logDb.getRecentLogs(100);
+      final results = await _logDb.getRecentLogs(_maxInMemoryLogs);
 
       if (results.isNotEmpty) {
         final loadedLogs = <LogEntry>[];
@@ -543,8 +560,32 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     });
   }
 
+  /// 启用或禁用日志持久化（对应开发者模式）
+  void setPersistenceEnabled(bool enabled) {
+    if (_isPersistenceEnabled != enabled) {
+      _isPersistenceEnabled = enabled;
+      log(
+        UnifiedLogLevel.info,
+        '日志持久化已${enabled ? "启用" : "禁用"}',
+        source: 'UnifiedLogService',
+      );
+      // 如果禁用了持久化，立即清除待处理的日志
+      if (!enabled) {
+        _pendingLogs.clear();
+      }
+      notifyListeners();
+    }
+  }
+
   /// 添加日志条目到内存缓存和待处理队列
   void _addLogEntry(LogEntry entry) {
+    if (_isDisposed) return;
+
+    // 始终添加到内存缓存，以便在启用开发者模式后能看到当前的即时日志（可选）
+    // 或者，如果要求"默认无日志"，也可以在这里拦截内存缓存。
+    // 但通常保留内存缓存有助于查看刚刚发生的错误，且内存开销可控。
+    // 这里我们保留内存缓存，但控制持久化。
+
     // 添加到内存缓存，保持最新的日志在前面
     _memoryLogs.insert(0, entry);
 
@@ -552,9 +593,6 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     if (_memoryLogs.length > _maxInMemoryLogs) {
       _memoryLogs.removeLast();
     }
-
-    // 添加到待处理队列，准备写入数据库
-    _pendingLogs.add(entry);
 
     // 更新日志统计信息
     _logStats[entry.level] = (_logStats[entry.level] ?? 0) + 1;
@@ -564,6 +602,14 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     _logOperationCount++;
     _sourceStats[entry.source ?? 'unknown'] =
         (_sourceStats[entry.source ?? 'unknown'] ?? 0) + 1;
+
+    // 只有在启用持久化时，才添加到待处理队列准备写入数据库
+    // 唯一的例外是：如果这是严重错误或警告，即使未开启持久化也记录，以便后续诊断问题
+    if (_isPersistenceEnabled ||
+        entry.level == UnifiedLogLevel.error ||
+        entry.level == UnifiedLogLevel.warning) {
+      _pendingLogs.add(entry);
+    }
 
     // 延迟通知监听器，避免在 build 方法中直接调用
     if (!_notifyScheduled) {
@@ -576,18 +622,20 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
       });
     }
 
-    // 对错误级别的日志进行更积极的持久化，减少进程被杀前的丢失风险（Android常见）
-    if (entry.level == UnifiedLogLevel.error) {
-      // 忽略返回的 Future，避免阻塞 UI 线程
-      // ignore: discarded_futures
-      flushLogs();
+    // 对错误级别的日志进行更积极的持久化，但仅当持久化启用时
+    // 如果正在刷新，则跳过以避免递归
+    if (_isPersistenceEnabled &&
+        entry.level == UnifiedLogLevel.error &&
+        !_isFlushing) {
+      unawaited(flushLogs());
     }
   }
 
   /// 将待处理的日志保存到数据库
   Future<void> _savePendingLogsToDatabase() async {
-    if (_pendingLogs.isEmpty) return;
+    if (_pendingLogs.isEmpty || _isFlushing) return;
 
+    _isFlushing = true;
     final logsToSave = List<LogEntry>.from(_pendingLogs);
     _pendingLogs.clear();
 
@@ -615,18 +663,23 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     } catch (e, stackTrace) {
       _logger.severe('保存日志到数据库失败: $e', e, stackTrace);
 
-      // 如果保存失败，重新添加到待处理队列（但避免无限积累）
-      if (_pendingLogs.length < 100) {
-        _pendingLogs.addAll(logsToSave);
-        _logger.warning('已将 ${logsToSave.length} 条日志重新加入待处理队列');
-      } else {
-        _logger.warning('待处理队列已满，丢弃 ${logsToSave.length} 条日志以防止内存溢出');
+      // 如果保存失败且未被销毁，重新添加到待处理队列（但避免无限积累）
+      if (!_isDisposed) {
+        if (_pendingLogs.length < 100) {
+          _pendingLogs.addAll(logsToSave);
+          _logger.warning('已将 ${logsToSave.length} 条日志重新加入待处理队列');
+        } else {
+          _logger.warning('待处理队列已满，丢弃 ${logsToSave.length} 条日志以防止内存溢出');
+        }
       }
+    } finally {
+      _isFlushing = false;
     }
   }
 
   /// 设置新的日志级别并保存
   Future<void> setLogLevel(UnifiedLogLevel newLevel) async {
+    if (_isDisposed) return;
     if (_currentLevel != newLevel) {
       final oldLevel = _currentLevel;
       _currentLevel = newLevel;
@@ -669,6 +722,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
   /// 清除所有内存中的日志
   void clearMemoryLogs() {
+    if (_isDisposed) return;
     _memoryLogs.clear();
     if (!_notifyScheduled) {
       _notifyScheduled = true;
@@ -684,6 +738,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
   /// 清除所有存储的日志（包括数据库中的）
   Future<void> clearAllLogs() async {
+    if (_isDisposed) return;
     _memoryLogs.clear();
     _pendingLogs.clear();
 
@@ -767,6 +822,8 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     Object? error,
     StackTrace? stackTrace,
   }) {
+    if (_isDisposed) return;
+
     // 确保已初始化
     if (!_initialized) {
       // 在初始化前将日志暂存，避免竞态导致flush时丢失
@@ -780,8 +837,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
       );
       _bufferDuringInit.add(entry);
       // 触发初始化（若尚未开始）
-      // ignore: discarded_futures
-      _initialize();
+      unawaited(_initialize());
       return;
     }
 
@@ -821,6 +877,8 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
   /// 立即刷新所有待处理的日志到数据库
   Future<void> flushLogs() async {
+    if (_isFlushing) return;
+
     // 等待初始化完成，确保预初始化期间缓存的日志被转移
     if (_initCompleter != null && !(_initCompleter!.isCompleted)) {
       await _initCompleter!.future;
@@ -840,14 +898,13 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
   /// 销毁时释放资源
   @override
   void dispose() {
+    _isDisposed = true;
     try {
       WidgetsBinding.instance.removeObserver(this);
     } catch (_) {}
     _batchSaveTimer?.cancel();
     // 虽然 dispose 不能等待，但仍尽量触发一次持久化
-    // 忽略等待，防止阻塞销毁流程
-    // ignore: discarded_futures
-    _savePendingLogsToDatabase();
+    unawaited(_savePendingLogsToDatabase());
     super.dispose();
   }
 
@@ -860,8 +917,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
       case AppLifecycleState.detached:
       case AppLifecycleState.hidden:
         // 主动持久化，避免在 Android 等平台上因进程被杀导致日志丢失
-        // ignore: discarded_futures
-        _savePendingLogsToDatabase();
+        unawaited(_savePendingLogsToDatabase());
         break;
       case AppLifecycleState.resumed:
         // 无需处理
@@ -963,6 +1019,7 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
 
   /// 重置日志统计信息
   void resetLogStats() {
+    if (_isDisposed) return;
     _logStats.clear();
     _lastLogTime = null;
     log(UnifiedLogLevel.info, '日志统计信息已重置', source: 'UnifiedLogService');
@@ -993,6 +1050,92 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     }
 
     return buffer.toString();
+  }
+
+  /// 导出日志到文件（流式写入，内存安全）
+  Future<void> exportLogsToFile(
+    File file, {
+    UnifiedLogLevel? minLevel,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    final sink = file.openWrite();
+    try {
+      sink.writeln('# ThoughtEcho 日志导出');
+      sink.writeln('导出时间: ${DateTime.now().toIso8601String()}');
+      sink.writeln('日志级别: ${minLevel?.name ?? '所有级别'}');
+      sink.writeln('');
+
+      // 1. 先写内存中的日志
+      final filteredMemoryLogs = _memoryLogs.where((log) {
+        if (minLevel != null && log.level.index < minLevel.index) {
+          return false;
+        }
+        if (startDate != null && log.timestamp.isBefore(startDate)) {
+          return false;
+        }
+        if (endDate != null && log.timestamp.isAfter(endDate)) {
+          return false;
+        }
+        return true;
+      });
+
+      for (final log in filteredMemoryLogs) {
+        sink.writeln(log.toString());
+        sink.writeln('---');
+      }
+
+      // 2. 如果开启了持久化，从数据库中读取更多日志并写入
+      // 为了防止数据库日志过多导致 OOM，我们采用分页读取
+      const int pageSize = 100;
+      int offset = 0;
+      bool hasMore = true;
+
+      while (hasMore) {
+        final dbLogs = await queryLogs(
+          level: minLevel,
+          startDate: startDate,
+          endDate: endDate,
+          limit: pageSize,
+          offset: offset,
+        );
+
+        if (dbLogs.isEmpty) {
+          hasMore = false;
+        } else {
+          for (final log in dbLogs) {
+            // 避免重复写入（如果内存中已经有了）
+            // 简单的排重逻辑：如果时间戳在内存日志范围内，可能重复
+            // 这里为了简单，只写不在内存中的日志
+            bool alreadyInMemory = _memoryLogs.any(
+              (m) =>
+                  m.timestamp == log.timestamp &&
+                  m.message == log.message &&
+                  m.level == log.level,
+            );
+
+            if (!alreadyInMemory) {
+              sink.writeln(log.toString());
+              sink.writeln('---');
+            }
+          }
+
+          offset += pageSize;
+          if (dbLogs.length < pageSize) {
+            hasMore = false;
+          }
+
+          // 定期刷新，释放缓冲区
+          if (offset % (pageSize * 2) == 0) {
+            await sink.flush();
+          }
+        }
+      }
+
+      await sink.flush();
+    } finally {
+      await sink.close();
+    }
   }
 
   /// 处理在日志服务初始化之前缓存的错误

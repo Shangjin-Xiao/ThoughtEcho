@@ -1,10 +1,13 @@
+import 'package:flutter/foundation.dart'; // Add kIsWeb import
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:share_plus/share_plus.dart';
+import '../services/large_file_manager.dart';
 import '../constants/app_constants.dart';
+import '../utils/content_sanitizer.dart';
 import '../gen_l10n/app_localizations.dart';
 
 class AIAnnualReportWebView extends StatefulWidget {
@@ -375,56 +378,19 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
             .replaceAll(RegExp(r'\s+'), ' ')
             .trim();
 
-        return '''
-⚠️ 检测到AI返回了JSON数据格式
-
-这表明AI模型可能误解了请求，返回了数据分析结果而非HTML报告。
-
-返回的内容：
-$cleanJson
-
-这个问题可能的原因：
-• AI混淆了年度报告生成和内容分析功能
-• 提示词需要进一步优化
-• 模型版本或配置问题
-
-建议解决方案：
-1. 重新生成报告（AI可能会修正错误）
-2. 检查AI设置中的模型配置
-3. 尝试使用原生Flutter报告功能
-4. 更新AI提示词配置
-
-如需技术支持，请保存此错误信息并联系开发者。
-''';
+        return l10n.detectedAIJSONFormat(cleanJson);
       } catch (e) {
-        return '''
-⚠️ 检测到异常数据格式
-
-AI返回了无法正常解析的JSON数据，这可能是由于：
-• 网络传输问题
-• AI服务异常
-• 数据格式错误
-
-原始内容：
-${content.length > 300 ? '${content.substring(0, 300)}...' : content}
-
-建议重新生成报告或使用原生报告功能。
-''';
+        return l10n.detectedAbnormalFormat(
+          content.length > 300 ? '${content.substring(0, 300)}...' : content,
+        );
       }
     }
 
     // 检查是否包含HTML标签
     if (!content.contains('<html') && !content.contains('<!DOCTYPE')) {
-      return '''
-📄 AI生成的文本内容
-
-${content.length > 500 ? '${content.substring(0, 500)}...' : content}
-
-💡 提示：AI返回了纯文本格式的总结而非HTML报告。
-这可能是因为模型理解了内容但没有按照HTML格式输出。
-
-完整内容可以在浏览器中查看，系统会自动包装为HTML格式。
-''';
+      return l10n.aiGeneratedTextContent(
+        content.length > 500 ? '${content.substring(0, 500)}...' : content,
+      );
     }
 
     // 提取HTML中的文本内容
@@ -460,7 +426,8 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>心迹 ${widget.year} 年度报告</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'none'; object-src 'none'; style-src 'unsafe-inline'; img-src data: https:; font-src data: https:; connect-src 'none'; media-src 'none'; frame-src 'none'; child-src 'none';">
+    <title>${l10n.annualReportHtmlTitle(widget.year.toString())}</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
@@ -501,8 +468,8 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
 <body>
     <div class="container">
         <div class="header">
-            <h1>心迹 ${widget.year} 年度报告</h1>
-            <p>生成时间: ${DateTime.now().toString().substring(0, 19)}</p>
+            <h1>${l10n.annualReportHtmlTitle(widget.year.toString())}</h1>
+            <p>${l10n.generationTimeLabel(DateTime.now().toString().substring(0, 19))}</p>
         </div>
         <div class="content ${widget.htmlContent.trim().startsWith('{') ? 'json-content' : ''}">${widget.htmlContent}</div>
     </div>
@@ -510,6 +477,9 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
 </html>
 ''';
       }
+
+      // 注入CSP头部（双重保障：针对AI生成的已有HTML结构的情况）
+      contentToWrite = ContentSanitizer.injectCsp(contentToWrite);
 
       // 方法1：尝试使用Data URI在浏览器中直接打开
       try {
@@ -554,7 +524,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
           '${tempDir.path}/annual_report_${widget.year}_$timestamp.html',
         );
 
-        await htmlFile.writeAsString(contentToWrite);
+        await LargeFileManager.writeStringToFile(htmlFile, contentToWrite);
 
         // 尝试直接打开文件URL
         final uri = Uri.file(htmlFile.path);
@@ -582,12 +552,13 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
         // URL方式失败，继续尝试其他方法
       }
 
-      // 方法3：移动端专用 - 尝试使用HTTP服务器方式
-      if (Platform.isAndroid || Platform.isIOS) {
+      // 方法3：尝试使用HTTP服务器方式 (通用且更可靠，支持 Windows/iOS/Android)
+      if (!kIsWeb) {
         try {
           await _openInBrowserViaTempServer(contentToWrite);
           return;
         } catch (serverError) {
+          debugPrint('HTTP服务器方式失败: $serverError');
           // 服务器方式失败，继续尝试其他方法
         }
       }
@@ -619,6 +590,72 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
 
   /// 移动端专用：通过临时HTTP服务器在浏览器中打开HTML内容
   Future<void> _openInBrowserViaTempServer(String htmlContent) async {
+    // 1. 尝试使用本地HTTP服务器方式 (iOS/Android通用且更可靠)
+    HttpServer? server;
+    try {
+      // 绑定到本地回环地址的随机端口
+      server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+
+      // 处理请求
+      server.listen((HttpRequest request) {
+        // 设置正确的ContentType和编码，防止乱码
+        request.response.headers.contentType =
+            ContentType('text', 'html', charset: 'utf-8');
+        // 安全增强：设置Content-Security-Policy头
+        request.response.headers.add(
+          'Content-Security-Policy',
+          ContentSanitizer.defaultCsp,
+        );
+
+        // 写入HTML内容
+        request.response.write(htmlContent);
+        request.response.close();
+      });
+
+      // 构建localhost URL
+      final uri = Uri.parse(
+          'http://127.0.0.1:${server.port}/annual_report_${widget.year}.html');
+
+      // 使用外部浏览器打开
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.check_circle, color: Colors.white),
+                  const SizedBox(width: 8),
+                  Text(l10n.reportOpenedInBrowser),
+                ],
+              ),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              duration: AppConstants.snackBarDurationNormal,
+            ),
+          );
+        }
+
+        // 延迟关闭服务器，给予用户足够的时间加载页面
+        // 注意：页面加载完成后，服务器关闭不会影响查看，但刷新会失效
+        Future.delayed(const Duration(minutes: 5), () {
+          try {
+            server?.close(force: true);
+            debugPrint('临时报告服务器已自动关闭');
+          } catch (_) {}
+        });
+
+        return; // 成功打开，直接返回
+      }
+    } catch (e) {
+      debugPrint('HTTP服务器方式打开失败: $e');
+      try {
+        server?.close(force: true);
+      } catch (_) {}
+      // 继续执行后续的Fallback逻辑
+    }
+
+    // 2. Fallback: 原有的文件方式 (对于某些Android设备可能有效，或者作为失败后的各种尝试)
     try {
       // 创建临时文件
       final tempDir = await getTemporaryDirectory();
@@ -627,7 +664,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
         '${tempDir.path}/annual_report_${widget.year}_$timestamp.html',
       );
 
-      await htmlFile.writeAsString(htmlContent);
+      await LargeFileManager.writeStringToFile(htmlFile, htmlContent);
 
       // 尝试使用不同的LaunchMode来打开文件
       final uri = Uri.file(htmlFile.path);
@@ -640,11 +677,11 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: const Row(
+                content: Row(
                   children: [
-                    Icon(Icons.check_circle, color: Colors.white),
-                    SizedBox(width: 8),
-                    Text('报告已在浏览器中打开'),
+                    const Icon(Icons.check_circle, color: Colors.white),
+                    const SizedBox(width: 8),
+                    Text(l10n.reportOpenedInBrowser),
                   ],
                 ),
                 backgroundColor: Theme.of(context).colorScheme.primary,
@@ -680,7 +717,7 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
         );
       }
     } catch (e) {
-      throw Exception('临时服务器方式失败: $e');
+      throw Exception('打开浏览器失败: $e');
     }
   }
 
@@ -724,7 +761,12 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
           children: [
             const Icon(Icons.info_outline, color: Colors.blue),
             const SizedBox(width: 8),
-            Text(l10n.annualReportOpenInBrowser),
+            Flexible(
+              child: Text(
+                l10n.annualReportOpenInBrowser,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         content: Column(
@@ -784,28 +826,33 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
           children: [
             const Icon(Icons.info_outline, color: Colors.orange),
             const SizedBox(width: 8),
-            Text(l10n.annualReportHowToView),
+            Flexible(
+              child: Text(
+                l10n.annualReportHowToView,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('HTML报告内容已复制到剪贴板。请按以下步骤操作：'),
+            Text(l10n.htmlReportCopiedSteps),
             const SizedBox(height: 16),
             Text(l10n.annualReportMobileInstructions,
                 style: const TextStyle(fontWeight: FontWeight.bold)),
-            const Text('1. 打开浏览器（Chrome/Safari等）'),
-            const Text('2. 新建空白页面或新标签页'),
-            const Text('3. 在地址栏输入：data:text/html,'),
-            const Text('4. 粘贴复制的内容'),
-            const Text('5. 回车查看报告'),
+            Text(l10n.browserInstructionsStep1),
+            Text(l10n.browserInstructionsStep2),
+            Text(l10n.browserInstructionsStep3),
+            Text(l10n.browserInstructionsStep4),
+            Text(l10n.browserInstructionsStep5),
             const SizedBox(height: 12),
             Text(l10n.annualReportDesktopInstructions,
                 style: const TextStyle(fontWeight: FontWeight.bold)),
-            const Text('1. 新建文本文件，粘贴内容'),
-            const Text('2. 将文件保存为 .html 格式'),
-            const Text('3. 双击文件在浏览器中打开'),
+            Text(l10n.desktopInstructionsStep1),
+            Text(l10n.desktopInstructionsStep2),
+            Text(l10n.desktopInstructionsStep3),
           ],
         ),
         actions: [
@@ -856,7 +903,8 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>心迹 ${widget.year} 年度报告</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'none'; object-src 'none'; style-src 'unsafe-inline'; img-src data: https:; font-src data: https:; connect-src 'none'; media-src 'none'; frame-src 'none'; child-src 'none';">
+    <title>${l10n.annualReportHtmlTitle(widget.year.toString())}</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
@@ -888,8 +936,8 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
 <body>
     <div class="container">
         <div class="header">
-            <h1>心迹 ${widget.year} 年度报告</h1>
-            <p>生成时间: ${DateTime.now().toString().substring(0, 19)}</p>
+            <h1>${l10n.annualReportHtmlTitle(widget.year.toString())}</h1>
+            <p>${l10n.generationTimeLabel(DateTime.now().toString().substring(0, 19))}</p>
         </div>
         <div class="content">${widget.htmlContent}</div>
     </div>
@@ -898,7 +946,10 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
 ''';
       }
 
-      await htmlFile.writeAsString(contentToShare);
+      // 注入CSP头部
+      contentToShare = ContentSanitizer.injectCsp(contentToShare);
+
+      await LargeFileManager.writeStringToFile(htmlFile, contentToShare);
 
       // 使用系统分享功能
       await SharePlus.instance.share(
@@ -966,8 +1017,11 @@ ${content.length > 500 ? '${content.substring(0, 500)}...' : content}
         final fileName = 'annual_report_${widget.year}_$timestamp.html';
         final reportFile = File('${reportsDir.path}/$fileName');
 
+        // 注入CSP头部
+        final secureContent = ContentSanitizer.injectCsp(widget.htmlContent);
+
         // 保存文件
-        await reportFile.writeAsString(widget.htmlContent);
+        await LargeFileManager.writeStringToFile(reportFile, secureContent);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

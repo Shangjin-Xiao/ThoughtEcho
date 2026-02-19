@@ -104,7 +104,9 @@ class AIService extends ChangeNotifier {
       );
 
       final content = _requestHelper.parseResponse(response);
-      logDebug('AI连接测试成功: $content');
+      final preview =
+          content.length > 20 ? '${content.substring(0, 20)}...' : content;
+      logDebug('AI连接测试成功: $preview');
       return true;
     } catch (e) {
       logDebug('AI连接测试失败: $e');
@@ -303,6 +305,7 @@ class AIService extends ChangeNotifier {
     required int totalWordCount,
     String? notesPreview,
     String? fullNotesContent, // 新增：完整笔记内容用于深度分析
+    String? previousInsights, // 新增：历史洞察上下文
   }) {
     final controller = _requestHelper.createStreamController();
 
@@ -335,6 +338,7 @@ class AIService extends ChangeNotifier {
                 totalWordCount: totalWordCount,
                 notesPreview: notesPreview,
                 fullNotesContent: fullNotesContent, // 传递完整内容
+                previousInsights: previousInsights, // 传递历史洞察
               );
 
               await _requestHelper.makeStreamRequestWithProvider(
@@ -484,15 +488,6 @@ class AIService extends ChangeNotifier {
       },
       context: '流式生成每日提示',
     );
-  }
-
-  // 保留旧的generateDailyPrompt方法，以防其他地方仍在使用
-  // 它将直接返回DailyPromptGenerator的当前提示
-  // 保留旧的generateDailyPrompt方法，但已弃用，需要 AppLocalizations 参数
-  @Deprecated('使用 streamGenerateDailyPrompt 替代')
-  String generateDailyPrompt(AppLocalizations l10n) {
-    logDebug('调用了旧的generateDailyPrompt方法，建议切换到streamGenerateDailyPrompt');
-    return DailyPromptGenerator.getDefaultPrompt(l10n);
   }
 
   Future<String> generateInsights(
@@ -1249,7 +1244,9 @@ class AIService extends ChangeNotifier {
         );
 
         final content = _requestHelper.parseResponse(response);
-        logDebug('AI连接测试成功: $content');
+        final preview =
+            content.length > 20 ? '${content.substring(0, 20)}...' : content;
+        logDebug('AI连接测试成功: $preview');
       },
       context: 'AI连接测试',
     );

@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="心迹用户指南 - ThoughtEcho User Guide">
+    <meta name="theme-color" content="#a67c52">
+    <title>心迹用户指南 - ThoughtEcho User Guide</title>
+    <link rel="icon" type="image/png" href="icon.png"/>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Sans:wght@300;400;500;700&family=Long+Cang&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+    <!-- 防止字体加载导致的文字闪烁：先隐藏，字体就绪或超时后再显示 -->
+    <script>
+        (function(){
+            document.documentElement.style.visibility = 'hidden';
+            var reveal = function(){ document.documentElement.style.visibility = ''; };
+            if (document.fonts && document.fonts.ready) {
+                document.fonts.ready.then(reveal);
+            }
+            setTimeout(reveal, 800);
+        })();
+    </script>
+    
+    <!-- Marked.js -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    
+    <style>
+        /* CSS 变量 */
+        :root {
+            --paper-white: #fefdfb;
+            --paper-cream: #f9f6f0;
+            --ink-dark: #2c2416;
+            --ink-medium: #5a4a3a;
+            --accent-brown: #a67c52;
+            --accent-blue: #5d94b8;
+            --line-color: #d4c5b9;
+            --toc-width: 280px;
+            --nav-h: 80px;
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        html {
+            scroll-padding-top: var(--nav-h, 80px);
+        }
+
+        @media (prefers-reduced-motion: no-preference) {
+            html {
+                scroll-behavior: smooth;
+            }
+        }
+
+        body {
+            font-family: 'Noto Sans SC', sans-serif;
+            background: var(--paper-cream);
+            color: var(--ink-dark);
+            line-height: 1.8;
+        }
+        
+        
+        /* 导航栏 */
+        nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            background: rgba(254, 253, 251, 0.95);
+            border-bottom: 3px solid var(--accent-brown);
+            backdrop-filter: blur(12px);
+        }
+        
+        .nav-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .nav-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--ink-dark);
+        }
+        
+        .nav-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+        
+        button {
+            padding: 0.6rem 1.2rem;
+            background: var(--accent-brown);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        button:hover { opacity: 0.9; }
+
+        .toc-toggle {
+            display: none;
+            background: var(--accent-blue);
+        }
+        
+        /* 主容器 */
+        .main-container {
+            display: flex;
+            max-width: 1400px;
+            margin: var(--nav-h, 80px) auto 0;
+            padding: 2rem;
+        }
+        
+        /* 侧边栏TOC */
+        .toc-sidebar {
+            width: var(--toc-width);
+            position: fixed;
+            top: var(--nav-h, 80px);
+            height: calc(100vh - var(--nav-h, 80px));
+            overflow-y: auto;
+            padding: 2rem 1rem;
+            background: var(--paper-white);
+            border-right: 2px solid var(--line-color);
+        }
+        
+        .toc-list {
+            list-style: none;
+        }
+        
+        .toc-list a {
+            color: var(--ink-medium);
+            text-decoration: none;
+            display: block;
+            padding: 0.4rem 0.6rem;
+            border-radius: 6px;
+        }
+        
+        .toc-list a:hover {
+            background: #fff9e6;
+            color: var(--accent-brown);
+        }
+        
+        .toc-list a.active {
+            background: var(--accent-brown);
+            color: white;
+        }
+
+        .toc-overlay {
+            display: none;
+            position: fixed;
+            top: var(--nav-h, 80px);
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(44, 36, 22, 0.35);
+            backdrop-filter: blur(2px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease;
+            z-index: 900;
+        }
+        
+        /* 内容区 */
+        .content {
+            flex: 1;
+            margin-left: var(--toc-width);
+            padding: 2rem 3rem;
+            max-width: calc(100% - var(--toc-width));
+        }
+        
+        .content-wrapper {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 4rem;
+            color: var(--ink-medium);
+        }
+        
+        .error {
+            padding: 2rem;
+            background: #fff0f0;
+            border-left: 4px solid #c66b6b;
+            border-radius: 8px;
+        }
+        
+        /* Markdown 样式 */
+        .content h1 {
+            font-size: 2.5rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 4px solid var(--accent-brown);
+        }
+        
+        .content h2 {
+            font-size: 1.8rem;
+            color: var(--accent-brown);
+            margin-top: 3rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--line-color);
+        }
+        
+        .content h3 {
+            font-size: 1.3rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        .content p {
+            margin-bottom: 1rem;
+            color: var(--ink-medium);
+        }
+        
+        .content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 1.5rem;
+            background: var(--paper-white);
+        }
+        
+        .content th, .content td {
+            padding: 0.8rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--line-color);
+        }
+        
+        .content th {
+            background: var(--accent-brown);
+            color: white;
+            font-weight: 600;
+        }
+        
+        .content code {
+            background: #fff9e6;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            font-size: 0.9em;
+        }
+        
+        .content pre {
+            background: var(--paper-white);
+            border: 2px solid var(--line-color);
+            border-radius: 8px;
+            padding: 1rem;
+            overflow-x: auto;
+            margin-bottom: 1rem;
+        }
+        
+        .content pre code {
+            background: none;
+            padding: 0;
+        }
+        
+        .content blockquote {
+            background: #f0f8ff;
+            border-left: 4px solid var(--accent-blue);
+            padding: 1rem 1.5rem;
+            margin-bottom: 1.5rem;
+            border-radius: 0 8px 8px 0;
+        }
+
+        /* 手册内嵌图片：圆角阴影 + 居中 + 限制最大宽度 */
+        .content img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 1.5rem auto;
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.10);
+            border: 2px solid var(--line-color);
+        }
+
+        /* 列表优化 */
+        .content ul, .content ol {
+            margin-bottom: 1rem;
+            padding-left: 1.8rem;
+            color: var(--ink-medium);
+        }
+        .content li {
+            margin-bottom: 0.35rem;
+        }
+
+        /* 链接样式 */
+        .content a {
+            color: var(--accent-blue);
+            text-decoration: underline dotted;
+            transition: color 0.2s;
+        }
+        .content a:hover {
+            color: var(--accent-brown);
+        }
+
+        /* h4 样式 */
+        .content h4 {
+            font-size: 1.1rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.75rem;
+            color: var(--ink-dark);
+        }
+
+        /* 表格滚动容器（移动端防溢出） */
+        .content table {
+            display: block;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* TOC 层级缩进 */
+        .toc-list .toc-h3 {
+            padding-left: 1.6rem;
+            font-size: 0.92em;
+        }
+        
+        /* 语言切换 — 使用 data 属性避免 body 自身被 .lang-en 隐藏 */
+        .lang-zh, .lang-en { display: none; }
+        body[data-lang="zh"] .lang-zh { display: block; }
+        body[data-lang="en"] .lang-en { display: block; }
+        body[data-lang="en"] { font-family: 'Noto Sans', sans-serif; }
+        
+        /* 响应式 */
+        @media (max-width: 1024px) {
+            .toc-toggle { display: inline-flex; }
+            .toc-sidebar {
+                display: block;
+                width: min(82vw, 320px);
+                transform: translateX(-105%);
+                transition: transform 0.25s ease;
+                box-shadow: 4px 0 16px rgba(0,0,0,0.15);
+                z-index: 950;
+            }
+            body.toc-open .toc-sidebar {
+                transform: translateX(0);
+            }
+            .toc-overlay { display: block; }
+            body.toc-open .toc-overlay {
+                opacity: 1;
+                pointer-events: auto;
+            }
+            .content {
+                margin-left: 0;
+                max-width: 100%;
+                padding: 2rem 1.5rem;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .nav-container {
+                padding: 0.8rem 1rem;
+                flex-wrap: wrap;
+                gap: 0.75rem;
+            }
+            .nav-title {
+                font-size: 1.1rem;
+            }
+            .nav-actions {
+                width: 100%;
+                justify-content: flex-end;
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            button {
+                padding: 0.5rem 0.9rem;
+                font-size: 0.85rem;
+            }
+            .content {
+                padding: 1.5rem 1.1rem;
+            }
+            .content h1 {
+                font-size: 2rem;
+            }
+            .content h2 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav>
+        <div class="nav-container">
+            <div class="nav-title">
+                <span class="lang-zh">心迹用户指南</span>
+                <span class="lang-en">ThoughtEcho User Guide</span>
+            </div>
+            <div class="nav-actions">
+                <button class="toc-toggle" id="tocToggle" aria-controls="tocSidebar" aria-expanded="false">
+                    <span class="lang-zh">目录</span>
+                    <span class="lang-en">Contents</span>
+                </button>
+                <button id="langToggle">EN/中文</button>
+                <button onclick="location.href='index.html'">
+                    <span class="lang-zh">返回首页</span>
+                    <span class="lang-en">Home</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="toc-overlay" id="tocOverlay"></div>
+
+    <!-- 侧边目录 -->
+    <aside class="toc-sidebar" id="tocSidebar">
+        <h3 class="lang-zh">📑 目录</h3>
+        <h3 class="lang-en">📑 Contents</h3>
+        <ul class="toc-list" id="tocList"></ul>
+    </aside>
+
+    <!-- 主内容 -->
+    <div class="main-container">
+        <main class="content">
+            <div class="content-wrapper">
+                <div class="loading" id="loading">
+                    <span class="lang-zh">加载中...</span>
+                    <span class="lang-en">Loading...</span>
+                </div>
+                <div class="error" id="error" style="display:none;">
+                    <strong class="lang-zh">加载失败</strong>
+                    <strong class="lang-en">Load Failed</strong>
+                    <p id="errorMsg"></p>
+                </div>
+                <div class="lang-zh" id="content-zh"></div>
+                <div class="lang-en" id="content-en"></div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // 配置 marked
+        marked.setOptions({
+            breaks: true,
+            gfm: true
+        });
+
+        function syncNavHeightVar() {
+            var nav = document.querySelector('nav');
+            if (!nav) {
+                console.warn('Navigation height sync skipped; nav not found.');
+                return;
+            }
+            document.documentElement.style.setProperty('--nav-h', nav.offsetHeight + 'px');
+        }
+
+        syncNavHeightVar();
+        window.addEventListener('resize', syncNavHeightVar);
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(syncNavHeightVar).catch(() => {
+                console.warn('Font loading detection unavailable; navigation height will sync on next resize event.');
+            });
+        }
+
+        var langToggle = document.getElementById('langToggle');
+        var tocToggle = document.getElementById('tocToggle');
+        var tocOverlay = document.getElementById('tocOverlay');
+        const tocList = document.getElementById('tocList');
+        if (!tocList) {
+            console.warn('TOC list container not found.');
+        }
+
+        // 语言状态管理：使用 data-lang 属性而非 class，避免 .lang-en 规则误隐藏 body
+        function switchPageLang(targetLang) {
+            document.body.dataset.lang = targetLang;
+            document.documentElement.lang = targetLang === 'en' ? 'en' : 'zh-CN';
+            localStorage.setItem('lang', targetLang);
+            if (tocToggle) {
+                tocToggle.setAttribute('aria-label', targetLang === 'en' ? 'Toggle table of contents' : '切换目录');
+            }
+            syncNavHeightVar();
+        }
+
+        // 恢复上次语言偏好，默认中文
+        switchPageLang(localStorage.getItem('lang') === 'en' ? 'en' : 'zh');
+
+        // 绑定切换按钮
+        langToggle.addEventListener('click', function () {
+            var nextLang = document.body.dataset.lang === 'en' ? 'zh' : 'en';
+            switchPageLang(nextLang);
+            generateTOC();
+        });
+
+        function closeToc() {
+            document.body.classList.remove('toc-open');
+            if (tocToggle) {
+                tocToggle.setAttribute('aria-expanded', 'false');
+            }
+        }
+
+        function toggleToc() {
+            if (!tocToggle) return;
+            var isTocOpen = document.body.classList.toggle('toc-open');
+            tocToggle.setAttribute('aria-expanded', String(isTocOpen));
+        }
+
+        if (tocToggle) {
+            tocToggle.addEventListener('click', toggleToc);
+        }
+
+        if (tocOverlay) {
+            tocOverlay.addEventListener('click', closeToc);
+        }
+
+        // 加载 Markdown
+        async function loadManual() {
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const errorMsg = document.getElementById('errorMsg');
+            const contentZh = document.getElementById('content-zh');
+            const contentEn = document.getElementById('content-en');
+
+            try {
+                // 尝试从 GitHub 加载
+                let response;
+                try {
+                    response = await fetch('https://raw.githubusercontent.com/Shangjin-Xiao/ThoughtEcho/main/docs/USER_MANUAL.md');
+                } catch (e) {
+                    // 降级到本地路径
+                    response = await fetch('../docs/USER_MANUAL.md');
+                }
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const markdown = await response.text();
+
+                // 分离中英文内容
+                const zhMatch = markdown.match(/<div id="-中文版本">\s*\n([\s\S]*?)\n<\/div>/);
+                const enMatch = markdown.match(/<div id="-english-version">\s*\n([\s\S]*?)\n<\/div>/);
+
+                if (!zhMatch || !enMatch) {
+                    throw new Error('无法解析 Markdown 结构');
+                }
+
+                // 修复图片路径 (../res/screenshot/ 和 res/screenshot/ -> screenshot/)
+                const fixImagePath = (md) => md
+                    .replace(/\]\(\.\.\/res\/screenshot\//g, '](screenshot/')
+                    .replace(/\]\(res\/screenshot\//g, '](screenshot/');
+
+                // 渲染
+                contentZh.innerHTML = marked.parse(fixImagePath(zhMatch[1]));
+                contentEn.innerHTML = marked.parse(fixImagePath(enMatch[1]));
+
+                // 为标题添加 ID
+                addHeadingIds(contentZh);
+                addHeadingIds(contentEn);
+
+                // 生成目录
+                generateTOC();
+
+                loading.style.display = 'none';
+            } catch (err) {
+                console.error('加载失败:', err);
+                loading.style.display = 'none';
+                error.style.display = 'block';
+                errorMsg.textContent = err.message;
+            }
+        }
+
+        // 为标题添加 ID
+        function addHeadingIds(container) {
+            const headings = container.querySelectorAll('h1, h2, h3');
+            headings.forEach((h, index) => {
+                if (!h.id) {
+                    const text = h.textContent.trim();
+                    const id = text.toLowerCase()
+                        .replace(/[^\w\u4e00-\u9fa5\s-]/g, '')
+                        .replace(/\s+/g, '-')
+                        .substring(0, 50) + '-' + index;
+                    h.id = id;
+                }
+            });
+        }
+
+        function handleTocLinkClick(event) {
+            const link = event.target.closest('a');
+            const href = link?.getAttribute('href');
+            if (!link || !href || !href.startsWith('#')) return;
+            if (document.body.classList.contains('toc-open')) {
+                closeToc();
+            }
+        }
+
+        if (tocList) {
+            tocList.addEventListener('click', handleTocLinkClick);
+        }
+
+        // 生成目录
+        function generateTOC() {
+            if (!tocList) return;
+            tocList.innerHTML = '';
+
+            const isEnglish = document.body.dataset.lang === 'en';
+            const content = document.getElementById(isEnglish ? 'content-en' : 'content-zh');
+            const headings = content.querySelectorAll('h2, h3');
+
+            headings.forEach(h => {
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = '#' + h.id;
+                a.textContent = h.textContent;
+                a.className = h.tagName === 'H3' ? 'toc-h3' : 'toc-h2';
+                li.appendChild(a);
+                tocList.appendChild(li);
+            });
+
+            // 滚动监听
+            setupScrollSpy();
+        }
+
+        // 滚动高亮
+        function setupScrollSpy() {
+            const sections = document.querySelectorAll('.content h2, .content h3');
+            const navLinks = document.querySelectorAll('.toc-list a');
+
+            window.addEventListener('scroll', () => {
+                let current = '';
+                sections.forEach(section => {
+                    const sectionTop = section.offsetTop;
+                    if (pageYOffset >= sectionTop - 100) {
+                        current = section.getAttribute('id');
+                    }
+                });
+
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                    if (link.getAttribute('href') === '#' + current) {
+                        link.classList.add('active');
+                    }
+                });
+            });
+        }
+
+        // 初始化
+        loadManual();
+    </script>
+</body>
+</html>

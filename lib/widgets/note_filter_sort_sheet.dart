@@ -89,7 +89,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
         : <String>[];
 
     // 性能优化：预计算常用数据和缓存映射
-    _weatherCategories = WeatherService.filterCategoryToLabel.keys.toList();
+    _weatherCategories = WeatherService.filterCategoryToKeys.keys.toList();
     _dayPeriodKeys = TimeUtils.dayPeriodKeyToLabel.keys.toList();
 
     // 预缓存天气图标（标签将在 build 时通过 _getWeatherFilterLabel 动态获取以支持国际化）
@@ -318,7 +318,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
     final chips = sortedTags.map((tag) {
       final isHiddenTag = tag.id == DatabaseService.hiddenTagId;
       final isSelected = _tempSelectedTagIds.contains(tag.id);
-      
+
       // Use IconUtils to get the icon
       final bool isEmoji = IconUtils.isEmoji(tag.iconName);
       final dynamic tagIcon = IconUtils.getIconData(
@@ -348,7 +348,9 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
               ),
             ),
             // 如果是隐藏标签且需要验证，显示锁图标
-            if (isHiddenTag && widget.requireBiometricForHidden && !_hiddenTagUnlocked) ...[
+            if (isHiddenTag &&
+                widget.requireBiometricForHidden &&
+                !_hiddenTagUnlocked) ...[
               const SizedBox(width: 4),
               Icon(
                 Icons.lock_outline,
@@ -374,7 +376,10 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
     final isHiddenTag = tag.id == DatabaseService.hiddenTagId;
 
     // 如果是隐藏标签且需要验证
-    if (isHiddenTag && selected && widget.requireBiometricForHidden && !_hiddenTagUnlocked) {
+    if (isHiddenTag &&
+        selected &&
+        widget.requireBiometricForHidden &&
+        !_hiddenTagUnlocked) {
       // 执行生物识别验证
       final authenticated = await _biometricService.authenticate(
         localizedReason: l10n.biometricAuthReason,

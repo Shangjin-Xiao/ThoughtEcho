@@ -1,6 +1,12 @@
 {
   "@@locale": "en",
   "appTitle": "ThoughtEcho",
+  "draftRestored": "Draft automatically restored",
+  "draftRecoverTitle": "Restore Unsaved Draft",
+  "draftRecoverMessage": "You have unsaved content from your last session. Would you like to restore it?",
+  "restore": "Restore",
+  "discard": "Discard",
+  "draftSaved": "Draft saved",
   "cancel": "Cancel",
   "confirm": "Confirm",
   "delete": "Delete",
@@ -20,6 +26,11 @@
   "languageFollowSystem": "Follow System",
   "languageChinese": "简体中文",
   "languageEnglish": "English",
+  "languageJapanese": "Japanese",
+  "languageKorean": "Korean",
+  "languageSpanish": "Spanish",
+  "languageFrench": "French",
+  "languageGerman": "German",
   "selectLanguage": "Select Language",
   "onboardingSelectLanguage": "Select Language",
   "onboardingWelcome": "Welcome to ThoughtEcho",
@@ -79,6 +90,14 @@
   "prefMoreOptionsHint": "More personalization options and AI features available in Settings > Preferences.",
   "settingsTitle": "Settings",
   "settingsLocationWeather": "Location & Weather Settings",
+  "settingsAutoAttachLocation": "Auto-attach location when adding notes",
+  "settingsAutoAttachLocationDesc": "Automatically check location when creating new notes",
+  "settingsAutoAttachWeather": "Auto-attach weather when adding notes",
+  "settingsAutoAttachWeatherDesc": "Automatically check weather when creating new notes",
+  "weatherFetchFailedTitle": "Weather Fetch Failed",
+  "weatherFetchFailedDesc": "Cannot get current weather info. Please check your network connection or try again later",
+  "locationFetchFailedNoNetwork": "No network, coordinates saved",
+  "locationAndWeatherUnavailable": "Cannot get location and weather info at this time",
   "settingsUseLocationService": "Use Location Service",
   "settingsLocationEnabled": "Permission granted and enabled",
   "settingsLocationPermissionOnly": "Permission granted but service disabled",
@@ -119,6 +138,84 @@
   "settingsCheckUpdate": "Check for Updates",
   "settingsCheckUpdateDesc": "Check if a new version is available",
   "settingsClose": "Close",
+  "developerModeEnabled": "🎉 Developer mode enabled!",
+  "developerModeDisabled": "✅ Developer mode disabled",
+  "devFirstScrollPerfMonitorTitle": "First-scroll jank monitor (Dev)",
+  "devFirstScrollPerfMonitorDesc": "Measure frame timings for the first gesture scroll after opening Notes (not first frame)",
+  "devFirstScrollPerfResult": "First-scroll performance: total {total}, jank {jank}, avg {avgMs}ms, worst {worstMs}ms",
+  "@devFirstScrollPerfResult": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "jank": {
+        "type": "int"
+      },
+      "avgMs": {
+        "type": "String"
+      },
+      "worstMs": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyRecoveryTitle": "ThoughtEcho - Data Recovery",
+  "emergencyRecoveryHeading": "Database initialization failed",
+  "emergencyRecoveryDescription": "The app cannot start normally. The database may be corrupted or inaccessible.\n\nYou can try backing up existing data to prevent loss, or try restarting the app.",
+  "emergencyBackupAndRestoreButton": "Backup & restore data",
+  "emergencyTryRestartAppButton": "Try restarting the app",
+  "emergencyReinitializeFailed": "Reinitialize failed: {error}",
+  "@emergencyReinitializeFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyRecoveryHint": "Tip: If the issue persists, you may need to reinstall the app. Please back up your data beforehand.",
+  "emergencyAppTitle": "ThoughtEcho - Emergency Recovery",
+  "emergencyModeTitle": "Emergency Recovery Mode",
+  "emergencyAppStartFailedTitle": "App failed to start",
+  "emergencyAppStartFailedDesc": "A severe error occurred while starting ThoughtEcho. This may be caused by data corruption or storage permission issues.",
+  "emergencyErrorLabel": "Error:",
+  "emergencyTechnicalDetails": "Technical details",
+  "emergencyExitAppButton": "Exit app",
+  "emergencyPersistentIssueHint": "If the issue persists, try reinstalling the app or contact the developer for support.",
+  "emergencyBackupPageTitle": "Emergency Data Recovery",
+  "emergencyBackupToolTitle": "Emergency data recovery tool",
+  "emergencyBackupToolDesc": "Due to a critical error, you can try:\n\n1. Export database file - export the raw database file for professional recovery\n2. Try opening the backup & restore page - note: this may not work if the database is damaged",
+  "emergencyProcessing": "Processing...",
+  "emergencyExportDatabaseButton": "Export database file",
+  "emergencyOpenBackupPageButton": "Try opening standard backup & restore",
+  "emergencyOpenBackupFailed": "Unable to open backup & restore page: {error}",
+  "@emergencyOpenBackupFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyExportHint": "Tip: You can send the exported database file to the developer for recovery.",
+  "emergencyLocatingDatabase": "Locating database file...",
+  "emergencyDatabaseNotFound": "Database file not found",
+  "emergencyPreparingExport": "Preparing export...",
+  "emergencyCopyingFile": "Copying file...",
+  "emergencyDatabaseExported": "Database file exported to: {path}",
+  "@emergencyDatabaseExported": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyExportFailed": "Export failed: {error}",
+  "@emergencyExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "locationPermissionDenied": "Location permission denied, cannot enable location service",
   "enableLocationService": "Please Enable Location Service",
   "enableLocationServiceDesc": "ThoughtEcho needs access to your location to provide weather and other features. Please enable location service in system settings.",
@@ -138,6 +235,33 @@
   "pleaseWait": "Please wait...",
   "close": "Close",
   "ok": "OK",
+  "timeJustNow": "Just now",
+  "timeMinutesAgo": "{count} mins ago",
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeHoursAgo": "{count} hours ago",
+  "@timeHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeDaysAgo": "{count} days ago",
+  "@timeDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeYesterday": "Yesterday",
+  "exactAlarmDeniedHint": "Exact alarm permission denied, push timing may be inaccurate",
   "error": "Error",
   "success": "Success",
   "warning": "Warning",
@@ -996,7 +1120,11 @@
   "noteSearchEmptySubtitle": "Try other keywords or check your spelling",
   "noteSearchTimeoutMessage": "Search timed out, please retry",
   "searchingLabel": "Searching",
-  "filterAndSortTooltip": "Filter/Sort",
+  "guideAddNoteTagHiddenTitle": "Hide Notes",
+  "guideAddNoteTagHiddenDesc": "Select tags to hide notes",
+  "guideNoteItemMoreShareTitle": "Share Card",
+  "guideNoteItemMoreShareDesc": "Generate share cards here",
+  "filterAndSortTooltip": "Filter notes or view hidden ones",
   "noNotesFound": "No notes found, please add some notes first",
   "generateInsightsError": "Failed to generate insights: {error}",
   "@generateInsightsError": {
@@ -1291,6 +1419,16 @@
       }
     }
   },
+  "@operationFailed": {
+    "placeholders": {
+      "operation": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "loadStatsFailed": "Failed to load statistics",
   "mediaFileStats": "Media File Statistics",
   "totalFiles": "Total Files",
@@ -1552,6 +1690,14 @@
     }
   },
   "generateCards": "Generate Cards",
+  "aiCardGenerationDisabledLog": "AI card generation disabled, using local templates",
+  "missingGalleryPermission": "No gallery access permission, please enable it in settings",
+  "desktopGalleryNotSupported": "Saving to gallery is not supported on desktop, please use share function",
+  "cardFileNamePrefix": "ThoughtEcho_Card",
+  "aiProviderConfigMissing": "No available AI provider configuration found",
+  "aiSvgEmpty": "AI returned empty SVG content",
+  "unsafeSvgContent": "SVG content contains unsafe elements",
+  "invalidSvgContent": "Content returned by AI does not contain valid SVG code",
   "noFeaturedCards": "No Featured Cards Yet",
   "featuredCardGenerationTip": "Generate beautiful sharing cards from your notes: AI On = Smart Design, AI Off = Built-in Templates.",
   "cardFromReport": "A beautiful card from ThoughtEcho Periodic Report",
@@ -1605,6 +1751,133 @@
       }
     }
   },
+  "detectedAIJSONFormat": "⚠️ Detected AI returned JSON data\n\nThis indicates that the AI model might have misunderstood the request, returning data analysis instead of an HTML report.\n\nContent returned:\n{json}\n\nPossible causes:\n• AI confused annual report generation with content analysis\n• Prompt needs further optimization\n• Model version or configuration issue\n\nSuggested solutions:\n1. Regenerate report (AI might correct the error)\n2. Check model configuration in AI settings\n3. Try using native Flutter report feature\n4. Update AI prompt configuration\n\nFor technical support, please save this error message and contact the developer.",
+  "@detectedAIJSONFormat": {
+    "placeholders": {
+      "json": {
+        "type": "String"
+      }
+    }
+  },
+  "detectedAbnormalFormat": "⚠️ Detected abnormal data format\n\nAI returned JSON data that could not be parsed correctly, which might be due to:\n• Network transport issues\n• AI service exception\n• Data format error\n\nOriginal content:\n{content}\n\nSuggested to regenerate the report or use the native report feature.",
+  "@detectedAbnormalFormat": {
+    "placeholders": {
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "aiGeneratedTextContent": "📄 AI Generated Text Content\n\n{content}\n\n💡 Tip: AI returned a plain text summary instead of an HTML report.\nThis might be because the model understood the content but did not output it in HTML format.\n\nFull content can be viewed in a browser, and the system will automatically wrap it in HTML format.",
+  "@aiGeneratedTextContent": {
+    "placeholders": {
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "htmlReportCopiedSteps": "HTML report content copied to clipboard. Please follow these steps:",
+  "browserInstructionsStep1": "1. Open browser (Chrome/Safari, etc.)",
+  "browserInstructionsStep2": "2. Open a new blank page or tab",
+  "browserInstructionsStep3": "3. In the address bar, enter: data:text/html,",
+  "browserInstructionsStep4": "4. Paste the copied content",
+  "browserInstructionsStep5": "5. Press enter to view the report",
+  "desktopInstructionsStep1": "1. Create a new text file and paste content",
+  "desktopInstructionsStep2": "2. Save the file with .html extension",
+  "desktopInstructionsStep3": "3. Double-click the file to open in browser",
+  "annualReportHtmlTitle": "ThoughtEcho {year} Annual Report",
+  "generationTimeLabel": "Generated at: {time}",
+  "askNoteTitle": "Ask Note",
+  "noteInfoTitle": "Note Information",
+  "meUser": "Me",
+  "aiAssistantUser": "AI Assistant",
+  "aiAssistantWelcome": "Hello! I am your note assistant. You can ask me any questions about this note, and I will provide in-depth answers based on the content.\n\n📝 Note content overview:\n{preview}\n\n💡 You can try these questions:\n• What is the core idea of this note?\n• What inspiration can be gained from this note?\n• How to apply the ideas in this note to real life?\n• What thinking pattern does this note reflect?",
+  "thinkingInProgress": "Thinking...",
+  "aiMisunderstoodQuestion": "Sorry, I couldn't understand this question. Please try asking in a different way.",
+  "aiResponseError": "Sorry, an error occurred while responding: {error}",
+  "apiKeyDiagnosticsTitle": "API Key Diagnostics",
+  "apiKeyDiagnosticsTool": "API Key Diagnostics Tool",
+  "apiKeyDiagnosticsDesc": "This tool checks the storage and retrieval of API keys to help diagnose 401 authentication errors.",
+  "runDiagnostics": "Run Diagnostics",
+  "diagnosticResultLabel": "Diagnostic Result:",
+  "diagnosticReportHeader": "=== API Key Diagnostic Report ===",
+  "diagnosticReportTime": "Time: {time}",
+  "diagnosticMultiProviderCheck": "1. Multi-provider configuration...",
+  "diagnosticCurrentProvider": "   - Current Provider: {name}",
+  "diagnosticAvailableProviders": "   - Available providers: {count}",
+  "diagnosticEnabledProviders": "   - Enabled providers: {count}",
+  "diagnosticProviderDetails": "2. Current provider details...",
+  "diagnosticProviderId": "   - ID: {id}",
+  "diagnosticProviderName": "   - Name: {name}",
+  "diagnosticProviderUrl": "   - API URL: {url}",
+  "diagnosticProviderModel": "   - Model: {model}",
+  "diagnosticProviderEnabled": "   - Enabled: {status}",
+  "diagnosticApiKeyCheck": "3. API Key check...",
+  "diagnosticApiKeyInSettings": "   - Key in settings: {status}",
+  "diagnosticApiKeyLength": "   - Key length in settings: {length}",
+  "diagnosticApiKeyPrefix": "   - Key prefix in settings: {prefix}",
+  "diagnosticSecureApiKeyExists": "   - Key in secure storage: {status}",
+  "diagnosticSecureApiKeyLength": "   - Key length in secure storage: {length}",
+  "diagnosticSecureApiKeyPrefix": "   - Key prefix in secure storage: {prefix}",
+  "diagnosticApiKeyValidation": "4. Key validation...",
+  "diagnosticAsyncValidation": "   - Async validation: {status}",
+  "diagnosticFormatValidation": "   - Format validation: {status}",
+  "diagnosticErrorNoProvider": "2. Error: No current provider selected",
+  "diagnosticAllProvidersStatus": "5. All providers status...",
+  "diagnosticProviderStatusItem": "   - {name}: {keyStatus} {enabledStatus}",
+  "diagnosticSuggestions": "6. Suggestions...",
+  "diagnosticSuggestionSelectProvider": "   - Please select an AI provider",
+  "diagnosticSuggestionEnableProvider": "   - Please enable the currently selected AI provider",
+  "diagnosticSuggestionConfigureKey": "   - Please configure a valid API key for {name}",
+  "diagnosticSuggestionNormal": "   - ✓ API key configuration is normal",
+  "diagnosticComplete": "=== Diagnostics Complete ===",
+  "diagnosticError": "Error during diagnostics: {error}",
+  "passStatus": "Pass",
+  "failStatus": "Fail",
+  "yesStatus": "Yes",
+  "noStatus": "No",
+  "notSelectedStatus": "Not selected",
+  "importInstructions": "Import Instructions",
+  "selectingFile": "Selecting file...",
+  "validatingFile": "Validating file...",
+  "checkingFileCompatibility": "Checking file compatibility...",
+  "importingFile": "Importing file...",
+  "importComplete": "Import complete!",
+  "fileSaveFailed": "File save failed",
+  "processingMedia": "Processing {mediaType}...",
+  "@processingMedia": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadingFile": "Downloading file...",
+  "downloadComplete": "Download complete!",
+  "connectingToServer": "Connecting to server...",
+  "savingFile": "Saving file...",
+  "waitingForAIContent": "Waiting for AI content...",
+  "occurredError": "[Error occurred: {error}]",
+  "cancelLabel": "Cancel",
+  "selectFromGallery": "Select {mediaType} from gallery",
+  "@selectFromGallery": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "selectFromFilesWithTypeName": "Select {mediaType} from files",
+  "@selectFromFilesWithTypeName": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "importTipsImage": "• Supports JPG, PNG, GIF, WebP formats\n• Save directly to app media library, reducing duplicates\n• Use memory protection technology for large images\n• Unsaved files are automatically cleaned up",
+  "importTipsVideo": "• Supports MP4, MOV, AVI, MKV formats\n• Save directly to app media library, reducing duplicates\n• Streaming technology to prevent OOM\n• Unsaved files are automatically cleaned up",
+  "importTipsAudio": "• Supports MP3, WAV, AAC, M4A formats\n• Save directly to app media library, reducing duplicates\n• Optimized storage, fast loading\n• Unsaved files are automatically cleaned up",
+  "importTipsDefault": "• Supports multiple media formats\n• Save directly to app media library, memory safety protection\n• Unsaved files are automatically cleaned up",
   "formattedDate": "{month}/{day}",
   "@formattedDate": {
     "placeholders": {
@@ -2278,6 +2551,17 @@
   "weatherFetchFailed": "Weather fetch failed",
   "pleaseSelectCityFirst": "Please select a city or enable location service first",
   "useCurrentLocation": "Use Current Location",
+  "useFreeOnlineReverseGeocoding": "Use free online reverse geocoding",
+  "onlineReverseGeocodingNeedsLocation": "Please get current location first",
+  "onlineReverseGeocodingFailed": "Online reverse geocoding failed",
+  "onlineReverseGeocodingSuccess": "Online reverse geocoding updated: {address}",
+  "@onlineReverseGeocodingSuccess": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
   "weatherProvidedBy": "Weather data provided by Open-Meteo",
   "processing": "Processing...",
   "searchingCity": "Searching cities...",
@@ -2613,6 +2897,17 @@
   "regenerateCard": "Regenerate",
   "regeneratingCard": "Regenerating...",
   "cardGenerating": "Generating card...",
+  "generatingCards": "Generating cards...",
+  "loadMoreCards": "Load more cards",
+  "remainingCards": "{count} more available",
+  "@remainingCards": {
+    "description": "Remaining cards count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "saveBtn": "Save",
   "work": "Work: ",
   "explanation": "Explanation: ",
@@ -2887,9 +3182,24 @@
   "unsavedChangesDesc": "You have unsaved edits. Do you want to discard these changes?",
   "continueEditing": "Continue Editing",
   "discardChanges": "Discard Changes",
+  "actionFavorite": "Favorite",
+  "actionUnfavorite": "Unfavorite",
+  "clearFavoriteTitle": "Clear Favorite",
+  "clearFavoriteMessage": "Are you sure you want to clear {count} favorite(s) from this note?",
+  "@clearFavoriteMessage": {
+    "description": "Clear favorite confirmation message",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clearFavoriteSuccess": "Favorite cleared",
+  "clearFavoriteFailed": "Failed to clear favorite",
+  "moreOptions": "More options",
 
   "localAiFeatures": "Local AI Features",
-  "localAiFeaturesPreview": "Local AI Features (Preview)",
+  "localAiFeaturesPreview": "Preview",
   "localAiFeaturesDesc": "Enhance your note-taking experience with on-device AI",
   "enableLocalAi": "Enable Local AI",
   "enableLocalAiDesc": "Turn on to enable on-device AI features",
@@ -3067,17 +3377,25 @@
   "smartPushTitlePreview": "Smart Push (Preview)",
   "smartPushDesc": "Schedule push notifications for past notes and daily quotes",
   "smartPushEnable": "Enable Smart Push",
-  "smartPushEnableDesc": "Receive memory notifications at scheduled times",
-  "smartPushContentType": "Content Types",
+  "smartPushEnableDesc": "Push memory notes or daily quotes at scheduled times",
+  "smartPushContentType": "Push Mode",
   "smartPushDailyQuote": "Daily Quote",
-  "smartPushDailyQuoteDesc": "Push selected inspirational quotes",
+  "smartPushDailyQuoteDesc": "Push curated quotes",
   "smartPushPastNotes": "Past Notes",
   "smartPushPastNotesDesc": "Push historical note reviews",
+  "smartPushModeSmart": "Smart Push",
+  "smartPushModeSmartDesc": "Automatically select the most meaningful content",
+  "smartPushModeBoth": "Random Push",
+  "smartPushModeBothDesc": "Randomly push daily quotes or past notes",
   "smartPushPastNoteTypes": "Review Types",
   "smartPushYearAgoToday": "Year Ago Today",
   "smartPushYearAgoTodayDesc": "Push notes from the same day in previous years",
   "smartPushMonthAgoToday": "Month Ago Today",
-  "smartPushMonthAgoTodayDesc": "Push notes from the same day last month",
+  "smartPushMonthAgoTodayDesc": "Push notes from the same day in past months",
+  "smartPushWeekAgoToday": "Week Ago",
+  "smartPushWeekAgoTodayDesc": "Push notes from a week ago",
+  "smartPushRandomMemory": "Random Memory",
+  "smartPushRandomMemoryDesc": "Randomly push historical notes",
   "smartPushSameLocation": "Same Location",
   "smartPushSameLocationDesc": "Push notes from the same area",
   "smartPushSameWeather": "Same Weather",
@@ -3087,15 +3405,119 @@
   "smartPushTagFilterDesc": "Only push notes with selected tags (no selection means no restriction)",
   "smartPushTimeSettings": "Push Time",
   "smartPushAddTime": "Add Push Time",
-  "smartPushAiSection": "AI Smart Push",
-  "smartPushAiEnable": "AI Recommendations",
-  "smartPushAiEnableDesc": "Intelligently recommend memories based on content and mood",
-  "smartPushComingSoon": "Coming Soon",
+  "smartPushFrequency": "Push Frequency",
+  "smartPushFrequencyDaily": "Daily",
+  "smartPushFrequencyWeekdays": "Weekdays",
+  "smartPushFrequencyWeekends": "Weekends",
+  "smartPushFrequencyCustom": "Custom",
+  "smartPushAdvancedOptions": "Advanced Options",
   "smartPushTest": "Send Test Push",
   "smartPushTestSent": "Test notification sent, please check notifications",
-  "smartPushNoMatchingNotes": "No matching notes to push",
-  "smartPushNotice": "Notice",
-  "smartPushNoticeDesc": "• Push notifications require notification permission\n• Notifications may be delayed when app is in background\n• Keep the app running in background for best experience\n• True background scheduling coming soon",
+  "smartPushNoMatchingNotes": "No matching content to push",
+  "smartPushPermissionRequired": "Notification permission is required to send push",
+  "smartPushNotice": "Tips",
+  "smartPushNoticeDesc": "• Push notifications require notification permission\n• Enable auto-start and background running in system settings for reliable delivery\n• Some devices may need battery optimization disabled\n• Smart mode automatically selects the most relevant content",
+  "smartPushModeCustom": "Custom Push",
+  "smartPushModeCustomDesc": "Manually select review types and filters",
+  "smartPushExactAlarmHint": "Enable exact alarm permission for reliable push notifications",
+  "smartPushExactAlarmTitle": "Exact Alarm Permission",
+  "smartPushExactAlarmMessage": "To ensure notifications arrive on time, please grant exact alarm permission. You can still use push without it, but timing may vary by a few minutes.",
+  "smartPushGoToSettings": "Go to Settings",
+  "smartPushPermissionWarningTitle": "Permission Setup Incomplete",
+  "smartPushPermissionWarningDesc": "Some permissions are not granted, which may cause push notifications to fail. Tap items below to configure.",
+  "smartPushNotificationPermission": "Notification Permission",
+  "smartPushBatteryOptimization": "Disable Battery Optimization",
+  "smartPushAutoStartPermission": "Auto-Start Permission",
+  "smartPushAutoStartHint": "Required for background push on some devices",
+  "smartPushAutoStartTitle": "Auto-Start Setup Guide",
+  "smartPushAutoStartInstructions": "Please follow these steps:",
+  "smartPushAutoStartNote": "Note: The interface may vary slightly between system versions. Please find ThoughtEcho in app management and allow auto-start and background activity.",
+  "smartPushUnknownManufacturer": "Unknown Device",
+  "iHaveConfigured": "I have configured",
+  "recommended": "Recommended",
+  "settingsUserManual": "User Manual",
+  "settingsUserManualDesc": "Learn how to use ThoughtEcho features",
+  "manualTitle": "User Manual",
+  "manualLoadFailed": "Failed to load manual content",
+  "viewing": "Viewing...",
+  "backToAnalysis": "Back to Analysis",
+  "userGuide": "User Guide",
+  "userGuideDesc": "Learn how to use ThoughtEcho features",
+  "userGuideSearchHint": "Search user guide...",
+  "userGuideNoResults": "No results found",
+  "userGuideOnlineDoc": "Full Online Documentation",
+  "tileNoLocationPermission": "No Location",
+  "tileLocationServiceOff": "GPS Off",
+  "tileOffline": "Offline",
+  "tileNoNetwork": "No Network",
+  "tileLoading": "Loading...",
+  "tileNoWeather": "No Weather",
+  "tileCachedSuffix": "(Cached)",
+
+  "noteAutoFillSection": "Note Auto-Fill",
+  "noteAutoFillSectionDesc": "Auto-fill author, source, and tags when creating notes",
+  "defaultAuthor": "Default Author",
+  "defaultAuthorDesc": "Author to auto-fill when creating new notes",
+  "defaultAuthorHint": "Enter default author name",
+  "defaultSource": "Default Source",
+  "defaultSourceDesc": "Source/work to auto-fill when creating new notes",
+  "defaultSourceHint": "Enter default source or work name",
+  "defaultTags": "Default Tags",
+  "defaultTagsDesc": "Tags to auto-add when creating new notes",
+  "defaultTagsNone": "Not set",
+  "defaultTagsCount": "{count} tags selected",
+  "@defaultTagsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectDefaultTags": "Select Default Tags",
+  "autoFillEnabled": "Auto-fill enabled",
+  "clearDefaultValue": "Clear",
+  "saveDefaultValue": "Save",
+  "defaultValueSaved": "Default value saved",
+  "defaultValueCleared": "Default value cleared",
+
+  "citySelectedWeatherUpdated": "Selected city: {cityName}, weather updated",
+  "@citySelectedWeatherUpdated": {
+    "placeholders": {
+      "cityName": {
+        "type": "String"
+      }
+    }
+  },
+  "citySelectionError": "Error selecting city: {error}",
+  "@citySelectionError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "currentLocationWeatherUpdated": "Using current location: {cityName}, weather updated",
+  "@currentLocationWeatherUpdated": {
+    "placeholders": {
+      "cityName": {
+        "type": "String"
+      }
+    }
+  },
+  "locationFetchError": "Failed to get location: {error}",
+  "@locationFetchError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "weatherTimeoutRetry": "Weather fetch timed out, please try again later",
+  "weatherFetchFailedCheckNetwork": "Weather fetch failed, please check network connection",
+  "locationTimeoutCheckPermission": "Location fetch timed out, please check location permission",
+  "cannotGetCurrentLocation": "Cannot get current location, please ensure location permission is granted",
+  "cannotGetSelectedCityLocation": "Cannot get selected city location",
+  "cityInfoIncomplete": "City information is incomplete",
 
   "modelManagement": "Model Management",
   "modelManagementDesc": "Download and manage local AI models",

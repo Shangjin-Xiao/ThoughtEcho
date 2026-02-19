@@ -11,6 +11,7 @@ void main() {
 
     test('知识卡片模板生成', () {
       final svg = CardTemplates.knowledgeTemplate(
+        brandName: 'ThoughtEcho',
         content: testContent,
         author: testAuthor,
         date: testDate,
@@ -21,7 +22,7 @@ void main() {
       expect(svg, contains('</svg>'));
       expect(svg, contains('xmlns="http://www.w3.org/2000/svg"'));
       expect(svg, matches(RegExp(r'viewBox="0 0 400\.?0? 600\.?0?"')));
-      expect(svg, contains('knowledgeBg'));
+      expect(svg, contains('auroraBlur'));
       expect(svg, contains(testAuthor));
       expect(svg, contains(testDate));
       expect(svg, contains('ThoughtEcho'));
@@ -29,6 +30,7 @@ void main() {
 
     test('引用卡片模板生成', () {
       final svg = CardTemplates.quoteTemplate(
+        brandName: 'ThoughtEcho',
         content: testContent,
         author: testAuthor,
         date: testDate,
@@ -47,17 +49,20 @@ void main() {
           '这是一段非常长的引用内容，用来测试在没有手动换行的情况下，系统是否能够自动将文本拆分成多行显示，从而避免只显示两行就出现省略号的问题。我们希望这个逻辑能够智能地利用粉色卡片中留白充足的版面，让长笔记按照中文和英文混排的规则自然地折行，直到达到可用空间上限。';
 
       final svg = CardTemplates.quoteTemplate(
+        brandName: 'ThoughtEcho',
         content: longQuoteContent,
         author: testAuthor,
         date: testDate,
       );
 
-      final italicLineCount = RegExp('font-style="italic"').allMatches(svg).length;
+      final italicLineCount =
+          RegExp('font-style="italic"').allMatches(svg).length;
       expect(italicLineCount, greaterThanOrEqualTo(4));
     });
 
     test('哲学思考卡片模板生成', () {
       final svg = CardTemplates.philosophicalTemplate(
+        brandName: 'ThoughtEcho',
         content: testContent,
         author: testAuthor,
         date: testDate,
@@ -73,6 +78,7 @@ void main() {
 
     test('简约卡片模板生成', () {
       final svg = CardTemplates.minimalistTemplate(
+        brandName: 'ThoughtEcho',
         content: testContent,
         author: testAuthor,
         date: testDate,
@@ -88,6 +94,7 @@ void main() {
 
     test('自然卡片模板生成', () {
       final svg = CardTemplates.natureTemplate(
+        brandName: 'ThoughtEcho',
         content: testContent,
         author: testAuthor,
         date: testDate,
@@ -103,6 +110,7 @@ void main() {
 
     test('复古卡片模板生成', () {
       final svg = CardTemplates.retroTemplate(
+        brandName: 'ThoughtEcho',
         content: testContent,
         author: testAuthor,
         date: testDate,
@@ -119,15 +127,17 @@ void main() {
     test('根据类型获取模板', () {
       // 测试知识卡片
       final knowledgeSvg = CardTemplates.getTemplateByType(
+        brandName: 'ThoughtEcho',
         type: CardType.knowledge,
         content: testContent,
         author: testAuthor,
         date: testDate,
       );
-      expect(knowledgeSvg, contains('knowledgeBg'));
+      expect(knowledgeSvg, contains('auroraBlur'));
 
       // 测试引用卡片
       final quoteSvg = CardTemplates.getTemplateByType(
+        brandName: 'ThoughtEcho',
         type: CardType.quote,
         content: testContent,
         author: testAuthor,
@@ -137,6 +147,7 @@ void main() {
 
       // 测试哲学卡片
       final philoSvg = CardTemplates.getTemplateByType(
+        brandName: 'ThoughtEcho',
         type: CardType.philosophical,
         content: testContent,
         author: testAuthor,
@@ -146,6 +157,7 @@ void main() {
 
       // 测试简约卡片
       final minimalistSvg = CardTemplates.getTemplateByType(
+        brandName: 'ThoughtEcho',
         type: CardType.minimalist,
         content: testContent,
         author: testAuthor,
@@ -155,6 +167,7 @@ void main() {
 
       // 测试自然卡片
       final natureSvg = CardTemplates.getTemplateByType(
+        brandName: 'ThoughtEcho',
         type: CardType.nature,
         content: testContent,
         author: testAuthor,
@@ -164,12 +177,33 @@ void main() {
 
       // 测试复古卡片
       final retroSvg = CardTemplates.getTemplateByType(
+        brandName: 'ThoughtEcho',
         type: CardType.retro,
         content: testContent,
         author: testAuthor,
         date: testDate,
       );
       expect(retroSvg, contains('noise'));
+
+      // 测试正念模板
+      final mindfulSvg = CardTemplates.getTemplateByType(
+        brandName: 'ThoughtEcho',
+        type: CardType.mindful,
+        content: testContent,
+        author: testAuthor,
+        date: testDate,
+      );
+      expect(mindfulSvg, contains('paperNoise'));
+
+      // 测试霓虹赛博模板
+      final neonCyberSvg = CardTemplates.getTemplateByType(
+        brandName: 'ThoughtEcho',
+        type: CardType.neonCyber,
+        content: testContent,
+        author: testAuthor,
+        date: testDate,
+      );
+      expect(neonCyberSvg, contains('cyberGrid'));
     });
 
     test('长文本处理', () {
@@ -181,6 +215,7 @@ void main() {
 ''';
 
       final svg = CardTemplates.knowledgeTemplate(
+        brandName: 'ThoughtEcho',
         content: longContent,
         author: testAuthor,
         date: testDate,
@@ -195,6 +230,7 @@ void main() {
 
     test('无作者信息处理', () {
       final svg = CardTemplates.knowledgeTemplate(
+        brandName: 'ThoughtEcho',
         content: testContent,
         date: testDate,
       );
@@ -209,6 +245,7 @@ void main() {
 
     test('SVG结构验证', () {
       final svg = CardTemplates.knowledgeTemplate(
+        brandName: 'ThoughtEcho',
         content: testContent,
         author: testAuthor,
         date: testDate,
@@ -231,21 +268,23 @@ void main() {
 
     test('颜色和样式验证', () {
       final svg = CardTemplates.knowledgeTemplate(
+        brandName: 'ThoughtEcho',
         content: testContent,
         author: testAuthor,
         date: testDate,
       );
 
       // 验证现代化配色 (更新后的颜色)
-      expect(svg, contains('#6366f1')); // Indigo
-      expect(svg, contains('#8b5cf6')); // Violet
-      expect(svg, contains('#d946ef')); // Fuchsia
+      expect(svg, contains('#7c3aed')); // Violet
+      expect(svg, contains('#0891b2')); // Cyan
+      expect(svg, contains('#db2777')); // Pink
       expect(svg, contains('stop-opacity'));
       expect(svg, contains('fill-opacity'));
     });
 
     test('元数据与地点/天气渲染', () {
       final svg = CardTemplates.knowledgeTemplate(
+        brandName: 'ThoughtEcho',
         content: testContent,
         author: testAuthor,
         date: testDate,
@@ -262,6 +301,7 @@ void main() {
       const contentWithSpecialChars = '这是<特殊>字符&测试"内容"';
 
       final svg = CardTemplates.quoteTemplate(
+        brandName: 'ThoughtEcho',
         content: contentWithSpecialChars,
         date: testDate,
       );

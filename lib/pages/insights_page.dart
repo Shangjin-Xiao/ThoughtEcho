@@ -11,6 +11,7 @@ import '../models/ai_analysis_model.dart';
 import '../models/quote_model.dart';
 import 'ai_analysis_history_page_clean.dart';
 import 'ai_settings_page.dart';
+import '../theme/app_theme.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter/services.dart';
 import '../constants/app_constants.dart';
@@ -563,15 +564,38 @@ class _InsightsPageState extends State<InsightsPage> {
       ),
       floatingActionButton: _showAnalysisSelection
           ? FloatingActionButton.extended(
-              onPressed: _isLoading ? null : _generateInsights,
-              label: Text(_isLoading ? l10n.analyzing : l10n.startAnalysis),
-              icon: _isLoading
+              onPressed: () {
+                if (_isGenerating ||
+                    (_accumulatedInsightsText.isNotEmpty && !_isLoading)) {
+                  setState(() {
+                    _showAnalysisSelection = false;
+                  });
+                } else {
+                  _generateInsights();
+                }
+              },
+              label: Text(
+                _isGenerating
+                    ? l10n.viewing
+                    : (_accumulatedInsightsText.isNotEmpty && !_isLoading)
+                        ? l10n
+                            .viewHistory // Reuse "View History" or similar, or just "View Result"
+                        : l10n.startAnalysis,
+              ),
+              icon: _isGenerating
                   ? const SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white, // Ensure visibility on FAB
+                      ),
                     )
-                  : const Icon(Icons.auto_awesome),
+                  : Icon(
+                      (_accumulatedInsightsText.isNotEmpty && !_isLoading)
+                          ? Icons.visibility
+                          : Icons.auto_awesome,
+                    ),
             )
           : null,
     );
@@ -597,8 +621,7 @@ class _InsightsPageState extends State<InsightsPage> {
                 onPressed: () {
                   setState(() {
                     _showAnalysisSelection = true;
-                    _accumulatedInsightsText = '';
-                    _isGenerating = false;
+                    // Fix: Do not clear state here to allow returning to ongoing generation or result
                   });
                 },
               ),
@@ -670,10 +693,18 @@ class _InsightsPageState extends State<InsightsPage> {
 
           // 分析风格选择
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+              border: Border.all(
+                color: theme.colorScheme.outline.withValues(alpha: 0.1),
+              ),
+            ),
             child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: 12,
+              runSpacing: 12,
               children: _getAnalysisStyles(AppLocalizations.of(context)).map((
                 style,
               ) {
@@ -689,13 +720,29 @@ class _InsightsPageState extends State<InsightsPage> {
                       });
                     }
                   },
-                  selectedColor: theme.colorScheme.primaryContainer,
+                  showCheckmark: false,
+                  avatar: isSelected
+                      ? Icon(
+                          Icons.check,
+                          size: 16,
+                          color: theme.colorScheme.onSecondaryContainer,
+                        )
+                      : null,
+                  selectedColor: theme.colorScheme.secondaryContainer,
                   labelStyle: TextStyle(
                     color: isSelected
-                        ? theme.colorScheme.primary
+                        ? theme.colorScheme.onSecondaryContainer
                         : theme.colorScheme.onSurface,
                     fontWeight:
                         isSelected ? FontWeight.bold : FontWeight.normal,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    side: BorderSide(
+                      color: isSelected
+                          ? Colors.transparent
+                          : theme.colorScheme.outline.withValues(alpha: 0.3),
+                    ),
                   ),
                   tooltip: style['description'],
                 );
@@ -706,55 +753,115 @@ class _InsightsPageState extends State<InsightsPage> {
           const SizedBox(height: 24),
 
           // 自定义提示词选项
-          InkWell(
-            onTap: () {
-              setState(() {
-                _showCustomPrompt = !_showCustomPrompt;
-              });
-            },
-            child: Row(
+          Container(
+            decoration: BoxDecoration(
+              color: _showCustomPrompt
+                  ? theme.colorScheme.surfaceContainer
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+              border: _showCustomPrompt
+                  ? Border.all(
+                      color: theme.colorScheme.outline.withValues(alpha: 0.2))
+                  : null,
+            ),
+            padding:
+                _showCustomPrompt ? const EdgeInsets.all(16) : EdgeInsets.zero,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(
-                  _showCustomPrompt ? Icons.arrow_drop_down : Icons.arrow_right,
-                  color: theme.primaryColor,
-                ),
-                Text(
-                  l10n.advancedOptions,
-                  style: TextStyle(
-                    color: theme.primaryColor,
-                    fontWeight: FontWeight.w500,
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      _showCustomPrompt = !_showCustomPrompt;
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _showCustomPrompt
+                              ? Icons.keyboard_arrow_down
+                              : Icons.keyboard_arrow_right,
+                          color: theme.primaryColor,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          l10n.advancedOptions,
+                          style: TextStyle(
+                            color: theme.primaryColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
+
+                // 自定义提示词输入框
+                if (_showCustomPrompt) ...[
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _customPromptController,
+                    decoration: InputDecoration(
+                      labelText: l10n.customPrompt,
+                      hintText: l10n.customPromptHint,
+                      border: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppTheme.inputRadius),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppTheme.inputRadius),
+                        borderSide: BorderSide(
+                          color:
+                              theme.colorScheme.outline.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: theme.colorScheme.surface,
+                    ),
+                    maxLines: 3,
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                ],
               ],
             ),
           ),
-
-          // 自定义提示词输入框
-          if (_showCustomPrompt) ...[
-            const SizedBox(height: 16),
-            TextField(
-              controller: _customPromptController,
-              decoration: InputDecoration(
-                labelText: l10n.customPrompt,
-                hintText: l10n.customPromptHint,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                filled: true,
-                fillColor: theme.colorScheme.surface,
-              ),
-              maxLines: 3,
-            ),
-          ],
 
           const SizedBox(height: 24),
 
           // 历史记录栏
           Card(
             margin: const EdgeInsets.only(bottom: 16),
+            elevation: 0, // Flat style for history link
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+              side: BorderSide(
+                color: theme.colorScheme.outline.withValues(alpha: 0.2),
+              ),
+            ),
+            color: theme.colorScheme.surface, // Clean surface
             child: ListTile(
-              leading: Icon(Icons.history, color: theme.primaryColor),
-              title: Text(l10n.analysisHistoryRecord),
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.secondaryContainer
+                      .withValues(alpha: 0.5),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.history,
+                  color: theme.colorScheme.onSecondaryContainer,
+                  size: 20,
+                ),
+              ),
+              title: Text(
+                l10n.analysisHistoryRecord,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
               subtitle: Text(l10n.viewPreviousAnalysis),
               trailing: const Icon(Icons.chevron_right),
               onTap: () {
@@ -786,11 +893,14 @@ class _InsightsPageState extends State<InsightsPage> {
                       color: theme.colorScheme.onSecondaryContainer,
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      l10n.analysisDescriptionTitle,
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.onSecondaryContainer,
+                    Flexible(
+                      child: Text(
+                        l10n.analysisDescriptionTitle,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSecondaryContainer,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -824,9 +934,12 @@ class _InsightsPageState extends State<InsightsPage> {
                   children: [
                     const Icon(Icons.warning_amber_rounded, size: 20),
                     const SizedBox(width: 8),
-                    Text(
-                      l10n.aiAnalysisUsageInstructionsTitle,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    Flexible(
+                      child: Text(
+                        l10n.aiAnalysisUsageInstructionsTitle,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),
@@ -849,17 +962,23 @@ class _InsightsPageState extends State<InsightsPage> {
     final isSelected = _selectedAnalysisType == type['prompt'];
     final String key = type['prompt'];
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      elevation: isSelected ? 2 : 0,
+      margin: const EdgeInsets.only(bottom: 12), // Increased spacing
+      elevation: isSelected ? 4 : 0.5, // Better elevation
+      shadowColor: theme.shadowColor.withValues(alpha: 0.2),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius:
+            BorderRadius.circular(AppTheme.cardRadius), // Use AppTheme
         side: BorderSide(
           color: isSelected
               ? theme.colorScheme.primary
-              : theme.colorScheme.outline.withValues(alpha: 0.3),
+              : theme.colorScheme.outline
+                  .withValues(alpha: 0.1), // Subtle border
           width: isSelected ? 2 : 1,
         ),
       ),
+      color: isSelected
+          ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
+          : theme.cardColor,
       child: InkWell(
         onTap: () {
           setState(() {
@@ -867,31 +986,49 @@ class _InsightsPageState extends State<InsightsPage> {
             _showCustomPrompt = false;
           });
         },
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.all(16), // Increased padding
           child: Row(
             children: [
+              // Icon with container
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  type['icon'],
+                  color: isSelected
+                      ? theme.colorScheme.onPrimary
+                      : theme.colorScheme.onSurfaceVariant,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       _analysisTypeKeyToLabel[key] ?? key,
-                      style: theme.textTheme.titleSmall?.copyWith(
+                      style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: isSelected
-                            ? theme.primaryColor
-                            : theme.textTheme.titleSmall?.color,
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurface,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 4),
                     Text(
                       type['description'],
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.textTheme.bodySmall?.color?.withValues(
-                          alpha: 0.7,
-                        ),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        // detailed body text
+                        color: theme.colorScheme.onSurfaceVariant,
+                        height: 1.3,
                       ),
                     ),
                   ],
@@ -899,16 +1036,15 @@ class _InsightsPageState extends State<InsightsPage> {
               ),
               if (isSelected)
                 Container(
-                  width: 20,
-                  height: 20,
+                  padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: theme.primaryColor,
+                    color: theme.colorScheme.primary,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.check,
                     color: theme.colorScheme.onPrimary,
-                    size: 14,
+                    size: 12,
                   ),
                 ),
             ],
@@ -994,9 +1130,54 @@ class _InsightsPageState extends State<InsightsPage> {
                           data:
                               _accumulatedInsightsText, // Use accumulated text
                           selectable: true,
-                          styleSheet: MarkdownStyleSheet.fromTheme(
-                            theme,
-                          ).copyWith(p: theme.textTheme.bodyMedium),
+                          styleSheet:
+                              MarkdownStyleSheet.fromTheme(theme).copyWith(
+                            p: theme.textTheme.bodyMedium?.copyWith(
+                              height: 1.6,
+                              fontSize: 16,
+                            ),
+                            h1: theme.textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: theme.primaryColor,
+                              height: 1.5,
+                            ),
+                            h2: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: theme.colorScheme.onSurface,
+                              height: 1.5,
+                            ),
+                            h3: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              height: 1.4,
+                            ),
+                            listBullet: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.primaryColor,
+                            ),
+                            blockquote: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant,
+                              fontStyle: FontStyle.italic,
+                            ),
+                            blockquoteDecoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerHighest
+                                  .withValues(alpha: 0.5),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border(
+                                left: BorderSide(
+                                  color: theme.primaryColor,
+                                  width: 4,
+                                ),
+                              ),
+                            ),
+                            code: theme.textTheme.bodySmall?.copyWith(
+                              fontFamily: 'monospace',
+                              backgroundColor:
+                                  theme.colorScheme.surfaceContainerHighest,
+                            ),
+                            codeblockDecoration: BoxDecoration(
+                              color: theme.colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
                         ),
                       ],
                     ),

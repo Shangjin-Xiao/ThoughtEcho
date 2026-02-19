@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 MaterialColor createMaterialColor(Color color) {
   List strengths = <double>[.05];
   Map<int, Color> swatch = <int, Color>{};
-  final int r = color.r.toInt(),
-      g = color.g.toInt(),
-      b = color.b.toInt(); // 转换为整数
+  final int r = (color.r * 255).round(),
+      g = (color.g * 255).round(),
+      b = (color.b * 255).round();
 
   for (int i = 1; i < 10; i++) {
     strengths.add(0.1 * i);
@@ -44,15 +44,15 @@ Color adjustColor(Color color) {
 
 // 新增扩展方法，将 withOpacity 替换为 applyOpacity
 extension ColorValueExtension on Color {
-  Color applyOpacity(double opacity) =>
-      Color.fromRGBO(r.toInt(), g.toInt(), b.toInt(), opacity); // 转换为整数并移除 this
+  Color applyOpacity(double opacity) => Color.fromRGBO(
+      (r * 255).round(), (g * 255).round(), (b * 255).round(), opacity);
 }
 
 // 新增扩展方法，将已弃用的 withOpacity 替换为安全的实现
 extension ColorExtension on Color {
   /// 安全地设置颜色的透明度，替代已弃用的 withOpacity
-  Color withAlpha(double opacity) =>
-      Color.fromRGBO(r.toInt(), g.toInt(), b.toInt(), opacity); // 转换为整数并移除 this
+  Color withAlpha(double opacity) => Color.fromRGBO(
+      (r * 255).round(), (g * 255).round(), (b * 255).round(), opacity);
 }
 
 /// 颜色工具类
@@ -65,11 +65,8 @@ class ColorUtils {
     // 确保opacity在有效范围内
     opacity = opacity.clamp(0.0, 1.0);
 
-    // 将0-1的opacity转换为0-255的alpha值
-    final int alpha = (opacity * 255).round();
-
     // 创建带有新alpha值的颜色
-    return color.withAlpha(alpha);
+    return color.withValues(alpha: opacity);
   }
 
   /// 获取页面背景色

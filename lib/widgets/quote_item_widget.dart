@@ -15,20 +15,22 @@ import '../gen_l10n/app_localizations.dart';
 /// 优化：使用StatefulWidget以支持双击反馈动画，数据变化通过父组件管理
 class QuoteItemWidget extends StatefulWidget {
   final Quote quote;
-  final List<NoteCategory> tags;
+  final Map<String, NoteCategory> tagMap;
   final bool isExpanded;
   final Function(bool) onToggleExpanded;
   final Function() onEdit;
   final Function() onDelete;
   final Function() onAskAI;
   final Function()? onGenerateCard;
-  final Function()? onFavorite; // 新增：心形按钮点击回调
+  final Function()? onFavorite; // 心形按钮点击回调
+  final Function()? onLongPressFavorite; // 心形按钮长按回调（清除收藏）
   final String? searchQuery;
 
   /// 自定义标签显示的构建器函数，接收一个标签对象，返回一个Widget
   final Widget Function(NoteCategory)? tagBuilder;
   final GlobalKey? favoriteButtonGuideKey;
   final GlobalKey? foldToggleGuideKey;
+  final GlobalKey? moreButtonGuideKey; // 功能引导：更多按钮 Key
 
   /// 当前筛选的标签ID列表，用于优先显示匹配的标签
   final List<String> selectedTagIds;
@@ -36,18 +38,20 @@ class QuoteItemWidget extends StatefulWidget {
   const QuoteItemWidget({
     super.key,
     required this.quote,
-    required this.tags,
+    required this.tagMap,
     required this.isExpanded,
     required this.onToggleExpanded,
     required this.onEdit,
     required this.onDelete,
     required this.onAskAI,
     this.onGenerateCard,
-    this.onFavorite, // 新增：心形按钮点击回调
+    this.onFavorite, // 心形按钮点击回调
+    this.onLongPressFavorite, // 心形按钮长按回调（清除收藏）
     this.tagBuilder,
     this.searchQuery,
     this.favoriteButtonGuideKey,
     this.foldToggleGuideKey,
+    this.moreButtonGuideKey,
     this.selectedTagIds = const [],
   });
 
@@ -235,7 +239,6 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     final l10n = AppLocalizations.of(context);
     final quote = widget.quote;
     final isExpanded = widget.isExpanded;
-    // final colorScheme = Theme.of(context).colorScheme; // REMOVED unused variable
 
     // Determine the background color of the card
     // If the quote has a color, use it, otherwise use theme color
@@ -259,26 +262,25 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
 
     // 格式化日期和时间段（支持国际化和精确时间显示）
     final DateTime quoteDate = DateTime.parse(quote.date);
-    final settingsService = context.watch<SettingsService>();
+    final showExactTime = context.select<SettingsService, bool>(
+      (s) => s.showExactTime,
+    );
     final String formattedDate = TimeUtils.formatQuoteDateLocalized(
       context,
       quoteDate,
       dayPeriod: quote.dayPeriod,
-      showExactTime: settingsService.showExactTime,
+      showExactTime: showExactTime,
     );
 
-    return AnimatedContainer(
+    return Container(
       margin: const EdgeInsets.symmetric(
         horizontal: 12,
         vertical: 6,
-      ), // 减少水平边距从16到12，垂直从8到6
-      duration: const Duration(milliseconds: 350),
-      curve: Curves.easeOutQuad,
+      ),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         boxShadow: isExpanded
             ? [
-                // 轻微增强阴影，提升展开时的质感
                 BoxShadow(
                   color: Colors.black.withValues(alpha: 0.06),
                   blurRadius: 12,
@@ -323,14 +325,13 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                           const SizedBox(width: 2),
                           Text(
                             // 优先显示文字位置，没有文字位置时显示坐标
-                            quote.location != null
-                                ? (quote.location!.split(',').length >= 3
-                                    ? (quote.location!.split(',').length >= 4
-                                        ? '${quote.location!.split(',')[2]}·${quote.location!.split(',')[3]}' // 显示 "城市·区县"
-                                        : quote.location!.split(
-                                            ',',
-                                          )[2]) // 只有城市
-                                    : quote.location!)
+                            (quote.location != null &&
+                                    LocationService.formatLocationForDisplay(
+                                      quote.location,
+                                    ).isNotEmpty)
+                                ? LocationService.formatLocationForDisplay(
+                                    quote.location,
+                                  )
                                 : LocationService.formatCoordinates(
                                     quote.latitude,
                                     quote.longitude,
@@ -380,6 +381,120 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                     final needsExpansion = _needsExpansion(quote);
                     final showFullContent = isExpanded || !needsExpansion;
 
+                    // 构建不依赖双击动画的内容子树（QuoteContent + 底部遮罩）
+                    // 作为 AnimatedBuilder 的 child 传入，避免动画 tick 时重建重型子树
+                    final contentChild = Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        AnimatedSwitcher(
+                          duration: QuoteItemWidget._fadeDuration,
+                          switchInCurve: Curves.easeOut,
+                          switchOutCurve: Curves.easeIn,
+                          layoutBuilder: (currentChild, previousChildren) =>
+                              Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              ...previousChildren,
+                              if (currentChild != null) currentChild,
+                            ],
+                          ),
+                          child: KeyedSubtree(
+                            key: ValueKey<bool>(showFullContent),
+                            child: QuoteContent(
+                              quote: quote,
+                              style: innerTheme.textTheme.bodyLarge?.copyWith(
+                                color: primaryTextColor,
+                                height: 1.5,
+                              ),
+                              showFullContent: showFullContent,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          height: 30,
+                          child: IgnorePointer(
+                            child: AnimatedSwitcher(
+                              duration: QuoteItemWidget._fadeDuration,
+                              switchInCurve: Curves.easeIn,
+                              switchOutCurve: Curves.easeOut,
+                              child: (!isExpanded && needsExpansion)
+                                  ? ClipRect(
+                                      child: BackdropFilter(
+                                        filter: ui.ImageFilter.blur(
+                                          sigmaX: 1.2,
+                                          sigmaY: 1.2,
+                                        ),
+                                        child: Container(
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              begin: Alignment.topCenter,
+                                              end: Alignment.bottomCenter,
+                                              colors: [
+                                                innerTheme.colorScheme.surface
+                                                    .withValues(
+                                                  alpha: 0.0,
+                                                ),
+                                                innerTheme.colorScheme.surface
+                                                    .withValues(
+                                                  alpha: 0.08,
+                                                ),
+                                                innerTheme.colorScheme.surface
+                                                    .withValues(
+                                                  alpha: 0.18,
+                                                ),
+                                              ],
+                                              stops: const [
+                                                0.0,
+                                                0.4,
+                                                1.0,
+                                              ],
+                                            ),
+                                          ),
+                                          alignment: Alignment.center,
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: innerTheme
+                                                  .colorScheme.surface
+                                                  .withValues(
+                                                alpha: 0.35,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(
+                                                12,
+                                              ),
+                                            ),
+                                            child: Text(
+                                              l10n.doubleTapToViewFull,
+                                              style: innerTheme
+                                                  .textTheme.bodySmall
+                                                  ?.copyWith(
+                                                color: innerTheme
+                                                    .colorScheme.onSurface
+                                                    .withValues(
+                                                  alpha: 0.65,
+                                                ),
+                                                fontSize: 11,
+                                                fontStyle: FontStyle.italic,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    )
+                                  : const SizedBox.shrink(),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+
                     return AnimatedSize(
                       duration: QuoteItemWidget.expandCollapseDuration,
                       curve: QuoteItemWidget._expandCurve,
@@ -387,151 +502,40 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                       clipBehavior: Clip.none,
                       child: AnimatedBuilder(
                         animation: _doubleTapController,
-                        builder: (context, _) {
+                        // 将不依赖动画值的子树通过 child 传入，避免动画帧间重建
+                        child: contentChild,
+                        builder: (context, child) {
                           final highlightOpacity = _highlightProgress.value;
                           final brightness = innerTheme.brightness;
                           final overlayStrength =
                               brightness == Brightness.dark ? 0.12 : 0.05;
-                          final overlayColor = Colors.white.withValues(
-                            alpha: overlayStrength * highlightOpacity,
-                          );
 
                           return Transform.scale(
                             scale: _scaleAnimation.value,
                             alignment: Alignment.topLeft,
-                            child: Stack(
-                              clipBehavior: Clip.none,
-                              children: [
-                                AnimatedSwitcher(
-                                  duration: QuoteItemWidget._fadeDuration,
-                                  switchInCurve: Curves.easeOut,
-                                  switchOutCurve: Curves.easeIn,
-                                  layoutBuilder:
-                                      (currentChild, previousChildren) => Stack(
+                            child: highlightOpacity > 0
+                                ? Stack(
                                     clipBehavior: Clip.none,
                                     children: [
-                                      ...previousChildren,
-                                      if (currentChild != null) currentChild,
-                                    ],
-                                  ),
-                                  child: KeyedSubtree(
-                                    key: ValueKey<bool>(showFullContent),
-                                    child: QuoteContent(
-                                      quote: quote,
-                                      style: innerTheme.textTheme.bodyLarge
-                                          ?.copyWith(
-                                        color: primaryTextColor,
-                                        height: 1.5,
-                                      ),
-                                      showFullContent: showFullContent,
-                                    ),
-                                  ),
-                                ),
-                                if (highlightOpacity > 0)
-                                  Positioned.fill(
-                                    child: IgnorePointer(
-                                      child: DecoratedBox(
-                                        key: const ValueKey(
-                                          'quote_item.double_tap_overlay',
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: overlayColor,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                Positioned(
-                                  left: 0,
-                                  right: 0,
-                                  bottom: 0,
-                                  height: 30,
-                                  child: IgnorePointer(
-                                    child: AnimatedSwitcher(
-                                      duration: QuoteItemWidget._fadeDuration,
-                                      switchInCurve: Curves.easeIn,
-                                      switchOutCurve: Curves.easeOut,
-                                      child: (!isExpanded && needsExpansion)
-                                          ? ClipRect(
-                                              child: BackdropFilter(
-                                                filter: ui.ImageFilter.blur(
-                                                  sigmaX: 1.2,
-                                                  sigmaY: 1.2,
-                                                ),
-                                                child: Container(
-                                                  decoration: BoxDecoration(
-                                                    gradient: LinearGradient(
-                                                      begin:
-                                                          Alignment.topCenter,
-                                                      end: Alignment
-                                                          .bottomCenter,
-                                                      colors: [
-                                                        innerTheme
-                                                            .colorScheme.surface
-                                                            .withValues(
-                                                          alpha: 0.0,
-                                                        ),
-                                                        innerTheme
-                                                            .colorScheme.surface
-                                                            .withValues(
-                                                          alpha: 0.08,
-                                                        ),
-                                                        innerTheme
-                                                            .colorScheme.surface
-                                                            .withValues(
-                                                          alpha: 0.18,
-                                                        ),
-                                                      ],
-                                                      stops: const [
-                                                        0.0,
-                                                        0.4,
-                                                        1.0,
-                                                      ],
-                                                    ),
-                                                  ),
-                                                  alignment: Alignment.center,
-                                                  child: Container(
-                                                    padding: const EdgeInsets
-                                                        .symmetric(
-                                                      horizontal: 8,
-                                                      vertical: 2,
-                                                    ),
-                                                    decoration: BoxDecoration(
-                                                      color: innerTheme
-                                                          .colorScheme.surface
-                                                          .withValues(
-                                                        alpha: 0.35,
-                                                      ),
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                        12,
-                                                      ),
-                                                    ),
-                                                    child: Text(
-                                                      l10n.doubleTapToViewFull,
-                                                      style: innerTheme
-                                                          .textTheme.bodySmall
-                                                          ?.copyWith(
-                                                        color: innerTheme
-                                                            .colorScheme
-                                                            .onSurface
-                                                            .withValues(
-                                                          alpha: 0.65,
-                                                        ),
-                                                        fontSize: 11,
-                                                        fontStyle:
-                                                            FontStyle.italic,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                ),
+                                      child!,
+                                      Positioned.fill(
+                                        child: IgnorePointer(
+                                          child: DecoratedBox(
+                                            key: const ValueKey(
+                                              'quote_item.double_tap_overlay',
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white.withValues(
+                                                alpha: overlayStrength *
+                                                    highlightOpacity,
                                               ),
-                                            )
-                                          : const SizedBox.shrink(),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                : child!,
                           );
                         },
                       ),
@@ -590,102 +594,127 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                               widget.selectedTagIds,
                             );
 
-                            return ListView.builder(
+                            return SingleChildScrollView(
                               scrollDirection: Axis.horizontal,
                               physics: const BouncingScrollPhysics(),
-                              itemCount: sortedTagIds.length,
-                              itemBuilder: (context, index) {
-                                final tagId = sortedTagIds[index];
-                                final tag = widget.tags.firstWhere(
-                                  (t) => t.id == tagId,
-                                  orElse: () => NoteCategory(
-                                    id: tagId,
-                                    name: l10n.unknownTag,
-                                  ),
-                                );
+                              child: Row(
+                                children: [
+                                  for (int index = 0;
+                                      index < sortedTagIds.length;
+                                      index++)
+                                    () {
+                                      final tagId = sortedTagIds[index];
+                                      final tag = widget.tagMap[tagId] ??
+                                          NoteCategory(
+                                            id: tagId,
+                                            name: l10n.unknownTag,
+                                          );
 
-                                // 判断是否是筛选条件中的标签
-                                final isFilteredTag =
-                                    widget.selectedTagIds.contains(tagId);
+                                      // 判断是否是筛选条件中的标签
+                                      final isFilteredTag =
+                                          widget.selectedTagIds.contains(tagId);
 
-                                return Container(
-                                  margin: EdgeInsets.only(
-                                    right:
-                                        index < sortedTagIds.length - 1 ? 8 : 0,
-                                  ),
-                                  child: widget.tagBuilder != null
-                                      ? widget.tagBuilder!(tag)
-                                      : Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 10,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: isFilteredTag
-                                                ? baseContentColor.withValues(
-                                                    alpha: 0.15,
-                                                  )
-                                                : baseContentColor.withValues(
-                                                    alpha: 0.08,
+                                      return Container(
+                                        margin: EdgeInsets.only(
+                                          right: index < sortedTagIds.length - 1
+                                              ? 8
+                                              : 0,
+                                        ),
+                                        child: widget.tagBuilder != null
+                                            ? widget.tagBuilder!(tag)
+                                            : Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                  horizontal: 10,
+                                                  vertical: 4,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  color: isFilteredTag
+                                                      ? baseContentColor
+                                                          .withValues(
+                                                          alpha: 0.15,
+                                                        )
+                                                      : baseContentColor
+                                                          .withValues(
+                                                          alpha: 0.08,
+                                                        ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                    14,
                                                   ),
-                                            borderRadius: BorderRadius.circular(
-                                              14,
-                                            ),
-                                            border: Border.all(
-                                              color: isFilteredTag
-                                                  ? baseContentColor.withValues(
-                                                      alpha: 0.4,
-                                                    )
-                                                  : baseContentColor.withValues(
-                                                      alpha: 0.15,
-                                                    ),
-                                              width: isFilteredTag ? 1.0 : 0.5,
-                                            ),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              if (tag.iconName?.isNotEmpty ==
-                                                  true) ...[
-                                                if (IconUtils.isEmoji(
-                                                  tag.iconName!,
-                                                )) ...[
-                                                  Text(
-                                                    IconUtils.getDisplayIcon(
-                                                      tag.iconName!,
-                                                    ),
-                                                    style: const TextStyle(
-                                                      fontSize: 12,
-                                                    ),
+                                                  border: Border.all(
+                                                    color: isFilteredTag
+                                                        ? baseContentColor
+                                                            .withValues(
+                                                            alpha: 0.4,
+                                                          )
+                                                        : baseContentColor
+                                                            .withValues(
+                                                            alpha: 0.15,
+                                                          ),
+                                                    width: isFilteredTag
+                                                        ? 1.0
+                                                        : 0.5,
                                                   ),
-                                                  const SizedBox(width: 3),
-                                                ] else ...[
-                                                  Icon(
-                                                    IconUtils.getIconData(
-                                                      tag.iconName!,
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    if (tag.iconName
+                                                            ?.isNotEmpty ==
+                                                        true) ...[
+                                                      if (IconUtils.isEmoji(
+                                                        tag.iconName!,
+                                                      )) ...[
+                                                        Text(
+                                                          IconUtils
+                                                              .getDisplayIcon(
+                                                            tag.iconName!,
+                                                          ),
+                                                          style:
+                                                              const TextStyle(
+                                                            fontSize: 12,
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                            width: 3),
+                                                      ] else ...[
+                                                        Icon(
+                                                          IconUtils.getIconData(
+                                                            tag.iconName!,
+                                                          ),
+                                                          size: 12,
+                                                          color:
+                                                              secondaryTextColor,
+                                                        ),
+                                                        const SizedBox(
+                                                            width: 3),
+                                                      ],
+                                                    ],
+                                                    Text(
+                                                      tag.name,
+                                                      style: theme
+                                                          .textTheme.bodySmall
+                                                          ?.copyWith(
+                                                        color:
+                                                            secondaryTextColor,
+                                                        fontSize: 11,
+                                                        fontWeight:
+                                                            isFilteredTag
+                                                                ? FontWeight
+                                                                    .w600
+                                                                : FontWeight
+                                                                    .w500,
+                                                      ),
                                                     ),
-                                                    size: 12,
-                                                    color: secondaryTextColor,
-                                                  ),
-                                                  const SizedBox(width: 3),
-                                                ],
-                                              ],
-                                              Text(
-                                                tag.name,
-                                                style: theme.textTheme.bodySmall
-                                                    ?.copyWith(
-                                                  color: secondaryTextColor,
-                                                  fontSize: 11,
-                                                  fontWeight: isFilteredTag
-                                                      ? FontWeight.w600
-                                                      : FontWeight.w500,
+                                                  ],
                                                 ),
                                               ),
-                                            ],
-                                          ),
-                                        ),
-                                );
-                              },
+                                      );
+                                    }(),
+                                ],
+                              ),
                             );
                           },
                         ),
@@ -697,62 +726,68 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
 
                   // 心形按钮（如果启用）
                   if (widget.onFavorite != null) ...[
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        key: widget.favoriteButtonGuideKey,
-                        onTap: widget.onFavorite,
-                        borderRadius: BorderRadius.circular(20),
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Stack(
-                            children: [
-                              Icon(
-                                quote.favoriteCount > 0
-                                    ? Icons.favorite
-                                    : Icons.favorite_border,
-                                size: 20,
-                                color: quote.favoriteCount > 0
-                                    ? Colors.red.shade400
-                                    : iconColor,
-                              ),
-                              if (quote.favoriteCount > 0)
-                                Positioned(
-                                  right: -2,
-                                  top: -2,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(2),
-                                    decoration: BoxDecoration(
-                                      color: Colors.red.shade600,
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: (quote.colorHex == null ||
-                                                quote.colorHex!.isEmpty)
-                                            ? theme.colorScheme
-                                                .surfaceContainerLowest
-                                            : cardColor,
-                                        width: 1.5,
+                    Tooltip(
+                      message: l10n.actionFavorite,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          key: widget.favoriteButtonGuideKey,
+                          onTap: widget.onFavorite,
+                          onLongPress: quote.favoriteCount > 0
+                              ? widget.onLongPressFavorite
+                              : null,
+                          borderRadius: BorderRadius.circular(20),
+                          child: Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Stack(
+                              children: [
+                                Icon(
+                                  quote.favoriteCount > 0
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  size: 20,
+                                  color: quote.favoriteCount > 0
+                                      ? Colors.red.shade400
+                                      : iconColor,
+                                ),
+                                if (quote.favoriteCount > 0)
+                                  Positioned(
+                                    right: -2,
+                                    top: -2,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red.shade600,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(
+                                          color: (quote.colorHex == null ||
+                                                  quote.colorHex!.isEmpty)
+                                              ? theme.colorScheme
+                                                  .surfaceContainerLowest
+                                              : cardColor,
+                                          width: 1.5,
+                                        ),
                                       ),
-                                    ),
-                                    constraints: const BoxConstraints(
-                                      minWidth: 16,
-                                      minHeight: 16,
-                                    ),
-                                    child: Text(
-                                      quote.favoriteCount > 99
-                                          ? '99+'
-                                          : '${quote.favoriteCount}',
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.bold,
-                                        height: 1.0,
+                                      constraints: const BoxConstraints(
+                                        minWidth: 16,
+                                        minHeight: 16,
                                       ),
-                                      textAlign: TextAlign.center,
+                                      child: Text(
+                                        quote.favoriteCount > 99
+                                            ? '99+'
+                                            : '${quote.favoriteCount}',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.bold,
+                                          height: 1.0,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
                                     ),
                                   ),
-                                ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -762,6 +797,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
 
                   // 更多操作按钮
                   PopupMenuButton<String>(
+                    tooltip: l10n.moreOptions,
+                    key: widget.moreButtonGuideKey, // 功能引导 key
                     icon: Icon(Icons.more_vert, color: iconColor),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),

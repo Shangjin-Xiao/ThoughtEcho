@@ -14,6 +14,12 @@ class AppSettings {
   final bool enableHiddenNotes; // 新增：是否启用隐藏笔记功能
   final bool requireBiometricForHidden; // 新增：访问隐藏笔记是否需要生物识别验证
   final bool developerMode; // 新增：开发者模式
+  final bool enableFirstOpenScrollPerfMonitor; // 新增：首次打开后首次滑动性能监测
+  final bool autoAttachLocation; // 新增：添加笔记时自动勾选位置
+  final bool autoAttachWeather; // 新增：添加笔记时自动勾选天气
+  final String? defaultAuthor; // 新增：默认作者（自动填充）
+  final String? defaultSource; // 新增：默认出处（自动填充）
+  final List<String> defaultTagIds; // 新增：默认标签 ID 列表（自动填充）
 
   AppSettings({
     this.hitokotoType = 'a,b,c,d,e,f,g,h,i,j,k', // 默认全选所有类型
@@ -31,6 +37,12 @@ class AppSettings {
     this.enableHiddenNotes = false, // 默认不启用隐藏笔记功能
     this.requireBiometricForHidden = false, // 默认不需要生物识别验证
     this.developerMode = false, // 默认关闭开发者模式
+    this.enableFirstOpenScrollPerfMonitor = false, // 默认关闭首次滑动性能监测
+    this.autoAttachLocation = false, // 默认不自动勾选位置
+    this.autoAttachWeather = false, // 默认不自动勾选天气
+    this.defaultAuthor, // 默认无自动填充作者
+    this.defaultSource, // 默认无自动填充出处
+    this.defaultTagIds = const [], // 默认无自动填充标签
   });
 
   Map<String, dynamic> toJson() {
@@ -50,6 +62,12 @@ class AppSettings {
       'enableHiddenNotes': enableHiddenNotes,
       'requireBiometricForHidden': requireBiometricForHidden,
       'developerMode': developerMode,
+      'enableFirstOpenScrollPerfMonitor': enableFirstOpenScrollPerfMonitor,
+      'autoAttachLocation': autoAttachLocation,
+      'autoAttachWeather': autoAttachWeather,
+      'defaultAuthor': defaultAuthor,
+      'defaultSource': defaultSource,
+      'defaultTagIds': defaultTagIds,
     };
   }
 
@@ -71,6 +89,14 @@ class AppSettings {
       enableHiddenNotes: map['enableHiddenNotes'] ?? false,
       requireBiometricForHidden: map['requireBiometricForHidden'] ?? false,
       developerMode: map['developerMode'] ?? false,
+      enableFirstOpenScrollPerfMonitor:
+          map['enableFirstOpenScrollPerfMonitor'] ?? false,
+      autoAttachLocation: map['autoAttachLocation'] ?? false,
+      autoAttachWeather: map['autoAttachWeather'] ?? false,
+      defaultAuthor: map['defaultAuthor'] as String?,
+      defaultSource: map['defaultSource'] as String?,
+      defaultTagIds:
+          (map['defaultTagIds'] as List<dynamic>?)?.cast<String>() ?? const [],
     );
   }
 
@@ -90,6 +116,12 @@ class AppSettings {
         enableHiddenNotes: false, // 默认不启用隐藏笔记功能
         requireBiometricForHidden: false, // 默认不需要生物识别验证
         developerMode: false, // 默认关闭开发者模式
+        enableFirstOpenScrollPerfMonitor: false,
+        autoAttachLocation: false, // 默认不自动勾选位置
+        autoAttachWeather: false, // 默认不自动勾选天气
+        defaultAuthor: null,
+        defaultSource: null,
+        defaultTagIds: const [],
       );
 
   /// 使用特殊标记来区分"未指定"和"设置为null（跟随系统）"
@@ -110,6 +142,14 @@ class AppSettings {
     bool? enableHiddenNotes,
     bool? requireBiometricForHidden,
     bool? developerMode,
+    bool? enableFirstOpenScrollPerfMonitor,
+    bool? autoAttachLocation,
+    bool? autoAttachWeather,
+    String? defaultAuthor,
+    bool clearDefaultAuthor = false,
+    String? defaultSource,
+    bool clearDefaultSource = false,
+    List<String>? defaultTagIds,
   }) {
     return AppSettings(
       hitokotoType: hitokotoType ?? this.hitokotoType,
@@ -132,6 +172,15 @@ class AppSettings {
       requireBiometricForHidden:
           requireBiometricForHidden ?? this.requireBiometricForHidden,
       developerMode: developerMode ?? this.developerMode,
+      enableFirstOpenScrollPerfMonitor: enableFirstOpenScrollPerfMonitor ??
+          this.enableFirstOpenScrollPerfMonitor,
+      autoAttachLocation: autoAttachLocation ?? this.autoAttachLocation,
+      autoAttachWeather: autoAttachWeather ?? this.autoAttachWeather,
+      defaultAuthor:
+          clearDefaultAuthor ? null : (defaultAuthor ?? this.defaultAuthor),
+      defaultSource:
+          clearDefaultSource ? null : (defaultSource ?? this.defaultSource),
+      defaultTagIds: defaultTagIds ?? this.defaultTagIds,
     );
   }
 }

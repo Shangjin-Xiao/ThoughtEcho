@@ -20,7 +20,7 @@
     </a>
   </p>
 
-  <h3>🌍 English localization in progress — contributions welcome!</h3>
+  <h3>🌍 Now with full English and Japanese support!</h3>
 
   <p>
     <b>📝 你的专属灵感摘录本<br>
@@ -33,7 +33,8 @@
   
   <p>
     <a href="#-english-version"><b>English</b></a> • 
-    <a href="#-中文版本"><b>中文</b></a>
+    <a href="#-中文版本"><b>中文</b></a> •
+    <a href="docs/USER_MANUAL.md"><b>用户手册 / User Manual</b></a>
   </p>
   
 </div>
@@ -58,8 +59,12 @@
     </tr>
     <tr>
       <td align="center"><b>🌍 情境记录</b><br>自动保存位置、天气与时间段信息</td>
-      <td align="center"><b>🧠 智能内存管理</b><br>动态调节批量处理，避免内存溢出</td>
+      <td align="center"><b>🙈 隐藏笔记</b><br>隐藏标签+生物识别保护隐私笔记</td>
+      <td align="center"><b>💾 草稿自动保存</b><br>编辑时自动保存，异常退出不丢失</td>
+    </tr>
+    <tr>
       <td align="center"><b>⚡ 快速捕获</b><br>剪贴板检测、一言与每日灵感随手收集</td>
+      <td align="center" colspan="2"><b>📱 全平台支持</b><br>Windows、Android、iOS、Web 全覆盖</td>
     </tr>
   </table>
 </div>
@@ -182,7 +187,12 @@
         • 性能优化与稳定性提升<br>
         • 用户体验改进<br>
         • 多设备同步功能<br>
-        • 桌面端应用支持
+        • 国际化多语言支持<br>
+        • 桌面端应用支持<br>
+        • 隐藏笔记与隐私保护<br>
+        • 草稿自动保存与恢复<br>
+        • iOS 平台支持<br>
+        • 应用内用户指南
       </td>
       <td>
         <b>🔥 智能输入升级</b><br>
@@ -191,7 +201,6 @@
         • OCR拍照识别摘录<br>
         • AI自动提取作者出处<br><br>
         <b>🌍 用户体验提升</b><br>
-        • 国际化多语言支持<br>
         • 仿真3D笔记本界面<br>
         • 智能内容分类<br>
         • 地图选点添加位置<br><br>
@@ -264,7 +273,7 @@
   </p>
 
   <p>
-    <b>🌍 Localization:</b> English translation is actively in progress! We're working hard to provide full English support. Contributions are welcome!
+    <b>🌍 Localization:</b> Full English and Japanese support available! More languages welcome.
   </p>
 </div>
 
@@ -290,12 +299,16 @@ ThoughtEcho is more than just a note-taking app—it's your **personal AI-powere
     <tr>
       <td align="center"><b>🏷️ Tags & Search</b><br>Multi-tag filters, smart facets, full-text search</td>
       <td align="center"><b>🎯 AI Card Generation</b><br>Convert notes into beautiful shareable cards</td>
-      <td align="center"><b>� Media & Backup Hub</b><br>Stream large files safely with backup/restore peace of mind</td>
+      <td align="center"><b>📦 Media & Backup Hub</b><br>Stream large files safely with backup/restore peace of mind</td>
     </tr>
     <tr>
       <td align="center"><b>🌍 Context Capture</b><br>Auto-save location, weather, and time-of-day context</td>
-      <td align="center"><b>🧠 Intelligent Memory Management</b><br>Adaptive batching to prevent memory spikes</td>
+      <td align="center"><b>🙈 Hidden Notes</b><br>Hidden tags + biometric protection for private notes</td>
+      <td align="center"><b>💾 Auto-Save Drafts</b><br>Auto-save while editing, no content lost on crash</td>
+    </tr>
+    <tr>
       <td align="center"><b>⚡ Quick Capture</b><br>Clipboard watcher, Hitokoto quotes, daily prompts on tap</td>
+      <td align="center" colspan="2"><b>📱 All Platforms</b><br>Windows, Android, iOS, Web full coverage</td>
     </tr>
   </table>
 </div>
@@ -418,7 +431,12 @@ ThoughtEcho is more than just a note-taking app—it's your **personal AI-powere
         • Performance optimization<br>
         • User experience improvements<br>
         • Multi-device sync support<br>
-        • Desktop application support
+        • Internationalization support<br>
+        • Desktop application support<br>
+        • Hidden notes & privacy protection<br>
+        • Auto-save drafts & recovery<br>
+        • iOS platform support<br>
+        • In-app user guide
       </td>
       <td>
         • Enhanced natural language search<br>
@@ -426,7 +444,6 @@ ThoughtEcho is more than just a note-taking app—it's your **personal AI-powere
         • OCR text recognition<br>
         • AI author extraction<br>
         • Map location selection<br>
-        • Internationalization support<br>
         • 3D notebook interface<br>
         • Smart categorization<br>
         • Offline AI capabilities<br>

@@ -24,6 +24,7 @@ class SvgOffscreenRenderer {
     ui.ImageByteFormat format = ui.ImageByteFormat.png,
     Duration timeout = const Duration(seconds: 10),
     bool devicePixelRatioAware = true,
+    double borderRadius = 0,
   }) async {
     // 检查context是否有效
     if (context is Element) {
@@ -83,12 +84,20 @@ class SvgOffscreenRenderer {
     );
 
     // 简化布局结构，移除复杂的FittedBox嵌套，直接使用Container包裹
+    // 如果指定了圆角，则使用ClipRRect裁剪
+    final Widget contentWidget = borderRadius > 0
+        ? ClipRRect(
+            borderRadius: BorderRadius.circular(borderRadius),
+            child: svgWidget,
+          )
+        : svgWidget;
+
     final captureContent = Container(
       color: background,
       width: width.toDouble(),
       height: height.toDouble(),
       alignment: Alignment.center,
-      child: svgWidget,
+      child: contentWidget,
     );
 
     final mediaQueryData = MediaQuery.maybeOf(context);

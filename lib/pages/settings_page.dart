@@ -28,6 +28,7 @@ import 'annual_report_page.dart';
 import 'ai_annual_report_webview.dart';
 import 'license_page.dart' as license;
 import 'preferences_detail_page.dart';
+import 'user_guide_page.dart';
 import '../utils/feature_guide_helper.dart';
 import 'storage_management_page.dart';
 import 'local_ai_settings_page.dart'; // 导入本地 AI 设置页面
@@ -487,8 +488,7 @@ class SettingsPageState extends State<SettingsPage> {
                   ),
                 ),
 
-                // 当前天气信息已移动到“搜索并选择城市”对话框内
-                const SizedBox(height: 8.0),
+                // 当前天气信息已移动到"搜索并选择城市"对话框内
               ],
             ),
           ),
@@ -570,14 +570,23 @@ class SettingsPageState extends State<SettingsPage> {
                     return ListTile(
                       title: Row(
                         children: [
-                          Text(l10n.localAiFeatures),
+                          Flexible(
+                            child: Text(
+                              l10n.localAiFeatures,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.tertiary.withOpacity(0.2),
+                              color: theme.colorScheme.tertiary
+                                  .withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: theme.colorScheme.tertiary.withOpacity(0.5)),
+                              border: Border.all(
+                                  color: theme.colorScheme.tertiary
+                                      .withValues(alpha: 0.5)),
                             ),
                             child: Text(
                               'Preview',
@@ -604,7 +613,7 @@ class SettingsPageState extends State<SettingsPage> {
                     );
                   },
                 ),
-                // 智能推送 - 仅在开发者模式下显示
+                // 智能推送 (Beta) - 仅开发者模式显示
                 Consumer<SettingsService>(
                   builder: (context, settingsService, _) {
                     if (!settingsService.appSettings.developerMode) {
@@ -616,18 +625,24 @@ class SettingsPageState extends State<SettingsPage> {
                           Text(l10n.smartPushTitle),
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.tertiary.withOpacity(0.2),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primaryContainer,
                               borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: theme.colorScheme.tertiary.withOpacity(0.5)),
                             ),
                             child: Text(
-                              'Preview',
+                              'Beta',
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
-                                color: theme.colorScheme.tertiary,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onPrimaryContainer,
                               ),
                             ),
                           ),
@@ -663,19 +678,45 @@ class SettingsPageState extends State<SettingsPage> {
                 ),
                 // 移至偏好设置页
                 // Add Logs Settings entry below
-                ListTile(
-                  title: Text(l10n.settingsLogs),
-                  subtitle: Text(l10n.settingsLogsDesc),
-                  leading: const Icon(
-                    Icons.article_outlined,
-                  ), // 或者 Icons.bug_report_outlined
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const LogsSettingsPage(),
-                      ),
+                Consumer<SettingsService>(
+                  builder: (context, settingsService, _) {
+                    // 仅在开发者模式下显示日志设置入口
+                    if (!settingsService.appSettings.developerMode) {
+                      return const SizedBox.shrink();
+                    }
+                    return ListTile(
+                      title: Text(l10n.settingsLogs),
+                      subtitle: Text(l10n.settingsLogsDesc),
+                      leading: const Icon(
+                        Icons.article_outlined,
+                      ), // 或者 Icons.bug_report_outlined
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const LogsSettingsPage(),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+                Consumer<SettingsService>(
+                  builder: (context, settingsService, _) {
+                    if (!settingsService.appSettings.developerMode) {
+                      return const SizedBox.shrink();
+                    }
+                    return SwitchListTile(
+                      title: Text(l10n.logDebugInfo),
+                      subtitle: Text(l10n.logDebugInfoDesc),
+                      secondary: const Icon(Icons.speed_outlined),
+                      value: settingsService.enableFirstOpenScrollPerfMonitor,
+                      onChanged: (enabled) {
+                        settingsService.setEnableFirstOpenScrollPerfMonitor(
+                          enabled,
+                        );
+                      },
                     );
                   },
                 ),
@@ -906,6 +947,22 @@ class SettingsPageState extends State<SettingsPage> {
                                     context,
                                     MaterialPageRoute(
                                       builder: (context) =>
+                                          const UserGuidePage(),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.help_outline),
+                                label: Text(l10n.userGuide),
+                                style: _primaryButtonStyle(context),
+                              ),
+                              const SizedBox(height: 8),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  Navigator.pop(dialogContext);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
                                           const license.LicensePage(),
                                     ),
                                   );
@@ -981,39 +1038,43 @@ class SettingsPageState extends State<SettingsPage> {
   // --- 处理 Logo 三击激活开发者模式 ---
   void _handleLogoTap() async {
     final now = DateTime.now();
-    
+
     // 如果距离上次点击超过2秒，重置计数
     if (_lastLogoTap != null && now.difference(_lastLogoTap!).inSeconds > 2) {
       _logoTapCount = 0;
     }
-    
+
     _lastLogoTap = now;
     _logoTapCount++;
-    
+
     if (_logoTapCount >= 3) {
       _logoTapCount = 0;
       final settingsService = context.read<SettingsService>();
       final currentSettings = settingsService.appSettings;
       final newDeveloperMode = !currentSettings.developerMode;
-      
+
       await settingsService.updateAppSettings(
         currentSettings.copyWith(developerMode: newDeveloperMode),
       );
-      
+
+      // 同步更新日志服务的持久化状态
+      UnifiedLogService.instance.setPersistenceEnabled(newDeveloperMode);
+
       if (!mounted) return;
-      
+      final l10n = AppLocalizations.of(context);
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            newDeveloperMode 
-                ? '🎉 开发者模式已开启！Developer Mode Enabled!'
-                : '✅ 开发者模式已关闭 Developer Mode Disabled',
+            newDeveloperMode
+                ? l10n.developerModeEnabled
+                : l10n.developerModeDisabled,
           ),
           duration: const Duration(seconds: 2),
           behavior: SnackBarBehavior.floating,
         ),
       );
-      
+
       // 关闭对话框
       Navigator.of(context).pop();
     }
@@ -1054,55 +1115,97 @@ class SettingsPageState extends State<SettingsPage> {
     final settingsService = Provider.of<SettingsService>(context);
     final locationService =
         Provider.of<LocationService>(context, listen: false);
+    final weatherService = Provider.of<WeatherService>(context, listen: false);
     final currentLocale = settingsService.localeCode;
+    final l10n = AppLocalizations.of(context);
 
     String getLanguageName(String? code) {
       switch (code) {
         case 'zh':
-          return '简体中文';
+          return l10n.languageChinese;
         case 'en':
-          return 'English';
+          return l10n.languageEnglish;
+        case 'ja':
+          return l10n.languageJapanese;
+        case 'ko':
+          return l10n.languageKorean;
+        case 'es':
+          return l10n.languageSpanish;
+        case 'fr':
+          return l10n.languageFrench;
+        case 'de':
+          return l10n.languageGerman;
         default:
-          return '跟随系统';
+          return l10n.languageFollowSystem;
       }
     }
 
     return ListTile(
-      title: const Text('语言 / Language'),
+      title: Text(l10n.languageSettings),
       subtitle: Text(getLanguageName(currentLocale)),
       leading: const Icon(Icons.translate),
       onTap: () {
         showDialog(
           context: context,
           builder: (dialogContext) => AlertDialog(
-            title: const Text('选择语言 / Select Language'),
+            title: Text(l10n.selectLanguage),
             content: StatefulBuilder(
               builder: (context, setState) {
                 return RadioGroup<String?>(
                   groupValue: currentLocale,
                   onChanged: (value) async {
                     await settingsService.setLocale(value);
-                    // 同步更新位置服务的语言设置
+                    // 同步更新位置和天气服务的语言设置
                     locationService.currentLocaleCode = value;
+                    weatherService.currentLocaleCode = value;
                     if (dialogContext.mounted) Navigator.pop(dialogContext);
                   },
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
-                    children: const [
+                    children: [
                       RadioListTile<String?>(
-                        title: Text('跟随系统 / Follow System'),
+                        title: Text(l10n.languageFollowSystem),
                         value: null,
                       ),
-                      RadioListTile<String?>(title: Text('简体中文'), value: 'zh'),
                       RadioListTile<String?>(
-                        title: Text('English'),
+                        title: Text(l10n.languageChinese),
+                        value: 'zh',
+                      ),
+                      RadioListTile<String?>(
+                        title: const Text('English'),
                         value: 'en',
+                      ),
+                      RadioListTile<String?>(
+                        title: const Text('日本語'),
+                        value: 'ja',
+                      ),
+                      RadioListTile<String?>(
+                        title: const Text('한국어'),
+                        value: 'ko',
+                      ),
+                      RadioListTile<String?>(
+                        title: const Text('Español'),
+                        value: 'es',
+                      ),
+                      RadioListTile<String?>(
+                        title: const Text('Français'),
+                        value: 'fr',
+                      ),
+                      RadioListTile<String?>(
+                        title: const Text('Deutsch'),
+                        value: 'de',
                       ),
                     ],
                   ),
                 );
               },
             ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: Text(l10n.cancel),
+              ),
+            ],
           ),
         );
       },
@@ -1187,6 +1290,7 @@ class SettingsPageState extends State<SettingsPage> {
           context,
           MaterialPageRoute(
             builder: (context) =>
+                // ignore: deprecated_member_use_from_same_package
                 AnnualReportPage(year: currentYear, quotes: thisYearQuotes),
           ),
         );
@@ -1564,12 +1668,13 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('内容长度：${result.length}字符'),
-                  Text('HTML格式：${isHtml ? '✅' : '❌'}'),
-                  Text('JSON格式：${isJson ? '⚠️' : '✅'}'),
-                  Text('包含HTML标签：${containsHtmlTags ? '✅' : '❌'}'),
+                  Text(l10n.contentLengthLabel(result.length)),
+                  Text(l10n.htmlFormatLabel(isHtml ? '✅' : '❌')),
+                  Text(l10n.jsonFormatLabel(isJson ? '⚠️' : '✅')),
+                  Text(
+                      l10n.containsHtmlTagsLabel(containsHtmlTags ? '✅' : '❌')),
                   const SizedBox(height: 10),
-                  const Text('前100字符：'),
+                  Text(l10n.first100CharsLabel),
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
@@ -1616,8 +1721,8 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
           if (mounted) {
             Navigator.pop(context);
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('测试失败：AI返回了空内容'),
+              SnackBar(
+                content: Text(l10n.testFailedEmptyContent),
                 duration: AppConstants.snackBarDurationError,
               ),
             );
@@ -1628,12 +1733,12 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
         if (mounted) {
           Navigator.pop(context); // 关闭加载对话框
 
-          String errorMessage = '测试失败：$e';
+          String errorMessage = l10n.testFailed(e.toString());
           if (e.toString().contains('API Key')) {
-            errorMessage = '测试失败：请先在AI设置中配置有效的API Key';
+            errorMessage = l10n.testFailedApiKey;
           } else if (e.toString().contains('network') ||
               e.toString().contains('连接')) {
-            errorMessage = '测试失败：网络连接异常';
+            errorMessage = l10n.testFailedNetwork;
           }
 
           ScaffoldMessenger.of(context).showSnackBar(

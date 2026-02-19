@@ -1,0 +1,1500 @@
+{
+  "@@locale": "ko",
+  "appTitle": "ThoughtEcho",
+  "cancel": "취소",
+  "confirm": "확인",
+  "delete": "삭제",
+  "save": "저장",
+  "edit": "편집",
+  "search": "검색",
+  "settings": "설정",
+  "loading": "로딩 중...",
+  "retry": "재시도",
+  "refresh": "새로고침",
+  "annualReport": "연간 보고서",
+  "clearRecords": "기록 지우기",
+  "home": "홈",
+  "notes": "노트",
+  "aiFeatures": "AI",
+  "languageSettings": "언어",
+  "languageFollowSystem": "시스템 설정 따름",
+  "languageChinese": "중국어(간체)",
+  "languageEnglish": "영어",
+  "languageJapanese": "일본어",
+  "languageKorean": "한국어",
+  "languageSpanish": "스페인어",
+  "languageFrench": "프랑스어",
+  "languageGerman": "독일어",
+  "selectLanguage": "언어 선택",
+  "onboardingSelectLanguage": "언어 선택",
+  "onboardingWelcome": "ThoughtEcho에 오신 것을 환영합니다",
+  "onboardingSubtitle": "AI 기반의 개인 영감 노트",
+  "onboardingDescription": "함께 기록해 보아요",
+  "onboardingCoreFeatures": "핵심 기능",
+  "onboardingDiscoverFeatures": "ThoughtEcho의 강력한 기능을 발견하세요",
+  "onboardingPersonalization": "개인화",
+  "onboardingCustomizeExperience": "나만의 경험을 맞춤 설정하세요",
+  "onboardingModifyLater": "이 설정들은 앱 내에서 언제든지 변경할 수 있습니다",
+  "onboardingComplete": "설정 완료",
+  "onboardingAllSet": "모든 설정이 완료되었습니다\n이제 당신의 생각을 기록해 보세요",
+  "onboardingStartJourney": "함께 여정을 시작해 봅시다",
+  "onboardingSkip": "건너뛰기",
+  "onboardingNext": "다음",
+  "onboardingPrevious": "이전",
+  "onboardingStart": "시작하기",
+  "onboardingPreparing": "준비 중...",
+  "onboardingSkipTitle": "온보딩 건너뛰기",
+  "onboardingSkipMessage": "온보딩을 건너뛰시겠습니까?\n일부 설정은 기본값으로 적용됩니다.",
+  "onboardingConfirmSkip": "건너뛰기 확인",
+  "onboardingInitializing": "초기화 중...",
+  "onboardingInitFailed": "초기화 실패, 다시 시도해 주세요",
+  "onboardingContinueUsing": "계속하기",
+  "onboardingError": "문제가 발생했습니다",
+  "onboardingUpdateComplete": "업데이트 완료",
+  "onboardingUpdateSuccess": "ThoughtEcho가 성공적으로 업데이트되었습니다\n데이터가 자동으로 마이그레이션되었습니다",
+  "onboardingEnterApp": "앱 진입",
+  "onboardingQuickTip1": "오늘의 명언을 한 번 탭하면 복사됩니다",
+  "onboardingQuickTip2": "오늘의 명언을 두 번 탭하면 노트에 빠르게 추가됩니다",
+  "onboardingQuickTip3": "태그를 사용하여 노트를 정리하세요",
+  "onboardingQuickTip4": "전문 검색으로 내용을 빠르게 찾으세요",
+  "featureSmartNotes": "스마트 노트",
+  "featureSmartNotesDesc": "시간, 위치, 날씨가 자동으로 기록되는 서식 있는 텍스트 편집",
+  "featureDailyQuote": "오늘의 명언",
+  "featureDailyQuoteDesc": "하루의 영감을 주는 엄선된 명언",
+  "featureAiInsight": "AI 인사이트",
+  "featureAiInsightDesc": "노트를 지능적으로 분석하여 사고 패턴과 감정 변화를 발견합니다",
+  "featureLocalFirst": "로컬 우선",
+  "featureLocalFirstDesc": "개인정보 보호와 보안을 위해 모든 데이터는 기기에 저장됩니다",
+  "prefLanguage": "언어",
+  "prefLanguageDesc": "앱 표시 언어 선택",
+  "prefDailyQuoteType": "명언 유형",
+  "prefDailyQuoteTypeDesc": "관심 있는 콘텐츠 유형을 선택하세요",
+  "prefLocationService": "위치 서비스",
+  "prefLocationServiceDesc": "위치 서비스를 활성화하여 노트 위치와 날씨 정보를 기록합니다",
+  "prefDefaultStartPage": "기본 시작 페이지",
+  "prefDefaultStartPageDesc": "앱을 열 때 표시할 페이지를 선택하세요",
+  "prefHomeOverview": "홈 개요",
+  "prefHomeOverviewDesc": "오늘의 명언 및 최근 노트 보기",
+  "prefNoteList": "노트 목록",
+  "prefNoteListDesc": "노트 관리로 바로 이동",
+  "prefSelectAll": "전체 선택",
+  "prefClearAll": "지우기",
+  "prefAboutSettings": "설정 정보",
+  "prefAboutSettingsInfo": "• 모든 설정은 앱 설정에서 언제든지 수정할 수 있습니다\n• 우리는 개인정보를 소중히 여기며, 모든 데이터는 기기에 저장됩니다\n• 관련 기능이 필요할 때 권한을 요청합니다",
+  "prefMoreOptionsHint": "더 많은 개인화 옵션과 AI 기능은 설정 > 환경설정에서 사용할 수 있습니다.",
+  "settingsTitle": "설정",
+  "settingsLocationWeather": "위치 및 날씨 설정",
+  "settingsUseLocationService": "위치 서비스 사용",
+  "settingsLocationEnabled": "권한 허용 및 활성화됨",
+  "settingsLocationPermissionOnly": "권한은 허용되었으나 서비스가 비활성화됨",
+  "settingsLocationNoPermission": "위치 권한 없음",
+  "settingsSetLocation": "표시 위치 설정",
+  "settingsSearchCity": "도시 검색 및 선택",
+  "settingsCurrentLocation": "현재 표시 위치",
+  "settingsNotSet": "설정되지 않음",
+  "settingsAppSettings": "앱 설정",
+  "settingsPreferences": "환경설정",
+  "settingsPreferencesDesc": "개인화 및 AI 기능",
+  "settingsDefaultStartPage": "기본 시작 페이지",
+  "settingsStartPageHome": "홈 (오늘의 명언)",
+  "settingsStartPageNotes": "노트 (노트 목록)",
+  "settingsSelectStartPage": "기본 시작 페이지 선택",
+  "settingsTheme": "테마 설정",
+  "settingsThemeDesc": "앱 모양 사용자 지정",
+  "settingsAI": "AI 설정",
+  "settingsAIDesc": "AI API 설정 및 다중 공급자 관리 구성",
+  "settingsHitokoto": "명언 설정",
+  "settingsHitokotoDesc": "오늘의 명언 유형 사용자 지정",
+  "settingsLogs": "로그 설정",
+  "settingsLogsDesc": "앱 로깅 수준 구성",
+  "settingsStorage": "저장소 관리",
+  "settingsStorageDesc": "저장소 사용량 확인, 캐시 및 미사용 파일 정리",
+  "settingsContentManagement": "콘텐츠 관리",
+  "settingsTags": "태그 관리",
+  "settingsTagsDesc": "노트 태그 추가, 편집 또는 삭제",
+  "settingsBackup": "백업 및 복원",
+  "settingsBackupDesc": "데이터 백업 또는 백업에서 복원",
+  "settingsSync": "노트 동기화",
+  "settingsSyncDesc": "주변 기기와 노트 동기화",
+  "settingsAbout": "ThoughtEcho 정보",
+  "settingsAboutSlogan": "AI 기반의 개인 영감 노트",
+  "settingsViewSource": "소스 코드 보기 (GitHub)",
+  "settingsVisitWebsite": "웹사이트 방문",
+  "settingsViewLicenses": "라이선스 보기",
+  "settingsCheckUpdate": "업데이트 확인",
+  "settingsCheckUpdateDesc": "새 버전이 있는지 확인",
+  "settingsClose": "닫기",
+  "locationPermissionDenied": "위치 권한이 거부되어 위치 서비스를 활성화할 수 없습니다",
+  "enableLocationService": "위치 서비스를 활성화해 주세요",
+  "enableLocationServiceDesc": "ThoughtEcho는 날씨 및 기타 기능을 제공하기 위해 위치 접근 권한이 필요합니다. 시스템 설정에서 위치 서비스를 활성화해 주세요.",
+  "goToSettings": "설정으로 이동",
+  "gettingLocation": "위치 가져오는 중...",
+  "locationServiceEnabled": "위치 서비스 활성화됨, 위치 업데이트됨",
+  "locationServiceDisabled": "위치 서비스 비활성화됨",
+  "cannotGetLocation": "현재 위치를 가져올 수 없음",
+  "selectedCount": "{count}개 유형 선택됨",
+  "@selectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pleaseWait": "잠시만 기다려 주세요...",
+  "close": "닫기",
+  "ok": "확인",
+  "error": "오류",
+  "success": "성공",
+  "warning": "경고",
+  "info": "정보",
+  "cannotOpenLink": "링크를 열 수 없음: {url}",
+  "@cannotOpenLink": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "checkUpdateFailed": "업데이트 확인 실패: {error}",
+  "@checkUpdateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotGetLocationPermission": "위치 권한을 얻을 수 없음",
+  "logDebugInfo": "디버그 정보 기록",
+  "logDebugInfoDesc": "로그 데이터베이스 상태 및 경로 정보 표시",
+  "databaseStatus": "데이터베이스 상태:",
+  "logStatistics": "로그 통계:",
+  "getDebugInfoFailed": "디버그 정보를 가져오지 못했습니다: {error}",
+  "@getDebugInfoFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "generatingAIReport": "AI 연간 보고서 생성 중...",
+  "generateReportFailed": "연간 보고서 생성 실패",
+  "aiReturnedEmpty": "AI가 빈 내용을 반환했습니다. 다시 시도해 주세요",
+  "pleaseConfigureApiKey": "AI 설정에서 먼저 유효한 API Key를 구성해 주세요",
+  "networkError": "네트워크 오류, 연결을 확인하고 다시 시도해 주세요",
+  "aiQuotaExceeded": "AI 서비스 할당량이 초과되었습니다. 나중에 다시 시도해 주세요",
+  "generateAIReportFailed": "AI 연간 보고서 생성 실패",
+  "getDataFailed": "데이터 가져오기 실패",
+  "testingAIReport": "AI 연간 보고서 테스트 중...",
+  "testResult": "테스트 결과",
+  "contentLength": "콘텐츠 길이: {length}자",
+  "@contentLength": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "htmlFormat": "HTML 형식: {status}",
+  "@htmlFormat": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "jsonFormat": "JSON 형식: {status}",
+  "@jsonFormat": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "containsHtmlTags": "HTML 태그 포함: {status}",
+  "@containsHtmlTags": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "first100Chars": "첫 100자:",
+  "viewReport": "보고서 보기",
+  "testFailed": "테스트 실패: {error}",
+  "@testFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "testFailedEmpty": "테스트 실패: AI가 빈 내용을 반환했습니다",
+  "testFailedApiKey": "테스트 실패: AI 설정에서 먼저 유효한 API Key를 구성해 주세요",
+  "testFailedNetwork": "테스트 실패: 네트워크 오류",
+  "testInitFailed": "테스트 초기화 실패",
+  "followSystem": "시스템 따름",
+  "navHome": "홈",
+  "navNotes": "노트",
+  "navInsights": "인사이트",
+  "navSettings": "설정",
+  "appTitleOffline": "ThoughtEcho - 오프라인",
+  "loadingDataPleaseWait": "데이터 로딩 중, 잠시만 기다려 주세요...",
+  "noTagsAvailable": "사용 가능한 태그 없음",
+  "deleteNote": "노트 삭제",
+  "deleteNoteConfirmation": "이 노트를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+  "noteDeleted": "노트가 삭제되었습니다",
+  "favorited": "즐겨찾기됨 ({count})",
+  "@favorited": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "favoriteFailed": "즐겨찾기 실패, 다시 시도해 주세요",
+  "aiCardServiceNotInitialized": "AI 카드 서비스가 초기화되지 않음",
+  "generateCardFailed": "카드 생성 실패: {error}",
+  "@generateCardFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "generatingShareImage": "공유 이미지 생성 중...",
+  "cardSharedSuccessfully": "카드가 성공적으로 공유되었습니다",
+  "shareFailed": "공유 실패: {error}",
+  "@shareFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "savingCardToGallery": "카드를 갤러리에 저장 중...",
+  "cardSavedToGallery": "카드가 갤러리에 저장되었습니다: {path}",
+  "@cardSavedToGallery": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "saveFailed": "저장 실패: {error}",
+  "@saveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "view": "보기",
+  "todayThoughts": "오늘의 생각",
+  "loadingTodayThoughts": "오늘의 생각 로딩 중...",
+  "fetchingDefaultPrompt": "기본 프롬프트 가져오는 중...",
+  "waitingForTodayThoughts": "오늘의 생각을 기다리는 중...",
+  "noTodayThoughts": "오늘의 생각이 없습니다",
+  "cannotOpenFullEditor": "전체 편집기를 열 수 없음: {error}",
+  "@cannotOpenFullEditor": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "refreshFailed": "새로고침 실패: {error}",
+  "@refreshFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "backupAndRestore": "백업 및 복원",
+  "dataBackup": "데이터 백업",
+  "dataRestore": "데이터 복원",
+  "includeMediaFiles": "미디어 파일 포함",
+  "creatingBackup": "백업 생성 중...",
+  "createBackup": "백업 생성",
+  "selectBackupFileToRestore": "복원할 백업 파일 선택",
+  "importantNotes": "중요 알림",
+  "dataSecurity": "데이터 보안",
+  "dataSafetyDesc": "데이터를 복원하면 현재 모든 데이터가 덮어씌워집니다. 현재 데이터를 먼저 백업해 두시기 바랍니다.",
+  "backupAdvice": "백업 권장",
+  "backupAdviceDesc": "데이터를 여러 위치(로컬, 클라우드 저장소 등)에 정기적으로 백업하는 것을 권장합니다.",
+  "formatInfo": "형식 정보",
+  "formatInfoDesc": "새로운 ZIP 형식은 전체 데이터와 미디어 파일을 포함하며, 이전 JSON 형식은 텍스트 데이터만 포함합니다.",
+  "compatibility": "호환성",
+  "compatibilityDesc": "새로운 ZIP 형식과 이전 JSON 형식 백업 파일 가져오기를 모두 지원합니다.",
+  "confirmRestore": "복원 확인",
+  "confirmMergeImport": "병합 가져오기 확인",
+  "startMerge": "병합 시작",
+  "selectImportMode": "가져오기 모드 선택",
+  "continueAction": "계속",
+  "backupFailed": "백업 실패",
+  "restoreFailed": "복원 실패",
+  "selectFileFailed": "파일 선택 실패",
+  "cannotGetFilePath": "파일 경로를 가져올 수 없습니다. 다시 선택해 주세요.",
+  "invalidBackupFile": "유효하지 않은 백업 파일",
+  "invalidBackupFileDesc": "선택한 파일은 유효한 ThoughtEcho 백업 파일이 아닙니다.\n\n올바른 백업 파일을 선택해 주세요.",
+  "backupCanceled": "백업 취소됨",
+  "restoreCanceled": "복원 취소됨",
+  "unknownField": "알 수 없는 필드",
+  "confirmRestoreData": "데이터 복원 확인",
+  "insightsTitle": "AI 인사이트",
+  "analysisTypeComprehensive": "종합 분석",
+  "analysisTypeComprehensiveDesc": "모든 노트를 분석하여 주제, 감정 및 사고 패턴을 탐색합니다",
+  "analysisTypeEmotional": "감정 인사이트",
+  "analysisTypeEmotionalDesc": "감정 상태와 추세를 분석합니다",
+  "analysisTypeMindmap": "마인드맵",
+  "analysisTypeMindmapDesc": "사고 구조를 구축하고 습관을 분석합니다",
+  "analysisTypeGrowth": "성장 제안",
+  "analysisTypeGrowthDesc": "노트를 기반으로 개인화된 성장 및 진보 제안을 제공합니다",
+  "analysisStyleProfessional": "전문적인 분석",
+  "analysisStyleProfessionalDesc": "객관적이고 전문적인 분석 관점",
+  "analysisStyleFriendly": "친근한 멘토",
+  "analysisStyleFriendlyDesc": "친근한 멘토와 같은 부드러운 조언",
+  "analysisStyleHumorous": "유머러스한 스타일",
+  "analysisStyleHumorousDesc": "유머러스한 방식으로 생각을 해석합니다",
+  "analysisStyleLiterary": "문학적 스타일",
+  "analysisStyleLiteraryDesc": "아름다운 문학적 언어로 사고의 여정을 묘사합니다",
+  "selectAnalysisType": "분석 유형 선택",
+  "selectAnalysisStyle": "분석 스타일 선택",
+  "customPrompt": "사용자 지정 프롬프트",
+  "startAnalysis": "분석 시작",
+  "stopAnalysis": "중지",
+  "shareAnalysis": "공유",
+  "copyAnalysis": "복사",
+  "saveAnalysis": "저장",
+  "noNotesToAnalyze": "분석할 노트가 없습니다",
+  "noNotesToAnalyzeDesc": "AI가 인사이트를 제공할 수 있도록 먼저 노트를 추가해 주세요",
+  "aiServiceNotConfigured": "AI 서비스가 구성되지 않음",
+  "configureAIService": "AI 서비스 구성",
+  "analysisHistory": "기록",
+  "newAnalysis": "새 분석",
+  "analyzing": "분석 중...",
+  "analysisSaved": "분석 저장됨",
+  "analysisCopied": "분석이 클립보드에 복사됨",
+  "noteSaved": "노트 저장됨",
+  "selectCardColor": "카드 색상 선택",
+  "presetColors": "프리셋 색상",
+  "customColor": "사용자 지정 색상",
+  "select": "선택",
+  "editMetadata": "메타데이터 편집",
+  "done": "완료",
+  "selectTags": "태그 선택",
+  "noMatchingTags": "일치하는 태그 없음",
+  "smartAnalyzeSource": "스마트 소스 분석",
+  "smartAnalyzeSourceDesc": "텍스트에서 잠재적인 저자와 작품을 분석합니다",
+  "polishText": "텍스트 윤문",
+  "polishTextDesc": "텍스트 표현을 더 유려하고 우아하게 최적화합니다",
+  "continueWriting": "이어쓰기",
+  "continueWritingDesc": "동일한 스타일과 어조로 현재 내용을 확장합니다",
+  "deepAnalysis": "심층 분석",
+  "deepAnalysisDesc": "노트 내용에 대한 심층 분석 및 해석을 수행합니다",
+  "askNote": "노트에 질문하기",
+  "askNoteDesc": "AI 비서와 대화하며 노트 내용을 깊이 있게 탐구합니다",
+  "pleaseEnterContent": "먼저 내용을 입력해 주세요",
+  "analysisResults": "분석 결과",
+  "confidence": "신뢰도",
+  "noAuthorOrWorkIdentified": "명확한 저자나 작품을 식별할 수 없습니다",
+  "applyAnalysisResults": "분석 결과 적용",
+  "parseResultsFailed": "결과 파싱 실패",
+  "analysisFailed": "분석 실패: {error}",
+  "analysisResultsCopied": "분석 결과가 클립보드에 복사됨",
+  "noteInfo": "노트 정보",
+  "source": "출처",
+  "createdAt": "작성일",
+  "content": "내용",
+  "periodicReport": "정기 보고서",
+  "aiInsightsTab": "AI 인사이트",
+  "locationServiceNotEnabled": "위치 서비스가 활성화되지 않음",
+  "pleaseEnableLocationInSettings": "시스템 설정에서 위치 서비스를 활성화해 주세요",
+  "locationServiceEnabledMsg": "위치 서비스 활성화됨",
+  "quickTips": "빠른 팁",
+  "coreFeature": "핵심",
+  "confirmDelete": "삭제 확인",
+  "confirmDeleteAnalysis": "이 분석 기록을 삭제하시겠습니까?",
+  "deleteSuccess": "성공적으로 삭제됨",
+  "deleteFailed": "삭제 실패: {error}",
+  "@deleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "serviceNotInitialized": "서비스가 초기화되지 않음",
+  "location": "위치",
+  "weather": "날씨",
+  "color": "색상",
+  "noteUpdated": "노트 업데이트됨",
+  "openFullEditorFailed": "전체 편집기 열기 실패: {error}",
+  "@openFullEditorFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "saveFailedWithError": "저장 실패: {error}",
+  "@saveFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "themeSettings": "테마 설정",
+  "themeMode": "테마 모드",
+  "themeModeLight": "라이트",
+  "themeModeDark": "다크",
+  "useCustomThemeColor": "사용자 지정 테마 색상 사용",
+  "selectThemeColor": "테마 색상 선택",
+  "dynamicColor": "동적 색상",
+  "dynamicColorDesc": "시스템에서 테마 색상 추출",
+  "customColorEnabledHint": "사용자 지정 테마 색상이 활성화되어 동적 색상이 일시적으로 비활성화됨",
+  "dynamicColorDisabledHint": "동적 색상 비활성화됨, 기본 파란색 테마 사용",
+  "themeTools": "테마 도구",
+  "themeToolsDesc": "테마 색상이 비정상적으로 보이면 테마 새로고침을 시도하세요",
+  "themeRefreshed": "테마 새로고침됨",
+  "refreshTheme": "테마 새로고침",
+  "hitokotoSettings": "오늘의 명언 설정",
+  "hitokotoTypeSettings": "명언 유형 설정",
+  "hitokotoTypeDesc": "하나 이상의 명언 유형을 선택할 수 있습니다. 앱이 선택한 유형 중에서 무작위로 내용을 표시합니다. 각 유형은 다른 콘텐츠 소스와 스타일을 나타냅니다.",
+  "selectAll": "전체 선택",
+  "clearAll": "전체 해제",
+  "typeSelection": "유형 선택",
+  "typeSelectionHint": "탭하여 선호하는 명언 유형을 선택하세요",
+  "usageInstructions": "사용 설명",
+  "hitokotoServiceProvider": "명언 서비스 제공: Hitokoto",
+  "hitokotoHelpItem1": "적어도 하나의 유형을 선택해야 합니다. 앱이 선택한 유형 중에서 무작위로 내용을 표시합니다",
+  "hitokotoHelpItem2": "여러 유형을 선택하면 더 다양한 콘텐츠를 제공받을 수 있습니다",
+  "hitokotoHelpItem3": "각 유형은 다른 콘텐츠 스타일과 출처를 나타냅니다",
+  "settingsSaved": "설정 저장됨",
+  "tagManagement": "태그 관리",
+  "newTagName": "새 태그 이름",
+  "enterTagNameHint": "태그 이름 입력 (최대 50자)",
+  "selectIcon": "아이콘 선택",
+  "adding": "추가 중",
+  "add": "추가",
+  "pleaseEnterTagName": "태그 이름을 입력해 주세요",
+  "tagAddedSuccess": "태그 추가 성공",
+  "addTagFailed": "태그 추가 실패: {error}",
+  "@addTagFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "iconSelectionHint": "아이콘을 선택하거나 이모지를 입력하여 태그 아이콘으로 사용하세요",
+  "iconSelected": "선택된 아이콘: {icon}",
+  "@iconSelected": {
+    "placeholders": {
+      "icon": {
+        "type": "String"
+      }
+    }
+  },
+  "clear": "지우기",
+  "loadTagsFailed": "태그 로드 실패: {error}",
+  "@loadTagsFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noTags": "아직 태그가 없습니다",
+  "editTag": "태그 편집",
+  "tagName": "태그 이름",
+  "icon": "아이콘",
+  "deleteTagConfirmation": "\"{name}\" 태그를 삭제하시겠습니까? 관련된 노트는 유지되지만 더 이상 이 태그와 연결되지 않습니다.",
+  "@deleteTagConfirmation": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tagDeletedSuccess": "태그 삭제 성공",
+  "deleteTagFailed": "태그 삭제 실패: {error}",
+  "@deleteTagFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "defaultTag": "기본",
+  "systemDefaultTag": "시스템 기본 태그",
+  "tapToEditLongPressToDelete": "탭하여 편집, 길게 눌러 삭제",
+  "enterEmojiHint": "이모지 입력...",
+  "useAsIcon": "\"{emoji}\"를 아이콘으로 사용",
+  "@useAsIcon": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "systemIcons": "시스템 아이콘",
+  "storageManagement": "저장소 관리",
+  "clearCache": "캐시 지우기",
+  "clearCacheConfirmTitle": "캐시 지우기",
+  "clearCacheConfirmContent": "앱 캐시를 지우시겠습니까?\n\n임시 파일과 이미지 캐시가 제거되지만 노트는 삭제되지 않습니다.",
+  "cleanOrphanMedia": "미사용 미디어 정리",
+  "cleanOrphanMediaConfirmTitle": "미사용 미디어 파일 정리",
+  "cleanOrphanMediaConfirmContent": "어떤 노트에서도 참조하지 않는 미디어 파일(이미지, 동영상, 오디오)이 삭제됩니다.\n\n계속하시겠습니까?",
+  "databaseMaintenance": "데이터베이스 유지관리",
+  "databaseMaintenanceConfirmTitle": "데이터베이스 유지관리",
+  "databaseMaintenanceConfirmContent": "이 작업은 데이터베이스를 최적화합니다:\n\n• 저장 공간 조각 모음\n• 통계 업데이트\n• 인덱스 재구성\n\n데이터 크기에 따라 몇 초에서 몇 분 정도 소요될 수 있습니다.\n\n계속하시겠습니까?",
+  "startMaintenance": "유지관리 시작",
+  "maintenanceInProgress": "데이터베이스 유지관리 중...",
+  "preparingProgress": "준비 중...",
+  "maintenanceComplete": "유지관리 완료",
+  "maintenanceDuration": "소요 시간: {duration}초",
+  "@maintenanceDuration": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "databaseSizeChange": "데이터베이스 크기: {before} MB → {after} MB",
+  "@databaseSizeChange": {
+    "placeholders": {
+      "before": {
+        "type": "String"
+      },
+      "after": {
+        "type": "String"
+      }
+    }
+  },
+  "spaceSavedMb": "확보된 공간: {size} MB",
+  "@spaceSavedMb": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "noSpaceSaved": "확보된 공간 없음 (데이터베이스가 이미 최적화됨)",
+  "maintenanceFailed": "유지관리 실패: {error}",
+  "@maintenanceFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadStorageInfoFailed": "저장소 정보 로드 실패: {error}",
+  "@loadStorageInfoFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cacheCleanedResult": "캐시 삭제됨, {size} 확보",
+  "@cacheCleanedResult": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "clearCacheFailed": "캐시 삭제 실패: {error}",
+  "@clearCacheFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "orphanFilesCleanedResult": "{count, plural, =0{미사용 파일 없음} =1{정리 완료, 미사용 파일 1개 삭제됨} other{정리 완료, 미사용 파일 {count}개 삭제됨}}",
+  "@orphanFilesCleanedResult": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noOrphanFilesFound": "미사용 파일 없음",
+  "cleanupFailed": "정리 실패: {error}",
+  "@cleanupFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "totalStorageUsage": "총 저장소 사용량",
+  "databaseUsage": "데이터베이스 사용량",
+  "mediaFilesUsage": "미디어 파일 사용량",
+  "cacheUsage": "캐시 사용량",
+  "notesDatabase": "노트 데이터베이스",
+  "aiDatabase": "AI 데이터베이스",
+  "logDatabase": "로그 데이터베이스",
+  "images": "이미지",
+  "videos": "동영상",
+  "audios": "오디오",
+  "tempFilesAndCache": "임시 파일 및 캐시",
+  "fileCount": "{count, plural, =1{1개 파일} other{{count}개 파일}}",
+  "@fileCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dataStorageLocation": "데이터 저장 위치",
+  "currentDataDirectory": "현재 데이터 디렉터리",
+  "custom": "사용자 지정",
+  "windowsDataMigration": "Windows 데이터 디렉터리 마이그레이션",
+  "windowsDataMigrationDesc": "앱 데이터를 다른 위치(예: D 드라이브)로 이동하여 시스템 디스크 공간을 확보합니다",
+  "changeDataDirectory": "데이터 디렉터리 변경",
+  "migrating": "마이그레이션 중...",
+  "confirmDataMigration": "데이터 마이그레이션 확인",
+  "migrationTargetPath": "모든 앱 데이터를 다음 위치로 이동합니다:",
+  "migrationWarning": "⚠️ 마이그레이션은 몇 분 정도 소요될 수 있습니다. 이 과정 중에 앱을 닫지 마세요.\n⚠️ 마이그레이션이 완료된 후 앱을 다시 시작해야 합니다.",
+  "startMigration": "마이그레이션 시작",
+  "migratingData": "데이터 마이그레이션 중",
+  "migrationComplete": "마이그레이션 완료",
+  "migrationCompleteMessage": "데이터가 새 디렉터리로 성공적으로 이동되었습니다!\n\n변경 사항을 적용하려면 앱을 다시 시작해 주세요.",
+  "migrationFailed": "데이터 마이그레이션 실패. 자세한 내용은 로그를 확인하세요.",
+  "migrationFailedWithError": "마이그레이션 실패: {error}",
+  "@migrationFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "selectNewDataDirectory": "새 데이터 저장 디렉터리 선택",
+  "directoryNotAvailable": "선택한 디렉터리를 사용할 수 없거나 쓰기 권한이 없습니다",
+  "selectDirectoryFailed": "디렉터리 선택 실패: {error}",
+  "@selectDirectoryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logsViewer": "로그 뷰어",
+  "logFilter": "로그 필터",
+  "clearLogs": "로그 지우기",
+  "searchLogs": "로그 검색...",
+  "noLogs": "아직 로그가 없습니다",
+  "loadMoreLogs": "로그 더 불러오기",
+  "loadMoreLogsFailed": "로그 더 불러오기 실패: {error}",
+  "@loadMoreLogsFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logDetailsTitle": "{level} 로그 {source}",
+  "@logDetailsTitle": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      },
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "copyAll": "전체 복사",
+  "timestamp": "시간: {time}",
+  "@timestamp": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "message": "메시지:",
+  "errorLabel": "오류:",
+  "stackTrace": "스택 추적:",
+  "logCopiedToClipboard": "로그 상세 정보가 클립보드에 복사됨",
+  "containsError": "오류 정보 포함",
+  "sourceFilter": "소스: {source}",
+  "@sourceFilter": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "searchFilter": "검색: {query}",
+  "@searchFilter": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "clearAllFilters": "전체 지우기",
+  "logFilterOptions": "로그 필터 옵션",
+  "reset": "초기화",
+  "filterByLogLevel": "로그 레벨로 필터링",
+  "filterBySource": "소스로 필터링",
+  "enterSourceName": "로그 소스 이름 입력...",
+  "apply": "적용",
+  "clearLogsTitle": "로그 지우기",
+  "clearLogsQuestion": "어떤 로그를 지우시겠습니까?",
+  "clearMemoryLogsOnly": "메모리 로그만 지우기",
+  "clearAllLogs": "모든 로그 지우기",
+  "memoryLogsCleared": "메모리 로그 지워짐",
+  "allLogsCleared": "모든 로그 지워짐",
+  "logsCount": "{count, plural, =1{1개 로그 표시 중} other{{count}개 로그 표시 중}} • 길게 눌러 복사 • 탭하여 상세 정보",
+  "@logsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logPageError": "로그 페이지 렌더링 오류:",
+  "networkDiagnostic": "네트워크 진단",
+  "networkConfig": "네트워크 구성",
+  "networkDiagnosticSection": "네트워크 진단",
+  "diagnosing": "진단 중...",
+  "runNetworkDiagnostic": "네트워크 진단 실행",
+  "diagnosticResult": "진단 결과: {passed}/{total} 통과",
+  "@diagnosticResult": {
+    "placeholders": {
+      "passed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "diagnosticFailed": "진단 실패: {error}",
+  "@diagnosticFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceDiscovery": "기기 검색",
+  "startDiscovery": "검색 시작",
+  "stopDiscovery": "검색 중지",
+  "sendAnnouncement": "알림 전송",
+  "deviceAnnouncementSent": "기기 알림 전송됨",
+  "startDiscoveryFailed": "기기 검색 시작 실패: {error}",
+  "@startDiscoveryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "sendAnnouncementFailed": "기기 알림 전송 실패: {error}",
+  "@sendAnnouncementFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "statusRunning": "상태: 실행 중",
+  "statusStopped": "상태: 중지됨",
+  "discoveredDevices": "검색된 기기",
+  "discoveredDevicesCount": "검색된 기기 ({count})",
+  "@discoveredDevicesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noDevicesFound": "기기 없음",
+  "unknownModel": "알 수 없는 모델",
+  "fingerprint": "지문: {fingerprint}",
+  "@fingerprint": {
+    "placeholders": {
+      "fingerprint": {
+        "type": "String"
+      }
+    }
+  },
+  "hitokotoTypeA": "애니메이션",
+  "hitokotoTypeB": "만화",
+  "hitokotoTypeC": "게임",
+  "hitokotoTypeD": "문학",
+  "hitokotoTypeE": "오리지널",
+  "hitokotoTypeF": "인터넷",
+  "hitokotoTypeG": "기타",
+  "hitokotoTypeH": "영화 및 TV",
+  "hitokotoTypeI": "시",
+  "hitokotoTypeJ": "Netease Cloud Music",
+  "hitokotoTypeK": "철학",
+  "noNetworkConnection": "네트워크 연결 없음",
+  "unknown": "알 수 없음",
+  "defaultQuote1": "인생은 현재뿐만 아니라 시와 먼 곳이기도 합니다.",
+  "defaultQuote2": "인생은 여행과 같아서 목적지에 신경 쓸 필요 없이 길 위의 풍경을 신경 써야 합니다.",
+  "defaultQuote3": "기회를 기다리지 말고 창조하세요.",
+  "editTagTitle": "태그 편집",
+  "tagNameLabel": "태그 이름",
+  "iconLabel": "아이콘:",
+  "emotion": "감정",
+  "thinking": "생각",
+  "nature": "자연",
+  "mood": "기분",
+  "life": "인생",
+  "growth": "성장",
+  "reward": "보상",
+  "transport": "교통",
+  "otherCategory": "기타",
+  "logLoadMoreError": "로그 더 불러오기 실패: {error}",
+  "@logLoadMoreError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logLoadError": "로그 로드 실패",
+  "logSourceFilter": "소스: {source}",
+  "@logSourceFilter": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "logSearchFilter": "검색: {query}",
+  "@logSearchFilter": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "logClearAllFilters": "전체 지우기",
+  "logCopyAll": "전체 복사",
+  "logTimestamp": "시간: {time}",
+  "@logTimestamp": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "logMessage": "메시지:",
+  "logError": "오류:",
+  "logStackTrace": "스택 추적:",
+  "logCopied": "로그 상세 정보가 클립보드에 복사됨",
+  "logFilterReset": "초기화",
+  "logFilterByLevel": "로그 레벨로 필터링",
+  "logFilterBySource": "소스로 필터링",
+  "logFilterSourceHint": "로그 소스 이름 입력...",
+  "logFilterApply": "적용",
+  "logClearTitle": "로그 지우기",
+  "logClearQuestion": "어떤 로그를 지우시겠습니까?",
+  "logClearMemory": "메모리 로그만 지우기",
+  "logClearMemorySuccess": "메모리 로그 지워짐",
+  "logClearAll": "모든 로그 지우기",
+  "logClearAllSuccess": "모든 로그 지워짐",
+  "logClearError": "로그 지우기 실패: {error}",
+  "@logClearError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logContainsError": "오류 정보 포함",
+  "httpServerPort": "HTTP 서버 포트: {port}",
+  "@httpServerPort": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "multicastDiscoveryPort": "멀티캐스트 검색 포트: {port}",
+  "@multicastDiscoveryPort": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "multicastAddress": "멀티캐스트 주소: {address}",
+  "@multicastAddress": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "protocolVersion": "프로토콜 버전: {version}",
+  "@protocolVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "testAnalysis": "분석 테스트",
+  "testAnalysisDesc": "이것은 저장 기능이 올바르게 작동하는지 확인하기 위한 테스트 분석입니다.",
+  "viewHistory": "기록 보기",
+  "saveAnalysisError": "분석 저장 실패: {error}",
+  "@saveAnalysisError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "analysisNoteTitle": "# {title}\n\n{content}",
+  "@analysisNoteTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "aiAnalysisSource": "AI 분석",
+  "thoughtechoAI": "ThoughtEcho AI",
+  "savedAsNote": "새 노트로 저장됨",
+  "saveAsNoteError": "노트로 저장 실패: {error}",
+  "@saveAsNoteError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shareError": "공유 실패: {error}",
+  "@shareError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "configureApiKey": "설정에서 먼저 API Key를 구성해 주세요",
+  "noteListEmptyTitle": "아직 노트가 없습니다. 기록을 시작해 보세요!",
+  "noteSearchEmptyTitle": "관련 노트를 찾을 수 없습니다",
+  "noteSearchEmptySubtitle": "다른 키워드를 시도하거나 철자를 확인해 주세요",
+  "noteSearchTimeoutMessage": "검색 시간이 초과되었습니다. 다시 시도해 주세요",
+  "searchingLabel": "검색 중",
+  "filterAndSortTooltip": "필터/정렬",
+  "noNotesFound": "노트를 찾을 수 없습니다. 먼저 노트를 추가해 주세요",
+  "generateInsightsError": "인사이트 생성 실패: {error}",
+  "@generateInsightsError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "serverInternalError": "서버 내부 오류, 모델 구성 문제일 수 있습니다",
+  "checkSettings": "설정 확인",
+  "invalidApiKey": "유효하지 않은 API Key, 설정을 확인해 주세요",
+  "checkApiKey": "API Key 확인",
+  "rateLimitExceeded": "요청 빈도가 너무 높습니다. 나중에 다시 시도해 주세요",
+  "tryLater": "나중에 다시 시도",
+  "generateInsightsSetupError": "인사이트 생성 실패 (설정): {error}",
+  "@generateInsightsSetupError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "serverInternalErrorConfig": "서버 내부 오류, AI 모델 구성이 올바른지 확인해 주세요",
+  "invalidApiKeyUpdate": "유효하지 않은 API Key, 설정에서 API Key를 업데이트해 주세요",
+  "configureValidApiKey": "설정에서 먼저 유효한 API Key를 구성해 주세요",
+  "regenerate": "재생성",
+  "selectAnalysisMethod": "분석 방법 선택",
+  "advancedOptions": "고급 옵션",
+  "customPromptHint": "예: 내 노트에 언급된 인물과 장소를 분석해 줘",
+  "analysisHistoryRecord": "분석 기록 레코드",
+  "viewPreviousAnalysis": "이전 AI 분석 결과 보기",
+  "analysisDescriptionTitle": "분석 설명",
+  "analysisDescription": "AI 분석은 모든 노트 내용을 종합하여 잠재적인 사고 패턴과 규칙성을 발견합니다. 다양한 분석 스타일을 선택하여 다양한 관점을 얻을 수 있습니다. 시간이 다소 걸릴 수 있으니 잠시만 기다려 주세요.",
+  "aiAnalysisUsageInstructionsTitle": "AI 분석 사용 설명",
+  "aiAnalysisUsageInstructions": "1. AI는 부정확하거나 오해의 소지가 있는 내용을 생성할 수 있으므로 분석 결과를 신중하게 평가해 주세요\n2. 이 기능을 사용할 때 모든 노트 정보(내용, 날짜, 위치, 날씨, 기온 등)가 AI에 전송되어 종합적인 분석에 사용됩니다\n3. 분석 결과는 참고용이며, 최종 해석은 사용자에게 달려 있습니다\n4. 최상의 경험을 위해 양호한 네트워크 환경에서 이 기능을 사용하는 것을 권장합니다",
+  "copyToClipboard": "클립보드에 복사",
+  "analysisResultCopied": "분석 결과가 클립보드에 복사됨",
+  "saveAsNoteButton": "노트로 저장",
+  "saveAnalysisButton": "분석 저장",
+  "shareInsightsButton": "인사이트 공유",
+  "generateInsightsErrorSnapshot": "인사이트 생성 오류: {error}",
+  "@generateInsightsErrorSnapshot": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "insightsPageEmpty": "분석 유형을 선택하고 \"분석 시작\"을 클릭하세요\n인사이트가 노트의 사고 패턴과 규칙성을 발견하도록 도와줍니다",
+  "customAnalysis": "사용자 지정 분석",
+  "siliconflow": "SiliconFlow",
+  "openapiCompatible": "OpenAPI 호환",
+  "verifyingApiKey": "API Key 확인 중...",
+  "noProviderSelected": "공급자가 선택되지 않음",
+  "apiKeyValid": "API Key 유효함 ({length}자)",
+  "@apiKeyValid": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "apiKeyInvalid": "유효한 API Key가 구성되지 않음",
+  "noAiProviderSelected": "❌ AI 공급자가 선택되지 않음",
+  "providerDisabled": "⚠️ 공급자 비활성화됨",
+  "apiKeyVerified": "✅ API Key 유효함 (확인됨)",
+  "apiKeyStatusCheck": "API Key 상태 확인: {status}",
+  "@apiKeyStatusCheck": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "checkFailed": "확인 실패: {error}",
+  "@checkFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadAiSettingsError": "AI 설정 로드 실패: {error}",
+  "@loadAiSettingsError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadAiSettingsErrorUser": "AI 설정을 로드하지 못했습니다. 네트워크 연결을 확인하거나 앱을 다시 시작해 주세요",
+  "fixFormErrors": "저장하기 전에 양식의 오류를 수정해 주세요",
+  "presetCreated": "새 프리셋이 생성되고 저장되었습니다",
+  "saveSettingsError": "설정 저장 실패: {error}",
+  "@saveSettingsError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "customConfig": "사용자 지정 구성",
+  "customConfigHost": "사용자 지정-{host}",
+  "@customConfigHost": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "customConfigTimestamp": "사용자 지정-{timestamp}",
+  "@customConfigTimestamp": {
+    "placeholders": {
+      "timestamp": {
+        "type": "String"
+      }
+    }
+  },
+  "testingConnection": "연결 테스트 중...",
+  "connectionTestSuccess": "AI 연결 테스트 성공!",
+  "connectionTestFailed": "연결 테스트 실패: {error}",
+  "@connectionTestFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apiKeyRequired": "{providerName}에 API Key가 필요합니다",
+  "@apiKeyRequired": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "connectionSuccess": "연결 성공",
+  "responseFormatError": "응답 형식 오류",
+  "connectionFailed": "연결 실패: {statusCode}",
+  "@connectionFailed": {
+    "placeholders": {
+      "statusCode": {
+        "type": "int"
+      }
+    }
+  },
+  "switchedTo": "{providerName}로 전환됨",
+  "@switchedTo": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "renamePreset": "프리셋 이름 변경",
+  "presetName": "프리셋 이름",
+  "presetRenamed": "프리셋 이름이 \"{result}\"로 변경되었습니다",
+  "@presetRenamed": {
+    "placeholders": {
+      "result": {
+        "type": "String"
+      }
+    }
+  },
+  "deletePreset": "프리셋 삭제",
+  "deletePresetConfirm": "프리셋 \"{providerName}\"을(를) 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+  "@deletePresetConfirm": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "presetDeleted": "프리셋 \"{providerName}\"이(가) 삭제되었습니다",
+  "@presetDeleted": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "aiProviderSelection": "AI 공급자 선택",
+  "currentProvider": "현재: {providerName}",
+  "@currentProvider": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "apiUrlLabel": "API: {url}",
+  "@apiUrlLabel": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "modelLabel": "모델: {model}",
+  "@modelLabel": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "apiKeyLabel": "API Key: {status}",
+  "@apiKeyLabel": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "modelNotConfigured": "구성되지 않음",
+  "checkApiKeyStatus": "API Key 상태 확인",
+  "savedPresets": "저장된 프리셋 ({length}):",
+  "@savedPresets": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "noPresetsSaved": "아직 저장된 프리셋이 없습니다. API 정보를 구성하고 \"설정 저장\"을 클릭하여 첫 번째 프리셋을 생성하세요.",
+  "rename": "이름 변경",
+  "testConnectionButton": "연결 테스트",
+  "reportInsightsUseAi": "정기 보고서 인사이트에 AI 사용",
+  "reportInsightsUseAiDesc": "활성화하면 보고서 페이지 진입 시 \"통찰의 시\"가 자동으로 생성됩니다. 비활성화하면 로컬 생성을 사용합니다.",
+  "aiSettingsTitle": "AI 설정",
+  "quickPresets": "빠른 프리셋",
+  "selectPreset": "공급자 프리셋 선택",
+  "selectPresetHint": "또는 아래에서 연결 매개변수를 수동으로 구성하세요",
+  "connectionConfig": "연결 구성 ({providerName})",
+  "@connectionConfig": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "apiUrlField": "API URL",
+  "apiUrlHint": "예: https://api.xxx.com/v1/chat/completions",
+  "apiUrlHelper": "http/https URL이어야 합니다",
+  "apiKeyField": "API Key",
+  "apiKeyHint": "서비스에 필요한 키 (공란일 수 있음)",
+  "show": "표시",
+  "hide": "숨기기",
+  "modelAndAdvanced": "모델 및 고급",
+  "modelNameField": "모델 이름",
+  "modelNameHint": "모델 이름을 입력하세요",
+  "modelNameHintDefault": "기본 모델 사용 또는 사용자 지정",
+  "hostOverrideField": "호스트 재정의",
+  "hostOverrideHint": "선택 사항, 프록시/리버스 프록시 시나리오용",
+  "createNewPreset": "새 프리셋 생성",
+  "aiCardGeneration": "AI 카드 생성",
+  "aiCardGenerationDesc": "노트용 SVG 공유 카드 생성: 켜기 = AI 스마트 디자인 사용, 끄기 = 내장 템플릿 사용 (기능은 여전히 사용 가능)",
+  "aiCardGenerationTip": "팁: 4K 토큰 이상을 지원하고 지침 준수 및 텍스트-SVG 생성 기능이 우수한 중대형 모델을 사용하는 것이 좋습니다.",
+  "aiEnhancedGeneration": "AI 향상된 생성",
+  "aiEnhancedGenerationDesc": "끄면 모델을 호출하는 대신 로컬 템플릿이 사용됩니다",
+  "todayThoughtsUseAi": "오늘의 생각에 AI 사용",
+  "todayThoughtsUseAiDesc": "활성화하면 AI를 사용하여 오늘의 생각 프롬프트를 생성합니다. 비활성화하면 로컬 생성을 사용합니다.",
+  "apiUrlRequired": "API URL은 비워둘 수 없습니다",
+  "invalidUrl": "유효한 HTTP/HTTPS URL을 입력해 주세요",
+  "mediaManagementTitle": "미디어 파일 관리",
+  "loadStatsError": "통계 로드 실패: {error}",
+  "@loadStatsError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "operationCompleted": "{operation} 완료",
+  "@operationCompleted": {
+    "placeholders": {
+      "operation": {
+        "type": "String"
+      }
+    }
+  },
+  "operationFailed": "{operation} 실패: {error}",
+  "@operationFailed": {
+    "placeholders": {
+      "operation": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadStatsFailed": "통계 로드 실패",
+  "mediaFileStats": "미디어 파일 통계",
+  "totalFiles": "총 파일",
+  "referencedFiles": "참조된 파일",
+  "orphanFiles": "미사용 파일",
+  "totalReferences": "총 참조",
+  "totalSize": "총 크기",
+  "imagesSize": "이미지 크기",
+  "videosSize": "동영상 크기",
+  "audiosSize": "오디오 크기",
+  "tempFiles": "임시 파일",
+  "tempFilesCount": "임시 파일 수",
+  "expiredFilesCount": "만료된 파일 수",
+  "tempFilesSize": "임시 파일 크기",
+  "cleanupOperations": "정리 작업",
+  "cleanupExpiredTempFiles": "만료된 임시 파일 정리",
+  "cleanupExpiredTempFilesDesc": "24시간 이상 된 임시 파일 삭제",
+  "cleanupOrphanFiles": "미사용 파일 정리",
+  "cleanupOrphanFilesDesc": "어떤 노트에서도 참조하지 않는 미디어 파일 삭제",
+  "fullCleanup": "전체 정리",
+  "fullCleanupDesc": "모든 임시 파일 및 미사용 파일 정리",
+  "migrateExistingNotes": "기존 노트 마이그레이션",
+  "migrateExistingNotesDesc": "기존 노트의 미디어 파일 참조 재설정",
+  "verifyFileIntegrity": "파일 무결성 검사",
+  "verifyFileIntegrityDesc": "미디어 파일 참조의 무결성 확인",
+  "operationResult": "{operation} 결과",
+  "@operationResult": {
+    "placeholders": {
+      "operation": {
+        "type": "String"
+      }
+    }
+  },
+  "cleanedFilesCount": "정리된 파일 수",
+  "spaceSavedMbLabel": "확보된 공간 (MB)",
+  "migratedQuotesCount": "마이그레이션된 인용 수",
+  "orphanFilesDetected": "미사용 파일 감지됨",
+  "checkedReferencesCount": "확인된 참조 수",
+  "missingFilesCount": "누락된 파일 수",
+  "fileIntegrity": "파일 무결성",
+  "normal": "정상",
+  "abnormal": "비정상",
+  "yourThoughtTrack": "당신의 생각 트랙",
+  "tapToExplore": "화면을 탭하여 탐색 시작",
+  "annualOverview": "연간 개요",
+  "noNotesInPeriod": "이 기간에 노트 없음",
+  "startRecording": "생각 기록 시작",
+  "totalRecorded": "총 기록",
+  "notesUnit": "개 노트",
+  "writingDays": "작성 일수",
+  "daysUnit": "일",
+  "longestStreak": "최장 연속",
+  "tagsUsed": "사용된 태그",
+  "tagsUnit": "개 태그",
+  "writingHabits": "작성 습관",
+  "noWritingHabits": "아직 작성 습관 데이터 없음",
+  "mostActiveTime": "가장 활발한 시간",
+  "noData": "데이터 없음",
+  "favoriteDay": "선호 요일",
+  "avgWordsPerNote": "노트당 평균 단어 수",
+  "wordsUnit": "단어",
+  "longestNote": "가장 긴 노트",
+  "mostCommonPeriod": "가장 흔한 시간대",
+  "mostCommonWeather": "가장 흔한 날씨",
+  "mostUsedTag": "가장 많이 사용된 태그",
+  "tagAnalysis": "태그 분석",
+  "mostUsedTags": "가장 많이 사용된 태그",
+  "usedXTimes": "{count}회 사용됨 ({percentage}%)",
+  "@usedXTimes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "percentage": {
+        "type": "String"
+      }
+    }
+  },
+  "noTagsUsed": "아직 사용된 태그가 없습니다",
+  "timeline": "타임라인",
+  "noRecordsInPeriod": "이 기간에 기록 없음",
+  "monthX": "{month}월",
+  "@monthX": {
+    "placeholders": {
+      "month": {
+        "type": "int"
+      }
+    }
+  },
+  "notesCount": "{count}개 노트",
+  "@notesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deepInsights": "심층 인사이트",
+  "thinkingDensity": "사고 밀도",
+  "deepThinker": "당신은 깊이 있는 생각을 즐기며, 각 노트가 매우 상세합니다. 이 습관은 생각을 더 잘 정리하는 데 도움이 됩니다.",
+  "conciseThinker": "당신의 생각은 간결하고 강력하며, 요점을 잘 파악합니다. 이것은 훌륭한 요약 능력입니다.",
+  "quickThinker": "당신은 짧은 아이디어를 기록하는 데 익숙하여 영감을 빠르게 포착할 수 있습니다. 이것은 훌륭한 기록 습관입니다.",
+  "growthTrack": "성장 트랙",
+  "notStarted": "아직 기록을 시작하지 않았습니다. 지금이 가장 좋은 시기입니다.",
+  "increasingFrequency": "기록 빈도가 점점 높아지고 있습니다! 연초부터 연말까지 생각하고 기록하는 습관이 점점 더 좋아졌습니다.",
+  "decreasingFrequency": "연초 기록은 매우 활발했습니다. 그때의 글쓰기 열정을 다시 되찾을 수 있을지도 모릅니다.",
+  "stableRhythm": "안정적인 기록 리듬을 유지하고 있습니다. 이러한 끈기는 드문 일입니다!",
+  "beginningOfYear": "올해는 기록의 시작입니다. 더 많은 생각 트랙을 볼 수 있기를 기대합니다.",
+  "writingRhythm": "작성 리듬",
+  "goodRhythm": "좋은 작성 리듬을 가지고 있으며, 최장 연속 기록은 {longestStreak}일입니다! 끈기는 힘입니다.",
+  "@goodRhythm": {
+    "placeholders": {
+      "longestStreak": {
+        "type": "int"
+      }
+    }
+  },
+  "decentRhythm": "좋은 기록 습관을 확립했습니다. 이 리듬을 계속 유지하세요.",
+  "startRhythm": "더 많이 기록하는 것이 습관입니다. 매일 작은 아이디어를 기록해 보세요.",
+  "generatingInsights": "이 기간에 대한 인사이트 생성 중...",
+  "noInsights": "아직 인사이트 없음",
+  "thankYou": "당신의 끈기에 감사합니다",
+  "everyThoughtCounts": "모든 생각은 기록할 가치가 있습니다\n모든 기록은 성장의 발자취입니다",
+  "continueRecording": "{year}년에도 계속 기록하기",
+  "@continueRecording": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "reportCopied": "연간 보고서가 클립보드에 복사되었습니다",
+  "monday": "월요일",
+  "tuesday": "화요일",
+  "wednesday": "수요일",
+  "thursday": "목요일",
+  "friday": "금요일",
+  "saturday": "토요일",
+  "sunday": "일요일",
+  "dayOfMonth": "{day}일",
+  "@dayOfMonth": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "noteDate": "{month} {day}",
+  "@noteDate": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "noteLocation": "{location}에서",
+  "@noteLocation": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      }
+    }
+  },
+  "noteWeather": "(날씨: {weather})",
+  "@noteWeather": {
+    "placeholders": {
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "annualReportForYear": "{year} 연간 보고서",
+  "@annualReportForYear": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "annualReportTitle": "ThoughtEcho 연간 보고서",
+  "pageIndicator": "{currentPage} / {totalPages}",
+  "@pageIndicator": {
+    "placeholders": {
+      "currentPage": {
+        "type": "int"
+      },
+      "totalPages": {
+        "type": "int"
+      }
+    }
+  },
+  "shareAnnualReportContent": "나의 {year} ThoughtEcho 회고\n\n📝 {totalQuotes}개의 생각 기록\n💭 1년의 성장과 성찰을 목격함\n\n삶의 조각들을 ThoughtEcho에 기록하며\n#ThoughtEcho #연간회고 #일기",
+  "@shareAnnualReportContent": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      },
+      "totalQuotes": {
+        "type": "int"
+      }
+    }
+  },
+  "tileNoLocationPermission": "위치 없음",
+  "tileOffline": "오프라인",
+  "tileNoNetwork": "네트워크 없음",
+  "tileLoading": "로딩 중...",
+  "tileNoWeather": "날씨 없음",
+  "tileCachedSuffix": "(캐시)"
+}

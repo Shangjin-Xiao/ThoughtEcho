@@ -83,18 +83,19 @@ class ApkDownloadService {
         return;
       }
 
-      // 生成文件名
-      final fileName = 'ThoughtEcho_$version.apk';
+      // 生成文件名（采用固定名称，避免旧安装包堆积）
+      const fileName = 'ThoughtEcho_latest.apk';
       final filePath = '${downloadDir.path}/$fileName';
 
-      // 检查文件是否已存在
+      // 检查并清理同名旧文件，确保下载的是最新的
       final file = File(filePath);
       if (await file.exists()) {
-        // 文件已存在，直接安装
-        if (context.mounted) {
-          await _installApk(context, filePath);
+        try {
+          logDebug('清理已存在的同名安装包: $filePath');
+          await file.delete();
+        } catch (e) {
+          logError('清理旧安装包失败: $e');
         }
-        return;
       }
 
       // 开始下载
@@ -107,6 +108,31 @@ class ApkDownloadService {
         final l10n = AppLocalizations.of(context);
         _showErrorDialog(context, l10n.apkDownloadFailed(e.toString()));
       }
+    }
+  }
+
+  /// 清理下载目录中的所有旧安装包
+  static Future<void> cleanupApkFiles() async {
+    try {
+      final downloadDir = await _getDownloadDirectory();
+      if (downloadDir == null) return;
+
+      if (await downloadDir.exists()) {
+        final List<FileSystemEntity> files = downloadDir.listSync();
+        // 清理目录下所有 APK 文件，因为这是应用私有下载目录，不应包含其他重要文件
+        for (var file in files) {
+          if (file is File && file.path.toLowerCase().endsWith('.apk')) {
+            try {
+              logDebug('启动清理旧安装包: ${file.path}');
+              await file.delete();
+            } catch (e) {
+              logError('删除旧安装包失败: ${file.path}, $e');
+            }
+          }
+        }
+      }
+    } catch (e) {
+      logError('清理安装包目录失败: $e');
     }
   }
 

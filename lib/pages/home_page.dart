@@ -37,6 +37,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import '../services/svg_to_image_service.dart';
 import '../utils/feature_guide_helper.dart';
+import '../services/draft_service.dart';
 
 class HomePage extends StatefulWidget {
   final int initialPage; // 添加初始页面参数
@@ -75,6 +76,7 @@ class _HomePageState extends State<HomePage>
   // 功能引导：记录页的 Keys
   final GlobalKey _noteFilterGuideKey = GlobalKey();
   final GlobalKey _noteFavoriteGuideKey = GlobalKey();
+  final GlobalKey _noteMoreGuideKey = GlobalKey(); // 功能引导：更多按钮 Key
   final GlobalKey _noteFoldGuideKey = GlobalKey();
   final GlobalKey<SettingsPageState> _settingsPageKey =
       GlobalKey<SettingsPageState>();
@@ -84,6 +86,9 @@ class _HomePageState extends State<HomePage>
 
   // AI卡片生成服务
   AICardGenerationService? _aiCardService;
+
+  // 网络恢复监听
+  ConnectivityService? _connectivityService;
 
   // --- 每日提示相关状态和逻辑 ---
   String _accumulatedPromptText = ''; // Accumulated text for daily prompt
@@ -296,6 +301,16 @@ class _HomePageState extends State<HomePage>
         context,
         listen: false,
       );
+      final connectivityService = Provider.of<ConnectivityService>(
+        context,
+        listen: false,
+      );
+
+      // 先刷新网络状态
+      final isConnected = await connectivityService.checkConnectionNow();
+
+      // P4: 动态刷新位置服务和权限状态，防止初始化时的过期值
+      await locationService.refreshServiceStatus();
 
       // 如果有位置权限，重新获取位置和天气
       if (locationService.hasLocationPermission &&
@@ -308,12 +323,23 @@ class _HomePageState extends State<HomePage>
         if (!mounted) return;
 
         if (position != null) {
+          // 联网时尝试解析离线坐标的地址
+          if (isConnected && locationService.isOfflineLocation) {
+            logDebug('尝试解析离线位置的地址...');
+            final resolved = await locationService.resolveOfflineLocation();
+
+            // P1: 地址解析成功后，回溯更新近期离线笔记的位置字段
+            if (resolved && mounted) {
+              _retroUpdateOfflineNoteLocations(locationService);
+            }
+          }
+
           logDebug('位置获取成功，开始刷新天气数据...');
-          // 强制刷新天气数据
+          // 仅联网时强制刷新天气，离线时使用缓存避免冲掉已有数据
           await weatherService.getWeatherData(
             position.latitude,
             position.longitude,
-            forceRefresh: true,
+            forceRefresh: isConnected,
           );
           logDebug('天气数据刷新完成: ${weatherService.currentWeather}');
         } else {
@@ -326,6 +352,47 @@ class _HomePageState extends State<HomePage>
       logDebug('刷新位置和天气信息时发生错误: $e');
       // 不抛出异常，让调用方继续执行
     }
+  }
+
+  /// P1: 回溯更新近期离线笔记的位置字段
+  /// 当网络恢复并成功解析出地址后，更新最近 24 小时内
+  /// 带有 pending/failed 位置标记的笔记
+  void _retroUpdateOfflineNoteLocations(LocationService locationService) {
+    if (!mounted) return;
+
+    final dbService = Provider.of<DatabaseService>(context, listen: false);
+    final resolvedAddress = locationService.getLocationDisplayText();
+    if (resolvedAddress.isEmpty) return;
+
+    Future.microtask(() async {
+      try {
+        final allQuotes = await dbService.getAllQuotes();
+        final cutoff = DateTime.now().subtract(const Duration(hours: 24));
+        int updatedCount = 0;
+
+        for (final quote in allQuotes) {
+          // 只更新 24 小时内、有坐标但地址为 pending/failed 的笔记
+          final quoteDate = DateTime.tryParse(quote.date);
+          if (quoteDate == null || quoteDate.isBefore(cutoff)) continue;
+
+          if (LocationService.isNonDisplayMarker(quote.location) &&
+              quote.latitude != null &&
+              quote.longitude != null) {
+            final updatedQuote = quote.copyWith(
+              location: resolvedAddress,
+            );
+            await dbService.updateQuote(updatedQuote);
+            updatedCount++;
+          }
+        }
+
+        if (updatedCount > 0) {
+          logDebug('P1: 回溯更新了 $updatedCount 条离线笔记的位置信息');
+        }
+      } catch (e) {
+        logDebug('回溯更新离线笔记位置失败: $e');
+      }
+    });
   }
 
   @override
@@ -350,8 +417,13 @@ class _HomePageState extends State<HomePage>
         _preloadTags();
       }
 
-      // 首次进入应用时检查剪贴板
-      _checkClipboard();
+      // 1. 检查是否有未保存的草稿（最高优先级，阻塞后续弹窗）
+      final draftRecovered = await _checkDraftRecovery();
+
+      // 2. 如果没有恢复草稿，再检查剪贴板
+      if (!draftRecovered) {
+        _checkClipboard();
+      }
 
       // 如果不是记录页启动，确保标签也被加载
       if (widget.initialPage != 1) {
@@ -360,6 +432,15 @@ class _HomePageState extends State<HomePage>
 
       // 先初始化位置和天气，然后再获取每日提示
       _initLocationAndWeatherThenFetchPrompt();
+
+      // 监听网络恢复，自动刷新位置和天气
+      if (mounted) {
+        _connectivityService = Provider.of<ConnectivityService>(
+          context,
+          listen: false,
+        );
+        _connectivityService!.addListener(_onConnectivityChanged);
+      }
     });
 
     // 根据初始页面尝试触发对应的功能引导
@@ -386,8 +467,18 @@ class _HomePageState extends State<HomePage>
     _aiTabController.dispose();
     // 移除生命周期观察器
     WidgetsBinding.instance.removeObserver(this);
-    _promptSubscription?.cancel(); // Cancel daily prompt subscription
+    _promptSubscription?.cancel();
+    _connectivityService?.removeListener(_onConnectivityChanged);
     super.dispose();
+  }
+
+  /// 网络状态变化回调：恢复联网时自动刷新位置和天气
+  void _onConnectivityChanged() {
+    final isConnected = _connectivityService?.isConnected ?? false;
+    if (isConnected && mounted) {
+      logDebug('网络已恢复，自动刷新位置和天气...');
+      _refreshLocationAndWeather();
+    }
   }
 
   @override
@@ -401,6 +492,131 @@ class _HomePageState extends State<HomePage>
         }
       });
     }
+  }
+
+  // 检查是否有未保存的草稿
+  Future<bool> _checkDraftRecovery() async {
+    if (!mounted) return false;
+
+    try {
+      final draftData = await DraftService().getLatestDraft();
+      if (draftData == null) return false;
+
+      if (!mounted) return false;
+
+      final l10n = AppLocalizations.of(context);
+      final shouldRestore = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.draftRecoverTitle),
+          content: Text(l10n.draftRecoverMessage),
+          actions: [
+            TextButton(
+              onPressed: () {
+                // 用户选择丢弃，删除所有草稿，避免重复提示
+                DraftService().deleteAllDrafts();
+                Navigator.pop(ctx, false);
+              },
+              child: Text(
+                l10n.discard,
+                style: TextStyle(color: Colors.red.shade400),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.restore),
+            ),
+          ],
+        ),
+      );
+
+      if (shouldRestore == true && mounted) {
+        final draftId = draftData['id'] as String;
+        final isNew = draftId.startsWith('new_');
+        final plainText = draftData['plainText'] as String? ?? '';
+        final deltaContent = draftData['deltaContent'] as String?;
+
+        Quote? initialQuote;
+        Quote? original;
+
+        if (!isNew) {
+          // 如果是现有笔记，尝试从数据库获取原始信息
+          try {
+            final db = context.read<DatabaseService>();
+            original = await db.getQuoteById(draftId);
+            if (original != null) {
+              // 使用草稿内容覆盖原始笔记内容
+              initialQuote = original.copyWith(
+                content: plainText,
+                deltaContent: deltaContent,
+                sourceAuthor: draftData['author'] as String?,
+                sourceWork: draftData['work'] as String?,
+                tagIds: (draftData['tagIds'] as List?)
+                    ?.map((e) => e.toString())
+                    .toList(),
+                colorHex: draftData['colorHex'] as String?,
+                location: draftData['location'] as String?,
+                latitude: (draftData['latitude'] as num?)?.toDouble(),
+                longitude: (draftData['longitude'] as num?)?.toDouble(),
+                weather: draftData['weather'] as String?,
+                temperature: draftData['temperature'] as String?,
+              );
+            } else {
+              logDebug('恢复草稿时发现原始笔记已删除，将作为新笔记处理');
+            }
+          } catch (e) {
+            logDebug('恢复草稿时获取原始笔记失败: $e');
+          }
+        }
+
+        initialQuote ??= Quote(
+          id: (isNew || original == null) ? null : draftId,
+          content: plainText,
+          deltaContent: deltaContent,
+          date: DateTime.now().toIso8601String(),
+          sourceAuthor: draftData['author'] as String?,
+          sourceWork: draftData['work'] as String?,
+          tagIds: (draftData['tagIds'] as List?)
+                  ?.map((e) => e.toString())
+                  .toList() ??
+              [],
+          colorHex: draftData['colorHex'] as String?,
+          location: draftData['location'] as String?,
+          latitude: (draftData['latitude'] as num?)?.toDouble(),
+          longitude: (draftData['longitude'] as num?)?.toDouble(),
+          weather: draftData['weather'] as String?,
+          temperature: draftData['temperature'] as String?,
+          editSource: 'fullscreen',
+        );
+
+        // 导航到全屏编辑器
+        if (mounted) {
+          final saved = await Navigator.push<bool>(
+            context,
+            MaterialPageRoute(
+              builder: (context) => NoteFullEditorPage(
+                initialContent: initialQuote!.content,
+                initialQuote: initialQuote,
+                isRestoredDraft: true, // 标记为恢复的草稿
+                restoredDraftId: draftId, // 传递恢复草稿的原始ID，确保 key 稳定
+                // 如果有标签信息，也可以传递 allTags，但这通常由编辑器自己加载
+              ),
+            ),
+          );
+
+          // 如果保存成功返回，强制刷新列表
+          if (saved == true && mounted) {
+            logDebug('编辑器保存成功返回，触发列表刷新');
+            context.read<DatabaseService>().refreshQuotes();
+          }
+          return true; // 已处理恢复
+        }
+      }
+    } catch (e) {
+      logError('检查草稿恢复失败', error: e, source: 'HomePage');
+    }
+    return false;
   }
 
   // 检查剪贴板内容并处理
@@ -687,6 +903,11 @@ class _HomePageState extends State<HomePage>
       guides.add(('note_page_expand', _noteFoldGuideKey));
     }
 
+    if (!FeatureGuideHelper.hasShown(context, 'note_item_more_share') &&
+        noteListState.hasQuotes) {
+      guides.add(('note_item_more_share', _noteMoreGuideKey));
+    }
+
     if (guides.isEmpty) {
       return;
     }
@@ -744,12 +965,20 @@ class _HomePageState extends State<HomePage>
         if (position != null) {
           logDebug('位置获取成功: ${position.latitude}, ${position.longitude}');
 
+          // P10: 冷启动时检查网络状态，联网则强刷天气获取实时数据
+          final connectivityService = Provider.of<ConnectivityService>(
+            context,
+            listen: false,
+          );
+          final isConnected = connectivityService.isConnected;
+
           // 异步获取天气，不阻塞主流程
           Future.microtask(() async {
             try {
               await weatherService.getWeatherData(
                 position.latitude,
                 position.longitude,
+                forceRefresh: isConnected,
                 timeout: const Duration(seconds: 10),
               );
               logDebug('天气数据更新完成: ${weatherService.currentWeather}');
@@ -835,6 +1064,93 @@ class _HomePageState extends State<HomePage>
   // FAB 短按处理
   void _onFABTap() {
     _showAddQuoteDialog();
+  }
+
+  // FAB 长按处理 - 显示语音录制浮层
+  void _onFABLongPress() {
+    final settingsService = Provider.of<SettingsService>(
+      context,
+      listen: false,
+    );
+    final localAISettings = settingsService.localAISettings;
+
+    // 检查是否启用了本地AI和语音转文字功能，未启用则直接返回无反应
+    if (!localAISettings.enabled || !localAISettings.speechToTextEnabled) {
+      return;
+    }
+
+    _showVoiceInputOverlay();
+  }
+
+  Future<void> _showVoiceInputOverlay() async {
+    if (!mounted) return;
+
+    await showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'voice_input_overlay',
+      barrierColor: Colors.transparent,
+      pageBuilder: (context, animation, secondaryAnimation) {
+        return VoiceInputOverlay(
+          transcribedText: null,
+          onSwipeUpForOCR: () async {
+            Navigator.of(context).pop();
+            await _openOCRFlow();
+          },
+          onRecordComplete: () {
+            Navigator.of(context).pop();
+            ScaffoldMessenger.of(this.context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  AppLocalizations.of(this.context).featureComingSoon,
+                ),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          },
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOut,
+        );
+        return FadeTransition(opacity: curved, child: child);
+      },
+      transitionDuration: const Duration(milliseconds: 180),
+    );
+  }
+
+  Future<void> _openOCRFlow() async {
+    if (!mounted) return;
+
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (context) => const OCRCapturePage()),
+    );
+
+    if (!mounted) return;
+
+    final l10n = AppLocalizations.of(context);
+    String resultText = l10n.featureComingSoon;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      builder: (context) {
+        return OCRResultSheet(
+          recognizedText: resultText,
+          onTextChanged: (text) {
+            resultText = text;
+          },
+          onInsertToEditor: () {
+            Navigator.of(context).pop();
+            _showAddQuoteDialog(prefilledContent: resultText);
+          },
+          onRecognizeSource: () {},
+        );
+      },
+    );
   }
 
   // 显示编辑笔记对话框
@@ -967,6 +1283,69 @@ class _HomePageState extends State<HomePage>
     }
   }
 
+  // 处理心形按钮长按（清除收藏）
+  void _handleLongPressFavorite(Quote quote) async {
+    if (quote.favoriteCount <= 0) return;
+
+    final l10n = AppLocalizations.of(context);
+
+    // 显示确认对话框
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.clearFavoriteTitle),
+        content: Text(l10n.clearFavoriteMessage(quote.favoriteCount)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text(l10n.confirm),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+    if (!mounted) return;
+
+    try {
+      final db = Provider.of<DatabaseService>(context, listen: false);
+      await db.resetFavoriteCount(quote.id!);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.favorite_border, color: Colors.white, size: 16),
+              const SizedBox(width: 8),
+              Text(l10n.clearFavoriteSuccess),
+            ],
+          ),
+          duration: const Duration(milliseconds: 1500),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.clearFavoriteFailed),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   // 显示AI问答聊天界面
   void _showAIQuestionDialog(Quote quote) {
     Navigator.of(context).push(
@@ -997,7 +1376,10 @@ class _HomePageState extends State<HomePage>
 
     try {
       // 生成卡片
-      final card = await _aiCardService!.generateCard(note: quote);
+      final card = await _aiCardService!.generateCard(
+        note: quote,
+        brandName: AppLocalizations.of(context).appTitle,
+      );
 
       // 关闭加载对话框
       if (mounted) Navigator.of(context).pop();
@@ -1010,7 +1392,11 @@ class _HomePageState extends State<HomePage>
             card: card,
             onShare: (selected) => _shareCard(selected),
             onSave: (selected) => _saveCard(selected),
-            onRegenerate: () => _aiCardService!.generateCard(note: quote),
+            onRegenerate: () => _aiCardService!.generateCard(
+              note: quote,
+              isRegeneration: true,
+              brandName: AppLocalizations.of(context).appTitle,
+            ),
           ),
         );
       }
@@ -1151,6 +1537,7 @@ class _HomePageState extends State<HomePage>
         scaleFactor: 2.0,
         renderMode: ExportRenderMode.contain,
         context: context,
+        fileNamePrefix: AppLocalizations.of(context).cardFileNamePrefix,
       );
 
       if (mounted) {
@@ -1216,55 +1603,72 @@ class _HomePageState extends State<HomePage>
     WeatherService weatherService,
   ) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final connectivityService = Provider.of<ConnectivityService>(context);
     final isConnected = connectivityService.isConnected;
     final hasPermission = locationService.hasLocationPermission;
+    final isServiceEnabled = locationService.isLocationServiceEnabled;
     final hasCoordinates = locationService.hasCoordinates;
-    final hasCity = locationService.city != null &&
-        !locationService.city!.contains("Throttled!");
-    final hasWeather = weatherService.currentWeather != null;
+    final hasCity =
+        locationService.city != null && locationService.city!.isNotEmpty;
+    final hasWeather = weatherService.currentWeather != null &&
+        weatherService.currentWeather != 'error' &&
+        weatherService.currentWeather != 'unknown';
+    final isCached = weatherService.state == WeatherServiceState.cached;
 
-    // 决定显示什么文字
     String locationText;
     String weatherText;
     IconData weatherIcon;
 
-    if (!hasPermission) {
-      // 无定位权限
-      locationText = '无定位';
-      weatherText = '--';
-      weatherIcon = Icons.cloud_off;
-    } else if (!isConnected && !hasCity) {
-      // 离线且无城市
-      if (hasCoordinates) {
-        locationText = LocationService.formatCoordinates(
-          locationService.currentPosition!.latitude,
-          locationService.currentPosition!.longitude,
-        );
-      } else {
-        locationText = '无网络';
-      }
-      weatherText = '离线';
-      weatherIcon = Icons.cloud_off;
-    } else if (hasCity && hasWeather) {
-      // 正常状态
+    // --- 构建天气文本的辅助函数 ---
+    String buildWeatherText() {
+      return '${WeatherService.getLocalizedWeatherDescription(l10n, weatherService.currentWeather!)}'
+          '${weatherService.temperature != null && weatherService.temperature!.isNotEmpty ? ' ${weatherService.temperature}' : ''}'
+          '${isCached ? ' ${l10n.tileCachedSuffix}' : ''}';
+    }
+
+    // --- 优先级链：位置显示 ---
+    if (hasCity) {
+      // 有城市信息（可能来自 GPS 解析或手动搜索城市）
       locationText = locationService.getDisplayLocation();
-      final l10n = AppLocalizations.of(context);
-      weatherText =
-          '${WeatherService.getLocalizedWeatherDescription(l10n, weatherService.currentWeather!)}'
-          '${weatherService.temperature != null && weatherService.temperature!.isNotEmpty ? ' ${weatherService.temperature}' : ''}';
-      weatherIcon = weatherService.getWeatherIconData();
     } else if (hasCoordinates) {
-      // 有坐标但未解析
+      // 有坐标但没有城市名（离线 GPS 或解析中）
       locationText = LocationService.formatCoordinates(
         locationService.currentPosition!.latitude,
         locationService.currentPosition!.longitude,
       );
-      weatherText = '加载中...';
+    } else if (!isServiceEnabled) {
+      // P3: 位置服务未启用（优先于权限文案）
+      locationText = l10n.tileLocationServiceOff;
+    } else if (!hasPermission) {
+      // 有位置服务但没有权限
+      locationText = l10n.tileNoLocationPermission;
+    } else if (!isConnected) {
+      locationText = l10n.tileNoNetwork;
+    } else {
+      locationText = l10n.tileLoading;
+    }
+
+    // --- 优先级链：天气显示 ---
+    // P5: 不再把天气显示绑死在权限上；只要有天气数据就显示
+    if (hasWeather) {
+      weatherText = buildWeatherText();
+      weatherIcon = weatherService.getWeatherIconData();
+    } else if (!hasCoordinates && !hasCity) {
+      // 完全没有位置坐标，天气无法获取
+      if (!isConnected) {
+        weatherText = l10n.tileOffline;
+        weatherIcon = Icons.cloud_off;
+      } else {
+        weatherText = '--';
+        weatherIcon = Icons.cloud_off;
+      }
+    } else if (isConnected) {
+      weatherText = l10n.tileLoading;
       weatherIcon = Icons.cloud_queue;
     } else {
-      // 什么都没有，不显示
-      return const SizedBox.shrink();
+      weatherText = l10n.tileNoWeather;
+      weatherIcon = Icons.cloud_off;
     }
 
     return Padding(
@@ -1323,6 +1727,7 @@ class _HomePageState extends State<HomePage>
     final weatherService = Provider.of<WeatherService>(context);
     final locationService = Provider.of<LocationService>(context);
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     final aiService =
         context.watch<AIService>(); // Watch AIService for key changes
     final settingsService = context
@@ -1381,14 +1786,12 @@ class _HomePageState extends State<HomePage>
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                AppLocalizations.of(context).appTitleOffline,
-                              ),
+                                  AppLocalizations.of(context).appTitleOffline),
                             ],
                           );
                         } else {
-                          titleWidget = Text(
-                            AppLocalizations.of(context).appTitle,
-                          );
+                          titleWidget =
+                              Text(AppLocalizations.of(context).appTitle);
                         }
 
                         // 英文标题使用 FittedBox 自动缩放以完整显示，不显示省略号
@@ -1647,6 +2050,9 @@ class _HomePageState extends State<HomePage>
                       onFavorite: settingsService.showFavoriteButton
                           ? _handleFavoriteClick
                           : null, // 根据设置控制心形按钮显示
+                      onLongPressFavorite: settingsService.showFavoriteButton
+                          ? _handleLongPressFavorite
+                          : null, // 长按清除收藏
                       isLoadingTags: _isLoadingTags, // 传递标签加载状态
                       selectedWeathers: _selectedWeathers,
                       selectedDayPeriods: _selectedDayPeriods,
@@ -1658,6 +2064,7 @@ class _HomePageState extends State<HomePage>
                       },
                       filterButtonKey: _noteFilterGuideKey, // 功能引导 key
                       favoriteButtonGuideKey: _noteFavoriteGuideKey,
+                      moreButtonGuideKey: _noteMoreGuideKey,
                       foldToggleGuideKey: _noteFoldGuideKey,
                       onGuideTargetsReady: _handleNoteGuideTargetsReady,
                     );
@@ -1671,12 +2078,28 @@ class _HomePageState extends State<HomePage>
             SettingsPage(key: _settingsPageKey),
           ],
         ),
-        floatingActionButton: LocalAIFab(
-          heroTag: 'homePageFAB',
-          onTap: _onFABTap,
-          onInsertText: (text) {
-            _showAddQuoteDialog(prefilledContent: text);
-          },
+        floatingActionButton: GestureDetector(
+          onLongPressStart: (_) => _onFABLongPress(),
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: AppTheme.accentShadow,
+            ),
+            child: FloatingActionButton(
+              heroTag: 'homePageFAB',
+              tooltip: '${l10n.add} / ${l10n.voiceInputTitle}',
+              onPressed: _onFABTap,
+              elevation: 0,
+              backgroundColor:
+                  theme.floatingActionButtonTheme.backgroundColor, // 使用主题定义的颜色
+              foregroundColor:
+                  theme.floatingActionButtonTheme.foregroundColor, // 使用主题定义的颜色
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(Icons.add, size: 28),
+            ),
+          ),
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
         bottomNavigationBar: ClipRect(

@@ -46,7 +46,12 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   List<GeneratedCard> _featuredCards = [];
   bool _isLoadingData = false;
   bool _isGeneratingCards = false;
+  bool _isLoadingMoreCards = false; // 加载更多卡片中
   int? _selectedCardIndex;
+
+  // 分页加载状态
+  List<Quote> _pendingQuotesForCards = []; // 待生成卡片的笔记队列
+  static const int _cardsPerBatch = 6; // 每批生成卡片数
 
   // 新增：周期"最多"统计与洞察
   String? _mostDayPeriod; // 晨曦/午后/黄昏/夜晚
@@ -126,10 +131,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       final quotes = await databaseService.getAllQuotes();
 
       // 调试：打印获取到的所有笔记数量
-      AppLogger.d('getAllQuotes 返回笔记数: ${quotes.length}');
+      AppLogger.d('getAllQuotes returned notes count: ${quotes.length}');
       // 打印每条笔记的日期（前10条）
       for (var i = 0; i < quotes.length && i < 10; i++) {
-        AppLogger.d('  原始笔记[$i]: date=${quotes[i].date}');
+        AppLogger.d('  Raw note[$i]: date=${quotes[i].date}');
       }
 
       // 根据选择的时间范围筛选笔记
@@ -155,7 +160,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       setState(() {
         _isLoadingData = false;
       });
-      AppLogger.e('加载周期数据失败', error: e);
+      AppLogger.e('Failed to load period data', error: e);
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -169,11 +174,20 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   }
 
   Future<void> _computeExtrasAndInsight() async {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
+
     // 计算总字数
     final totalWords = _periodQuotes.fold<int>(
       0,
       (sum, q) => sum + q.content.length,
     );
+
+    // 生成数据签名 (用于判断数据是否发生变化)
+    // 签名组成: 周期类型_开始日期_结束日期_笔记数量_总字数
+    final rangeText = _getDateRangeText(l10n);
+    final dataSignature =
+        '${_selectedPeriod}_${rangeText}_${_periodQuotes.length}_$totalWords';
 
     // 最常见时间段
     final Map<String, int> periodCounts = {};
@@ -248,9 +262,6 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
     if (!mounted) return;
 
-    // 本地化资源
-    final l10n = AppLocalizations.of(context);
-
     // 处理时段显示：转换为本地化标签
     String? dayPeriodDisplay;
     IconData? dayPeriodIcon;
@@ -267,8 +278,9 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     IconData? weatherIcon;
     if (mostWeather != null) {
       // 如果是筛选分类key，直接使用分类标签
-      if (WeatherService.filterCategoryToLabel.containsKey(mostWeather)) {
-        weatherDisplay = WeatherService.filterCategoryToLabel[mostWeather];
+      if (WeatherService.filterCategoryToKeys.containsKey(mostWeather)) {
+        weatherDisplay = WeatherService.getLocalizedFilterCategoryLabel(
+            context, mostWeather);
         weatherIcon = WeatherService.getFilterCategoryIcon(mostWeather);
       } else {
         // 否则按原逻辑处理
@@ -278,8 +290,8 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         );
         weatherIcon = WeatherCodeMapper.getIcon(mostWeather);
 
-        // 如果返回的是"未知"，说明mostWeather可能已经是中文描述
-        if (weatherDisplay == '未知') {
+        // 如果返回的是未知描述，说明mostWeather可能已经是描述
+        if (weatherDisplay == l10n.weatherUnknown) {
           weatherDisplay = mostWeather;
           // 反向匹配：根据中文描述找到key以获取更准确的图标
           final key = WeatherCodeMapper.getKeyByDescription(mostWeather);
@@ -296,7 +308,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       _mostTopTag = topTagName;
       _notesPreview = samples.isEmpty ? null : samples;
 
-      // 设置显示用的中文文本和图标
+      // 设置显示用的文本和图标
       _mostDayPeriodDisplay = dayPeriodDisplay;
       _mostDayPeriodIcon = dayPeriodIcon;
       _mostWeatherDisplay = weatherDisplay;
@@ -304,10 +316,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       _mostTopTagIcon = topTagIcon;
     });
 
-    _maybeStartInsight();
+    _maybeStartInsight(dataSignature);
   }
 
-  void _maybeStartInsight() {
+  void _maybeStartInsight(String dataSignature) async {
     if (!mounted) return;
     final l10n = AppLocalizations.of(context);
     final settings = context.read<SettingsService>();
@@ -317,12 +329,43 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     final noteCount = _periodQuotes.length;
 
     _insightSub?.cancel();
+
+    // 1. 尝试从历史记录中查找缓存
+    final insightService = context.read<InsightHistoryService>();
+    final cachedInsight = insightService.getInsightBySignature(dataSignature);
+
+    if (cachedInsight != null) {
+      // 如果有缓存，直接使用缓存
+      if (mounted) {
+        setState(() {
+          _insightText = cachedInsight.insight;
+          _insightLoading = false;
+        });
+        AppLogger.d('Using cached insight for signature: $dataSignature');
+      }
+      return;
+    }
+
+    // 如果没有数据，不进行生成
+    if (noteCount == 0) {
+      if (mounted) {
+        setState(() {
+          _insightText = '';
+          _insightLoading = false;
+        });
+      }
+      return;
+    }
+
     if (useAI) {
       setState(() {
         _insightText = '';
         _insightLoading = true;
       });
       final ai = context.read<AIService>();
+
+      // 获取历史洞察上下文
+      final previousInsights = insightService.getPreviousInsightsContext();
 
       // 准备完整的笔记内容用于AI分析
       final fullNotesContent = _periodQuotes.map((quote) {
@@ -345,10 +388,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         if (quote.weather != null && quote.weather!.isNotEmpty) {
           final w = quote.weather!.trim();
           // 优先把英文key映射为国际化描述
-          final wDesc = WeatherCodeMapper.getLocalizedDescription(
-            l10n,
-            w,
-          );
+          final wDesc = WeatherCodeMapper.getLocalizedDescription(l10n, w);
           final display = wDesc == l10n.weatherUnknown ? w : wDesc;
           content += l10n.weatherInfo(display);
         }
@@ -367,6 +407,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         totalWordCount: _totalWordCount,
         notesPreview: _notesPreview,
         fullNotesContent: fullNotesContent, // 传递完整内容
+        previousInsights: previousInsights, // 传递历史上下文
       )
           .listen(
         (chunk) {
@@ -391,6 +432,11 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
             _insightText = local;
             _insightLoading = false;
           });
+
+          // 本地兜底生成的洞察也保存，但标记为非AI（在save方法里处理）
+          // 不过由于saveInsightToHistory目前强制isAiGenerated=true，
+          // 这里我们可能不想保存本地兜底的，或者保存但不带signature以避免污染？
+          // 暂时策略：出错降级为本地生成后，不保存到带signature的历史，以免下次误用本地版覆盖AI版
         },
         onDone: () {
           if (!mounted) return;
@@ -400,17 +446,15 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
           // 保存洞察到历史记录
           if (_insightText.isNotEmpty) {
-            _saveInsightToHistory(l10n);
+            _saveInsightToHistory(l10n, dataSignature: dataSignature);
           }
         },
       );
     } else {
+      // ... (Local generation logic remains mostly the same, but we won't save it with signature)
       // 调试：记录本地生成洞察的参数
       AppLogger.d(
-        '开始本地生成洞察 - useAI: $useAI, periodLabel: $periodLabel, activeDays: $activeDays, noteCount: $noteCount, totalWordCount: $_totalWordCount',
-      );
-      AppLogger.d(
-        '本地生成洞察参数 - mostTimePeriod: ${_mostDayPeriodDisplay ?? _mostDayPeriod}, mostWeather: ${_mostWeatherDisplay ?? _mostWeather}, topTag: $_mostTopTag',
+        'Start generating local insight - useAI: $useAI, periodLabel: $periodLabel, activeDays: $activeDays, noteCount: $noteCount, totalWordCount: $_totalWordCount',
       );
 
       final local = context.read<AIService>().buildLocalReportInsight(
@@ -423,27 +467,25 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
             totalWordCount: _totalWordCount,
           );
 
-      // 调试：记录本地生成的结果
-      AppLogger.d(
-        '本地生成洞察结果 - 长度: ${local.length}, 内容: ${local.isNotEmpty ? local.substring(0, local.length > 50 ? 50 : local.length) : "空字符串"}',
-      );
-
       setState(() {
         _insightText = local;
         _insightLoading = false;
       });
 
-      // 保存洞察到历史记录
-      if (_insightText.isNotEmpty) {
-        _saveInsightToHistory(l10n);
-      }
+      // 本地生成的洞察通常不保存到"AI历史"中，或者保存但不用于上下文参考
+      // 根据用户需求，这里我们不保存本地生成的洞察到带signature的缓存中，
+      // 因为用户明确说 "只有调用ai生成的才保存"
     }
   }
 
   /// 根据时间范围筛选笔记
   List<Quote> _filterQuotesByPeriod(List<Quote> quotes) {
     // 归一化选中日期为当天开始时间（去除时间分量）
-    final now = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+    final now = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+    );
     DateTime startDate;
     DateTime endDate;
 
@@ -469,30 +511,40 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     }
 
     // 调试日志
-    AppLogger.d('筛选条件: period=$_selectedPeriod, selectedDate=$_selectedDate');
-    AppLogger.d('筛选范围: startDate=$startDate, endDate=$endDate');
-    AppLogger.d('总笔记数: ${quotes.length}');
+    AppLogger.d(
+      'Filter conditions: period=$_selectedPeriod, selectedDate=$_selectedDate',
+    );
+    AppLogger.d('Filter range: startDate=$startDate, endDate=$endDate');
+    AppLogger.d('Total notes: ${quotes.length}');
 
     final filtered = quotes.where((quote) {
       final quoteDateTime = DateTime.parse(quote.date);
       // 归一化笔记日期为当天开始时间，只比较日期部分
-      final quoteDate = DateTime(quoteDateTime.year, quoteDateTime.month, quoteDateTime.day);
+      final quoteDate = DateTime(
+        quoteDateTime.year,
+        quoteDateTime.month,
+        quoteDateTime.day,
+      );
       // 使用 >= startDate 且 <= endDate 的逻辑
-      final isInRange = !quoteDate.isBefore(startDate) && !quoteDate.isAfter(endDate);
+      final isInRange =
+          !quoteDate.isBefore(startDate) && !quoteDate.isAfter(endDate);
       return isInRange;
     }).toList();
 
-    AppLogger.d('筛选后笔记数: ${filtered.length}');
+    AppLogger.d('Filtered notes count: ${filtered.length}');
     // 打印前5条笔记的日期以便调试
     for (var i = 0; i < filtered.length && i < 5; i++) {
-      AppLogger.d('  笔记[$i]: ${filtered[i].date}');
+      AppLogger.d('  Note[$i]: ${filtered[i].date}');
     }
 
     return filtered;
   }
 
   /// 保存洞察到历史记录
-  Future<void> _saveInsightToHistory(AppLocalizations l10n) async {
+  Future<void> _saveInsightToHistory(
+    AppLocalizations l10n, {
+    String? dataSignature,
+  }) async {
     try {
       final insightService = context.read<InsightHistoryService>();
 
@@ -517,18 +569,23 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         periodType: _selectedPeriod,
         periodLabel: periodLabel,
         isAiGenerated: true,
+        dataSignature: dataSignature, // 传递签名
       );
 
       logDebug(
-        '已保存洞察到历史记录: ${_insightText.substring(0, _insightText.length > 50 ? 50 : _insightText.length)}...',
+        'Saved insight to history: ${_insightText.substring(0, _insightText.length > 50 ? 50 : _insightText.length)}...',
         source: 'AIPeriodicReportPage',
       );
     } catch (e) {
-      logError('保存洞察到历史记录失败: $e', error: e, source: 'AIPeriodicReportPage');
+      logError(
+        'Failed to save insight to history: $e',
+        error: e,
+        source: 'AIPeriodicReportPage',
+      );
     }
   }
 
-  /// 生成精选卡片
+  /// 生成精选卡片（首次加载）
   Future<void> _generateFeaturedCards() async {
     if (_aiCardService == null || _periodQuotes.isEmpty || _isGeneratingCards) {
       return;
@@ -536,15 +593,24 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
     setState(() {
       _isGeneratingCards = true;
+      _featuredCards = []; // 清空现有卡片
     });
 
     try {
-      // 选择最有代表性的笔记（最多6张卡片）
-      final selectedQuotes = _selectRepresentativeQuotes(_periodQuotes);
+      // 选择所有有代表性的笔记（不限制数量），按多样性排序
+      final allSelectedQuotes = _selectRepresentativeQuotes(
+        _periodQuotes,
+        maxCount: _periodQuotes.length, // 选择所有符合条件的笔记
+      );
+
+      // 首批生成 _cardsPerBatch 张
+      final firstBatch = allSelectedQuotes.take(_cardsPerBatch).toList();
+      _pendingQuotesForCards = allSelectedQuotes.skip(_cardsPerBatch).toList();
 
       final cards = await _aiCardService!.generateFeaturedCards(
-        selectedQuotes,
-        maxCards: 6,
+        notes: firstBatch,
+        brandName: AppLocalizations.of(context).appTitle,
+        maxCards: _cardsPerBatch,
       );
 
       setState(() {
@@ -555,7 +621,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
       setState(() {
         _isGeneratingCards = false;
       });
-      AppLogger.e('生成精选卡片失败', error: e);
+      AppLogger.e('Failed to generate featured cards', error: e);
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -568,20 +634,73 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     }
   }
 
+  /// 加载更多卡片
+  Future<void> _loadMoreCards() async {
+    if (_aiCardService == null ||
+        _pendingQuotesForCards.isEmpty ||
+        _isLoadingMoreCards ||
+        _isGeneratingCards) {
+      return;
+    }
+
+    setState(() {
+      _isLoadingMoreCards = true;
+    });
+
+    try {
+      // 取下一批笔记
+      final nextBatch = _pendingQuotesForCards.take(_cardsPerBatch).toList();
+      _pendingQuotesForCards =
+          _pendingQuotesForCards.skip(_cardsPerBatch).toList();
+
+      final newCards = await _aiCardService!.generateFeaturedCards(
+        notes: nextBatch,
+        brandName: AppLocalizations.of(context).appTitle,
+        maxCards: _cardsPerBatch,
+      );
+
+      setState(() {
+        _featuredCards.addAll(newCards);
+        _isLoadingMoreCards = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoadingMoreCards = false;
+      });
+      AppLogger.e('Failed to load more cards', error: e);
+      if (mounted) {
+        final l10n = AppLocalizations.of(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.generateCardFailed(e.toString())),
+            duration: AppConstants.snackBarDurationError,
+          ),
+        );
+      }
+    }
+  }
+
+  /// 是否还有更多卡片可加载
+  bool get _hasMoreCards => _pendingQuotesForCards.isNotEmpty;
+
   /// 选择有代表性的笔记
-  List<Quote> _selectRepresentativeQuotes(List<Quote> quotes) {
+  /// [maxCount] 根据周期类型动态调整（周=6，月=12，年=18）
+  List<Quote> _selectRepresentativeQuotes(
+    List<Quote> quotes, {
+    int maxCount = 6,
+  }) {
     // 按内容长度和多样性选择
     final sortedQuotes = List<Quote>.from(quotes);
 
     // 优先选择内容丰富的笔记
     sortedQuotes.sort((a, b) => b.content.length.compareTo(a.content.length));
 
-    // 选择前6条，确保多样性
+    // 选择指定数量的笔记，确保多样性
     final selected = <Quote>[];
     final usedKeywords = <String>{};
 
     for (final quote in sortedQuotes) {
-      if (selected.length >= 6) break;
+      if (selected.length >= maxCount) break;
 
       // 简单的关键词去重逻辑
       final words = quote.content.toLowerCase().split(' ');
@@ -868,7 +987,12 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   children: [
                     const Icon(Icons.view_week, size: 16),
                     const SizedBox(width: 4),
-                    Text(l10n.thisWeek),
+                    Flexible(
+                      child: Text(
+                        l10n.thisWeek,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -879,7 +1003,12 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   children: [
                     const Icon(Icons.calendar_view_month, size: 16),
                     const SizedBox(width: 4),
-                    Text(l10n.thisMonth),
+                    Flexible(
+                      child: Text(
+                        l10n.thisMonth,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -890,7 +1019,12 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   children: [
                     const Icon(Icons.today, size: 16),
                     const SizedBox(width: 4),
-                    Text(l10n.thisYear),
+                    Flexible(
+                      child: Text(
+                        l10n.thisYear,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -901,12 +1035,13 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                 _selectedPeriod = selection.first;
                 // 切换时间范围时，重置生成的内容
                 _featuredCards = [];
+                _pendingQuotesForCards = [];
                 _selectedCardIndex = null;
               });
               _loadPeriodData();
             },
             style: SegmentedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
             ),
           ),
         ],
@@ -928,6 +1063,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         _selectedDate = picked;
         // 切换日期时，重置生成的内容
         _featuredCards = [];
+        _pendingQuotesForCards = [];
         _selectedCardIndex = null;
       });
       _loadPeriodData();
@@ -1548,20 +1684,30 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  value,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      value,
+                      style:
+                          Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                      maxLines: 1,
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  unit,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                ),
+                if (unit.isNotEmpty) ...[
+                  const SizedBox(width: 4),
+                  Text(
+                    unit,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ],
               ],
             ),
           ],
@@ -1607,20 +1753,30 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  value,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      value,
+                      style:
+                          Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                      maxLines: 1,
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  unit,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                ),
+                if (unit.isNotEmpty) ...[
+                  const SizedBox(width: 4),
+                  Text(
+                    unit,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ],
               ],
             ),
           ],
@@ -1677,20 +1833,30 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  value,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
+                Expanded(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      value,
+                      style:
+                          Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                      maxLines: 1,
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 4),
-                Text(
-                  unit,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                ),
+                if (unit.isNotEmpty) ...[
+                  const SizedBox(width: 4),
+                  Text(
+                    unit,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ],
               ],
             ),
           ],
@@ -2050,6 +2216,7 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
                   onPressed: () {
                     setState(() {
                       _featuredCards = [];
+                      _pendingQuotesForCards = [];
                     });
                     _generateFeaturedCards();
                   },
@@ -2140,6 +2307,15 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
 
   /// 构建精选卡片网格
   Widget _buildFeaturedCardsGrid() {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+
+    // 计算总项数：卡片数 + 可能的"加载更多"按钮
+    final hasLoadMore = _hasMoreCards && !_isLoadingMoreCards;
+    final isLoadingMore = _isLoadingMoreCards;
+    final extraItemCount = (hasLoadMore || isLoadingMore) ? 1 : 0;
+    final totalItemCount = _featuredCards.length + extraItemCount;
+
     return GridView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -2148,8 +2324,88 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
         crossAxisSpacing: 12,
         mainAxisSpacing: 12,
       ),
-      itemCount: _featuredCards.length,
+      itemCount: totalItemCount,
       itemBuilder: (context, index) {
+        // 最后一项显示"加载更多"或加载指示器
+        if (index >= _featuredCards.length) {
+          if (_isLoadingMoreCards) {
+            return Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: theme.colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.5,
+                ),
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      l10n.generatingCards,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          // "加载更多"按钮
+          return InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: _loadMoreCards,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: theme.colorScheme.outline.withValues(alpha: 0.5),
+                  width: 1.5,
+                  style: BorderStyle.solid,
+                ),
+                color: theme.colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.3,
+                ),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.add_circle_outline,
+                    size: 36,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    l10n.loadMoreCards,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    l10n.remainingCards(_pendingQuotesForCards.length),
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
         final card = _featuredCards[index];
         final isSelected = _selectedCardIndex == index;
 
@@ -2217,12 +2473,16 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
     Future<GeneratedCard> Function()? regenerateCallback;
     if (_aiCardService != null && quoteForCard != null) {
       regenerateCallback = () async {
-        final newCard =
-            await _aiCardService!.generateCard(note: quoteForCard!);
+        final newCard = await _aiCardService!.generateCard(
+          note: quoteForCard!,
+          isRegeneration: true,
+          brandName: AppLocalizations.of(context).appTitle,
+        );
         if (mounted) {
           setState(() {
-            final index =
-                _featuredCards.indexWhere((existing) => existing.id == card.id);
+            final index = _featuredCards.indexWhere(
+              (existing) => existing.id == card.id,
+            );
             if (index != -1) {
               _featuredCards[index] = newCard;
             }

@@ -6,6 +6,7 @@ import '../models/app_settings.dart';
 import '../models/multi_ai_settings.dart'; // 新增 MultiAISettings 导入
 import '../models/local_ai_settings.dart'; // 新增 LocalAISettings 导入
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/services/api_key_manager.dart';
 
 import '../services/mmkv_service.dart';
 
@@ -100,6 +101,16 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 开发者模式：首次打开后首次滑动卡顿监测开关
+  bool get enableFirstOpenScrollPerfMonitor =>
+      _appSettings.enableFirstOpenScrollPerfMonitor;
+  Future<void> setEnableFirstOpenScrollPerfMonitor(bool enabled) async {
+    _appSettings =
+        _appSettings.copyWith(enableFirstOpenScrollPerfMonitor: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
   // 语言设置：获取当前语言代码（null 表示跟随系统）
   String? get localeCode => _appSettings.localeCode;
 
@@ -126,6 +137,54 @@ class SettingsService extends ChangeNotifier {
   bool get requireBiometricForHidden => _appSettings.requireBiometricForHidden;
   Future<void> setRequireBiometricForHidden(bool enabled) async {
     _appSettings = _appSettings.copyWith(requireBiometricForHidden: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  // 添加笔记时自动勾选位置
+  bool get autoAttachLocation => _appSettings.autoAttachLocation;
+  Future<void> setAutoAttachLocation(bool enabled) async {
+    _appSettings = _appSettings.copyWith(autoAttachLocation: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  // 添加笔记时自动勾选天气
+  bool get autoAttachWeather => _appSettings.autoAttachWeather;
+  Future<void> setAutoAttachWeather(bool enabled) async {
+    _appSettings = _appSettings.copyWith(autoAttachWeather: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  // 默认作者（自动填充）
+  String? get defaultAuthor => _appSettings.defaultAuthor;
+  Future<void> setDefaultAuthor(String? author) async {
+    if (author == null || author.isEmpty) {
+      _appSettings = _appSettings.copyWith(clearDefaultAuthor: true);
+    } else {
+      _appSettings = _appSettings.copyWith(defaultAuthor: author);
+    }
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  // 默认出处（自动填充）
+  String? get defaultSource => _appSettings.defaultSource;
+  Future<void> setDefaultSource(String? source) async {
+    if (source == null || source.isEmpty) {
+      _appSettings = _appSettings.copyWith(clearDefaultSource: true);
+    } else {
+      _appSettings = _appSettings.copyWith(defaultSource: source);
+    }
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  // 默认标签 ID 列表（自动填充）
+  List<String> get defaultTagIds => _appSettings.defaultTagIds;
+  Future<void> setDefaultTagIds(List<String> tagIds) async {
+    _appSettings = _appSettings.copyWith(defaultTagIds: tagIds);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
     notifyListeners();
   }
@@ -201,6 +260,8 @@ class SettingsService extends ChangeNotifier {
     await _loadLocalAISettings(); // 新增本地AI设置加载
     _loadAppSettings();
     _loadThemeMode();
+
+    await _secureLegacyApiKey();
 
     notifyListeners();
   }
@@ -362,8 +423,13 @@ class SettingsService extends ChangeNotifier {
   }
 
   Future<void> updateAISettings(AISettings settings) async {
-    _aiSettings = settings;
-    await _mmkv.setString(_aiSettingsKey, json.encode(settings.toJson()));
+    // Security: Ensure we don't persist API key in plaintext in legacy AISettings
+    if (settings.apiKey.isNotEmpty) {
+      _aiSettings = settings.copyWith(apiKey: '');
+    } else {
+      _aiSettings = settings;
+    }
+    await _mmkv.setString(_aiSettingsKey, json.encode(_aiSettings.toJson()));
     notifyListeners();
   }
 
@@ -609,5 +675,57 @@ class SettingsService extends ChangeNotifier {
   Future<void> setCustomString(String key, String value) async {
     await _mmkv.init();
     await _mmkv.setString(key, value);
+  }
+
+  /// 迁移遗留的明文API密钥到安全存储
+  Future<void> _secureLegacyApiKey() async {
+    if (_aiSettings.apiKey.isEmpty) return;
+
+    bool shouldClear = false;
+
+    // 如果我们有当前选中的服务商
+    if (_multiAISettings.currentProviderId != null) {
+      final apiKeyManager = APIKeyManager();
+      final providerId = _multiAISettings.currentProviderId!;
+
+      try {
+        // 检查安全存储中是否已有密钥
+        final hasSecureKey = await apiKeyManager.hasValidProviderApiKey(
+          providerId,
+        );
+
+        if (hasSecureKey) {
+          // 安全存储中已有密钥，遗留的明文密钥是冗余的，可以直接清除
+          shouldClear = true;
+          logDebug(
+              'Found redundant plaintext API key in AISettings. Clearing.');
+        } else {
+          // 安全存储中没有密钥，尝试迁移
+          await apiKeyManager.saveProviderApiKey(
+            providerId,
+            _aiSettings.apiKey,
+          );
+          shouldClear = true;
+          logDebug(
+            'Migrated legacy plaintext API key to SecureStorage for provider: $providerId',
+          );
+        }
+      } catch (e) {
+        logDebug('Error securing legacy API key: $e');
+        // 出错时不清除，避免数据丢失
+      }
+    } else {
+      // 如果没有选中的服务商，暂时不清除，因为无法确定归属
+      // 但这种情况很少见，因为通常会有默认或已配置的服务商
+      logDebug(
+        'Legacy API key found but no current provider selected. Skipping migration.',
+      );
+    }
+
+    if (shouldClear) {
+      _aiSettings = _aiSettings.copyWith(apiKey: '');
+      await _mmkv.setString(_aiSettingsKey, json.encode(_aiSettings.toJson()));
+      logDebug('Legacy plaintext API key cleared from AISettings.');
+    }
   }
 }

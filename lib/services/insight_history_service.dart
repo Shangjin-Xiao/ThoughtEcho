@@ -9,6 +9,7 @@ class PeriodicInsight {
   final String periodLabel; // '本周', '本月', '2024年'
   final DateTime createdAt;
   final bool isAiGenerated; // 区分AI生成和本地生成
+  final String? dataSignature; // 数据签名，用于去重
 
   PeriodicInsight({
     required this.insight,
@@ -16,6 +17,7 @@ class PeriodicInsight {
     required this.periodLabel,
     required this.createdAt,
     required this.isAiGenerated,
+    this.dataSignature,
   });
 
   Map<String, dynamic> toJson() {
@@ -25,6 +27,7 @@ class PeriodicInsight {
       'periodLabel': periodLabel,
       'createdAt': createdAt.toIso8601String(),
       'isAiGenerated': isAiGenerated,
+      if (dataSignature != null) 'dataSignature': dataSignature,
     };
   }
 
@@ -35,6 +38,7 @@ class PeriodicInsight {
       periodLabel: json['periodLabel'] ?? '',
       createdAt: DateTime.tryParse(json['createdAt'] ?? '') ?? DateTime.now(),
       isAiGenerated: json['isAiGenerated'] ?? false,
+      dataSignature: json['dataSignature'],
     );
   }
 }
@@ -80,6 +84,7 @@ class InsightHistoryService extends ChangeNotifier {
     required String periodType,
     required String periodLabel,
     bool isAiGenerated = true,
+    String? dataSignature,
   }) async {
     try {
       // 只保存AI生成的洞察
@@ -91,6 +96,7 @@ class InsightHistoryService extends ChangeNotifier {
         periodLabel: periodLabel,
         createdAt: DateTime.now(),
         isAiGenerated: isAiGenerated,
+        dataSignature: dataSignature,
       );
 
       _insights.insert(0, newInsight);
@@ -116,6 +122,44 @@ class InsightHistoryService extends ChangeNotifier {
     } catch (e) {
       debugPrint('保存洞察到存储失败: $e');
     }
+  }
+
+  /// 根据数据签名获取洞察
+  PeriodicInsight? getInsightBySignature(String signature) {
+    try {
+      return _insights
+          .firstWhere((insight) => insight.dataSignature == signature);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// 获取历史洞察上下文（用于AI分析）
+  /// 仅返回最近的 [limit] 条**周报(week)**洞察，以避免无效数据干扰
+  String getPreviousInsightsContext({int limit = 3}) {
+    if (_insights.isEmpty) return '';
+
+    // 过滤出AI生成的周报洞察
+    final weeklyInsights = _insights
+        .where((i) => i.isAiGenerated && i.periodType == 'week')
+        .take(limit)
+        .toList();
+
+    if (weeklyInsights.isEmpty) return '';
+
+    final buffer = StringBuffer();
+    // 移除这行重复的标题，因为 AIPromptManager 已经添加了【历史洞察参考】标题
+    // buffer.writeln('【历史洞察参考】');
+    // buffer.writeln('以下是该用户之前的周期性洞察记录，可帮助你了解其长期思考模式：');
+
+    // 直接输出内容，让 PromptManager 统一控制标题格式
+    for (var i = 0; i < weeklyInsights.length; i++) {
+      final insight = weeklyInsights[i];
+      // 简化格式，只保留内容，因为 PromptManager 会包裹它
+      buffer.writeln('- [${insight.periodLabel}] ${insight.insight}');
+    }
+
+    return buffer.toString();
   }
 
   /// 获取最近的周期洞察（本周、上周、本月、上月）用于今日思考

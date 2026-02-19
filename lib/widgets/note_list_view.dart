@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:ui' show FrameTiming;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -11,6 +12,7 @@ import '../services/database_service.dart';
 import '../utils/icon_utils.dart';
 import '../utils/lottie_animation_manager.dart';
 import '../widgets/quote_item_widget.dart';
+import '../widgets/quote_content_widget.dart';
 import '../widgets/app_loading_view.dart';
 import '../widgets/app_empty_view.dart';
 import 'note_filter_sort_sheet.dart';
@@ -35,13 +37,15 @@ class NoteListView extends StatefulWidget {
   final Function(Quote) onDelete;
   final Function(Quote) onAskAI;
   final Function(Quote)? onGenerateCard;
-  final Function(Quote)? onFavorite; // 新增：心形按钮点击回调
+  final Function(Quote)? onFavorite; // 心形按钮点击回调
+  final Function(Quote)? onLongPressFavorite; // 心形按钮长按回调（清除收藏）
   final bool isLoadingTags; // 新增标签加载状态参数
   final List<String> selectedWeathers; // 新增天气筛选参数
   final List<String> selectedDayPeriods; // 新增时间段筛选参数
   final Function(List<String>, List<String>) onFilterChanged; // 新增筛选变化回调
   final GlobalKey? filterButtonKey; // 功能引导：筛选按钮的 Key
   final GlobalKey? favoriteButtonGuideKey; // 功能引导：心形按钮 Key
+  final GlobalKey? moreButtonGuideKey; // 功能引导：更多按钮 Key
   final GlobalKey? foldToggleGuideKey; // 功能引导：折叠/展开区域 Key
   final VoidCallback? onGuideTargetsReady; // 功能引导：目标就绪回调
 
@@ -59,13 +63,15 @@ class NoteListView extends StatefulWidget {
     required this.onDelete,
     required this.onAskAI,
     this.onGenerateCard,
-    this.onFavorite, // 新增：心形按钮点击回调
+    this.onFavorite, // 心形按钮点击回调
+    this.onLongPressFavorite, // 心形按钮长按回调（清除收藏）
     this.isLoadingTags = false, // 默认为false
     this.selectedWeathers = const [],
     this.selectedDayPeriods = const [],
     required this.onFilterChanged,
     this.filterButtonKey, // 功能引导 Key
     this.favoriteButtonGuideKey,
+    this.moreButtonGuideKey,
     this.foldToggleGuideKey,
     this.onGuideTargetsReady,
   });
@@ -102,6 +108,10 @@ class NoteListViewState extends State<NoteListView> {
   // 修复：用于检测和恢复滚动范围异常的计数器
   int _scrollExtentCheckCounter = 0;
   static const int _maxScrollExtentChecks = 3;
+  DateTime? _lastScrollExtentCheckTime;
+  static const Duration _scrollExtentCheckInterval = Duration(
+    milliseconds: 220,
+  );
 
   // 修复：添加防抖定时器和性能优化
   Timer? _searchDebounceTimer;
@@ -112,13 +122,24 @@ class NoteListViewState extends State<NoteListView> {
   DateTime? _lastUserScrollTime; // 最近一次用户滚动时间
   bool _isInitializing = true; // 标记是否正在初始化，避免冷启动滚动冲突
 
+  // 开发者模式：首次打开后首次手势滑动性能监测（非首帧）
+  bool _firstOpenScrollPerfEnabled = false;
+  bool _firstOpenScrollPerfRecording = false;
+  bool _firstOpenScrollPerfCaptured = false;
+  final List<FrameTiming> _firstOpenScrollFrameTimings = <FrameTiming>[];
+  final List<int> _firstOpenScrollUpdateMicros = <int>[];
+  Timer? _firstOpenScrollStopTimer;
+
+  bool _hasExpandableQuoteCached = false;
+  bool _hasExpandableQuoteComputed = false;
+
   /// 获取有效的标签列表：优先使用外部传入的，若为空则使用本地缓存
   List<NoteCategory> get _effectiveTags =>
       widget.tags.isNotEmpty ? widget.tags : _localTagsCache;
 
   bool get hasQuotes => _quotes.isNotEmpty;
 
-  bool get hasExpandableQuote => _quotes.any(QuoteItemWidget.needsExpansionFor);
+  bool get hasExpandableQuote => _hasExpandableQuoteCached;
 
   bool get isFilterGuideReady =>
       widget.filterButtonKey != null &&
@@ -223,17 +244,22 @@ class NoteListViewState extends State<NoteListView> {
     _lastScrollOffset = currentOffset;
 
     // 修复：检测滚动范围异常（列表提前终止的情况）
-    _checkAndFixScrollExtentAnomaly();
+    // 节流检测，避免滚动期间频繁触发数据库状态读取
+    final now = DateTime.now();
+    if (_lastScrollExtentCheckTime == null ||
+        now.difference(_lastScrollExtentCheckTime!) >=
+            _scrollExtentCheckInterval) {
+      _lastScrollExtentCheckTime = now;
+      _checkAndFixScrollExtentAnomaly();
+    }
 
     // 如果正在初始化，忽略滚动事件以避免冲突
     if (_isInitializing) {
-      logDebug('正在初始化，忽略滚动事件', source: 'NoteListView');
       return;
     }
 
     // 自动滚动过程中产生的事件不视为用户操作
     if (_isAutoScrolling) {
-      logDebug('自动滚动进行中，忽略滚动事件', source: 'NoteListView');
       return;
     }
 
@@ -242,7 +268,6 @@ class NoteListViewState extends State<NoteListView> {
       _isUserScrolling = true;
     }
 
-    final now = DateTime.now();
     _lastUserScrollTime = now;
 
     // 重置定时器
@@ -252,13 +277,156 @@ class NoteListViewState extends State<NoteListView> {
     _userScrollingTimer = Timer(const Duration(milliseconds: 450), () {
       if (!mounted) return;
       if (_isAutoScrolling) return;
-
-      if (_isUserScrolling) {
-        setState(() {
-          _isUserScrolling = false;
-        });
-      }
+      _isUserScrolling = false;
       _lastUserScrollTime = null;
+    });
+  }
+
+  void _startFirstOpenScrollPerfCapture() {
+    if (!_firstOpenScrollPerfEnabled ||
+        _firstOpenScrollPerfCaptured ||
+        _firstOpenScrollPerfRecording ||
+        !_initialDataLoaded) {
+      return;
+    }
+
+    _firstOpenScrollPerfRecording = true;
+    _firstOpenScrollFrameTimings.clear();
+    _firstOpenScrollUpdateMicros.clear();
+    _firstOpenScrollStopTimer?.cancel();
+    WidgetsBinding.instance.addTimingsCallback(_collectFrameTimings);
+    logDebug('首次滑动性能监测开始', source: 'NoteListView.Perf');
+  }
+
+  void _collectFrameTimings(List<FrameTiming> timings) {
+    if (!_firstOpenScrollPerfRecording) {
+      return;
+    }
+    _firstOpenScrollFrameTimings.addAll(timings);
+  }
+
+  void _stopFirstOpenScrollPerfCapture() {
+    if (!_firstOpenScrollPerfRecording) {
+      return;
+    }
+
+    _firstOpenScrollStopTimer?.cancel();
+    _firstOpenScrollStopTimer = Timer(
+      const Duration(milliseconds: 180),
+      _finalizeFirstOpenScrollPerfCapture,
+    );
+  }
+
+  void _finalizeFirstOpenScrollPerfCapture() {
+    if (!_firstOpenScrollPerfRecording) {
+      return;
+    }
+
+    _firstOpenScrollPerfRecording = false;
+    _firstOpenScrollPerfCaptured = true;
+    WidgetsBinding.instance.removeTimingsCallback(_collectFrameTimings);
+
+    if (_firstOpenScrollFrameTimings.isNotEmpty) {
+      int jankyFrames = 0;
+      double worstFrameMs = 0;
+      int totalFrameMicros = 0;
+
+      for (final timing in _firstOpenScrollFrameTimings) {
+        final int totalMicros = timing.buildDuration.inMicroseconds +
+            timing.rasterDuration.inMicroseconds;
+        totalFrameMicros += totalMicros;
+
+        final frameMs = totalMicros / 1000.0;
+        if (frameMs > worstFrameMs) {
+          worstFrameMs = frameMs;
+        }
+
+        if (totalMicros > 16600) {
+          jankyFrames++;
+        }
+      }
+
+      final totalFrames = _firstOpenScrollFrameTimings.length;
+      final avgFrameMs = (totalFrameMicros / totalFrames) / 1000.0;
+
+      logDebug(
+        '首次滑动性能结果(FrameTiming): total=$totalFrames, jank=$jankyFrames, '
+        'avg=${avgFrameMs.toStringAsFixed(1)}ms, '
+        'worst=${worstFrameMs.toStringAsFixed(1)}ms',
+        source: 'NoteListView.Perf',
+      );
+    } else {
+      if (_firstOpenScrollUpdateMicros.length < 2) {
+        logDebug(
+          '首次滑动性能结果(滚动事件): 样本不足，updates=${_firstOpenScrollUpdateMicros.length}',
+          source: 'NoteListView.Perf',
+        );
+        return;
+      }
+
+      int jankyIntervals = 0;
+      int worstIntervalMicros = 0;
+      int totalIntervalMicros = 0;
+
+      for (int i = 1; i < _firstOpenScrollUpdateMicros.length; i++) {
+        final int interval = _firstOpenScrollUpdateMicros[i] -
+            _firstOpenScrollUpdateMicros[i - 1];
+        if (interval > worstIntervalMicros) {
+          worstIntervalMicros = interval;
+        }
+        totalIntervalMicros += interval;
+        if (interval > 20000) {
+          jankyIntervals++;
+        }
+      }
+
+      final int sampleCount = _firstOpenScrollUpdateMicros.length - 1;
+      final double avgIntervalMs = (totalIntervalMicros / sampleCount) / 1000.0;
+      final double worstIntervalMs = worstIntervalMicros / 1000.0;
+
+      logDebug(
+        '首次滑动性能结果(滚动事件回退): samples=$sampleCount, '
+        'jankIntervals=$jankyIntervals, '
+        'avgInterval=${avgIntervalMs.toStringAsFixed(1)}ms, '
+        'worstInterval=${worstIntervalMs.toStringAsFixed(1)}ms',
+        source: 'NoteListView.Perf',
+      );
+    }
+
+    if (!mounted) {
+      return;
+    }
+  }
+
+  void _scheduleExpandableQuoteCheck() {
+    _hasExpandableQuoteComputed = false;
+    _hasExpandableQuoteCached = false;
+
+    if (_quotes.isEmpty) {
+      return;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || _hasExpandableQuoteComputed) {
+        return;
+      }
+
+      final bool hasExpandable = _quotes.take(80).any(
+            QuoteItemWidget.needsExpansionFor,
+          );
+
+      if (!mounted) {
+        return;
+      }
+
+      _hasExpandableQuoteComputed = true;
+      if (_hasExpandableQuoteCached != hasExpandable) {
+        setState(() {
+          _hasExpandableQuoteCached = hasExpandable;
+        });
+      } else {
+        _hasExpandableQuoteCached = hasExpandable;
+      }
     });
   }
 
@@ -326,16 +494,6 @@ class NoteListViewState extends State<NoteListView> {
         setState(() {
           _hasMore = db.hasMoreQuotes;
           _isLoading = false;
-        });
-
-        // 强制刷新 ScrollController 以更新滚动范围
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && _scrollController.hasClients) {
-            // 触发轻微滚动以强制重新计算滚动范围
-            final currentOffset = _scrollController.offset;
-            _scrollController.jumpTo(currentOffset + 0.1);
-            _scrollController.jumpTo(currentOffset);
-          }
         });
       }
     } catch (e) {
@@ -442,6 +600,7 @@ class NoteListViewState extends State<NoteListView> {
             _isLoading = false;
             _pruneExpansionControllers();
           });
+          _scheduleExpandableQuoteCheck();
 
           if (widget.onGuideTargetsReady != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -477,6 +636,8 @@ class NoteListViewState extends State<NoteListView> {
             });
             // 冷启动保护期：设置较长的保护期，避免首次进入时的滚动冲突
             _lastUserScrollTime = DateTime.now();
+            // 预热 Document 缓存：在用户滚动前异步解析所有已加载笔记的富文本 JSON
+            QuoteContent.prewarmDocumentCache(list);
             logDebug('首次数据加载完成', source: 'NoteListView');
           }
 
@@ -681,6 +842,10 @@ class NoteListViewState extends State<NoteListView> {
             _isLoading = false;
             _pruneExpansionControllers();
           });
+          _scheduleExpandableQuoteCheck();
+
+          // 预热新加载数据的 Document 缓存
+          QuoteContent.prewarmDocumentCache(list);
 
           if (widget.onGuideTargetsReady != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -831,6 +996,12 @@ class NoteListViewState extends State<NoteListView> {
 
     _searchDebounceTimer?.cancel(); // 清理防抖定时器
     _userScrollingTimer?.cancel(); // 清理用户滑动定时器
+    _firstOpenScrollStopTimer?.cancel();
+
+    if (_firstOpenScrollPerfRecording) {
+      WidgetsBinding.instance.removeTimingsCallback(_collectFrameTimings);
+      _firstOpenScrollPerfRecording = false;
+    }
 
     for (final notifier in _expansionNotifiers.values) {
       notifier.dispose();
@@ -1015,18 +1186,8 @@ class NoteListViewState extends State<NoteListView> {
           _hasMore = db.hasMoreQuotes;
           _isLoading = false; // 加载完成后重置状态
         });
-
-        // 修复：加载更多后强制刷新滚动范围
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && _scrollController.hasClients) {
-            // 触发轻微滚动以强制重新计算滚动范围
-            final currentOffset = _scrollController.offset;
-            if (currentOffset > 0) {
-              _scrollController.jumpTo(currentOffset + 0.1);
-              _scrollController.jumpTo(currentOffset);
-            }
-          }
-        });
+        // 注意：移除了 jumpTo 双跳 hack，该 hack 会导致偶发卡顿
+        // ListView.builder 会自动处理 itemCount 变化后的滚动范围更新
       }
     } catch (e) {
       // 修复：出错时也要重置加载状态
@@ -1113,11 +1274,29 @@ class NoteListViewState extends State<NoteListView> {
     }
 
     var favoriteGuideAssigned = false;
+    var moreGuideAssigned = false;
     var foldGuideAssigned = false;
+
+    // 优化：提前创建标签映射，避免在 item builder 中重复计算
+    // 将整体复杂度从 O(L * T) 优化为 O(L + T)，其中构建映射为 O(L)，每次查找为 O(1)
+    final tagMap = {for (var t in _effectiveTags) t.id: t};
 
     return NotificationListener<ScrollNotification>(
       key: listKey,
       onNotification: (ScrollNotification notification) {
+        if (_firstOpenScrollPerfEnabled && !_firstOpenScrollPerfCaptured) {
+          if (notification is ScrollStartNotification &&
+              notification.dragDetails != null) {
+            _startFirstOpenScrollPerfCapture();
+          } else if (_firstOpenScrollPerfRecording &&
+              notification is ScrollUpdateNotification) {
+            _firstOpenScrollUpdateMicros
+                .add(DateTime.now().microsecondsSinceEpoch);
+          } else if (notification is ScrollEndNotification) {
+            _stopFirstOpenScrollPerfCapture();
+          }
+        }
+
         // 修复：优化预加载逻辑，减少频繁触发
         if (notification is ScrollUpdateNotification) {
           final metrics = notification.metrics;
@@ -1152,9 +1331,9 @@ class NoteListViewState extends State<NoteListView> {
       child: ListView.builder(
         controller: _scrollController, // 添加滚动控制器
         physics: const AlwaysScrollableScrollPhysics(),
-        addAutomaticKeepAlives: true, // 性能优化：保持滚动位置
+        addAutomaticKeepAlives: true, // 保持默认：图片组件依赖 keepAlive 避免重加载闪烁
         addRepaintBoundaries: true, // 性能优化：减少重绘范围
-        cacheExtent: 500, // 性能优化：预渲染500像素范围
+        cacheExtent: AppConstants.noteListCacheExtent,
         itemCount: _quotes.length + (_hasMore ? 1 : 0),
         itemBuilder: (context, index) {
           if (index < _quotes.length) {
@@ -1171,19 +1350,27 @@ class NoteListViewState extends State<NoteListView> {
               () => GlobalKey(debugLabel: itemKey),
             );
 
-            final bool needsExpansion = QuoteItemWidget.needsExpansionFor(
-              quote,
-            );
+            final bool shouldCheckExpansionForGuide =
+                !foldGuideAssigned && widget.foldToggleGuideKey != null;
+            final bool needsExpansion = shouldCheckExpansionForGuide
+                ? QuoteItemWidget.needsExpansionFor(quote)
+                : false;
 
             final attachFavoriteGuideKey = !favoriteGuideAssigned &&
                 widget.favoriteButtonGuideKey != null &&
                 widget.onFavorite != null;
+            final attachMoreGuideKey =
+                !moreGuideAssigned && widget.moreButtonGuideKey != null;
             final attachFoldGuideKey = !foldGuideAssigned &&
                 widget.foldToggleGuideKey != null &&
                 needsExpansion;
 
             if (attachFavoriteGuideKey) {
               favoriteGuideAssigned = true;
+            }
+
+            if (attachMoreGuideKey) {
+              moreGuideAssigned = true;
             }
 
             if (attachFoldGuideKey) {
@@ -1193,13 +1380,13 @@ class NoteListViewState extends State<NoteListView> {
             final expansionNotifier = _obtainExpansionNotifier(quoteId);
             _expandedItems.putIfAbsent(quoteId, () => expansionNotifier.value);
 
-            return RepaintBoundary(
+            return KeyedSubtree(
               key: _itemKeys[quoteId],
               child: ValueListenableBuilder<bool>(
                 valueListenable: expansionNotifier,
                 builder: (context, isExpanded, child) => QuoteItemWidget(
                   quote: quote,
-                  tags: _effectiveTags,
+                  tagMap: tagMap,
                   selectedTagIds: widget.selectedTagIds,
                   isExpanded: isExpanded,
                   onToggleExpanded: (expanded) {
@@ -1208,7 +1395,8 @@ class NoteListViewState extends State<NoteListView> {
                     }
                     _expandedItems[quoteId] = expanded;
 
-                    final bool requiresAlignment = needsExpansion;
+                    final bool requiresAlignment =
+                        QuoteItemWidget.needsExpansionFor(quote);
 
                     if (!expanded && requiresAlignment) {
                       final waitDuration =
@@ -1232,9 +1420,14 @@ class NoteListViewState extends State<NoteListView> {
                   onFavorite: widget.onFavorite != null
                       ? () => widget.onFavorite!(quote)
                       : null,
+                  onLongPressFavorite: widget.onLongPressFavorite != null
+                      ? () => widget.onLongPressFavorite!(quote)
+                      : null,
                   favoriteButtonGuideKey: attachFavoriteGuideKey
                       ? widget.favoriteButtonGuideKey
                       : null,
+                  moreButtonGuideKey:
+                      attachMoreGuideKey ? widget.moreButtonGuideKey : null,
                   foldToggleGuideKey:
                       attachFoldGuideKey ? widget.foldToggleGuideKey : null,
                   // 不使用自定义 tagBuilder，让 QuoteItemWidget 使用内部的标签渲染逻辑
@@ -1358,6 +1551,9 @@ class NoteListViewState extends State<NoteListView> {
     final searchController = Provider.of<NoteSearchController>(context);
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
+    _firstOpenScrollPerfEnabled = context.select<SettingsService, bool>(
+      (s) => s.appSettings.developerMode && s.enableFirstOpenScrollPerfMonitor,
+    );
 
     // 监听搜索控制器状态，如果搜索出错则重置本地加载状态
     if (searchController.searchError != null && _isLoading) {
@@ -1434,20 +1630,28 @@ class NoteListViewState extends State<NoteListView> {
                               builder: (context, settings, _) {
                                 final localAI = settings.localAISettings;
                                 // 只有启用了本地AI和AI搜索功能才显示
-                                if (localAI.enabled && localAI.aiSearchEnabled) {
+                                if (localAI.enabled &&
+                                    localAI.aiSearchEnabled) {
                                   return IconButton(
                                     icon: Icon(
-                                      _isAISearchMode ? Icons.auto_awesome : Icons.search,
-                                      color: _isAISearchMode ? theme.colorScheme.primary : null,
+                                      _isAISearchMode
+                                          ? Icons.auto_awesome
+                                          : Icons.search,
+                                      color: _isAISearchMode
+                                          ? theme.colorScheme.primary
+                                          : null,
                                     ),
-                                    tooltip: _isAISearchMode ? l10n.aiSearchMode : l10n.normalSearchMode,
+                                    tooltip: _isAISearchMode
+                                        ? l10n.aiSearchMode
+                                        : l10n.normalSearchMode,
                                     onPressed: () {
                                       setState(() {
                                         _isAISearchMode = !_isAISearchMode;
                                       });
                                       // 如果有搜索词，重新搜索
                                       if (_searchController.text.isNotEmpty) {
-                                        _onSearchChanged(_searchController.text);
+                                        _onSearchChanged(
+                                            _searchController.text);
                                       }
                                     },
                                   );
@@ -1461,47 +1665,50 @@ class NoteListViewState extends State<NoteListView> {
                               icon: const Icon(Icons.tune),
                               tooltip: l10n.filterAndSortTooltip,
                               onPressed: () {
-                            final settings = context.read<SettingsService>();
-                            showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              backgroundColor: Theme.of(
-                                context,
-                              ).colorScheme.surfaceContainerLowest,
-                              shape: const RoundedRectangleBorder(
-                                borderRadius: BorderRadius.vertical(
-                                  top: Radius.circular(16),
-                                ),
-                              ),
-                              builder: (context) => NoteFilterSortSheet(
-                                allTags: _effectiveTags,
-                                selectedTagIds: widget.selectedTagIds,
-                                sortType: widget.sortType,
-                                sortAscending: widget.sortAscending,
-                                selectedWeathers: widget.selectedWeathers,
-                                selectedDayPeriods: widget.selectedDayPeriods,
-                                requireBiometricForHidden: settings.requireBiometricForHidden,
-                                onApply: (
-                                  tagIds,
-                                  sortType,
-                                  sortAscending,
-                                  selectedWeathers,
-                                  selectedDayPeriods,
-                                ) {
-                                  widget.onTagSelectionChanged(tagIds);
-                                  widget.onSortChanged(
-                                    sortType,
-                                    sortAscending,
-                                  );
-                                  widget.onFilterChanged(
-                                    selectedWeathers,
-                                    selectedDayPeriods,
-                                  );
-                                  _updateStreamSubscription();
-                                },
-                              ),
-                            );
-                          },
+                                final settings =
+                                    context.read<SettingsService>();
+                                showModalBottomSheet(
+                                  context: context,
+                                  isScrollControlled: true,
+                                  backgroundColor: Theme.of(
+                                    context,
+                                  ).colorScheme.surfaceContainerLowest,
+                                  shape: const RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.vertical(
+                                      top: Radius.circular(16),
+                                    ),
+                                  ),
+                                  builder: (context) => NoteFilterSortSheet(
+                                    allTags: _effectiveTags,
+                                    selectedTagIds: widget.selectedTagIds,
+                                    sortType: widget.sortType,
+                                    sortAscending: widget.sortAscending,
+                                    selectedWeathers: widget.selectedWeathers,
+                                    selectedDayPeriods:
+                                        widget.selectedDayPeriods,
+                                    requireBiometricForHidden:
+                                        settings.requireBiometricForHidden,
+                                    onApply: (
+                                      tagIds,
+                                      sortType,
+                                      sortAscending,
+                                      selectedWeathers,
+                                      selectedDayPeriods,
+                                    ) {
+                                      widget.onTagSelectionChanged(tagIds);
+                                      widget.onSortChanged(
+                                        sortType,
+                                        sortAscending,
+                                      );
+                                      widget.onFilterChanged(
+                                        selectedWeathers,
+                                        selectedDayPeriods,
+                                      );
+                                      _updateStreamSubscription();
+                                    },
+                                  ),
+                                );
+                              },
                             ),
                           ],
                         ),
@@ -1644,7 +1851,8 @@ class NoteListViewState extends State<NoteListView> {
 
       allChips.addAll(
         categorySet.map((cat) {
-          final label = WeatherService.filterCategoryToLabel[cat] ?? cat;
+          final label =
+              WeatherService.getLocalizedFilterCategoryLabel(context, cat);
           final icon = WeatherService.getFilterCategoryIcon(cat);
           return TweenAnimationBuilder<double>(
             key: ValueKey('weather_cat_$cat'),
@@ -1685,7 +1893,7 @@ class NoteListViewState extends State<NoteListView> {
       final List<String> others =
           widget.selectedWeathers.where((k) => !knownKeys.contains(k)).toList();
       for (final k in others) {
-        final label = WeatherService.weatherKeyToLabel[k] ?? k;
+        final label = WeatherService.getLocalizedWeatherLabel(context, k);
         allChips.add(
           TweenAnimationBuilder<double>(
             key: ValueKey('weather_$k'),

@@ -220,6 +220,10 @@ class ReceiveController {
       final contentType = request.headers.contentType;
       final boundary = contentType?.parameters['boundary'];
 
+      // Tracking last reported bytes to throttle updates (e.g. every 100KB)
+      int lastReportedBytes = 0;
+      const int progressThreshold = 100 * 1024;
+
       if (contentType != null &&
           contentType.mimeType == 'multipart/form-data' &&
           boundary != null) {
@@ -246,12 +250,14 @@ class ReceiveController {
           await for (final chunk in part) {
             received += chunk.length;
             await raf.writeFrom(chunk);
-            if (received % (64 * 1024) == 0) {
+            // Report progress if we've received enough new bytes
+            if (received - lastReportedBytes >= progressThreshold) {
               logDebug(
                 'recv_progress bytes=$received size=${fileDto.size}',
                 source: 'LocalSend',
               );
               onReceiveProgress?.call(received, fileDto.size);
+              lastReportedBytes = received;
             }
           }
         }
@@ -269,12 +275,14 @@ class ReceiveController {
           }
           received += chunk.length;
           await raf.writeFrom(chunk);
-          if (received % (64 * 1024) == 0) {
+          // Report progress if we've received enough new bytes
+          if (received - lastReportedBytes >= progressThreshold) {
             logDebug(
               'recv_progress bytes=$received size=${fileDto.size}',
               source: 'LocalSend',
             );
             onReceiveProgress?.call(received, fileDto.size);
+            lastReportedBytes = received;
           }
         }
       }

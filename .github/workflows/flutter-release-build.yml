@@ -47,7 +47,7 @@ jobs:
       - name: 设置 Flutter 环境
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.35.3'
+          flutter-version: '3.38.6'
           channel: 'stable'
           cache: true
       
@@ -86,10 +86,6 @@ jobs:
           flutter --version
           flutter doctor -v
           flutter pub get
-          # ⚠️ 不在发布构建中执行 pub upgrade：
-          # 1) 会下载/更新大量依赖缓存，增加 CI 磁盘压力
-          # 2) 可能引入与当前约束不兼容的新版本，导致构建不稳定
-          # 如需升级依赖，请在专门的 PR 中更新 pubspec.lock 后再发布。
 
       - name: 构建发布版APK
         run: |

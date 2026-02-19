@@ -14,6 +14,7 @@ import '../theme/app_theme.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter_markdown/flutter_markdown.dart'; // 导入 markdown 库
 import '../utils/color_utils.dart'; // Import color_utils
+import 'accessible_color_grid.dart'; // Import the new accessible color grid
 import 'add_note_ai_menu.dart'; // 导入 AI 菜单组件
 import '../pages/note_full_editor_page.dart'; // 导入全屏富文本编辑器
 import 'package:thoughtecho/utils/app_logger.dart';
@@ -52,8 +53,11 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   late TextEditingController _authorController;
   late TextEditingController _workController;
   final GlobalKey _fullscreenButtonKey = GlobalKey();
+  final GlobalKey _tagGuideKey = GlobalKey(); // 标签功能引导 Key
   final List<String> _selectedTagIds = [];
   String? _aiSummary;
+  Quote? _fullInitialQuote;
+  bool _isLoadingFullQuote = false;
 
   // 优化：内部维护标签列表，支持动态更新
   List<NoteCategory> _availableTags = [];
@@ -82,6 +86,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
   // 标签搜索控制器
   final TextEditingController _tagSearchController = TextEditingController();
+
+  // 性能优化：延迟请求焦点，避免与 BottomSheet 动画竞争
+  final FocusNode _contentFocusNode = FocusNode();
 
   // 性能优化：缓存Provider引用，避免重复查找
   LocationService? _cachedLocationService;
@@ -132,6 +139,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   void initState() {
     super.initState();
 
+    // 每日一言双击添加：使用一言数据专属填充，跳过通用默认填充（作者/出处/默认标签）
+    final bool isHitokotoQuickAdd = widget.hitokotoData != null;
+
     // 初始化控制器
     _contentController = TextEditingController(
       text: widget.initialQuote?.content ?? widget.prefilledContent ?? '',
@@ -150,31 +160,123 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     _filteredTags = _availableTags;
     _lastSearchQuery = '';
 
+    // 新建笔记时，自动填充默认作者、出处和标签
+    if (widget.initialQuote == null && !isHitokotoQuickAdd) {
+      final settingsService = _readServiceOrNull<SettingsService>(context);
+      if (settingsService != null) {
+        // 仅在没有预填充值时使用默认值
+        if (_authorController.text.isEmpty &&
+            settingsService.defaultAuthor != null &&
+            settingsService.defaultAuthor!.isNotEmpty) {
+          _authorController.text = settingsService.defaultAuthor!;
+        }
+        if (_workController.text.isEmpty &&
+            settingsService.defaultSource != null &&
+            settingsService.defaultSource!.isNotEmpty) {
+          _workController.text = settingsService.defaultSource!;
+        }
+        // 自动添加默认标签
+        if (_selectedTagIds.isEmpty &&
+            settingsService.defaultTagIds.isNotEmpty) {
+          _selectedTagIds.addAll(settingsService.defaultTagIds);
+        }
+      }
+    }
+
     // 优化：完全延迟所有服务初始化和数据库监听器，避免阻塞首次绘制
-    // 使用 microtask 确保在首次 build 完成后再执行
-    Future.microtask(() {
+    // 使用 postFrameCallback + delay 确保首帧渲染完成后再执行重量级操作
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
 
-      _cachedLocationService = _readServiceOrNull<LocationService>(context);
-      _cachedWeatherService = _readServiceOrNull<WeatherService>(context);
-      _databaseService = _readServiceOrNull<DatabaseService>(context);
+      // 延迟 300ms 执行服务初始化和位置/天气获取，避免与动画竞争
+      Future.delayed(const Duration(milliseconds: 300), () async {
+        if (!mounted) return;
 
-      // 延迟注册监听器，避免初始化时触发不必要的查询
-      Future.delayed(const Duration(milliseconds: 500), () {
-        if (mounted && _databaseService != null) {
-          _databaseService!.addListener(_onDatabaseChanged);
+        _cachedLocationService = _readServiceOrNull<LocationService>(context);
+        _cachedWeatherService = _readServiceOrNull<WeatherService>(context);
+        _databaseService = _readServiceOrNull<DatabaseService>(context);
+
+        // 新建笔记时，读取用户偏好并自动勾选位置/天气
+        if (widget.initialQuote == null) {
+          final settingsService = _readServiceOrNull<SettingsService>(context);
+          if (settingsService != null) {
+            final autoLocation = settingsService.autoAttachLocation;
+            final autoWeather = settingsService.autoAttachWeather;
+
+            if (autoLocation || autoWeather) {
+              if (mounted) {
+                setState(() {
+                  if (autoLocation) {
+                    _includeLocation = true;
+                  }
+                  if (autoWeather) {
+                    _includeWeather = true;
+                  }
+                });
+              }
+
+              // 如果自动勾选了位置，获取位置；天气需要位置坐标，所以在位置获取后处理
+              if (autoLocation) {
+                await _fetchLocationForNewNote();
+                // 位置获取后再获取天气
+                if (autoWeather &&
+                    _includeLocation &&
+                    (_newLatitude != null ||
+                        _cachedLocationService?.currentPosition != null)) {
+                  _fetchWeatherForNewNote();
+                } else if (autoWeather && !_includeLocation) {
+                  // 位置获取失败，天气也无法获取，取消天气选中并提示
+                  if (mounted) {
+                    setState(() {
+                      _includeWeather = false;
+                    });
+                    if (context.mounted) {
+                      final l10n = AppLocalizations.of(context);
+                      showDialog(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: Text(l10n.weatherFetchFailedTitle),
+                          content: Text(l10n.locationAndWeatherUnavailable),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx),
+                              child: Text(l10n.iKnow),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                  }
+                }
+              } else if (autoWeather) {
+                // 没有勾选位置但勾选了天气，尝试用缓存的位置获取天气
+                _fetchWeatherForNewNote();
+              }
+            }
+          }
         }
+
+        // 延迟注册监听器，避免初始化时触发不必要的查询
+        Future.delayed(const Duration(milliseconds: 200), () {
+          if (mounted && _databaseService != null) {
+            _databaseService!.addListener(_onDatabaseChanged);
+          }
+        });
       });
     });
 
     // 添加搜索防抖监听器
     _tagSearchController.addListener(_onSearchChanged);
 
-    // 显示全屏编辑按钮的功能引导
+    // 性能优化：延迟 Feature Guide 弹出，避免与键盘动画竞争
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        _showFullscreenButtonGuide();
-      }
+      if (!mounted) return;
+      // 延迟 500ms 显示功能引导，确保 UI 稳定
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          _showGuides();
+        }
+      });
     });
 
     // 如果是编辑已有笔记
@@ -190,7 +292,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       _originalTemperature = widget.initialQuote!.temperature;
 
       // 根据现有笔记的位置和天气信息设置复选框状态
-      _includeLocation = widget.initialQuote!.location != null;
+      _includeLocation = widget.initialQuote!.location != null ||
+          (widget.initialQuote!.latitude != null &&
+              widget.initialQuote!.longitude != null);
       _includeWeather = widget.initialQuote!.weather != null;
 
       // 添加标签
@@ -211,6 +315,16 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
           _workController,
         );
       }
+
+      // 异步获取完整的 Quote 信息（防止列表页传递的是不完整的对象）
+      _isLoadingFullQuote = true;
+      _fetchFullQuote().whenComplete(() {
+        if (mounted) {
+          setState(() {
+            _isLoadingFullQuote = false;
+          });
+        }
+      });
     }
 
     // 优化：完全异步执行重量级操作，不阻塞 UI
@@ -221,6 +335,31 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
           _addDefaultHitokotoTagsAsync();
         }
       });
+    }
+  }
+
+  /// 异步获取完整的 Quote 对象
+  Future<void> _fetchFullQuote() async {
+    if (widget.initialQuote == null || widget.initialQuote!.id == null) return;
+
+    // 延迟一点执行，确保 Provider 可用
+    await Future.delayed(Duration.zero);
+    if (!mounted) return;
+
+    try {
+      final db = Provider.of<DatabaseService>(context, listen: false);
+      final fullQuote = await db.getQuoteById(widget.initialQuote!.id!);
+      if (fullQuote != null && mounted) {
+        setState(() {
+          _fullInitialQuote = fullQuote;
+          // 如果列表页传递的对象缺少 AI 分析等大字段，这里补全
+          if (_aiSummary == null && fullQuote.aiAnalysis != null) {
+            _aiSummary = fullQuote.aiAnalysis;
+          }
+        });
+      }
+    } catch (e) {
+      logDebug('获取完整笔记详情失败: $e');
     }
   }
 
@@ -261,12 +400,14 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     });
   }
 
-  /// 显示全屏编辑按钮的功能引导
-  void _showFullscreenButtonGuide() {
-    FeatureGuideHelper.show(
+  /// 显示功能引导序列
+  void _showGuides() {
+    FeatureGuideHelper.showSequence(
       context: context,
-      guideId: 'add_note_fullscreen_button',
-      targetKey: _fullscreenButtonKey,
+      guides: [
+        ('add_note_fullscreen_button', _fullscreenButtonKey),
+        ('add_note_tag_hidden', _tagGuideKey),
+      ],
     );
   }
 
@@ -311,6 +452,34 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   Future<void> _fetchLocationForNewNote() async {
     final locationService = _cachedLocationService;
     if (locationService == null) return;
+
+    // 检查并请求权限（与全屏编辑器一致）
+    if (!locationService.hasLocationPermission) {
+      bool permissionGranted =
+          await locationService.requestLocationPermission();
+      if (!permissionGranted) {
+        if (mounted && context.mounted) {
+          final l10n = AppLocalizations.of(context);
+          setState(() {
+            _includeLocation = false;
+          });
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text(l10n.cannotGetLocationTitle),
+              content: Text(l10n.cannotGetLocationPermissionShort),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(l10n.iKnow),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
+    }
 
     try {
       final position = await locationService.getCurrentLocation();
@@ -367,6 +536,100 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     }
   }
 
+  /// 获取新建笔记的天气信息
+  Future<void> _fetchWeatherForNewNote() async {
+    final weatherService = _cachedWeatherService;
+    final locationService = _cachedLocationService;
+    if (weatherService == null) return;
+
+    try {
+      // 天气需要位置坐标
+      double? lat = _newLatitude;
+      double? lon = _newLongitude;
+
+      // 如果还没有坐标，尝试从 locationService 获取
+      if (lat == null || lon == null) {
+        lat = locationService?.currentPosition?.latitude;
+        lon = locationService?.currentPosition?.longitude;
+      }
+
+      if (lat == null || lon == null) {
+        // 没有坐标，无法获取天气
+        if (mounted) {
+          setState(() {
+            _includeWeather = false;
+          });
+          if (context.mounted) {
+            final l10n = AppLocalizations.of(context);
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: Text(l10n.weatherFetchFailedTitle),
+                content: Text(l10n.locationAndWeatherUnavailable),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text(l10n.iKnow),
+                  ),
+                ],
+              ),
+            );
+          }
+        }
+        return;
+      }
+
+      // 获取天气
+      await weatherService.getWeatherData(lat, lon);
+
+      if (!weatherService.hasData && mounted) {
+        // 天气获取失败
+        setState(() {
+          _includeWeather = false;
+        });
+        if (context.mounted) {
+          final l10n = AppLocalizations.of(context);
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text(l10n.weatherFetchFailedTitle),
+              content: Text(l10n.weatherFetchFailedDesc),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(l10n.iKnow),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      logDebug('对话框获取天气失败: $e');
+      if (mounted) {
+        setState(() {
+          _includeWeather = false;
+        });
+        if (context.mounted) {
+          final l10n = AppLocalizations.of(context);
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text(l10n.weatherFetchFailedTitle),
+              content: Text(l10n.weatherFetchFailedDesc),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(l10n.iKnow),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+    }
+  }
+
   /// 获取位置提示文本（支持坐标显示）
   /// 修复：新建模式只显示实时获取的位置，而不是从 LocationService 获取的缓存位置
   String _getLocationTooltipText(BuildContext context) {
@@ -375,7 +638,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     // 编辑模式：显示原始位置
     if (widget.initialQuote != null) {
       if (_originalLocation != null && _originalLocation!.isNotEmpty) {
-        return _originalLocation!;
+        return LocationService.formatLocationForDisplay(_originalLocation);
       }
       if (_originalLatitude != null && _originalLongitude != null) {
         return LocationService.formatCoordinates(
@@ -388,7 +651,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
     // 新建模式：只显示实时获取的位置
     if (_newLocation != null && _newLocation!.isNotEmpty) {
-      return _newLocation!;
+      return LocationService.formatLocationForDisplay(_newLocation);
     }
     if (_newLatitude != null && _newLongitude != null) {
       return LocationService.formatCoordinates(_newLatitude, _newLongitude);
@@ -429,7 +692,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       content = hasOnlyCoordinates
           ? l10n.locationUpdateHint(LocationService.formatCoordinates(
               _originalLatitude, _originalLongitude))
-          : l10n.locationRemoveHint(_originalLocation ?? "");
+          : l10n.locationRemoveHint(
+              LocationService.formatLocationForDisplay(_originalLocation),
+            );
       actions = [
         if (_includeLocation)
           TextButton(
@@ -473,6 +738,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
           if (formattedAddress != null && formattedAddress.isNotEmpty) {
             setState(() {
               _originalLocation = formattedAddress;
+              _includeLocation = true;
             });
             if (context.mounted) {
               final l10n = AppLocalizations.of(context);
@@ -563,6 +829,205 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     }
   }
 
+  /// 新建模式下的位置信息对话框
+  /// 支持查看当前坐标、手动触发地址解析、移除位置
+  Future<void> _showNewNoteLocationDialog(
+    BuildContext context,
+    ThemeData theme,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    final hasAddress = _newLocation != null && _newLocation!.isNotEmpty;
+    final hasCoordinates = _newLatitude != null && _newLongitude != null;
+    final hasOnlyCoordinates = !hasAddress && hasCoordinates;
+
+    String title;
+    String content;
+    List<Widget> actions = [];
+
+    if (!hasCoordinates) {
+      // 没有任何位置数据
+      title = l10n.cannotGetLocationTitle;
+      content = l10n.cannotGetLocationDesc;
+      actions = [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(l10n.iKnow),
+        ),
+      ];
+    } else {
+      title = l10n.locationInfo;
+      content = hasOnlyCoordinates
+          ? l10n.locationUpdateHint(
+              LocationService.formatCoordinates(_newLatitude, _newLongitude))
+          : l10n.locationRemoveHint(
+              LocationService.formatLocationForDisplay(_newLocation),
+            );
+      actions = [
+        TextButton(
+          onPressed: () => Navigator.pop(context, 'remove'),
+          child: Text(l10n.remove),
+        ),
+        if (hasOnlyCoordinates)
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'update'),
+            child: Text(l10n.updateLocation),
+          ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, 'cancel'),
+          child: Text(l10n.cancel),
+        ),
+      ];
+    }
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(content),
+        actions: actions,
+      ),
+    );
+
+    if (result == 'update' && hasCoordinates) {
+      // 尝试用坐标更新地址（优先在线 Nominatim → 回退系统 SDK）
+      try {
+        // 先尝试通过 locationService 的完整解析链
+        final locationService = _cachedLocationService;
+        if (locationService != null && locationService.hasCoordinates) {
+          await locationService.getAddressFromLatLng();
+          final resolved = locationService.getFormattedLocation();
+          if (resolved.isNotEmpty && mounted) {
+            setState(() {
+              _newLocation = resolved;
+            });
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                    content: Text(l10n.locationUpdatedTo(
+                        LocationService.formatLocationForDisplay(resolved)))),
+              );
+            }
+            return;
+          }
+        }
+
+        // 回退到直接调用 LocalGeocodingService
+        final localeCode = locationService?.currentLocaleCode;
+        final addressInfo =
+            await LocalGeocodingService.getAddressFromCoordinates(
+          _newLatitude!,
+          _newLongitude!,
+          localeCode: localeCode,
+        );
+        if (addressInfo != null && mounted) {
+          final formattedAddress = addressInfo['formatted_address'];
+          if (formattedAddress != null && formattedAddress.isNotEmpty) {
+            setState(() {
+              _newLocation = formattedAddress;
+            });
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                    content: Text(l10n.locationUpdatedTo(
+                        LocationService.formatLocationForDisplay(
+                            formattedAddress)))),
+              );
+            }
+          } else if (context.mounted) {
+            ScaffoldMessenger.of(context)
+                .showSnackBar(SnackBar(content: Text(l10n.cannotGetAddress)));
+          }
+        } else if (mounted && context.mounted) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(l10n.cannotGetAddress)));
+        }
+      } catch (e) {
+        if (mounted && context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.updateFailed(e.toString()))));
+        }
+      }
+    } else if (result == 'remove') {
+      setState(() {
+        _includeLocation = false;
+        _newLocation = null;
+        _newLatitude = null;
+        _newLongitude = null;
+      });
+    }
+  }
+
+  /// 新建模式下的天气信息对话框
+  /// 支持查看当前天气、移除天气
+  Future<void> _showNewNoteWeatherDialog(
+    BuildContext context,
+    ThemeData theme,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    final weatherService = _cachedWeatherService;
+    final hasWeatherData = weatherService?.hasData ?? false;
+
+    String title;
+    String content;
+    List<Widget> actions = [];
+
+    if (!hasWeatherData) {
+      // 没有天气数据（获取失败或离线）
+      title = l10n.weatherFetchFailedTitle;
+      content = l10n.weatherFetchFailedDesc;
+      actions = [
+        TextButton(
+          onPressed: () => Navigator.pop(context, 'remove'),
+          child: Text(l10n.remove),
+        ),
+        // 如果有坐标，允许重试获取天气
+        if (_newLatitude != null && _newLongitude != null)
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'retry'),
+            child: Text(l10n.retry),
+          ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, 'cancel'),
+          child: Text(l10n.cancel),
+        ),
+      ];
+    } else {
+      // 有天气数据
+      title = l10n.weatherInfo2;
+      final weatherDisplay = weatherService!.getFormattedWeather(l10n);
+      content = l10n.weatherRemoveHint(weatherDisplay.isNotEmpty
+          ? weatherDisplay
+          : '${weatherService.currentWeather}');
+      actions = [
+        TextButton(
+          onPressed: () => Navigator.pop(context, 'remove'),
+          child: Text(l10n.remove),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, 'cancel'),
+          child: Text(l10n.cancel),
+        ),
+      ];
+    }
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(content),
+        actions: actions,
+      ),
+    );
+
+    if (result == 'remove') {
+      setState(() {
+        _includeWeather = false;
+      });
+    } else if (result == 'retry') {
+      _fetchWeatherForNewNote();
+    }
+  }
+
   @override
   void dispose() {
     _searchDebounceTimer?.cancel();
@@ -571,6 +1036,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     _authorController.dispose();
     _workController.dispose();
     _tagSearchController.dispose();
+    _contentFocusNode.dispose();
 
     // 优化：移除数据库监听器，防止内存泄漏
     _databaseService?.removeListener(_onDatabaseChanged);
@@ -863,21 +1329,6 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
 
-    // 优化：使用缓存的服务或延迟获取
-    final locationService =
-        _cachedLocationService ?? _readServiceOrNull<LocationService>(context);
-    final weatherService =
-        _cachedWeatherService ?? _readServiceOrNull<WeatherService>(context);
-
-    final locationValue = locationService?.getFormattedLocation();
-    final String? location = (locationValue != null && locationValue.isNotEmpty)
-        ? locationValue
-        : null;
-
-    final String? weather = weatherService?.currentWeather;
-    final String? temperature = weatherService?.temperature;
-    final String? formattedWeather = weatherService?.getFormattedWeather(l10n);
-
     return Padding(
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -896,6 +1347,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
               children: [
                 TextField(
                   controller: _contentController,
+                  focusNode: _contentFocusNode,
                   decoration: InputDecoration(
                     hintText: AppLocalizations.of(context).writeYourThoughts,
                     border: const OutlineInputBorder(),
@@ -903,7 +1355,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                     contentPadding: const EdgeInsets.fromLTRB(16, 16, 48, 16),
                   ),
                   maxLines: 3,
-                  autofocus: true,
+                  autofocus: true, // 立即弹出键盘，其他重操作已延迟
                 ),
                 Positioned(
                   top: 0,
@@ -1125,162 +1577,226 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
             // 位置和天气选项
             const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Text(
-                  l10n.addInfo,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                // 位置信息按钮
-                Tooltip(
-                  message: locationService != null
-                      ? '${l10n.addLocationPrefix}: ${_getLocationTooltipText(context)}'
-                      : l10n.locationServiceUnavailable,
-                  child: Stack(
-                    children: [
-                      FilterChip(
-                        avatar: Icon(
-                          Icons.location_on,
-                          color: _includeLocation
-                              ? theme.colorScheme.primary
-                              : Colors.grey,
-                          size: 18,
-                        ),
-                        label: Text(l10n.location),
-                        selected: _includeLocation,
-                        onSelected: (value) async {
-                          // 编辑模式下统一弹对话框
-                          if (widget.initialQuote != null) {
-                            await _showLocationDialog(context, theme);
-                            return;
-                          }
-                          // 新建模式
-                          if (value &&
-                              _newLocation == null &&
-                              _newLatitude == null) {
-                            _fetchLocationForNewNote();
-                          }
-                          setState(() {
-                            _includeLocation = value;
-                          });
-                        },
-                        selectedColor: theme.colorScheme.primaryContainer,
-                      ),
-                      // 小红点：有坐标但没地址时提示可更新
-                      if (widget.initialQuote != null &&
-                          _originalLocation == null &&
-                          _originalLatitude != null &&
-                          _originalLongitude != null)
-                        Positioned(
-                          right: 0,
-                          top: 0,
-                          child: Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.error,
-                              shape: BoxShape.circle,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // 天气信息按钮
-                Tooltip(
-                  message: weather != null && weatherService != null
-                      ? l10n.addWeatherWithValue(formattedWeather ?? weather)
-                      : l10n.addWeatherInfo,
-                  child: FilterChip(
-                    avatar: Icon(
-                      weather != null && weatherService != null
-                          ? weatherService.getWeatherIconData()
-                          : Icons.cloud,
-                      color: _includeWeather
-                          ? theme.colorScheme.primary
-                          : Colors.grey,
-                      size: 18,
+            RepaintBoundary(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Text(
+                    l10n.addInfo,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
                     ),
-                    label: Text(l10n.weather),
-                    selected: _includeWeather,
-                    onSelected: (value) async {
-                      // 编辑模式下统一弹对话框
-                      if (widget.initialQuote != null) {
-                        await _showWeatherDialog(context, theme);
-                        return;
-                      }
-                      setState(() {
-                        _includeWeather = value;
-                      });
-                    },
-                    selectedColor: theme.colorScheme.primaryContainer,
                   ),
-                ),
-                const SizedBox(width: 8),
-                // 颜色选择按钮
-                Tooltip(
-                  message: _selectedColorHex != null
-                      ? l10n.cardColorSet
-                      : l10n.setCardColor,
-                  child: FilterChip(
-                    avatar: _selectedColorHex != null
-                        ? Container(
-                            width: 18,
-                            height: 18,
-                            decoration: BoxDecoration(
-                              color: Color(
-                                int.parse(
-                                      _selectedColorHex!.substring(1),
-                                      radix: 16,
-                                    ) |
-                                    0xFF000000,
+                  const SizedBox(width: 16),
+                  // 位置信息按钮
+                  Builder(
+                    builder: (context) {
+                      // 仅在需要显示 tooltip 时读取服务，避免每次 build 都触发
+                      final locationService = _cachedLocationService;
+                      return Tooltip(
+                        message: locationService != null
+                            ? '${l10n.addLocationPrefix}: ${_getLocationTooltipText(context)}'
+                            : l10n.locationServiceUnavailable,
+                        child: Stack(
+                          children: [
+                            FilterChip(
+                              key: const ValueKey('add_note_location_chip'),
+                              avatar: Icon(
+                                Icons.location_on,
+                                color: _includeLocation
+                                    ? theme.colorScheme.primary
+                                    : Colors.grey,
+                                size: 18,
                               ),
-                              borderRadius: BorderRadius.circular(9),
-                              border: Border.all(color: Colors.white, width: 1),
+                              label: Text(l10n.location),
+                              selected: _includeLocation,
+                              onSelected: (value) async {
+                                // 编辑模式下统一弹对话框
+                                if (widget.initialQuote != null) {
+                                  await _showLocationDialog(context, theme);
+                                  return;
+                                }
+                                // 新建模式：已有坐标/地址时弹对话框（查看/转换/移除）
+                                if (_includeLocation &&
+                                    (_newLatitude != null ||
+                                        _newLocation != null)) {
+                                  await _showNewNoteLocationDialog(
+                                      context, theme);
+                                  return;
+                                }
+                                // 新建模式：首次勾选，获取位置
+                                if (value &&
+                                    _newLocation == null &&
+                                    _newLatitude == null) {
+                                  _fetchLocationForNewNote();
+                                }
+                                setState(() {
+                                  _includeLocation = value;
+                                });
+                              },
+                              selectedColor: theme.colorScheme.primaryContainer,
                             ),
-                          )
-                        : const Icon(
-                            Icons.color_lens,
-                            size: 18,
-                            color: Colors.grey,
-                          ),
-                    label: Text(l10n.color),
-                    selected: _selectedColorHex != null,
-                    onSelected: (value) {
-                      if (value) {
-                        _showCustomColorPicker(context);
-                      } else {
-                        setState(() {
-                          _selectedColorHex = null;
-                        });
-                      }
+                            // 小红点：有坐标但没地址时提示可更新
+                            if (widget.initialQuote == null &&
+                                _includeLocation &&
+                                _newLocation == null &&
+                                _newLatitude != null &&
+                                _newLongitude != null)
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                child: Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.error,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ),
+                            if (widget.initialQuote != null &&
+                                _originalLocation == null &&
+                                _originalLatitude != null &&
+                                _originalLongitude != null)
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                child: Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: theme.colorScheme.error,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
                     },
-                    selectedColor: theme.colorScheme.primaryContainer,
                   ),
-                ),
-                const SizedBox(width: 8),
-              ],
+                  const SizedBox(width: 8),
+                  // 天气信息按钮
+                  Builder(
+                    builder: (context) {
+                      // 仅在需要显示时读取服务，避免每次 build 都触发
+                      final weatherService = _cachedWeatherService;
+                      final weather = weatherService?.currentWeather;
+                      final formattedWeather =
+                          weatherService?.getFormattedWeather(l10n);
+                      return Tooltip(
+                        message: weather != null && weatherService != null
+                            ? l10n.addWeatherWithValue(
+                                formattedWeather ?? weather)
+                            : l10n.addWeatherInfo,
+                        child: FilterChip(
+                          key: const ValueKey('add_note_weather_chip'),
+                          avatar: Icon(
+                            weather != null && weatherService != null
+                                ? weatherService.getWeatherIconData()
+                                : Icons.cloud,
+                            color: _includeWeather
+                                ? theme.colorScheme.primary
+                                : Colors.grey,
+                            size: 18,
+                          ),
+                          label: Text(l10n.weather),
+                          selected: _includeWeather,
+                          onSelected: (value) async {
+                            // 编辑模式下统一弹对话框
+                            if (widget.initialQuote != null) {
+                              await _showWeatherDialog(context, theme);
+                              return;
+                            }
+                            // 新建模式：已勾选天气时，点击弹出详情/移除对话框
+                            if (_includeWeather) {
+                              await _showNewNoteWeatherDialog(context, theme);
+                              return;
+                            }
+                            // 新建模式：首次勾选
+                            if (value) {
+                              setState(() {
+                                _includeWeather = true;
+                              });
+                              // 勾选时获取天气
+                              _fetchWeatherForNewNote();
+                            } else {
+                              setState(() {
+                                _includeWeather = false;
+                              });
+                            }
+                          },
+                          selectedColor: theme.colorScheme.primaryContainer,
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(width: 8),
+                  // 颜色选择按钮
+                  Tooltip(
+                    message: _selectedColorHex != null
+                        ? l10n.cardColorSet
+                        : l10n.setCardColor,
+                    child: FilterChip(
+                      key: const ValueKey('add_note_color_chip'),
+                      avatar: _selectedColorHex != null
+                          ? Container(
+                              width: 18,
+                              height: 18,
+                              decoration: BoxDecoration(
+                                color: Color(
+                                  int.parse(
+                                        _selectedColorHex!.substring(1),
+                                        radix: 16,
+                                      ) |
+                                      0xFF000000,
+                                ),
+                                borderRadius: BorderRadius.circular(9),
+                                border:
+                                    Border.all(color: Colors.white, width: 1),
+                              ),
+                            )
+                          : const Icon(
+                              Icons.color_lens,
+                              size: 18,
+                              color: Colors.grey,
+                            ),
+                      label: Text(l10n.color),
+                      selected: _selectedColorHex != null,
+                      onSelected: (value) {
+                        if (value) {
+                          _showCustomColorPicker(context);
+                        } else {
+                          setState(() {
+                            _selectedColorHex = null;
+                          });
+                        }
+                      },
+                      selectedColor: theme.colorScheme.primaryContainer,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+              ),
             ), // 标签选择区域
             const SizedBox(height: 16),
             // ✅ 使用独立组件，避免AddNoteDialog重建时重复构建标签列表
-            TagSelectionSection(
-              tags: _availableTags,
-              selectedTagIds: _selectedTagIds,
-              onSelectionChanged: (newSelection) {
-                setState(() {
-                  _selectedTagIds
-                    ..clear()
-                    ..addAll(newSelection);
-                });
-              },
-              isLoading: _isLoadingHitokotoTags,
+            Container(
+              key: _tagGuideKey,
+              child: TagSelectionSection(
+                tags: _availableTags,
+                selectedTagIds: _selectedTagIds,
+                onSelectionChanged: (newSelection) {
+                  setState(() {
+                    _selectedTagIds
+                      ..clear()
+                      ..addAll(newSelection);
+                  });
+                },
+                isLoading: _isLoadingHitokotoTags,
+              ),
             ),
 
             // 显示已选标签
@@ -1370,126 +1886,161 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                       ),
                     ),
                   ),
-                  onPressed: () async {
-                    if (_contentController.text.isNotEmpty) {
-                      // 获取当前时间段
-                      final String currentDayPeriodKey =
-                          TimeUtils.getCurrentDayPeriodKey(); // 使用 Key
+                  onPressed: _isLoadingFullQuote
+                      ? null
+                      : () async {
+                          if (_contentController.text.isNotEmpty) {
+                            // 获取当前时间段
+                            final String currentDayPeriodKey =
+                                TimeUtils.getCurrentDayPeriodKey(); // 使用 Key
 
-                      // 创建或更新笔记
-                      // 使用实时获取的位置（新建）或原始位置（编辑）
-                      final isEditing = widget.initialQuote != null;
+                            // 创建或更新笔记
+                            // 使用实时获取的位置（新建）或原始位置（编辑）
+                            final isEditing = widget.initialQuote != null;
+                            final baseQuote =
+                                _fullInitialQuote ?? widget.initialQuote;
 
-                      final Quote quote = Quote(
-                        id: widget.initialQuote?.id ?? const Uuid().v4(),
-                        content: _contentController.text,
-                        date: widget.initialQuote?.date ??
-                            DateTime.now().toIso8601String(),
-                        aiAnalysis: _aiSummary,
-                        source: _formatSource(
-                          _authorController.text,
-                          _workController.text,
+                            final Quote quote = Quote(
+                              id: widget.initialQuote?.id ?? const Uuid().v4(),
+                              content: _contentController.text,
+                              date: widget.initialQuote?.date ??
+                                  DateTime.now().toIso8601String(),
+                              aiAnalysis: _aiSummary,
+                              source: _formatSource(
+                                _authorController.text,
+                                _workController.text,
+                              ),
+                              sourceAuthor: _authorController.text,
+                              sourceWork: _workController.text,
+                              tagIds: _selectedTagIds,
+                              sentiment: baseQuote?.sentiment,
+                              keywords: baseQuote?.keywords,
+                              summary: baseQuote?.summary,
+                              categoryId: _selectedCategory?.id ??
+                                  widget.initialQuote?.categoryId,
+                              colorHex: _selectedColorHex,
+                              location: _includeLocation
+                                  ? (isEditing
+                                      ? _originalLocation
+                                      : () {
+                                          final loc = _newLocation ??
+                                              _cachedLocationService
+                                                  ?.getFormattedLocation();
+                                          if ((loc == null || loc.isEmpty) &&
+                                              _newLatitude != null) {
+                                            return LocationService
+                                                .kAddressPending;
+                                          }
+                                          return loc;
+                                        }())
+                                  : null,
+                              latitude: (_includeLocation || _includeWeather)
+                                  ? (isEditing
+                                      ? _originalLatitude
+                                      : _newLatitude)
+                                  : null,
+                              longitude: (_includeLocation || _includeWeather)
+                                  ? (isEditing
+                                      ? _originalLongitude
+                                      : _newLongitude)
+                                  : null,
+                              weather: _includeWeather
+                                  ? (isEditing
+                                      ? _originalWeather
+                                      : _cachedWeatherService?.currentWeather)
+                                  : null,
+                              temperature: _includeWeather
+                                  ? (isEditing
+                                      ? _originalTemperature
+                                      : _cachedWeatherService?.temperature)
+                                  : null,
+                              dayPeriod: widget.initialQuote?.dayPeriod ??
+                                  currentDayPeriodKey, // 保存 Key
+                              editSource:
+                                  widget.initialQuote?.editSource, // 保证兼容
+                              deltaContent:
+                                  widget.initialQuote?.deltaContent, // 保证兼容
+                            );
+
+                            try {
+                              final db = Provider.of<DatabaseService>(
+                                context,
+                                listen: false,
+                              );
+
+                              if (widget.initialQuote != null) {
+                                // 更新已有笔记
+                                await db.updateQuote(quote);
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      AppLocalizations.of(context).noteUpdated,
+                                    ),
+                                    duration:
+                                        AppConstants.snackBarDurationImportant,
+                                  ),
+                                );
+                              } else {
+                                // 添加新笔记
+                                await db.addQuote(quote);
+                                if (!context.mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      AppLocalizations.of(context).noteSaved,
+                                    ),
+                                    duration:
+                                        AppConstants.snackBarDurationImportant,
+                                  ),
+                                );
+                              }
+
+                              // 调用保存回调
+                              if (widget.onSave != null) {
+                                widget.onSave!(quote);
+                              }
+
+                              // 在保存后请求AI推荐标签（仅新建笔记时）
+                              if (!isEditing) {
+                                await _showAIRecommendedTags(quote.content);
+                              }
+
+                              // 关闭对话框
+                              if (this.context.mounted) {
+                                Navigator.of(context).pop();
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      AppLocalizations.of(
+                                        context,
+                                      ).saveFailedWithError(e.toString()),
+                                    ),
+                                    duration:
+                                        AppConstants.snackBarDurationError,
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            }
+                          }
+                        },
+                  child: _isLoadingFullQuote
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : Text(
+                          widget.initialQuote != null
+                              ? AppLocalizations.of(context).edit
+                              : AppLocalizations.of(context).save,
                         ),
-                        sourceAuthor: _authorController.text,
-                        sourceWork: _workController.text,
-                        tagIds: _selectedTagIds,
-                        sentiment: widget.initialQuote?.sentiment,
-                        keywords: widget.initialQuote?.keywords,
-                        summary: widget.initialQuote?.summary,
-                        categoryId: _selectedCategory?.id ??
-                            widget.initialQuote?.categoryId,
-                        colorHex: _selectedColorHex,
-                        location: _includeLocation
-                            ? (isEditing
-                                ? _originalLocation
-                                : _newLocation ?? location)
-                            : null,
-                        latitude: _includeLocation
-                            ? (isEditing ? _originalLatitude : _newLatitude)
-                            : null,
-                        longitude: _includeLocation
-                            ? (isEditing ? _originalLongitude : _newLongitude)
-                            : null,
-                        weather: _includeWeather
-                            ? (isEditing ? _originalWeather : weather)
-                            : null,
-                        temperature: _includeWeather
-                            ? (isEditing ? _originalTemperature : temperature)
-                            : null,
-                        dayPeriod: widget.initialQuote?.dayPeriod ??
-                            currentDayPeriodKey, // 保存 Key
-                        editSource: widget.initialQuote?.editSource, // 保证兼容
-                        deltaContent: widget.initialQuote?.deltaContent, // 保证兼容
-                      );
-
-                      try {
-                        final db = Provider.of<DatabaseService>(
-                          context,
-                          listen: false,
-                        );
-
-                        if (widget.initialQuote != null) {
-                          // 更新已有笔记
-                          await db.updateQuote(quote);
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                AppLocalizations.of(context).noteUpdated,
-                              ),
-                              duration: AppConstants.snackBarDurationImportant,
-                            ),
-                          );
-                        } else {
-                          // 添加新笔记
-                          await db.addQuote(quote);
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                AppLocalizations.of(context).noteSaved,
-                              ),
-                              duration: AppConstants.snackBarDurationImportant,
-                            ),
-                          );
-                        }
-
-                        // 调用保存回调
-                        if (widget.onSave != null) {
-                          widget.onSave!(quote);
-                        }
-
-                        // 在保存后请求AI推荐标签（仅新建笔记时）
-                        if (!isEditing) {
-                          await _showAIRecommendedTags(quote.content);
-                        }
-
-                        // 关闭对话框
-                        if (this.context.mounted) {
-                          Navigator.of(context).pop();
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                AppLocalizations.of(
-                                  context,
-                                ).saveFailedWithError(e.toString()),
-                              ),
-                              duration: AppConstants.snackBarDurationError,
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
-                      }
-                    }
-                  },
-                  child: Text(
-                    widget.initialQuote != null
-                        ? AppLocalizations.of(context).edit
-                        : AppLocalizations.of(context).save,
-                  ),
                 ),
               ],
             ),
@@ -1502,42 +2053,12 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
   // 自定义颜色选择器
   Future<void> _showCustomColorPicker(BuildContext context) async {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context);
     final Color initialColor = _selectedColorHex != null
         ? Color(
             int.parse(_selectedColorHex!.substring(1), radix: 16) | 0xFF000000,
           )
         : Colors.transparent;
-
-    // 预设颜色列表 - 更现代的轻柔色调
-    final List<Color> presetColors = [
-      Colors.transparent, // 透明/无
-      const Color(0xFFF9E4E4), // 轻红色
-      const Color(0xFFFFF0E1), // 轻橙色
-      const Color(0xFFFFFBE5), // 轻黄色
-      const Color(0xFFE8F5E9), // 轻绿色
-      const Color(0xFFE1F5FE), // 轻蓝色
-      const Color(0xFFF3E5F5), // 轻紫色
-      const Color(0xFFFCE4EC), // 轻粉色
-
-      const Color(0xFFEF9A9A), // 红色
-      const Color(0xFFFFCC80), // 橙色
-      const Color(0xFFFFF59D), // 黄色
-      const Color(0xFFA5D6A7), // 绿色
-      const Color(0xFF90CAF9), // 蓝色
-      const Color(0xFFCE93D8), // 紫色
-      const Color(0xFFF48FB1), // 粉色
-
-      const Color(0xFFEF9A9A), // 深红色
-      const Color(0xFFFFCC80), // 深橙色
-      const Color(0xFFFFF59D), // 深黄色
-      const Color(0xFFA5D6A7), // 深绿色
-      const Color(0xFF90CAF9), // 深蓝色
-      const Color(0xFFCE93D8), // 深紫色
-      const Color(0xFFF48FB1), // 深粉色
-    ];
 
     final Color? result = await showDialog<Color>(
       context: context,
@@ -1547,98 +2068,13 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // 预设颜色网格
-              Container(
-                width: 280,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerLowest,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(left: 4, bottom: 8),
-                      child: Text(
-                        l10n.presetColors,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      alignment: WrapAlignment.start,
-                      children: presetColors.map((color) {
-                        String? colorHex;
-                        if (color != Colors.transparent) {
-                          colorHex =
-                              '#${color.toARGB32().toRadixString(16).substring(2)}';
-                        }
-
-                        final bool isSelected = color == Colors.transparent
-                            ? _selectedColorHex == null
-                            : _selectedColorHex == colorHex;
-
-                        return GestureDetector(
-                          onTap: () {
-                            if (!mounted) return;
-                            Navigator.of(context).pop(color);
-                          },
-                          child: Container(
-                            width: 42,
-                            height: 42,
-                            decoration: BoxDecoration(
-                              color: color,
-                              borderRadius: BorderRadius.circular(21),
-                              border: Border.all(
-                                color: isSelected
-                                    ? colorScheme.primary
-                                    : color == Colors.transparent
-                                        ? Colors.grey
-                                            .applyOpacity(0.5) // MODIFIED
-                                        : Colors.transparent,
-                                width: 2,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.applyOpacity(
-                                    0.05,
-                                  ), // MODIFIED
-                                  spreadRadius: 1,
-                                  blurRadius: 3,
-                                  offset: const Offset(0, 1),
-                                ),
-                              ],
-                            ),
-                            child: Center(
-                              child: isSelected
-                                  ? Icon(
-                                      Icons.check_circle,
-                                      color: color == Colors.transparent ||
-                                              color.computeLuminance() > 0.7
-                                          ? colorScheme.primary
-                                          : Colors.white,
-                                      size: 24,
-                                    )
-                                  : color == Colors.transparent
-                                      ? const Icon(
-                                          Icons.block,
-                                          color: Colors.grey,
-                                          size: 18,
-                                        )
-                                      : null,
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                ),
+              // 预设颜色网格 - 使用新的无障碍组件
+              AccessibleColorGrid(
+                selectedColorHex: _selectedColorHex,
+                onColorSelected: (color) {
+                  if (!mounted) return;
+                  Navigator.of(context).pop(color);
+                },
               ),
 
               const SizedBox(height: 16),

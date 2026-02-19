@@ -31,9 +31,13 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
         scrolledUnderElevation: 1,
         backgroundColor: theme.colorScheme.surface,
         title: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
-            Text(l10n.localAiFeatures),
+            Flexible(
+              child: Text(
+                l10n.localAiFeatures,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
             const SizedBox(width: 10),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

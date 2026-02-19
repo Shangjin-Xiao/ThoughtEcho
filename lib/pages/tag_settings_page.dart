@@ -570,7 +570,13 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                                   color: colorScheme.error,
                                                 ),
                                                 const SizedBox(width: 8),
-                                                Text(l10n.confirmDeleteTag),
+                                                Flexible(
+                                                  child: Text(
+                                                    l10n.confirmDeleteTag,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
                                               ],
                                             ),
                                             content: Text(

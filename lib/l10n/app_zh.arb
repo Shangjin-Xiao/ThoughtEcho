@@ -1,6 +1,12 @@
 {
   "@@locale": "zh",
   "appTitle": "心迹",
+  "draftRestored": "已自动恢复未保存的草稿",
+  "draftRecoverTitle": "恢复未保存的草稿",
+  "draftRecoverMessage": "检测到您有上次未保存的编辑内容，是否恢复并继续编辑？",
+  "restore": "恢复",
+  "discard": "丢弃",
+  "draftSaved": "草稿已保存",
   "cancel": "取消",
   "confirm": "确定",
   "delete": "删除",
@@ -20,6 +26,11 @@
   "languageFollowSystem": "跟随系统",
   "languageChinese": "简体中文",
   "languageEnglish": "English",
+  "languageJapanese": "日本語",
+  "languageKorean": "한국어",
+  "languageSpanish": "Español",
+  "languageFrench": "Français",
+  "languageGerman": "Deutsch",
   "selectLanguage": "选择语言 / Select Language",
   "onboardingSelectLanguage": "选择语言",
   "onboardingWelcome": "欢迎使用心迹",
@@ -79,6 +90,14 @@
   "prefMoreOptionsHint": "更多个性化选项和AI功能可在「设置 > 偏好设置」中随时调整。",
   "settingsTitle": "设置",
   "settingsLocationWeather": "位置与天气设置",
+  "settingsAutoAttachLocation": "添加笔记时自动附加位置",
+  "settingsAutoAttachLocationDesc": "新建笔记时自动勾选位置信息",
+  "settingsAutoAttachWeather": "添加笔记时自动附加天气",
+  "settingsAutoAttachWeatherDesc": "新建笔记时自动勾选天气信息",
+  "weatherFetchFailedTitle": "天气获取失败",
+  "weatherFetchFailedDesc": "无法获取当前天气信息，请检查网络连接或稍后重试",
+  "locationFetchFailedNoNetwork": "无网络连接，已保存坐标位置",
+  "locationAndWeatherUnavailable": "当前无法获取位置和天气信息",
   "settingsUseLocationService": "使用位置服务",
   "settingsLocationEnabled": "已获得权限并启用",
   "settingsLocationPermissionOnly": "已获得权限但服务未启用",
@@ -119,6 +138,84 @@
   "settingsCheckUpdate": "检查更新",
   "settingsCheckUpdateDesc": "检查是否有新版本可用",
   "settingsClose": "关闭",
+  "developerModeEnabled": "🎉 开发者模式已开启！",
+  "developerModeDisabled": "✅ 开发者模式已关闭",
+  "devFirstScrollPerfMonitorTitle": "首次滑动卡顿监测（开发者）",
+  "devFirstScrollPerfMonitorDesc": "监测首次打开记录页后的首次手势滑动帧耗时（非首帧）",
+  "devFirstScrollPerfResult": "首次滑动性能：总帧 {total}，卡顿帧 {jank}，平均 {avgMs}ms，最慢 {worstMs}ms",
+  "@devFirstScrollPerfResult": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "jank": {
+        "type": "int"
+      },
+      "avgMs": {
+        "type": "String"
+      },
+      "worstMs": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyRecoveryTitle": "心迹 - 数据恢复",
+  "emergencyRecoveryHeading": "数据库初始化失败",
+  "emergencyRecoveryDescription": "应用无法正常启动。可能是数据库损坏或无法访问。\n\n您可以尝试备份现有数据以防数据丢失，或尝试重新启动应用。",
+  "emergencyBackupAndRestoreButton": "备份和恢复数据",
+  "emergencyTryRestartAppButton": "尝试重新启动应用",
+  "emergencyReinitializeFailed": "重新初始化失败: {error}",
+  "@emergencyReinitializeFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyRecoveryHint": "提示: 如果问题持续存在，可能需要重新安装应用。请确保在此之前备份您的数据。",
+  "emergencyAppTitle": "心迹 - 紧急恢复",
+  "emergencyModeTitle": "紧急恢复模式",
+  "emergencyAppStartFailedTitle": "应用启动失败",
+  "emergencyAppStartFailedDesc": "心迹应用启动过程中发生严重错误。这可能是由于数据损坏或者存储权限问题导致。",
+  "emergencyErrorLabel": "错误信息:",
+  "emergencyTechnicalDetails": "技术详情",
+  "emergencyExitAppButton": "退出应用",
+  "emergencyPersistentIssueHint": "如果问题持续存在，请尝试重新安装应用，或联系开发者获取支持。",
+  "emergencyBackupPageTitle": "紧急数据恢复",
+  "emergencyBackupToolTitle": "数据紧急恢复工具",
+  "emergencyBackupToolDesc": "由于应用发生了严重错误，您可以尝试：\n\n1. 导出数据库文件 - 导出原始数据库文件供专业人员恢复\n2. 尝试查看备份恢复页 - 注意：由于数据库可能损坏，此功能可能无法正常工作",
+  "emergencyProcessing": "正在处理...",
+  "emergencyExportDatabaseButton": "导出数据库文件",
+  "emergencyOpenBackupPageButton": "尝试打开标准备份还原页面",
+  "emergencyOpenBackupFailed": "无法打开备份还原页面：{error}",
+  "@emergencyOpenBackupFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyExportHint": "提示: 导出的数据库文件可以发送给开发人员进行专业恢复。",
+  "emergencyLocatingDatabase": "正在定位数据库文件...",
+  "emergencyDatabaseNotFound": "未找到数据库文件",
+  "emergencyPreparingExport": "正在准备导出...",
+  "emergencyCopyingFile": "正在复制文件...",
+  "emergencyDatabaseExported": "数据库文件已导出到: {path}",
+  "@emergencyDatabaseExported": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyExportFailed": "导出失败: {error}",
+  "@emergencyExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "locationPermissionDenied": "位置权限被拒绝，无法启用位置服务",
   "enableLocationService": "请启用位置服务",
   "enableLocationServiceDesc": "心迹需要访问您的位置以提供天气等功能。请在系统设置中启用位置服务。",
@@ -138,6 +235,33 @@
   "pleaseWait": "请稍候...",
   "close": "关闭",
   "ok": "好的",
+  "timeJustNow": "刚刚",
+  "timeMinutesAgo": "{count}分钟前",
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeHoursAgo": "{count}小时前",
+  "@timeHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeDaysAgo": "{count}天前",
+  "@timeDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeYesterday": "昨天",
+  "exactAlarmDeniedHint": "精确闹钟权限被拒绝，推送时间可能不准确",
   "error": "错误",
   "success": "成功",
   "warning": "警告",
@@ -996,7 +1120,11 @@
   "noteSearchEmptySubtitle": "尝试使用其他关键词或检查拼写",
   "noteSearchTimeoutMessage": "搜索超时，请重试",
   "searchingLabel": "搜索中",
-  "filterAndSortTooltip": "筛选/排序",
+  "guideAddNoteTagHiddenTitle": "隐藏笔记",
+  "guideAddNoteTagHiddenDesc": "选择标签可以将笔记设为隐藏",
+  "guideNoteItemMoreShareTitle": "卡片分享",
+  "guideNoteItemMoreShareDesc": "在此生成卡片分享",
+  "filterAndSortTooltip": "筛选笔记或查看隐藏内容",
   "noNotesFound": "没有找到笔记，请先添加一些笔记",
   "generateInsightsError": "生成洞察失败: {error}",
   "@generateInsightsError": {
@@ -1291,6 +1419,16 @@
       }
     }
   },
+  "@operationFailed": {
+    "placeholders": {
+      "operation": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "loadStatsFailed": "无法加载统计信息",
   "mediaFileStats": "媒体文件统计",
   "totalFiles": "总文件数",
@@ -1552,6 +1690,14 @@
     }
   },
   "generateCards": "生成卡片",
+  "aiCardGenerationDisabledLog": "AI卡片生成已关闭，使用本地模板生成",
+  "missingGalleryPermission": "没有相册访问权限，请在设置中开启权限",
+  "desktopGalleryNotSupported": "桌面端暂不支持直接保存到相册，建议使用分享功能",
+  "cardFileNamePrefix": "心迹_Card",
+  "aiProviderConfigMissing": "未找到可用的AI提供商配置",
+  "aiSvgEmpty": "AI返回了空的SVG内容",
+  "unsafeSvgContent": "SVG内容包含不安全的元素",
+  "invalidSvgContent": "AI返回的内容不包含有效的SVG代码",
   "noFeaturedCards": "暂无精选卡片",
   "featuredCardGenerationTip": "可根据笔记内容生成精美分享卡片：开启AI=智能设计，关闭AI=使用内置模板",
   "cardFromReport": "来自心迹周期报告的精美卡片",
@@ -1605,6 +1751,142 @@
       }
     }
   },
+  "detectedAIJSONFormat": "⚠️ 检测到AI返回了JSON数据格式\n\n这表明AI模型可能误解了请求，返回了数据分析结果而非HTML报告。\n\n返回的内容：\n{json}\n\n这个问题可能的原因：\n• AI混淆了年度报告生成和内容分析功能\n• 提示词需要进一步优化\n• 模型版本或配置问题\n\n建议解决方案：\n1. 重新生成报告（AI可能会修正错误）\n2. 检查AI设置中的模型配置\n3. 尝试使用原生Flutter报告功能\n4. 更新AI提示词配置\n\n如需技术支持，请保存此错误信息并联系开发者。",
+  "@detectedAIJSONFormat": {
+    "placeholders": {
+      "json": {
+        "type": "String"
+      }
+    }
+  },
+  "detectedAbnormalFormat": "⚠️ 检测到异常数据格式\n\nAI返回了无法正常解析的JSON数据，这可能是由于：\n• 网络传输问题\n• AI服务异常\n• 数据格式错误\n\n原始内容：\n{content}\n\n建议重新生成报告或使用原生报告功能。",
+  "@detectedAbnormalFormat": {
+    "placeholders": {
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "aiGeneratedTextContent": "📄 AI生成的文本内容\n\n{content}\n\n💡 提示：AI返回了纯文本格式的总结而非HTML报告。\n这可能是因为模型理解了内容但没有按照HTML格式输出。\n\n完整内容可以在浏览器中查看，系统会自动包装为HTML格式。",
+  "@aiGeneratedTextContent": {
+    "placeholders": {
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "htmlReportCopiedSteps": "HTML报告内容已复制到剪贴板。请按以下步骤操作：",
+  "browserInstructionsStep1": "1. 打开浏览器（Chrome/Safari等）",
+  "browserInstructionsStep2": "2. 新建空白页面或新标签页",
+  "browserInstructionsStep3": "3. 在地址栏输入：data:text/html,",
+  "browserInstructionsStep4": "4. 粘贴复制的内容",
+  "browserInstructionsStep5": "5. 回车查看报告",
+  "desktopInstructionsStep1": "1. 新建文本文件，粘贴内容",
+  "desktopInstructionsStep2": "2. 将文件保存为 .html 格式",
+  "desktopInstructionsStep3": "3. 双击文件在浏览器中打开",
+  "annualReportHtmlTitle": "心迹 {year} 年度报告",
+  "generationTimeLabel": "生成时间: {time}",
+  "askNoteTitle": "问笔记",
+  "noteInfoTitle": "笔记信息",
+  "meUser": "我",
+  "aiAssistantUser": "AI助手",
+  "aiAssistantWelcome": "你好！我是你的笔记助手。你可以问我关于这篇笔记的任何问题，我会基于笔记内容为你提供深度解答。\n\n📝 笔记内容概览：\n{preview}\n\n💡 你可以试试这些问题：\n• 这篇笔记的核心思想是什么？\n• 从这篇笔记中能得到什么启发？\n• 如何将这篇笔记的想法应用到实际生活中？\n• 这篇笔记反映了什么样的思维模式？",
+  "thinkingInProgress": "正在思考中...",
+  "aiMisunderstoodQuestion": "抱歉，我没能理解这个问题。请尝试换个方式问我。",
+  "aiResponseError": "抱歉，回答时出现了错误：{error}",
+  "apiKeyDiagnosticsTitle": "API密钥诊断",
+  "apiKeyDiagnosticsTool": "API密钥诊断工具",
+  "apiKeyDiagnosticsDesc": "此工具将检查API密钥的存储和获取情况，帮助诊断401认证错误。",
+  "runDiagnostics": "运行诊断",
+  "diagnosticResultLabel": "诊断结果:",
+  "diagnosticReportHeader": "=== API密钥诊断报告 ===",
+  "diagnosticReportTime": "时间: {time}",
+  "diagnosticMultiProviderCheck": "1. 多供应商配置...",
+  "diagnosticCurrentProvider": "   - 当前供应商: {name}",
+  "diagnosticAvailableProviders": "   - 可用供应商数量: {count}",
+  "diagnosticEnabledProviders": "   - 已启用供应商: {count}",
+  "diagnosticProviderDetails": "2. 当前供应商详情...",
+  "diagnosticProviderId": "   - ID: {id}",
+  "diagnosticProviderName": "   - 名称: {name}",
+  "diagnosticProviderUrl": "   - API URL: {url}",
+  "diagnosticProviderModel": "   - 模型: {model}",
+  "diagnosticProviderEnabled": "   - 已启用: {status}",
+  "diagnosticApiKeyCheck": "3. API密钥检查...",
+  "diagnosticApiKeyInSettings": "   - 设置中有密钥: {status}",
+  "diagnosticApiKeyLength": "   - 设置中密钥长度: {length}",
+  "diagnosticApiKeyPrefix": "   - 设置中密钥前缀: {prefix}",
+  "diagnosticSecureApiKeyExists": "   - 安全存储中有密钥: {status}",
+  "diagnosticSecureApiKeyLength": "   - 安全存储密钥长度: {length}",
+  "diagnosticSecureApiKeyPrefix": "   - 安全存储密钥前缀: {prefix}",
+  "diagnosticApiKeyValidation": "4. 密钥验证...",
+  "diagnosticAsyncValidation": "   - 异步验证: {status}",
+  "diagnosticFormatValidation": "   - 格式验证: {status}",
+  "diagnosticErrorNoProvider": "2. 错误: 未选择当前供应商",
+  "diagnosticAllProvidersStatus": "5. 所有供应商状态...",
+  "diagnosticProviderStatusItem": "   - {name}: {keyStatus} {enabledStatus}",
+  "diagnosticSuggestions": "6. 建议...",
+  "diagnosticSuggestionSelectProvider": "   - 请选择一个AI服务商",
+  "diagnosticSuggestionEnableProvider": "   - 请启用当前选择的AI服务商",
+  "diagnosticSuggestionConfigureKey": "   - 请为 {name} 配置有效的API密钥",
+  "diagnosticSuggestionNormal": "   - ✓ API密钥配置正常",
+  "diagnosticComplete": "=== 诊断完成 ===",
+  "diagnosticError": "诊断过程中发生错误: {error}",
+  "passStatus": "通过",
+  "failStatus": "失败",
+  "yesStatus": "是",
+  "noStatus": "否",
+  "notSelectedStatus": "未选择",
+  "importInstructions": "导入说明",
+  "selectingFile": "正在选择文件...",
+  "validatingFile": "正在验证文件...",
+  "checkingFileCompatibility": "正在检查文件兼容性...",
+  "importingFile": "正在导入文件...",
+  "importComplete": "导入完成！",
+  "fileSaveFailed": "文件保存失败",
+  "processingMedia": "正在处理{mediaType}...",
+  "@processingMedia": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadingFile": "正在下载文件...",
+  "downloadComplete": "下载完成！",
+  "connectingToServer": "正在连接服务器...",
+  "savingFile": "正在保存文件...",
+  "waitingForAIContent": "正在等待 AI 生成内容...",
+  "occurredError": "[发生错误: {error}]",
+  "cancelLabel": "取消",
+  "selectFromGallery": "从相册选择{mediaType}",
+  "@selectFromGallery": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "selectFromFilesWithTypeName": "从文件选择{mediaType}",
+  "@selectFromFilesWithTypeName": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "importTipsImage": "• 支持 JPG、PNG、GIF、WebP 等格式\n• 直接保存到应用媒体库，减少重复复制\n• 使用内存保护技术，支持超大图片\n• 未保存笔记退出将自动清理未引用文件",
+  "importTipsVideo": "• 支持 MP4、MOV、AVI、MKV 等格式\n• 直接保存到应用媒体库，减少重复复制\n• 流式处理技术，防止内存溢出\n• 未保存笔记退出将自动清理未引用文件",
+  "importTipsAudio": "• 支持 MP3、WAV、AAC、M4A 等格式\n• 直接保存到应用媒体库，减少重复复制\n• 优化存储，快速加载\n• 未保存笔记退出将自动清理未引用文件",
+  "importTipsDefault": "• 支持多种媒体格式\n• 直接保存到应用媒体库\n• 内存安全保护\n• 未保存笔记退出将自动清理未引用文件",
+  "viewNoteInfo": "查看笔记信息",
+  "contentLengthLabel": "内容长度：{length}字符",
+  "htmlFormatLabel": "HTML格式：{status}",
+  "jsonFormatLabel": "JSON格式：{status}",
+  "containsHtmlTagsLabel": "包含HTML标签：{status}",
+  "first100CharsLabel": "前100字符：",
+  "testFailedEmptyContent": "测试失败：AI返回了空内容",
+  "testFailedApiKey": "测试失败：请先在AI设置中配置有效的API Key",
+  "testFailedNetwork": "测试失败：网络连接异常",
   "formattedDate": "{month}月{day}日",
   "@formattedDate": {
     "placeholders": {
@@ -2278,6 +2560,17 @@
   "weatherFetchFailed": "天气获取失败",
   "pleaseSelectCityFirst": "请先选择城市或启用位置服务",
   "useCurrentLocation": "使用当前位置",
+  "useFreeOnlineReverseGeocoding": "使用免费在线反向地理编码",
+  "onlineReverseGeocodingNeedsLocation": "请先获取当前位置",
+  "onlineReverseGeocodingFailed": "在线反向地理编码失败",
+  "onlineReverseGeocodingSuccess": "在线反向地理编码已更新：{address}",
+  "@onlineReverseGeocodingSuccess": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
   "weatherProvidedBy": "天气数据由 Open-Meteo 提供",
   "processing": "正在处理...",
   "searchingCity": "搜索城市中...",
@@ -2613,6 +2906,17 @@
   "regenerateCard": "重新生成",
   "regeneratingCard": "正在重新生成...",
   "cardGenerating": "正在生成卡片...",
+  "generatingCards": "正在生成卡片...",
+  "loadMoreCards": "加载更多卡片",
+  "remainingCards": "还有 {count} 张可生成",
+  "@remainingCards": {
+    "description": "剩余可生成卡片数",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "saveBtn": "保存",
   "work": "作品: ",
   "explanation": "说明: ",
@@ -2889,7 +3193,7 @@
   "discardChanges": "放弃更改",
 
   "localAiFeatures": "本地 AI 功能",
-  "localAiFeaturesPreview": "本地 AI 功能 (Preview)",
+  "localAiFeaturesPreview": "预览版",
   "localAiFeaturesDesc": "使用设备端 AI 能力增强笔记体验",
   "enableLocalAi": "启用本地 AI",
   "enableLocalAiDesc": "开启后将启用设备端 AI 功能",
@@ -3067,17 +3371,25 @@
   "smartPushTitlePreview": "智能推送 (Preview)",
   "smartPushDesc": "定时推送过去的笔记和每日一言",
   "smartPushEnable": "启用智能推送",
-  "smartPushEnableDesc": "开启后将在设定时间推送回忆笔记",
-  "smartPushContentType": "推送内容类型",
+  "smartPushEnableDesc": "在设定时间推送回忆笔记或每日一言",
+  "smartPushContentType": "推送模式",
   "smartPushDailyQuote": "每日一言",
-  "smartPushDailyQuoteDesc": "推送精选名言警句",
-  "smartPushPastNotes": "过去的笔记",
+  "smartPushDailyQuoteDesc": "推送精选语录",
+  "smartPushPastNotes": "往日笔记",
   "smartPushPastNotesDesc": "推送历史笔记回顾",
+  "smartPushModeSmart": "智能推送",
+  "smartPushModeSmartDesc": "自动选择最有意义的内容推送",
+  "smartPushModeBoth": "随机推送",
+  "smartPushModeBothDesc": "随机推送每日一言或往日笔记",
   "smartPushPastNoteTypes": "回顾类型",
   "smartPushYearAgoToday": "去年今日",
   "smartPushYearAgoTodayDesc": "推送往年同月同日的笔记",
   "smartPushMonthAgoToday": "往月今日",
-  "smartPushMonthAgoTodayDesc": "推送上月同一天的笔记",
+  "smartPushMonthAgoTodayDesc": "推送历史同一天的笔记",
+  "smartPushWeekAgoToday": "一周前",
+  "smartPushWeekAgoTodayDesc": "推送一周前的笔记",
+  "smartPushRandomMemory": "随机回忆",
+  "smartPushRandomMemoryDesc": "随机推送历史笔记",
   "smartPushSameLocation": "相同地点",
   "smartPushSameLocationDesc": "推送同一区域的笔记",
   "smartPushSameWeather": "相同天气",
@@ -3087,15 +3399,134 @@
   "smartPushTagFilterDesc": "仅推送带有选中标签的笔记（不选则不限制）",
   "smartPushTimeSettings": "推送时间",
   "smartPushAddTime": "添加推送时间",
-  "smartPushAiSection": "AI 智能推送",
-  "smartPushAiEnable": "AI 智能推荐",
-  "smartPushAiEnableDesc": "基于笔记内容和情绪智能推荐相关回忆",
-  "smartPushComingSoon": "即将推出",
+  "smartPushFrequency": "推送频率",
+  "smartPushFrequencyDaily": "每天",
+  "smartPushFrequencyWeekdays": "工作日",
+  "smartPushFrequencyWeekends": "周末",
+  "smartPushFrequencyCustom": "自定义",
+  "smartPushAdvancedOptions": "高级选项",
   "smartPushTest": "发送测试推送",
   "smartPushTestSent": "测试推送已发送，请查看通知",
-  "smartPushNoMatchingNotes": "没有符合条件的笔记可推送",
-  "smartPushNotice": "功能说明",
-  "smartPushNoticeDesc": "• 推送功能需要通知权限\n• 应用在后台时推送可能延迟\n• 建议保持应用在后台运行以获得最佳体验\n• 未来将支持真正的后台定时推送",
+  "smartPushNoMatchingNotes": "没有符合条件的内容可推送",
+  "smartPushPermissionRequired": "需要通知权限才能发送推送",
+  "smartPushNotice": "使用说明",
+  "smartPushNoticeDesc": "• 推送功能需要授予通知权限\n• 为确保按时推送，请在系统设置中允许应用自启动和后台运行\n• 部分设备需要关闭电池优化\n• 智能模式会自动选择最相关的内容",
+  "smartPushModeCustom": "自定义推送",
+  "smartPushModeCustomDesc": "手动选择回顾类型和筛选条件",
+  "smartPushExactAlarmHint": "建议开启精确闹钟权限以确保准时推送",
+  "smartPushExactAlarmTitle": "精确闹钟权限",
+  "smartPushExactAlarmMessage": "为确保推送准时送达，需要授予精确闹钟权限。不授权也可使用，但推送时间可能有几分钟误差。",
+  "smartPushGoToSettings": "去设置",
+  "smartPushPermissionWarningTitle": "权限设置不完整",
+  "smartPushPermissionWarningDesc": "部分权限未授予，可能导致推送无法正常工作。点击下方项目进行设置。",
+  "smartPushNotificationPermission": "通知权限",
+  "smartPushBatteryOptimization": "关闭电池优化",
+  "smartPushAutoStartPermission": "自启动权限",
+  "smartPushAutoStartHint": "国产手机需要此权限才能后台推送",
+  "smartPushAutoStartTitle": "自启动设置指引",
+  "smartPushAutoStartInstructions": "请按以下步骤操作：",
+  "smartPushAutoStartNote": "注意：不同系统版本界面可能略有差异，请在应用管理中找到心迹并允许自启动和后台运行。",
+  "smartPushUnknownManufacturer": "未知设备",
+  "iHaveConfigured": "我已设置",
+  "recommended": "推荐",
+  "actionFavorite": "收藏",
+  "actionUnfavorite": "取消收藏",
+  "clearFavoriteTitle": "清除收藏",
+  "clearFavoriteMessage": "确定要清除这条笔记的 {count} 次收藏吗？",
+  "@clearFavoriteMessage": {
+    "description": "清除收藏确认消息",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clearFavoriteSuccess": "已清除收藏",
+  "clearFavoriteFailed": "清除收藏失败",
+  "moreOptions": "更多选项",
+  "settingsUserManual": "用户手册",
+  "settingsUserManualDesc": "了解如何使用心迹的各项功能",
+  "manualTitle": "用户手册",
+  "manualLoadFailed": "无法加载手册内容",
+  "viewing": "查看中...",
+  "backToAnalysis": "回到分析",
+  "userGuide": "用户指南",
+  "userGuideDesc": "了解如何使用心迹的各项功能",
+  "userGuideSearchHint": "搜索用户指南...",
+  "userGuideNoResults": "未找到相关内容",
+  "userGuideOnlineDoc": "完整在线文档",
+  "tileNoLocationPermission": "无定位",
+  "tileLocationServiceOff": "定位未开启",
+  "tileOffline": "离线",
+  "tileNoNetwork": "无网络",
+  "tileLoading": "加载中...",
+  "tileNoWeather": "无天气",
+  "tileCachedSuffix": "(缓存)",
+
+  "noteAutoFillSection": "笔记默认填充",
+  "noteAutoFillSectionDesc": "新建笔记时自动填充作者、出处和标签",
+  "defaultAuthor": "默认作者",
+  "defaultAuthorDesc": "新建笔记时自动填充的作者",
+  "defaultAuthorHint": "输入默认作者名",
+  "defaultSource": "默认出处",
+  "defaultSourceDesc": "新建笔记时自动填充的出处/作品",
+  "defaultSourceHint": "输入默认出处或作品名",
+  "defaultTags": "默认标签",
+  "defaultTagsDesc": "新建笔记时自动添加的标签",
+  "defaultTagsNone": "未设置",
+  "defaultTagsCount": "已选 {count} 个标签",
+  "@defaultTagsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectDefaultTags": "选择默认标签",
+  "autoFillEnabled": "已启用自动填充",
+  "clearDefaultValue": "清除",
+  "saveDefaultValue": "保存",
+  "defaultValueSaved": "默认值已保存",
+  "defaultValueCleared": "默认值已清除",
+
+  "citySelectedWeatherUpdated": "已选择城市：{cityName}，天气已更新",
+  "@citySelectedWeatherUpdated": {
+    "placeholders": {
+      "cityName": {
+        "type": "String"
+      }
+    }
+  },
+  "citySelectionError": "处理城市选择时出错：{error}",
+  "@citySelectionError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "currentLocationWeatherUpdated": "已使用当前位置：{cityName}，天气已更新",
+  "@currentLocationWeatherUpdated": {
+    "placeholders": {
+      "cityName": {
+        "type": "String"
+      }
+    }
+  },
+  "locationFetchError": "获取当前位置失败：{error}",
+  "@locationFetchError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "weatherTimeoutRetry": "天气获取超时，请稍后重试",
+  "weatherFetchFailedCheckNetwork": "天气数据获取失败，请检查网络连接",
+  "locationTimeoutCheckPermission": "位置获取超时，请检查位置权限设置",
+  "cannotGetCurrentLocation": "无法获取当前位置，请确保已授予位置权限",
+  "cannotGetSelectedCityLocation": "无法获取选中城市的位置信息",
+  "cityInfoIncomplete": "城市信息不完整",
 
   "modelManagement": "模型管理",
   "modelManagementDesc": "下载和管理本地 AI 模型",

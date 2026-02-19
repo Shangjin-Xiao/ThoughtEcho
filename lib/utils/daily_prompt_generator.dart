@@ -67,7 +67,7 @@ class DailyPromptGenerator {
     // 获取天气key（只查找一次）
     String? weatherKey;
     if (weather != null) {
-      weatherKey = WeatherService.weatherKeyToLabel.keys.firstWhere(
+      weatherKey = WeatherService.legacyWeatherKeyToLabel.keys.firstWhere(
         (k) =>
             weather == k || weather == WeatherService.getWeatherDescription(k),
         orElse: () => weather,

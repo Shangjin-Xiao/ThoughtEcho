@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
@@ -85,45 +86,37 @@ class BackupService {
     try {
       cancelToken?.throwIfCancelled();
 
-      // 1. 导出结构化数据 (笔记, 设置, AI历史) 到 JSON
-      logDebug('开始收集结构化数据...');
-      onProgress?.call(5, 100); // 更新进度
+      // 1. 使用流式导出结构化数据，避免内存溢出
+      logDebug('开始流式导出结构化数据...');
+      onProgress?.call(5, 100);
 
       // 让UI有机会更新
       await Future.delayed(const Duration(milliseconds: 50));
 
-      final backupData = await _gatherStructuredData(includeMediaFiles);
-
-      cancelToken?.throwIfCancelled();
-      onProgress?.call(15, 100); // 更新进度
-
-      // 2. 使用流式JSON写入避免大JSON一次性加载到内存
       jsonFile = File(path.join(tempDir.path, _backupDataFile));
-      logDebug('开始流式写入JSON数据...');
 
-      // 让UI有机会更新
-      await Future.delayed(const Duration(milliseconds: 50));
-
-      await LargeFileManager.encodeJsonToFileStreaming(
-        backupData,
+      // 修复 P1-2：流式导出数据到JSON文件
+      await _exportStructuredDataStreaming(
         jsonFile,
-        onProgress: (current, total) {
-          // JSON写入进度占总进度的15%
-          final jsonProgress = (current * 15).round();
-          onProgress?.call(15 + jsonProgress, 100);
+        includeMediaFiles,
+        onProgress: (progress) {
+          // JSON导出进度占总进度的30% (5% - 35%)
+          final jsonProgress = (progress * 30).round();
+          onProgress?.call(5 + jsonProgress, 100);
         },
+        cancelToken: cancelToken,
       );
 
       cancelToken?.throwIfCancelled();
-      onProgress?.call(30, 100); // 更新进度
+      onProgress?.call(35, 100); // 更新进度
 
-      // 3. 准备ZIP文件列表
+      // 2. 准备ZIP文件列表
       final filesToZip = <String, String>{};
 
       // 添加JSON文件
       filesToZip[_backupDataFile] = jsonFile.path;
 
-      // 4. (可选) 收集媒体文件 - 使用优化的媒体处理器
+      // 3. (可选) 收集媒体文件 - 使用优化的媒体处理器
       final mediaFilesMap =
           await BackupMediaProcessor.collectMediaFilesForBackup(
         includeMediaFiles: includeMediaFiles,
@@ -148,7 +141,7 @@ class BackupService {
       cancelToken?.throwIfCancelled();
       onProgress?.call(60, 100); // 更新进度
 
-      // 5. 使用流式ZIP创建
+      // 4. 使用流式ZIP创建
       logDebug('开始创建ZIP文件，包含 ${filesToZip.length} 个文件...');
 
       // 让UI有机会更新
@@ -202,6 +195,131 @@ class BackupService {
           await jsonFile.delete();
         }
       } catch (_) {}
+    }
+  }
+
+  /// 流式导出结构化数据到JSON文件
+  Future<void> _exportStructuredDataStreaming(
+    File outputFile,
+    bool includeMediaFiles, {
+    Function(double progress)? onProgress,
+    CancelToken? cancelToken,
+  }) async {
+    IOSink? sink;
+    try {
+      await outputFile.parent.create(recursive: true);
+      sink = outputFile.openWrite();
+
+      final deviceId = _settingsService.getOrCreateDeviceId();
+      final appDir = await getApplicationDocumentsDirectory();
+      final appPath = appDir.path;
+
+      // 写入JSON头部
+      sink.write('{"version":"$_backupVersion",');
+      sink.write('"createdAt":"${DateTime.now().toIso8601String()}",');
+      sink.write('"device_id":"$deviceId",');
+      sink.write('"notes":{');
+
+      // 1. 导出分类
+      logDebug('正在导出分类数据...');
+      final categories = await _databaseService.getAllCategories(); // 假设分类数据量不大
+      sink.write('"categories":${jsonEncode(categories)},');
+      sink.write('"quotes":[');
+
+      // 2. 流式导出笔记
+      logDebug('正在流式导出笔记数据...');
+      const int pageSize = 50;
+      int offset = 0;
+      int totalQuotes = 0;
+      bool isFirstQuote = true;
+
+      // 先获取总数用于进度计算
+      final allQuotesCount = await _databaseService.getQuotesCount(
+        excludeHiddenNotes: false,
+      );
+
+      while (true) {
+        cancelToken?.throwIfCancelled();
+
+        final quotes = await _databaseService.getUserQuotes(
+          offset: offset,
+          limit: pageSize,
+          excludeHiddenNotes: false, // 备份包含隐藏笔记
+        );
+
+        if (quotes.isEmpty) break;
+
+        for (final quote in quotes) {
+          if (!isFirstQuote) {
+            sink.write(',');
+          }
+          isFirstQuote = false;
+
+          // 转换为JSON并处理tag_ids
+          final quoteMap = quote.toJson();
+          if (quote.tagIds.isNotEmpty) {
+            quoteMap['tag_ids'] = quote.tagIds.join(',');
+          }
+
+          // 处理媒体路径
+          if (includeMediaFiles &&
+              quoteMap['delta_content'] != null &&
+              quoteMap['delta_content'].toString().isNotEmpty) {
+            final deltaContent = quoteMap['delta_content'] as String;
+            try {
+              // 暂时简单处理：如果不包含超大JSON，直接转换
+              // 对于超大JSON，可能需要更复杂的流式处理，但这里先假设单个笔记Delta不会导致OOM
+              // 如果确实很大，BackupService原有逻辑也是在内存中处理单个笔记的
+              final deltaJson = jsonDecode(deltaContent);
+              final convertedDelta = _convertDeltaMediaPaths(
+                deltaJson,
+                appPath,
+                true,
+              );
+              quoteMap['delta_content'] = jsonEncode(convertedDelta);
+            } catch (e) {
+              logDebug('导出时处理笔记 ${quote.id} 富文本失败: $e');
+            }
+          }
+
+          sink.write(jsonEncode(quoteMap));
+        }
+
+        totalQuotes += quotes.length;
+        offset += quotes.length;
+
+        // 报告进度 (0.0 - 0.8)
+        if (allQuotesCount > 0) {
+          onProgress?.call((totalQuotes / allQuotesCount) * 0.8);
+        }
+
+        // 定期刷新缓冲区
+        await sink.flush();
+
+        // 让出CPU
+        await Future.delayed(const Duration(milliseconds: 1));
+      }
+
+      sink.write(']},'); // 关闭 quotes 数组和 notes 对象
+
+      cancelToken?.throwIfCancelled();
+      onProgress?.call(0.85);
+
+      // 3. 导出设置
+      logDebug('正在导出设置数据...');
+      final settingsData = _settingsService.getAllSettingsForBackup();
+      sink.write('"settings":${jsonEncode(settingsData)},');
+
+      // 4. 导出AI分析数据
+      logDebug('正在导出AI分析数据...');
+      // 假设AI分析数据量也不大，或者也可以改为分页查询
+      final aiAnalysisData = await _aiAnalysisDbService.exportAnalysesAsList();
+      sink.write('"ai_analysis":${jsonEncode(aiAnalysisData)}}'); // 结束JSON对象
+
+      await sink.flush();
+      onProgress?.call(1.0);
+    } finally {
+      await sink?.close();
     }
   }
 
@@ -402,6 +520,7 @@ class BackupService {
   }
 
   /// 聚合所有结构化数据到一个Map中
+  // ignore: unused_element
   Future<Map<String, dynamic>> _gatherStructuredData(
     bool includeMediaFiles,
   ) async {
@@ -430,9 +549,43 @@ class BackupService {
   Future<bool> _checkBackupHasMediaFiles(
     Map<String, dynamic> backupData,
   ) async {
-    // 检查版本信息和备份内容来判断是否包含媒体文件
+    // 优先：当前版本备份默认包含媒体相对路径，需要转换
     final version = backupData['version'] as String?;
-    return version == _backupVersion;
+    if (version == _backupVersion) {
+      return true;
+    }
+
+    // 兼容旧版本：扫描 Delta 中是否存在相对媒体路径（media/ 或 media\）
+    final notes = backupData['notes'];
+    if (notes is! Map<String, dynamic>) {
+      return false;
+    }
+
+    final quotesRaw = notes['quotes'];
+    if (quotesRaw is! List) {
+      return false;
+    }
+
+    for (final quote in quotesRaw) {
+      if (quote is! Map) {
+        continue;
+      }
+
+      final quoteMap = Map<String, dynamic>.from(quote);
+      final deltaField = _resolveQuoteDeltaField(quoteMap);
+      if (deltaField == null) {
+        continue;
+      }
+
+      final deltaContent = quoteMap[deltaField];
+      if (deltaContent is String &&
+          (deltaContent.contains('media/') ||
+              RegExp(r'media\\+').hasMatch(deltaContent))) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   /// 在备份时将笔记数据中的媒体文件绝对路径转换为相对路径
@@ -447,40 +600,50 @@ class BackupService {
 
     if (processedData.containsKey('quotes')) {
       final quotes = List<Map<String, dynamic>>.from(processedData['quotes']);
+      int successCount = 0;
+      int failureCount = 0;
+      int skippedCount = 0;
 
       for (final quote in quotes) {
-        if (quote.containsKey('deltaContent') &&
-            quote['deltaContent'] != null) {
-          final deltaContent = quote['deltaContent'] as String;
-          try {
-            // 使用流式JSON处理避免大内容OOM
-            if (deltaContent.length > 10 * 1024 * 1024) {
-              // 10MB以上
-              logDebug('富文本内容过大，跳过媒体路径转换');
-              // 保留原内容，避免OOM
-            } else {
-              final deltaJson =
-                  await LargeFileManager.processLargeJson<Map<String, dynamic>>(
-                deltaContent,
-                encode: false,
-              );
-              final convertedDelta = _convertDeltaMediaPaths(
-                deltaJson,
-                appPath,
-                true,
-              );
-              quote['deltaContent'] =
-                  await LargeFileManager.processLargeJson<String>(
-                convertedDelta,
-                encode: true,
-              );
-            }
-          } catch (e) {
-            logDebug('处理笔记 ${quote['id']} 的富文本内容时出错: $e');
-            // 如果处理失败，保持原内容不变
-          }
+        final deltaField = _resolveQuoteDeltaField(quote);
+        if (deltaField == null) {
+          skippedCount++;
+          continue;
+        }
+
+        if (quote[deltaField] == null) {
+          skippedCount++;
+          continue;
+        }
+
+        final deltaContent = quote[deltaField] as String;
+        try {
+          final deltaJson = await LargeFileManager.processLargeJson<dynamic>(
+            deltaContent,
+            encode: false,
+          );
+          final convertedDelta = _convertDeltaMediaPaths(
+            deltaJson,
+            appPath,
+            true,
+          );
+          quote[deltaField] = jsonEncode(convertedDelta);
+          successCount++;
+          logDebug(
+            '处理笔记 ${quote['id']} 的富文本内容成功 (field: $deltaField)',
+          );
+        } catch (e) {
+          failureCount++;
+          logDebug(
+            '处理笔记 ${quote['id']} 的富文本内容时出错 (field: $deltaField): $e',
+          );
+          // 如果处理失败，保持原内容不变
         }
       }
+
+      logDebug(
+        '媒体路径转换完成 - 成功: $successCount, 失败: $failureCount, 跳过: $skippedCount',
+      );
 
       processedData['quotes'] = quotes;
     }
@@ -500,45 +663,70 @@ class BackupService {
 
     if (processedData.containsKey('quotes')) {
       final quotes = List<Map<String, dynamic>>.from(processedData['quotes']);
+      int successCount = 0;
+      int failureCount = 0;
+      int skippedCount = 0;
 
       for (final quote in quotes) {
-        if (quote.containsKey('deltaContent') &&
-            quote['deltaContent'] != null) {
-          final deltaContent = quote['deltaContent'] as String;
-          try {
-            // 使用流式JSON处理避免大内容OOM
-            if (deltaContent.length > 10 * 1024 * 1024) {
-              // 10MB以上
-              logDebug('富文本内容过大，跳过媒体路径转换');
-              // 保留原内容，避免OOM
-            } else {
-              final deltaJson =
-                  await LargeFileManager.processLargeJson<Map<String, dynamic>>(
-                deltaContent,
-                encode: false,
-              );
-              final convertedDelta = _convertDeltaMediaPaths(
-                deltaJson,
-                appPath,
-                false,
-              );
-              quote['deltaContent'] =
-                  await LargeFileManager.processLargeJson<String>(
-                convertedDelta,
-                encode: true,
-              );
-            }
-          } catch (e) {
-            logDebug('处理笔记 ${quote['id']} 的富文本内容时出错: $e');
-            // 如果处理失败，保持原内容不变
-          }
+        final deltaField = _resolveQuoteDeltaField(quote);
+        if (deltaField == null) {
+          skippedCount++;
+          continue;
+        }
+
+        if (quote[deltaField] == null) {
+          skippedCount++;
+          continue;
+        }
+
+        final deltaContent = quote[deltaField] as String;
+        try {
+          final deltaJson = await LargeFileManager.processLargeJson<dynamic>(
+            deltaContent,
+            encode: false,
+          );
+          final convertedDelta = _convertDeltaMediaPaths(
+            deltaJson,
+            appPath,
+            false,
+          );
+          quote[deltaField] = jsonEncode(convertedDelta);
+          successCount++;
+          logDebug(
+            '还原笔记 ${quote['id']} 的富文本内容成功 (field: $deltaField)',
+          );
+        } catch (e) {
+          failureCount++;
+          logDebug(
+            '还原笔记 ${quote['id']} 的富文本内容时出错 (field: $deltaField): $e',
+          );
+          // 如果处理失败，保持原内容不变
         }
       }
+
+      logDebug(
+        '媒体路径还原完成 - 成功: $successCount, 失败: $failureCount, 跳过: $skippedCount',
+      );
 
       processedData['quotes'] = quotes;
     }
 
     return processedData;
+  }
+
+  @visibleForTesting
+  static String? testResolveQuoteDeltaField(Map<String, dynamic> quote) {
+    return _resolveQuoteDeltaField(quote);
+  }
+
+  static String? _resolveQuoteDeltaField(Map<String, dynamic> quote) {
+    if (quote.containsKey('delta_content')) {
+      return 'delta_content';
+    }
+    if (quote.containsKey('deltaContent')) {
+      return 'deltaContent';
+    }
+    return null;
   }
 
   /// 递归处理 Delta JSON 中的媒体文件路径
@@ -637,16 +825,22 @@ class BackupService {
         if (originalPath.startsWith(appPath)) {
           // 生成相对路径，并统一使用正斜杠以确保跨平台兼容
           final relativePath = path.relative(originalPath, from: appPath);
-          return relativePath.replaceAll(r'\', '/');
+          final converted = relativePath.replaceAll(r'\', '/');
+          logDebug('媒体路径转换: $originalPath -> $converted');
+          return converted;
         }
+        logDebug('媒体路径保持不变(非应用路径): $originalPath');
         return originalPath; // 如果不是应用内路径，保持不变
       } else {
         // 还原时：相对路径 -> 绝对路径
         if (!path.isAbsolute(originalPath)) {
           // 将路径中的正斜杠转换为当前平台的路径分隔符
           final normalizedPath = originalPath.replaceAll('/', path.separator);
-          return path.join(appPath, normalizedPath);
+          final absolutePath = path.join(appPath, normalizedPath);
+          logDebug('媒体路径还原: $originalPath -> $absolutePath');
+          return absolutePath;
         }
+        logDebug('媒体路径保持不变(已是绝对路径): $originalPath');
         return originalPath; // 如果已经是绝对路径，保持不变
       }
     } catch (e) {

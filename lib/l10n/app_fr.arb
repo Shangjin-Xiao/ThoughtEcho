@@ -1,0 +1,1500 @@
+{
+  "@@locale": "fr",
+  "appTitle": "ThoughtEcho",
+  "cancel": "Annuler",
+  "confirm": "Confirmer",
+  "delete": "Supprimer",
+  "save": "Enregistrer",
+  "edit": "Modifier",
+  "search": "Rechercher",
+  "settings": "Paramètres",
+  "loading": "Chargement...",
+  "retry": "Réessayer",
+  "refresh": "Actualiser",
+  "annualReport": "Rapport annuel",
+  "clearRecords": "Effacer les enregistrements",
+  "home": "Accueil",
+  "notes": "Notes",
+  "aiFeatures": "IA",
+  "languageSettings": "Langue",
+  "languageFollowSystem": "Suivre le système",
+  "languageChinese": "简体中文",
+  "languageEnglish": "English",
+  "languageJapanese": "Japonais",
+  "languageKorean": "Coréen",
+  "languageSpanish": "Espagnol",
+  "languageFrench": "Français",
+  "languageGerman": "Allemand",
+  "selectLanguage": "Sélectionner la langue",
+  "onboardingSelectLanguage": "Sélectionner la langue",
+  "onboardingWelcome": "Bienvenue sur ThoughtEcho",
+  "onboardingSubtitle": "Votre carnet d'inspiration personnel propulsé par l'IA",
+  "onboardingDescription": "Enregistrons ensemble",
+  "onboardingCoreFeatures": "Fonctionnalités principales",
+  "onboardingDiscoverFeatures": "Découvrez la puissance de ThoughtEcho",
+  "onboardingPersonalization": "Personnalisation",
+  "onboardingCustomizeExperience": "Personnalisez votre expérience",
+  "onboardingModifyLater": "Ces paramètres peuvent être modifiés à tout moment dans l'application",
+  "onboardingComplete": "Configuration terminée",
+  "onboardingAllSet": "Vous avez terminé tous les réglages\nVous pouvez maintenant commencer à enregistrer vos pensées",
+  "onboardingStartJourney": "Commençons le voyage ensemble",
+  "onboardingSkip": "Passer",
+  "onboardingNext": "Suivant",
+  "onboardingPrevious": "Précédent",
+  "onboardingStart": "Commencer",
+  "onboardingPreparing": "Préparation...",
+  "onboardingSkipTitle": "Passer l'introduction",
+  "onboardingSkipMessage": "Êtes-vous sûr de vouloir passer l'introduction ?\nCertains paramètres utiliseront les valeurs par défaut.",
+  "onboardingConfirmSkip": "Confirmer le saut",
+  "onboardingInitializing": "Initialisation...",
+  "onboardingInitFailed": "L'initialisation a échoué, veuillez réessayer",
+  "onboardingContinueUsing": "Continuer",
+  "onboardingError": "Une erreur est survenue",
+  "onboardingUpdateComplete": "Mise à jour terminée",
+  "onboardingUpdateSuccess": "ThoughtEcho a été mis à jour avec succès\nVos données ont été migrées automatiquement",
+  "onboardingEnterApp": "Entrer dans l'application",
+  "onboardingQuickTip1": "Appuyez une fois sur la Citation du jour pour copier le contenu",
+  "onboardingQuickTip2": "Appuyez deux fois sur la Citation du jour pour l'ajouter rapidement aux notes",
+  "onboardingQuickTip3": "Utilisez des étiquettes pour organiser vos notes",
+  "onboardingQuickTip4": "Recherche plein texte pour trouver rapidement du contenu",
+  "featureSmartNotes": "Notes intelligentes",
+  "featureSmartNotesDesc": "Édition de texte enrichi avec enregistrement automatique de l'heure, du lieu et de la météo",
+  "featureDailyQuote": "Citation du jour",
+  "featureDailyQuoteDesc": "Citations sélectionnées pour inspirer votre journée",
+  "featureAiInsight": "Aperçu IA",
+  "featureAiInsightDesc": "Analyse intelligente de vos notes pour découvrir des modèles de pensée et des changements émotionnels",
+  "featureLocalFirst": "Local d'abord",
+  "featureLocalFirstDesc": "Toutes les données sont stockées sur votre appareil pour la confidentialité et la sécurité",
+  "prefLanguage": "Langue",
+  "prefLanguageDesc": "Sélectionner la langue d'affichage de l'application",
+  "prefDailyQuoteType": "Types de citation du jour",
+  "prefDailyQuoteTypeDesc": "Sélectionnez les types de contenu qui vous intéressent",
+  "prefLocationService": "Service de localisation",
+  "prefLocationServiceDesc": "Activez le service de localisation pour enregistrer les lieux des notes et obtenir des informations météo",
+  "prefDefaultStartPage": "Page de démarrage par défaut",
+  "prefDefaultStartPageDesc": "Sélectionnez la page à afficher à l'ouverture de l'application",
+  "prefHomeOverview": "Aperçu de l'accueil",
+  "prefHomeOverviewDesc": "Voir la citation du jour et les notes récentes",
+  "prefNoteList": "Liste des notes",
+  "prefNoteListDesc": "Aller directement à la gestion des notes",
+  "prefSelectAll": "Tout sélectionner",
+  "prefClearAll": "Effacer",
+  "prefAboutSettings": "À propos des paramètres",
+  "prefAboutSettingsInfo": "• Tous les paramètres peuvent être modifiés dans l'application à tout moment\n• Nous respectons votre vie privée, toutes les données sont stockées sur votre appareil\n• Les permissions seront demandées lorsque vous aurez besoin des fonctionnalités associées",
+  "prefMoreOptionsHint": "Plus d'options de personnalisation et de fonctionnalités IA disponibles dans Paramètres > Préférences.",
+  "settingsTitle": "Paramètres",
+  "settingsLocationWeather": "Paramètres de localisation et météo",
+  "settingsUseLocationService": "Utiliser le service de localisation",
+  "settingsLocationEnabled": "Permission accordée et activée",
+  "settingsLocationPermissionOnly": "Permission accordée mais service désactivé",
+  "settingsLocationNoPermission": "Pas de permission de localisation",
+  "settingsSetLocation": "Définir le lieu d'affichage",
+  "settingsSearchCity": "Rechercher et sélectionner une ville",
+  "settingsCurrentLocation": "Lieu d'affichage actuel",
+  "settingsNotSet": "Non défini",
+  "settingsAppSettings": "Paramètres de l'application",
+  "settingsPreferences": "Préférences",
+  "settingsPreferencesDesc": "Personnalisation et fonctionnalités IA",
+  "settingsDefaultStartPage": "Page de démarrage par défaut",
+  "settingsStartPageHome": "Accueil (Citation du jour)",
+  "settingsStartPageNotes": "Notes (Liste des notes)",
+  "settingsSelectStartPage": "Sélectionner la page de démarrage par défaut",
+  "settingsTheme": "Paramètres du thème",
+  "settingsThemeDesc": "Personnaliser l'apparence de l'application",
+  "settingsAI": "Paramètres IA",
+  "settingsAIDesc": "Configurer les paramètres de l'API IA et la gestion multi-fournisseurs",
+  "settingsHitokoto": "Paramètres des citations",
+  "settingsHitokotoDesc": "Personnaliser les types de citation du jour",
+  "settingsLogs": "Paramètres des journaux",
+  "settingsLogsDesc": "Configurer le niveau de journalisation de l'application",
+  "settingsStorage": "Gestion du stockage",
+  "settingsStorageDesc": "Voir l'utilisation du stockage, nettoyer le cache et les fichiers inutilisés",
+  "settingsContentManagement": "Gestion du contenu",
+  "settingsTags": "Gestion des étiquettes",
+  "settingsTagsDesc": "Ajouter, modifier ou supprimer des étiquettes de note",
+  "settingsBackup": "Sauvegarde et restauration",
+  "settingsBackupDesc": "Sauvegarder les données ou restaurer à partir d'une sauvegarde",
+  "settingsSync": "Synchronisation des notes",
+  "settingsSyncDesc": "Synchroniser les notes avec les appareils à proximité",
+  "settingsAbout": "À propos de ThoughtEcho",
+  "settingsAboutSlogan": "Votre carnet d'inspiration personnel propulsé par l'IA",
+  "settingsViewSource": "Voir le code source (GitHub)",
+  "settingsVisitWebsite": "Visiter le site web",
+  "settingsViewLicenses": "Voir les licences",
+  "settingsCheckUpdate": "Vérifier les mises à jour",
+  "settingsCheckUpdateDesc": "Vérifier si une nouvelle version est disponible",
+  "settingsClose": "Fermer",
+  "locationPermissionDenied": "Permission de localisation refusée, impossible d'activer le service de localisation",
+  "enableLocationService": "Veuillez activer le service de localisation",
+  "enableLocationServiceDesc": "ThoughtEcho a besoin d'accéder à votre position pour fournir la météo et d'autres fonctionnalités. Veuillez activer le service de localisation dans les paramètres système.",
+  "goToSettings": "Aller aux paramètres",
+  "gettingLocation": "Obtention de la localisation...",
+  "locationServiceEnabled": "Service de localisation activé, position mise à jour",
+  "locationServiceDisabled": "Service de localisation désactivé",
+  "cannotGetLocation": "Impossible d'obtenir la position actuelle",
+  "selectedCount": "{count} types sélectionnés",
+  "@selectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "pleaseWait": "Veuillez patienter...",
+  "close": "Fermer",
+  "ok": "OK",
+  "error": "Erreur",
+  "success": "Succès",
+  "warning": "Avertissement",
+  "info": "Info",
+  "cannotOpenLink": "Impossible d'ouvrir le lien : {url}",
+  "@cannotOpenLink": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "checkUpdateFailed": "Échec de la vérification de mise à jour : {error}",
+  "@checkUpdateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotGetLocationPermission": "Impossible d'obtenir la permission de localisation",
+  "logDebugInfo": "Journaliser les infos de débogage",
+  "logDebugInfoDesc": "Afficher l'état de la base de données des journaux et les informations de chemin",
+  "databaseStatus": "État de la base de données :",
+  "logStatistics": "Statistiques des journaux :",
+  "getDebugInfoFailed": "Échec de l'obtention des infos de débogage : {error}",
+  "@getDebugInfoFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "generatingAIReport": "Génération du rapport annuel IA...",
+  "generateReportFailed": "Échec de la génération du rapport annuel",
+  "aiReturnedEmpty": "L'IA a renvoyé un contenu vide, veuillez réessayer",
+  "pleaseConfigureApiKey": "Veuillez d'abord configurer une clé API valide dans les paramètres IA",
+  "networkError": "Erreur réseau, veuillez vérifier votre connexion et réessayer",
+  "aiQuotaExceeded": "Quota de service IA dépassé, veuillez réessayer plus tard",
+  "generateAIReportFailed": "Échec de la génération du rapport annuel IA",
+  "getDataFailed": "Échec de l'obtention des données",
+  "testingAIReport": "Test du rapport annuel IA...",
+  "testResult": "Résultat du test",
+  "contentLength": "Longueur du contenu : {length} caractères",
+  "@contentLength": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "htmlFormat": "Format HTML : {status}",
+  "@htmlFormat": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "jsonFormat": "Format JSON : {status}",
+  "@jsonFormat": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "containsHtmlTags": "Contient des balises HTML : {status}",
+  "@containsHtmlTags": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "first100Chars": "100 premiers caractères :",
+  "viewReport": "Voir le rapport",
+  "testFailed": "Échec du test : {error}",
+  "@testFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "testFailedEmpty": "Échec du test : L'IA a renvoyé un contenu vide",
+  "testFailedApiKey": "Échec du test : Veuillez d'abord configurer une clé API valide dans les paramètres IA",
+  "testFailedNetwork": "Échec du test : Erreur réseau",
+  "testInitFailed": "Échec de l'initialisation du test",
+  "followSystem": "Suivre le système",
+  "navHome": "Accueil",
+  "navNotes": "Notes",
+  "navInsights": "Aperçus",
+  "navSettings": "Paramètres",
+  "appTitleOffline": "ThoughtEcho - Hors ligne",
+  "loadingDataPleaseWait": "Chargement des données, veuillez patienter...",
+  "noTagsAvailable": "Aucune étiquette disponible",
+  "deleteNote": "Supprimer la note",
+  "deleteNoteConfirmation": "Êtes-vous sûr de vouloir supprimer cette note ? Cette action est irréversible.",
+  "noteDeleted": "Note supprimée",
+  "favorited": "Favoris ({count})",
+  "@favorited": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "favoriteFailed": "Échec de l'ajout aux favoris, veuillez réessayer",
+  "aiCardServiceNotInitialized": "Service de carte IA non initialisé",
+  "generateCardFailed": "Échec de la génération de la carte : {error}",
+  "@generateCardFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "generatingShareImage": "Génération de l'image de partage...",
+  "cardSharedSuccessfully": "Carte partagée avec succès",
+  "shareFailed": "Échec du partage : {error}",
+  "@shareFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "savingCardToGallery": "Enregistrement de la carte dans la galerie...",
+  "cardSavedToGallery": "Carte enregistrée dans la galerie : {path}",
+  "@cardSavedToGallery": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "saveFailed": "Échec de l'enregistrement : {error}",
+  "@saveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "view": "Voir",
+  "todayThoughts": "Pensées du jour",
+  "loadingTodayThoughts": "Chargement des pensées du jour...",
+  "fetchingDefaultPrompt": "Récupération de l'invite par défaut...",
+  "waitingForTodayThoughts": "En attente des pensées du jour...",
+  "noTodayThoughts": "Aucune pensée pour aujourd'hui",
+  "cannotOpenFullEditor": "Impossible d'ouvrir l'éditeur complet : {error}",
+  "@cannotOpenFullEditor": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "refreshFailed": "Échec de l'actualisation : {error}",
+  "@refreshFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "backupAndRestore": "Sauvegarde et restauration",
+  "dataBackup": "Sauvegarde des données",
+  "dataRestore": "Restauration des données",
+  "includeMediaFiles": "Inclure les fichiers multimédias",
+  "creatingBackup": "Création de la sauvegarde...",
+  "createBackup": "Créer une sauvegarde",
+  "selectBackupFileToRestore": "Sélectionner le fichier de sauvegarde à restaurer",
+  "importantNotes": "Notes importantes",
+  "dataSecurity": "Sécurité des données",
+  "dataSafetyDesc": "La restauration des données écrasera toutes les données actuelles. Veuillez vous assurer de sauvegarder vos données actuelles d'abord",
+  "backupAdvice": "Conseil de sauvegarde",
+  "backupAdviceDesc": "Il est recommandé de sauvegarder régulièrement les données à plusieurs endroits (local, stockage cloud, etc.)",
+  "formatInfo": "Info format",
+  "formatInfoDesc": "Le nouveau format ZIP contient les données complètes et les fichiers multimédias ; l'ancien format JSON ne contient que les données textuelles",
+  "compatibility": "Compatibilité",
+  "compatibilityDesc": "Prend en charge l'importation des fichiers de sauvegarde au nouveau format ZIP et à l'ancien format JSON",
+  "confirmRestore": "Confirmer la restauration",
+  "confirmMergeImport": "Confirmer l'importation par fusion",
+  "startMerge": "Démarrer la fusion",
+  "selectImportMode": "Sélectionner le mode d'importation",
+  "continueAction": "Continuer",
+  "backupFailed": "Échec de la sauvegarde",
+  "restoreFailed": "Échec de la restauration",
+  "selectFileFailed": "Échec de la sélection du fichier",
+  "cannotGetFilePath": "Impossible d'obtenir le chemin du fichier, veuillez sélectionner à nouveau",
+  "invalidBackupFile": "Fichier de sauvegarde invalide",
+  "invalidBackupFileDesc": "Le fichier sélectionné n'est pas un fichier de sauvegarde ThoughtEcho valide.\n\nVeuillez sélectionner un fichier de sauvegarde correct.",
+  "backupCanceled": "Sauvegarde annulée",
+  "restoreCanceled": "Restauration annulée",
+  "unknownField": "Champ inconnu",
+  "confirmRestoreData": "Confirmer la restauration des données",
+  "insightsTitle": "Aperçus IA",
+  "analysisTypeComprehensive": "Analyse complète",
+  "analysisTypeComprehensiveDesc": "Analyser toutes vos notes pour explorer les thèmes, les émotions et les modèles de pensée",
+  "analysisTypeEmotional": "Aperçus émotionnels",
+  "analysisTypeEmotionalDesc": "Analyser votre état émotionnel et vos tendances",
+  "analysisTypeMindmap": "Carte mentale",
+  "analysisTypeMindmapDesc": "Construire la structure de votre pensée et analyser vos habitudes",
+  "analysisTypeGrowth": "Suggestions de croissance",
+  "analysisTypeGrowthDesc": "Suggestions de croissance et de progrès personnalisées basées sur vos notes",
+  "analysisStyleProfessional": "Analyse professionnelle",
+  "analysisStyleProfessionalDesc": "Perspective analytique objective et professionnelle",
+  "analysisStyleFriendly": "Mentor amical",
+  "analysisStyleFriendlyDesc": "Conseils doux comme un mentor amical",
+  "analysisStyleHumorous": "Style humoristique",
+  "analysisStyleHumorousDesc": "Interpréter vos pensées de manière humoristique",
+  "analysisStyleLiterary": "Style littéraire",
+  "analysisStyleLiteraryDesc": "Décrire votre voyage de pensée dans un beau langage littéraire",
+  "selectAnalysisType": "Sélectionner le type d'analyse",
+  "selectAnalysisStyle": "Sélectionner le style d'analyse",
+  "customPrompt": "Invite personnalisée",
+  "startAnalysis": "Démarrer l'analyse",
+  "stopAnalysis": "Arrêter",
+  "shareAnalysis": "Partager",
+  "copyAnalysis": "Copier",
+  "saveAnalysis": "Enregistrer",
+  "noNotesToAnalyze": "Aucune note à analyser",
+  "noNotesToAnalyzeDesc": "Ajoutez d'abord quelques notes pour que l'IA puisse fournir des aperçus",
+  "aiServiceNotConfigured": "Service IA non configuré",
+  "configureAIService": "Configurer le service IA",
+  "analysisHistory": "Historique",
+  "newAnalysis": "Nouvelle analyse",
+  "analyzing": "Analyse en cours...",
+  "analysisSaved": "Analyse enregistrée",
+  "analysisCopied": "Analyse copiée dans le presse-papiers",
+  "noteSaved": "Note enregistrée",
+  "selectCardColor": "Sélectionner la couleur de la carte",
+  "presetColors": "Couleurs prédéfinies",
+  "customColor": "Couleur personnalisée",
+  "select": "Sélectionner",
+  "editMetadata": "Modifier les métadonnées",
+  "done": "Terminé",
+  "selectTags": "Sélectionner les étiquettes",
+  "noMatchingTags": "Aucune étiquette correspondante trouvée",
+  "smartAnalyzeSource": "Analyse intelligente de la source",
+  "smartAnalyzeSourceDesc": "Analyser l'auteur potentiel et l'œuvre dans le texte",
+  "polishText": "Peaufiner le texte",
+  "polishTextDesc": "Optimiser l'expression du texte pour le rendre plus fluide et élégant",
+  "continueWriting": "Continuer à écrire",
+  "continueWritingDesc": "Étendre le contenu actuel avec le même style et le même ton",
+  "deepAnalysis": "Analyse approfondie",
+  "deepAnalysisDesc": "Effectuer une analyse et une interprétation approfondies du contenu de la note",
+  "askNote": "Demander à la note",
+  "askNoteDesc": "Discuter avec l'assistant IA pour explorer le contenu de la note en profondeur",
+  "pleaseEnterContent": "Veuillez d'abord saisir du contenu",
+  "analysisResults": "Résultats de l'analyse",
+  "confidence": "Confiance",
+  "noAuthorOrWorkIdentified": "Impossible d'identifier un auteur ou une œuvre claire",
+  "applyAnalysisResults": "Appliquer les résultats de l'analyse",
+  "parseResultsFailed": "Échec de l'analyse des résultats",
+  "analysisFailed": "Échec de l'analyse : {error}",
+  "analysisResultsCopied": "Résultats de l'analyse copiés dans le presse-papiers",
+  "noteInfo": "Infos de la note",
+  "source": "Source",
+  "createdAt": "Créé le",
+  "content": "Contenu",
+  "periodicReport": "Rapport périodique",
+  "aiInsightsTab": "Aperçus IA",
+  "locationServiceNotEnabled": "Service de localisation non activé",
+  "pleaseEnableLocationInSettings": "Veuillez activer le service de localisation dans les paramètres système",
+  "locationServiceEnabledMsg": "Service de localisation activé",
+  "quickTips": "Astuces rapides",
+  "coreFeature": "Principal",
+  "confirmDelete": "Confirmer la suppression",
+  "confirmDeleteAnalysis": "Êtes-vous sûr de vouloir supprimer cet enregistrement d'analyse ?",
+  "deleteSuccess": "Supprimé avec succès",
+  "deleteFailed": "Échec de la suppression : {error}",
+  "@deleteFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "serviceNotInitialized": "Service non initialisé",
+  "location": "Lieu",
+  "weather": "Météo",
+  "color": "Couleur",
+  "noteUpdated": "Note mise à jour",
+  "openFullEditorFailed": "Échec de l'ouverture de l'éditeur complet : {error}",
+  "@openFullEditorFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "saveFailedWithError": "Échec de l'enregistrement : {error}",
+  "@saveFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "themeSettings": "Paramètres du thème",
+  "themeMode": "Mode du thème",
+  "themeModeLight": "Clair",
+  "themeModeDark": "Sombre",
+  "useCustomThemeColor": "Utiliser une couleur de thème personnalisée",
+  "selectThemeColor": "Sélectionner la couleur du thème",
+  "dynamicColor": "Couleur dynamique",
+  "dynamicColorDesc": "Extraire la couleur du thème du système",
+  "customColorEnabledHint": "Couleur de thème personnalisée activée, la couleur dynamique est temporairement désactivée",
+  "dynamicColorDisabledHint": "Couleur dynamique désactivée, utilisation du thème bleu par défaut",
+  "themeTools": "Outils de thème",
+  "themeToolsDesc": "Si les couleurs du thème semblent anormales, essayez d'actualiser le thème",
+  "themeRefreshed": "Thème actualisé",
+  "refreshTheme": "Actualiser le thème",
+  "hitokotoSettings": "Paramètres de citation du jour",
+  "hitokotoTypeSettings": "Paramètres des types de citation du jour",
+  "hitokotoTypeDesc": "Vous pouvez sélectionner un ou plusieurs types de citations quotidiennes. L'application affichera aléatoirement du contenu de vos types sélectionnés. Différents types représentent différentes sources et styles de contenu.",
+  "selectAll": "Tout sélectionner",
+  "clearAll": "Tout effacer",
+  "typeSelection": "Sélection du type",
+  "typeSelectionHint": "Appuyez pour sélectionner vos types de citations préférés",
+  "usageInstructions": "Instructions",
+  "hitokotoServiceProvider": "Service de citation fourni par Hitokoto",
+  "hitokotoHelpItem1": "Au moins un type doit être sélectionné. L'application affichera aléatoirement du contenu des types sélectionnés",
+  "hitokotoHelpItem2": "Sélectionner plusieurs types fournit une variété de contenu plus riche",
+  "hitokotoHelpItem3": "Différents types représentent différents styles et sources de contenu",
+  "settingsSaved": "Paramètres enregistrés",
+  "tagManagement": "Gestion des étiquettes",
+  "newTagName": "Nom de la nouvelle étiquette",
+  "enterTagNameHint": "Saisir le nom de l'étiquette (max 50 caractères)",
+  "selectIcon": "Sélectionner l'icône",
+  "adding": "Ajout",
+  "add": "Ajouter",
+  "pleaseEnterTagName": "Veuillez saisir un nom d'étiquette",
+  "tagAddedSuccess": "Étiquette ajoutée avec succès",
+  "addTagFailed": "Échec de l'ajout de l'étiquette : {error}",
+  "@addTagFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "iconSelectionHint": "Choisissez une icône ou saisissez un emoji comme icône d'étiquette",
+  "iconSelected": "Icône sélectionnée : {icon}",
+  "@iconSelected": {
+    "placeholders": {
+      "icon": {
+        "type": "String"
+      }
+    }
+  },
+  "clear": "Effacer",
+  "loadTagsFailed": "Échec du chargement des étiquettes : {error}",
+  "@loadTagsFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noTags": "Pas encore d'étiquette",
+  "editTag": "Modifier l'étiquette",
+  "tagName": "Nom de l'étiquette",
+  "icon": "Icône",
+  "deleteTagConfirmation": "Êtes-vous sûr de vouloir supprimer l'étiquette \"{name}\" ? Les notes associées seront conservées mais ne seront plus liées à cette étiquette.",
+  "@deleteTagConfirmation": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tagDeletedSuccess": "Étiquette supprimée avec succès",
+  "deleteTagFailed": "Échec de la suppression de l'étiquette : {error}",
+  "@deleteTagFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "defaultTag": "Défaut",
+  "systemDefaultTag": "Étiquette par défaut du système",
+  "tapToEditLongPressToDelete": "Appuyez pour modifier, appui long pour supprimer",
+  "enterEmojiHint": "Saisir un emoji...",
+  "useAsIcon": "Utiliser \"{emoji}\" comme icône",
+  "@useAsIcon": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "systemIcons": "Icônes système",
+  "storageManagement": "Gestion du stockage",
+  "clearCache": "Effacer le cache",
+  "clearCacheConfirmTitle": "Effacer le cache",
+  "clearCacheConfirmContent": "Êtes-vous sûr de vouloir effacer le cache de l'application ?\n\nCela supprimera les fichiers temporaires et le cache d'images, mais ne supprimera pas vos notes.",
+  "cleanOrphanMedia": "Nettoyer les médias inutilisés",
+  "cleanOrphanMediaConfirmTitle": "Nettoyer les fichiers multimédias inutilisés",
+  "cleanOrphanMediaConfirmContent": "Cela supprimera les fichiers multimédias (images, vidéos, audio) qui ne sont référencés par aucune note.\n\nÊtes-vous sûr de vouloir continuer ?",
+  "databaseMaintenance": "Maintenance de la base de données",
+  "databaseMaintenanceConfirmTitle": "Maintenance de la base de données",
+  "databaseMaintenanceConfirmContent": "Cette opération optimisera la base de données :\n\n• Défragmenter l'espace de stockage\n• Mettre à jour les statistiques\n• Reconstruire les index\n\nLe processus peut prendre de quelques secondes à plusieurs minutes selon la taille des données.\n\nÊtes-vous sûr de vouloir continuer ?",
+  "startMaintenance": "Démarrer la maintenance",
+  "maintenanceInProgress": "Maintenance de la base de données en cours...",
+  "preparingProgress": "Préparation...",
+  "maintenanceComplete": "Maintenance terminée",
+  "maintenanceDuration": "Durée : {duration} secondes",
+  "@maintenanceDuration": {
+    "placeholders": {
+      "duration": {
+        "type": "String"
+      }
+    }
+  },
+  "databaseSizeChange": "Taille de la base de données : {before} Mo → {after} Mo",
+  "@databaseSizeChange": {
+    "placeholders": {
+      "before": {
+        "type": "String"
+      },
+      "after": {
+        "type": "String"
+      }
+    }
+  },
+  "spaceSavedMb": "Espace économisé : {size} Mo",
+  "@spaceSavedMb": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "noSpaceSaved": "Aucun espace économisé (la base de données est déjà compacte)",
+  "maintenanceFailed": "Échec de la maintenance : {error}",
+  "@maintenanceFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadStorageInfoFailed": "Échec du chargement des infos de stockage : {error}",
+  "@loadStorageInfoFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cacheCleanedResult": "Cache effacé, {size} libérés",
+  "@cacheCleanedResult": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "clearCacheFailed": "Échec de l'effacement du cache : {error}",
+  "@clearCacheFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "orphanFilesCleanedResult": "{count, plural, =0{Aucun fichier inutilisé trouvé} =1{Nettoyage terminé, 1 fichier inutilisé supprimé} other{Nettoyage terminé, {count} fichiers inutilisés supprimés}}",
+  "@orphanFilesCleanedResult": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noOrphanFilesFound": "Aucun fichier inutilisé trouvé",
+  "cleanupFailed": "Échec du nettoyage : {error}",
+  "@cleanupFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "totalStorageUsage": "Utilisation totale du stockage",
+  "databaseUsage": "Utilisation de la base de données",
+  "mediaFilesUsage": "Utilisation des fichiers multimédias",
+  "cacheUsage": "Utilisation du cache",
+  "notesDatabase": "Base de données des notes",
+  "aiDatabase": "Base de données IA",
+  "logDatabase": "Base de données des journaux",
+  "images": "Images",
+  "videos": "Vidéos",
+  "audios": "Audio",
+  "tempFilesAndCache": "Fichiers temporaires et cache",
+  "fileCount": "{count, plural, =1{1 fichier} other{{count} fichiers}}",
+  "@fileCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dataStorageLocation": "Emplacement de stockage des données",
+  "currentDataDirectory": "Répertoire de données actuel",
+  "custom": "Personnalisé",
+  "windowsDataMigration": "Migration du répertoire de données Windows",
+  "windowsDataMigrationDesc": "Migrer les données de l'application vers un autre emplacement (par ex., lecteur D:) pour libérer de l'espace disque système",
+  "changeDataDirectory": "Changer le répertoire de données",
+  "migrating": "Migration...",
+  "confirmDataMigration": "Confirmer la migration des données",
+  "migrationTargetPath": "Sur le point de migrer toutes les données de l'application vers :",
+  "migrationWarning": "⚠️ La migration peut prendre plusieurs minutes. Veuillez ne pas fermer l'application pendant ce processus.\n⚠️ Vous devrez redémarrer l'application une fois la migration terminée.",
+  "startMigration": "Démarrer la migration",
+  "migratingData": "Migration des données",
+  "migrationComplete": "Migration terminée",
+  "migrationCompleteMessage": "Les données ont été migrées avec succès vers le nouveau répertoire !\n\nVeuillez redémarrer l'application pour que les modifications prennent effet.",
+  "migrationFailed": "Échec de la migration des données. Veuillez vérifier les journaux pour plus de détails.",
+  "migrationFailedWithError": "Échec de la migration : {error}",
+  "@migrationFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "selectNewDataDirectory": "Sélectionner le nouveau répertoire de stockage des données",
+  "directoryNotAvailable": "Le répertoire sélectionné n'est pas disponible ou manque de permission d'écriture",
+  "selectDirectoryFailed": "Échec de la sélection du répertoire : {error}",
+  "@selectDirectoryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logsViewer": "Visionneuse de journaux",
+  "logFilter": "Filtre de journal",
+  "clearLogs": "Effacer les journaux",
+  "searchLogs": "Rechercher dans les journaux...",
+  "noLogs": "Aucun journal pour l'instant",
+  "loadMoreLogs": "Charger plus de journaux",
+  "loadMoreLogsFailed": "Échec du chargement de plus de journaux : {error}",
+  "@loadMoreLogsFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logDetailsTitle": "{level} Journal {source}",
+  "@logDetailsTitle": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      },
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "copyAll": "Tout copier",
+  "timestamp": "Heure : {time}",
+  "@timestamp": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "message": "Message :",
+  "errorLabel": "Erreur :",
+  "stackTrace": "Trace de pile :",
+  "logCopiedToClipboard": "Détails du journal copiés dans le presse-papiers",
+  "containsError": "Contient des informations d'erreur",
+  "sourceFilter": "Source : {source}",
+  "@sourceFilter": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "searchFilter": "Recherche : {query}",
+  "@searchFilter": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "clearAllFilters": "Tout effacer",
+  "logFilterOptions": "Options de filtre de journal",
+  "reset": "Réinitialiser",
+  "filterByLogLevel": "Filtrer par niveau de journal",
+  "filterBySource": "Filtrer par source",
+  "enterSourceName": "Saisir le nom de la source du journal...",
+  "apply": "Appliquer",
+  "clearLogsTitle": "Effacer les journaux",
+  "clearLogsQuestion": "Quels journaux souhaitez-vous effacer ?",
+  "clearMemoryLogsOnly": "Effacer les journaux mémoire uniquement",
+  "clearAllLogs": "Effacer tous les journaux",
+  "memoryLogsCleared": "Journaux mémoire effacés",
+  "allLogsCleared": "Tous les journaux effacés",
+  "logsCount": "{count, plural, =1{Affichage de 1 journal} other{Affichage de {count} journaux}} • Appui long pour copier • Appuyez pour les détails",
+  "@logsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "logPageError": "Erreur de rendu de la page de journal :",
+  "networkDiagnostic": "Diagnostic réseau",
+  "networkConfig": "Configuration réseau",
+  "networkDiagnosticSection": "Diagnostic réseau",
+  "diagnosing": "Diagnostic en cours...",
+  "runNetworkDiagnostic": "Exécuter le diagnostic réseau",
+  "diagnosticResult": "Résultat du diagnostic : {passed}/{total} réussis",
+  "@diagnosticResult": {
+    "placeholders": {
+      "passed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "diagnosticFailed": "Échec du diagnostic : {error}",
+  "@diagnosticFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceDiscovery": "Découverte d'appareils",
+  "startDiscovery": "Démarrer la découverte",
+  "stopDiscovery": "Arrêter la découverte",
+  "sendAnnouncement": "Envoyer une annonce",
+  "deviceAnnouncementSent": "Annonce de l'appareil envoyée",
+  "startDiscoveryFailed": "Échec du démarrage de la découverte de l'appareil : {error}",
+  "@startDiscoveryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "sendAnnouncementFailed": "Échec de l'envoi de l'annonce de l'appareil : {error}",
+  "@sendAnnouncementFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "statusRunning": "État : En cours d'exécution",
+  "statusStopped": "État : Arrêté",
+  "discoveredDevices": "Appareils découverts",
+  "discoveredDevicesCount": "Appareils découverts ({count})",
+  "@discoveredDevicesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noDevicesFound": "Aucun appareil trouvé",
+  "unknownModel": "Modèle inconnu",
+  "fingerprint": "Empreinte : {fingerprint}",
+  "@fingerprint": {
+    "placeholders": {
+      "fingerprint": {
+        "type": "String"
+      }
+    }
+  },
+  "hitokotoTypeA": "Anime",
+  "hitokotoTypeB": "Manga",
+  "hitokotoTypeC": "Jeu",
+  "hitokotoTypeD": "Littérature",
+  "hitokotoTypeE": "Original",
+  "hitokotoTypeF": "Du web",
+  "hitokotoTypeG": "Autre",
+  "hitokotoTypeH": "Cinéma & TV",
+  "hitokotoTypeI": "Poésie",
+  "hitokotoTypeJ": "Netease Cloud Music",
+  "hitokotoTypeK": "Philosophie",
+  "noNetworkConnection": "Pas de connexion réseau",
+  "unknown": "Inconnu",
+  "defaultQuote1": "La vie n'est pas seulement le présent, mais aussi la poésie et le lointain.",
+  "defaultQuote2": "La vie est comme un voyage, il ne faut pas se soucier de la destination, ce qui compte c'est le paysage en chemin.",
+  "defaultQuote3": "N'attendez pas l'opportunité, créez-la.",
+  "editTagTitle": "Modifier l'étiquette",
+  "tagNameLabel": "Nom de l'étiquette",
+  "iconLabel": "Icône :",
+  "emotion": "Émotion",
+  "thinking": "Pensée",
+  "nature": "Nature",
+  "mood": "Humeur",
+  "life": "Vie",
+  "growth": "Croissance",
+  "reward": "Récompense",
+  "transport": "Transport",
+  "otherCategory": "Autre",
+  "logLoadMoreError": "Échec du chargement de plus de journaux : {error}",
+  "@logLoadMoreError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logLoadError": "Échec du chargement des journaux",
+  "logSourceFilter": "Source : {source}",
+  "@logSourceFilter": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "logSearchFilter": "Recherche : {query}",
+  "@logSearchFilter": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "logClearAllFilters": "Tout effacer",
+  "logCopyAll": "Tout copier",
+  "logTimestamp": "Heure : {time}",
+  "@logTimestamp": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "logMessage": "Message :",
+  "logError": "Erreur :",
+  "logStackTrace": "Trace de pile :",
+  "logCopied": "Détails du journal copiés dans le presse-papiers",
+  "logFilterReset": "Réinitialiser",
+  "logFilterByLevel": "Filtrer par niveau de journal",
+  "logFilterBySource": "Filtrer par source",
+  "logFilterSourceHint": "Saisir le nom de la source du journal...",
+  "logFilterApply": "Appliquer",
+  "logClearTitle": "Effacer les journaux",
+  "logClearQuestion": "Quels journaux souhaitez-vous effacer ?",
+  "logClearMemory": "Effacer les journaux mémoire uniquement",
+  "logClearMemorySuccess": "Journaux mémoire effacés",
+  "logClearAll": "Effacer tous les journaux",
+  "logClearAllSuccess": "Tous les journaux effacés",
+  "logClearError": "Échec de l'effacement des journaux : {error}",
+  "@logClearError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "logContainsError": "Contient des informations d'erreur",
+  "httpServerPort": "Port du serveur HTTP : {port}",
+  "@httpServerPort": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "multicastDiscoveryPort": "Port de découverte multicast : {port}",
+  "@multicastDiscoveryPort": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "multicastAddress": "Adresse multicast : {address}",
+  "@multicastAddress": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "protocolVersion": "Version du protocole : {version}",
+  "@protocolVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "testAnalysis": "Analyse test",
+  "testAnalysisDesc": "Ceci est une analyse test pour vérifier que la fonction d'enregistrement fonctionne correctement.",
+  "viewHistory": "Voir l'historique",
+  "saveAnalysisError": "Échec de l'enregistrement de l'analyse : {error}",
+  "@saveAnalysisError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "analysisNoteTitle": "# {title}\n\n{content}",
+  "@analysisNoteTitle": {
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "aiAnalysisSource": "Analyse IA",
+  "thoughtechoAI": "ThoughtEcho IA",
+  "savedAsNote": "Enregistré comme nouvelle note",
+  "saveAsNoteError": "Échec de l'enregistrement comme note : {error}",
+  "@saveAsNoteError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "shareError": "Échec du partage : {error}",
+  "@shareError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "configureApiKey": "Veuillez d'abord configurer la clé API dans les paramètres",
+  "noteListEmptyTitle": "Pas encore de note, commencez votre journal !",
+  "noteSearchEmptyTitle": "Aucune note correspondante trouvée",
+  "noteSearchEmptySubtitle": "Essayez d'autres mots-clés ou vérifiez votre orthographe",
+  "noteSearchTimeoutMessage": "La recherche a expiré, veuillez réessayer",
+  "searchingLabel": "Recherche en cours",
+  "filterAndSortTooltip": "Filtrer/Trier",
+  "noNotesFound": "Aucune note trouvée, veuillez ajouter quelques notes d'abord",
+  "generateInsightsError": "Échec de la génération des aperçus : {error}",
+  "@generateInsightsError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "serverInternalError": "Erreur interne du serveur, peut-être un problème de configuration du modèle",
+  "checkSettings": "Vérifier les paramètres",
+  "invalidApiKey": "Clé API invalide, veuillez vérifier les paramètres",
+  "checkApiKey": "Vérifier la clé API",
+  "rateLimitExceeded": "La fréquence des requêtes est trop élevée, veuillez réessayer plus tard",
+  "tryLater": "Réessayer plus tard",
+  "generateInsightsSetupError": "Échec de la génération des aperçus (configuration) : {error}",
+  "@generateInsightsSetupError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "serverInternalErrorConfig": "Erreur interne du serveur, veuillez vérifier si la configuration du modèle IA est correcte",
+  "invalidApiKeyUpdate": "Clé API invalide, veuillez mettre à jour la clé API dans les paramètres",
+  "configureValidApiKey": "Veuillez d'abord configurer une clé API valide dans les paramètres",
+  "regenerate": "Régénérer",
+  "selectAnalysisMethod": "Sélectionner la méthode d'analyse",
+  "advancedOptions": "Options avancées",
+  "customPromptHint": "par ex., Analyser les personnages et les lieux mentionnés dans mes notes",
+  "analysisHistoryRecord": "Enregistrement de l'historique d'analyse",
+  "viewPreviousAnalysis": "Voir les résultats d'analyse IA précédents",
+  "analysisDescriptionTitle": "Description de l'analyse",
+  "analysisDescription": "L'analyse IA synthétisera tout le contenu de vos notes pour découvrir des modèles de pensée et des régularités potentiels. Vous pouvez choisir différents styles d'analyse pour obtenir diverses perspectives. Cela peut prendre un certain temps, veuillez patienter.",
+  "aiAnalysisUsageInstructionsTitle": "Instructions d'utilisation de l'analyse IA",
+  "aiAnalysisUsageInstructions": "1. L'IA peut générer du contenu inexact ou trompeur, veuillez évaluer les résultats de l'analyse avec prudence\n2. Lorsque vous utilisez cette fonctionnalité, toutes vos informations de note (y compris le contenu, la date, le lieu, la météo et la température, etc.) seront envoyées à l'IA pour une analyse complète\n3. Les résultats de l'analyse sont à titre indicatif uniquement, et l'interprétation finale vous appartient\n4. Il est recommandé d'utiliser cette fonctionnalité dans un bon environnement réseau pour obtenir la meilleure expérience",
+  "copyToClipboard": "Copier dans le presse-papiers",
+  "analysisResultCopied": "Résultat de l'analyse copié dans le presse-papiers",
+  "saveAsNoteButton": "Enregistrer comme note",
+  "saveAnalysisButton": "Enregistrer l'analyse",
+  "shareInsightsButton": "Partager les aperçus",
+  "generateInsightsErrorSnapshot": "Erreur lors de la génération des aperçus : {error}",
+  "@generateInsightsErrorSnapshot": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "insightsPageEmpty": "Sélectionnez un type d'analyse et cliquez sur \"Démarrer l'analyse\"\nLes aperçus vous aideront à découvrir des modèles de pensée et des régularités dans vos notes",
+  "customAnalysis": "Analyse personnalisée",
+  "siliconflow": "SiliconFlow",
+  "openapiCompatible": "Compatible OpenAPI",
+  "verifyingApiKey": "Vérification de la clé API...",
+  "noProviderSelected": "Aucun fournisseur sélectionné",
+  "apiKeyValid": "Clé API valide ({length} caractères)",
+  "@apiKeyValid": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "apiKeyInvalid": "Aucune clé API valide configurée",
+  "noAiProviderSelected": "❌ Aucun fournisseur IA sélectionné",
+  "providerDisabled": "⚠️ Fournisseur désactivé",
+  "apiKeyVerified": "✅ Clé API valide (vérifiée)",
+  "apiKeyStatusCheck": "Vérification de l'état de la clé API : {status}",
+  "@apiKeyStatusCheck": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "checkFailed": "Échec de la vérification : {error}",
+  "@checkFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadAiSettingsError": "Échec du chargement des paramètres IA : {error}",
+  "@loadAiSettingsError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadAiSettingsErrorUser": "Échec du chargement des paramètres IA, veuillez vérifier votre connexion réseau ou redémarrer l'application",
+  "fixFormErrors": "Veuillez corriger les erreurs dans le formulaire avant d'enregistrer",
+  "presetCreated": "Nouveau préréglage créé et enregistré avec succès",
+  "saveSettingsError": "Échec de l'enregistrement des paramètres : {error}",
+  "@saveSettingsError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "customConfig": "Configuration personnalisée",
+  "customConfigHost": "Personnalisé-{host}",
+  "@customConfigHost": {
+    "placeholders": {
+      "host": {
+        "type": "String"
+      }
+    }
+  },
+  "customConfigTimestamp": "Personnalisé-{timestamp}",
+  "@customConfigTimestamp": {
+    "placeholders": {
+      "timestamp": {
+        "type": "String"
+      }
+    }
+  },
+  "testingConnection": "Test de connexion...",
+  "connectionTestSuccess": "Test de connexion IA réussi !",
+  "connectionTestFailed": "Échec du test de connexion : {error}",
+  "@connectionTestFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apiKeyRequired": "La clé API est requise pour {providerName}",
+  "@apiKeyRequired": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "connectionSuccess": "Connexion réussie",
+  "responseFormatError": "Erreur de format de réponse",
+  "connectionFailed": "Échec de la connexion : {statusCode}",
+  "@connectionFailed": {
+    "placeholders": {
+      "statusCode": {
+        "type": "int"
+      }
+    }
+  },
+  "switchedTo": "Basculé vers {providerName}",
+  "@switchedTo": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "renamePreset": "Renommer le préréglage",
+  "presetName": "Nom du préréglage",
+  "presetRenamed": "Le préréglage a été renommé en \"{result}\"",
+  "@presetRenamed": {
+    "placeholders": {
+      "result": {
+        "type": "String"
+      }
+    }
+  },
+  "deletePreset": "Supprimer le préréglage",
+  "deletePresetConfirm": "Êtes-vous sûr de vouloir supprimer le préréglage \"{providerName}\" ? Cette action est irréversible.",
+  "@deletePresetConfirm": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "presetDeleted": "Le préréglage \"{providerName}\" a été supprimé",
+  "@presetDeleted": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "aiProviderSelection": "Sélection du fournisseur IA",
+  "currentProvider": "Actuel : {providerName}",
+  "@currentProvider": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "apiUrlLabel": "API : {url}",
+  "@apiUrlLabel": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "modelLabel": "Modèle : {model}",
+  "@modelLabel": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      }
+    }
+  },
+  "apiKeyLabel": "Clé API : {status}",
+  "@apiKeyLabel": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "modelNotConfigured": "Non configuré",
+  "checkApiKeyStatus": "Vérifier l'état de la clé API",
+  "savedPresets": "Préréglages enregistrés ({length}) :",
+  "@savedPresets": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "noPresetsSaved": "Aucun préréglage enregistré pour l'instant. Configurez les informations de l'API et cliquez sur \"Enregistrer les paramètres\" pour créer le premier préréglage.",
+  "rename": "Renommer",
+  "testConnectionButton": "Tester la connexion",
+  "reportInsightsUseAi": "Utiliser l'IA pour les aperçus du rapport périodique",
+  "reportInsightsUseAiDesc": "Si activé, un \"Poème perspicace\" sera généré automatiquement en entrant dans la page du rapport. Si désactivé, la génération locale sera utilisée.",
+  "aiSettingsTitle": "Paramètres IA",
+  "quickPresets": "Préréglages rapides",
+  "selectPreset": "Sélectionner un préréglage de fournisseur",
+  "selectPresetHint": "Ou configurer manuellement les paramètres de connexion ci-dessous",
+  "connectionConfig": "Configuration de la connexion ({providerName})",
+  "@connectionConfig": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "apiUrlField": "URL de l'API",
+  "apiUrlHint": "par ex., https://api.xxx.com/v1/chat/completions",
+  "apiUrlHelper": "Doit être une URL http/https",
+  "apiKeyField": "Clé API",
+  "apiKeyHint": "La clé requise pour le service (peut être laissée vide)",
+  "show": "Afficher",
+  "hide": "Masquer",
+  "modelAndAdvanced": "Modèle et avancé",
+  "modelNameField": "Nom du modèle",
+  "modelNameHint": "Veuillez saisir un nom de modèle",
+  "modelNameHintDefault": "Utiliser le modèle par défaut ou personnaliser",
+  "hostOverrideField": "Remplacement de l'hôte",
+  "hostOverrideHint": "Optionnel, pour les scénarios de proxy/proxy inverse",
+  "createNewPreset": "Créer un nouveau préréglage",
+  "aiCardGeneration": "Génération de carte IA",
+  "aiCardGenerationDesc": "Générer des cartes de partage SVG pour les notes : On = utiliser l'IA pour la conception intelligente, Off = utiliser des modèles intégrés (fonctionnalité toujours disponible)",
+  "aiCardGenerationTip": "Conseil : Il est recommandé d'utiliser un modèle moyen à grand qui prend en charge ≥4K jetons et possède de bonnes capacités de suivi d'instructions et de génération texte-vers-SVG.",
+  "aiEnhancedGeneration": "Génération améliorée par IA",
+  "aiEnhancedGenerationDesc": "Lorsqu'il est désactivé, les modèles locaux seront utilisés au lieu d'appeler le modèle",
+  "todayThoughtsUseAi": "Utiliser l'IA pour les Pensées du jour",
+  "todayThoughtsUseAiDesc": "Si activé, l'IA sera utilisée pour générer des invites pour les Pensées du jour. Si désactivé, la génération locale sera utilisée.",
+  "apiUrlRequired": "L'URL de l'API ne peut pas être vide",
+  "invalidUrl": "Veuillez saisir une URL HTTP/HTTPS valide",
+  "mediaManagementTitle": "Gestion des fichiers multimédias",
+  "loadStatsError": "Échec du chargement des statistiques : {error}",
+  "@loadStatsError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "operationCompleted": "{operation} terminée",
+  "@operationCompleted": {
+    "placeholders": {
+      "operation": {
+        "type": "String"
+      }
+    }
+  },
+  "operationFailed": "{operation} a échoué : {error}",
+  "@operationFailed": {
+    "placeholders": {
+      "operation": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "loadStatsFailed": "Échec du chargement des statistiques",
+  "mediaFileStats": "Statistiques des fichiers multimédias",
+  "totalFiles": "Total des fichiers",
+  "referencedFiles": "Fichiers référencés",
+  "orphanFiles": "Fichiers orphelins",
+  "totalReferences": "Total des références",
+  "totalSize": "Taille totale",
+  "imagesSize": "Taille des images",
+  "videosSize": "Taille des vidéos",
+  "audiosSize": "Taille des audios",
+  "tempFiles": "Fichiers temporaires",
+  "tempFilesCount": "Nombre de fichiers temporaires",
+  "expiredFilesCount": "Nombre de fichiers expirés",
+  "tempFilesSize": "Taille des fichiers temporaires",
+  "cleanupOperations": "Opérations de nettoyage",
+  "cleanupExpiredTempFiles": "Nettoyer les fichiers temporaires expirés",
+  "cleanupExpiredTempFilesDesc": "Supprimer les fichiers temporaires datant de plus de 24 heures",
+  "cleanupOrphanFiles": "Nettoyer les fichiers orphelins",
+  "cleanupOrphanFilesDesc": "Supprimer les fichiers multimédias non référencés par aucune note",
+  "fullCleanup": "Nettoyage complet",
+  "fullCleanupDesc": "Nettoyer tous les fichiers temporaires et orphelins",
+  "migrateExistingNotes": "Migrer les notes existantes",
+  "migrateExistingNotesDesc": "Rétablir les références de fichiers multimédias pour les notes existantes",
+  "verifyFileIntegrity": "Vérifier l'intégrité des fichiers",
+  "verifyFileIntegrityDesc": "Vérifier l'intégrité des références de fichiers multimédias",
+  "operationResult": "Résultat de {operation}",
+  "@operationResult": {
+    "placeholders": {
+      "operation": {
+        "type": "String"
+      }
+    }
+  },
+  "cleanedFilesCount": "Nombre de fichiers nettoyés",
+  "spaceSavedMbLabel": "Espace économisé (Mo)",
+  "migratedQuotesCount": "Nombre de citations migrées",
+  "orphanFilesDetected": "Fichiers orphelins détectés",
+  "checkedReferencesCount": "Nombre de références vérifiées",
+  "missingFilesCount": "Nombre de fichiers manquants",
+  "fileIntegrity": "Intégrité des fichiers",
+  "normal": "Normal",
+  "abnormal": "Anormal",
+  "yourThoughtTrack": "Votre piste de pensée",
+  "tapToExplore": "Appuyez sur l'écran pour commencer à explorer",
+  "annualOverview": "Aperçu annuel",
+  "noNotesInPeriod": "Aucune note dans cette période",
+  "startRecording": "Commencez à enregistrer vos pensées",
+  "totalRecorded": "Total enregistré",
+  "notesUnit": " notes",
+  "writingDays": "Jours d'écriture",
+  "daysUnit": " jours",
+  "longestStreak": "Plus longue série",
+  "tagsUsed": "Étiquettes utilisées",
+  "tagsUnit": " étiquettes",
+  "writingHabits": "Habitudes d'écriture",
+  "noWritingHabits": "Aucune donnée sur les habitudes d'écriture pour l'instant",
+  "mostActiveTime": "Heure la plus active",
+  "noData": "Pas de données",
+  "favoriteDay": "Jour préféré",
+  "avgWordsPerNote": "Mots moy. par note",
+  "wordsUnit": " mots",
+  "longestNote": "Note la plus longue",
+  "mostCommonPeriod": "Période la plus courante",
+  "mostCommonWeather": "Météo la plus courante",
+  "mostUsedTag": "Étiquette la plus utilisée",
+  "tagAnalysis": "Analyse des étiquettes",
+  "mostUsedTags": "Étiquettes les plus utilisées",
+  "usedXTimes": "Utilisé {count} fois ({percentage}%)",
+  "@usedXTimes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "percentage": {
+        "type": "String"
+      }
+    }
+  },
+  "noTagsUsed": "Aucune étiquette n'a encore été utilisée",
+  "timeline": "Chronologie",
+  "noRecordsInPeriod": "Aucun enregistrement dans cette période",
+  "monthX": "Mois {month}",
+  "@monthX": {
+    "placeholders": {
+      "month": {
+        "type": "int"
+      }
+    }
+  },
+  "notesCount": "{count} notes",
+  "@notesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "deepInsights": "Aperçus approfondis",
+  "thinkingDensity": "Densité de pensée",
+  "deepThinker": "Vous aimez penser profondément, et chaque note est très détaillée. Cette habitude vous aide à mieux organiser vos pensées.",
+  "conciseThinker": "Votre pensée est concise et puissante, et vous êtes doué pour saisir les points principaux. C'est une excellente compétence de synthèse.",
+  "quickThinker": "Vous avez l'habitude d'enregistrer de courtes idées, ce qui vous permet de capturer rapidement l'inspiration. C'est une excellente habitude d'enregistrement.",
+  "growthTrack": "Piste de croissance",
+  "notStarted": "Vous n'avez pas encore commencé à enregistrer, c'est le meilleur moment maintenant.",
+  "increasingFrequency": "Votre fréquence d'enregistrement est de plus en plus élevée ! Du début à la fin de l'année, l'habitude de penser et d'enregistrer s'est améliorée de plus en plus.",
+  "decreasingFrequency": "Les enregistrements au début de l'année étaient très actifs, peut-être pouvez-vous retrouver l'enthousiasme pour l'écriture à ce moment-là.",
+  "stableRhythm": "Vous avez maintenu un rythme d'enregistrement stable, et cette persistance est rare !",
+  "beginningOfYear": "Cette année est le début de l'enregistrement, j'ai hâte de voir plus de pistes de pensée.",
+  "writingRhythm": "Rythme d'écriture",
+  "goodRhythm": "Vous avez un bon rythme d'écriture, avec la plus longue série continue de {longestStreak} jours ! La persistance est le pouvoir.",
+  "@goodRhythm": {
+    "placeholders": {
+      "longestStreak": {
+        "type": "int"
+      }
+    }
+  },
+  "decentRhythm": "Vous avez établi une bonne habitude d'enregistrement, gardez ce rythme.",
+  "startRhythm": "Enregistrer plus est une habitude, vous pouvez essayer d'enregistrer quelques petites idées chaque jour.",
+  "generatingInsights": "Génération d'aperçus pour cette période...",
+  "noInsights": "Aucun aperçu pour l'instant",
+  "thankYou": "Merci pour votre persistance",
+  "everyThoughtCounts": "Chaque pensée vaut la peine d'être enregistrée\nChaque enregistrement est une empreinte de croissance",
+  "continueRecording": "Continuer à enregistrer en {year}",
+  "@continueRecording": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "reportCopied": "Le rapport annuel a été copié dans le presse-papiers",
+  "monday": "Lundi",
+  "tuesday": "Mardi",
+  "wednesday": "Mercredi",
+  "thursday": "Jeudi",
+  "friday": "Vendredi",
+  "saturday": "Samedi",
+  "sunday": "Dimanche",
+  "dayOfMonth": "Jour {day}",
+  "@dayOfMonth": {
+    "placeholders": {
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "noteDate": "{day} {month}",
+  "@noteDate": {
+    "placeholders": {
+      "month": {
+        "type": "String"
+      },
+      "day": {
+        "type": "String"
+      }
+    }
+  },
+  "noteLocation": "à {location}",
+  "@noteLocation": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      }
+    }
+  },
+  "noteWeather": "(Météo : {weather})",
+  "@noteWeather": {
+    "placeholders": {
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "annualReportForYear": "Rapport annuel {year}",
+  "@annualReportForYear": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "annualReportTitle": "Rapport annuel ThoughtEcho",
+  "pageIndicator": "{currentPage} / {totalPages}",
+  "@pageIndicator": {
+    "placeholders": {
+      "currentPage": {
+        "type": "int"
+      },
+      "totalPages": {
+        "type": "int"
+      }
+    }
+  },
+  "shareAnnualReportContent": "Ma revue ThoughtEcho {year}\n\n📝 Enregistré {totalQuotes} pensées\n💭 Témoin d'une année de croissance et de réflexion\n\nEnregistrer les morceaux de vie dans ThoughtEcho\n#ThoughtEcho #RevueAnnuelle #Journal",
+  "@shareAnnualReportContent": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      },
+      "totalQuotes": {
+        "type": "int"
+      }
+    }
+  },
+  "tileNoLocationPermission": "Pas de localisation",
+  "tileOffline": "Hors ligne",
+  "tileNoNetwork": "Pas de réseau",
+  "tileLoading": "Chargement...",
+  "tileNoWeather": "Pas de météo",
+  "tileCachedSuffix": "(Cache)"
+}
