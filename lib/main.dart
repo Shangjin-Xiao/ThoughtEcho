@@ -151,23 +151,6 @@ Future<void> main() async {
         }
       }
 
-      // Windows平台启动调试服务 - 正式版已禁用
-      // if (!kIsWeb && Platform.isWindows) {
-      //   // 异步初始化调试服务，不等待完成
-      //   Future.microtask(() async {
-      //     try {
-      //       await WindowsStartupDebugService.initialize();
-      //       await WindowsStartupDebugService.recordInitStep('调试服务已启动');
-      //       await WindowsStartupDebugService.createStartupGuide();
-      //       await WindowsStartupDebugService.recordFFIInfo();
-      //       await WindowsStartupDebugService.checkWindowsRuntime();
-      //     } catch (e) {
-      //       // 静默处理调试服务错误，不影响主流程
-      //       logError('调试服务初始化失败: $e', error: e, source: 'DebugService');
-      //     }
-      //   });
-      // }
-
       // 初始化日志系统
       AppLogger.initialize();
 
@@ -246,41 +229,17 @@ Future<void> main() async {
       };
       try {
         // 先初始化必要的平台特定的数据库配置
-        // if (!kIsWeb && Platform.isWindows) {
-        //   await WindowsStartupDebugService.recordInitStep('开始初始化数据库平台');
-        // }
         await initializeDatabasePlatform();
-        // if (!kIsWeb && Platform.isWindows) {
-        //   await WindowsStartupDebugService.recordInitStep('数据库平台初始化完成');
-        // }
 
         // 初始化轻量级且必须的服务
-        // if (!kIsWeb && Platform.isWindows) {
-        //   await WindowsStartupDebugService.recordInitStep('开始初始化MMKV服务');
-        // }
         final mmkvService = MMKVService();
         await mmkvService.init();
-        // if (!kIsWeb && Platform.isWindows) {
-        //   await WindowsStartupDebugService.recordInitStep('MMKV服务初始化完成');
-        // }
 
         // 初始化网络服务
-        // if (!kIsWeb && Platform.isWindows) {
-        //   await WindowsStartupDebugService.recordInitStep('开始初始化网络服务');
-        // }
         await NetworkService.instance.init();
-        // if (!kIsWeb && Platform.isWindows) {
-        //   await WindowsStartupDebugService.recordInitStep('网络服务初始化完成');
-        // }
 
         // 初始化设置服务
-        // if (!kIsWeb && Platform.isWindows) {
-        //   await WindowsStartupDebugService.recordInitStep('开始初始化设置服务');
-        // }
         final settingsService = await SettingsService.create();
-        // if (!kIsWeb && Platform.isWindows) {
-        //   await WindowsStartupDebugService.recordInitStep('设置服务初始化完成');
-        // }
         // 自动获取应用版本号
         final packageInfo = await PackageInfo.fromPlatform();
         final String currentVersion = packageInfo.version;
@@ -532,38 +491,17 @@ Future<void> main() async {
                     ? TimeoutConstants.databaseInitTimeoutWindows
                     : TimeoutConstants.databaseInitTimeoutDefault;
 
-                // if (Platform.isWindows) {
-                //   await WindowsStartupDebugService.recordInitStep('开始初始化主数据库');
-                // }
                 await databaseService.init().timeout(
                   dbTimeoutDuration,
                   onTimeout: () {
                     throw TimeoutException('数据库初始化超时');
                   },
                 );
-                // if (Platform.isWindows) {
-                //   await WindowsStartupDebugService.recordInitStep('主数据库初始化完成');
-                // }
-
                 // 初始化AI分析数据库
                 try {
-                  // if (Platform.isWindows) {
-                  //   await WindowsStartupDebugService.recordInitStep(
-                  //       '开始初始化AI分析数据库');
-                  // }
                   await aiAnalysisDbService.init();
-                  // if (Platform.isWindows) {
-                  //   await WindowsStartupDebugService.recordInitStep(
-                  //       'AI分析数据库初始化完成');
-                  // }
                   logInfo('AI分析数据库初始化完成', source: 'BackgroundInit');
                 } catch (aiDbError) {
-                  // if (Platform.isWindows) {
-                  //   await WindowsStartupDebugService.recordInitStep(
-                  //       'AI分析数据库初始化失败',
-                  //       details: aiDbError.toString(),
-                  //       success: false);
-                  // }
                   logError(
                     'AI分析数据库初始化失败: $aiDbError',
                     error: aiDbError,
@@ -577,12 +515,6 @@ Future<void> main() async {
 
                 logInfo('后台数据库迁移完成', source: 'BackgroundInit');
               } catch (e, stackTrace) {
-                // if (Platform.isWindows) {
-                //   await WindowsStartupDebugService.recordCrash(
-                //       e.toString(), stackTrace,
-                //       context: '后台数据库迁移失败');
-                //   await WindowsStartupDebugService.flushLogs(); // 确保崩溃信息立即写入磁盘
-                // }
                 logError(
                   '后台数据库迁移失败: $e',
                   error: e,
@@ -592,10 +524,6 @@ Future<void> main() async {
 
                 // 在紧急情况下尝试初始化新数据库
                 try {
-                  // if (Platform.isWindows) {
-                  //   await WindowsStartupDebugService.recordInitStep(
-                  //       '尝试紧急恢复：初始化新数据库');
-                  // }
                   await databaseService.initializeNewDatabase();
 
                   // 尝试初始化AI分析数据库
@@ -730,16 +658,6 @@ Future<void> main() async {
       }
     },
     (error, stackTrace) {
-      // Windows平台立即记录崩溃信息 - 正式版已禁用
-      // if (Platform.isWindows) {
-      //   try {
-      //     WindowsStartupDebugService.recordCrash(error.toString(), stackTrace,
-      //         context: '全局未捕获异常');
-      //   } catch (_) {
-      //     // 静默处理调试记录失败
-      //   }
-      // }
-
       logError(
         '未捕获的异常: $error',
         error: error,
