@@ -5,7 +5,6 @@ library;
 
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
@@ -629,11 +628,11 @@ class SpeechRecognitionService extends ChangeNotifier {
       throw Exception('wav_too_short');
     }
 
-    String _fourCC(int offset) {
+    String fourCC(int offset) {
       return String.fromCharCodes(wavBytes.sublist(offset, offset + 4));
     }
 
-    if (_fourCC(0) != 'RIFF' || _fourCC(8) != 'WAVE') {
+    if (fourCC(0) != 'RIFF' || fourCC(8) != 'WAVE') {
       throw Exception('wav_invalid_header');
     }
 
@@ -649,7 +648,7 @@ class SpeechRecognitionService extends ChangeNotifier {
     // chunk scan from 12
     int offset = 12;
     while (offset + 8 <= wavBytes.lengthInBytes) {
-      final id = _fourCC(offset);
+      final id = fourCC(offset);
       final size = bd.getUint32(offset + 4, Endian.little);
       final chunkDataStart = offset + 8;
 

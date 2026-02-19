@@ -1,8 +1,7 @@
 /// 混合 OCR 服务
 ///
-/// 智能选择使用 MLKit、Tesseract 或 VLM 进行文字识别
+/// 智能选择使用 MLKit 或 VLM 进行文字识别
 /// - 印刷体（移动端） → MLKit（快速、准确）
-/// - 印刷体（桌面端） → Tesseract（轻量、兼容）
 library;
 /// - 手写/复杂场景 → VLM（准确、智能）
 

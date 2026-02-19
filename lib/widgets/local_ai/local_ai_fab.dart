@@ -261,6 +261,7 @@ class _LocalAIFabState extends State<LocalAIFab> {
                   phase: _currentPhase,
                   transcribedText: speech.currentTranscription,
                   errorMessage: _errorMessage,
+                  volumeLevel: speech.status.volumeLevel,
                 );
               },
             );

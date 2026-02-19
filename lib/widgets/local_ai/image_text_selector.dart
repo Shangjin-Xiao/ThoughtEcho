@@ -105,7 +105,7 @@ class _ImageTextSelectorState extends State<ImageTextSelector> {
                       ),
                     ),
                   );
-                }).toList(),
+                }),
               ],
             ),
           ),

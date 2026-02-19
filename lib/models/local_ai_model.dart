@@ -14,7 +14,7 @@ enum LocalAIModelType {
   /// 语音识别模型 (Whisper)
   asr,
 
-  /// OCR 模型 (Tesseract)
+  /// OCR 模型
   ocr,
 }
 

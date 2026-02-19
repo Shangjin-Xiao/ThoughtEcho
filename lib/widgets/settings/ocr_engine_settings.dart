@@ -1,6 +1,6 @@
 /// 本地 AI OCR 引擎设置界面
 ///
-/// 允许用户选择 OCR 引擎：Tesseract、VLM 或自动选择
+/// 允许用户选择 OCR 引擎：MLKit、VLM 或自动选择
 library;
 
 import 'package:flutter/material.dart';
