@@ -1122,8 +1122,15 @@ class DatabaseService extends ChangeNotifier {
       return;
     }
 
+    // 优化：一次性获取所有分类ID，避免在循环中进行N+1查询
+    final allCategories = await txn.query('categories', columns: ['id']);
+    final allCategoryIds = allCategories.map((c) => c['id'] as String).toSet();
+
     int migratedCount = 0;
     int errorCount = 0;
+
+    // 优化：使用batch进行批量插入
+    final batch = txn.batch();
 
     for (final quote in quotesWithTags) {
       try {
@@ -1141,26 +1148,19 @@ class DatabaseService extends ChangeNotifier {
 
         if (tagIds.isEmpty) continue;
 
-        // 验证标签ID是否存在
+        // 验证标签ID是否存在（在内存中检查）
         final validTagIds = <String>[];
         for (final tagId in tagIds) {
-          final categoryExists = await txn.query(
-            'categories',
-            where: 'id = ?',
-            whereArgs: [tagId],
-            limit: 1,
-          );
-
-          if (categoryExists.isNotEmpty) {
+          if (allCategoryIds.contains(tagId)) {
             validTagIds.add(tagId);
           } else {
             logDebug('警告：标签ID $tagId 不存在，跳过');
           }
         }
 
-        // 插入有效的标签关联
+        // 插入有效的标签关联（添加到batch）
         for (final tagId in validTagIds) {
-          await txn.insert(
+          batch.insert(
               'quote_tags',
               {
                 'quote_id': quoteId,
@@ -1174,6 +1174,15 @@ class DatabaseService extends ChangeNotifier {
         errorCount++;
         logDebug('迁移笔记 ${quote['id']} 的标签时出错: $e');
       }
+    }
+
+    // 提交批量操作
+    try {
+      await batch.commit(noResult: true);
+    } catch (e) {
+      logError('批量插入标签关联失败: $e', error: e, source: 'TagMigration');
+      // 重新抛出异常以确保迁移事务整体失败，避免在迁移未完成时删除 tag_ids 列导致数据丢失
+      rethrow;
     }
 
     logDebug('标签数据迁移完成：成功 $migratedCount 条，错误 $errorCount 条');
