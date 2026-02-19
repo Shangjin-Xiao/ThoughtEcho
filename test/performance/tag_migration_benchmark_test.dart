@@ -152,13 +152,13 @@ void main() {
         }
       }
 
-      // 5. Commit batch
+      // 5. Commit batch (Single transaction commit minimizes IPC overhead)
       await batch.commit(noResult: true);
     });
     stopwatchFast.stop();
     print('Fast migration took: ${stopwatchFast.elapsedMilliseconds}ms');
 
-    // Verify count
+    // Verify count (Fast)
     final countFast = Sqflite.firstIntValue(
         await db.rawQuery('SELECT COUNT(*) FROM quote_tags'));
     print('Fast migration inserted $countFast records.');
