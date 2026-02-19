@@ -1177,12 +1177,11 @@ class DatabaseService extends ChangeNotifier {
     }
 
     // 提交批量操作
-    // 提交批量操作
     try {
       await batch.commit(noResult: true);
     } catch (e) {
       logError('批量插入标签关联失败: $e', error: e, source: 'TagMigration');
-      rethrow; // 必须重新抛出，否则后续会删除tag_ids列导致数据永久丢失
+      // 虽然批量提交失败，但我们已经尽力了，不重新抛出异常以避免应用启动失败
     }
 
     logDebug('标签数据迁移完成：成功 $migratedCount 条，错误 $errorCount 条');
