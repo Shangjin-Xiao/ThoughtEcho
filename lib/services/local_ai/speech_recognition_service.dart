@@ -780,7 +780,7 @@ class SpeechRecognitionService extends ChangeNotifier {
   void _startRecordingTimer() {
     _recordingTimer?.cancel();
     _recordingTimer =
-        Timer.periodic(const Duration(milliseconds: 100), (timer) {
+        Timer.periodic(const Duration(milliseconds: 300), (timer) {
       if (!_status.isRecording) {
         timer.cancel();
         return;
@@ -791,7 +791,7 @@ class SpeechRecognitionService extends ChangeNotifier {
       final timeFactor = _status.durationSeconds * 3.14;
       final simulatedVolume = 0.3 + 0.2 * (0.5 + 0.5 * _sin(timeFactor));
       _status = _status.copyWith(
-        durationSeconds: _status.durationSeconds + 0.1,
+        durationSeconds: _status.durationSeconds + 0.3,
         volumeLevel: simulatedVolume.clamp(0.0, 1.0),
       );
       notifyListeners();

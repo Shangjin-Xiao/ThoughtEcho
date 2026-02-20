@@ -476,6 +476,26 @@ class ModelManager extends ChangeNotifier {
     await prefs.remove(_prefsKeyGemmaActiveModelId);
   }
 
+  /// FlutterGemma 全局初始化 Completer（防止并发初始化）
+  static Completer<void>? _flutterGemmaInitCompleter;
+
+  /// 确保 FlutterGemma 插件已全局初始化（并发安全）
+  Future<void> _ensureFlutterGemmaInitialized() async {
+    if (_flutterGemmaInitCompleter != null) {
+      return _flutterGemmaInitCompleter!.future;
+    }
+    _flutterGemmaInitCompleter = Completer<void>();
+    try {
+      await FlutterGemma.initialize();
+      logInfo('FlutterGemma 全局初始化完成', source: 'ModelManager');
+      _flutterGemmaInitCompleter!.complete();
+    } catch (e) {
+      logError('FlutterGemma 全局初始化失败: $e', source: 'ModelManager');
+      // 重置，允许后续重试
+      _flutterGemmaInitCompleter = null;
+    }
+  }
+
   Future<void> _executeFlutterGemmaManagedDownload(_DownloadTask task) async {
     if (_modelsDirectory == null) {
       task.onError(errorDownloadFailed);
@@ -532,8 +552,16 @@ class ModelManager extends ChangeNotifier {
       }
 
       // 下载完成后，告诉 flutter_gemma 该模型文件路径
-      final gemma = FlutterGemmaPlugin.instance;
-      await gemma.modelManager.setModelPath(task.savePath);
+      await _ensureFlutterGemmaInitialized();
+      final modelInfo = _modelStates[task.modelId];
+      final modelType = modelInfo?.type == LocalAIModelType.embedding
+          ? null // embedding 模型使用不同的安装流程
+          : ModelType.gemmaIt;
+      if (modelType != null) {
+        await FlutterGemma.installModel(modelType: modelType)
+            .fromFile(task.savePath)
+            .install();
+      }
 
       // 标记当前激活模型
       await _setFlutterGemmaActiveModelId(task.modelId);
@@ -672,8 +700,12 @@ class ModelManager extends ChangeNotifier {
 
       // flutter_gemma 托管模型：导入后设置模型路径，并记录 active id。
       if (model.downloadUrl.startsWith('managed://flutter_gemma/')) {
-        final gemma = FlutterGemmaPlugin.instance;
-        await gemma.modelManager.setModelPath(targetPath);
+        await _ensureFlutterGemmaInitialized();
+        if (model.type == LocalAIModelType.llm) {
+          await FlutterGemma.installModel(modelType: ModelType.gemmaIt)
+              .fromFile(targetPath)
+              .install();
+        }
         await _setFlutterGemmaActiveModelId(modelId);
       }
 

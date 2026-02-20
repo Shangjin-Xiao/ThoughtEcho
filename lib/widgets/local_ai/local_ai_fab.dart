@@ -66,6 +66,13 @@ class _LocalAIFabState extends State<LocalAIFab> {
     super.dispose();
   }
 
+  /// 关闭语音浮层（如果已打开）
+  void _closeOverlayIfOpen() {
+    if (_voiceOverlayOpen && mounted) {
+      Navigator.of(context, rootNavigator: true).maybePop();
+    }
+  }
+
   /// 通知浮层更新
   void _notifyOverlayUpdate() {
     _overlayUpdateNotifier.value++;
@@ -125,9 +132,7 @@ class _LocalAIFabState extends State<LocalAIFab> {
   /// 上滑进入 OCR
   Future<void> _handleSwipeUpToOCR() async {
     // 先关闭浮层
-    if (_voiceOverlayOpen && mounted) {
-      Navigator.of(context, rootNavigator: true).maybePop();
-    }
+    _closeOverlayIfOpen();
 
     // 取消录音（如果正在录音）
     await _cancelVoiceRecording();
@@ -158,9 +163,7 @@ class _LocalAIFabState extends State<LocalAIFab> {
 
       // 如果用户已松开手指或要进入 OCR，不再开始录音
       if (_fingerLifted || _shouldEnterOCR) {
-        if (_voiceOverlayOpen && mounted) {
-          Navigator.of(context, rootNavigator: true).maybePop();
-        }
+        _closeOverlayIfOpen();
         return;
       }
 
@@ -183,17 +186,18 @@ class _LocalAIFabState extends State<LocalAIFab> {
 
   /// 停止录音并将文字填入编辑框
   Future<void> _stopRecordingAndInsertText() async {
-    // 先关闭浮层
-    if (_voiceOverlayOpen && mounted) {
-      Navigator.of(context, rootNavigator: true).maybePop();
-    }
-
     if (!_isVoiceRecording) {
+      // 如果未在录音，直接关闭浮层
+      _closeOverlayIfOpen();
       return;
     }
 
     final localAI = LocalAIService.instance;
     final l10n = AppLocalizations.of(context);
+
+    // 先更新浮层为处理中状态
+    _currentPhase = VoiceOverlayPhase.processing;
+    _notifyOverlayUpdate();
 
     try {
       final result = await localAI.stopAndTranscribe();
@@ -202,6 +206,10 @@ class _LocalAIFabState extends State<LocalAIFab> {
       if (!mounted) return;
 
       final resultText = result.text.trim();
+
+      // 关闭浮层
+      _closeOverlayIfOpen();
+
       if (resultText.isEmpty) {
         // 未识别到文字，显示提示
         ScaffoldMessenger.of(context).showSnackBar(
@@ -217,6 +225,10 @@ class _LocalAIFabState extends State<LocalAIFab> {
       widget.onInsertText(resultText);
     } catch (e) {
       _isVoiceRecording = false;
+
+      // 关闭浮层
+      _closeOverlayIfOpen();
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -262,6 +274,19 @@ class _LocalAIFabState extends State<LocalAIFab> {
                   transcribedText: speech.currentTranscription,
                   errorMessage: _errorMessage,
                   volumeLevel: speech.status.volumeLevel,
+                  onStopRecording: () {
+                    _stopRecordingAndInsertText();
+                  },
+                  onCancel: () {
+                    _cancelVoiceRecording();
+                    _closeOverlayIfOpen();
+                  },
+                  onTranscriptionComplete: (text) {
+                    _closeOverlayIfOpen();
+                    if (text.trim().isNotEmpty) {
+                      widget.onInsertText(text.trim());
+                    }
+                  },
                 );
               },
             );
