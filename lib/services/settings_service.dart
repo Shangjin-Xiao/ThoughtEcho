@@ -105,8 +105,9 @@ class SettingsService extends ChangeNotifier {
   bool get enableFirstOpenScrollPerfMonitor =>
       _appSettings.enableFirstOpenScrollPerfMonitor;
   Future<void> setEnableFirstOpenScrollPerfMonitor(bool enabled) async {
-    _appSettings =
-        _appSettings.copyWith(enableFirstOpenScrollPerfMonitor: enabled);
+    _appSettings = _appSettings.copyWith(
+      enableFirstOpenScrollPerfMonitor: enabled,
+    );
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
     notifyListeners();
   }
@@ -698,7 +699,8 @@ class SettingsService extends ChangeNotifier {
           // 安全存储中已有密钥，遗留的明文密钥是冗余的，可以直接清除
           shouldClear = true;
           logDebug(
-              'Found redundant plaintext API key in AISettings. Clearing.');
+            'Found redundant plaintext API key in AISettings. Clearing.',
+          );
         } else {
           // 安全存储中没有密钥，尝试迁移
           await apiKeyManager.saveProviderApiKey(

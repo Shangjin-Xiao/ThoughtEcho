@@ -25,50 +25,54 @@ void main() {
     });
 
     test(
-        'should return memory conservative strategy when memory pressure is high',
-        () {
-      final context = MemoryContext(
-        pressureLevel: 2, // High
-        availableMemory: 200 * 1024 * 1024,
-        dataSize: 1024,
-        operationName: 'media_processing',
-        additionalContext: {},
-      );
+      'should return memory conservative strategy when memory pressure is high',
+      () {
+        final context = MemoryContext(
+          pressureLevel: 2, // High
+          availableMemory: 200 * 1024 * 1024,
+          dataSize: 1024,
+          operationName: 'media_processing',
+          additionalContext: {},
+        );
 
-      final result = strategy.getStrategy(context);
+        final result = strategy.getStrategy(context);
 
-      expect(result.name, equals('memory_conservative'));
-    });
-
-    test('should return memory conservative strategy when data size > 500MB',
-        () {
-      final context = MemoryContext(
-        pressureLevel: 1, // Normal
-        availableMemory: 500 * 1024 * 1024,
-        dataSize: 500 * 1024 * 1024 + 1, // > 500MB
-        operationName: 'media_processing',
-        additionalContext: {},
-      );
-
-      final result = strategy.getStrategy(context);
-
-      expect(result.name, equals('memory_conservative'));
-    });
+        expect(result.name, equals('memory_conservative'));
+      },
+    );
 
     test(
-        'should return default strategy when memory pressure is normal and data size is small',
-        () {
-      final context = MemoryContext(
-        pressureLevel: 1, // Normal
-        availableMemory: 500 * 1024 * 1024,
-        dataSize: 1024, // Small
-        operationName: 'media_processing',
-        additionalContext: {},
-      );
+      'should return memory conservative strategy when data size > 500MB',
+      () {
+        final context = MemoryContext(
+          pressureLevel: 1, // Normal
+          availableMemory: 500 * 1024 * 1024,
+          dataSize: 500 * 1024 * 1024 + 1, // > 500MB
+          operationName: 'media_processing',
+          additionalContext: {},
+        );
 
-      final result = strategy.getStrategy(context);
+        final result = strategy.getStrategy(context);
 
-      expect(result.name, equals('default'));
-    });
+        expect(result.name, equals('memory_conservative'));
+      },
+    );
+
+    test(
+      'should return default strategy when memory pressure is normal and data size is small',
+      () {
+        final context = MemoryContext(
+          pressureLevel: 1, // Normal
+          availableMemory: 500 * 1024 * 1024,
+          dataSize: 1024, // Small
+          operationName: 'media_processing',
+          additionalContext: {},
+        );
+
+        final result = strategy.getStrategy(context);
+
+        expect(result.name, equals('default'));
+      },
+    );
   });
 }

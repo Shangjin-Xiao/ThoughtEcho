@@ -67,8 +67,9 @@ class _OCRResultSheetState extends State<OCRResultSheet> {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color:
-                          theme.colorScheme.onSurfaceVariant.withOpacity(0.35),
+                      color: theme.colorScheme.onSurfaceVariant.withOpacity(
+                        0.35,
+                      ),
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),

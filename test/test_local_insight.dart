@@ -15,8 +15,9 @@ class AIPromptManager {
   }) {
     final time = mostTimePeriod ?? '本期时段分布较均衡';
     final weather = mostWeather ?? '天气因素不明显';
-    final tag =
-        (topTag != null && topTag.trim().isNotEmpty) ? '#$topTag' : '主题尚未收敛';
+    final tag = (topTag != null && topTag.trim().isNotEmpty)
+        ? '#$topTag'
+        : '主题尚未收敛';
 
     // 3种风格模板（除了简约数据型和极简禅意型），随机挑选
     final rng = math.Random();

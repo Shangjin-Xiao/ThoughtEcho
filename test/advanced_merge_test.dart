@@ -199,9 +199,11 @@ void main() {
           if (a['deltaContent'] == null && b['deltaContent'] != null) return 1;
 
           // 2. 优先保留内容更丰富的
-          final aLength = (a['content'] as String).length +
+          final aLength =
+              (a['content'] as String).length +
               (a['deltaContent']?.length ?? 0);
-          final bLength = (b['content'] as String).length +
+          final bLength =
+              (b['content'] as String).length +
               (b['deltaContent']?.length ?? 0);
           if (aLength != bLength) return bLength.compareTo(aLength);
 

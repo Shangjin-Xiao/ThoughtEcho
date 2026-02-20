@@ -339,16 +339,18 @@ class MediaFileService {
         final batch = allEntities.skip(i).take(batchSize).toList();
 
         // 并行检查文件是否存在，显著提高 I/O 效率
-        final results = await Future.wait(batch.map((entity) async {
-          try {
-            if (await entity.exists()) {
-              return entity.path;
+        final results = await Future.wait(
+          batch.map((entity) async {
+            try {
+              if (await entity.exists()) {
+                return entity.path;
+              }
+            } catch (e) {
+              logDebug('检查媒体文件失败，跳过: ${entity.path}, 错误: $e');
             }
-          } catch (e) {
-            logDebug('检查媒体文件失败，跳过: ${entity.path}, 错误: $e');
-          }
-          return null;
-        }));
+            return null;
+          }),
+        );
 
         for (final result in results) {
           if (result != null) {

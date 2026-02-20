@@ -7,6 +7,7 @@ class SlidingCard extends StatefulWidget {
   final VoidCallback? onSlideComplete;
   final VoidCallback? onTap;
   final VoidCallback? onDoubleTap;
+  final String? bottomTip;
 
   const SlidingCard({
     super.key,
@@ -14,6 +15,7 @@ class SlidingCard extends StatefulWidget {
     this.onSlideComplete,
     this.onTap,
     this.onDoubleTap,
+    this.bottomTip,
   });
 
   @override
@@ -222,7 +224,23 @@ class _SlidingCardState extends State<SlidingCard>
                             const SizedBox(height: 16),
                             widget.child,
                             const SizedBox(height: 16),
-                            if (widget.onSlideComplete != null)
+                            if (widget.bottomTip != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8.0),
+                                child: AnimatedOpacity(
+                                  duration: const Duration(milliseconds: 200),
+                                  opacity: 0.6,
+                                  child: Text(
+                                    widget.bottomTip!,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: theme.colorScheme.onSurface
+                                          .withValues(alpha: 0.5),
+                                    ),
+                                  ),
+                                ),
+                              )
+                            else if (widget.onSlideComplete != null)
                               Padding(
                                 padding: const EdgeInsets.only(top: 8.0),
                                 child: AnimatedOpacity(

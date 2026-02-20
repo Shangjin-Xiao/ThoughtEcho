@@ -46,18 +46,19 @@ void main() {
 </svg>
 ''';
 
-      final bytes = await SvgToImageService.convertSvgToImage(
-        rgbSvg,
-        width: 100,
-        height: 100,
-        format: ui.ImageByteFormat.png,
-        useCache: false,
-      ).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          fail('SVG转换超时（可能是离屏渲染在测试环境下无法初始化FlutterView）');
-        },
-      );
+      final bytes =
+          await SvgToImageService.convertSvgToImage(
+            rgbSvg,
+            width: 100,
+            height: 100,
+            format: ui.ImageByteFormat.png,
+            useCache: false,
+          ).timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              fail('SVG转换超时（可能是离屏渲染在测试环境下无法初始化FlutterView）');
+            },
+          );
 
       expect(bytes, isNotNull);
       expect(bytes.length, greaterThan(0));

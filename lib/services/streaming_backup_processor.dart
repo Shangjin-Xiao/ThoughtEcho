@@ -141,11 +141,14 @@ class StreamingBackupProcessor {
               // 将 ZIP 条目名中的正斜杠转换为当前平台的路径分隔符
               // ZIP 格式标准使用正斜杠，但在 Windows 上需要转换为反斜杠
               final normalizedName = f.name.replaceAll('/', p.separator);
-              final safeRelativePath =
-                  _normalizeSafeRelativePath(normalizedName);
+              final safeRelativePath = _normalizeSafeRelativePath(
+                normalizedName,
+              );
               if (safeRelativePath == null) {
-                logWarning('跳过不安全的ZIP条目: ${f.name}',
-                    source: 'StreamingBackupProcessor');
+                logWarning(
+                  '跳过不安全的ZIP条目: ${f.name}',
+                  source: 'StreamingBackupProcessor',
+                );
                 continue;
               }
 
@@ -158,8 +161,10 @@ class StreamingBackupProcessor {
               await outFile.writeAsBytes(f.content as List<int>, flush: true);
               logDebug('已解压媒体文件: ${f.name} -> $targetPath');
             } catch (e) {
-              logWarning('媒体文件解压失败: ${f.name}, $e',
-                  source: 'StreamingBackupProcessor');
+              logWarning(
+                '媒体文件解压失败: ${f.name}, $e',
+                source: 'StreamingBackupProcessor',
+              );
             }
           }
         }

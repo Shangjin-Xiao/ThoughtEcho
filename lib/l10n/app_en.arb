@@ -3186,6 +3186,7 @@
   "clearFavoriteSuccess": "Favorite cleared",
   "clearFavoriteFailed": "Failed to clear favorite",
   "moreOptions": "More options",
+  "dailyQuoteInteractionHint": "Tap to copy • Double tap to save",
 
   "localAiFeatures": "Local AI Features",
   "localAiFeaturesPreview": "Preview",

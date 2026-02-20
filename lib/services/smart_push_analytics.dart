@@ -44,7 +44,7 @@ class SmartPushAnalytics extends ChangeNotifier {
   };
 
   SmartPushAnalytics({MMKVService? mmkvService})
-      : _mmkv = mmkvService ?? MMKVService();
+    : _mmkv = mmkvService ?? MMKVService();
 
   // ============================================================
   // 1. 响应性热图 - 用户 App 打开时间分析
@@ -125,10 +125,9 @@ class SmartPushAnalytics extends ChangeNotifier {
     final heatmap = await calculateResponsivenessHeatmap();
 
     // 过滤并排序
-    final validWindows = heatmap.entries
-        .where((e) => e.value >= minScore)
-        .toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    final validWindows =
+        heatmap.entries.where((e) => e.value >= minScore).toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
 
     // 确保时间间隔至少 3 小时
     final selected = <MapEntry<int, double>>[];
@@ -187,7 +186,9 @@ class SmartPushAnalytics extends ChangeNotifier {
   }
 
   Future<void> _applyTimeDecay(
-      Map<int, double> heatmap, List<String> records) async {
+    Map<int, double> heatmap,
+    List<String> records,
+  ) async {
     // 简化的时间衰减：最近 7 天的记录权重 2x
     final now = DateTime.now();
     final recentCutoff = now.subtract(const Duration(days: 7));
@@ -220,8 +221,9 @@ class SmartPushAnalytics extends ChangeNotifier {
       final jsonStr = _mmkv.getString(_appOpenTimesKey);
       if (jsonStr == null || jsonStr.isEmpty) return [];
 
-      final List<dynamic> list =
-          List<dynamic>.from((jsonStr.split(',').where((s) => s.isNotEmpty)));
+      final List<dynamic> list = List<dynamic>.from(
+        (jsonStr.split(',').where((s) => s.isNotEmpty)),
+      );
       return list.cast<String>();
     } catch (e) {
       return [];
@@ -298,8 +300,9 @@ class SmartPushAnalytics extends ChangeNotifier {
       if (lastDismissal == null || lastDismissal.isEmpty) return false;
 
       final dismissTime = DateTime.parse(lastDismissal);
-      final cooldownEnd =
-          dismissTime.add(Duration(hours: cooldownHoursAfterDismiss));
+      final cooldownEnd = dismissTime.add(
+        Duration(hours: cooldownHoursAfterDismiss),
+      );
 
       return DateTime.now().isBefore(cooldownEnd);
     } catch (e) {

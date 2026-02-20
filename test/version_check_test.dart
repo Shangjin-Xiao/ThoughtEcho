@@ -103,8 +103,10 @@ void main() {
 
       final versionInfo = VersionInfo.fromJson(mockResponseWithApk, '1.0.0');
 
-      expect(versionInfo.apkDownloadUrl,
-          'https://github.com/test/releases/download/v1.2.0/app-release.apk');
+      expect(
+        versionInfo.apkDownloadUrl,
+        'https://github.com/test/releases/download/v1.2.0/app-release.apk',
+      );
     });
 
     test('should handle response without APK assets', () {

@@ -54,8 +54,9 @@ class LocalGeocodingService {
       }
 
       // 根据精度要求设置参数
-      final accuracy =
-          highAccuracy ? LocationAccuracy.high : LocationAccuracy.reduced;
+      final accuracy = highAccuracy
+          ? LocationAccuracy.high
+          : LocationAccuracy.reduced;
       final timeout = highAccuracy
           ? const Duration(seconds: 10)
           : const Duration(seconds: 5);
@@ -149,16 +150,16 @@ class LocalGeocodingService {
             'city': (placeLocality != null && placeLocality.isNotEmpty)
                 ? placeLocality
                 : ((placeSubAdminArea != null && placeSubAdminArea.isNotEmpty)
-                    ? placeSubAdminArea
-                    : null),
+                      ? placeSubAdminArea
+                      : null),
             'district':
                 (placeSubLocality != null && placeSubLocality.isNotEmpty)
-                    ? placeSubLocality
-                    : null,
+                ? placeSubLocality
+                : null,
             'street':
                 (placeThoroughfare != null && placeThoroughfare.isNotEmpty)
-                    ? placeThoroughfare
-                    : null,
+                ? placeThoroughfare
+                : null,
             'formatted_address': _formatAddress(place),
             'source': 'system', // 标记数据来源
           };

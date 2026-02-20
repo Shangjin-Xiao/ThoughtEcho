@@ -29,9 +29,7 @@ class _ImageTextSelectorState extends State<ImageTextSelector> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.ocrSelectRegion),
-      ),
+      appBar: AppBar(title: Text(l10n.ocrSelectRegion)),
       body: Column(
         children: [
           // 提示文本
@@ -54,11 +52,7 @@ class _ImageTextSelectorState extends State<ImageTextSelector> {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.image,
-                          size: 64,
-                          color: Colors.grey[600],
-                        ),
+                        Icon(Icons.image, size: 64, color: Colors.grey[600]),
                         const SizedBox(height: 16),
                         Text(
                           l10n.featureComingSoon,

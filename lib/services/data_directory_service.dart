@@ -72,8 +72,11 @@ class DataDirectoryService {
       }
 
       final docsDir = await getApplicationDocumentsDirectory();
-      final legacyDbPath =
-          path.join(docsDir.path, 'databases', 'thoughtecho.db');
+      final legacyDbPath = path.join(
+        docsDir.path,
+        'databases',
+        'thoughtecho.db',
+      );
       final legacyDbFile = File(legacyDbPath);
 
       // 检查旧版数据是否存在于 Documents 根目录
@@ -102,11 +105,7 @@ class DataDirectoryService {
       await Directory(newDataDir).create(recursive: true);
 
       // 迁移应用相关的文件和目录
-      final itemsToMigrate = [
-        'databases',
-        'media',
-        'ai_analyses.db',
-      ];
+      final itemsToMigrate = ['databases', 'media', 'ai_analyses.db'];
 
       for (final item in itemsToMigrate) {
         final sourcePath = path.join(docsDir.path, item);
@@ -306,9 +305,7 @@ class DataDirectoryService {
         onStatusUpdate?.call('验证文件完整性...');
 
         // 5. 验证关键文件是否复制成功
-        final criticalFiles = [
-          'databases/thoughtecho.db',
-        ];
+        final criticalFiles = ['databases/thoughtecho.db'];
 
         for (final relPath in criticalFiles) {
           final sourceFile = File(path.join(currentPath, relPath));
@@ -351,7 +348,8 @@ class DataDirectoryService {
 
   /// 在 isolate 中收集应用相关的文件（避免阻塞 UI）
   static Future<Map<String, dynamic>> _collectAppFiles(
-      String currentPath) async {
+    String currentPath,
+  ) async {
     final filesToCopy = <String>[];
     final errors = <String>[];
 
@@ -395,20 +393,12 @@ class DataDirectoryService {
       }
     }
 
-    return {
-      'files': filesToCopy,
-      'errors': errors,
-    };
+    return {'files': filesToCopy, 'errors': errors};
   }
 
   /// 检查是否是 Windows 系统文件
   static bool _isWindowsSystemFile(String fileName) {
-    final systemFiles = [
-      'desktop.ini',
-      'thumbs.db',
-      'ntuser.dat',
-      '.ds_store',
-    ];
+    final systemFiles = ['desktop.ini', 'thumbs.db', 'ntuser.dat', '.ds_store'];
     return systemFiles.contains(fileName);
   }
 
@@ -488,8 +478,10 @@ class DataDirectoryService {
       }
 
       int totalSize = 0;
-      await for (final entity
-          in dir.list(recursive: true, followLinks: false)) {
+      await for (final entity in dir.list(
+        recursive: true,
+        followLinks: false,
+      )) {
         if (entity is File) {
           try {
             totalSize += await entity.length();

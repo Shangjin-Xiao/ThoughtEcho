@@ -11,35 +11,40 @@ void main() {
     test('allows valid file inside extraction directory', () {
       final targetPath = path.join(extractDir, 'file.txt');
       expect(
-          () =>
-              PathSecurityUtils.validateExtractionPath(targetPath, extractDir),
-          returnsNormally);
+        () => PathSecurityUtils.validateExtractionPath(targetPath, extractDir),
+        returnsNormally,
+      );
     });
 
     test('allows valid file in subdirectory', () {
       final targetPath = path.join(extractDir, 'subdir', 'file.txt');
       expect(
-          () =>
-              PathSecurityUtils.validateExtractionPath(targetPath, extractDir),
-          returnsNormally);
+        () => PathSecurityUtils.validateExtractionPath(targetPath, extractDir),
+        returnsNormally,
+      );
     });
 
     test('throws on Zip Slip attempt (parent directory)', () {
       final targetPath = path.join(extractDir, '..', 'evil.txt');
       // targetPath resolves to sibling of extractDir, e.g., .../evil.txt
       expect(
-          () =>
-              PathSecurityUtils.validateExtractionPath(targetPath, extractDir),
-          throwsA(isA<Exception>()
-              .having((e) => e.toString(), 'message', contains('安全警告'))));
+        () => PathSecurityUtils.validateExtractionPath(targetPath, extractDir),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'message',
+            contains('安全警告'),
+          ),
+        ),
+      );
     });
 
     test('throws on Zip Slip attempt (multiple levels up)', () {
       final targetPath = path.join(extractDir, '..', '..', 'etc', 'passwd');
       expect(
-          () =>
-              PathSecurityUtils.validateExtractionPath(targetPath, extractDir),
-          throwsA(isA<Exception>()));
+        () => PathSecurityUtils.validateExtractionPath(targetPath, extractDir),
+        throwsA(isA<Exception>()),
+      );
     });
 
     test('throws on absolute path pointing outside', () {
@@ -50,9 +55,9 @@ void main() {
 
       // If extractDir is not a prefix of targetPath, it should fail.
       expect(
-          () =>
-              PathSecurityUtils.validateExtractionPath(targetPath, extractDir),
-          throwsA(isA<Exception>()));
+        () => PathSecurityUtils.validateExtractionPath(targetPath, extractDir),
+        throwsA(isA<Exception>()),
+      );
     });
 
     test('throws on sibling directory with same prefix (partial match)', () {
@@ -62,19 +67,24 @@ void main() {
       final targetPath = '${extractDir}_suffix${path.separator}file.txt';
 
       expect(
-          () =>
-              PathSecurityUtils.validateExtractionPath(targetPath, extractDir),
-          throwsA(isA<Exception>()
-              .having((e) => e.toString(), 'message', contains('路径尝试穿越'))));
+        () => PathSecurityUtils.validateExtractionPath(targetPath, extractDir),
+        throwsA(
+          isA<Exception>().having(
+            (e) => e.toString(),
+            'message',
+            contains('路径尝试穿越'),
+          ),
+        ),
+      );
     });
 
     test('normalizes complex paths correctly', () {
       // /safe/dir/./subdir/../file.txt -> /safe/dir/file.txt
       final targetPath = path.join(extractDir, '.', 'subdir', '..', 'file.txt');
       expect(
-          () =>
-              PathSecurityUtils.validateExtractionPath(targetPath, extractDir),
-          returnsNormally);
+        () => PathSecurityUtils.validateExtractionPath(targetPath, extractDir),
+        returnsNormally,
+      );
     });
   });
 }

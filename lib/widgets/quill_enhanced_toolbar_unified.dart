@@ -83,8 +83,8 @@ class _UnifiedQuillToolbarState extends State<UnifiedQuillToolbar> {
             // 第三组：标题
             quill.QuillToolbarSelectHeaderStyleDropdownButton(
               controller: widget.controller,
-              options: const quill
-                  .QuillToolbarSelectHeaderStyleDropdownButtonOptions(),
+              options:
+                  const quill.QuillToolbarSelectHeaderStyleDropdownButtonOptions(),
             ),
             _buildDivider(),
 

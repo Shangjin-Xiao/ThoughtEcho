@@ -3165,6 +3165,7 @@
   "actionFavorite": "お気に入り",
   "actionUnfavorite": "お気に入り解除",
   "moreOptions": "その他のオプション",
+  "dailyQuoteInteractionHint": "タップしてコピー • ダブルタップで保存",
   "tileNoLocationPermission": "位置情報なし",
   "tileOffline": "オフライン",
   "tileNoNetwork": "ネットワークなし",

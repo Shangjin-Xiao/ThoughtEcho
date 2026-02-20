@@ -23,15 +23,21 @@ void main() {
         expect(StringUtils.formatSource('', 'My Book'), '——《My Book》');
       });
 
-      test('should return formatted author and source when both are provided',
-          () {
-        expect(StringUtils.formatSource('John Doe', 'My Book'),
-            '——John Doe 《My Book》');
-      });
+      test(
+        'should return formatted author and source when both are provided',
+        () {
+          expect(
+            StringUtils.formatSource('John Doe', 'My Book'),
+            '——John Doe 《My Book》',
+          );
+        },
+      );
 
       test('should handle whitespace correctly', () {
         expect(
-            StringUtils.formatSource(' John ', ' Book '), '—— John  《 Book 》');
+          StringUtils.formatSource(' John ', ' Book '),
+          '—— John  《 Book 》',
+        );
       });
     });
 
@@ -52,15 +58,16 @@ void main() {
       });
 
       test(
-          'should parse formatted source with missing author prefix if source is present',
-          () {
-        // The regex for author expects "——" prefix.
-        // If the string is just "Author 《Source》" (without ——), author extraction might fail based on implementation.
-        // Let's check implementation behavior: RegExp(r'——([^《]+)').firstMatch(source);
-        // So "Author 《Source》" -> no match for author.
-        final result = StringUtils.parseSource('Author 《Source》');
-        expect(result, ['', 'Source']);
-      });
+        'should parse formatted source with missing author prefix if source is present',
+        () {
+          // The regex for author expects "——" prefix.
+          // If the string is just "Author 《Source》" (without ——), author extraction might fail based on implementation.
+          // Let's check implementation behavior: RegExp(r'——([^《]+)').firstMatch(source);
+          // So "Author 《Source》" -> no match for author.
+          final result = StringUtils.parseSource('Author 《Source》');
+          expect(result, ['', 'Source']);
+        },
+      );
 
       test('should handle empty string', () {
         final result = StringUtils.parseSource('');
@@ -73,14 +80,15 @@ void main() {
       });
 
       test(
-          'should handle source without closing bracket gracefully (or as implemented)',
-          () {
-        // Regex: RegExp(r'《(.+?)》')
-        // If "《My Book", it won't match.
-        final result = StringUtils.parseSource('《My Book');
-        expect(result[1], '');
-        expect(result[0], '');
-      });
+        'should handle source without closing bracket gracefully (or as implemented)',
+        () {
+          // Regex: RegExp(r'《(.+?)》')
+          // If "《My Book", it won't match.
+          final result = StringUtils.parseSource('《My Book');
+          expect(result[1], '');
+          expect(result[0], '');
+        },
+      );
     });
 
     group('parseSourceToControllers', () {
@@ -116,7 +124,9 @@ void main() {
     group('needsExpansion', () {
       test('should return false when text length is less than threshold', () {
         expect(
-            StringUtils.needsExpansion('Short text', threshold: 20), isFalse);
+          StringUtils.needsExpansion('Short text', threshold: 20),
+          isFalse,
+        );
       });
 
       test('should return false when text length equals threshold', () {
