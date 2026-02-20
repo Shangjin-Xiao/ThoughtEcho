@@ -1,8 +1,6 @@
 import 'dart:math' as math;
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../gen_l10n/app_localizations.dart';
-import '../../theme/app_theme.dart';
 
 /// 语音浮层当前阶段
 enum VoiceOverlayPhase {
@@ -21,10 +19,8 @@ enum VoiceOverlayPhase {
 
 /// 语音录制浮层组件
 ///
-/// 长按 FAB 时显示，提供录音状态显示。
-///
-/// 录音阶段使用微信风格声浪波形动画，
-/// 波形条高度跟随 [volumeLevel] 实时响应。
+/// 全屏覆盖浮层，底部展示海浪动画响应音量，
+/// 中央展示转写文本，提供停止/取消/填入编辑器操作。
 class VoiceInputOverlay extends StatefulWidget {
   /// 实时转写的文本
   final String? transcribedText;
@@ -38,12 +34,24 @@ class VoiceInputOverlay extends StatefulWidget {
   /// 当前音量级别 (0.0 - 1.0)
   final double volumeLevel;
 
+  /// 停止录音并触发转写
+  final VoidCallback? onStopRecording;
+
+  /// 取消录音并退出
+  final VoidCallback? onCancel;
+
+  /// 转写完成后将文本填入编辑器
+  final ValueChanged<String>? onTranscriptionComplete;
+
   const VoiceInputOverlay({
     super.key,
     this.transcribedText,
     this.phase = VoiceOverlayPhase.initializing,
     this.errorMessage,
     this.volumeLevel = 0.0,
+    this.onStopRecording,
+    this.onCancel,
+    this.onTranscriptionComplete,
   });
 
   @override
@@ -51,63 +59,22 @@ class VoiceInputOverlay extends StatefulWidget {
 }
 
 class _VoiceInputOverlayState extends State<VoiceInputOverlay>
-    with TickerProviderStateMixin {
+    with SingleTickerProviderStateMixin {
   late AnimationController _waveController;
-  late AnimationController _breathController;
-
-  /// 波形条高度历史（模拟多条柱状声浪）
-  final List<double> _barHeights = List.filled(_barCount, 0.15);
-
-  /// 波形条数量
-  static const int _barCount = 28;
 
   @override
   void initState() {
     super.initState();
-    // 波浪动画控制器 - 持续循环驱动波形更新
     _waveController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 120),
-    )..addListener(_updateBars);
-    _waveController.repeat();
-
-    // 呼吸动画（用于初始化/处理阶段）
-    _breathController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
+      duration: const Duration(milliseconds: 2500),
+    )..repeat();
   }
 
   @override
   void dispose() {
-    _waveController.removeListener(_updateBars);
     _waveController.dispose();
-    _breathController.dispose();
     super.dispose();
-  }
-
-  /// 更新声浪条高度
-  void _updateBars() {
-    if (widget.phase != VoiceOverlayPhase.recording) return;
-
-    final vol = widget.volumeLevel.clamp(0.0, 1.0);
-    final time = DateTime.now().millisecondsSinceEpoch / 1000.0;
-
-    for (int i = 0; i < _barCount; i++) {
-      // 每根柱子基于不同相位的正弦波叠加，营造自然波浪感
-      final phase1 = math.sin(time * 5.0 + i * 0.45) * 0.3;
-      final phase2 = math.sin(time * 3.2 + i * 0.8) * 0.2;
-      final phase3 = math.sin(time * 7.1 + i * 0.25) * 0.1;
-
-      // 基础高度 + 音量驱动 + 波浪叠加
-      final base = 0.08 + vol * 0.6;
-      final wave = (phase1 + phase2 + phase3) * (0.3 + vol * 0.7);
-      final target = (base + wave).clamp(0.05, 1.0);
-
-      // 平滑插值（柱子不要跳变）
-      _barHeights[i] = _barHeights[i] + (target - _barHeights[i]) * 0.35;
-    }
-    if (mounted) setState(() {});
   }
 
   @override
@@ -115,232 +82,326 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final size = MediaQuery.of(context).size;
 
-    final drag = (-_swipeOffset).clamp(0.0, _maxDragDistance);
-    final willTriggerOCR = drag >= _ocrTriggerDistance;
-
+    final hasText = widget.transcribedText != null &&
+        widget.transcribedText!.trim().isNotEmpty;
     final isRecording = widget.phase == VoiceOverlayPhase.recording;
+    final isProcessing = widget.phase == VoiceOverlayPhase.processing;
+    final isError = widget.phase == VoiceOverlayPhase.error;
+    final isInitializing = widget.phase == VoiceOverlayPhase.initializing;
+    // 转写完成：不在录音/初始化中，且有文本
+    final isDone = !isRecording && !isInitializing && hasText && !isError;
 
-    return IgnorePointer(
-      ignoring: true,
-      child: Material(
-        color: Colors.transparent,
-        child: Stack(
-          children: [
-            // 背景模糊
-            Positioned.fill(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                child: Container(
-                  color: Colors.black.withValues(alpha: 0.6),
+    return Material(
+      color: Colors.transparent,
+      child: Stack(
+        children: [
+          // 半透明背景 — 点击取消
+          Positioned.fill(
+            child: GestureDetector(
+              onTap: widget.onCancel,
+              child: ColoredBox(
+                color: Colors.black.withValues(alpha: 0.5),
+              ),
+            ),
+          ),
+
+          // ====== 底部海浪动画 ======
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: size.height * 0.25,
+            child: AnimatedBuilder(
+              animation: _waveController,
+              builder: (context, _) {
+                return CustomPaint(
+                  painter: _OceanWavePainter(
+                    phase: _waveController.value,
+                    volumeLevel: isRecording ? widget.volumeLevel : 0.0,
+                    color: colorScheme.primary,
+                  ),
+                  size: Size(size.width, size.height * 0.25),
+                );
+              },
+            ),
+          ),
+
+          // ====== 主内容 ======
+          SafeArea(
+            child: Column(
+              children: [
+                // 顶部关闭按钮
+                Align(
+                  alignment: Alignment.topRight,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: IconButton(
+                      onPressed: widget.onCancel,
+                      icon: const Icon(Icons.close_rounded),
+                      color: Colors.white70,
+                      iconSize: 28,
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.white.withValues(alpha: 0.08),
+                      ),
+                      tooltip: MaterialLocalizations.of(context)
+                          .closeButtonTooltip,
+                    ),
+                  ),
+                ),
+
+                const Spacer(flex: 3),
+
+                // ====== 中央区域 ======
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 36),
+                  child: _buildCenterContent(
+                    context,
+                    l10n,
+                    theme,
+                    colorScheme,
+                    hasText: hasText,
+                    isRecording: isRecording,
+                    isProcessing: isProcessing,
+                    isError: isError,
+                    isInitializing: isInitializing,
+                    isDone: isDone,
+                  ),
+                ),
+
+                const Spacer(flex: 2),
+
+                // ====== 底部按钮区（在波浪上方）======
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 48),
+                  child: _buildBottomActions(
+                    context,
+                    l10n,
+                    colorScheme,
+                    isRecording: isRecording,
+                    isInitializing: isInitializing,
+                    isDone: isDone,
+                    hasText: hasText,
+                  ),
+                ),
+
+                // 为波浪区域留出空间
+                SizedBox(height: size.height * 0.12),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 中央内容：状态指示 + 转写文本
+  Widget _buildCenterContent(
+    BuildContext context,
+    AppLocalizations l10n,
+    ThemeData theme,
+    ColorScheme colorScheme, {
+    required bool hasText,
+    required bool isRecording,
+    required bool isProcessing,
+    required bool isError,
+    required bool isInitializing,
+    required bool isDone,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // 状态指示器
+        _buildStatusIndicator(
+          colorScheme,
+          isRecording: isRecording,
+          isProcessing: isProcessing,
+          isError: isError,
+          isInitializing: isInitializing,
+        ),
+
+        const SizedBox(height: 20),
+
+        // 状态文字
+        Text(
+          _getStatusText(l10n),
+          style: theme.textTheme.titleMedium?.copyWith(
+            color: Colors.white.withValues(alpha: 0.85),
+            fontWeight: FontWeight.w500,
+            letterSpacing: 0.3,
+          ),
+        ),
+
+        const SizedBox(height: 24),
+
+        // 转写文本
+        if (hasText)
+          AnimatedOpacity(
+            opacity: 1.0,
+            duration: const Duration(milliseconds: 300),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 200),
+              child: SingleChildScrollView(
+                child: Text(
+                  widget.transcribedText!,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    height: 1.6,
+                    fontSize: 17,
+                  ),
                 ),
               ),
             ),
-
-            // 主要内容
-            SafeArea(
-              child: Column(
-                children: [
-                  // 顶部关闭按钮
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: IconButton(
-                        onPressed: () => Navigator.of(context).maybePop(),
-                        icon: const Icon(Icons.close),
-                        color: Colors.white,
-                        style: IconButton.styleFrom(
-                          backgroundColor: Colors.white.withOpacity(0.1),
-                          highlightColor: Colors.white.withOpacity(0.2),
-                        ),
-                        tooltip: MaterialLocalizations.of(context)
-                            .closeButtonTooltip,
-                      ),
-                    ),
-                  ),
-
-                  const Spacer(flex: 2),
-
-                  // 麦克风动画区域
-                  AnimatedBuilder(
-                    animation: _animationController,
-                    builder: (context, child) {
-                      final t = _animationController.value;
-                      // 呼吸效果
-                      final scale = 1.0 + (t * 0.1);
-                      final opacity = 0.3 - (t * 0.15);
-
-                      return Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          // 扩散波纹
-                          Transform.scale(
-                            scale: 1.0 + (t * 0.5),
-                            child: Container(
-                              width: 120,
-                              height: 120,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color:
-                                      colorScheme.primary.withOpacity(opacity),
-                                  width: 2,
-                                ),
-                              ),
-                            ),
-                          ),
-                          // 内部光晕
-                          Container(
-                            width: 100 * scale,
-                            height: 100 * scale,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: colorScheme.primary.withOpacity(0.2),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: colorScheme.primary.withOpacity(0.4),
-                                  blurRadius: 20,
-                                  spreadRadius: 5,
-                                ),
-                              ],
-                            ),
-                          ),
-                          // 核心图标
-                          Container(
-                            width: 80,
-                            height: 80,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: colorScheme.primary,
-                              gradient: LinearGradient(
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                                colors: [
-                                  colorScheme.primary,
-                                  colorScheme.primaryContainer,
-                                ],
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: colorScheme.primary.withOpacity(0.5),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Icon(
-                              Icons.mic_rounded,
-                              size: 40,
-                              color: colorScheme.onPrimary,
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-
-                  const SizedBox(height: 32),
-
-                  // 状态文本
-                  Text(
-                    _getStatusText(l10n),
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // 实时转写内容展示
-                  if (widget.transcribedText != null &&
-                      widget.transcribedText!.isNotEmpty)
-                    Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 32),
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
-                        borderRadius:
-                            BorderRadius.circular(AppTheme.cardRadius),
-                        border: Border.all(
-                          color: Colors.white.withOpacity(0.1),
-                        ),
-                      ),
-                      child: Text(
-                        widget.transcribedText!,
-                        textAlign: TextAlign.center,
-                        style: theme.textTheme.bodyLarge?.copyWith(
-                          color: Colors.white.withOpacity(0.9),
-                          height: 1.5,
-                        ),
-                      ),
-                    )
-                  else
-                    Text(
-                      l10n.voiceTranscribing,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withOpacity(0.6),
-                      ),
-                    ),
-
-                  const Spacer(flex: 3),
-
-                  // 底部上滑提示
-                  AnimatedOpacity(
-                    opacity: willTriggerOCR ? 1.0 : 0.7,
-                    duration: const Duration(milliseconds: 200),
-                    child: Column(
-                      children: [
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          transform: Matrix4.translationValues(
-                              0, willTriggerOCR ? -10 : 0, 0),
-                          child: Icon(
-                            willTriggerOCR
-                                ? Icons.document_scanner_rounded
-                                : Icons.keyboard_arrow_up_rounded,
-                            color: willTriggerOCR
-                                ? colorScheme.primaryContainer
-                                : Colors.white,
-                            size: 32,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          l10n.voiceRecordingHint,
-                          style: theme.textTheme.labelLarge?.copyWith(
-                            color: willTriggerOCR
-                                ? colorScheme.primaryContainer
-                                : Colors.white.withOpacity(0.8),
-                            fontWeight: willTriggerOCR
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        // 简单的指示条
-                        Container(
-                          width: 40,
-                          height: 4,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.3),
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-                ],
-              ),
+          )
+        else if (isRecording)
+          Text(
+            l10n.listening,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: Colors.white.withValues(alpha: 0.4),
+              fontStyle: FontStyle.italic,
             ),
-          ],
-        ),
-      ),
+          ),
+
+        // 错误详情
+        if (isError && widget.errorMessage != null) ...[
+          const SizedBox(height: 12),
+          Text(
+            widget.errorMessage!,
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: Colors.redAccent.withValues(alpha: 0.9),
+              height: 1.4,
+            ),
+          ),
+        ],
+      ],
     );
+  }
+
+  /// 状态指示器 — 小而精致
+  Widget _buildStatusIndicator(
+    ColorScheme colorScheme, {
+    required bool isRecording,
+    required bool isProcessing,
+    required bool isError,
+    required bool isInitializing,
+  }) {
+    if (isError) {
+      return Icon(
+        Icons.error_outline_rounded,
+        size: 40,
+        color: Colors.redAccent.withValues(alpha: 0.8),
+      );
+    }
+
+    if (isProcessing || isInitializing) {
+      return SizedBox(
+        width: 32,
+        height: 32,
+        child: CircularProgressIndicator(
+          strokeWidth: 2.5,
+          valueColor: AlwaysStoppedAnimation<Color>(
+            colorScheme.primary.withValues(alpha: 0.7),
+          ),
+        ),
+      );
+    }
+
+    // 录音中 — 脉冲红点
+    if (isRecording) {
+      return AnimatedBuilder(
+        animation: _waveController,
+        builder: (context, _) {
+          // 呼吸式脉冲，周期约 1.25 秒
+          final pulse =
+              0.6 + 0.4 * math.sin(_waveController.value * math.pi * 2);
+          return Container(
+            width: 14,
+            height: 14,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.redAccent.withValues(alpha: pulse),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.redAccent.withValues(alpha: pulse * 0.5),
+                  blurRadius: 12,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    }
+
+    return const SizedBox.shrink();
+  }
+
+  /// 底部操作按钮
+  Widget _buildBottomActions(
+    BuildContext context,
+    AppLocalizations l10n,
+    ColorScheme colorScheme, {
+    required bool isRecording,
+    required bool isInitializing,
+    required bool isDone,
+    required bool hasText,
+  }) {
+    // 转写完成 — 显示「填入编辑器」按钮
+    if (isDone) {
+      return FilledButton.icon(
+        onPressed: () {
+          final text = widget.transcribedText?.trim() ?? '';
+          if (text.isNotEmpty) {
+            widget.onTranscriptionComplete?.call(text);
+          }
+        },
+        icon: const Icon(Icons.check_rounded, size: 20),
+        label: Text(l10n.voiceInsertToEditor),
+        style: FilledButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+        ),
+      );
+    }
+
+    // 录音中 — 显示圆形停止按钮
+    if (isRecording) {
+      return GestureDetector(
+        onTap: widget.onStopRecording,
+        child: Container(
+          width: 68,
+          height: 68,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: colorScheme.primary,
+            boxShadow: [
+              BoxShadow(
+                color: colorScheme.primary.withValues(alpha: 0.4),
+                blurRadius: 20,
+                spreadRadius: 2,
+              ),
+            ],
+          ),
+          child: Icon(
+            Icons.stop_rounded,
+            size: 36,
+            color: colorScheme.onPrimary,
+          ),
+        ),
+      );
+    }
+
+    // 初始化 / 处理中 — 无操作按钮
+    return const SizedBox.shrink();
   }
 
   /// 获取状态文本
@@ -356,298 +417,73 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
         return l10n.featureNotAvailable;
     }
   }
-
-  /// 构建内容区域
-  Widget _buildContentArea(
-      BuildContext context, AppLocalizations l10n, ThemeData theme) {
-    switch (widget.phase) {
-      case VoiceOverlayPhase.initializing:
-        return Text(
-          l10n.voiceInitializingHint,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: Colors.white.withValues(alpha: 0.6),
-          ),
-        );
-
-      case VoiceOverlayPhase.recording:
-        if (widget.transcribedText != null &&
-            widget.transcribedText!.isNotEmpty) {
-          return Container(
-            margin: const EdgeInsets.symmetric(horizontal: 32),
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.1),
-              ),
-            ),
-            child: Text(
-              widget.transcribedText!,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: Colors.white.withValues(alpha: 0.9),
-                height: 1.5,
-              ),
-            ),
-          );
-        } else {
-          return Text(
-            l10n.listening,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: Colors.white.withValues(alpha: 0.6),
-            ),
-          );
-        }
-
-      case VoiceOverlayPhase.processing:
-        return Text(
-          l10n.voiceProcessing,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: Colors.white.withValues(alpha: 0.6),
-          ),
-        );
-
-      case VoiceOverlayPhase.error:
-        return Container(
-          margin: const EdgeInsets.symmetric(horizontal: 32),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.red.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-            border: Border.all(
-              color: Colors.red.withValues(alpha: 0.3),
-            ),
-          ),
-          child: Text(
-            widget.errorMessage ?? l10n.featureNotAvailable,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: Colors.white.withValues(alpha: 0.9),
-            ),
-          ),
-        );
-    }
-  }
-
-  /// 构建中心内容（根据阶段不同显示不同动画）
-  Widget _buildCenterContent(BuildContext context, ColorScheme colorScheme) {
-    if (widget.phase == VoiceOverlayPhase.initializing) {
-      return _buildInitializingContent(colorScheme);
-    }
-    if (widget.phase == VoiceOverlayPhase.error) {
-      return _buildErrorContent();
-    }
-    if (widget.phase == VoiceOverlayPhase.processing) {
-      return _buildProcessingContent(colorScheme);
-    }
-    // ========== 录音阶段：微信风格声浪动画 ==========
-    return _buildWaveformContent(colorScheme);
-  }
-
-  /// 声浪波形 + 麦克风图标
-  Widget _buildWaveformContent(ColorScheme colorScheme) {
-    return SizedBox(
-      width: 260,
-      height: 140,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // 波形条
-          CustomPaint(
-            size: const Size(260, 140),
-            painter: _WaveformPainter(
-              barHeights: _barHeights,
-              color: colorScheme.primary,
-              glowColor: colorScheme.primaryContainer,
-            ),
-          ),
-          // 中心麦克风圆形
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  colorScheme.primary,
-                  colorScheme.primaryContainer,
-                ],
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: colorScheme.primary.withValues(alpha: 0.4),
-                  blurRadius: 16,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: Icon(
-              Icons.mic_rounded,
-              size: 32,
-              color: colorScheme.onPrimary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// 初始化阶段
-  Widget _buildInitializingContent(ColorScheme colorScheme) {
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        SizedBox(
-          width: 120,
-          height: 120,
-          child: CircularProgressIndicator(
-            strokeWidth: 3,
-            valueColor: AlwaysStoppedAnimation<Color>(
-              colorScheme.primary.withValues(alpha: 0.5),
-            ),
-          ),
-        ),
-        Container(
-          width: 80,
-          height: 80,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                colorScheme.primary.withValues(alpha: 0.8),
-                colorScheme.primaryContainer.withValues(alpha: 0.8),
-              ],
-            ),
-          ),
-          child: Icon(
-            Icons.mic_rounded,
-            size: 40,
-            color: colorScheme.onPrimary.withValues(alpha: 0.7),
-          ),
-        ),
-      ],
-    );
-  }
-
-  /// 错误状态
-  Widget _buildErrorContent() {
-    return Container(
-      width: 100,
-      height: 100,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.red.withValues(alpha: 0.2),
-      ),
-      child: const Icon(
-        Icons.error_outline_rounded,
-        size: 50,
-        color: Colors.white,
-      ),
-    );
-  }
-
-  /// 处理中
-  Widget _buildProcessingContent(ColorScheme colorScheme) {
-    return AnimatedBuilder(
-      animation: _breathController,
-      builder: (context, child) {
-        final t = _breathController.value;
-        return Stack(
-          alignment: Alignment.center,
-          children: [
-            SizedBox(
-              width: 120,
-              height: 120,
-              child: CircularProgressIndicator(
-                strokeWidth: 3,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  colorScheme.primary.withValues(alpha: 0.5 + t * 0.3),
-                ),
-              ),
-            ),
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    colorScheme.primary,
-                    colorScheme.primaryContainer,
-                  ],
-                ),
-              ),
-              child: Icon(
-                Icons.sync_rounded,
-                size: 40,
-                color: colorScheme.onPrimary,
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
 }
 
-/// 声浪波形绘制器
-///
-/// 绘制类似微信语音消息的波形条，从中心向两侧展开，
-/// 每根条带有圆角和渐变荧光效果。
-class _WaveformPainter extends CustomPainter {
-  final List<double> barHeights;
-  final Color color;
-  final Color glowColor;
+// ---------------------------------------------------------------------------
+// 海浪 CustomPainter
+// ---------------------------------------------------------------------------
 
-  _WaveformPainter({
-    required this.barHeights,
+/// 绘制多层正弦海浪，振幅响应音量，
+/// 使用 4 层不同相位和透明度的波浪营造深度感。
+class _OceanWavePainter extends CustomPainter {
+  final double phase; // 0.0 – 1.0 循环
+  final double volumeLevel; // 0.0 – 1.0
+  final Color color;
+
+  _OceanWavePainter({
+    required this.phase,
+    required this.volumeLevel,
     required this.color,
-    required this.glowColor,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    final barCount = barHeights.length;
-    const barWidth = 3.5;
-    final gap = (size.width - barCount * barWidth) / (barCount + 1);
-    final maxBarHeight = size.height * 0.85;
-    final centerY = size.height / 2;
+    final vol = volumeLevel.clamp(0.0, 1.0);
 
-    for (int i = 0; i < barCount; i++) {
-      final x = gap + i * (barWidth + gap);
-      final h = barHeights[i].clamp(0.05, 1.0) * maxBarHeight;
-      final halfH = h / 2;
+    // 4 层波浪配置：[频率倍数, 相位偏移, 振幅系数, 透明度]
+    const layers = <List<double>>[
+      [1.0, 0.0, 1.0, 0.12],
+      [1.3, 0.8, 0.8, 0.18],
+      [0.7, 2.2, 0.6, 0.25],
+      [1.6, 4.0, 0.5, 0.35],
+    ];
 
-      // 中间位置的条更亮
-      final distFromCenter = (i - barCount / 2).abs() / (barCount / 2);
-      final alpha = 1.0 - distFromCenter * 0.3;
+    for (final cfg in layers) {
+      final freq = cfg[0];
+      final phaseOffset = cfg[1];
+      final ampScale = cfg[2];
+      final alpha = cfg[3];
 
-      final rect = RRect.fromRectAndRadius(
-        Rect.fromLTRB(x, centerY - halfH, x + barWidth, centerY + halfH),
-        const Radius.circular(2.0),
-      );
+      // 基础振幅 + 音量贡献
+      final amplitude = (8.0 + vol * 22.0) * ampScale;
+      final wavePhase = phase * math.pi * 2 * freq + phaseOffset;
 
-      // 荧光层（模糊阴影）
-      final glowPaint = Paint()
-        ..color = glowColor.withValues(alpha: alpha * 0.3)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-      canvas.drawRRect(rect, glowPaint);
+      final path = Path();
+      path.moveTo(0, size.height);
 
-      // 实体条
-      final barPaint = Paint()
-        ..color = color.withValues(alpha: alpha * 0.85)
+      for (double x = 0; x <= size.width; x += 4) {
+        final normalizedX = x / size.width;
+        // 两个正弦叠加产生更自然的波形
+        final y1 = math.sin(normalizedX * math.pi * 2 * 1.5 + wavePhase);
+        final y2 =
+            math.sin(normalizedX * math.pi * 2 * 2.8 + wavePhase * 1.3) * 0.4;
+        final waveY = size.height * 0.35 - (y1 + y2) * amplitude;
+        path.lineTo(x, waveY);
+      }
+
+      path.lineTo(size.width, size.height);
+      path.close();
+
+      final paint = Paint()
+        ..color = color.withValues(alpha: alpha)
         ..style = PaintingStyle.fill;
-      canvas.drawRRect(rect, barPaint);
+
+      canvas.drawPath(path, paint);
     }
   }
 
   @override
-  bool shouldRepaint(covariant _WaveformPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _OceanWavePainter old) {
+    return old.phase != phase || old.volumeLevel != volumeLevel;
+  }
 }

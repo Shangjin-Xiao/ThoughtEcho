@@ -17,7 +17,9 @@ import '../models/quote_model.dart';
 import '../widgets/daily_quote_view.dart';
 import '../widgets/note_list_view.dart';
 import '../widgets/add_note_dialog.dart';
-import '../widgets/local_ai/local_ai_fab.dart';
+import '../widgets/local_ai/voice_input_overlay.dart';
+import '../widgets/local_ai/ocr_capture_page.dart';
+import '../widgets/local_ai/ocr_result_sheet.dart';
 import 'ai_features_page.dart';
 import 'settings_page.dart';
 import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
@@ -1087,17 +1089,16 @@ class _HomePageState extends State<HomePage>
 
     await showGeneralDialog<void>(
       context: context,
-      barrierDismissible: true,
+      barrierDismissible: false,
       barrierLabel: 'voice_input_overlay',
       barrierColor: Colors.transparent,
       pageBuilder: (context, animation, secondaryAnimation) {
         return VoiceInputOverlay(
           transcribedText: null,
-          onSwipeUpForOCR: () async {
+          onCancel: () {
             Navigator.of(context).pop();
-            await _openOCRFlow();
           },
-          onRecordComplete: () {
+          onStopRecording: () {
             Navigator.of(context).pop();
             ScaffoldMessenger.of(this.context).showSnackBar(
               SnackBar(
@@ -1107,6 +1108,10 @@ class _HomePageState extends State<HomePage>
                 behavior: SnackBarBehavior.floating,
               ),
             );
+          },
+          onTranscriptionComplete: (text) {
+            Navigator.of(context).pop();
+            _showAddQuoteDialog(prefilledContent: text);
           },
         );
       },
@@ -1121,6 +1126,7 @@ class _HomePageState extends State<HomePage>
     );
   }
 
+  // ignore: unused_element
   Future<void> _openOCRFlow() async {
     if (!mounted) return;
 
