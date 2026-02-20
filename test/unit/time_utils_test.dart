@@ -66,6 +66,24 @@ void main() {
       // 期望格式为 "01-01 09:05"
       expect(formatted, '01-01 09:05');
     });
+
+    test('formats today timestamp with only time', () {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day, 10, 5, 3);
+      final formatted = TimeUtils.formatLogTimestamp(today);
+      expect(formatted, '10:05:03');
+    });
+
+    test('formats within a week timestamp with weekday', () {
+      final now = DateTime.now();
+      // Ensure we go back a few days but stay within the same year to avoid edge case complexity in this simple test
+      // Using 3 days ago is generally safe unless testing on Jan 1-3, but formatLogTimestamp logic handles week/year boundaries via difference.inDays
+      final recent = now.subtract(const Duration(days: 3));
+      final formatted = TimeUtils.formatLogTimestamp(recent);
+
+      // Matches "周X HH:mm", e.g., "周一 10:05"
+      expect(formatted, matches(r'^周[一二三四五六日] \d{2}:\d{2}$'));
+    });
   });
 
   group('formatDateFromIso', () {

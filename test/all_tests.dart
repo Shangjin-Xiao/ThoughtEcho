@@ -22,6 +22,7 @@ import 'performance/day_period_patch_test.dart' as day_period_patch_test;
 
 // Import utility tests
 import 'unit/time_utils_test.dart' as time_utils_test;
+import 'unit/utils/path_security_utils_test.dart' as path_security_utils_test;
 
 // Import widget tests
 import 'widget/pages/home_page_test.dart' as home_page_test;
@@ -47,6 +48,7 @@ void main() {
 
     group('Utility Tests', () {
       time_utils_test.main();
+      path_security_utils_test.main();
     });
 
     group('Widget Tests', () {

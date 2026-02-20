@@ -8,21 +8,7 @@ class TimeUtils {
   /// 获取当前时间段的英文 Key
   static String getCurrentDayPeriodKey() {
     final now = TimeOfDay.now();
-    final hour = now.hour;
-
-    if (hour >= 5 && hour < 8) {
-      return 'dawn'; // 5:00-7:59 晨曦
-    } else if (hour >= 8 && hour < 12) {
-      return 'morning'; // 8:00-11:59 上午
-    } else if (hour >= 12 && hour < 17) {
-      return 'afternoon'; // 12:00-16:59 午后
-    } else if (hour >= 17 && hour < 20) {
-      return 'dusk'; // 17:00-19:59 黄昏
-    } else if (hour >= 20 && hour < 23) {
-      return 'evening'; // 20:00-22:59 夜晚
-    } else {
-      return 'midnight'; // 23:00-4:59 深夜
-    }
+    return _dayPeriodKeyFromHour(now.hour);
   }
 
   /// 根据时间段 Key 获取中文标签（旧方法，用于向后兼容）
@@ -89,43 +75,7 @@ class TimeUtils {
   static IconData getDayPeriodIconByKey(String? key) {
     // 直接使用 getDayPeriodIcon 方法，传入 key 对应的中文标签
     return getDayPeriodIcon(dayPeriodKeyToLabel[key]);
-    /* switch (key) { // 旧逻辑保留注释，以备参考
-      case 'dawn':
-        return Icons.wb_twilight;
-      case 'morning':
-        return Icons.wb_sunny_outlined;
-      case 'afternoon':
-        return Icons.wb_sunny;
-      case 'dusk':
-        return Icons.nights_stay_outlined;
-      case 'evening':
-        return Icons.nightlight_round;
-      case 'midnight':
-        return Icons.bedtime;
-      default:
-        return Icons.access_time;
-    } */
   }
-
-  // 移除重复的 getDayPeriodIcon 定义，因为 getDayPeriodIconByKey 内部已调用它
-  /* static IconData getDayPeriodIcon(String? dayPeriod) {
-    switch (dayPeriod) {
-      case '晨曦':
-        return Icons.wb_twilight;
-      case '上午':
-        return Icons.wb_sunny_outlined;
-      case '午后':
-        return Icons.wb_sunny;
-      case '黄昏':
-        return Icons.nights_stay_outlined;
-      case '夜晚':
-        return Icons.nightlight_round;
-      case '深夜':
-        return Icons.bedtime;
-      default:
-        return Icons.access_time;
-    }
-  } */
 
   /// 相对时间格式（仅日期范围 + 时间），用于列表场景（本地化版本）
   /// - 今天：HH:mm
@@ -237,29 +187,15 @@ class TimeUtils {
     }
 
     // 如果没有提供 dayPeriod，根据时间推算
-    final hour = dateTime.hour;
-    String dayPeriodKey;
-    if (hour >= 5 && hour < 8) {
-      dayPeriodKey = 'dawn';
-    } else if (hour >= 8 && hour < 12) {
-      dayPeriodKey = 'morning';
-    } else if (hour >= 12 && hour < 17) {
-      dayPeriodKey = 'afternoon';
-    } else if (hour >= 17 && hour < 20) {
-      dayPeriodKey = 'dusk';
-    } else if (hour >= 20 && hour < 23) {
-      dayPeriodKey = 'evening';
-    } else {
-      dayPeriodKey = 'midnight';
-    }
-
+    final dayPeriodKey = _dayPeriodKeyFromHour(dateTime.hour);
     final dayPeriodLabel = getDayPeriodLabel(dayPeriodKey);
     return '$formattedDate $dayPeriodLabel';
   }
 
   /// 格式化笔记日期（本地化版本，支持国际化）
-  /// 可选参数 showExactTime：是否显示精确时间（时:分）
-  /// 格式：2025-06-21 上午 或 2025-06-21 14:30 上午
+  /// [showExactTime] 是否显示精确时间（时:分）
+  /// - 当 [showExactTime] 为 true 时，返回 "YYYY-MM-DD HH:mm"，不包含时间段标签。
+  /// - 当 [showExactTime] 为 false 时，返回 "YYYY-MM-DD 上午/下午"。
   static String formatQuoteDateLocalized(
     BuildContext context,
     DateTime dateTime, {
@@ -268,6 +204,11 @@ class TimeUtils {
   }) {
     final formattedDate =
         '${dateTime.year}-${_twoDigits(dateTime.month)}-${_twoDigits(dateTime.day)}';
+
+    if (showExactTime) {
+      final timeStr = formatQuoteTime(dateTime);
+      return '$formattedDate $timeStr';
+    }
 
     String resolveDayPeriodKey() {
       final normalized = dayPeriod?.trim();
@@ -286,29 +227,11 @@ class TimeUtils {
       }
 
       // 兜底：根据时间推算时间段
-      final hour = dateTime.hour;
-      if (hour >= 5 && hour < 8) {
-        return 'dawn';
-      } else if (hour >= 8 && hour < 12) {
-        return 'morning';
-      } else if (hour >= 12 && hour < 17) {
-        return 'afternoon';
-      } else if (hour >= 17 && hour < 20) {
-        return 'dusk';
-      } else if (hour >= 20 && hour < 23) {
-        return 'evening';
-      } else {
-        return 'midnight';
-      }
+      return _dayPeriodKeyFromHour(dateTime.hour);
     }
 
     final dayPeriodKey = resolveDayPeriodKey();
     final dayPeriodLabel = getLocalizedDayPeriodLabel(context, dayPeriodKey);
-
-    if (showExactTime) {
-      final timeStr = formatQuoteTime(dateTime);
-      return '$formattedDate $timeStr';
-    }
 
     return '$formattedDate $dayPeriodLabel';
   }
@@ -369,5 +292,22 @@ class TimeUtils {
   static String _twoDigits(int n) {
     if (n >= 10) return '$n';
     return '0$n';
+  }
+
+  /// 根据小时数返回对应的时间段 Key
+  static String _dayPeriodKeyFromHour(int hour) {
+    if (hour >= 5 && hour < 8) {
+      return 'dawn';
+    } else if (hour >= 8 && hour < 12) {
+      return 'morning';
+    } else if (hour >= 12 && hour < 17) {
+      return 'afternoon';
+    } else if (hour >= 17 && hour < 20) {
+      return 'dusk';
+    } else if (hour >= 20 && hour < 23) {
+      return 'evening';
+    } else {
+      return 'midnight';
+    }
   }
 }
