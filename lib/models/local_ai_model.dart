@@ -105,6 +105,12 @@ class LocalAIModelInfo {
     }
   }
 
+  /// 是否支持手动导入
+  bool get supportsManualImport =>
+      type == LocalAIModelType.asr ||
+      type == LocalAIModelType.llm ||
+      type == LocalAIModelType.embedding;
+
   /// 复制并更新状态
   LocalAIModelInfo copyWith({
     String? id,
