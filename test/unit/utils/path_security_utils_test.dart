@@ -59,13 +59,23 @@ void main() {
       // extractDir: /.../safe_extract_dir
       // targetPath: /.../safe_extract_dir_suffix/file.txt
       // This ensures that "safe_extract_dir_suffix" is not accepted just because it starts with "safe_extract_dir"
+      // This specifically tests the fix for the "startsWith" logic flaw.
       final targetPath = '${extractDir}_suffix${path.separator}file.txt';
 
       expect(
           () =>
               PathSecurityUtils.validateExtractionPath(targetPath, extractDir),
           throwsA(isA<Exception>()
-              .having((e) => e.toString(), 'message', contains('路径尝试穿越'))));
+              .having((e) => e.toString(), 'message', contains('安全警告'))));
+    });
+
+    test('throws on extraction directory itself (root of extraction)', () {
+      // Trying to write to the extraction directory itself as a file
+      final targetPath = extractDir;
+      expect(
+          () =>
+              PathSecurityUtils.validateExtractionPath(targetPath, extractDir),
+          throwsA(isA<Exception>()));
     });
 
     test('normalizes complex paths correctly', () {

@@ -11,15 +11,10 @@ class PathSecurityUtils {
     final normalizedTarget = path.normalize(path.absolute(targetPath));
     final normalizedExtractDir = path.normalize(path.absolute(extractDir));
 
-    if (!normalizedTarget.startsWith(normalizedExtractDir)) {
+    // 使用 path.isWithin 替代 startsWith，更健壮地防止路径穿越
+    // 确保 targetPath 严格位于 extractDir 内部（不包括 extractDir 本身）
+    if (!path.isWithin(normalizedExtractDir, normalizedTarget)) {
       throw Exception('安全警告：检测到非法路径穿越尝试 ($targetPath)');
-    }
-
-    // 额外的相对路径检查作为深度防御
-    final relative =
-        path.relative(normalizedTarget, from: normalizedExtractDir);
-    if (relative.startsWith('..') || path.isAbsolute(relative)) {
-      throw Exception('安全警告：路径尝试穿越到父目录 ($targetPath)');
     }
   }
 }
