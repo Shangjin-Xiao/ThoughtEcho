@@ -21,6 +21,16 @@ class ModelManagementPage extends StatefulWidget {
 }
 
 class _ModelManagementPageState extends State<ModelManagementPage> {
+  // 预置链接用于减少用户首次配置成本；版本升级时需同步更新这里的 URL。
+  static const Map<String, String> _managedModelUrlPresets = {
+    'gemma-2b':
+        'https://storage.googleapis.com/mediapipe-models/llm_inference/gemma2-2b-it-int4/1/gemma2-2b-it-int4.bin',
+    'gecko-384':
+        'https://storage.googleapis.com/mediapipe-models/text_embedder/gecko/float32/latest/gecko.tflite',
+    'paligemma-3b':
+        'https://storage.googleapis.com/mediapipe-models/image_generator/paligemma-3b-mix-224/float16/latest/paligemma-3b-mix-224.task',
+  };
+
   late ModelManager _modelManager;
   bool _isInitialized = false;
   String? _initError;
@@ -613,8 +623,7 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
                     _modelManager.cancelDownload(model.id);
                   },
                 ),
-              if (model.status == LocalAIModelStatus.notDownloaded ||
-                  model.status == LocalAIModelStatus.error)
+              if (model.supportsManualImport)
                 ListTile(
                   leading: const Icon(Icons.file_upload_outlined),
                   title: Text(l10n.modelImport),
@@ -695,8 +704,10 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
   }
 
   Future<bool> _promptAndSaveManagedModelUrl(LocalAIModelInfo model) async {
-    final existingUrl =
-        await _modelManager.getFlutterGemmaManagedModelUrl(model.id) ?? '';
+    final existingUrl = await _modelManager.getFlutterGemmaManagedModelUrl(
+          model.id,
+        ) ??
+        _getSuggestedManagedModelUrl(model.id);
     if (!mounted) return false;
     final l10n = AppLocalizations.of(context);
     final controller = TextEditingController(text: existingUrl);
@@ -1050,6 +1061,14 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
 
   bool _isManagedModel(LocalAIModelInfo model) {
     return model.downloadUrl.startsWith('managed://');
+  }
+
+  /// 为 flutter_gemma 托管模型提供预置下载链接。
+  ///
+  /// 返回值用于在用户尚未配置地址时预填输入框；
+  /// 若模型不在预置列表中，则返回空字符串。
+  String _getSuggestedManagedModelUrl(String modelId) {
+    return _managedModelUrlPresets[modelId] ?? '';
   }
 
   bool _needsPreparation(LocalAIModelInfo model) {
