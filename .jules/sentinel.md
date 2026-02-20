@@ -17,8 +17,3 @@
 **Vulnerability:** Legacy `AISettings` (used before `MultiAISettings`) stored API keys in the `apiKey` field, which was serialized to JSON and stored in `MMKV` (insecure plaintext). Although the app migrated to `APIKeyManager`, the old `AISettings` blob remained in storage.
 **Learning:** Migration logic must not only move data to secure storage but also *sanitize* the old data source. Simple "if exists, migrate" logic often leaves the insecure copy behind.
 **Prevention:** Implement explicit cleanup logic (`_secureLegacyApiKey`) that checks for and removes sensitive fields from legacy storage structures after successful migration or redundancy check. Enforce empty values for sensitive fields in legacy models' serialization logic (`updateAISettings`).
-
-## 2026-02-13 - [High] Incomplete Zip Slip Protection Fixed
-**Vulnerability:** Path validation used `startsWith` to check if the extraction target was within the destination directory. This allowed a sibling directory attack (e.g., `/extract` matches `/extract_evil`). While a secondary `path.relative` check existed, the primary check was logically flawed. Additionally, `ZipStreamProcessor` did not explicitly reject symbolic links, potentially bypassing path validation.
-**Learning:** String-based path checks are prone to edge cases (trailing slashes, partial matches). `startsWith` does not respect path boundaries.
-**Prevention:** Use semantic path checks like `path.isWithin` from standard libraries which correctly handles directory separators. Ensure archive extraction logic explicitly rejects symbolic links (check `file.isSymbolicLink`) to prevent symlink-based attacks.

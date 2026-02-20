@@ -262,20 +262,14 @@ class ZipStreamProcessor {
         // 使用流式解压API
         final archive = decoder.decodeBytes(bytes);
 
-        final filesToProcess =
-            archive.files.where((file) => file.isFile).toList();
+        final filesToProcess = archive.files
+            .where((file) => file.isFile)
+            .toList();
         final totalFiles = filesToProcess.length;
         sendPort.send(totalFiles); // 1. 发送总文件数
 
         int processedCount = 0;
         for (final file in filesToProcess) {
-          // 安全检查：防止符号链接攻击
-          if (file.isSymbolicLink) {
-            sendPort.send(
-                {'error': '安全警告：检测到符号链接 (${file.name})，已拒绝解压以防止路径穿越攻击'});
-            return;
-          }
-
           final outputPath = '$extractPath/${file.name}';
 
           // 安全检查：防止Zip Slip路径穿越漏洞
