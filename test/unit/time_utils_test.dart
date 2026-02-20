@@ -34,6 +34,28 @@ void main() {
     expect(formatted, contains('21:15'));
   });
 
+  group('formatQuoteTime', () {
+    test('formats midnight correctly', () {
+      final dateTime = DateTime(2023, 10, 27, 0, 0);
+      expect(TimeUtils.formatQuoteTime(dateTime), '00:00');
+    });
+
+    test('formats single digit hour and minute correctly', () {
+      final dateTime = DateTime(2023, 10, 27, 9, 5);
+      expect(TimeUtils.formatQuoteTime(dateTime), '09:05');
+    });
+
+    test('formats double digit hour and minute correctly', () {
+      final dateTime = DateTime(2023, 10, 27, 21, 15);
+      expect(TimeUtils.formatQuoteTime(dateTime), '21:15');
+    });
+
+    test('formats end of day correctly', () {
+      final dateTime = DateTime(2023, 10, 27, 23, 59);
+      expect(TimeUtils.formatQuoteTime(dateTime), '23:59');
+    });
+  });
+
   group('formatDateFromIso', () {
     test('formats valid ISO date string correctly', () {
       const isoDate = '2023-10-27T10:00:00.000Z';

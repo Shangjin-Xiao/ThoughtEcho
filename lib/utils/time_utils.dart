@@ -222,14 +222,14 @@ class TimeUtils {
   /// 格式化日期时间（完整日期和时间）
   /// 格式：2025年6月21日 14:30
   static String formatDateTime(DateTime dateTime) {
-    return '${dateTime.year}年${dateTime.month}月${dateTime.day}日 ${dateTime.hour}:${dateTime.minute.toString().padLeft(2, '0')}';
+    return '${dateTime.year}年${dateTime.month}月${dateTime.day}日 ${dateTime.hour}:${_twoDigits(dateTime.minute)}';
   }
 
   /// 格式化笔记日期（日期 + 时间段）
   /// 格式：2025-06-21 上午
   static String formatQuoteDate(DateTime dateTime, {String? dayPeriod}) {
     final formattedDate =
-        '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')}';
+        '${dateTime.year}-${_twoDigits(dateTime.month)}-${_twoDigits(dateTime.day)}';
 
     if (dayPeriod != null) {
       final dayPeriodLabel = getDayPeriodLabel(dayPeriod);
@@ -267,7 +267,7 @@ class TimeUtils {
     bool showExactTime = false,
   }) {
     final formattedDate =
-        '${dateTime.year}-${dateTime.month.toString().padLeft(2, '0')}-${dateTime.day.toString().padLeft(2, '0')}';
+        '${dateTime.year}-${_twoDigits(dateTime.month)}-${_twoDigits(dateTime.day)}';
 
     String resolveDayPeriodKey() {
       final normalized = dayPeriod?.trim();
@@ -316,7 +316,7 @@ class TimeUtils {
   /// 格式化文件名时间戳
   /// 格式：20250621_1430
   static String formatFileTimestamp(DateTime dateTime) {
-    return '${dateTime.year}${dateTime.month.toString().padLeft(2, '0')}${dateTime.day.toString().padLeft(2, '0')}_${dateTime.hour.toString().padLeft(2, '0')}${dateTime.minute.toString().padLeft(2, '0')}';
+    return '${dateTime.year}${_twoDigits(dateTime.month)}${_twoDigits(dateTime.day)}_${_twoDigits(dateTime.hour)}${_twoDigits(dateTime.minute)}';
   }
 
   /// 格式化日志时间戳（智能显示）
@@ -332,17 +332,17 @@ class TimeUtils {
     if (local.year == now.year &&
         local.month == now.month &&
         local.day == now.day) {
-      return '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}:${local.second.toString().padLeft(2, '0')}';
+      return '${_twoDigits(local.hour)}:${_twoDigits(local.minute)}:${_twoDigits(local.second)}';
     }
     // 一周内的日志显示星期几和时间
     else if (difference.inDays < 7) {
       final weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
       final weekday = weekdays[(local.weekday - 1) % 7];
-      return '$weekday ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+      return '$weekday ${_twoDigits(local.hour)}:${_twoDigits(local.minute)}';
     }
     // 更久的日志显示日期和时间
     else {
-      return '${local.month}-${local.day} ${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+      return '${local.month}-${local.day} ${_twoDigits(local.hour)}:${_twoDigits(local.minute)}';
     }
   }
 
