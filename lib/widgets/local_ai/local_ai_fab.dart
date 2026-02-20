@@ -183,17 +183,20 @@ class _LocalAIFabState extends State<LocalAIFab> {
 
   /// 停止录音并将文字填入编辑框
   Future<void> _stopRecordingAndInsertText() async {
-    // 先关闭浮层
-    if (_voiceOverlayOpen && mounted) {
-      Navigator.of(context, rootNavigator: true).maybePop();
-    }
-
     if (!_isVoiceRecording) {
+      // 如果未在录音，直接关闭浮层
+      if (_voiceOverlayOpen && mounted) {
+        Navigator.of(context, rootNavigator: true).maybePop();
+      }
       return;
     }
 
     final localAI = LocalAIService.instance;
     final l10n = AppLocalizations.of(context);
+
+    // 先更新浮层为处理中状态
+    _currentPhase = VoiceOverlayPhase.processing;
+    _notifyOverlayUpdate();
 
     try {
       final result = await localAI.stopAndTranscribe();
@@ -202,6 +205,12 @@ class _LocalAIFabState extends State<LocalAIFab> {
       if (!mounted) return;
 
       final resultText = result.text.trim();
+
+      // 关闭浮层
+      if (_voiceOverlayOpen && mounted) {
+        Navigator.of(context, rootNavigator: true).maybePop();
+      }
+
       if (resultText.isEmpty) {
         // 未识别到文字，显示提示
         ScaffoldMessenger.of(context).showSnackBar(
@@ -217,6 +226,12 @@ class _LocalAIFabState extends State<LocalAIFab> {
       widget.onInsertText(resultText);
     } catch (e) {
       _isVoiceRecording = false;
+
+      // 关闭浮层
+      if (_voiceOverlayOpen && mounted) {
+        Navigator.of(context, rootNavigator: true).maybePop();
+      }
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -262,6 +277,25 @@ class _LocalAIFabState extends State<LocalAIFab> {
                   transcribedText: speech.currentTranscription,
                   errorMessage: _errorMessage,
                   volumeLevel: speech.status.volumeLevel,
+                  onStopRecording: () {
+                    _stopRecordingAndInsertText();
+                  },
+                  onCancel: () {
+                    _cancelVoiceRecording();
+                    if (_voiceOverlayOpen && mounted) {
+                      Navigator.of(context, rootNavigator: true)
+                          .maybePop();
+                    }
+                  },
+                  onTranscriptionComplete: (text) {
+                    if (_voiceOverlayOpen && mounted) {
+                      Navigator.of(context, rootNavigator: true)
+                          .maybePop();
+                    }
+                    if (text.trim().isNotEmpty) {
+                      widget.onInsertText(text.trim());
+                    }
+                  },
                 );
               },
             );

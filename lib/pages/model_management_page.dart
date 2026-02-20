@@ -660,9 +660,16 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
       final existingUrl =
           await _modelManager.getFlutterGemmaManagedModelUrl(model.id);
       if (existingUrl == null || existingUrl.trim().isEmpty) {
-        final configured = await _promptAndSaveManagedModelUrl(model);
-        if (!configured) {
-          return;
+        // 先尝试使用预置 URL 自动填充，如果有预置 URL 则直接保存
+        final presetUrl = _getSuggestedManagedModelUrl(model.id);
+        if (presetUrl.isNotEmpty) {
+          await _modelManager.setFlutterGemmaManagedModelUrl(
+              model.id, presetUrl);
+        } else {
+          final configured = await _promptAndSaveManagedModelUrl(model);
+          if (!configured) {
+            return;
+          }
         }
       }
     }

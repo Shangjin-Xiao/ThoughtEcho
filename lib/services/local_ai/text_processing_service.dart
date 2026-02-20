@@ -85,7 +85,10 @@ class TextProcessingService extends ChangeNotifier {
   /// 初始化 flutter_gemma
   Future<void> _initializeGemma() async {
     try {
-      // 优先走 FlutterGemmaPlugin + setModelPath 流程（更明确、可控）。
+      // 确保 FlutterGemma 已全局初始化（插件要求在使用前调用）
+      await _ensureFlutterGemmaInitialized();
+
+      // 优先走 FlutterGemmaPlugin + installModel 流程（更明确、可控）。
       final modelPath = _modelManager.getModelPath('gemma-2b');
       if (modelPath == null) {
         logInfo('Gemma 模型文件不存在，跳过初始化', source: 'TextProcessingService');
@@ -93,7 +96,9 @@ class TextProcessingService extends ChangeNotifier {
       }
 
       final gemma = FlutterGemmaPlugin.instance;
-      await gemma.modelManager.setModelPath(modelPath);
+      await FlutterGemma.installModel(modelType: ModelType.gemmaIt)
+          .fromFile(modelPath)
+          .install();
 
       // 这里不强绑定具体 ModelType：不同版本/不同模型可能差异较大。
       // 先尝试创建一个通用 model 并创建 session。
@@ -107,6 +112,22 @@ class TextProcessingService extends ChangeNotifier {
       logInfo('Gemma 模型会话已准备就绪（FlutterGemmaPlugin）', source: 'TextProcessingService');
     } catch (e) {
       logError('初始化 Gemma 失败: $e', source: 'TextProcessingService');
+    }
+  }
+
+  /// FlutterGemma 全局初始化标记
+  static bool _flutterGemmaInitialized = false;
+
+  /// 确保 FlutterGemma 插件已全局初始化
+  static Future<void> _ensureFlutterGemmaInitialized() async {
+    if (_flutterGemmaInitialized) return;
+    try {
+      await FlutterGemma.initialize();
+      _flutterGemmaInitialized = true;
+      logInfo('FlutterGemma 全局初始化完成', source: 'TextProcessingService');
+    } catch (e) {
+      logError('FlutterGemma 全局初始化失败: $e', source: 'TextProcessingService');
+      // 不抛出异常，后续调用会再次尝试
     }
   }
 
@@ -124,6 +145,9 @@ class TextProcessingService extends ChangeNotifier {
     try {
       logInfo('加载 LLM 模型', source: 'TextProcessingService');
 
+      // 确保 FlutterGemma 已全局初始化
+      await _ensureFlutterGemmaInitialized();
+
       // 优先使用 FlutterGemmaPlugin（可配合模型管理页下载/导入的本地文件）
       final modelPath = _modelManager.getModelPath('gemma-2b');
       if (modelPath == null) {
@@ -131,8 +155,10 @@ class TextProcessingService extends ChangeNotifier {
       }
 
       try {
+        await FlutterGemma.installModel(modelType: ModelType.gemmaIt)
+            .fromFile(modelPath)
+            .install();
         final gemma = FlutterGemmaPlugin.instance;
-        await gemma.modelManager.setModelPath(modelPath);
         final model = await gemma.createModel(
           modelType: ModelType.gemmaIt,
           maxTokens: 512,
@@ -140,7 +166,6 @@ class TextProcessingService extends ChangeNotifier {
         _gemmaSession = await model.createSession();
       } catch (e) {
         // 兜底：兼容旧版静态 API（若插件版本仍提供该路径）
-        await FlutterGemma.initialize();
         final model = await FlutterGemma.getActiveModel(maxTokens: 512);
         _gemmaSession = await model.createSession();
       }
