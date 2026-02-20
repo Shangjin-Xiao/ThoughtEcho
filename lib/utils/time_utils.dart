@@ -143,16 +143,17 @@ class TimeUtils {
     final dateOnly = DateTime(dateTime.year, dateTime.month, dateTime.day);
 
     if (dateOnly == today) {
-      return DateFormat('HH:mm').format(dateTime);
+      return formatQuoteTime(dateTime);
     } else if (dateOnly == yesterday) {
-      return '${l10n.timeYesterday} ${DateFormat('HH:mm').format(dateTime)}';
+      return '${l10n.timeYesterday} ${formatQuoteTime(dateTime)}';
     } else if (dateTime.isAfter(weekAgo)) {
       final locale = Localizations.localeOf(context).toString();
       return DateFormat('EEE HH:mm', locale).format(dateTime);
     } else if (dateTime.year == now.year) {
-      return DateFormat('MM-dd HH:mm').format(dateTime);
+      // Optimized: Avoid DateFormat instantiation for fixed patterns
+      return '${_twoDigits(dateTime.month)}-${_twoDigits(dateTime.day)} ${formatQuoteTime(dateTime)}';
     } else {
-      return DateFormat('yyyy-MM-dd HH:mm').format(dateTime);
+      return '${dateTime.year}-${_twoDigits(dateTime.month)}-${_twoDigits(dateTime.day)} ${formatQuoteTime(dateTime)}';
     }
   }
 
@@ -175,8 +176,10 @@ class TimeUtils {
   }
 
   /// 仅返回时间部分（HH:mm），用于需要和日期分离显示的场景
-  static String formatQuoteTime(DateTime dateTime) =>
-      DateFormat('HH:mm').format(dateTime);
+  static String formatQuoteTime(DateTime dateTime) {
+    // Optimized: Use manual formatting to avoid expensive DateFormat instantiation for fixed patterns.
+    return '${_twoDigits(dateTime.hour)}:${_twoDigits(dateTime.minute)}';
+  }
 
   /// 兼容旧代码：调用 formatRelativeDateTime
   @Deprecated('请使用 formatRelativeDateTimeLocalized 或 formatQuoteTime 拆分后的方法')
@@ -198,15 +201,15 @@ class TimeUtils {
     final dateOnly = DateTime(dateTime.year, dateTime.month, dateTime.day);
 
     if (dateOnly == today) {
-      return DateFormat('HH:mm').format(dateTime);
+      return formatQuoteTime(dateTime);
     } else if (dateOnly == yesterday) {
-      return '昨天 ${DateFormat('HH:mm').format(dateTime)}';
+      return '昨天 ${formatQuoteTime(dateTime)}';
     } else if (dateTime.isAfter(weekAgo)) {
       return DateFormat('EEE HH:mm', 'zh_CN').format(dateTime);
     } else if (dateTime.year == now.year) {
-      return DateFormat('MM-dd HH:mm').format(dateTime);
+      return '${_twoDigits(dateTime.month)}-${_twoDigits(dateTime.day)} ${formatQuoteTime(dateTime)}';
     } else {
-      return DateFormat('yyyy-MM-dd HH:mm').format(dateTime);
+      return '${dateTime.year}-${_twoDigits(dateTime.month)}-${_twoDigits(dateTime.day)} ${formatQuoteTime(dateTime)}';
     }
   }
 
@@ -361,5 +364,10 @@ class TimeUtils {
     } catch (e) {
       return isoDate;
     }
+  }
+
+  static String _twoDigits(int n) {
+    if (n >= 10) return '$n';
+    return '0$n';
   }
 }
