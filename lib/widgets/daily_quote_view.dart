@@ -255,7 +255,6 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
             dailyQuote,
           );
         },
-        bottomTip: AppLocalizations.of(context).dailyQuoteInteractionHint,
         child: Padding(
           padding: EdgeInsets.zero, // 移除内边距，依靠SlidingCard的动态padding提供间距
           child: Column(
