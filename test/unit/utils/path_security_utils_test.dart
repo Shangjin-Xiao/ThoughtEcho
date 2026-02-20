@@ -30,7 +30,7 @@ void main() {
       expect(
         () => PathSecurityUtils.validateExtractionPath(targetPath, extractDir),
         throwsA(
-          isA<Exception>().having(
+          isA<PathSecurityException>().having(
             (e) => e.toString(),
             'message',
             contains('安全警告'),
@@ -43,7 +43,7 @@ void main() {
       final targetPath = path.join(extractDir, '..', '..', 'etc', 'passwd');
       expect(
         () => PathSecurityUtils.validateExtractionPath(targetPath, extractDir),
-        throwsA(isA<Exception>()),
+        throwsA(isA<PathSecurityException>()),
       );
     });
 
@@ -56,7 +56,7 @@ void main() {
       // If extractDir is not a prefix of targetPath, it should fail.
       expect(
         () => PathSecurityUtils.validateExtractionPath(targetPath, extractDir),
-        throwsA(isA<Exception>()),
+        throwsA(isA<PathSecurityException>()),
       );
     });
 
@@ -69,10 +69,10 @@ void main() {
       expect(
         () => PathSecurityUtils.validateExtractionPath(targetPath, extractDir),
         throwsA(
-          isA<Exception>().having(
+          isA<PathSecurityException>().having(
             (e) => e.toString(),
             'message',
-            contains('路径尝试穿越'),
+            contains('安全警告'),
           ),
         ),
       );
