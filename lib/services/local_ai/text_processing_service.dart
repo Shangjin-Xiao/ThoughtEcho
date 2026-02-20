@@ -115,19 +115,23 @@ class TextProcessingService extends ChangeNotifier {
     }
   }
 
-  /// FlutterGemma 全局初始化标记
-  static bool _flutterGemmaInitialized = false;
+  /// FlutterGemma 全局初始化 Completer（防止并发初始化）
+  static Completer<void>? _flutterGemmaInitCompleter;
 
-  /// 确保 FlutterGemma 插件已全局初始化
+  /// 确保 FlutterGemma 插件已全局初始化（并发安全）
   static Future<void> _ensureFlutterGemmaInitialized() async {
-    if (_flutterGemmaInitialized) return;
+    if (_flutterGemmaInitCompleter != null) {
+      return _flutterGemmaInitCompleter!.future;
+    }
+    _flutterGemmaInitCompleter = Completer<void>();
     try {
       await FlutterGemma.initialize();
-      _flutterGemmaInitialized = true;
       logInfo('FlutterGemma 全局初始化完成', source: 'TextProcessingService');
+      _flutterGemmaInitCompleter!.complete();
     } catch (e) {
       logError('FlutterGemma 全局初始化失败: $e', source: 'TextProcessingService');
-      // 不抛出异常，后续调用会再次尝试
+      // 重置，允许后续重试
+      _flutterGemmaInitCompleter = null;
     }
   }
 
