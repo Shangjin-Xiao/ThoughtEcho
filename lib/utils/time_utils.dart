@@ -222,7 +222,7 @@ class TimeUtils {
   /// 格式化日期时间（完整日期和时间）
   /// 格式：2025年6月21日 14:30
   static String formatDateTime(DateTime dateTime) {
-    return '${dateTime.year}年${dateTime.month}月${dateTime.day}日 ${dateTime.hour}:${_twoDigits(dateTime.minute)}';
+    return '${dateTime.year}年${dateTime.month}月${dateTime.day}日 ${_twoDigits(dateTime.hour)}:${_twoDigits(dateTime.minute)}';
   }
 
   /// 格式化笔记日期（日期 + 时间段）

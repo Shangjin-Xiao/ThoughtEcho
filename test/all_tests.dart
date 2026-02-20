@@ -20,6 +20,9 @@ import 'unit/services/location_format_test.dart' as location_format_test;
 import 'storage_management_test.dart' as storage_management_test;
 import 'performance/day_period_patch_test.dart' as day_period_patch_test;
 
+// Import utility tests
+import 'unit/time_utils_test.dart' as time_utils_test;
+
 // Import widget tests
 import 'widget/pages/home_page_test.dart' as home_page_test;
 
@@ -40,6 +43,10 @@ void main() {
       ai_analysis_service_test.main();
       storage_management_test.main();
       day_period_patch_test.main();
+    });
+
+    group('Utility Tests', () {
+      time_utils_test.main();
     });
 
     group('Widget Tests', () {
