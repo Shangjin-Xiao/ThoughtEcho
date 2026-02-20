@@ -30,7 +30,7 @@ void main() {
       expect(
           () =>
               PathSecurityUtils.validateExtractionPath(targetPath, extractDir),
-          throwsA(isA<Exception>()
+          throwsA(isA<PathSecurityException>()
               .having((e) => e.toString(), 'message', contains('安全警告'))));
     });
 
@@ -39,7 +39,8 @@ void main() {
       expect(
           () =>
               PathSecurityUtils.validateExtractionPath(targetPath, extractDir),
-          throwsA(isA<Exception>()));
+          throwsA(isA<PathSecurityException>()
+              .having((e) => e.toString(), 'message', contains('安全警告'))));
     });
 
     test('throws on absolute path pointing outside', () {
@@ -52,7 +53,8 @@ void main() {
       expect(
           () =>
               PathSecurityUtils.validateExtractionPath(targetPath, extractDir),
-          throwsA(isA<Exception>()));
+          throwsA(isA<PathSecurityException>()
+              .having((e) => e.toString(), 'message', contains('安全警告'))));
     });
 
     test('throws on sibling directory with same prefix (partial match)', () {
@@ -65,7 +67,7 @@ void main() {
       expect(
           () =>
               PathSecurityUtils.validateExtractionPath(targetPath, extractDir),
-          throwsA(isA<Exception>()
+          throwsA(isA<PathSecurityException>()
               .having((e) => e.toString(), 'message', contains('安全警告'))));
     });
 
@@ -75,7 +77,8 @@ void main() {
       expect(
           () =>
               PathSecurityUtils.validateExtractionPath(targetPath, extractDir),
-          throwsA(isA<Exception>()));
+          throwsA(isA<PathSecurityException>()
+              .having((e) => e.toString(), 'message', contains('安全警告'))));
     });
 
     test('normalizes complex paths correctly', () {

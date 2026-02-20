@@ -19,6 +19,6 @@
 **Prevention:** Implement explicit cleanup logic (`_secureLegacyApiKey`) that checks for and removes sensitive fields from legacy storage structures after successful migration or redundancy check. Enforce empty values for sensitive fields in legacy models' serialization logic (`updateAISettings`).
 
 ## 2026-02-13 - [High] Incomplete Zip Slip Protection Fixed
-**Vulnerability:** Path validation used `startsWith` to check if the extraction target was within the destination directory. This allowed a sibling directory attack (e.g., `/extract` matches `/extract_evil`). While a secondary `path.relative` check existed, the primary check was logically flawed.
+**Vulnerability:** Path validation used `startsWith` to check if the extraction target was within the destination directory. This allowed a sibling directory attack (e.g., `/extract` matches `/extract_evil`). While a secondary `path.relative` check existed, the primary check was logically flawed. Additionally, `ZipStreamProcessor` did not explicitly reject symbolic links, potentially bypassing path validation.
 **Learning:** String-based path checks are prone to edge cases (trailing slashes, partial matches). `startsWith` does not respect path boundaries.
-**Prevention:** Use semantic path checks like `path.isWithin` from standard libraries, which correctly handles directory separators and boundaries.
+**Prevention:** Use semantic path checks like `path.isWithin` from standard libraries which correctly handles directory separators. Ensure archive extraction logic explicitly rejects symbolic links (check `file.isSymbolicLink`) to prevent symlink-based attacks.
