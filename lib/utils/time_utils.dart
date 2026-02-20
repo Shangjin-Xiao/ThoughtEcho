@@ -342,7 +342,7 @@ class TimeUtils {
     }
     // 更久的日志显示日期和时间
     else {
-      return '${local.month}-${local.day} ${_twoDigits(local.hour)}:${_twoDigits(local.minute)}';
+      return '${_twoDigits(local.month)}-${_twoDigits(local.day)} ${_twoDigits(local.hour)}:${_twoDigits(local.minute)}';
     }
   }
 

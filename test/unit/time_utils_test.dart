@@ -56,6 +56,18 @@ void main() {
     });
   });
 
+  group('formatLogTimestamp', () {
+    test('formats long ago timestamp with zero padding for month and day', () {
+      // 构造一个很久以前的时间（例如一年前的1月1日 9:05）
+      final now = DateTime.now();
+      final longAgo = DateTime(now.year - 1, 1, 1, 9, 5);
+
+      final formatted = TimeUtils.formatLogTimestamp(longAgo);
+      // 期望格式为 "01-01 09:05"
+      expect(formatted, '01-01 09:05');
+    });
+  });
+
   group('formatDateFromIso', () {
     test('formats valid ISO date string correctly', () {
       const isoDate = '2023-10-27T10:00:00.000Z';
