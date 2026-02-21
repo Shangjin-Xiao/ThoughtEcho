@@ -34,9 +34,6 @@ class VoiceInputOverlay extends StatefulWidget {
   /// 当前音量级别 (0.0 - 1.0)
   final double volumeLevel;
 
-  /// 停止录音并触发转写
-  final VoidCallback? onStopRecording;
-
   /// 取消录音并退出
   final VoidCallback? onCancel;
 
@@ -49,7 +46,6 @@ class VoiceInputOverlay extends StatefulWidget {
     this.phase = VoiceOverlayPhase.initializing,
     this.errorMessage,
     this.volumeLevel = 0.0,
-    this.onStopRecording,
     this.onCancel,
     this.onTranscriptionComplete,
   });
@@ -132,25 +128,6 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
           SafeArea(
             child: Column(
               children: [
-                // 顶部关闭按钮
-                Align(
-                  alignment: Alignment.topRight,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: IconButton(
-                      onPressed: widget.onCancel,
-                      icon: const Icon(Icons.close_rounded),
-                      color: Colors.white70,
-                      iconSize: 28,
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.white.withValues(alpha: 0.08),
-                      ),
-                      tooltip: MaterialLocalizations.of(context)
-                          .closeButtonTooltip,
-                    ),
-                  ),
-                ),
-
                 const Spacer(flex: 3),
 
                 // ====== 中央区域 ======
@@ -166,7 +143,6 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                     isProcessing: isProcessing,
                     isError: isError,
                     isInitializing: isInitializing,
-                    isDone: isDone,
                   ),
                 ),
 
@@ -179,10 +155,7 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                     context,
                     l10n,
                     colorScheme,
-                    isRecording: isRecording,
-                    isInitializing: isInitializing,
                     isDone: isDone,
-                    hasText: hasText,
                   ),
                 ),
 
@@ -207,33 +180,33 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
     required bool isProcessing,
     required bool isError,
     required bool isInitializing,
-    required bool isDone,
   }) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // 状态指示器
-        _buildStatusIndicator(
-          colorScheme,
-          isRecording: isRecording,
-          isProcessing: isProcessing,
-          isError: isError,
-          isInitializing: isInitializing,
-        ),
-
-        const SizedBox(height: 20),
-
-        // 状态文字
-        Text(
-          _getStatusText(l10n),
-          style: theme.textTheme.titleMedium?.copyWith(
-            color: Colors.white.withValues(alpha: 0.85),
-            fontWeight: FontWeight.w500,
-            letterSpacing: 0.3,
+        if (!isRecording) ...[
+          // 状态指示器
+          _buildStatusIndicator(
+            colorScheme,
+            isProcessing: isProcessing,
+            isError: isError,
+            isInitializing: isInitializing,
           ),
-        ),
 
-        const SizedBox(height: 24),
+          const SizedBox(height: 20),
+
+          // 状态文字
+          Text(
+            _getStatusText(l10n),
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: Colors.white.withValues(alpha: 0.85),
+              fontWeight: FontWeight.w500,
+              letterSpacing: 0.3,
+            ),
+          ),
+
+          const SizedBox(height: 24),
+        ],
 
         // 转写文本
         if (hasText)
@@ -253,14 +226,6 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                   ),
                 ),
               ),
-            ),
-          )
-        else if (isRecording)
-          Text(
-            l10n.listening,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: Colors.white.withValues(alpha: 0.4),
-              fontStyle: FontStyle.italic,
             ),
           ),
 
@@ -283,7 +248,6 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
   /// 状态指示器 — 小而精致
   Widget _buildStatusIndicator(
     ColorScheme colorScheme, {
-    required bool isRecording,
     required bool isProcessing,
     required bool isError,
     required bool isInitializing,
@@ -309,33 +273,6 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
       );
     }
 
-    // 录音中 — 脉冲红点
-    if (isRecording) {
-      return AnimatedBuilder(
-        animation: _waveController,
-        builder: (context, _) {
-          // 呼吸式脉冲，周期约 1.25 秒
-          final pulse =
-              0.6 + 0.4 * math.sin(_waveController.value * math.pi * 2);
-          return Container(
-            width: 14,
-            height: 14,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.redAccent.withValues(alpha: pulse),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.redAccent.withValues(alpha: pulse * 0.5),
-                  blurRadius: 12,
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-          );
-        },
-      );
-    }
-
     return const SizedBox.shrink();
   }
 
@@ -344,10 +281,7 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
     BuildContext context,
     AppLocalizations l10n,
     ColorScheme colorScheme, {
-    required bool isRecording,
-    required bool isInitializing,
     required bool isDone,
-    required bool hasText,
   }) {
     // 转写完成 — 显示「填入编辑器」按钮
     if (isDone) {
@@ -373,34 +307,6 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
       );
     }
 
-    // 录音中 — 显示圆形停止按钮
-    if (isRecording) {
-      return GestureDetector(
-        onTap: widget.onStopRecording,
-        child: Container(
-          width: 68,
-          height: 68,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: colorScheme.primary,
-            boxShadow: [
-              BoxShadow(
-                color: colorScheme.primary.withValues(alpha: 0.4),
-                blurRadius: 20,
-                spreadRadius: 2,
-              ),
-            ],
-          ),
-          child: Icon(
-            Icons.stop_rounded,
-            size: 36,
-            color: colorScheme.onPrimary,
-          ),
-        ),
-      );
-    }
-
-    // 初始化 / 处理中 — 无操作按钮
     return const SizedBox.shrink();
   }
 

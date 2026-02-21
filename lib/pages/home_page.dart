@@ -1098,17 +1098,6 @@ class _HomePageState extends State<HomePage>
           onCancel: () {
             Navigator.of(context).pop();
           },
-          onStopRecording: () {
-            Navigator.of(context).pop();
-            ScaffoldMessenger.of(this.context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  AppLocalizations.of(this.context).featureComingSoon,
-                ),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          },
           onTranscriptionComplete: (text) {
             Navigator.of(context).pop();
             _showAddQuoteDialog(prefilledContent: text);
