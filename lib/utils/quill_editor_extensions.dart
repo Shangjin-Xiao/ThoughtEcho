@@ -303,6 +303,10 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
     double width,
     int? cacheWidth,
   ) {
+    if (!_shouldLoad) {
+      return _buildImagePlaceholder(context, width);
+    }
+
     if (_hasError) {
       return _buildErrorPlaceholder(context, width);
     }
