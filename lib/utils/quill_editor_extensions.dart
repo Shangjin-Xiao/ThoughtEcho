@@ -1,5 +1,6 @@
 // ignore_for_file: implementation_imports
 
+import 'dart:async';
 import 'dart:collection';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -192,6 +193,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
   bool _shouldLoad = false;
   bool _hasError = false;
   bool _isLoaded = false;
+  Timer? _deferredLoadTimer;
 
   @override
   bool get wantKeepAlive => true;
@@ -213,6 +215,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
       final bool previouslyLoaded = _loadedSources.contains(widget.source);
       _shouldLoad = previouslyLoaded;
       _isLoaded = previouslyLoaded;
+      _deferredLoadTimer?.cancel();
     }
   }
 
@@ -221,11 +224,41 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
       return;
     }
 
-    if (info.visibleFraction > 0.05) {
-      setState(() {
-        _shouldLoad = true;
-      });
+    if (info.visibleFraction <= 0.01) {
+      _deferredLoadTimer?.cancel();
+      return;
     }
+
+    if (info.visibleFraction > 0.05) {
+      _tryStartLoading();
+    }
+  }
+
+  void _tryStartLoading() {
+    if (!mounted || _shouldLoad) {
+      return;
+    }
+
+    if (Scrollable.recommendDeferredLoadingForContext(context)) {
+      _deferredLoadTimer?.cancel();
+      _deferredLoadTimer = Timer(const Duration(milliseconds: 120), () {
+        if (!mounted || _shouldLoad) {
+          return;
+        }
+        _tryStartLoading();
+      });
+      return;
+    }
+
+    setState(() {
+      _shouldLoad = true;
+    });
+  }
+
+  @override
+  void dispose() {
+    _deferredLoadTimer?.cancel();
+    super.dispose();
   }
 
   @override
