@@ -3306,6 +3306,7 @@
   "voiceApplyCorrection": "AI Correction",
   "voiceRecognizeSource": "Recognize Source",
   "voiceInsertToEditor": "Insert to Editor",
+  "voiceStopRecording": "Stop Recording",
   "ocrCapture": "Capture Photo",
   "ocrCaptureHint": "Align with text area",
   "ocrSelectRegion": "Select Text Region",

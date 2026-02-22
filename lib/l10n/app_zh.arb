@@ -3300,6 +3300,7 @@
   "voiceApplyCorrection": "AI 纠错",
   "voiceRecognizeSource": "识别来源",
   "voiceInsertToEditor": "填入编辑器",
+  "voiceStopRecording": "停止录音",
   "ocrCapture": "拍照识别",
   "ocrCaptureHint": "对准文字区域拍照",
   "ocrSelectRegion": "选择文字区域",

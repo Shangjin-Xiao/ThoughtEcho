@@ -1069,53 +1069,6 @@ class _HomePageState extends State<HomePage>
     _showAddQuoteDialog();
   }
 
-  // FAB 长按处理 - 显示语音录制浮层
-  void _onFABLongPress() {
-    final settingsService = Provider.of<SettingsService>(
-      context,
-      listen: false,
-    );
-    final localAISettings = settingsService.localAISettings;
-
-    // 检查是否启用了本地AI和语音转文字功能，未启用则直接返回无反应
-    if (!localAISettings.enabled || !localAISettings.speechToTextEnabled) {
-      return;
-    }
-
-    _showVoiceInputOverlay();
-  }
-
-  Future<void> _showVoiceInputOverlay() async {
-    if (!mounted) return;
-
-    await showGeneralDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      barrierLabel: 'voice_input_overlay',
-      barrierColor: Colors.transparent,
-      pageBuilder: (context, animation, secondaryAnimation) {
-        return VoiceInputOverlay(
-          transcribedText: null,
-          onCancel: () {
-            Navigator.of(context).pop();
-          },
-          onTranscriptionComplete: (text) {
-            Navigator.of(context).pop();
-            _showAddQuoteDialog(prefilledContent: text);
-          },
-        );
-      },
-      transitionBuilder: (context, animation, secondaryAnimation, child) {
-        final curved = CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeOut,
-        );
-        return FadeTransition(opacity: curved, child: child);
-      },
-      transitionDuration: const Duration(milliseconds: 180),
-    );
-  }
-
   // ignore: unused_element
   Future<void> _openOCRFlow() async {
     if (!mounted) return;

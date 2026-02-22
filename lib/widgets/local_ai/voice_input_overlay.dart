@@ -34,6 +34,9 @@ class VoiceInputOverlay extends StatefulWidget {
   /// 当前音量级别 (0.0 - 1.0)
   final double volumeLevel;
 
+  /// 停止录音并转写（用户主动点击停止按钮）
+  final VoidCallback? onStopRecording;
+
   /// 取消录音并退出
   final VoidCallback? onCancel;
 
@@ -46,6 +49,7 @@ class VoiceInputOverlay extends StatefulWidget {
     this.phase = VoiceOverlayPhase.initializing,
     this.errorMessage,
     this.volumeLevel = 0.0,
+    this.onStopRecording,
     this.onCancel,
     this.onTranscriptionComplete,
   });
@@ -156,6 +160,7 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                     l10n,
                     colorScheme,
                     isDone: isDone,
+                    isRecording: isRecording,
                   ),
                 ),
 
@@ -282,7 +287,27 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
     AppLocalizations l10n,
     ColorScheme colorScheme, {
     required bool isDone,
+    required bool isRecording,
   }) {
+    // 录音中 — 显示「停止录音」按钮
+    if (isRecording) {
+      return FilledButton.icon(
+        onPressed: widget.onStopRecording,
+        icon: const Icon(Icons.stop_rounded, size: 20),
+        label: Text(l10n.voiceStopRecording),
+        style: FilledButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+          ),
+        ),
+      );
+    }
+
     // 转写完成 — 显示「填入编辑器」按钮
     if (isDone) {
       return FilledButton.icon(

@@ -265,12 +265,13 @@ class ModelManager extends ChangeNotifier {
       return;
     }
 
-    // 更新状态为下载中
+    // 更新状态为下载中（同时清除旧的错误消息）
     _updateModelState(
       modelId,
       model.copyWith(
         status: LocalAIModelStatus.downloading,
         downloadProgress: 0.0,
+        errorMessage: null,
       ),
     );
 

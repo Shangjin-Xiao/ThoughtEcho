@@ -3,6 +3,9 @@
 /// 定义设备端 AI 模型的元数据和状态
 library;
 
+/// 用于 copyWith 中区分"未传值"与"传了 null"的哨兵对象
+const _copyWithSentinel = Object();
+
 /// 模型类型枚举
 enum LocalAIModelType {
   /// LLM 模型 (Gemma 2B)
@@ -122,7 +125,7 @@ class LocalAIModelInfo {
     String? fileName,
     LocalAIModelStatus? status,
     double? downloadProgress,
-    String? errorMessage,
+    Object? errorMessage = _copyWithSentinel,
     String? version,
     bool? isRequired,
   }) {
@@ -136,7 +139,9 @@ class LocalAIModelInfo {
       fileName: fileName ?? this.fileName,
       status: status ?? this.status,
       downloadProgress: downloadProgress ?? this.downloadProgress,
-      errorMessage: errorMessage ?? this.errorMessage,
+      errorMessage: identical(errorMessage, _copyWithSentinel)
+          ? this.errorMessage
+          : errorMessage as String?,
       version: version ?? this.version,
       isRequired: isRequired ?? this.isRequired,
     );

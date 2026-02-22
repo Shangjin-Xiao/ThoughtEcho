@@ -130,8 +130,10 @@ class TextProcessingService extends ChangeNotifier {
       _flutterGemmaInitCompleter!.complete();
     } catch (e) {
       logError('FlutterGemma 全局初始化失败: $e', source: 'TextProcessingService');
-      // 重置，允许后续重试
+      // 先通知等待中的调用者，再重置允许重试
+      _flutterGemmaInitCompleter!.completeError(e);
       _flutterGemmaInitCompleter = null;
+      rethrow;
     }
   }
 
@@ -189,6 +191,10 @@ class TextProcessingService extends ChangeNotifier {
     if (!_modelLoaded) return;
 
     try {
+      // 释放 session 资源
+      try {
+        await (_gemmaSession as dynamic)?.close();
+      } catch (_) {}
       _gemmaSession = null;
       _modelLoaded = false;
       notifyListeners();

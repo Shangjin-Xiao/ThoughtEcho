@@ -60,9 +60,6 @@ class SpeechRecognitionService extends ChangeNotifier {
   /// 当前录音文件路径（WAV）
   String? _recordingFilePath;
 
-  /// 音频缓冲
-  final List<double> _audioBuffer = [];
-
   /// 是否使用流式录音（移动端用 PCM stream，可做实时预览）
   bool _useStreamRecording = false;
 
@@ -324,7 +321,6 @@ class SpeechRecognitionService extends ChangeNotifier {
       _asrStream?.free();
       _asrStream = null;
 
-      _audioBuffer.clear();
       _currentTranscription = '';
 
       if (_useStreamRecording && _recognizer != null) {
@@ -391,6 +387,15 @@ class SpeechRecognitionService extends ChangeNotifier {
 
       logInfo('开始录音', source: 'SpeechRecognitionService');
     } catch (e) {
+      // 清理录音资源，避免计时器/流悬空
+      _recordingTimer?.cancel();
+      _recordingTimer = null;
+      _partialDecodeTimer?.cancel();
+      _partialDecodeTimer = null;
+      await _audioStreamSub?.cancel();
+      _audioStreamSub = null;
+      _asrStream?.free();
+      _asrStream = null;
       _status = RecordingStatus(
         state: RecordingState.error,
         errorMessage: e.toString(),
@@ -561,7 +566,6 @@ class SpeechRecognitionService extends ChangeNotifier {
       _recordingTimer?.cancel();
       _status = RecordingStatus.idle;
       _currentTranscription = '';
-      _audioBuffer.clear();
       _useStreamRecording = false;
       notifyListeners();
 
@@ -728,7 +732,6 @@ class SpeechRecognitionService extends ChangeNotifier {
     _partialDecodeInProgress = false;
     _status = RecordingStatus.idle;
     _currentTranscription = '';
-    _audioBuffer.clear();
     notifyListeners();
   }
 
