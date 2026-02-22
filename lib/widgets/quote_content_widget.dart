@@ -354,9 +354,9 @@ class QuoteContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final settingsService = Provider.of<SettingsService>(context);
-    final prioritizeBoldContent =
-        settingsService.prioritizeBoldContentInCollapse;
+    final prioritizeBoldContent = context.select<SettingsService, bool>(
+      (s) => s.prioritizeBoldContentInCollapse,
+    );
     final bool needsExpansion = exceedsCollapsedHeight(quote);
 
     if (quote.deltaContent != null && quote.editSource == 'fullscreen') {
