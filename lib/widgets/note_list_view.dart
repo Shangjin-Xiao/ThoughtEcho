@@ -22,6 +22,7 @@ import '../services/weather_service.dart'; // 导入天气服务
 import '../utils/time_utils.dart'; // 导入时间工具
 import '../controllers/search_controller.dart';
 import '../constants/app_constants.dart'; // 导入应用常量
+import '../utils/quill_editor_extensions.dart' show isListScrolling;
 import '../services/settings_service.dart'; // 导入设置服务
 
 class NoteListView extends StatefulWidget {
@@ -1260,6 +1261,8 @@ class NoteListViewState extends State<NoteListView> {
 
         // 预加载逻辑：热路径不做日志、不做分配
         if (notification is ScrollUpdateNotification) {
+          // 标记列表正在滚动（含惯性阶段），阻止图片提前解码
+          isListScrolling.value = true;
           final metrics = notification.metrics;
           final threshold =
               metrics.maxScrollExtent * AppConstants.scrollPreloadThreshold;
@@ -1273,6 +1276,8 @@ class NoteListViewState extends State<NoteListView> {
 
         // 滚动完全停止（含惯性）：重置用户滚动状态 + 延迟检查
         if (notification is ScrollEndNotification) {
+          // 列表完全静止，允许图片开始解码
+          isListScrolling.value = false;
           // 重置用户滚动状态，记录最后滚动时间用于 _scrollToItem 的 900ms 冷却
           _isUserScrolling = false;
           _lastUserScrollTime = DateTime.now();
