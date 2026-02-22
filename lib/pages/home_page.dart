@@ -1007,6 +1007,9 @@ class _HomePageState extends State<HomePage>
     String? prefilledWork,
     dynamic hitokotoData,
   }) async {
+    await _loadTags();
+    if (!mounted) return;
+
     // 确保标签数据已经加载
     if (_isLoadingTags || _tags.isEmpty) {
       logDebug('标签数据未准备好，重新加载标签数据...');
