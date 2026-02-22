@@ -32,6 +32,9 @@ class LocalAISettings {
   /// 相关笔记推荐开关
   final bool relatedNotesEnabled;
 
+  /// 启动时自动加载本地模型
+  final bool autoLoadOnStartup;
+
   const LocalAISettings({
     this.enabled = false,
     this.speechToTextEnabled = true,
@@ -43,6 +46,7 @@ class LocalAISettings {
     this.noteClassificationEnabled = true,
     this.emotionDetectionEnabled = true,
     this.relatedNotesEnabled = true,
+    this.autoLoadOnStartup = false,
   });
 
   /// 默认设置
@@ -63,6 +67,7 @@ class LocalAISettings {
           json['noteClassificationEnabled'] as bool? ?? true,
       emotionDetectionEnabled: json['emotionDetectionEnabled'] as bool? ?? true,
       relatedNotesEnabled: json['relatedNotesEnabled'] as bool? ?? true,
+      autoLoadOnStartup: json['autoLoadOnStartup'] as bool? ?? false,
     );
   }
 
@@ -79,6 +84,7 @@ class LocalAISettings {
       'noteClassificationEnabled': noteClassificationEnabled,
       'emotionDetectionEnabled': emotionDetectionEnabled,
       'relatedNotesEnabled': relatedNotesEnabled,
+      'autoLoadOnStartup': autoLoadOnStartup,
     };
   }
 
@@ -94,6 +100,7 @@ class LocalAISettings {
     bool? noteClassificationEnabled,
     bool? emotionDetectionEnabled,
     bool? relatedNotesEnabled,
+    bool? autoLoadOnStartup,
   }) {
     return LocalAISettings(
       enabled: enabled ?? this.enabled,
@@ -109,6 +116,7 @@ class LocalAISettings {
       emotionDetectionEnabled:
           emotionDetectionEnabled ?? this.emotionDetectionEnabled,
       relatedNotesEnabled: relatedNotesEnabled ?? this.relatedNotesEnabled,
+      autoLoadOnStartup: autoLoadOnStartup ?? this.autoLoadOnStartup,
     );
   }
 
@@ -125,7 +133,8 @@ class LocalAISettings {
         other.smartTagsEnabled == smartTagsEnabled &&
         other.noteClassificationEnabled == noteClassificationEnabled &&
         other.emotionDetectionEnabled == emotionDetectionEnabled &&
-        other.relatedNotesEnabled == relatedNotesEnabled;
+        other.relatedNotesEnabled == relatedNotesEnabled &&
+        other.autoLoadOnStartup == autoLoadOnStartup;
   }
 
   @override
@@ -141,6 +150,7 @@ class LocalAISettings {
       noteClassificationEnabled,
       emotionDetectionEnabled,
       relatedNotesEnabled,
+      autoLoadOnStartup,
     );
   }
 
@@ -156,6 +166,7 @@ class LocalAISettings {
         'smartTagsEnabled: $smartTagsEnabled, '
         'noteClassificationEnabled: $noteClassificationEnabled, '
         'emotionDetectionEnabled: $emotionDetectionEnabled, '
-        'relatedNotesEnabled: $relatedNotesEnabled)';
+        'relatedNotesEnabled: $relatedNotesEnabled, '
+        'autoLoadOnStartup: $autoLoadOnStartup)';
   }
 }

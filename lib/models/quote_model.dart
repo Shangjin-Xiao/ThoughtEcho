@@ -252,6 +252,11 @@ class Quote {
     } on ArgumentError {
       rethrow;
     } catch (e) {
+      // 统一抛出 FormatException，保持异常处理的一致性
+      if (e is ArgumentError) {
+        throw FormatException(e.message.toString());
+      }
+      // 非预期解析错误：包装为 FormatException 并附带原始 JSON 便于排查。
       throw FormatException('解析Quote JSON失败: $e, JSON: $json');
     }
   }

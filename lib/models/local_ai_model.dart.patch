@@ -1,0 +1,65 @@
+/// 在 LocalAIModelInfo 类中添加 VLM 模型定义
+///
+/// 将以下代码添加到现有模型列表中：
+
+  /// PaliGemma 视觉语言模型（推荐用于 OCR）
+  static const paliGemma3B = LocalAIModelInfo(
+    id: 'paligemma-3b',
+    name: 'PaliGemma 3B',
+    type: LocalAIModelType.ocr,
+    description: 'Google PaliGemma 视觉语言模型，专为图像理解和 OCR 优化',
+    sizeBytes: 3000 * 1024 * 1024, // ~3GB
+    downloadUrl: 'https://huggingface.co/google/paligemma-3b-mix-224/resolve/main/model.bin',
+    fileName: 'paligemma-3b.bin',
+    version: '1.0',
+    isRequired: false,
+  );
+
+  /// Gemma 2B 视觉版（轻量级）
+  static const gemma2BVision = LocalAIModelInfo(
+    id: 'gemma-2b-vision',
+    name: 'Gemma 2B Vision',
+    type: LocalAIModelType.ocr,
+    description: 'Google Gemma 2B 视觉版，支持图像理解和文字识别',
+    sizeBytes: 2000 * 1024 * 1024, // ~2GB
+    downloadUrl: 'https://huggingface.co/google/gemma-2b-vision/resolve/main/model.bin',
+    fileName: 'gemma-2b-vision.bin',
+    version: '1.0',
+    isRequired: false,
+  );
+
+  /// Qwen-VL-Chat（阿里通义千问视觉版）
+  static const qwenVLChat = LocalAIModelInfo(
+    id: 'qwen-vl-chat',
+    name: 'Qwen-VL-Chat',
+    type: LocalAIModelType.ocr,
+    description: '阿里通义千问视觉语言模型，支持中文手写识别',
+    sizeBytes: 1800 * 1024 * 1024, // ~1.8GB
+    downloadUrl: 'https://huggingface.co/Qwen/Qwen-VL-Chat/resolve/main/model.bin',
+    fileName: 'qwen-vl-chat.bin',
+    version: '1.0',
+    isRequired: false,
+  );
+
+  /// MobileVLM 1.7B（移动端优化）
+  static const mobileVLM = LocalAIModelInfo(
+    id: 'mobile-vlm-1.7b',
+    name: 'MobileVLM 1.7B',
+    type: LocalAIModelType.ocr,
+    description: '专为移动设备优化的视觉语言模型',
+    sizeBytes: 1700 * 1024 * 1024, // ~1.7GB
+    downloadUrl: 'https://huggingface.co/mtgv/MobileVLM-1.7B/resolve/main/model.bin',
+    fileName: 'mobile-vlm-1.7b.bin',
+    version: '1.0',
+    isRequired: false,
+  );
+
+/// 更新 getPresetModels() 方法，添加 VLM 模型到返回列表：
+///
+/// return [
+///   // ... 现有模型 ...
+///   paliGemma3B,
+///   gemma2BVision,
+///   qwenVLChat,
+///   mobileVLM,
+/// ];

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:camera/camera.dart';
 import '../../gen_l10n/app_localizations.dart';
 
 /// OCR 拍照页面
@@ -13,6 +14,82 @@ class OCRCapturePage extends StatefulWidget {
 }
 
 class _OCRCapturePageState extends State<OCRCapturePage> {
+  CameraController? _controller;
+  Future<void>? _initializeFuture;
+  bool _isCapturing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeFuture = _initializeCamera();
+  }
+
+  Future<void> _initializeCamera() async {
+    final cameras = await availableCameras();
+    if (cameras.isEmpty) {
+      throw Exception('camera_not_available');
+    }
+
+    final back =
+        cameras.where((c) => c.lensDirection == CameraLensDirection.back);
+    final selected = back.isNotEmpty ? back.first : cameras.first;
+
+    final controller = CameraController(
+      selected,
+      ResolutionPreset.high,
+      enableAudio: false,
+      imageFormatGroup: ImageFormatGroup.jpeg,
+    );
+
+    await controller.initialize();
+    if (!mounted) {
+      await controller.dispose();
+      return;
+    }
+
+    setState(() {
+      _controller = controller;
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _takePicture() async {
+    if (_isCapturing) return;
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+
+    setState(() {
+      _isCapturing = true;
+    });
+
+    try {
+      HapticFeedback.selectionClick();
+      final file = await controller.takePicture();
+      if (!mounted) return;
+      Navigator.of(context).pop(file.path);
+    } catch (_) {
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.featureNotAvailable),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCapturing = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -33,32 +110,44 @@ class _OCRCapturePageState extends State<OCRCapturePage> {
       ),
       body: Stack(
         children: [
-          // TODO: 相机预览 - 后端实现后添加
-          Center(
-            child: Container(
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.camera_alt,
-                    size: 64,
-                    color: Colors.white.withOpacity(0.7),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    l10n.featureComingSoon,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 16,
+          // 相机预览
+          Positioned.fill(
+            child: FutureBuilder<void>(
+              future: _initializeFuture,
+              builder: (context, snapshot) {
+                final controller = _controller;
+
+                if (snapshot.connectionState == ConnectionState.waiting ||
+                    controller == null ||
+                    !controller.value.isInitialized) {
+                  return const Center(
+                    child: SizedBox(
+                      width: 28,
+                      height: 28,
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     ),
-                  ),
-                ],
-              ),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        l10n.featureNotAvailable,
+                        style: const TextStyle(color: Colors.white70),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  );
+                }
+
+                return CameraPreview(controller);
+              },
             ),
           ),
 
@@ -97,16 +186,7 @@ class _OCRCapturePageState extends State<OCRCapturePage> {
                     radius: 48,
                     splashColor: Colors.white.withOpacity(0.15),
                     highlightColor: Colors.white.withOpacity(0.06),
-                    onTap: () {
-                      HapticFeedback.selectionClick();
-                      // TODO: 拍照逻辑 - 后端实现后添加
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(l10n.featureComingSoon),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    },
+                    onTap: _isCapturing ? null : _takePicture,
                     child: Container(
                       width: 78,
                       height: 78,
@@ -133,10 +213,16 @@ class _OCRCapturePageState extends State<OCRCapturePage> {
                             shape: BoxShape.circle,
                             color: Colors.black.withOpacity(0.06),
                           ),
-                          child: const Icon(
-                            Icons.camera_alt,
-                            color: Colors.black87,
-                          ),
+                          child: _isCapturing
+                              ? const Padding(
+                                  padding: EdgeInsets.all(14),
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(
+                                  Icons.camera_alt,
+                                  color: Colors.black87,
+                                ),
                         ),
                       ),
                     ),

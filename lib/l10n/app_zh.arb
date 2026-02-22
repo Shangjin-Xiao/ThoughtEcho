@@ -300,6 +300,15 @@
   "aiReturnedEmpty": "AI返回了空内容，请重试",
   "pleaseConfigureApiKey": "请先在AI设置中配置有效的API Key",
   "networkError": "网络连接异常，请检查网络后重试",
+  "connectionTimeout": "连接超时，请检查网络",
+  "sendTimeout": "发送超时，请检查网络",
+  "receiveTimeout": "接收超时，请检查网络",
+  "modelNotFound": "模型文件不存在",
+  "modelAccessDenied": "无权访问模型文件",
+  "serverError": "服务器错误",
+  "downloadCancelled": "下载已取消",
+  "connectionFailed": "网络连接失败，请检查网络",
+  "downloadFailed": "下载失败",
   "aiQuotaExceeded": "AI服务配额不足，请稍后重试",
   "generateAIReportFailed": "生成AI年度报告失败",
   "getDataFailed": "获取数据失败",
@@ -1253,6 +1262,7 @@
       }
     }
   },
+  "apiKeyNotRequired": "无需 API Key",
   "connectionSuccess": "连接成功",
   "responseFormatError": "响应格式异常",
   "connectionFailed": "连接失败：{statusCode}",
@@ -1927,6 +1937,7 @@
   "aiProviderAnthropic": "Anthropic (Claude)",
   "aiProviderOllama": "Ollama",
   "aiProviderLMStudio": "LMStudio",
+  "aiProviderLocalGemma": "本地 Gemma（离线）",
   "apiKeyStatusEmpty": "空",
   "apiKeyStatusNotEmpty": "{length}字符",
   "@apiKeyStatusNotEmpty": {
@@ -3186,6 +3197,8 @@
   "localAiFeaturesDesc": "使用设备端 AI 能力增强笔记体验",
   "enableLocalAi": "启用本地 AI",
   "enableLocalAiDesc": "开启后将启用设备端 AI 功能",
+  "localAiAutoLoadOnStartup": "启动后自动加载",
+  "localAiAutoLoadOnStartupDesc": "开启后将在应用启动后后台初始化本地 AI（可能增加耗电与占用）",
   "localAiPreviewNote": "此功能目前处于预览阶段，部分功能可能不稳定",
 
   "inputEnhancement": "输入增强",
@@ -3277,6 +3290,9 @@
   "localAIEmotionDetectionDesc": "分析笔记的情感倾向",
   "voiceRecording": "正在录音...",
   "voiceRecordingHint": "松开结束，上滑进入 OCR",
+  "voiceInitializing": "正在初始化...",
+  "voiceInitializingHint": "请稍候，正在准备语音识别",
+  "voiceNoTextRecognized": "未识别到文字",
   "voiceProcessing": "处理中...",
   "voiceTranscribing": "转写中...",
   "voiceResultTitle": "语音识别结果",
@@ -3284,6 +3300,7 @@
   "voiceApplyCorrection": "AI 纠错",
   "voiceRecognizeSource": "识别来源",
   "voiceInsertToEditor": "填入编辑器",
+  "voiceStopRecording": "停止录音",
   "ocrCapture": "拍照识别",
   "ocrCaptureHint": "对准文字区域拍照",
   "ocrSelectRegion": "选择文字区域",
@@ -3291,6 +3308,37 @@
   "ocrProcessing": "识别中...",
   "ocrResultTitle": "OCR 识别结果",
   "ocrNoTextDetected": "未检测到文字",
+  "ocrEngineSettings": "OCR 引擎设置",
+  "ocrEngineAuto": "自动选择",
+  "ocrEngineAutoDesc": "智能判断图片类型，自动选择最佳引擎",
+  "ocrEngineMLKit": "MLKit OCR",
+  "ocrEngineMLKitDesc": "移动端主力 · 快速准确 · 适合印刷体",
+  "ocrEngineTesseract": "Tesseract OCR",
+  "ocrEngineTesseractDesc": "桌面端兼容 · 适合印刷体文字",
+  "ocrEngineVLM": "VLM 视觉模型",
+  "ocrEngineVLMDesc": "视觉语言模型 · 适合手写文字和复杂场景",
+  "ocrCurrentEngine": "当前引擎",
+  "ocrHandwritingDetected": "检测到手写文字",
+  "ocrPrintedTextDetected": "检测到印刷体文字",
+  "ocrUsingMLKit": "使用 MLKit 引擎识别中...",
+  "ocrUsingVLM": "使用 VLM 引擎识别中...",
+  "ocrUsingTesseract": "使用 Tesseract 引擎识别中...",
+  "ocrVLMNotAvailable": "VLM 模型未下载",
+  "ocrVLMRecommendation": "手写识别推荐下载 VLM 模型",
+  "ocrDownloadVLMModel": "下载 VLM 模型",
+  "ocrVLMModePrecise": "精确模式",
+  "ocrVLMModeUnderstanding": "理解模式",
+  "ocrVLMModeHandwritten": "手写模式",
+  "ocrMLKitScript": "识别脚本",
+  "ocrScriptLatin": "拉丁文",
+  "ocrScriptChinese": "中文",
+  "ocrScriptJapanese": "日文",
+  "ocrScriptKorean": "韩文",
+  "ocrScriptDevanagari": "梵文",
+  "ocrSelectRegion": "选择文字区域",
+  "ocrTakePhoto": "拍照识别",
+  "ocrSelectImage": "选择图片",
+  "ocrProcessing": "识别中...",
   "aiSearchMode": "AI 搜索",
   "normalSearchMode": "普通搜索",
   "aiSearching": "AI 搜索中...",
@@ -3479,5 +3527,176 @@
   "locationTimeoutCheckPermission": "位置获取超时，请检查位置权限设置",
   "cannotGetCurrentLocation": "无法获取当前位置，请确保已授予位置权限",
   "cannotGetSelectedCityLocation": "无法获取选中城市的位置信息",
-  "cityInfoIncomplete": "城市信息不完整"
+  "cityInfoIncomplete": "城市信息不完整",
+
+  "modelManagement": "模型管理",
+  "modelManagementDesc": "下载和管理本地 AI 模型",
+  "modelDownload": "下载模型",
+  "modelDownloading": "下载中...",
+  "modelDownloadProgress": "下载进度：{progress}%",
+  "@modelDownloadProgress": {
+    "placeholders": {
+      "progress": {
+        "type": "int"
+      }
+    }
+  },
+  "modelDownloadComplete": "下载完成",
+  "modelDownloadFailed": "下载失败：{error}",
+  "@modelDownloadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "modelImport": "导入模型",
+  "modelImportHint": "从本地文件导入模型",
+  "modelImportASR": "选择语音识别模型文件",
+  "modelImportOCR": "选择 OCR 模型文件",
+  "modelImporting": "正在导入模型...",
+  "modelImportSuccess": "模型导入成功",
+  "modelImportFailed": "模型导入失败: {error}",
+  "@modelImportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "modelManagedByPackage": "此模型由 flutter_gemma 管理：请配置下载地址或导入 .task 模型文件",
+  "modelPrepare": "准备模型",
+  "modelPrepareHint": "解压/加载（可能需要一些时间）",
+  "modelPreparing": "正在准备模型...",
+  "modelPrepareSuccess": "模型已准备就绪",
+  "modelPrepareFailed": "模型准备失败：{error}",
+  "@modelPrepareFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "modelExtractFailed": "解压失败",
+  "modelDelete": "删除模型",
+  "modelDeleteConfirm": "确定要删除此模型吗？删除后需要重新下载。",
+  "modelSize": "大小：{size}",
+  "@modelSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "modelVersion": "版本：{version}",
+  "@modelVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "modelNotDownloaded": "未下载",
+  "modelDownloaded": "已下载",
+  "modelLoaded": "已加载",
+  "modelLoading": "加载中",
+  "modelError": "错误",
+  "modelTypeLLM": "语言模型",
+  "modelTypeEmbedding": "嵌入模型",
+  "modelTypeASR": "语音识别",
+  "modelTypeOCR": "文字识别",
+  "modelStorageUsage": "模型存储占用：{size}",
+  "@modelStorageUsage": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "modelClearAll": "清除所有模型",
+  "modelClearAllConfirm": "确定要删除所有已下载的模型吗？",
+  "modelDownloadSource": "下载源",
+  "modelDownloadSourceHint": "模型将从 HuggingFace/GitHub 下载",
+  "modelRequiresDownload": "此功能需要先下载相应的模型",
+  "modelMemoryWarning": "此模型需要约 {memory} 内存，请确保设备有足够的可用内存",
+  "@modelMemoryWarning": {
+    "placeholders": {
+      "memory": {
+        "type": "String"
+      }
+    }
+  },
+  "similarityHighlyRelated": "内容高度相关",
+  "similarityTopicSimilar": "主题相似",
+  "similaritySomewhatRelated": "有一定关联",
+  "similarityPossiblyRelated": "可能相关",
+  "positiveEmotionDetected": "检测到积极情绪",
+  "negativeEmotionDetected": "检测到消极情绪",
+  "containsDateKeywords": "包含日期相关词汇",
+  "containsQuoteFormat": "包含引用格式",
+  "containsInsightKeywords": "包含感悟相关词汇",
+  "pleaseSwitchToAsrModel": "请先下载语音识别模型",
+  "pleaseSwitchToOcrModel": "请先下载 OCR 模型",
+
+  "ocrPhotoFailed": "拍照失败: {error}",
+  "@ocrPhotoFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ocrImagePickFailed": "选择图片失败: {error}",
+  "@ocrImagePickFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ocrRecognitionFailed": "识别失败: {error}",
+  "@ocrRecognitionFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ocrClearSelection": "清空",
+  "ocrSelectAll": "全选",
+  "ocrTapToSelectHint": "点击选择文字区域 · 已选 {selected}/{total}",
+  "@ocrTapToSelectHint": {
+    "placeholders": {
+      "selected": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "ocrConfirmSelection": "确认选择 ({count})",
+  "@ocrConfirmSelection": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "filePathNotAvailable": "无法获取文件路径",
+  "modelDownloadedCount": "已下载 {count} 个模型",
+  "@modelDownloadedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "featureNotEnabled": "该功能未启用，请在设置中开启",
+  "modelRecommended": "推荐",
+  "modelLightweight": "轻量",
+  "modelHighAccuracy": "高精度",
+  "embeddingServicePlaceholder": "嵌入服务尚未完整实现",
+  "noChangesNeeded": "文本无需修改",
+  "aiCorrectionFailed": "AI 纠错失败"
 }

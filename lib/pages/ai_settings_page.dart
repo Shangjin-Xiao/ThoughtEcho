@@ -7,6 +7,7 @@ import '../models/ai_provider_settings.dart';
 import '../models/multi_ai_settings.dart';
 import '../utils/app_logger.dart';
 import '../services/api_key_manager.dart';
+import '../services/local_ai/text_processing_service.dart';
 import '../utils/ai_network_manager.dart';
 import '../utils/api_key_debugger.dart';
 import '../constants/app_constants.dart';
@@ -94,11 +95,21 @@ class _AISettingsPageState extends State<AISettingsPage> {
         'model': '',
       },
       {
+        'name': l10n.aiProviderLocalGemma,
+        'apiUrl': 'local://gemma',
+        'model': 'gemma-2b',
+      },
+      {
         'name': l10n.openapiCompatible,
         'apiUrl': 'http://your-openapi-server/v1/chat/completions',
         'model': '',
       },
     ];
+  }
+
+  bool _isLocalUrl(String url) {
+    final uri = Uri.tryParse(url.trim());
+    return uri != null && uri.scheme == 'local';
   }
 
   // --- Logic Methods (Preserved) ---
@@ -129,6 +140,10 @@ class _AISettingsPageState extends State<AISettingsPage> {
   void _updateApiKeyStatus() {
     final l10n = AppLocalizations.of(context);
     if (_currentProvider != null) {
+      if (_isLocalUrl(_currentProvider!.apiUrl)) {
+        _apiKeyStatus = l10n.apiKeyNotRequired;
+        return;
+      }
       _apiKeyStatus = l10n.verifyingApiKey;
     } else {
       _apiKeyStatus = l10n.noProviderSelected;
@@ -138,6 +153,14 @@ class _AISettingsPageState extends State<AISettingsPage> {
   Future<void> _updateApiKeyStatusAsync() async {
     final l10n = AppLocalizations.of(context);
     if (_currentProvider != null) {
+      if (_isLocalUrl(_currentProvider!.apiUrl)) {
+        _apiKeyStatus = l10n.apiKeyNotRequired;
+        if (mounted) {
+          setState(() {});
+        }
+        return;
+      }
+
       final apiKeyManager = APIKeyManager();
       final hasValidKey =
           await apiKeyManager.hasValidProviderApiKey(_currentProvider!.id);
@@ -168,7 +191,10 @@ class _AISettingsPageState extends State<AISettingsPage> {
         statusMessage = l10n.noAiProviderSelected;
       } else {
         final provider = multiSettings.currentProvider!;
-        if (!provider.isEnabled) {
+
+        if (_isLocalUrl(provider.apiUrl)) {
+          statusMessage = l10n.apiKeyNotRequired;
+        } else if (!provider.isEnabled) {
           statusMessage = l10n.providerDisabled;
         } else {
           final apiKeyManager = APIKeyManager();
@@ -313,7 +339,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
       model: _modelController.text,
       maxTokens: maxTokens,
       hostOverride: hostOverride.isEmpty ? null : hostOverride,
-      isEnabled: _apiKeyController.text.isNotEmpty,
+      isEnabled: _isLocalUrl(_apiUrlController.text) ||
+          _apiKeyController.text.isNotEmpty,
     );
 
     final apiKeyManager = APIKeyManager();
@@ -397,9 +424,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
   Future<void> _testProvider(AIProviderSettings provider) async {
     final l10n = AppLocalizations.of(context);
-    if (provider.apiKey.isEmpty) {
-      throw Exception(l10n.apiKeyRequired(provider.name));
-    }
+    final isLocal = _isLocalUrl(provider.apiUrl);
 
     setState(() {
       _testingStatus[provider.id] = true;
@@ -407,14 +432,43 @@ class _AISettingsPageState extends State<AISettingsPage> {
     });
 
     try {
+      if (isLocal) {
+        // 本地模型：走设备端推理，不要求 API Key
+        final content =
+            await TextProcessingService.instance.generateFromPrompts(
+          systemPrompt: l10n.connectionTestSystemMessage,
+          userMessage: l10n.connectionTestUserMessage,
+        );
+
+        if (content.trim().isNotEmpty) {
+          setState(() {
+            _testResults[provider.id] = l10n.connectionSuccess;
+          });
+        } else {
+          setState(() {
+            _testResults[provider.id] = l10n.testFailedEmptyContent;
+          });
+        }
+        return;
+      }
+
+      // 远程 provider：从安全存储读取 API Key
+      final apiKeyManager = APIKeyManager();
+      final apiKey = await apiKeyManager.getProviderApiKey(provider.id);
+      if (apiKey.isEmpty) {
+        throw Exception(l10n.apiKeyRequired(provider.name));
+      }
+
+      final providerWithKey = provider.copyWith(apiKey: apiKey);
+
       final testMessages = [
         {'role': 'system', 'content': l10n.connectionTestSystemMessage},
         {'role': 'user', 'content': l10n.connectionTestUserMessage},
       ];
       final response = await AINetworkManager.makeRequest(
-        url: '',
+        url: provider.apiUrl,
         data: {'messages': testMessages, 'temperature': 0.1, 'max_tokens': 50},
-        provider: provider,
+        provider: providerWithKey,
         timeout: const Duration(seconds: 30),
       );
 

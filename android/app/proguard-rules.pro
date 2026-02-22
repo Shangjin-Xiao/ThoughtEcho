@@ -99,6 +99,25 @@
 -keep class com.tencent.mmkv.** { *; }
 -dontwarn com.tencent.mmkv.**
 
+# Google MLKit Text Recognition
+# MLKit 插件会引用各语种的 TextRecognizerOptions 类，即使应用只用了部分语种，
+# R8 也会因缺失类报错。保留并忽略缺失警告。
+-keep class com.google.mlkit.** { *; }
+-dontwarn com.google.mlkit.**
+-keep class com.google_mlkit_text_recognition.** { *; }
+-dontwarn com.google_mlkit_text_recognition.**
+
+# flutter_gemma / MediaPipe
+# MediaPipe 的部分 profiling/graph 相关 API 会在字节码中引用 proto 生成类，但这些类在某些打包组合里并不会随库一起提供。
+# Release 模式启用 R8 时会因此报 "Missing class ... com.google.mediapipe.proto.*" 并直接失败。
+# 这些缺失类通常只影响可选的 profiler/调试路径；应用未使用时可以安全忽略。
+-keep class com.google.mediapipe.** { *; }
+-dontwarn com.google.mediapipe.**
+-keep class com.google.protobuf.** { *; }
+-dontwarn com.google.protobuf.**
+-keep class com.google.ai.edge.localagents.** { *; }
+-dontwarn com.google.ai.edge.localagents.**
+
 # 32位设备内存优化
 -dontoptimize
 -dontpreverify

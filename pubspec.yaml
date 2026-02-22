@@ -4,8 +4,8 @@ publish_to: 'none'
 version: 3.4.0+1
 
 environment:
-  sdk: '>=3.5.0 <4.0.0'
-  flutter: '>=3.22.1'
+  sdk: '>=3.6.0 <4.0.0'
+  flutter: '>=3.24.0'
 
 dependencies:
   flutter:
@@ -67,12 +67,11 @@ dependencies:
   basic_utils: ^5.7.0 # localsend基础工具包
   convert: ^3.1.2 # 数据转换工具
   dart_mappable: ^4.6.1 # Dart对象映射
-  mime: ^1.0.6 # MIME类型处理
+  mime: ^2.0.0 # MIME类型处理
   path_provider_foundation: ^2.4.3 # iOS/macOS路径提供
   rhttp: ^0.14.0 # Rust实现的HTTP客户端
   pasteboard: ^0.4.0 # 剪贴板操作
   http: ^1.2.2 # HTTP客户端库
-  http_server: ^1.0.0 # for MimeMultipartTransformer and HttpMultipartFormData
   collection: ^1.18.0
   refena_flutter: ^3.2.0
   open_file: ^3.5.10 # 用于打开文件，包括APK安装
@@ -82,6 +81,12 @@ dependencies:
   android_alarm_manager_plus: ^4.0.0
   timezone: ^0.10.0
   workmanager: ^0.9.0+3
+  # 本地 AI 功能依赖 (Local AI dependencies)
+  flutter_gemma: ^0.12.4 # Gemma LLM 本地推理
+  sherpa_onnx: ^1.12.20 # 语音识别 (Whisper)
+  google_mlkit_text_recognition: ^0.13.0 # MLKit OCR（移动端主力）
+  record: '>=6.0.0 <6.1.0' # 录音功能
+  camera: ^0.11.0+2 # 相机功能
 
 dev_dependencies:
   flutter_test:
@@ -178,5 +183,6 @@ flutter:
   assets:
     - assets/lottie/
     - assets/icon.png
+    - assets/tessdata_config.json
     - docs/
     - LICENSE
