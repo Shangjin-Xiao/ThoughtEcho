@@ -65,6 +65,18 @@ void main() {
       // ASR should contain Whisper models
       expect(asrModels.any((m) => m.id == 'whisper-tiny'), true);
     });
+
+    test('supportsManualImport returns true for ASR and dialogue models', () {
+      final asr = LocalAIModels.whisperTiny;
+      final llm = LocalAIModels.gemma2b;
+      final embedding = LocalAIModels.gecko384;
+      final ocr = LocalAIModels.paliGemma3B;
+
+      expect(asr.supportsManualImport, true);
+      expect(llm.supportsManualImport, true);
+      expect(embedding.supportsManualImport, true);
+      expect(ocr.supportsManualImport, false);
+    });
   });
 
   group('SpeechRecognitionResult Tests', () {

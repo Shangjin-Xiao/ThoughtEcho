@@ -5,6 +5,7 @@ library;
 
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
@@ -82,6 +83,9 @@ class SpeechRecognitionService extends ChangeNotifier {
 
   /// 每次触发预览解码前至少新增的样本数（避免过于频繁）
   static const int _minNewSamplesForPartialDecode = 16000; // ~1s @16k
+
+  /// 高核设备上的线程上限，避免占用过高导致 UI 抖动
+  static const int _maxRecommendedThreads = 6;
 
   /// 录音计时器
   Timer? _recordingTimer;
@@ -195,7 +199,7 @@ class SpeechRecognitionService extends ChangeNotifier {
             task: 'transcribe',
           ),
           tokens: modelFiles.tokens,
-          numThreads: 4,
+          numThreads: _recommendedThreadCount(),
           debug: false,
           modelType: 'whisper',
         ),
@@ -207,6 +211,12 @@ class SpeechRecognitionService extends ChangeNotifier {
       logError('初始化 sherpa_onnx 识别器失败: $e', source: 'SpeechRecognitionService');
       _recognizer = null;
     }
+  }
+
+  /// 根据设备 CPU 动态设置线程数，兼顾速度和稳定性
+  int _recommendedThreadCount() {
+    final cores = Platform.numberOfProcessors;
+    return math.max(1, math.min(cores ~/ 2, _maxRecommendedThreads));
   }
 
   /// 确保 sherpa_onnx 已完成必要的全局初始化。
@@ -770,7 +780,7 @@ class SpeechRecognitionService extends ChangeNotifier {
   void _startRecordingTimer() {
     _recordingTimer?.cancel();
     _recordingTimer =
-        Timer.periodic(const Duration(milliseconds: 100), (timer) {
+        Timer.periodic(const Duration(milliseconds: 300), (timer) {
       if (!_status.isRecording) {
         timer.cancel();
         return;
@@ -781,7 +791,7 @@ class SpeechRecognitionService extends ChangeNotifier {
       final timeFactor = _status.durationSeconds * 3.14;
       final simulatedVolume = 0.3 + 0.2 * (0.5 + 0.5 * _sin(timeFactor));
       _status = _status.copyWith(
-        durationSeconds: _status.durationSeconds + 0.1,
+        durationSeconds: _status.durationSeconds + 0.3,
         volumeLevel: simulatedVolume.clamp(0.0, 1.0),
       );
       notifyListeners();
