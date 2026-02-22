@@ -378,12 +378,20 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
         if (!mounted) return;
 
-        // 脏检查：只有标签数量或内容变化时才更新
+        // 脏检查：比较完整列表，避免新增标签但首尾不变时漏更新
         bool needsUpdate = _availableTags.length != updatedTags.length;
-        if (!needsUpdate && _availableTags.isNotEmpty) {
-          // 简单检查第一个和最后一个标签是否相同
-          needsUpdate = _availableTags.first.id != updatedTags.first.id ||
-              _availableTags.last.id != updatedTags.last.id;
+        if (!needsUpdate) {
+          for (int i = 0; i < _availableTags.length; i++) {
+            final current = _availableTags[i];
+            final updated = updatedTags[i];
+            if (current.id != updated.id ||
+                current.name != updated.name ||
+                current.iconName != updated.iconName ||
+                current.isDefault != updated.isDefault) {
+              needsUpdate = true;
+              break;
+            }
+          }
         }
 
         if (needsUpdate) {

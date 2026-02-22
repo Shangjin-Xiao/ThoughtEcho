@@ -2396,17 +2396,27 @@ class DatabaseService extends ChangeNotifier {
 
   Future<List<NoteCategory>> getCategories() async {
     if (kIsWeb) {
-      return _categoryStore;
+      return _moveHiddenCategoryToBottom(List<NoteCategory>.from(_categoryStore));
     }
     try {
       final db = await safeDatabase;
       final maps = await db.query('categories');
       final categories = maps.map((map) => NoteCategory.fromMap(map)).toList();
-      return categories;
+      return _moveHiddenCategoryToBottom(categories);
     } catch (e) {
       logDebug('获取分类错误: $e');
       return [];
     }
+  }
+
+  List<NoteCategory> _moveHiddenCategoryToBottom(List<NoteCategory> categories) {
+    final hiddenCategories = categories
+        .where((category) => category.id == hiddenTagId)
+        .toList();
+    final normalCategories = categories
+        .where((category) => category.id != hiddenTagId)
+        .toList();
+    return [...normalCategories, ...hiddenCategories];
   }
 
   /// 获取或创建隐藏标签
