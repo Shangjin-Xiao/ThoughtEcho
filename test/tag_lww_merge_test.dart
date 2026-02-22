@@ -83,5 +83,18 @@ void main() {
       });
       expect((eq2['tag_ids'] as String).split(',').toSet(), {workLocalId});
     });
+
+    test('hidden tag is always returned at the end of category list', () async {
+      await db.getOrCreateHiddenTag();
+      final suffix = DateTime.now().microsecondsSinceEpoch;
+      await db.addCategory('隐藏排序测试A_$suffix');
+      await db.addCategory('隐藏排序测试B_$suffix');
+
+      final categories = await db.getCategories();
+
+      expect(categories.where((c) => c.id == DatabaseService.hiddenTagId).length,
+          1);
+      expect(categories.last.id, DatabaseService.hiddenTagId);
+    });
   });
 }

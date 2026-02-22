@@ -699,6 +699,10 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
 
   void _showIconSelector(BuildContext context, AppLocalizations l10n) {
     final TextEditingController emojiSearchController = TextEditingController();
+    void updateSelectedIcon(String iconName) {
+      if (!mounted) return;
+      setState(() => _selectedIconName = iconName);
+    }
     String searchQuery = '';
     Map<String, bool> expandedCategories = {
       l10n.emotion: true,
@@ -714,7 +718,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
     showDialog(
       context: context,
       builder: (context) => StatefulBuilder(
-        builder: (context, setState) {
+        builder: (context, dialogSetState) {
           // Get emoji categories (using localized category names)
           final emojiCategories = IconUtils.getLocalizedEmojiCategories(l10n);
 
@@ -750,14 +754,14 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                               icon: const Icon(Icons.clear),
                               onPressed: () {
                                 emojiSearchController.clear();
-                                setState(() => searchQuery = '');
+                                dialogSetState(() => searchQuery = '');
                               },
                             )
                           : null,
                       border: const OutlineInputBorder(),
                     ),
                     onChanged: (value) {
-                      setState(() => searchQuery = value);
+                      dialogSetState(() => searchQuery = value);
                     },
                   ),
                   const SizedBox(height: 8),
@@ -777,10 +781,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                           ElevatedButton(
                             child: Text(l10n.select),
                             onPressed: () {
-                              setState(
-                                () => _selectedIconName =
-                                    emojiSearchController.text,
-                              );
+                              updateSelectedIcon(emojiSearchController.text);
                               Navigator.of(context).pop();
                             },
                           ),
@@ -817,7 +818,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                         : Icons.expand_more,
                                   ),
                                   onTap: () {
-                                    setState(() {
+                                    dialogSetState(() {
                                       expandedCategories[category] =
                                           !(expandedCategories[category] ??
                                               false);
@@ -839,9 +840,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                             _selectedIconName == emoji;
                                         return InkWell(
                                           onTap: () {
-                                            setState(
-                                              () => _selectedIconName = emoji,
-                                            );
+                                            updateSelectedIcon(emoji);
                                             Navigator.of(context).pop();
                                           },
                                           child: Container(
@@ -903,7 +902,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                   : Icons.expand_more,
                             ),
                             onTap: () {
-                              setState(() {
+                              dialogSetState(() {
                                 expandedCategories[l10n.systemIcons] =
                                     !(expandedCategories[l10n.systemIcons] ??
                                         false);
@@ -930,9 +929,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                     height: 70,
                                     child: InkWell(
                                       onTap: () {
-                                        setState(
-                                          () => _selectedIconName = iconName,
-                                        );
+                                        updateSelectedIcon(iconName);
                                         Navigator.of(context).pop();
                                       },
                                       child: Column(
