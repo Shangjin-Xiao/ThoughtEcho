@@ -15,6 +15,11 @@ import '../utils/app_logger.dart';
 import '../utils/optimized_image_loader.dart';
 import '../widgets/media_player_widget.dart';
 
+/// 全局滚动状态信号，由 NoteListView 的 NotificationListener 写入。
+/// _LazyQuillImage 通过读取此信号判断列表是否仍在 ballistic（惯性）滚动阶段，
+/// 从而避免松手后图片立即解码与惯性帧竞争 raster 线程导致的卡顿。
+final ValueNotifier<bool> isListScrolling = ValueNotifier<bool>(false);
+
 /// Quill编辑器扩展配置
 /// 图片使用flutter_quill_extensions官方实现，视频和音频使用自定义MediaPlayerWidget
 class QuillEditorExtensions {
@@ -239,12 +244,25 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
       return;
     }
 
+    // 检查 Flutter 滚动系统是否建议推迟加载（drag 阶段）
     if (Scrollable.recommendDeferredLoadingForContext(context)) {
       _deferredLoadTimer?.cancel();
       _deferredLoadTimer = Timer(const Duration(milliseconds: 120), () {
         if (!mounted || _shouldLoad) {
           return;
         }
+        _tryStartLoading();
+      });
+      return;
+    }
+
+    // 额外检查：recommendDeferredLoadingForContext 在 ballistic（惯性）阶段
+    // 也会返回 false，但此时列表仍在高速惯性滑动。通过外层 NoteListView 写入的
+    // 全局信号判断是否处于 ballistic 阶段，继续延迟解码避免和惯性帧竞争 raster。
+    if (isListScrolling.value) {
+      _deferredLoadTimer?.cancel();
+      _deferredLoadTimer = Timer(const Duration(milliseconds: 80), () {
+        if (!mounted || _shouldLoad) return;
         _tryStartLoading();
       });
       return;
