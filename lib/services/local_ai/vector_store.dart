@@ -208,7 +208,8 @@ class VectorStore extends ChangeNotifier {
 
     try {
       for (final entry in notes.entries) {
-        final embedding = await _embeddingService.generateEmbedding(entry.value);
+        final embedding =
+            await _embeddingService.generateEmbedding(entry.value);
         _embeddings[entry.key] = embedding.copyWith(noteId: entry.key);
       }
 

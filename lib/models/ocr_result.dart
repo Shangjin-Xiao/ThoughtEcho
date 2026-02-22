@@ -52,15 +52,14 @@ class TextBlock {
     final box = json['boundingBox'] as Map<String, dynamic>?;
     return TextBlock(
       text: json['text'] as String? ?? '',
-      boundingBox:
-          box != null
-              ? Rect.fromLTWH(
-                (box['left'] as num).toDouble(),
-                (box['top'] as num).toDouble(),
-                (box['width'] as num).toDouble(),
-                (box['height'] as num).toDouble(),
-              )
-              : Rect.zero,
+      boundingBox: box != null
+          ? Rect.fromLTWH(
+              (box['left'] as num).toDouble(),
+              (box['top'] as num).toDouble(),
+              (box['width'] as num).toDouble(),
+              (box['height'] as num).toDouble(),
+            )
+          : Rect.zero,
       confidence: (json['confidence'] as num?)?.toDouble() ?? 1.0,
       language: json['language'] as String?,
       isSelected: json['isSelected'] as bool? ?? false,
@@ -126,7 +125,8 @@ class OCRResult {
   bool get isNotEmpty => !isEmpty;
 
   /// 获取选中的文本块
-  List<TextBlock> get selectedBlocks => blocks.where((b) => b.isSelected).toList();
+  List<TextBlock> get selectedBlocks =>
+      blocks.where((b) => b.isSelected).toList();
 
   /// 获取选中的文本
   String get selectedText =>
@@ -136,19 +136,16 @@ class OCRResult {
   factory OCRResult.fromJson(Map<String, dynamic> json) {
     return OCRResult(
       fullText: json['fullText'] as String? ?? '',
-      blocks:
-          (json['blocks'] as List<dynamic>?)
+      blocks: (json['blocks'] as List<dynamic>?)
               ?.map((b) => TextBlock.fromJson(b as Map<String, dynamic>))
               .toList() ??
           [],
       imagePath: json['imagePath'] as String?,
       processingTimeMs: json['processingTimeMs'] as int?,
-      timestamp:
-          json['timestamp'] != null
-              ? DateTime.parse(json['timestamp'] as String)
-              : null,
-      languages:
-          (json['languages'] as List<dynamic>?)?.cast<String>() ??
+      timestamp: json['timestamp'] != null
+          ? DateTime.parse(json['timestamp'] as String)
+          : null,
+      languages: (json['languages'] as List<dynamic>?)?.cast<String>() ??
           const ['chi_sim', 'eng'],
     );
   }

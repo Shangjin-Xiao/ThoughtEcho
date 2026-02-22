@@ -3,7 +3,6 @@
 /// 拍照后使用 MLKit/VLM 进行文字识别，支持用户选择文字区域
 library;
 
-
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -177,14 +176,11 @@ class _CameraOCRPageState extends State<CameraOCRPage> {
 
       if (selectedIndices != null && selectedIndices.isNotEmpty) {
         // 用户选择了区域，返回选中的文本
-        final selectedBlocks = selectedIndices
-            .map((i) => result.blocks[i])
-            .toList();
+        final selectedBlocks =
+            selectedIndices.map((i) => result.blocks[i]).toList();
 
-        final selectedText = selectedBlocks
-            .map((b) => b.text)
-            .join('\n')
-            .trim();
+        final selectedText =
+            selectedBlocks.map((b) => b.text).join('\n').trim();
 
         if (mounted) {
           Navigator.of(context).pop(selectedText);

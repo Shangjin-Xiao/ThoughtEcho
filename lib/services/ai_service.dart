@@ -68,7 +68,8 @@ class AIService extends ChangeNotifier {
         }
 
         // 记录验证成功信息
-        final apiKey = await _apiKeyManager.getProviderApiKey(currentProvider.id);
+        final apiKey =
+            await _apiKeyManager.getProviderApiKey(currentProvider.id);
         logDebug(
           '验证设置成功 - Provider: ${currentProvider.name}, API Key长度: ${apiKey.length}',
         );

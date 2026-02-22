@@ -148,8 +148,7 @@ class TextCorrectionResult {
     return TextCorrectionResult(
       originalText: json['originalText'] as String? ?? '',
       correctedText: json['correctedText'] as String? ?? '',
-      corrections:
-          (json['corrections'] as List<dynamic>?)
+      corrections: (json['corrections'] as List<dynamic>?)
               ?.map((c) => TextCorrection.fromJson(c as Map<String, dynamic>))
               .toList() ??
           [],
@@ -235,8 +234,7 @@ class TagSuggestionResult {
   /// 从 JSON 创建
   factory TagSuggestionResult.fromJson(Map<String, dynamic> json) {
     return TagSuggestionResult(
-      tags:
-          (json['tags'] as List<dynamic>?)
+      tags: (json['tags'] as List<dynamic>?)
               ?.map((t) => SuggestedTag.fromJson(t as Map<String, dynamic>))
               .toList() ??
           [],

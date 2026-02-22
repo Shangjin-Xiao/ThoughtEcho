@@ -156,8 +156,9 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
               for (final entry in groupedModels.entries) ...[
                 _buildModelTypeHeader(context, l10n, theme, entry.key),
                 ...entry.value.asMap().entries.map(
-                  (e) => _buildModelCard(context, l10n, theme, e.value, animationIndex: e.key),
-                ),
+                      (e) => _buildModelCard(context, l10n, theme, e.value,
+                          animationIndex: e.key),
+                    ),
                 const SizedBox(height: 8),
               ],
 
@@ -236,7 +237,8 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          l10n.modelDownloadedCount(_modelManager.downloadedModels.length),
+                          l10n.modelDownloadedCount(
+                              _modelManager.downloadedModels.length),
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                           ),
@@ -342,9 +344,9 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
                               ),
                               // 推荐标签
                               ...tags.map((tag) => Padding(
-                                padding: const EdgeInsets.only(left: 6),
-                                child: _buildTag(theme, tag),
-                              )),
+                                    padding: const EdgeInsets.only(left: 6),
+                                    child: _buildTag(theme, tag),
+                                  )),
                             ],
                           ),
                           const SizedBox(height: 4),
@@ -1152,13 +1154,15 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
     switch (model.id) {
       case 'whisper-tiny':
         tags.add(_TagInfo(text: l10n.modelLightweight, color: Colors.teal));
-        tags.add(_TagInfo(text: l10n.modelRecommended, color: Colors.amber.shade700));
+        tags.add(_TagInfo(
+            text: l10n.modelRecommended, color: Colors.amber.shade700));
         break;
       case 'whisper-base':
         tags.add(_TagInfo(text: l10n.modelHighAccuracy, color: Colors.indigo));
         break;
       case 'gemma-2b':
-        tags.add(_TagInfo(text: l10n.modelRecommended, color: Colors.amber.shade700));
+        tags.add(_TagInfo(
+            text: l10n.modelRecommended, color: Colors.amber.shade700));
         break;
       case 'paligemma-3b':
         tags.add(_TagInfo(text: l10n.modelHighAccuracy, color: Colors.indigo));

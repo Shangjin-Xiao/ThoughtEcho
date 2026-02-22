@@ -339,8 +339,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
       model: _modelController.text,
       maxTokens: maxTokens,
       hostOverride: hostOverride.isEmpty ? null : hostOverride,
-      isEnabled:
-          _isLocalUrl(_apiUrlController.text) || _apiKeyController.text.isNotEmpty,
+      isEnabled: _isLocalUrl(_apiUrlController.text) ||
+          _apiKeyController.text.isNotEmpty,
     );
 
     final apiKeyManager = APIKeyManager();
@@ -434,7 +434,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
     try {
       if (isLocal) {
         // 本地模型：走设备端推理，不要求 API Key
-        final content = await TextProcessingService.instance.generateFromPrompts(
+        final content =
+            await TextProcessingService.instance.generateFromPrompts(
           systemPrompt: l10n.connectionTestSystemMessage,
           userMessage: l10n.connectionTestUserMessage,
         );

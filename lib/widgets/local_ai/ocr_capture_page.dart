@@ -30,7 +30,8 @@ class _OCRCapturePageState extends State<OCRCapturePage> {
       throw Exception('camera_not_available');
     }
 
-    final back = cameras.where((c) => c.lensDirection == CameraLensDirection.back);
+    final back =
+        cameras.where((c) => c.lensDirection == CameraLensDirection.back);
     final selected = back.isNotEmpty ? back.first : cameras.first;
 
     final controller = CameraController(
@@ -215,7 +216,8 @@ class _OCRCapturePageState extends State<OCRCapturePage> {
                           child: _isCapturing
                               ? const Padding(
                                   padding: EdgeInsets.all(14),
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
                                 )
                               : const Icon(
                                   Icons.camera_alt,

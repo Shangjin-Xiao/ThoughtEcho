@@ -38,7 +38,8 @@ class Embedding {
   /// 计算与另一个嵌入的余弦相似度
   double cosineSimilarity(Embedding other) {
     if (vector.length != other.vector.length) {
-      throw ArgumentError('Vector dimensions mismatch: ${vector.length} vs ${other.vector.length}');
+      throw ArgumentError(
+          'Vector dimensions mismatch: ${vector.length} vs ${other.vector.length}');
     }
 
     double dotProduct = 0.0;
@@ -59,17 +60,15 @@ class Embedding {
   /// 从 JSON 创建
   factory Embedding.fromJson(Map<String, dynamic> json) {
     return Embedding(
-      vector:
-          (json['vector'] as List<dynamic>?)
+      vector: (json['vector'] as List<dynamic>?)
               ?.map((e) => (e as num).toDouble())
               .toList() ??
           [],
       sourceText: json['sourceText'] as String? ?? '',
       noteId: json['noteId'] as String?,
-      createdAt:
-          json['createdAt'] != null
-              ? DateTime.parse(json['createdAt'] as String)
-              : null,
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : null,
     );
   }
 
@@ -126,10 +125,9 @@ class SearchResult {
       noteId: json['noteId'] as String,
       score: (json['score'] as num).toDouble(),
       matchedText: json['matchedText'] as String?,
-      highlights:
-          (json['highlights'] as List<dynamic>?)
-              ?.map((h) => HighlightRange.fromJson(h as Map<String, dynamic>))
-              .toList(),
+      highlights: (json['highlights'] as List<dynamic>?)
+          ?.map((h) => HighlightRange.fromJson(h as Map<String, dynamic>))
+          .toList(),
     );
   }
 

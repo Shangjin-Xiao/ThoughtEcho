@@ -34,8 +34,9 @@ class _AIActionButtonsState extends State<AIActionButtons> {
       children: [
         Expanded(
           child: OutlinedButton.icon(
-            onPressed: _isCorrectingLoading ? null : () => _applyCorrection(context),
-            icon: _isCorrectingLoading 
+            onPressed:
+                _isCorrectingLoading ? null : () => _applyCorrection(context),
+            icon: _isCorrectingLoading
                 ? const SizedBox(
                     width: 16,
                     height: 16,
@@ -48,7 +49,8 @@ class _AIActionButtonsState extends State<AIActionButtons> {
         const SizedBox(width: 8),
         Expanded(
           child: OutlinedButton.icon(
-            onPressed: _isSourceLoading ? null : () => _recognizeSource(context),
+            onPressed:
+                _isSourceLoading ? null : () => _recognizeSource(context),
             icon: _isSourceLoading
                 ? const SizedBox(
                     width: 16,
@@ -101,7 +103,7 @@ class _AIActionButtonsState extends State<AIActionButtons> {
     } catch (e) {
       logError('AI 纠错失败: $e', source: 'AIActionButtons');
       if (!context.mounted) return;
-      
+
       // 明确告知用户纠错失败
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -155,7 +157,7 @@ class _AIActionButtonsState extends State<AIActionButtons> {
     } catch (e) {
       logError('来源识别失败: $e', source: 'AIActionButtons');
       if (!context.mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.aiNoSourceFound)),
       );
@@ -168,4 +170,3 @@ class _AIActionButtonsState extends State<AIActionButtons> {
     }
   }
 }
-

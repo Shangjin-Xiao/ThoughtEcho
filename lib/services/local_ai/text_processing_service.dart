@@ -109,7 +109,8 @@ class TextProcessingService extends ChangeNotifier {
       _gemmaSession = await model.createSession();
 
       _modelLoaded = true;
-      logInfo('Gemma 模型会话已准备就绪（FlutterGemmaPlugin）', source: 'TextProcessingService');
+      logInfo('Gemma 模型会话已准备就绪（FlutterGemmaPlugin）',
+          source: 'TextProcessingService');
     } catch (e) {
       logError('初始化 Gemma 失败: $e', source: 'TextProcessingService');
     }
@@ -287,7 +288,7 @@ $text''';
 文本：$text''';
 
         final response = await _tryGemmaPrompt(prompt);
-        
+
         if (response != null && response.isNotEmpty) {
           // 尝试解析 JSON 响应
           final result = _parseSourceResponse(response);
@@ -318,12 +319,13 @@ $text''';
       final jsonStr = jsonMatch.group(0)!;
       // 简单解析
       final typeMatch = RegExp(r'"type"\s*:\s*"([^"]*)"').firstMatch(jsonStr);
-      final authorMatch = RegExp(r'"author"\s*:\s*"([^"]*)"').firstMatch(jsonStr);
+      final authorMatch =
+          RegExp(r'"author"\s*:\s*"([^"]*)"').firstMatch(jsonStr);
       final workMatch = RegExp(r'"work"\s*:\s*"([^"]*)"').firstMatch(jsonStr);
 
       final typeStr = typeMatch?.group(1) ?? '';
       SourceType type = SourceType.unknown;
-      
+
       if (typeStr.contains('书') || typeStr.contains('book')) {
         type = SourceType.book;
       } else if (typeStr.contains('诗') || typeStr.contains('poem')) {
@@ -394,15 +396,15 @@ $text''';
 
 $content''';
 
-          final response = await _tryGemmaPrompt(prompt);
-        
+        final response = await _tryGemmaPrompt(prompt);
+
         if (response != null && response.isNotEmpty) {
           final tags = response
               .split(RegExp(r'[,，、]'))
               .map((t) => t.trim())
               .where((t) => t.isNotEmpty && t.length < 20)
               .take(5)
-            .map((t) => SuggestedTag(name: t, confidence: 0.7))
+              .map((t) => SuggestedTag(name: t, confidence: 0.7))
               .toList();
 
           if (tags.isNotEmpty) {
@@ -449,7 +451,7 @@ $content''';
 $content''';
 
         final response = await _tryGemmaPrompt(prompt);
-        
+
         if (response != null && response.isNotEmpty) {
           final classification = _parseClassification(response);
           if (classification != null) {
@@ -472,7 +474,7 @@ $content''';
   /// 解析分类响应
   ClassificationResult? _parseClassification(String response) {
     final lower = response.toLowerCase();
-    
+
     if (lower.contains('日记') || lower.contains('diary')) {
       return const ClassificationResult(
         classification: NoteClassification.diary,
@@ -497,7 +499,7 @@ $content''';
         confidence: 0.8,
       );
     }
-    
+
     return null;
   }
 
@@ -560,7 +562,7 @@ $content''';
 $content''';
 
         final response = await _tryGemmaPrompt(prompt);
-        
+
         if (response != null && response.isNotEmpty) {
           final emotion = _parseEmotionResponse(response);
           if (emotion != null) {
@@ -583,11 +585,13 @@ $content''';
   /// 解析情绪响应
   EmotionResult? _parseEmotionResponse(String response) {
     final lower = response.toLowerCase();
-    
+
     EmotionType? emotion;
     double intensity = 0.5;
 
-    if (lower.contains('开心') || lower.contains('happy') || lower.contains('joy')) {
+    if (lower.contains('开心') ||
+        lower.contains('happy') ||
+        lower.contains('joy')) {
       emotion = EmotionType.happy;
     } else if (lower.contains('悲伤') || lower.contains('sad')) {
       emotion = EmotionType.sad;
@@ -597,7 +601,9 @@ $content''';
       emotion = EmotionType.fear;
     } else if (lower.contains('惊讶') || lower.contains('surprise')) {
       emotion = EmotionType.surprise;
-    } else if (lower.contains('平静') || lower.contains('calm') || lower.contains('neutral')) {
+    } else if (lower.contains('平静') ||
+        lower.contains('calm') ||
+        lower.contains('neutral')) {
       emotion = EmotionType.neutral;
     }
 
@@ -624,8 +630,26 @@ $content''';
 
   /// 简单的情绪词检测
   EmotionResult _simpleEmotionDetection(String content) {
-    final positiveWords = ['开心', '快乐', '高兴', '幸福', '感谢', 'happy', 'joy', 'grateful'];
-    final negativeWords = ['难过', '伤心', '悲伤', '失望', '愤怒', 'sad', 'angry', 'disappointed'];
+    final positiveWords = [
+      '开心',
+      '快乐',
+      '高兴',
+      '幸福',
+      '感谢',
+      'happy',
+      'joy',
+      'grateful'
+    ];
+    final negativeWords = [
+      '难过',
+      '伤心',
+      '悲伤',
+      '失望',
+      '愤怒',
+      'sad',
+      'angry',
+      'disappointed'
+    ];
 
     int positiveCount = 0;
     int negativeCount = 0;
@@ -727,7 +751,8 @@ $content''';
 
       // 1) 常见：getResponse(prompt: ...)
       try {
-        final dynamic resp = await (session as dynamic).getResponse(prompt: prompt);
+        final dynamic resp =
+            await (session as dynamic).getResponse(prompt: prompt);
         if (resp is String) return resp;
       } catch (_) {
         // ignore and try other patterns

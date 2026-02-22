@@ -20,12 +20,9 @@ void main() {
     });
 
     test('isRecording returns true only for recording state', () {
-      const recording =
-          RecordingStatus(state: RecordingState.recording);
-      const processing =
-          RecordingStatus(state: RecordingState.processing);
-      const completed =
-          RecordingStatus(state: RecordingState.completed);
+      const recording = RecordingStatus(state: RecordingState.recording);
+      const processing = RecordingStatus(state: RecordingState.processing);
+      const completed = RecordingStatus(state: RecordingState.completed);
 
       expect(recording.isRecording, true);
       expect(processing.isRecording, false);
@@ -39,8 +36,7 @@ void main() {
         volumeLevel: 0.5,
       );
 
-      final updated =
-          original.copyWith(state: RecordingState.processing);
+      final updated = original.copyWith(state: RecordingState.processing);
 
       expect(updated.state, RecordingState.processing);
       expect(updated.durationSeconds, 5.0); // preserved
@@ -66,52 +62,36 @@ void main() {
   group('VoiceOverlayPhase Tests', () {
     test('all phases are defined', () {
       expect(VoiceOverlayPhase.values.length, 4);
-      expect(VoiceOverlayPhase.values,
-          contains(VoiceOverlayPhase.initializing));
-      expect(VoiceOverlayPhase.values,
-          contains(VoiceOverlayPhase.recording));
-      expect(VoiceOverlayPhase.values,
-          contains(VoiceOverlayPhase.processing));
       expect(
-          VoiceOverlayPhase.values, contains(VoiceOverlayPhase.error));
+          VoiceOverlayPhase.values, contains(VoiceOverlayPhase.initializing));
+      expect(VoiceOverlayPhase.values, contains(VoiceOverlayPhase.recording));
+      expect(VoiceOverlayPhase.values, contains(VoiceOverlayPhase.processing));
+      expect(VoiceOverlayPhase.values, contains(VoiceOverlayPhase.error));
     });
 
     test('isDone logic: not recording, not initializing, has text, no error',
         () {
       // Simulate the isDone logic from voice_input_overlay.dart
-      bool computeIsDone(
-          VoiceOverlayPhase phase, bool hasText, bool isError) {
+      bool computeIsDone(VoiceOverlayPhase phase, bool hasText, bool isError) {
         final isRecording = phase == VoiceOverlayPhase.recording;
-        final isInitializing =
-            phase == VoiceOverlayPhase.initializing;
+        final isInitializing = phase == VoiceOverlayPhase.initializing;
         return !isRecording && !isInitializing && hasText && !isError;
       }
 
       // Should be done: processing phase with text
-      expect(
-          computeIsDone(VoiceOverlayPhase.processing, true, false),
-          true);
+      expect(computeIsDone(VoiceOverlayPhase.processing, true, false), true);
 
       // Should NOT be done: recording phase
-      expect(
-          computeIsDone(VoiceOverlayPhase.recording, true, false),
-          false);
+      expect(computeIsDone(VoiceOverlayPhase.recording, true, false), false);
 
       // Should NOT be done: no text
-      expect(
-          computeIsDone(VoiceOverlayPhase.processing, false, false),
-          false);
+      expect(computeIsDone(VoiceOverlayPhase.processing, false, false), false);
 
       // Should NOT be done: error
-      expect(
-          computeIsDone(VoiceOverlayPhase.processing, true, true),
-          false);
+      expect(computeIsDone(VoiceOverlayPhase.processing, true, true), false);
 
       // Should NOT be done: initializing
-      expect(
-          computeIsDone(
-              VoiceOverlayPhase.initializing, true, false),
-          false);
+      expect(computeIsDone(VoiceOverlayPhase.initializing, true, false), false);
     });
   });
 

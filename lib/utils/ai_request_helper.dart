@@ -103,7 +103,8 @@ class AIRequestHelper {
   }) async {
     // 本地模型：使用 local:// scheme 走设备端推理，不发网络请求。
     if (_isLocalProviderUrl(url)) {
-      final content = await _runLocalModel(systemPrompt: systemPrompt, userMessage: userMessage);
+      final content = await _runLocalModel(
+          systemPrompt: systemPrompt, userMessage: userMessage);
       return _buildOpenAICompatibleResponse(url: url, content: content);
     }
 
@@ -194,7 +195,8 @@ class AIRequestHelper {
     // 本地模型：不具备真正的 token streaming，这里用“生成后分片”来模拟流式输出。
     if (_isLocalProviderUrl(url)) {
       try {
-        final content = await _runLocalModel(systemPrompt: systemPrompt, userMessage: userMessage);
+        final content = await _runLocalModel(
+            systemPrompt: systemPrompt, userMessage: userMessage);
         for (final chunk in _chunkString(content, 48)) {
           onData(chunk);
         }

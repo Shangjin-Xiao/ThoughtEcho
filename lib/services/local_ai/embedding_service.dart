@@ -130,7 +130,9 @@ class EmbeddingService extends ChangeNotifier {
     try {
       // 尚未集成 flutter_gemma 生成嵌入向量
       // 当前返回占位零向量，语义搜索功能不可用
-      logDebug('生成嵌入向量（占位实现）: ${text.substring(0, text.length.clamp(0, 50))}...', source: 'EmbeddingService');
+      logDebug(
+          '生成嵌入向量（占位实现）: ${text.substring(0, text.length.clamp(0, 50))}...',
+          source: 'EmbeddingService');
 
       // 模拟生成嵌入
       await Future.delayed(const Duration(milliseconds: 100));

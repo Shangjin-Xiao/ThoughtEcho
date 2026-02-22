@@ -3,6 +3,7 @@
 /// 智能选择使用 MLKit 或 VLM 进行文字识别
 /// - 印刷体（移动端） → MLKit（快速、准确）
 library;
+
 /// - 手写/复杂场景 → VLM（准确、智能）
 
 import 'dart:async';

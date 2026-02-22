@@ -97,7 +97,8 @@ class MLKitOCRService extends ChangeNotifier {
     final startTime = DateTime.now();
 
     try {
-      _status = const ocr_model.OCRStatus(state: ocr_model.OCRState.processing, progress: 0.0);
+      _status = const ocr_model.OCRStatus(
+          state: ocr_model.OCRState.processing, progress: 0.0);
       notifyListeners();
 
       logInfo('开始 MLKit OCR 识别: $imagePath', source: 'MLKitOCRService');
@@ -132,7 +133,8 @@ class MLKitOCRService extends ChangeNotifier {
         ));
       }
 
-      final processingTime = DateTime.now().difference(startTime).inMilliseconds;
+      final processingTime =
+          DateTime.now().difference(startTime).inMilliseconds;
 
       final result = ocr_model.OCRResult(
         fullText: recognizedText.text,
@@ -142,7 +144,8 @@ class MLKitOCRService extends ChangeNotifier {
         languages: const ['auto'], // MLKit 自动检测
       );
 
-      _status = const ocr_model.OCRStatus(state: ocr_model.OCRState.completed, progress: 1.0);
+      _status = const ocr_model.OCRStatus(
+          state: ocr_model.OCRState.completed, progress: 1.0);
       notifyListeners();
 
       logInfo(

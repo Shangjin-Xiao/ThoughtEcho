@@ -53,10 +53,9 @@ class SpeechRecognitionResult {
       languageCode: json['languageCode'] as String?,
       isFinal: json['isFinal'] as bool? ?? true,
       durationMs: json['durationMs'] as int?,
-      timestamp:
-          json['timestamp'] != null
-              ? DateTime.parse(json['timestamp'] as String)
-              : null,
+      timestamp: json['timestamp'] != null
+          ? DateTime.parse(json['timestamp'] as String)
+          : null,
     );
   }
 
@@ -163,4 +162,3 @@ class RecordingStatus {
     );
   }
 }
-
