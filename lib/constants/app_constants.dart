@@ -28,10 +28,6 @@ class AppConstants {
   /// 提前预加载可避免用户滚动到底部时等待加载
   static const double scrollPreloadThreshold = 0.65;
 
-  /// 笔记列表离屏缓存范围（逻辑像素）
-  /// 适度预构建可减少白屏，同时避免首屏首次滑动时一次性构建过多重组件
-  static const double noteListCacheExtent = 420.0;
-
   // ==================== 动画时间常量 ====================
 
   /// 默认动画持续时间

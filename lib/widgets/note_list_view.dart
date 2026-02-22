@@ -1289,120 +1289,127 @@ class NoteListViewState extends State<NoteListView> {
         }
         return false;
       },
-      child: ListView.builder(
-        controller: _scrollController, // 添加滚动控制器
-        physics: const AlwaysScrollableScrollPhysics(),
-        addAutomaticKeepAlives: true, // 保持默认：图片组件依赖 keepAlive 避免重加载闪烁
-        addRepaintBoundaries: true, // 性能优化：减少重绘范围
-        cacheExtent: AppConstants.noteListCacheExtent,
-        itemCount: _quotes.length + (_hasMore ? 1 : 0),
-        itemBuilder: (context, index) {
-          if (index < _quotes.length) {
-            final quote = _quotes[index];
-            if (quote.id == null) {
-              logDebug('笔记缺少ID，跳过扩展状态管理', source: 'NoteListView');
-              return const SizedBox.shrink();
-            }
+      // 性能优化：BackdropGroup 让多个 BackdropFilter.grouped 共享采样
+      // 减少 GPU 重复帧缓冲读回，显著降低多模糊 item 同屏时的光栅开销
+      child: BackdropGroup(
+        child: ListView.builder(
+          controller: _scrollController, // 添加滚动控制器
+          physics: const AlwaysScrollableScrollPhysics(),
+          addAutomaticKeepAlives: true, // 保持默认：图片组件依赖 keepAlive 避免重加载闪烁
+          addRepaintBoundaries: true, // 性能优化：减少重绘范围
+          // 性能优化：惯性首帧移动距离远大于拖拽帧，需要更大缓存区预构建 item
+          // 避免 drag→ballistic 过渡时集中构建新 item 导致卡顿
+          cacheExtent: MediaQuery.sizeOf(context).height.clamp(400, 900),
+          itemCount: _quotes.length + (_hasMore ? 1 : 0),
+          itemBuilder: (context, index) {
+            if (index < _quotes.length) {
+              final quote = _quotes[index];
+              if (quote.id == null) {
+                logDebug('笔记缺少ID，跳过扩展状态管理', source: 'NoteListView');
+                return const SizedBox.shrink();
+              }
 
-            final quoteId = quote.id!;
-            final String itemKey = 'quote_${quoteId}_$index';
-            _itemKeys.putIfAbsent(
-              quoteId,
-              () => GlobalKey(debugLabel: itemKey),
-            );
+              final quoteId = quote.id!;
+              final String itemKey = 'quote_${quoteId}_$index';
+              _itemKeys.putIfAbsent(
+                quoteId,
+                () => GlobalKey(debugLabel: itemKey),
+              );
 
-            final bool shouldCheckExpansionForGuide =
-                !foldGuideAssigned && widget.foldToggleGuideKey != null;
-            final bool needsExpansion = shouldCheckExpansionForGuide
-                ? QuoteItemWidget.needsExpansionFor(quote)
-                : false;
+              final bool shouldCheckExpansionForGuide =
+                  !foldGuideAssigned && widget.foldToggleGuideKey != null;
+              final bool needsExpansion = shouldCheckExpansionForGuide
+                  ? QuoteItemWidget.needsExpansionFor(quote)
+                  : false;
 
-            final attachFavoriteGuideKey = !favoriteGuideAssigned &&
-                widget.favoriteButtonGuideKey != null &&
-                widget.onFavorite != null;
-            final attachMoreGuideKey =
-                !moreGuideAssigned && widget.moreButtonGuideKey != null;
-            final attachFoldGuideKey = !foldGuideAssigned &&
-                widget.foldToggleGuideKey != null &&
-                needsExpansion;
+              final attachFavoriteGuideKey = !favoriteGuideAssigned &&
+                  widget.favoriteButtonGuideKey != null &&
+                  widget.onFavorite != null;
+              final attachMoreGuideKey =
+                  !moreGuideAssigned && widget.moreButtonGuideKey != null;
+              final attachFoldGuideKey = !foldGuideAssigned &&
+                  widget.foldToggleGuideKey != null &&
+                  needsExpansion;
 
-            if (attachFavoriteGuideKey) {
-              favoriteGuideAssigned = true;
-            }
+              if (attachFavoriteGuideKey) {
+                favoriteGuideAssigned = true;
+              }
 
-            if (attachMoreGuideKey) {
-              moreGuideAssigned = true;
-            }
+              if (attachMoreGuideKey) {
+                moreGuideAssigned = true;
+              }
 
-            if (attachFoldGuideKey) {
-              foldGuideAssigned = true;
-            }
+              if (attachFoldGuideKey) {
+                foldGuideAssigned = true;
+              }
 
-            final expansionNotifier = _obtainExpansionNotifier(quoteId);
-            _expandedItems.putIfAbsent(quoteId, () => expansionNotifier.value);
+              final expansionNotifier = _obtainExpansionNotifier(quoteId);
+              _expandedItems.putIfAbsent(
+                  quoteId, () => expansionNotifier.value);
 
-            return KeyedSubtree(
-              key: _itemKeys[quoteId],
-              child: ValueListenableBuilder<bool>(
-                valueListenable: expansionNotifier,
-                builder: (context, isExpanded, child) => QuoteItemWidget(
-                  quote: quote,
-                  tagMap: tagMap,
-                  selectedTagIds: widget.selectedTagIds,
-                  isExpanded: isExpanded,
-                  onToggleExpanded: (expanded) {
-                    if (expansionNotifier.value != expanded) {
-                      expansionNotifier.value = expanded;
-                    }
-                    _expandedItems[quoteId] = expanded;
+              return KeyedSubtree(
+                key: _itemKeys[quoteId],
+                child: ValueListenableBuilder<bool>(
+                  valueListenable: expansionNotifier,
+                  builder: (context, isExpanded, child) => QuoteItemWidget(
+                    quote: quote,
+                    tagMap: tagMap,
+                    selectedTagIds: widget.selectedTagIds,
+                    isExpanded: isExpanded,
+                    onToggleExpanded: (expanded) {
+                      if (expansionNotifier.value != expanded) {
+                        expansionNotifier.value = expanded;
+                      }
+                      _expandedItems[quoteId] = expanded;
 
-                    final bool requiresAlignment =
-                        QuoteItemWidget.needsExpansionFor(quote);
+                      final bool requiresAlignment =
+                          QuoteItemWidget.needsExpansionFor(quote);
 
-                    if (!expanded && requiresAlignment) {
-                      final waitDuration =
-                          QuoteItemWidget.expandCollapseDuration +
-                              const Duration(milliseconds: 80);
-                      Future.delayed(waitDuration, () {
-                        if (!mounted) return;
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (!expanded && requiresAlignment) {
+                        final waitDuration =
+                            QuoteItemWidget.expandCollapseDuration +
+                                const Duration(milliseconds: 80);
+                        Future.delayed(waitDuration, () {
                           if (!mounted) return;
-                          _scrollToItem(quoteId, index);
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (!mounted) return;
+                            _scrollToItem(quoteId, index);
+                          });
                         });
-                      });
-                    }
-                  },
-                  onEdit: () => widget.onEdit(quote),
-                  onDelete: () => widget.onDelete(quote),
-                  onAskAI: () => widget.onAskAI(quote),
-                  onGenerateCard: widget.onGenerateCard != null
-                      ? () => widget.onGenerateCard!(quote)
-                      : null,
-                  onFavorite: widget.onFavorite != null
-                      ? () => widget.onFavorite!(quote)
-                      : null,
-                  onLongPressFavorite: widget.onLongPressFavorite != null
-                      ? () => widget.onLongPressFavorite!(quote)
-                      : null,
-                  favoriteButtonGuideKey: attachFavoriteGuideKey
-                      ? widget.favoriteButtonGuideKey
-                      : null,
-                  moreButtonGuideKey:
-                      attachMoreGuideKey ? widget.moreButtonGuideKey : null,
-                  foldToggleGuideKey:
-                      attachFoldGuideKey ? widget.foldToggleGuideKey : null,
-                  // 不使用自定义 tagBuilder，让 QuoteItemWidget 使用内部的标签渲染逻辑
-                  // 这样可以支持筛选标签的优先显示和高亮效果
+                      }
+                    },
+                    onEdit: () => widget.onEdit(quote),
+                    onDelete: () => widget.onDelete(quote),
+                    onAskAI: () => widget.onAskAI(quote),
+                    onGenerateCard: widget.onGenerateCard != null
+                        ? () => widget.onGenerateCard!(quote)
+                        : null,
+                    onFavorite: widget.onFavorite != null
+                        ? () => widget.onFavorite!(quote)
+                        : null,
+                    onLongPressFavorite: widget.onLongPressFavorite != null
+                        ? () => widget.onLongPressFavorite!(quote)
+                        : null,
+                    favoriteButtonGuideKey: attachFavoriteGuideKey
+                        ? widget.favoriteButtonGuideKey
+                        : null,
+                    moreButtonGuideKey:
+                        attachMoreGuideKey ? widget.moreButtonGuideKey : null,
+                    foldToggleGuideKey:
+                        attachFoldGuideKey ? widget.foldToggleGuideKey : null,
+                    // 不使用自定义 tagBuilder，让 QuoteItemWidget 使用内部的标签渲染逻辑
+                    // 这样可以支持筛选标签的优先显示和高亮效果
+                  ),
                 ),
-              ),
+              );
+            }
+            // 底部加载指示器
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: AppLoadingView(size: 32),
             );
-          }
-          // 底部加载指示器
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: AppLoadingView(size: 32),
-          );
-        },
+          },
+        ),
       ),
     );
   }

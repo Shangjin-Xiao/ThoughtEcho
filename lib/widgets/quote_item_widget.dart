@@ -421,12 +421,13 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                               switchInCurve: Curves.easeIn,
                               switchOutCurve: Curves.easeOut,
                               child: (!isExpanded && needsExpansion)
-                                  ? ClipRect(
-                                      child: BackdropFilter(
-                                        filter: ui.ImageFilter.blur(
-                                          sigmaX: 1.2,
-                                          sigmaY: 1.2,
-                                        ),
+                                  ? RepaintBoundary(
+                                      child: ClipRect(
+                                        child: BackdropFilter.grouped(
+                                          filter: ui.ImageFilter.blur(
+                                            sigmaX: 1.2,
+                                            sigmaY: 1.2,
+                                          ),
                                         child: Container(
                                           decoration: BoxDecoration(
                                             gradient: LinearGradient(
@@ -487,7 +488,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                           ),
                                         ),
                                       ),
-                                    )
+                                    ),
+                                  )
                                   : const SizedBox.shrink(),
                             ),
                           ),
