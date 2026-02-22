@@ -108,10 +108,6 @@ class NoteListViewState extends State<NoteListView> {
   // 修复：用于检测和恢复滚动范围异常的计数器
   int _scrollExtentCheckCounter = 0;
   static const int _maxScrollExtentChecks = 3;
-  DateTime? _lastScrollExtentCheckTime;
-  static const Duration _scrollExtentCheckInterval = Duration(
-    milliseconds: 220,
-  );
 
   // 修复：添加防抖定时器和性能优化
   Timer? _searchDebounceTimer;
@@ -243,43 +239,10 @@ class NoteListViewState extends State<NoteListView> {
     }
     _lastScrollOffset = currentOffset;
 
-    // 修复：检测滚动范围异常（列表提前终止的情况）
-    // 节流检测，避免滚动期间频繁触发数据库状态读取
-    final now = DateTime.now();
-    if (_lastScrollExtentCheckTime == null ||
-        now.difference(_lastScrollExtentCheckTime!) >=
-            _scrollExtentCheckInterval) {
-      _lastScrollExtentCheckTime = now;
-      _checkAndFixScrollExtentAnomaly();
-    }
-
-    // 如果正在初始化，忽略滚动事件以避免冲突
-    if (_isInitializing) {
-      return;
-    }
-
-    // 自动滚动过程中产生的事件不视为用户操作
-    if (_isAutoScrolling) {
-      return;
-    }
-
-    // 用户正在滑动（通过滚动事件检测）
-    if (!_isUserScrolling) {
-      _isUserScrolling = true;
-    }
-
-    _lastUserScrollTime = now;
-
-    // 重置定时器
-    _userScrollingTimer?.cancel();
-
-    // 设置定时器，滑动停止后快速重置状态
-    _userScrollingTimer = Timer(const Duration(milliseconds: 450), () {
-      if (!mounted) return;
-      if (_isAutoScrolling) return;
-      _isUserScrolling = false;
-      _lastUserScrollTime = null;
-    });
+    // 极致轻量：仅设置标志位，不做任何分配或重操作
+    // 重活（异常检测、状态重置）全部推迟到 ScrollEndNotification 中处理
+    if (_isInitializing || _isAutoScrolling) return;
+    _isUserScrolling = true;
   }
 
   void _startFirstOpenScrollPerfCapture() {
@@ -995,7 +958,6 @@ class NoteListViewState extends State<NoteListView> {
     }
 
     _searchDebounceTimer?.cancel(); // 清理防抖定时器
-    _userScrollingTimer?.cancel(); // 清理用户滑动定时器
     _firstOpenScrollStopTimer?.cancel();
 
     if (_firstOpenScrollPerfRecording) {
@@ -1046,7 +1008,6 @@ class NoteListViewState extends State<NoteListView> {
 
   // 添加滚动状态标志，防止在用户滑动时触发自动滚动
   bool _isUserScrolling = false;
-  Timer? _userScrollingTimer;
   double _lastScrollOffset = 0;
   static const double _scrollThreshold = 5.0; // 性能优化：5像素阈值
 
@@ -1297,36 +1258,36 @@ class NoteListViewState extends State<NoteListView> {
           }
         }
 
-        // 修复：优化预加载逻辑，减少频繁触发
+        // 预加载逻辑：热路径不做日志、不做分配
         if (notification is ScrollUpdateNotification) {
           final metrics = notification.metrics;
-          // 修复：使用常量文件中的阈值，适应不同屏幕尺寸
           final threshold =
               metrics.maxScrollExtent * AppConstants.scrollPreloadThreshold;
           if (metrics.pixels > threshold &&
               metrics.maxScrollExtent > 0 &&
               !_isLoading &&
               _hasMore) {
-            logDebug(
-              '滚动触发加载：pixels=${metrics.pixels.toInt()}, maxExtent=${metrics.maxScrollExtent.toInt()}, threshold=${threshold.toInt()}',
-              source: 'NoteListView',
-            );
             _loadMore();
           }
         }
 
-        // 修复：在滚动结束时检查是否需要加载更多
+        // 滚动完全停止（含惯性）：重置用户滚动状态 + 延迟检查
         if (notification is ScrollEndNotification) {
+          // 重置用户滚动状态，记录最后滚动时间用于 _scrollToItem 的 900ms 冷却
+          _isUserScrolling = false;
+          _lastUserScrollTime = DateTime.now();
+
           final metrics = notification.metrics;
-          // 如果滚动到了底部附近，且还有更多数据，确保触发加载
           if (metrics.pixels >= metrics.maxScrollExtent - 100 &&
               _hasMore &&
               !_isLoading) {
-            logDebug('滚动结束时检测到接近底部，尝试加载更多', source: 'NoteListView');
             _loadMore();
           }
+
+          // 滚动范围异常检测：从 _onScroll 热路径移至此处，避免滚动期间做 Provider 查找
+          _checkAndFixScrollExtentAnomaly();
         }
-        return true;
+        return false;
       },
       child: ListView.builder(
         controller: _scrollController, // 添加滚动控制器
