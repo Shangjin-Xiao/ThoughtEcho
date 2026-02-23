@@ -653,6 +653,7 @@ class ModelManager extends ChangeNotifier {
       }
 
       // 重置所有模型状态
+      _extractedModelPaths.clear();
       for (final modelId in _modelStates.keys.toList()) {
         final model = _modelStates[modelId]!;
         _modelStates[modelId] = model.copyWith(
