@@ -25,6 +25,7 @@ import 'package:thoughtecho/services/note_sync_service.dart';
 import 'package:thoughtecho/services/ai_service.dart';
 import 'package:thoughtecho/services/backup_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
+import 'package:thoughtecho/services/local_ai/local_ai_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/mmkv_service.dart';
 import 'package:thoughtecho/services/network_service.dart';
@@ -307,6 +308,9 @@ Future<void> main() async {
               ChangeNotifierProvider(create: (_) => connectivityService),
               ChangeNotifierProvider(create: (_) => featureGuideService),
               ChangeNotifierProvider(create: (_) => smartPushService),
+              ChangeNotifierProvider<LocalAIService>.value(
+                value: LocalAIService.instance,
+              ),
               ChangeNotifierProvider(create: (_) => NoteSearchController()),
               ChangeNotifierProxyProvider<SettingsService,
                   InsightHistoryService>(

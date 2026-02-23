@@ -237,13 +237,13 @@ class SpeechRecognitionService extends ChangeNotifier {
 
   /// 获取可用的模型路径
   String? _getAvailableModelPath() {
-    // 优先使用 whisper-base
-    if (_modelManager.isModelDownloaded('whisper-base')) {
-      return _modelManager.getModelPath('whisper-base');
-    }
-    // 其次使用 whisper-tiny
+    // 优先使用 whisper-tiny
     if (_modelManager.isModelDownloaded('whisper-tiny')) {
       return _modelManager.getModelPath('whisper-tiny');
+    }
+    // 其次使用 whisper-base
+    if (_modelManager.isModelDownloaded('whisper-base')) {
+      return _modelManager.getModelPath('whisper-base');
     }
     return null;
   }
@@ -252,10 +252,10 @@ class SpeechRecognitionService extends ChangeNotifier {
   Future<void> _ensureModelExtracted(String modelPath) async {
     // 获取当前使用的模型 ID
     String? modelId;
-    if (_modelManager.isModelDownloaded('whisper-base')) {
-      modelId = 'whisper-base';
-    } else if (_modelManager.isModelDownloaded('whisper-tiny')) {
+    if (_modelManager.isModelDownloaded('whisper-tiny')) {
       modelId = 'whisper-tiny';
+    } else if (_modelManager.isModelDownloaded('whisper-base')) {
+      modelId = 'whisper-base';
     }
 
     if (modelId != null) {
@@ -265,18 +265,17 @@ class SpeechRecognitionService extends ChangeNotifier {
 
   /// 获取解压后的模型路径
   Future<String?> _getExtractedModelPath() async {
-    // 优先使用 whisper-base
-    if (_modelManager.isModelDownloaded('whisper-base')) {
-      final extractedPath = _modelManager.getExtractedModelPath('whisper-base');
-      if (extractedPath != null) return extractedPath;
-      // 如果没有解压记录，但模型已下载，尝试获取解压后的目录
-      return _modelManager.getModelPath('whisper-base');
-    }
-    // 其次使用 whisper-tiny
+    // 优先使用 whisper-tiny
     if (_modelManager.isModelDownloaded('whisper-tiny')) {
       final extractedPath = _modelManager.getExtractedModelPath('whisper-tiny');
       if (extractedPath != null) return extractedPath;
       return _modelManager.getModelPath('whisper-tiny');
+    }
+    // 其次使用 whisper-base
+    if (_modelManager.isModelDownloaded('whisper-base')) {
+      final extractedPath = _modelManager.getExtractedModelPath('whisper-base');
+      if (extractedPath != null) return extractedPath;
+      return _modelManager.getModelPath('whisper-base');
     }
     return null;
   }
@@ -412,6 +411,7 @@ class SpeechRecognitionService extends ChangeNotifier {
       return SpeechRecognitionResult.empty;
     }
 
+    String? cleanupRecordingPath;
     try {
       _recordingTimer?.cancel();
       _partialDecodeTimer?.cancel();
@@ -474,6 +474,7 @@ class SpeechRecognitionService extends ChangeNotifier {
       _currentTranscription = transcribedText;
       notifyListeners();
 
+      cleanupRecordingPath = _recordingFilePath;
       _recordingFilePath = null;
 
       // 释放 asr stream
@@ -493,6 +494,30 @@ class SpeechRecognitionService extends ChangeNotifier {
       notifyListeners();
       logError('转写失败: $e', source: 'SpeechRecognitionService');
       rethrow;
+    } finally {
+      _recordingTimer?.cancel();
+      _partialDecodeTimer?.cancel();
+      _partialDecodeTimer = null;
+      try {
+        await _audioStreamSub?.cancel();
+      } catch (_) {}
+      _audioStreamSub = null;
+      try {
+        _asrStream?.free();
+      } catch (_) {}
+      _asrStream = null;
+
+      cleanupRecordingPath ??= _recordingFilePath;
+      final pathToDelete = cleanupRecordingPath;
+      if (pathToDelete != null && pathToDelete.isNotEmpty) {
+        try {
+          final file = File(pathToDelete);
+          if (await file.exists()) {
+            await file.delete();
+          }
+        } catch (_) {}
+      }
+      _recordingFilePath = null;
     }
   }
 
@@ -696,9 +721,8 @@ class SpeechRecognitionService extends ChangeNotifier {
       throw Exception('wav_unsupported_bps:$bitsPerSample');
     }
     if (sampleRate != 16000) {
-      // 不做重采样，避免引入额外依赖；用日志提示即可
-      logInfo('WAV 采样率为 $sampleRate，建议使用 16000Hz',
-          source: 'SpeechRecognitionService');
+      throw Exception(
+          'wav_unsupported_samplerate:expected_16000_got_$sampleRate');
     }
 
     final bytesPerSample = (bitsPerSample! ~/ 8);
@@ -792,19 +816,13 @@ class SpeechRecognitionService extends ChangeNotifier {
       // 更新录制时长
       // 注：音量级别基于时间模拟平滑波形，真实音量需要从音频流中计算
       final timeFactor = _status.durationSeconds * 3.14;
-      final simulatedVolume = 0.3 + 0.2 * (0.5 + 0.5 * _sin(timeFactor));
+      final simulatedVolume = 0.3 + 0.2 * (0.5 + 0.5 * math.sin(timeFactor));
       _status = _status.copyWith(
         durationSeconds: _status.durationSeconds + 0.3,
         volumeLevel: simulatedVolume.clamp(0.0, 1.0),
       );
       notifyListeners();
     });
-  }
-
-  /// 简易正弦函数近似（避免 import dart:math）
-  /// 简易正弦函数
-  static double _sin(double x) {
-    return math.sin(x);
   }
 
   @override

@@ -155,12 +155,14 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                 // ====== 底部按钮区（在波浪上方）======
                 Padding(
                   padding: const EdgeInsets.only(bottom: 48),
-                  child: _buildBottomActions(
-                    context,
-                    l10n,
-                    colorScheme,
-                    isDone: isDone,
-                    isRecording: isRecording,
+                  child: Center(
+                    child: _buildBottomActions(
+                      context,
+                      l10n,
+                      colorScheme,
+                      isDone: isDone,
+                      isRecording: isRecording,
+                    ),
                   ),
                 ),
 
@@ -214,25 +216,26 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
         ],
 
         // 转写文本
-        if (hasText)
-          AnimatedOpacity(
-            opacity: 1.0,
-            duration: const Duration(milliseconds: 300),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 200),
-              child: SingleChildScrollView(
-                child: Text(
-                  widget.transcribedText!,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    height: 1.6,
-                    fontSize: 17,
+        AnimatedOpacity(
+          opacity: hasText ? 1.0 : 0.0,
+          duration: const Duration(milliseconds: 300),
+          child: hasText
+              ? ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 200),
+                  child: SingleChildScrollView(
+                    child: Text(
+                      widget.transcribedText!,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        height: 1.6,
+                        fontSize: 17,
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ),
-          ),
+                )
+              : const SizedBox.shrink(),
+        ),
 
         // 错误详情
         if (isError && widget.errorMessage != null) ...[
@@ -415,6 +418,8 @@ class _OceanWavePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _OceanWavePainter old) {
-    return old.phase != phase || old.volumeLevel != volumeLevel;
+    return old.phase != phase ||
+        old.volumeLevel != volumeLevel ||
+        old.color != color;
   }
 }

@@ -28,11 +28,15 @@ class ModelManager extends ChangeNotifier {
   ModelManager._();
 
   /// HTTP 客户端
-  final Dio _dio = Dio();
+  final Dio _dio = Dio(
+    BaseOptions(
+      connectTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 30),
+    ),
+  );
 
   /// 模型存储目录
   String? _modelsDirectory;
-
 
   /// 解压后的模型目录（例如 Whisper 解压后的文件夹）
   final Map<String, String> _extractedModelPaths = {};
@@ -258,6 +262,7 @@ class ModelManager extends ChangeNotifier {
         url: model.downloadUrl,
         savePath: path.join(_modelsDirectory!, model.fileName),
         onProgress: (progress) {
+          if (!_downloadTasks.containsKey(modelId)) return;
           _updateModelState(
             modelId,
             _modelStates[modelId]!.copyWith(downloadProgress: progress),
@@ -265,6 +270,7 @@ class ModelManager extends ChangeNotifier {
           onProgress?.call(progress);
         },
         onComplete: () {
+          if (!_downloadTasks.containsKey(modelId)) return;
           _updateModelState(
             modelId,
             _modelStates[modelId]!.copyWith(
@@ -277,6 +283,7 @@ class ModelManager extends ChangeNotifier {
           logInfo('模型 $modelId 下载完成', source: 'ModelManager');
         },
         onError: (error) {
+          if (!_downloadTasks.containsKey(modelId)) return;
           _updateModelState(
             modelId,
             _modelStates[modelId]!.copyWith(
@@ -313,9 +320,17 @@ class ModelManager extends ChangeNotifier {
     if (task.url.startsWith('managed://')) {
       // flutter_gemma managed models not supported in ASR-only build
       final current = _modelStates[task.modelId];
+      const managedError = 'managed_model_not_supported';
       if (current != null) {
-        _updateModelState(task.modelId, current.copyWith(status: LocalAIModelStatus.error));
+        _updateModelState(
+          task.modelId,
+          current.copyWith(
+            status: LocalAIModelStatus.error,
+            errorMessage: managedError,
+          ),
+        );
       }
+      task.onError(managedError);
       return;
     }
 
@@ -426,12 +441,7 @@ class ModelManager extends ChangeNotifier {
   static const String errorManagedModelUrlMissing = 'managed_model_url_missing';
   static const String errorExtractFailed = 'extract_failed';
 
-
-
-
-
   /// FlutterGemma 全局初始化 Completer（防止并发初始化）
-
 
   /// 获取 Dio 错误代码
   String _getDioErrorCode(DioException e) {
@@ -494,7 +504,6 @@ class ModelManager extends ChangeNotifier {
     if (model == null || _modelsDirectory == null) return;
 
     try {
-
       final modelPath = path.join(_modelsDirectory!, model.fileName);
       final file = File(modelPath);
 
@@ -542,7 +551,6 @@ class ModelManager extends ChangeNotifier {
 
       final targetPath = path.join(_modelsDirectory!, model.fileName);
       await sourceFile.copy(targetPath);
-
 
       // 如果是压缩文件，需要解压
       if (targetPath.endsWith('.tar.bz2') || targetPath.endsWith('.tar.gz')) {
@@ -646,6 +654,10 @@ class ModelManager extends ChangeNotifier {
     if (_modelsDirectory == null) return;
 
     try {
+      for (final modelId in _downloadTasks.keys.toList()) {
+        await cancelDownload(modelId);
+      }
+
       final dir = Directory(_modelsDirectory!);
       if (await dir.exists()) {
         await dir.delete(recursive: true);
@@ -659,6 +671,7 @@ class ModelManager extends ChangeNotifier {
         _modelStates[modelId] = model.copyWith(
           status: LocalAIModelStatus.notDownloaded,
           downloadProgress: 0.0,
+          errorMessage: null,
         );
       }
 

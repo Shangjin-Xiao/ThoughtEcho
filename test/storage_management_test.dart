@@ -20,6 +20,7 @@ void main() {
         logDatabaseSize: 2048,
         aiDatabaseSize: 512,
         mediaFilesSize: 4096,
+        localAiModelsSize: 128,
         cacheSize: 256,
         mediaBreakdown: MediaFilesBreakdown(
           imagesSize: 2048,
@@ -31,7 +32,7 @@ void main() {
         ),
       );
 
-      expect(stats.totalSize, 1024 + 2048 + 512 + 4096 + 256);
+      expect(stats.totalSize, 1024 + 2048 + 512 + 4096 + 128 + 256);
     });
 
     test('MediaFilesBreakdown 应该正确存储媒体文件统计', () {
@@ -63,6 +64,7 @@ void main() {
         expect(stats.logDatabaseSize, greaterThanOrEqualTo(0));
         expect(stats.aiDatabaseSize, greaterThanOrEqualTo(0));
         expect(stats.mediaFilesSize, greaterThanOrEqualTo(0));
+        expect(stats.localAiModelsSize, greaterThanOrEqualTo(0));
         expect(stats.cacheSize, greaterThanOrEqualTo(0));
         expect(stats.totalSize, greaterThanOrEqualTo(0));
         expect(stats.mediaBreakdown, isNotNull);
@@ -121,6 +123,7 @@ void main() {
         logDatabaseSize: 0,
         aiDatabaseSize: 0,
         mediaFilesSize: 0,
+        localAiModelsSize: 0,
         cacheSize: 0,
         mediaBreakdown: MediaFilesBreakdown(
           imagesSize: 0,
