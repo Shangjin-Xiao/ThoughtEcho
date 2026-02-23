@@ -141,8 +141,9 @@ class ImageCacheService {
       'count': _memoryCache.length,
       'totalSize': totalSize,
       'maxSize': maxCacheSize,
-      'averageSize':
-          _memoryCache.isNotEmpty ? totalSize / _memoryCache.length : 0,
+      'averageSize': _memoryCache.isNotEmpty
+          ? totalSize / _memoryCache.length
+          : 0,
     };
   }
 

@@ -36,14 +36,18 @@ class ContentSanitizer {
     final headRegex = RegExp(r'(<head[^>]*>)', caseSensitive: false);
     if (headRegex.hasMatch(html)) {
       return html.replaceFirstMapped(
-          headRegex, (match) => '${match.group(0)}\n    $cspTag');
+        headRegex,
+        (match) => '${match.group(0)}\n    $cspTag',
+      );
     }
 
     // Try to find <html> tag, preserving attributes
     final htmlRegex = RegExp(r'(<html[^>]*>)', caseSensitive: false);
     if (htmlRegex.hasMatch(html)) {
-      return html.replaceFirstMapped(htmlRegex,
-          (match) => '${match.group(0)}\n<head>\n    $cspTag\n</head>');
+      return html.replaceFirstMapped(
+        htmlRegex,
+        (match) => '${match.group(0)}\n<head>\n    $cspTag\n</head>',
+      );
     }
 
     // If no structure, just prepend it

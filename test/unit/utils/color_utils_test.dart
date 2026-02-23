@@ -120,7 +120,9 @@ void main() {
         final expectedLight = Color.lerp(surfaceColor, Colors.white, 0.04)!;
         expect(
           ColorUtils.getSearchBoxBackgroundColor(
-              surfaceColor, Brightness.light),
+            surfaceColor,
+            Brightness.light,
+          ),
           expectedLight,
         );
       });

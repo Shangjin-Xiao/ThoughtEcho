@@ -235,19 +235,25 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (widget.quote.source != null) ...[
-                Text(l10n.source,
-                    style: Theme.of(context).textTheme.labelMedium),
+                Text(
+                  l10n.source,
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
                 const SizedBox(height: 4),
                 Text(widget.quote.source!),
                 const SizedBox(height: 16),
               ],
-              Text(l10n.createdAt,
-                  style: Theme.of(context).textTheme.labelMedium),
+              Text(
+                l10n.createdAt,
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
               const SizedBox(height: 4),
               Text(DateTime.parse(widget.quote.date).toString()),
               const SizedBox(height: 16),
-              Text(l10n.content,
-                  style: Theme.of(context).textTheme.labelMedium),
+              Text(
+                l10n.content,
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
               const SizedBox(height: 4),
               Text(
                 widget.quote.content,

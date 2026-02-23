@@ -196,29 +196,17 @@ class DailyPromptGenerator {
   ) {
     switch (weatherKey) {
       case 'clear':
-        prompts.addAll([
-          l10n.promptClearWeather1,
-          l10n.promptClearWeather2,
-        ]);
+        prompts.addAll([l10n.promptClearWeather1, l10n.promptClearWeather2]);
         break;
       case 'rain':
-        prompts.addAll([
-          l10n.promptRainWeather1,
-          l10n.promptRainWeather2,
-        ]);
+        prompts.addAll([l10n.promptRainWeather1, l10n.promptRainWeather2]);
         break;
       case 'cloudy':
       case 'partly_cloudy':
-        prompts.addAll([
-          l10n.promptCloudyWeather1,
-          l10n.promptCloudyWeather2,
-        ]);
+        prompts.addAll([l10n.promptCloudyWeather1, l10n.promptCloudyWeather2]);
         break;
       case 'snow':
-        prompts.addAll([
-          l10n.promptSnowWeather1,
-          l10n.promptSnowWeather2,
-        ]);
+        prompts.addAll([l10n.promptSnowWeather1, l10n.promptSnowWeather2]);
         break;
     }
   }
