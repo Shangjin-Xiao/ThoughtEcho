@@ -3498,6 +3498,14 @@
   "modelImport": "Import Model",
   "modelImportHint": "Import model from local file",
   "modelImportFailed": "Model import failed: {error}",
+  "@modelImportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "download_failed"
+      }
+    }
+  },
   "modelImportSuccess": "Model imported successfully",
   "modelImporting": "Importing model...",
   "modelError": "Error",
@@ -3511,9 +3519,17 @@
   "modelHighAccuracy": "High Accuracy",
   "modelLightweight": "Lightweight",
   "modelRecommended": "Recommended",
-  "modelManagedByPackage": "This model is managed by flutter_gemma: configure a download URL or import a .task model file",
+  "modelManagedByPackage": "This model is managed by built-in model management: configure a download URL or import a .task model file",
   "modelRequiresDownload": "This feature requires downloading the corresponding model first",
   "modelStorageUsage": "Model storage: {size}",
+  "@modelStorageUsage": {
+    "placeholders": {
+      "size": {
+        "type": "String",
+        "example": "125 MB"
+      }
+    }
+  },
   "modelClearAll": "Clear All Models",
   "modelClearAllConfirm": "Are you sure you want to delete all downloaded models?",
   "modelTypeLLM": "Language Model",

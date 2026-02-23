@@ -171,6 +171,11 @@ class LocalAIModelInfo {
     );
   }
 
+  /// 从 Map 创建（兼容数据库序列化接口）
+  factory LocalAIModelInfo.fromMap(Map<String, dynamic> map) {
+    return LocalAIModelInfo.fromJson(map);
+  }
+
   /// 转换为 JSON
   Map<String, dynamic> toJson() {
     return {
@@ -187,6 +192,11 @@ class LocalAIModelInfo {
       'version': version,
       'isRequired': isRequired,
     };
+  }
+
+  /// 转换为 Map（兼容数据库序列化接口）
+  Map<String, dynamic> toMap() {
+    return toJson();
   }
 
   @override

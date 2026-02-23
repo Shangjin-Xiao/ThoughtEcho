@@ -1,10 +1,13 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import '../gen_l10n/app_localizations.dart';
 import '../models/local_ai_model.dart';
+import '../models/local_ai_settings.dart';
 import '../services/local_ai/model_manager.dart';
 import '../services/local_ai/speech_recognition_service.dart';
+import '../services/settings_service.dart';
 import '../theme/app_theme.dart';
 
 /// 模型管理页面
@@ -18,21 +21,12 @@ class ModelManagementPage extends StatefulWidget {
 }
 
 class _ModelManagementPageState extends State<ModelManagementPage> {
-  // 预置链接用于减少用户首次配置成本；版本升级时需同步更新这里的 URL。
-  static const Map<String, String> _managedModelUrlPresets = {
-    'gemma-2b':
-        'https://storage.googleapis.com/mediapipe-models/llm_inference/gemma2-2b-it-int4/1/gemma2-2b-it-int4.bin',
-    'gecko-384':
-        'https://storage.googleapis.com/mediapipe-models/text_embedder/gecko/float32/latest/gecko.tflite',
-    'paligemma-3b':
-        'https://storage.googleapis.com/mediapipe-models/image_generator/paligemma-3b-mix-224/float16/latest/paligemma-3b-mix-224.task',
-  };
-
   late ModelManager _modelManager;
   bool _isInitialized = false;
   String? _initError;
 
   bool _isPreparing = false;
+  Future<int>? _totalStorageFuture;
 
   @override
   void initState() {
@@ -46,6 +40,8 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
       if (!_modelManager.isInitialized) {
         await _modelManager.initialize();
       }
+      _modelManager.addListener(_refreshStorageFuture);
+      _refreshStorageFuture();
       if (mounted) {
         setState(() {
           _isInitialized = true;
@@ -60,10 +56,28 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
     }
   }
 
+  void _refreshStorageFuture() {
+    if (!mounted) return;
+    setState(() {
+      _totalStorageFuture = _modelManager.getTotalStorageUsage();
+    });
+  }
+
+  @override
+  void dispose() {
+    if (_isInitialized) {
+      _modelManager.removeListener(_refreshStorageFuture);
+    }
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
+    final settingsService = Provider.of<SettingsService>(context);
+    final isDeveloperMode = settingsService.appSettings.developerMode;
+    final localAISettings = settingsService.localAISettings;
 
     return Scaffold(
       backgroundColor: theme.colorScheme.surface,
@@ -73,7 +87,7 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
         backgroundColor: theme.colorScheme.surface,
         title: Text(l10n.modelManagement),
         actions: [
-          if (_isInitialized)
+          if (_isInitialized && isDeveloperMode)
             IconButton(
               icon: const Icon(Icons.delete_sweep_outlined),
               tooltip: l10n.modelClearAll,
@@ -81,12 +95,23 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
             ),
         ],
       ),
-      body: _buildBody(context, l10n, theme),
+      body: _buildBody(
+        context,
+        l10n,
+        theme,
+        isDeveloperMode: isDeveloperMode,
+        localAISettings: localAISettings,
+      ),
     );
   }
 
   Widget _buildBody(
-      BuildContext context, AppLocalizations l10n, ThemeData theme) {
+    BuildContext context,
+    AppLocalizations l10n,
+    ThemeData theme, {
+    required bool isDeveloperMode,
+    required LocalAISettings localAISettings,
+  }) {
     if (_initError != null) {
       return Center(
         child: Padding(
@@ -133,7 +158,11 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
     return ListenableBuilder(
       listenable: _modelManager,
       builder: (context, _) {
-        final models = _modelManager.models;
+        final models = isDeveloperMode
+            ? _modelManager.models
+            : _modelManager.models
+                .where((model) => model.type == LocalAIModelType.asr)
+                .toList();
         final groupedModels = _groupModelsByType(models);
 
         return RefreshIndicator(
@@ -145,9 +174,15 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.symmetric(vertical: 8),
             children: [
-              // 存储信息卡片
-              _buildStorageCard(context, l10n, theme),
-              const SizedBox(height: 16),
+              if (!isDeveloperMode)
+                _buildSpeechToTextSwitchCard(
+                  context,
+                  l10n,
+                  localAISettings,
+                ),
+              if (!isDeveloperMode) const SizedBox(height: 16),
+              if (isDeveloperMode) _buildStorageCard(context, l10n, theme),
+              if (isDeveloperMode) const SizedBox(height: 16),
 
               // 按类型分组显示模型
               for (final entry in groupedModels.entries) ...[
@@ -159,13 +194,36 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
                 const SizedBox(height: 8),
               ],
 
-              // 底部提示
-              _buildInfoCard(context, l10n, theme),
-              const SizedBox(height: 24),
+              if (isDeveloperMode) _buildInfoCard(context, l10n, theme),
+              if (isDeveloperMode) const SizedBox(height: 24),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildSpeechToTextSwitchCard(
+    BuildContext context,
+    AppLocalizations l10n,
+    LocalAISettings settings,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Card(
+        child: SwitchListTile(
+          secondary: const Icon(Icons.mic_rounded),
+          title: Text(l10n.localAISpeechToText),
+          subtitle: Text(l10n.localAISpeechToTextDesc),
+          value: settings.speechToTextEnabled,
+          onChanged: (value) {
+            Provider.of<SettingsService>(context, listen: false)
+                .updateLocalAISettings(
+              settings.copyWith(speechToTextEnabled: value),
+            );
+          },
+        ),
+      ),
     );
   }
 
@@ -182,7 +240,7 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
   Widget _buildStorageCard(
       BuildContext context, AppLocalizations l10n, ThemeData theme) {
     return FutureBuilder<int>(
-      future: _modelManager.getTotalStorageUsage(),
+      future: _totalStorageFuture,
       builder: (context, snapshot) {
         final size = snapshot.data ?? 0;
         final sizeStr = _formatSize(size);
@@ -387,7 +445,7 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
                       _buildInfoChip(
                         theme,
                         Icons.extension_outlined,
-                        'flutter_gemma',
+                        l10n.modelDownloadSource,
                       ),
                   ],
                 ),
@@ -687,7 +745,6 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
     );
   }
 
-
   Future<void> _prepareModel(LocalAIModelInfo model) async {
     final l10n = AppLocalizations.of(context);
 
@@ -748,7 +805,8 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("${l10n.modelError}: ${_localizeModelError(l10n, e.toString())}"),
+            content: Text(
+                "${l10n.modelError}: ${_localizeModelError(l10n, e.toString())}"),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -782,7 +840,7 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
         break;
       case LocalAIModelType.llm:
       case LocalAIModelType.embedding:
-        // flutter_gemma 托管模型：允许导入本地 .task（或 .bin）模型文件
+        // 托管模型：允许导入本地 .task（或 .bin）模型文件
         allowedExtensions = ['task', 'bin'];
         dialogTitle = l10n.modelImport;
         break;
@@ -986,11 +1044,6 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
     return model.downloadUrl.startsWith('managed://');
   }
 
-  /// 为 flutter_gemma 托管模型提供预置下载链接。
-  ///
-  /// 返回值用于在用户尚未配置地址时预填输入框；
-  /// 若模型不在预置列表中，则返回空字符串。
-
   bool _needsPreparation(LocalAIModelInfo model) {
     if (model.status != LocalAIModelStatus.downloaded) return false;
     if (model.fileName.endsWith('.tar.bz2') ||
@@ -998,7 +1051,8 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
       return _modelManager.getExtractedModelPath(model.id) == null;
     }
     // LLM/Embedding not supported in ASR-only build
-    if (model.type == LocalAIModelType.llm || model.type == LocalAIModelType.embedding) {
+    if (model.type == LocalAIModelType.llm ||
+        model.type == LocalAIModelType.embedding) {
       return false;
     }
     return false;

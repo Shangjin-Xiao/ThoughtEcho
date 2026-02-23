@@ -71,9 +71,7 @@ class LocalAIService extends ChangeNotifier {
     bool eagerLoadModels = true,
   }) async {
     if (_initialized) {
-      // 更新设置
-      _settings = settings;
-      notifyListeners();
+      await updateSettings(settings);
       return;
     }
 
@@ -190,6 +188,9 @@ class LocalAIService extends ChangeNotifier {
     if (!isFeatureEnabled(LocalAIFeature.speechToText)) {
       throw Exception('feature_not_enabled:speechToText');
     }
+    if (!isFeatureAvailable(LocalAIFeature.speechToText)) {
+      throw Exception('feature_not_available:speechToText');
+    }
     await _speechService.startRecording();
   }
 
@@ -205,7 +206,6 @@ class LocalAIService extends ChangeNotifier {
     }
     return await _speechService.transcribeFile(audioPath);
   }
-
 
   // ==================== 模型管理 API ====================
 
@@ -245,13 +245,5 @@ class LocalAIService extends ChangeNotifier {
   /// 获取存储占用
   Future<int> getStorageUsage() async {
     return await _modelManager.getTotalStorageUsage();
-  }
-
-  @override
-  void dispose() {
-    _speechService.dispose();
-    // _ocrService.dispose(); // Tesseract 已移除
-    _modelManager.dispose();
-    super.dispose();
   }
 }

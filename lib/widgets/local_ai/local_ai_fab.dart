@@ -68,8 +68,14 @@ class _LocalAIFabState extends State<LocalAIFab> {
 
   /// 关闭语音浮层（如果已打开）
   void _closeOverlayIfOpen() {
-    if (_voiceOverlayOpen && mounted) {
-      Navigator.of(context, rootNavigator: true).maybePop();
+    if (!_voiceOverlayOpen || !mounted) return;
+    final navigator = Navigator.of(context, rootNavigator: true);
+    if (!navigator.canPop()) return;
+    try {
+      navigator.pop();
+      _voiceOverlayOpen = false;
+    } catch (_) {
+      // ignore
     }
   }
 
@@ -143,7 +149,7 @@ class _LocalAIFabState extends State<LocalAIFab> {
 
   /// 初始化并开始录音
   Future<void> _initializeAndStartRecording() async {
-    final localAI = LocalAIService.instance;
+    final localAI = Provider.of<LocalAIService>(context, listen: false);
     final settingsService =
         Provider.of<SettingsService>(context, listen: false);
     final localAISettings = settingsService.localAISettings;
@@ -192,7 +198,7 @@ class _LocalAIFabState extends State<LocalAIFab> {
       return;
     }
 
-    final localAI = LocalAIService.instance;
+    final localAI = Provider.of<LocalAIService>(context, listen: false);
     final l10n = AppLocalizations.of(context);
 
     // 先更新浮层为处理中状态
@@ -244,7 +250,9 @@ class _LocalAIFabState extends State<LocalAIFab> {
     if (!_isVoiceRecording) return;
     _isVoiceRecording = false;
     try {
-      await LocalAIService.instance.speechService.cancelRecording();
+      await Provider.of<LocalAIService>(context, listen: false)
+          .speechService
+          .cancelRecording();
     } catch (_) {
       // ignore
     }
@@ -265,7 +273,8 @@ class _LocalAIFabState extends State<LocalAIFab> {
         return ValueListenableBuilder<int>(
           valueListenable: _overlayUpdateNotifier,
           builder: (context, _, __) {
-            final speech = LocalAIService.instance.speechService;
+            final speech = Provider.of<LocalAIService>(context, listen: false)
+                .speechService;
             return ListenableBuilder(
               listenable: speech,
               builder: (context, _) {
@@ -317,7 +326,8 @@ class _LocalAIFabState extends State<LocalAIFab> {
     final l10n = AppLocalizations.of(context);
 
     try {
-      await LocalAIService.instance.initialize(
+      final localAI = Provider.of<LocalAIService>(context, listen: false);
+      await localAI.initialize(
         localAISettings,
         eagerLoadModels: false,
       );
@@ -337,7 +347,8 @@ class _LocalAIFabState extends State<LocalAIFab> {
       return;
     }
 
-    if (!LocalAIService.instance.isFeatureAvailable(LocalAIFeature.ocr)) {
+    final localAI = Provider.of<LocalAIService>(context, listen: false);
+    if (!localAI.isFeatureAvailable(LocalAIFeature.ocr)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(l10n.pleaseSwitchToOcrModel),
@@ -357,12 +368,10 @@ class _LocalAIFabState extends State<LocalAIFab> {
     if (!mounted) return;
     if (imagePath == null || imagePath.trim().isEmpty) return;
 
-    String resultText;
+    String resultText = '';
     try {
       // OCR recognition via hybrid service (not yet wired in ASR-only build)
-      throw Exception('feature_not_enabled:ocr');
-      // ignore: dead_code
-      resultText = '';
+      // resultText = await localAI.ocrService.recognizeText(imagePath);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -17,8 +17,6 @@ import '../models/quote_model.dart';
 import '../widgets/daily_quote_view.dart';
 import '../widgets/note_list_view.dart';
 import '../widgets/add_note_dialog.dart';
-import '../widgets/local_ai/ocr_capture_page.dart';
-import '../widgets/local_ai/ocr_result_sheet.dart';
 import '../widgets/local_ai/local_ai_fab.dart';
 import 'ai_features_page.dart';
 import 'settings_page.dart';
@@ -1071,39 +1069,6 @@ class _HomePageState extends State<HomePage>
     _showAddQuoteDialog();
   }
 
-  // ignore: unused_element
-  Future<void> _openOCRFlow() async {
-    if (!mounted) return;
-
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (context) => const OCRCapturePage()),
-    );
-
-    if (!mounted) return;
-
-    final l10n = AppLocalizations.of(context);
-    String resultText = l10n.featureComingSoon;
-
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      builder: (context) {
-        return OCRResultSheet(
-          recognizedText: resultText,
-          onTextChanged: (text) {
-            resultText = text;
-          },
-          onInsertToEditor: () {
-            Navigator.of(context).pop();
-            _showAddQuoteDialog(prefilledContent: resultText);
-          },
-          onRecognizeSource: () {},
-        );
-      },
-    );
-  }
-
   // 显示编辑笔记对话框
   void _showEditQuoteDialog(Quote quote) {
     // 检查笔记是否来自全屏编辑器
@@ -1678,7 +1643,6 @@ class _HomePageState extends State<HomePage>
     final weatherService = Provider.of<WeatherService>(context);
     final locationService = Provider.of<LocationService>(context);
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context);
     final aiService =
         context.watch<AIService>(); // Watch AIService for key changes
     final settingsService = context

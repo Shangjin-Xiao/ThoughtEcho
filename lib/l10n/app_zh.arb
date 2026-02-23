@@ -3507,6 +3507,14 @@
   "modelImport": "导入模型",
   "modelImportHint": "从本地文件导入模型",
   "modelImportFailed": "模型导入失败: {error}",
+  "@modelImportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "下载失败"
+      }
+    }
+  },
   "modelImportSuccess": "模型导入成功",
   "modelImporting": "正在导入模型...",
   "modelError": "错误",
@@ -3520,9 +3528,17 @@
   "modelHighAccuracy": "高精度",
   "modelLightweight": "轻量",
   "modelRecommended": "推荐",
-  "modelManagedByPackage": "此模型由 flutter_gemma 管理：请配置下载地址或导入 .task 模型文件",
+  "modelManagedByPackage": "此模型由内置模型管理功能处理：请配置下载地址或导入 .task 模型文件",
   "modelRequiresDownload": "此功能需要先下载相应的模型",
   "modelStorageUsage": "模型存储占用：{size}",
+  "@modelStorageUsage": {
+    "placeholders": {
+      "size": {
+        "type": "String",
+        "example": "125 MB"
+      }
+    }
+  },
   "modelClearAll": "清除所有模型",
   "modelClearAllConfirm": "确定要删除所有已下载的模型吗？",
   "modelTypeLLM": "语言模型",
