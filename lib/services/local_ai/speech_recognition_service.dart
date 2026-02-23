@@ -802,14 +802,9 @@ class SpeechRecognitionService extends ChangeNotifier {
   }
 
   /// 简易正弦函数近似（避免 import dart:math）
+  /// 简易正弦函数
   static double _sin(double x) {
-    // Normalize to -PI..PI
-    x = x % (2 * 3.14159265);
-    if (x > 3.14159265) x -= 2 * 3.14159265;
-    // Taylor series approximation
-    final x3 = x * x * x;
-    final x5 = x3 * x * x;
-    return x - x3 / 6.0 + x5 / 120.0;
+    return math.sin(x);
   }
 
   @override
