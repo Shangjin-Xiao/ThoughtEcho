@@ -859,6 +859,7 @@ class EmergencyRecoveryPage extends StatelessWidget {
                     // 尝试重新初始化数据库
                     try {
                       final databaseService = DatabaseService();
+                      databaseService.reinitialize();
                       await databaseService.initializeNewDatabase();
 
                       if (!context.mounted) return;

@@ -21,6 +21,11 @@ import '../utils/lww_utils.dart';
 import '../widgets/quote_content_widget.dart'; // 用于缓存清理
 
 class DatabaseService extends ChangeNotifier {
+  // 单例模式 - 确保所有代码共享同一实例，避免竞态条件
+  static final DatabaseService _instance = DatabaseService._internal();
+  factory DatabaseService() => _instance;
+  DatabaseService._internal();
+
   static Database? _database;
   final _categoriesController =
       StreamController<List<NoteCategory>>.broadcast();
@@ -2396,7 +2401,8 @@ class DatabaseService extends ChangeNotifier {
 
   Future<List<NoteCategory>> getCategories() async {
     if (kIsWeb) {
-      return _moveHiddenCategoryToBottom(List<NoteCategory>.from(_categoryStore));
+      return _moveHiddenCategoryToBottom(
+          List<NoteCategory>.from(_categoryStore));
     }
     try {
       final db = await safeDatabase;
@@ -2409,13 +2415,12 @@ class DatabaseService extends ChangeNotifier {
     }
   }
 
-  List<NoteCategory> _moveHiddenCategoryToBottom(List<NoteCategory> categories) {
-    final hiddenCategories = categories
-        .where((category) => category.id == hiddenTagId)
-        .toList();
-    final normalCategories = categories
-        .where((category) => category.id != hiddenTagId)
-        .toList();
+  List<NoteCategory> _moveHiddenCategoryToBottom(
+      List<NoteCategory> categories) {
+    final hiddenCategories =
+        categories.where((category) => category.id == hiddenTagId).toList();
+    final normalCategories =
+        categories.where((category) => category.id != hiddenTagId).toList();
     return [...normalCategories, ...hiddenCategories];
   }
 
@@ -5502,6 +5507,7 @@ class DatabaseService extends ChangeNotifier {
   /// 优化：添加dispose方法，确保资源正确释放
   /// 注意：这是新增方法，现有代码调用时需要确保在适当时机调用dispose()
   @override
+  // ignore: must_call_super
   void dispose() {
     if (_isDisposed) return;
 
@@ -5533,7 +5539,20 @@ class DatabaseService extends ChangeNotifier {
 
     logDebug('DatabaseService资源已释放');
 
-    super.dispose();
+    // 注意：单例模式下不调用 super.dispose()，因为 ChangeNotifier 需要保持可用
+    // ignore: must_call_super
+    // super.dispose();
+  }
+
+  /// 重新初始化单例状态（用于紧急恢复场景）
+  /// 在 dispose() 后调用此方法可以重置单例状态，使其可以重新初始化
+  void reinitialize() {
+    _isDisposed = false;
+    _isInitialized = false;
+    _isInitializing = false;
+    _initCompleter = null;
+    _databaseLock.clear();
+    logDebug('DatabaseService 单例状态已重置');
   }
 
   /// 尝试数据库恢复
