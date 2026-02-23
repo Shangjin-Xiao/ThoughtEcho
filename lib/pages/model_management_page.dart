@@ -677,7 +677,7 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                "\${AppLocalizations.of(context).modelDownloading} \${_localizeModelError(AppLocalizations.of(context), error)}",
+                "${AppLocalizations.of(context).modelDownloading} ${_localizeModelError(AppLocalizations.of(context), error)}",
               ),
               backgroundColor: Theme.of(context).colorScheme.error,
             ),
