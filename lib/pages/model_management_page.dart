@@ -748,7 +748,7 @@ class _ModelManagementPageState extends State<ModelManagementPage> {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text("${l10n.modelError}: \${_localizeModelError(l10n, e.toString())}"),
+            content: Text("${l10n.modelError}: ${_localizeModelError(l10n, e.toString())}"),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
