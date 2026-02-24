@@ -172,6 +172,8 @@ void main() {
 
 // Mock服务类 - 用于测试隔离，避免使用真实服务实例
 class MockDatabaseService extends DatabaseService {
+  MockDatabaseService() : super.forTesting();
+
   @override
   Future<List<NoteCategory>> getCategories() async {
     // 返回模拟的分类数据
