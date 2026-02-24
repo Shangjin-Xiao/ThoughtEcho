@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/database_service.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 // 移除未使用的 import，保持文件精简
 
 /// 说明:
@@ -12,6 +13,8 @@ import 'package:thoughtecho/services/database_service.dart';
 /// 使用内存/临时数据库 (DatabaseService默认策略会在测试环境创建本地DB)。
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  sqfliteFfiInit();
+  databaseFactory = databaseFactoryFfi;
 
   group('LWW integration basic scenarios', () {
     late DatabaseService db;

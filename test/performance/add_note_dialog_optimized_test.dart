@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/widgets/add_note_dialog.dart';
 import 'package:thoughtecho/models/note_category.dart';
 import 'package:thoughtecho/services/database_service.dart';
+import 'package:thoughtecho/services/feature_guide_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
 import 'package:thoughtecho/services/weather_service.dart';
+import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 
 /// 优化后的添加笔记对话框性能测试
 void main() {
@@ -14,6 +17,32 @@ void main() {
     late DatabaseService mockDatabaseService;
     late LocationService mockLocationService;
     late WeatherService mockWeatherService;
+
+    Widget createTestApp(Widget child) {
+      final guideService = MockFeatureGuideService();
+      return MultiProvider(
+        providers: [
+          ChangeNotifierProvider<FeatureGuideService>.value(
+            value: guideService,
+          ),
+          ChangeNotifierProvider<DatabaseService>.value(
+            value: mockDatabaseService,
+          ),
+          ChangeNotifierProvider<LocationService>.value(
+            value: mockLocationService,
+          ),
+          ChangeNotifierProvider<WeatherService>.value(
+            value: mockWeatherService,
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('zh'),
+          home: Scaffold(body: child),
+        ),
+      );
+    }
 
     setUp(() {
       // 模拟大量标签数据来测试性能
@@ -35,27 +64,18 @@ void main() {
     testWidgets('对话框应该快速显示，性能优于之前版本', (WidgetTester tester) async {
       // 构建测试应用
       await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            Provider<DatabaseService>.value(value: mockDatabaseService),
-            Provider<LocationService>.value(value: mockLocationService),
-            Provider<WeatherService>.value(value: mockWeatherService),
-          ],
-          child: MaterialApp(
-            home: Scaffold(
-              body: Builder(
-                builder: (context) => ElevatedButton(
-                  onPressed: () {
-                    showModalBottomSheet(
-                      context: context,
-                      isScrollControlled: true,
-                      builder: (context) =>
-                          AddNoteDialog(tags: mockTags, onSave: (_) {}),
-                    );
-                  },
-                  child: const Text('打开对话框'),
-                ),
-              ),
+        createTestApp(
+          Builder(
+            builder: (context) => ElevatedButton(
+              onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  builder: (context) =>
+                      AddNoteDialog(tags: mockTags, onSave: (_) {}),
+                );
+              },
+              child: const Text('打开对话框'),
             ),
           ),
         ),
@@ -87,18 +107,7 @@ void main() {
 
     testWidgets('标签搜索应该快速响应，无明显卡顿', (WidgetTester tester) async {
       await tester.pumpWidget(
-        MultiProvider(
-          providers: [
-            Provider<DatabaseService>.value(value: mockDatabaseService),
-            Provider<LocationService>.value(value: mockLocationService),
-            Provider<WeatherService>.value(value: mockWeatherService),
-          ],
-          child: MaterialApp(
-            home: Scaffold(
-              body: AddNoteDialog(tags: mockTags, onSave: (_) {}),
-            ),
-          ),
-        ),
+        createTestApp(AddNoteDialog(tags: mockTags, onSave: (_) {})),
       );
 
       // 查找并展开标签选择区域
@@ -109,7 +118,14 @@ void main() {
       await tester.pumpAndSettle();
 
       // 查找搜索框
-      final searchField = find.widgetWithText(TextField, '搜索标签...');
+      final searchField = find.byWidgetPredicate(
+        (widget) =>
+            widget is TextField && widget.decoration?.hintText == '搜索标签...'
+            // Fallback for non-zh locale or changes
+            ||
+            (widget is TextField &&
+                widget.decoration?.hintText == 'Search tags...'),
+      );
       expect(searchField, findsOneWidget);
 
       // 测试搜索性能
@@ -136,6 +152,8 @@ void main() {
 
 // 模拟服务类
 class MockDatabaseService extends DatabaseService {
+  MockDatabaseService() : super.forTesting();
+
   @override
   Future<List<NoteCategory>> getCategories() async {
     return [];
@@ -159,4 +177,20 @@ class MockWeatherService extends WeatherService {
 
   @override
   String? get temperature => '25°C';
+}
+
+class MockFeatureGuideService extends FeatureGuideService {
+  MockFeatureGuideService() : super(SafeMMKV());
+
+  @override
+  bool hasShown(String guideId) => true;
+
+  @override
+  Future<void> markAsShown(String guideId) async {}
+
+  @override
+  Future<void> resetGuide(String guideId) async {}
+
+  @override
+  Future<void> resetAllGuides() async {}
 }

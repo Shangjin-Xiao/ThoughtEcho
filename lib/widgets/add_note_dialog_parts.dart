@@ -25,6 +25,7 @@ class TagSelectionSection extends StatefulWidget {
 
 class _TagSelectionSectionState extends State<TagSelectionSection> {
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   List<NoteCategory> _filteredTags = [];
   bool _isExpanded = false;
 
@@ -38,6 +39,7 @@ class _TagSelectionSectionState extends State<TagSelectionSection> {
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -124,6 +126,7 @@ class _TagSelectionSectionState extends State<TagSelectionSection> {
         if (_isExpanded) // ✅ 只在展开时构建内容
           _TagSelectionContent(
             searchController: _searchController,
+            scrollController: _scrollController,
             filteredTags: _filteredTags,
             selectedTagIds: widget.selectedTagIds,
             onToggleTag: _toggleTag,
@@ -136,12 +139,14 @@ class _TagSelectionSectionState extends State<TagSelectionSection> {
 /// 标签选择内容 - 进一步拆分，使用const优化
 class _TagSelectionContent extends StatelessWidget {
   final TextEditingController searchController;
+  final ScrollController scrollController;
   final List<NoteCategory> filteredTags;
   final List<String> selectedTagIds;
   final void Function(String tagId, bool selected) onToggleTag;
 
   const _TagSelectionContent({
     required this.searchController,
+    required this.scrollController,
     required this.filteredTags,
     required this.selectedTagIds,
     required this.onToggleTag,
@@ -191,8 +196,10 @@ class _TagSelectionContent extends StatelessWidget {
             child: SizedBox(
               height: _computeTagListHeight(),
               child: Scrollbar(
+                controller: scrollController,
                 thumbVisibility: filteredTags.length > 6,
                 child: ListView.builder(
+                  controller: scrollController,
                   padding: EdgeInsets.zero,
                   physics: const ClampingScrollPhysics(),
                   cacheExtent: 100, // ✅ 移动端减少预渲染
