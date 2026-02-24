@@ -26,6 +26,16 @@ public final class GeneratedPluginRegistrant {
       Log.e(TAG, "Error registering plugin audioplayers_android, xyz.luan.audioplayers.AudioplayersPlugin", e);
     }
     try {
+      flutterEngine.getPlugins().add(new com.bbflight.background_downloader.BDPlugin());
+    } catch (Exception e) {
+      Log.e(TAG, "Error registering plugin background_downloader, com.bbflight.background_downloader.BDPlugin", e);
+    }
+    try {
+      flutterEngine.getPlugins().add(new io.flutter.plugins.camerax.CameraAndroidCameraxPlugin());
+    } catch (Exception e) {
+      Log.e(TAG, "Error registering plugin camera_android_camerax, io.flutter.plugins.camerax.CameraAndroidCameraxPlugin", e);
+    }
+    try {
       flutterEngine.getPlugins().add(new dev.fluttercommunity.plus.device_info.DeviceInfoPlusPlugin());
     } catch (Exception e) {
       Log.e(TAG, "Error registering plugin device_info_plus, dev.fluttercommunity.plus.device_info.DeviceInfoPlusPlugin", e);
@@ -44,6 +54,11 @@ public final class GeneratedPluginRegistrant {
       flutterEngine.getPlugins().add(new dev.flutter.packages.file_selector_android.FileSelectorAndroidPlugin());
     } catch (Exception e) {
       Log.e(TAG, "Error registering plugin file_selector_android, dev.flutter.packages.file_selector_android.FileSelectorAndroidPlugin", e);
+    }
+    try {
+      flutterEngine.getPlugins().add(new dev.flutterberlin.flutter_gemma.FlutterGemmaPlugin());
+    } catch (Exception e) {
+      Log.e(TAG, "Error registering plugin flutter_gemma, dev.flutterberlin.flutter_gemma.FlutterGemmaPlugin", e);
     }
     try {
       flutterEngine.getPlugins().add(new com.jrai.flutter_keyboard_visibility_temp_fork.FlutterKeyboardVisibilityTempForkPlugin());
@@ -81,6 +96,16 @@ public final class GeneratedPluginRegistrant {
       Log.e(TAG, "Error registering plugin geolocator_android, com.baseflow.geolocator.GeolocatorPlugin", e);
     }
     try {
+      flutterEngine.getPlugins().add(new com.google_mlkit_commons.GoogleMlKitCommonsPlugin());
+    } catch (Exception e) {
+      Log.e(TAG, "Error registering plugin google_mlkit_commons, com.google_mlkit_commons.GoogleMlKitCommonsPlugin", e);
+    }
+    try {
+      flutterEngine.getPlugins().add(new com.google_mlkit_text_recognition.GoogleMlKitTextRecognitionPlugin());
+    } catch (Exception e) {
+      Log.e(TAG, "Error registering plugin google_mlkit_text_recognition, com.google_mlkit_text_recognition.GoogleMlKitTextRecognitionPlugin", e);
+    }
+    try {
       flutterEngine.getPlugins().add(new io.flutter.plugins.imagepicker.ImagePickerPlugin());
     } catch (Exception e) {
       Log.e(TAG, "Error registering plugin image_picker_android, io.flutter.plugins.imagepicker.ImagePickerPlugin", e);
@@ -89,6 +114,11 @@ public final class GeneratedPluginRegistrant {
       flutterEngine.getPlugins().add(new dev.flutter.plugins.integration_test.IntegrationTestPlugin());
     } catch (Exception e) {
       Log.e(TAG, "Error registering plugin integration_test, dev.flutter.plugins.integration_test.IntegrationTestPlugin", e);
+    }
+    try {
+      flutterEngine.getPlugins().add(new com.example.large_file_handler.LargeFileHandlerPlugin());
+    } catch (Exception e) {
+      Log.e(TAG, "Error registering plugin large_file_handler, com.example.large_file_handler.LargeFileHandlerPlugin", e);
     }
     try {
       flutterEngine.getPlugins().add(new io.flutter.plugins.localauth.LocalAuthPlugin());
@@ -134,6 +164,11 @@ public final class GeneratedPluginRegistrant {
       flutterEngine.getPlugins().add(new dev.flutterquill.quill_native_bridge.QuillNativeBridgePlugin());
     } catch (Exception e) {
       Log.e(TAG, "Error registering plugin quill_native_bridge_android, dev.flutterquill.quill_native_bridge.QuillNativeBridgePlugin", e);
+    }
+    try {
+      flutterEngine.getPlugins().add(new com.llfbandit.record.RecordPlugin());
+    } catch (Exception e) {
+      Log.e(TAG, "Error registering plugin record_android, com.llfbandit.record.RecordPlugin", e);
     }
     try {
       flutterEngine.getPlugins().add(new dev.fluttercommunity.plus.share.SharePlusPlugin());

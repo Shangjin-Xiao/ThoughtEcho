@@ -300,6 +300,15 @@
   "aiReturnedEmpty": "AI returned empty content, please retry",
   "pleaseConfigureApiKey": "Please configure a valid API Key in AI settings first",
   "networkError": "Network error, please check your connection and retry",
+  "connectionTimeout": "Connection timeout, please check your network",
+  "sendTimeout": "Send timeout, please check your network",
+  "receiveTimeout": "Receive timeout, please check your network",
+  "modelNotFound": "Model file not found",
+  "modelAccessDenied": "Access denied to model file",
+  "serverError": "Server error",
+  "downloadCancelled": "Download cancelled",
+  "connectionFailed": "Network connection failed, please check your network",
+  "downloadFailed": "Download failed",
   "aiQuotaExceeded": "AI service quota exceeded, please try again later",
   "generateAIReportFailed": "Failed to generate AI annual report",
   "getDataFailed": "Failed to get data",
@@ -1253,6 +1262,7 @@
       }
     }
   },
+  "apiKeyNotRequired": "API Key not required",
   "connectionSuccess": "Connection successful",
   "responseFormatError": "Response format error",
   "connectionFailed": "Connection failed: {statusCode}",
@@ -1918,6 +1928,7 @@
   "aiProviderAnthropic": "Anthropic (Claude)",
   "aiProviderOllama": "Ollama",
   "aiProviderLMStudio": "LMStudio",
+  "aiProviderLocalGemma": "Local Gemma (offline)",
   "apiKeyStatusEmpty": "empty",
   "apiKeyStatusNotEmpty": "{length} characters",
   "@apiKeyStatusNotEmpty": {
@@ -3192,6 +3203,8 @@
   "localAiFeaturesDesc": "Enhance your note-taking experience with on-device AI",
   "enableLocalAi": "Enable Local AI",
   "enableLocalAiDesc": "Turn on to enable on-device AI features",
+  "localAiAutoLoadOnStartup": "Auto load after launch",
+  "localAiAutoLoadOnStartupDesc": "Initialize Local AI in the background after the app launches (may increase power and resource usage)",
   "localAiPreviewNote": "This feature is currently in preview. Some features may be unstable",
 
   "inputEnhancement": "Input Enhancement",
@@ -3283,6 +3296,9 @@
   "localAIEmotionDetectionDesc": "Analyze emotional sentiment",
   "voiceRecording": "Recording...",
   "voiceRecordingHint": "Release to end, swipe up for OCR",
+  "voiceInitializing": "Initializing...",
+  "voiceInitializingHint": "Please wait, preparing speech recognition",
+  "voiceNoTextRecognized": "No text recognized",
   "voiceProcessing": "Processing...",
   "voiceTranscribing": "Transcribing...",
   "voiceResultTitle": "Voice Recognition Result",
@@ -3290,6 +3306,7 @@
   "voiceApplyCorrection": "AI Correction",
   "voiceRecognizeSource": "Recognize Source",
   "voiceInsertToEditor": "Insert to Editor",
+  "voiceStopRecording": "Stop Recording",
   "ocrCapture": "Capture Photo",
   "ocrCaptureHint": "Align with text area",
   "ocrSelectRegion": "Select Text Region",
@@ -3297,6 +3314,37 @@
   "ocrProcessing": "Recognizing...",
   "ocrResultTitle": "OCR Recognition Result",
   "ocrNoTextDetected": "No text detected",
+  "ocrEngineSettings": "OCR Engine Settings",
+  "ocrEngineAuto": "Auto Select",
+  "ocrEngineAutoDesc": "Intelligently choose the best engine based on image type",
+  "ocrEngineMLKit": "MLKit OCR",
+  "ocrEngineMLKitDesc": "Mobile Optimized · Fast & Accurate · For Printed Text",
+  "ocrEngineTesseract": "Tesseract OCR",
+  "ocrEngineTesseractDesc": "Desktop Compatible · For Printed Text",
+  "ocrEngineVLM": "VLM Vision Model",
+  "ocrEngineVLMDesc": "Vision Language Model · For Handwriting & Complex Scenes",
+  "ocrCurrentEngine": "Current Engine",
+  "ocrHandwritingDetected": "Handwriting detected",
+  "ocrPrintedTextDetected": "Printed text detected",
+  "ocrUsingMLKit": "Recognizing with MLKit engine...",
+  "ocrUsingVLM": "Recognizing with VLM engine...",
+  "ocrUsingTesseract": "Recognizing with Tesseract engine...",
+  "ocrVLMNotAvailable": "VLM model not downloaded",
+  "ocrVLMRecommendation": "Download VLM model for better handwriting recognition",
+  "ocrDownloadVLMModel": "Download VLM Model",
+  "ocrVLMModePrecise": "Precise Mode",
+  "ocrVLMModeUnderstanding": "Understanding Mode",
+  "ocrVLMModeHandwritten": "Handwritten Mode",
+  "ocrMLKitScript": "Recognition Script",
+  "ocrScriptLatin": "Latin",
+  "ocrScriptChinese": "Chinese",
+  "ocrScriptJapanese": "Japanese",
+  "ocrScriptKorean": "Korean",
+  "ocrScriptDevanagari": "Devanagari",
+  "ocrSelectRegion": "Select Text Regions",
+  "ocrTakePhoto": "Take Photo",
+  "ocrSelectImage": "Select Image",
+  "ocrProcessing": "Processing...",
   "aiSearchMode": "AI Search",
   "normalSearchMode": "Normal Search",
   "aiSearching": "AI Searching...",
@@ -3470,5 +3518,176 @@
   "locationTimeoutCheckPermission": "Location fetch timed out, please check location permission",
   "cannotGetCurrentLocation": "Cannot get current location, please ensure location permission is granted",
   "cannotGetSelectedCityLocation": "Cannot get selected city location",
-  "cityInfoIncomplete": "City information is incomplete"
+  "cityInfoIncomplete": "City information is incomplete",
+
+  "modelManagement": "Model Management",
+  "modelManagementDesc": "Download and manage local AI models",
+  "modelDownload": "Download Model",
+  "modelDownloading": "Downloading...",
+  "modelDownloadProgress": "Download progress: {progress}%",
+  "@modelDownloadProgress": {
+    "placeholders": {
+      "progress": {
+        "type": "int"
+      }
+    }
+  },
+  "modelDownloadComplete": "Download complete",
+  "modelDownloadFailed": "Download failed: {error}",
+  "@modelDownloadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "modelImport": "Import Model",
+  "modelImportHint": "Import model from local file",
+  "modelImportASR": "Select speech recognition model file",
+  "modelImportOCR": "Select OCR model file",
+  "modelImporting": "Importing model...",
+  "modelImportSuccess": "Model imported successfully",
+  "modelImportFailed": "Model import failed: {error}",
+  "@modelImportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "modelManagedByPackage": "This model is managed by flutter_gemma: configure a download URL or import a .task model file",
+  "modelPrepare": "Prepare Model",
+  "modelPrepareHint": "Extract/load (may take some time)",
+  "modelPreparing": "Preparing model...",
+  "modelPrepareSuccess": "Model is ready",
+  "modelPrepareFailed": "Model preparation failed: {error}",
+  "@modelPrepareFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "modelExtractFailed": "Extraction failed",
+  "modelDelete": "Delete Model",
+  "modelDeleteConfirm": "Are you sure you want to delete this model? You will need to re-download it.",
+  "modelSize": "Size: {size}",
+  "@modelSize": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "modelVersion": "Version: {version}",
+  "@modelVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "modelNotDownloaded": "Not downloaded",
+  "modelDownloaded": "Downloaded",
+  "modelLoaded": "Loaded",
+  "modelLoading": "Loading",
+  "modelError": "Error",
+  "modelTypeLLM": "Language Model",
+  "modelTypeEmbedding": "Embedding Model",
+  "modelTypeASR": "Speech Recognition",
+  "modelTypeOCR": "Text Recognition",
+  "modelStorageUsage": "Model storage: {size}",
+  "@modelStorageUsage": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "modelClearAll": "Clear All Models",
+  "modelClearAllConfirm": "Are you sure you want to delete all downloaded models?",
+  "modelDownloadSource": "Download Source",
+  "modelDownloadSourceHint": "Models will be downloaded from HuggingFace/GitHub",
+  "modelRequiresDownload": "This feature requires downloading the corresponding model first",
+  "modelMemoryWarning": "This model requires approximately {memory} of memory, please ensure your device has enough available memory",
+  "@modelMemoryWarning": {
+    "placeholders": {
+      "memory": {
+        "type": "String"
+      }
+    }
+  },
+  "similarityHighlyRelated": "Highly related content",
+  "similarityTopicSimilar": "Similar topic",
+  "similaritySomewhatRelated": "Somewhat related",
+  "similarityPossiblyRelated": "Possibly related",
+  "positiveEmotionDetected": "Positive emotion detected",
+  "negativeEmotionDetected": "Negative emotion detected",
+  "containsDateKeywords": "Contains date-related keywords",
+  "containsQuoteFormat": "Contains quote format",
+  "containsInsightKeywords": "Contains insight-related keywords",
+  "pleaseSwitchToAsrModel": "Please download speech recognition model first",
+  "pleaseSwitchToOcrModel": "Please download OCR model first",
+
+  "ocrPhotoFailed": "Photo failed: {error}",
+  "@ocrPhotoFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ocrImagePickFailed": "Image selection failed: {error}",
+  "@ocrImagePickFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ocrRecognitionFailed": "Recognition failed: {error}",
+  "@ocrRecognitionFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "ocrClearSelection": "Clear",
+  "ocrSelectAll": "Select All",
+  "ocrTapToSelectHint": "Tap to select text regions · {selected}/{total} selected",
+  "@ocrTapToSelectHint": {
+    "placeholders": {
+      "selected": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "ocrConfirmSelection": "Confirm ({count})",
+  "@ocrConfirmSelection": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "filePathNotAvailable": "File path not available",
+  "modelDownloadedCount": "{count} models downloaded",
+  "@modelDownloadedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "featureNotEnabled": "This feature is not enabled, please turn it on in settings",
+  "modelRecommended": "Recommended",
+  "modelLightweight": "Lightweight",
+  "modelHighAccuracy": "High Accuracy",
+  "embeddingServicePlaceholder": "Embedding service not fully implemented yet",
+  "noChangesNeeded": "No changes needed",
+  "aiCorrectionFailed": "AI correction failed"
 }

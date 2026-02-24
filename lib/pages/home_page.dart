@@ -17,9 +17,10 @@ import '../models/quote_model.dart';
 import '../widgets/daily_quote_view.dart';
 import '../widgets/note_list_view.dart';
 import '../widgets/add_note_dialog.dart';
+import '../widgets/local_ai/voice_input_overlay.dart';
 import '../widgets/local_ai/ocr_capture_page.dart';
 import '../widgets/local_ai/ocr_result_sheet.dart';
-import '../widgets/local_ai/voice_input_overlay.dart';
+import '../widgets/local_ai/local_ai_fab.dart';
 import 'ai_features_page.dart';
 import 'settings_page.dart';
 import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
@@ -1071,61 +1072,7 @@ class _HomePageState extends State<HomePage>
     _showAddQuoteDialog();
   }
 
-  // FAB 长按处理 - 显示语音录制浮层
-  void _onFABLongPress() {
-    final settingsService = Provider.of<SettingsService>(
-      context,
-      listen: false,
-    );
-    final localAISettings = settingsService.localAISettings;
-
-    // 检查是否启用了本地AI和语音转文字功能，未启用则直接返回无反应
-    if (!localAISettings.enabled || !localAISettings.speechToTextEnabled) {
-      return;
-    }
-
-    _showVoiceInputOverlay();
-  }
-
-  Future<void> _showVoiceInputOverlay() async {
-    if (!mounted) return;
-
-    await showGeneralDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: 'voice_input_overlay',
-      barrierColor: Colors.transparent,
-      pageBuilder: (context, animation, secondaryAnimation) {
-        return VoiceInputOverlay(
-          transcribedText: null,
-          onSwipeUpForOCR: () async {
-            Navigator.of(context).pop();
-            await _openOCRFlow();
-          },
-          onRecordComplete: () {
-            Navigator.of(context).pop();
-            ScaffoldMessenger.of(this.context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  AppLocalizations.of(this.context).featureComingSoon,
-                ),
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-          },
-        );
-      },
-      transitionBuilder: (context, animation, secondaryAnimation, child) {
-        final curved = CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeOut,
-        );
-        return FadeTransition(opacity: curved, child: child);
-      },
-      transitionDuration: const Duration(milliseconds: 180),
-    );
-  }
-
+  // ignore: unused_element
   Future<void> _openOCRFlow() async {
     if (!mounted) return;
 
@@ -2083,28 +2030,10 @@ class _HomePageState extends State<HomePage>
             SettingsPage(key: _settingsPageKey),
           ],
         ),
-        floatingActionButton: GestureDetector(
-          onLongPressStart: (_) => _onFABLongPress(),
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: AppTheme.accentShadow,
-            ),
-            child: FloatingActionButton(
-              heroTag: 'homePageFAB',
-              tooltip: '${l10n.add} / ${l10n.voiceInputTitle}',
-              onPressed: _onFABTap,
-              elevation: 0,
-              backgroundColor:
-                  theme.floatingActionButtonTheme.backgroundColor, // 使用主题定义的颜色
-              foregroundColor:
-                  theme.floatingActionButtonTheme.foregroundColor, // 使用主题定义的颜色
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Icon(Icons.add, size: 28),
-            ),
-          ),
+        floatingActionButton: LocalAIFab(
+          heroTag: 'homePageFAB',
+          onTap: _onFABTap,
+          onInsertText: (text) => _showAddQuoteDialog(prefilledContent: text),
         ),
         floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
         bottomNavigationBar: ClipRect(

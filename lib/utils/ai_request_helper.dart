@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import '../models/ai_settings.dart';
 import '../models/ai_provider_settings.dart';
 import '../models/quote_model.dart';
+import '../services/local_ai/text_processing_service.dart';
 import '../utils/ai_network_manager.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
@@ -100,6 +101,13 @@ class AIRequestHelper {
     int? maxTokens,
     String? model,
   }) async {
+    // 本地模型：使用 local:// scheme 走设备端推理，不发网络请求。
+    if (_isLocalProviderUrl(url)) {
+      final content = await _runLocalModel(
+          systemPrompt: systemPrompt, userMessage: userMessage);
+      return _buildOpenAICompatibleResponse(url: url, content: content);
+    }
+
     final messages = createMessages(
       systemPrompt: systemPrompt,
       userMessage: userMessage,
@@ -184,6 +192,21 @@ class AIRequestHelper {
     int? maxTokens,
     String? model,
   }) async {
+    // 本地模型：不具备真正的 token streaming，这里用“生成后分片”来模拟流式输出。
+    if (_isLocalProviderUrl(url)) {
+      try {
+        final content = await _runLocalModel(
+            systemPrompt: systemPrompt, userMessage: userMessage);
+        for (final chunk in _chunkString(content, 48)) {
+          onData(chunk);
+        }
+        onComplete(content);
+      } catch (e) {
+        onError(e);
+      }
+      return;
+    }
+
     final messages = createMessages(
       systemPrompt: systemPrompt,
       userMessage: userMessage,
@@ -205,6 +228,54 @@ class AIRequestHelper {
       onError: onError,
       timeout: defaultTimeout,
     );
+  }
+
+  bool _isLocalProviderUrl(String url) {
+    final uri = Uri.tryParse(url.trim());
+    return uri != null && uri.scheme == 'local';
+  }
+
+  Future<String> _runLocalModel({
+    required String systemPrompt,
+    required String userMessage,
+  }) async {
+    final service = TextProcessingService.instance;
+    // 这里不依赖 SettingsService / LocalAISettings：AI provider 选择“本地模型”时，
+    // 我们按需初始化并加载 Gemma；若模型不存在则由异常交给 UI 做本地化提示。
+    return await service.generateFromPrompts(
+      systemPrompt: systemPrompt,
+      userMessage: userMessage,
+    );
+  }
+
+  Response _buildOpenAICompatibleResponse({
+    required String url,
+    required String content,
+  }) {
+    return Response(
+      requestOptions: RequestOptions(path: url),
+      statusCode: 200,
+      data: {
+        'choices': [
+          {
+            'message': {
+              'role': 'assistant',
+              'content': content,
+            },
+          },
+        ],
+      },
+    );
+  }
+
+  Iterable<String> _chunkString(String s, int chunkSize) sync* {
+    if (s.isEmpty) return;
+    int i = 0;
+    while (i < s.length) {
+      final end = (i + chunkSize) > s.length ? s.length : (i + chunkSize);
+      yield s.substring(i, end);
+      i = end;
+    }
   }
 
   /// 解析API响应

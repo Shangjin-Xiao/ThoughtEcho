@@ -25,6 +25,11 @@ class AIService extends ChangeNotifier {
   AIService({required SettingsService settingsService})
       : _settingsService = settingsService;
 
+  bool _isLocalProvider(AIProviderSettings provider) {
+    final uri = Uri.tryParse(provider.apiUrl.trim());
+    return uri != null && uri.scheme == 'local';
+  }
+
   Future<void> _validateSettings({bool testNetwork = false}) async {
     try {
       final multiSettings = _settingsService.multiAISettings;
@@ -48,23 +53,29 @@ class AIService extends ChangeNotifier {
       }
 
       // 3. 验证模型名称
-      if (currentProvider.model.trim().isEmpty) {
+      if (!_isLocalProvider(currentProvider) &&
+          currentProvider.model.trim().isEmpty) {
         throw Exception('AI模型名称不能为空');
       }
 
       // 4. 验证API密钥（统一检查）
-      final hasApiKey = await _apiKeyManager.hasValidProviderApiKey(
-        currentProvider.id,
-      );
-      if (!hasApiKey) {
-        throw Exception('请先为 ${currentProvider.name} 配置有效的API密钥');
-      }
+      if (!_isLocalProvider(currentProvider)) {
+        final hasApiKey = await _apiKeyManager.hasValidProviderApiKey(
+          currentProvider.id,
+        );
+        if (!hasApiKey) {
+          throw Exception('请先为 ${currentProvider.name} 配置有效的API密钥');
+        }
 
-      // 记录验证成功信息
-      final apiKey = await _apiKeyManager.getProviderApiKey(currentProvider.id);
-      logDebug(
-        '验证设置成功 - Provider: ${currentProvider.name}, API Key长度: ${apiKey.length}',
-      );
+        // 记录验证成功信息
+        final apiKey =
+            await _apiKeyManager.getProviderApiKey(currentProvider.id);
+        logDebug(
+          '验证设置成功 - Provider: ${currentProvider.name}, API Key长度: ${apiKey.length}',
+        );
+      } else {
+        logDebug('验证设置成功 - Provider: ${currentProvider.name} (local)');
+      }
 
       // 5. 可选的网络连接测试
       if (testNetwork) {
@@ -119,8 +130,12 @@ class AIService extends ChangeNotifier {
           return false;
         }
 
-        // 基本检查：provider存在且启用
-        // 实际的API Key验证通过异步方法进行
+        // 本地模型不需要 API Key。
+        if (_isLocalProvider(currentProvider)) {
+          return true;
+        }
+
+        // 基本检查：provider存在且启用；实际的API Key验证通过异步方法进行
         return true;
       }
 
@@ -148,12 +163,13 @@ class AIService extends ChangeNotifier {
           return false;
         }
 
-        // 从安全存储验证API密钥
-        final hasValidKey = await _apiKeyManager.hasValidProviderApiKey(
-          currentProvider.id,
-        );
+        // 本地模型不需要 API Key。
+        if (_isLocalProvider(currentProvider)) {
+          return true;
+        }
 
-        return hasValidKey;
+        // 从安全存储验证API密钥
+        return await _apiKeyManager.hasValidProviderApiKey(currentProvider.id);
       }
 
       return false;
@@ -173,6 +189,11 @@ class AIService extends ChangeNotifier {
     }
 
     final currentProvider = multiSettings.currentProvider!;
+
+    // 本地模型：无需注入 API Key。
+    if (_isLocalProvider(currentProvider)) {
+      return currentProvider;
+    }
 
     // 从加密存储获取真实的API Key
     final apiKey = await _apiKeyManager.getProviderApiKey(currentProvider.id);

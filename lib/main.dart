@@ -36,6 +36,7 @@ import 'package:thoughtecho/services/media_cleanup_service.dart';
 import 'package:thoughtecho/services/apk_download_service.dart';
 import 'package:thoughtecho/services/version_check_service.dart';
 import 'package:thoughtecho/services/insight_history_service.dart';
+import 'package:thoughtecho/services/local_ai/local_ai_service.dart';
 import 'package:thoughtecho/services/connectivity_service.dart';
 import 'package:thoughtecho/services/feature_guide_service.dart';
 import 'package:thoughtecho/services/data_directory_service.dart';
@@ -426,6 +427,20 @@ Future<void> main() async {
         Future.delayed(initDelay, () async {
           try {
             logInfo('UI已显示，正在后台初始化服务...', source: 'BackgroundInit');
+
+            // 可选：按设置自动初始化本地 AI（默认关闭，避免启动即占用资源）
+            final localAISettings = settingsService.localAISettings;
+            if (localAISettings.enabled && localAISettings.autoLoadOnStartup) {
+              try {
+                await LocalAIService.instance.initialize(
+                  localAISettings,
+                  eagerLoadModels: false,
+                );
+                logInfo('本地 AI 已按设置自动初始化', source: 'BackgroundInit');
+              } catch (e) {
+                logWarning('本地 AI 自动初始化失败: $e', source: 'BackgroundInit');
+              }
+            }
 
             // 初始化连接服务
             try {

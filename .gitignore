@@ -269,4 +269,5 @@ android/local.properties
 .claude/settings.local.json
 forge.yaml
 .claude-code-router/config.json
+_codeql_detected_source_root
 _flutter/
