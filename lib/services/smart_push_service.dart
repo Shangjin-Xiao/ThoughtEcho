@@ -14,6 +14,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import '../models/smart_push_settings.dart';
 import '../models/quote_model.dart';
 import '../pages/note_full_editor_page.dart';
+import '../widgets/add_note_dialog.dart';
 import '../main.dart' show navigatorKey;
 import 'database_service.dart';
 import 'mmkv_service.dart';
@@ -56,6 +57,7 @@ class SmartPushService extends ChangeNotifier {
   static const String _notificationChannelId = 'smart_push_channel';
   static const String _notificationChannelName = '智能推送';
   static const String _scheduledTimesKey = 'smart_push_scheduled_times_today';
+  static const String _lastDailyQuoteKey = 'smart_push_last_daily_quote';
 
   SmartPushSettings _settings = SmartPushSettings.defaultSettings();
   SmartPushSettings get settings => _settings;
@@ -420,12 +422,12 @@ class SmartPushService extends ChangeNotifier {
     AppLogger.i('通知被点击: ${response.payload}');
 
     String? noteId;
+    String? contentType;
     // SOTA: 记录用户点击交互（正向反馈）
     // payload 格式: "contentType:xxx|noteId:yyy" 或 "dailyQuote"
     try {
       final payload = response.payload;
       if (payload != null && payload.isNotEmpty) {
-        String? contentType;
 
         if (payload.contains('contentType:')) {
           // 解析 contentType 和 noteId
@@ -464,6 +466,11 @@ class SmartPushService extends ChangeNotifier {
     if (noteId != null && noteId.isNotEmpty) {
       _navigateToNote(noteId).catchError((e) {
         AppLogger.e('通知导航失败', error: e);
+      });
+    } else if (contentType == 'dailyQuote') {
+      // 每日一言：从 MMKV 读取缓存的每日一言内容并打开编辑器
+      _navigateToDailyQuote().catchError((e) {
+        AppLogger.e('每日一言导航失败', error: e);
       });
     }
   }
@@ -506,6 +513,76 @@ class SmartPushService extends ChangeNotifier {
       }
     } catch (e) {
       AppLogger.e('执行通知导航逻辑出错', error: e);
+    }
+  }
+
+  /// 导航到每日一言（从 MMKV 缓存读取，使用 AddNoteDialog 底部弹窗）
+  ///
+  /// 行为与首页双击每日一言一致：打开非全屏编辑器，自动填充来源和标签信息
+  Future<void> _navigateToDailyQuote() async {
+    try {
+      final cachedJson = _mmkv.getString(_lastDailyQuoteKey);
+      if (cachedJson == null || cachedJson.isEmpty) {
+        AppLogger.w('每日一言导航已取消：缓存中无数据');
+        return;
+      }
+
+      final hitokotoData = json.decode(cachedJson) as Map<String, dynamic>;
+      final content = hitokotoData['hitokoto'] as String?;
+      if (content == null || content.isEmpty) {
+        AppLogger.w('每日一言导航已取消：缓存内容为空');
+        return;
+      }
+
+      final fromWho = hitokotoData['from_who'] as String? ?? '';
+      final from = hitokotoData['from'] as String? ?? '';
+      final categories = await _databaseService.getCategories();
+
+      // 等待 navigatorKey 就绪（冷启动场景）
+      int retryCount = 0;
+      const maxRetries = 15;
+      while (navigatorKey.currentState == null && retryCount < maxRetries) {
+        AppLogger.d('等待 navigatorKey 就绪... ($retryCount)');
+        await Future.delayed(const Duration(milliseconds: 300));
+        retryCount++;
+      }
+
+      final navContext = navigatorKey.currentContext;
+      if (navContext == null) {
+        AppLogger.w('每日一言导航失败：navigatorKey.currentContext 在多次重试后仍为空');
+        return;
+      }
+
+      showModalBottomSheet(
+        context: navContext,
+        isScrollControlled: true,
+        backgroundColor:
+            Theme.of(navContext).colorScheme.surfaceContainerLowest,
+        builder: (context) => AddNoteDialog(
+          prefilledContent: content,
+          prefilledAuthor: fromWho.isNotEmpty ? fromWho : null,
+          prefilledWork: from.isNotEmpty ? from : null,
+          hitokotoData: hitokotoData,
+          tags: categories,
+        ),
+      );
+      AppLogger.i('已成功触发每日一言添加弹窗');
+    } catch (e) {
+      AppLogger.e('每日一言导航逻辑出错', error: e);
+    }
+  }
+
+  /// 缓存每日一言到 MMKV（供通知点击时读取）
+  ///
+  /// [hitokotoData] 为一言 API 的原始响应，包含 type 等标签分类信息
+  void _saveDailyQuoteToCache(Map<String, dynamic> hitokotoData) {
+    try {
+      _mmkv.setString(
+        _lastDailyQuoteKey,
+        json.encode(hitokotoData),
+      );
+    } catch (e) {
+      AppLogger.w('缓存每日一言失败', error: e);
     }
   }
 
@@ -1209,6 +1286,14 @@ class SmartPushService extends ChangeNotifier {
         AppLogger.w('精确闹钟权限不可用，使用 inexact 模式调度本地通知（时间可能有 15 分钟误差）');
       }
 
+      // 构建 payload，确保通知点击时能正确路由
+      String? payload;
+      if (isDailyQuote) {
+        payload = 'contentType:dailyQuote';
+      } else if (content?.noteId != null) {
+        payload = 'contentType:smartPush|noteId:${content!.noteId}';
+      }
+
       await _notificationsPlugin.zonedSchedule(
         id,
         content?.title ?? (isDailyQuote ? '📖 每日一言' : '💡 回忆时刻'),
@@ -1216,7 +1301,7 @@ class SmartPushService extends ChangeNotifier {
         scheduledDate,
         details,
         androidScheduleMode: scheduleMode,
-        payload: content?.noteId,
+        payload: payload,
       );
 
       AppLogger.i(
@@ -1689,7 +1774,21 @@ class SmartPushService extends ChangeNotifier {
       }
     }
 
-    // 7. 如果还是没有，尝试每日一言
+    // 7. 所有筛选器均未命中，记录诊断日志以便排查
+    if (allNotes.isNotEmpty) {
+      AppLogger.w(
+        '智能选择：所有筛选器均未命中，回退到每日一言 '
+        '(总笔记数: ${allNotes.length}, '
+        'yearAgo: ${yearAgoNotes.length}, '
+        'sameTime: ${sameTimeNotes.length}, '
+        'sameLocation: ${sameLocationNotes.length}, '
+        'sameWeather: ${sameWeatherNotes.length}, '
+        'monthAgo: ${monthAgoNotes.length}, '
+        'random7d: ${randomNotes.length})',
+      );
+    }
+
+    // 8. 尝试每日一言
     final dailyQuote = await _fetchDailyQuote();
     if (dailyQuote != null) {
       return _SmartSelectResult(
@@ -1805,8 +1904,11 @@ class SmartPushService extends ChangeNotifier {
       );
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
+        final data = json.decode(response.body) as Map<String, dynamic>?;
         if (data != null && data['hitokoto'] != null) {
+          // 缓存原始 API 数据，供通知点击时构建 AddNoteDialog
+          _saveDailyQuoteToCache(data);
+
           final fromWho = data['from_who'] as String? ?? '';
           final from = data['from'] as String? ?? '';
           return Quote(
