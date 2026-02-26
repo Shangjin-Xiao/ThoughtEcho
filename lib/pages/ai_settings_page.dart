@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/settings_service.dart';
-import '../services/ai_service.dart';
 import '../models/ai_settings.dart';
 import '../models/ai_provider_settings.dart';
 import '../models/multi_ai_settings.dart';
@@ -349,7 +348,18 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
   Future<void> _testConnection() async {
     final l10n = AppLocalizations.of(context);
-    await _saveSettings();
+
+    // 如果已有当前 provider，直接测试它，不需要先保存/创建新的
+    // 如果没有当前 provider，提示用户先保存配置
+    if (_currentProvider == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.noAiProviderSelected),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
 
     if (!mounted) return;
     final scaffoldMessenger = ScaffoldMessenger.of(context);
@@ -370,12 +380,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
         ),
       );
 
-      if (_currentProvider != null) {
-        await _testProvider(_currentProvider!);
-      } else {
-        final aiService = Provider.of<AIService>(context, listen: false);
-        await aiService.testConnection();
-      }
+      await _testProvider(_currentProvider!);
 
       if (!mounted) return;
       navigator.pop();
@@ -397,7 +402,12 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
   Future<void> _testProvider(AIProviderSettings provider) async {
     final l10n = AppLocalizations.of(context);
-    if (provider.apiKey.isEmpty) {
+
+    // 从安全存储加载 API Key，而不是检查 provider.apiKey（始终为空）
+    final apiKeyManager = APIKeyManager();
+    final hasValidKey =
+        await apiKeyManager.hasValidProviderApiKey(provider.id);
+    if (!hasValidKey) {
       throw Exception(l10n.apiKeyRequired(provider.name));
     }
 
@@ -451,17 +461,25 @@ class _AISettingsPageState extends State<AISettingsPage> {
         Provider.of<SettingsService>(context, listen: false);
     await settingsService.saveMultiAISettings(_multiSettings);
 
-    if (provider.apiKey.isNotEmpty) {
-      final apiKeyManager = APIKeyManager();
-      await apiKeyManager.saveProviderApiKey(provider.id, provider.apiKey);
-    }
+    // 从安全存储加载 API Key 填充输入框
+    final apiKeyManager = APIKeyManager();
+    final storedApiKey = await apiKeyManager.getProviderApiKey(provider.id);
 
+    if (!mounted) return;
     setState(() {
       _apiUrlController.text = provider.apiUrl;
-      _apiKeyController.text = provider.apiKey;
+      _apiKeyController.text = storedApiKey;
       _modelController.text = provider.model;
       _maxTokensController.text = provider.maxTokens.toString();
       _hostOverrideController.text = provider.hostOverride ?? '';
+
+      try {
+        _selectedPreset = _getAiPresets(l10n).firstWhere(
+          (p) => p['apiUrl'] == provider.apiUrl,
+        )['name'];
+      } catch (_) {
+        _selectedPreset = null;
+      }
     });
 
     await _updateApiKeyStatusAsync();
@@ -546,6 +564,10 @@ class _AISettingsPageState extends State<AISettingsPage> {
     );
 
     if (confirmed == true) {
+      // 同时删除安全存储中的 API Key
+      final apiKeyManager = APIKeyManager();
+      await apiKeyManager.removeProviderApiKey(provider.id);
+
       final updatedProviders =
           _multiSettings.providers.where((p) => p.id != provider.id).toList();
       String? newCurrentProviderId = _multiSettings.currentProviderId;
@@ -562,26 +584,35 @@ class _AISettingsPageState extends State<AISettingsPage> {
       await settingsService.saveMultiAISettings(updatedMultiSettings);
 
       if (!mounted) return;
-      setState(() {
-        _multiSettings = updatedMultiSettings;
-        _currentProvider = updatedMultiSettings.currentProvider;
 
-        if (provider.id == _currentProvider?.id || _currentProvider == null) {
-          if (_currentProvider != null) {
-            _apiUrlController.text = _currentProvider!.apiUrl;
-            _apiKeyController.text = _currentProvider!.apiKey;
-            _modelController.text = _currentProvider!.model;
-            _maxTokensController.text = _currentProvider!.maxTokens.toString();
-            _hostOverrideController.text = _currentProvider!.hostOverride ?? '';
-          } else {
-            _apiUrlController.clear();
-            _apiKeyController.clear();
-            _modelController.clear();
-            _maxTokensController.text = '32000';
-            _hostOverrideController.clear();
-          }
-        }
-      });
+      _multiSettings = updatedMultiSettings;
+      _currentProvider = updatedMultiSettings.currentProvider;
+
+      if (_currentProvider != null) {
+        // 从安全存储加载新当前 provider 的 API Key
+        final storedApiKey =
+            await apiKeyManager.getProviderApiKey(_currentProvider!.id);
+        if (!mounted) return;
+        setState(() {
+          _apiUrlController.text = _currentProvider!.apiUrl;
+          _apiKeyController.text = storedApiKey;
+          _modelController.text = _currentProvider!.model;
+          _maxTokensController.text = _currentProvider!.maxTokens.toString();
+          _hostOverrideController.text = _currentProvider!.hostOverride ?? '';
+        });
+      } else {
+        setState(() {
+          _apiUrlController.clear();
+          _apiKeyController.clear();
+          _modelController.clear();
+          _maxTokensController.text = '32000';
+          _hostOverrideController.clear();
+        });
+      }
+
+      await _updateApiKeyStatusAsync();
+
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.presetDeleted(provider.name))));
     }
@@ -787,7 +818,28 @@ class _AISettingsPageState extends State<AISettingsPage> {
                 else
                   IconButton(
                     icon: const Icon(Icons.network_check, size: 20),
-                    onPressed: () => _testProvider(provider),
+                    onPressed: () async {
+                      final messenger = ScaffoldMessenger.of(context);
+                      try {
+                        await _testProvider(provider);
+                        if (!mounted) return;
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(l10n.connectionTestSuccess),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      } catch (e) {
+                        if (!mounted) return;
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(
+                                l10n.connectionTestFailed(e.toString())),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    },
                     tooltip: l10n.testConnectionButton,
                   ),
               ],
