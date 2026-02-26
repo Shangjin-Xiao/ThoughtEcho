@@ -56,7 +56,7 @@ class APIKeyManager {
 
   /// 清理API密钥（移除空格和换行符）
   String _cleanApiKey(String apiKey) {
-    return apiKey.trim().replaceAll(RegExp(r'\s+'), ' ');
+    return apiKey.trim().replaceAll(RegExp(r'\s+'), '');
   }
 
   /// 验证API密钥格式
