@@ -117,8 +117,9 @@ class LocalSendProvider {
           'prepare_resp status=${response.statusCode}',
           source: 'LocalSend',
         );
-        final previewLen =
-            response.body.length < 50 ? response.body.length : 50;
+        final previewLen = response.body.length < 50
+            ? response.body.length
+            : 50;
         // P2 Fix: 脱敏日志，不打印完整响应内容
         debugPrint('响应摘要: ${response.body.substring(0, previewLen)}...');
 
@@ -269,8 +270,8 @@ class LocalSendProvider {
 
         // Send request with timeout
         final response = await request.send().timeout(
-              const Duration(minutes: 5),
-            );
+          const Duration(minutes: 5),
+        );
 
         logDebug(
           'upload_resp status=${response.statusCode} file=${file.path.split('/').last}',
@@ -301,8 +302,8 @@ class LocalSendProvider {
             ),
           );
           final legacyResp = await legacyReq.send().timeout(
-                const Duration(minutes: 5),
-              );
+            const Duration(minutes: 5),
+          );
           if (legacyResp.statusCode == 200) {
             debugPrint('文件上传成功(v1): $fileId');
             return;
@@ -371,8 +372,9 @@ class LocalSendProvider {
       // 通知对端（最佳努力，不影响本地状态）
       final remoteId = session.remoteSessionId;
       if (remoteId != null) {
-        final url =
-            ApiRoute.info.target(session.target).replaceAll('/info', '/cancel');
+        final url = ApiRoute.info
+            .target(session.target)
+            .replaceAll('/info', '/cancel');
         try {
           final client = http.Client();
           client

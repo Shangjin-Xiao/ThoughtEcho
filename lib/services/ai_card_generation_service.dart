@@ -3,7 +3,8 @@ import 'dart:io';
 import 'package:uuid/uuid.dart';
 // 条件导入：Web平台使用stub实现，其他平台使用gal
 import '../utils/stub_implementations.dart'
-    if (dart.library.io) 'package:gal/gal.dart' as gal;
+    if (dart.library.io) 'package:gal/gal.dart'
+    as gal;
 import '../models/quote_model.dart';
 import '../models/generated_card.dart';
 import '../constants/ai_card_prompts.dart';
@@ -55,10 +56,12 @@ class AICardGenerationService {
     // 如果用户关闭了 AI 生成功能，则直接使用模板（功能仍可用，只是没有AI增强）
     if (!isEnabled) {
       AppLogger.i('AI卡片生成已关闭，使用本地模板生成', source: 'AICardGeneration');
-      return _buildFallbackCard(note,
-          isRegeneration: isRegeneration,
-          brandName: brandName,
-          excludeType: excludeType);
+      return _buildFallbackCard(
+        note,
+        isRegeneration: isRegeneration,
+        brandName: brandName,
+        excludeType: excludeType,
+      );
     }
 
     // 根据用户语言设置决定卡片元数据语言
@@ -66,10 +69,13 @@ class AICardGenerationService {
 
     try {
       // 1. 智能选择最适合的提示词
-      var prompt = _selectBestPrompt(note, customStyle,
-          brandName: brandName,
-          isRegeneration: isRegeneration,
-          languageCode: languageCode);
+      var prompt = _selectBestPrompt(
+        note,
+        customStyle,
+        brandName: brandName,
+        isRegeneration: isRegeneration,
+        languageCode: languageCode,
+      );
 
       // 1.1 根据用户语言设置追加语言统一指令
       String langDirective;
@@ -163,19 +169,27 @@ class AICardGenerationService {
       );
     } catch (e) {
       AppLogger.w('AI生成失败，使用回退模板: $e', source: 'AICardGeneration');
-      return _buildFallbackCard(note,
-          isRegeneration: isRegeneration, brandName: brandName);
+      return _buildFallbackCard(
+        note,
+        isRegeneration: isRegeneration,
+        brandName: brandName,
+      );
     }
   }
 
   /// 本地模板回退封装(AI关闭或失败时使用)
-  GeneratedCard _buildFallbackCard(Quote note,
-      {bool isRegeneration = false,
-      required String brandName,
-      CardType? excludeType}) {
+  GeneratedCard _buildFallbackCard(
+    Quote note, {
+    bool isRegeneration = false,
+    required String brandName,
+    CardType? excludeType,
+  }) {
     // 智能检测最适合的模板类型
-    final cardType = _determineTemplateType(note,
-        isRegeneration: isRegeneration, excludeType: excludeType);
+    final cardType = _determineTemplateType(
+      note,
+      isRegeneration: isRegeneration,
+      excludeType: excludeType,
+    );
     final languageCode = _currentLanguageCode;
     final fallbackSVG = CardTemplates.getTemplateByType(
       brandName: brandName,
@@ -208,8 +222,11 @@ class AICardGenerationService {
   }
 
   /// 智能决定模板类型（基于标签、内容和随机性）
-  CardType _determineTemplateType(Quote note,
-      {bool isRegeneration = false, CardType? excludeType}) {
+  CardType _determineTemplateType(
+    Quote note, {
+    bool isRegeneration = false,
+    CardType? excludeType,
+  }) {
     // 重新生成时完全随机，跳过内容匹配
     if (isRegeneration) {
       final allTypes = CardType.values.where((t) => t != excludeType).toList();
@@ -238,7 +255,7 @@ class AICardGenerationService {
         case DatabaseService.defaultCategoryIdMusic: // 音乐 -> 情感/日记
           return CardType.emotional;
         case DatabaseService
-              .defaultCategoryIdInternet: // 网络 -> 开发者/代码 (通常是网络段子或技术梗)
+            .defaultCategoryIdInternet: // 网络 -> 开发者/代码 (通常是网络段子或技术梗)
           return CardType.dev;
         case DatabaseService.defaultCategoryIdMovie: // 影视 -> 引用/剧照感
           return CardType.quote;
@@ -261,7 +278,7 @@ class AICardGenerationService {
       'bug',
       'flutter',
       'dart',
-      'api'
+      'api',
     ])) {
       return CardType.dev;
     }
@@ -276,7 +293,7 @@ class AICardGenerationService {
       'emotion',
       'love',
       '悲伤',
-      '快乐'
+      '快乐',
     ])) {
       return CardType.emotional;
     }
@@ -291,7 +308,7 @@ class AICardGenerationService {
       'exam',
       'research',
       'paper',
-      '学术'
+      '学术',
     ])) {
       return CardType.academic;
     }
@@ -305,13 +322,21 @@ class AICardGenerationService {
       'mountain',
       'river',
       'green',
-      'eco'
+      'eco',
     ])) {
       return CardType.nature;
     }
 
-    if (_hasKeyword(content, keywords,
-        ['思考', '哲学', '意义', 'philosophy', 'think', 'mind', 'reason', 'truth'])) {
+    if (_hasKeyword(content, keywords, [
+      '思考',
+      '哲学',
+      '意义',
+      'philosophy',
+      'think',
+      'mind',
+      'reason',
+      'truth',
+    ])) {
       return CardType.philosophical;
     }
 
@@ -324,7 +349,7 @@ class AICardGenerationService {
       'old',
       'vintage',
       'memory',
-      'time'
+      'time',
     ])) {
       return CardType.retro;
     }
@@ -338,7 +363,7 @@ class AICardGenerationService {
       'tao',
       'chinese',
       'calligraphy',
-      'buddha'
+      'buddha',
     ])) {
       return CardType.ink;
     }
@@ -352,13 +377,21 @@ class AICardGenerationService {
       'tech',
       'neon',
       'glitch',
-      'punk'
+      'punk',
     ])) {
       return CardType.cyberpunk;
     }
 
-    if (_hasKeyword(content, keywords,
-        ['几何', '设计', '艺术', 'geo', 'design', 'art', 'shape', 'abstract'])) {
+    if (_hasKeyword(content, keywords, [
+      '几何',
+      '设计',
+      '艺术',
+      'geo',
+      'design',
+      'art',
+      'shape',
+      'abstract',
+    ])) {
       return CardType.geometric;
     }
 
@@ -409,7 +442,10 @@ class AICardGenerationService {
 
   /// 检查内容或关键词中是否包含目标词汇
   bool _hasKeyword(
-      String content, List<String> keywords, List<String> targets) {
+    String content,
+    List<String> keywords,
+    List<String> targets,
+  ) {
     // 检查内容
     for (final target in targets) {
       if (content.contains(target)) return true;
@@ -520,10 +556,12 @@ class AICardGenerationService {
   ///
   /// This runs in a background isolate to prevent UI jank.
   static Future<AICardProcessingResult> processSVGTask(
-      AICardProcessingData data) async {
+    AICardProcessingData data,
+  ) async {
     final logs = <AICardProcessingLog>[];
-    logs.add(AICardProcessingLog(
-        'DEBUG', '开始清理SVG内容，原始长度: ${data.svgContent.length}'));
+    logs.add(
+      AICardProcessingLog('DEBUG', '开始清理SVG内容，原始长度: ${data.svgContent.length}'),
+    );
 
     try {
       // 1. Clean SVG
@@ -554,7 +592,9 @@ class AICardGenerationService {
 
   /// 静态清理SVG内容 (用于Isolate)
   static String _cleanSVGContentStatic(
-      String response, List<AICardProcessingLog> logs) {
+    String response,
+    List<AICardProcessingLog> logs,
+  ) {
     String cleaned = response.trim();
 
     // 移除常见的markdown标记和说明文字
@@ -614,7 +654,8 @@ class AICardGenerationService {
         if (svgEndIndex > svgStartIndex) {
           cleaned = response.substring(svgStartIndex, svgEndIndex + 6);
           logs.add(
-              AICardProcessingLog('INFO', '字符串提取成功，SVG长度: ${cleaned.length}'));
+            AICardProcessingLog('INFO', '字符串提取成功，SVG长度: ${cleaned.length}'),
+          );
         }
       }
     }
@@ -669,8 +710,8 @@ class AICardGenerationService {
       // 先渲染图片（此时尚未出现 async gap，满足 use_build_context_synchronously 规范）
       final safeContext =
           (context != null && context is Element && !context.mounted)
-              ? null
-              : context;
+          ? null
+          : context;
 
       // 关键修复：直接使用原始 svgContent，不做任何标准化处理
       // 这样保证保存时的渲染与预览完全一致（预览使用 SVGCardWidget 直接渲染原始 SVG）
@@ -816,7 +857,7 @@ class AICardGenerationService {
             'Sep',
             'Oct',
             'Nov',
-            'Dec'
+            'Dec',
           ];
           return '${months[date.month - 1]} ${date.day}, ${date.year}';
       }
@@ -832,10 +873,13 @@ class AICardGenerationService {
   }
 
   /// 智能选择最适合的提示词（改进：增加随机性和变化）
-  String _selectBestPrompt(Quote note, String? customStyle,
-      {required String brandName,
-      bool isRegeneration = false,
-      String languageCode = 'zh'}) {
+  String _selectBestPrompt(
+    Quote note,
+    String? customStyle, {
+    required String brandName,
+    bool isRegeneration = false,
+    String languageCode = 'zh',
+  }) {
     // 重新生成时完全随机，跳过内容匹配
     if (isRegeneration) {
       final random = DateTime.now().millisecondsSinceEpoch % 3;
@@ -1142,10 +1186,14 @@ class AICardGenerationService {
     // 简单插入在 </svg> 前
     final metaParts = <String>[];
     // 规则：程序自动补全 -> 根据语言本地化
-    final localizedWeather =
-        _localizeWeather(weather, languageCode: languageCode);
-    final localizedDayPeriod =
-        _localizeDayPeriod(dayPeriod, languageCode: languageCode);
+    final localizedWeather = _localizeWeather(
+      weather,
+      languageCode: languageCode,
+    );
+    final localizedDayPeriod = _localizeDayPeriod(
+      dayPeriod,
+      languageCode: languageCode,
+    );
 
     if (date != null) metaParts.add(date); // 已是格式化的
     if (location != null) metaParts.add(location); // 用户输入不改动
@@ -1190,7 +1238,7 @@ class AICardGenerationService {
       'zh': '少云',
       'en': 'Partly Cloudy',
       'ja': '晴れ時々曇り',
-      'fr': 'Partiellement nuageux'
+      'fr': 'Partiellement nuageux',
     },
     'cloudy': {'zh': '多云', 'en': 'Cloudy', 'ja': '曇り', 'fr': 'Nuageux'},
     'overcast': {'zh': '阴', 'en': 'Overcast', 'ja': '曇天', 'fr': 'Couvert'},
@@ -1204,44 +1252,44 @@ class AICardGenerationService {
       'zh': '小雨',
       'en': 'Light Rain',
       'ja': '小雨',
-      'fr': 'Pluie légère'
+      'fr': 'Pluie légère',
     },
     'rain': {'zh': '雨', 'en': 'Rain', 'ja': '雨', 'fr': 'Pluie'},
     'moderate rain': {
       'zh': '中雨',
       'en': 'Moderate Rain',
       'ja': '中雨',
-      'fr': 'Pluie modérée'
+      'fr': 'Pluie modérée',
     },
     'heavy rain': {
       'zh': '大雨',
       'en': 'Heavy Rain',
       'ja': '大雨',
-      'fr': 'Forte pluie'
+      'fr': 'Forte pluie',
     },
     'freezing_rain': {
       'zh': '冻雨',
       'en': 'Freezing Rain',
       'ja': '凍雨',
-      'fr': 'Pluie verglaçante'
+      'fr': 'Pluie verglaçante',
     },
     'rain_shower': {
       'zh': '阵雨',
       'en': 'Rain Shower',
       'ja': 'にわか雨',
-      'fr': 'Averse'
+      'fr': 'Averse',
     },
     'thunderstorm': {
       'zh': '雷雨',
       'en': 'Thunderstorm',
       'ja': '雷雨',
-      'fr': 'Orage'
+      'fr': 'Orage',
     },
     'thunderstorm_heavy': {
       'zh': '雷暴雨',
       'en': 'Heavy Thunderstorm',
       'ja': '激しい雷雨',
-      'fr': 'Orage violent'
+      'fr': 'Orage violent',
     },
 
     // 雪类天气
@@ -1250,25 +1298,25 @@ class AICardGenerationService {
       'zh': '小雪',
       'en': 'Light Snow',
       'ja': '小雪',
-      'fr': 'Neige légère'
+      'fr': 'Neige légère',
     },
     'heavy snow': {
       'zh': '大雪',
       'en': 'Heavy Snow',
       'ja': '大雪',
-      'fr': 'Forte neige'
+      'fr': 'Forte neige',
     },
     'snow_grains': {
       'zh': '雪粒',
       'en': 'Snow Grains',
       'ja': '雪あられ',
-      'fr': 'Grésil'
+      'fr': 'Grésil',
     },
     'snow_shower': {
       'zh': '阵雪',
       'en': 'Snow Shower',
       'ja': 'にわか雪',
-      'fr': 'Averse de neige'
+      'fr': 'Averse de neige',
     },
     'sleet': {'zh': '雨夹雪', 'en': 'Sleet', 'ja': 'みぞれ', 'fr': 'Grésil'},
 
@@ -1280,8 +1328,10 @@ class AICardGenerationService {
 
   /// 本地化天气字符串
   /// [languageCode] 语言代码 ('zh', 'en', 'ja', 'fr', etc.)
-  static String? _localizeWeather(String? weather,
-      {String languageCode = 'zh'}) {
+  static String? _localizeWeather(
+    String? weather, {
+    String languageCode = 'zh',
+  }) {
     if (weather == null || weather.trim().isEmpty) return null;
     final w = weather.toLowerCase().trim();
 
@@ -1310,7 +1360,7 @@ class AICardGenerationService {
       'zh': '晨间',
       'en': 'Morning',
       'ja': '朝',
-      'fr': 'Matin'
+      'fr': 'Matin',
     }, // 兼容常见拼写错误
     'morning': {'zh': '晨间', 'en': 'Morning', 'ja': '朝', 'fr': 'Matin'},
     'noon': {'zh': '正午', 'en': 'Noon', 'ja': '正午', 'fr': 'Midi'},
@@ -1318,7 +1368,7 @@ class AICardGenerationService {
       'zh': '午后',
       'en': 'Afternoon',
       'ja': '午後',
-      'fr': 'Après-midi'
+      'fr': 'Après-midi',
     },
     'evening': {'zh': '傍晚', 'en': 'Evening', 'ja': '夕方', 'fr': 'Soir'},
     'night': {'zh': '夜晚', 'en': 'Night', 'ja': '夜', 'fr': 'Nuit'},
@@ -1328,14 +1378,16 @@ class AICardGenerationService {
       'zh': '深夜',
       'en': 'Late Night',
       'ja': '深夜',
-      'fr': 'Tard dans la nuit'
+      'fr': 'Tard dans la nuit',
     },
     'midnight': {'zh': '午夜', 'en': 'Midnight', 'ja': '真夜中', 'fr': 'Minuit'},
   };
 
   /// 本地化时间段字符串
-  static String? _localizeDayPeriod(String? period,
-      {String languageCode = 'zh'}) {
+  static String? _localizeDayPeriod(
+    String? period, {
+    String languageCode = 'zh',
+  }) {
     if (period == null || period.trim().isEmpty) return null;
     final p = period.toLowerCase().trim();
 
@@ -1425,9 +1477,9 @@ class AICardGenerationService {
 
     // 3) 如果根尺寸不可靠，尝试从首个rect推断（通常为背景矩形）
     if (w == null || h == null) {
-      final rectMatch =
-          RegExp(r'<rect[^>]*width="([^"]+)"[^>]*height="([^"]+)"')
-              .firstMatch(svgContent);
+      final rectMatch = RegExp(
+        r'<rect[^>]*width="([^"]+)"[^>]*height="([^"]+)"',
+      ).firstMatch(svgContent);
       if (rectMatch != null) {
         w = _parseNumericDimension(rectMatch.group(1)) ?? w;
         h = _parseNumericDimension(rectMatch.group(2)) ?? h;
@@ -1452,8 +1504,10 @@ class AICardGenerationService {
   }
 
   /// 验证SVG内容安全性
-  static bool _isSafeSVGContent(String svgContent,
-      [List<AICardProcessingLog>? logs]) {
+  static bool _isSafeSVGContent(
+    String svgContent, [
+    List<AICardProcessingLog>? logs,
+  ]) {
     // 检查是否包含潜在危险的元素
     final dangerousElements = [
       '<script',
@@ -1526,8 +1580,5 @@ class AICardProcessingResult {
   final String svg;
   final List<AICardProcessingLog> logs;
 
-  AICardProcessingResult({
-    required this.svg,
-    required this.logs,
-  });
+  AICardProcessingResult({required this.svg, required this.logs});
 }

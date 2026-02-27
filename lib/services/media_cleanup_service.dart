@@ -78,7 +78,7 @@ class MediaCleanupService {
       // 2. 清理所有临时文件
       final tempFiles = dryRun
           ? (await TemporaryMediaService.getTemporaryFilesStats())['totalFiles']
-              as int
+                as int
           : await TemporaryMediaService.cleanupAllTemporaryFiles();
       results['tempFilesCleared'] = tempFiles;
 
@@ -234,8 +234,9 @@ class MediaCleanupService {
       // 1. 检查引用表中的文件是否存在
       final databaseService = DatabaseService();
       // 媒体清理需要检查所有笔记（包括隐藏笔记）以避免误删隐藏笔记的媒体文件
-      final quotes =
-          await databaseService.getAllQuotes(excludeHiddenNotes: false);
+      final quotes = await databaseService.getAllQuotes(
+        excludeHiddenNotes: false,
+      );
 
       int checkedReferences = 0;
       int missingFiles = 0;

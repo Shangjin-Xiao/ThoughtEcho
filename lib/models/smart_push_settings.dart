@@ -64,12 +64,7 @@ class PushTimeSlot {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'hour': hour,
-      'minute': minute,
-      'enabled': enabled,
-      'label': label,
-    };
+    return {'hour': hour, 'minute': minute, 'enabled': enabled, 'label': label};
   }
 
   PushTimeSlot copyWith({
@@ -173,8 +168,11 @@ class SmartPushSettings {
     ],
     this.showAdvancedOptions = false,
     this.dailyQuotePushEnabled = false,
-    this.dailyQuotePushTime =
-        const PushTimeSlot(hour: 7, minute: 0, label: '每日一言'),
+    this.dailyQuotePushTime = const PushTimeSlot(
+      hour: 7,
+      minute: 0,
+      label: '每日一言',
+    ),
     this.lastPushTime,
     this.recentlyPushedNoteIds = const [],
   });
@@ -214,25 +212,33 @@ class SmartPushSettings {
               orElse: () => PushFrequency.daily,
             )
           : PushFrequency.daily,
-      enabledPastNoteTypes: (json['enabledPastNoteTypes'] as List<dynamic>?)
-              ?.map((e) => PastNoteType.values.firstWhere(
-                    (type) => type.name == e,
-                    orElse: () => PastNoteType.yearAgoToday,
-                  ))
+      enabledPastNoteTypes:
+          (json['enabledPastNoteTypes'] as List<dynamic>?)
+              ?.map(
+                (e) => PastNoteType.values.firstWhere(
+                  (type) => type.name == e,
+                  orElse: () => PastNoteType.yearAgoToday,
+                ),
+              )
               .toSet() ??
           {PastNoteType.yearAgoToday, PastNoteType.randomMemory},
-      filterTagIds: (json['filterTagIds'] as List<dynamic>?)
+      filterTagIds:
+          (json['filterTagIds'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           [],
-      filterWeatherTypes: (json['filterWeatherTypes'] as List<dynamic>?)
-              ?.map((e) => WeatherFilterType.values.firstWhere(
-                    (type) => type.name == e,
-                    orElse: () => WeatherFilterType.clear,
-                  ))
+      filterWeatherTypes:
+          (json['filterWeatherTypes'] as List<dynamic>?)
+              ?.map(
+                (e) => WeatherFilterType.values.firstWhere(
+                  (type) => type.name == e,
+                  orElse: () => WeatherFilterType.clear,
+                ),
+              )
               .toSet() ??
           {},
-      pushTimeSlots: (json['pushTimeSlots'] as List<dynamic>?)
+      pushTimeSlots:
+          (json['pushTimeSlots'] as List<dynamic>?)
               ?.map((e) => PushTimeSlot.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [const PushTimeSlot(hour: 8, minute: 0)],
@@ -240,12 +246,14 @@ class SmartPushSettings {
       dailyQuotePushEnabled: json['dailyQuotePushEnabled'] as bool? ?? false,
       dailyQuotePushTime: json['dailyQuotePushTime'] != null
           ? PushTimeSlot.fromJson(
-              json['dailyQuotePushTime'] as Map<String, dynamic>)
+              json['dailyQuotePushTime'] as Map<String, dynamic>,
+            )
           : const PushTimeSlot(hour: 7, minute: 0, label: '每日一言'),
       lastPushTime: json['lastPushTime'] != null
           ? DateTime.tryParse(json['lastPushTime'] as String)
           : null,
-      recentlyPushedNoteIds: (json['recentlyPushedNoteIds'] as List<dynamic>?)
+      recentlyPushedNoteIds:
+          (json['recentlyPushedNoteIds'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           [],
@@ -371,7 +379,4 @@ class SmartPushSettings {
 
 // 保留旧枚举以兼容现有代码（可在后续版本移除）
 @Deprecated('Use PushMode instead')
-enum PushContentType {
-  dailyQuote,
-  pastNotes,
-}
+enum PushContentType { dailyQuote, pastNotes }

@@ -87,9 +87,7 @@ class DatabaseSchemaManager {
     );
 
     // 搜索优化索引
-    await db.execute(
-      'CREATE INDEX idx_quotes_content_fts ON quotes(content)',
-    );
+    await db.execute('CREATE INDEX idx_quotes_content_fts ON quotes(content)');
 
     // 天气和时间段查询索引
     await db.execute(
@@ -138,7 +136,10 @@ class DatabaseSchemaManager {
   }
 
   Future<void> upgradeDatabase(
-      Database db, int oldVersion, int newVersion) async {
+    Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
     logDebug('开始数据库升级: $oldVersion -> $newVersion');
 
     try {
@@ -387,8 +388,11 @@ class DatabaseSchemaManager {
           logDebug('数据库升级：delta_content 字段已存在，跳过添加');
         }
       } catch (e) {
-        logError('delta_content 字段升级失败: $e',
-            error: e, source: 'DatabaseUpgrade');
+        logError(
+          'delta_content 字段升级失败: $e',
+          error: e,
+          source: 'DatabaseUpgrade',
+        );
       }
     }
 
@@ -727,13 +731,10 @@ class DatabaseSchemaManager {
 
         // 插入有效的标签关联（添加到batch）
         for (final tagId in validTagIds) {
-          batch.insert(
-              'quote_tags',
-              {
-                'quote_id': quoteId,
-                'tag_id': tagId,
-              },
-              conflictAlgorithm: ConflictAlgorithm.ignore);
+          batch.insert('quote_tags', {
+            'quote_id': quoteId,
+            'tag_id': tagId,
+          }, conflictAlgorithm: ConflictAlgorithm.ignore);
         }
 
         migratedCount++;
@@ -1271,8 +1272,8 @@ class DatabaseSchemaManager {
         // 3. 查询需要迁移的数据
         // 性能优化：仅查询值为中文标签的记录
         // 使用参数化查询而不是字符串拼接，防止潜在的 SQL 注入问题
-        final weatherLabels =
-            WeatherService.legacyWeatherKeyToLabel.values.toList();
+        final weatherLabels = WeatherService.legacyWeatherKeyToLabel.values
+            .toList();
         if (weatherLabels.isEmpty) {
           logDebug('没有需要迁移的 weather 标签');
           return;

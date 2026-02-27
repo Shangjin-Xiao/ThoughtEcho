@@ -28,7 +28,7 @@ class InsightsPage extends StatefulWidget {
 class _InsightsPageState extends State<InsightsPage> {
   bool _isLoading = false;
   Stream<String>?
-      _insightsStream; // Used only to provide stream to StreamBuilder for connection state
+  _insightsStream; // Used only to provide stream to StreamBuilder for connection state
   bool _isGenerating = false; // 新增状态变量表示是否正在生成
   bool _showAnalysisSelection = true; // 控制显示分析选择还是结果
   final TextEditingController _customPromptController = TextEditingController();
@@ -37,7 +37,7 @@ class _InsightsPageState extends State<InsightsPage> {
   String _accumulatedInsightsText =
       ''; // Added state variable for accumulated insights text
   StreamSubscription<String>?
-      _insightsSubscription; // Stream subscription for manual accumulation
+  _insightsSubscription; // Stream subscription for manual accumulation
 
   // 分析类型
   List<Map<String, dynamic>> _getAnalysisTypes(AppLocalizations l10n) {
@@ -421,8 +421,8 @@ class _InsightsPageState extends State<InsightsPage> {
         analysisStyle: _selectedAnalysisStyle,
         customPrompt:
             _showCustomPrompt && _customPromptController.text.isNotEmpty
-                ? _customPromptController.text
-                : null,
+            ? _customPromptController.text
+            : null,
       );
 
       if (!mounted) {
@@ -578,9 +578,9 @@ class _InsightsPageState extends State<InsightsPage> {
                 _isGenerating
                     ? l10n.viewing
                     : (_accumulatedInsightsText.isNotEmpty && !_isLoading)
-                        ? l10n
-                            .viewHistory // Reuse "View History" or similar, or just "View Result"
-                        : l10n.startAnalysis,
+                    ? l10n
+                          .viewHistory // Reuse "View History" or similar, or just "View Result"
+                    : l10n.startAnalysis,
               ),
               icon: _isGenerating
                   ? const SizedBox(
@@ -733,8 +733,9 @@ class _InsightsPageState extends State<InsightsPage> {
                     color: isSelected
                         ? theme.colorScheme.onSecondaryContainer
                         : theme.colorScheme.onSurface,
-                    fontWeight:
-                        isSelected ? FontWeight.bold : FontWeight.normal,
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
                   ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
@@ -761,11 +762,13 @@ class _InsightsPageState extends State<InsightsPage> {
               borderRadius: BorderRadius.circular(AppTheme.cardRadius),
               border: _showCustomPrompt
                   ? Border.all(
-                      color: theme.colorScheme.outline.withValues(alpha: 0.2))
+                      color: theme.colorScheme.outline.withValues(alpha: 0.2),
+                    )
                   : null,
             ),
-            padding:
-                _showCustomPrompt ? const EdgeInsets.all(16) : EdgeInsets.zero,
+            padding: _showCustomPrompt
+                ? const EdgeInsets.all(16)
+                : EdgeInsets.zero,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -809,15 +812,18 @@ class _InsightsPageState extends State<InsightsPage> {
                       labelText: l10n.customPrompt,
                       hintText: l10n.customPromptHint,
                       border: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppTheme.inputRadius),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.inputRadius,
+                        ),
                       ),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppTheme.inputRadius),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.inputRadius,
+                        ),
                         borderSide: BorderSide(
-                          color:
-                              theme.colorScheme.outline.withValues(alpha: 0.3),
+                          color: theme.colorScheme.outline.withValues(
+                            alpha: 0.3,
+                          ),
                         ),
                       ),
                       filled: true,
@@ -848,8 +854,9 @@ class _InsightsPageState extends State<InsightsPage> {
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.secondaryContainer
-                      .withValues(alpha: 0.5),
+                  color: theme.colorScheme.secondaryContainer.withValues(
+                    alpha: 0.5,
+                  ),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -966,13 +973,15 @@ class _InsightsPageState extends State<InsightsPage> {
       elevation: isSelected ? 4 : 0.5, // Better elevation
       shadowColor: theme.shadowColor.withValues(alpha: 0.2),
       shape: RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.circular(AppTheme.cardRadius), // Use AppTheme
+        borderRadius: BorderRadius.circular(
+          AppTheme.cardRadius,
+        ), // Use AppTheme
         side: BorderSide(
           color: isSelected
               ? theme.colorScheme.primary
-              : theme.colorScheme.outline
-                  .withValues(alpha: 0.1), // Subtle border
+              : theme.colorScheme.outline.withValues(
+                  alpha: 0.1,
+                ), // Subtle border
           width: isSelected ? 2 : 1,
         ),
       ),
@@ -1130,54 +1139,57 @@ class _InsightsPageState extends State<InsightsPage> {
                           data:
                               _accumulatedInsightsText, // Use accumulated text
                           selectable: true,
-                          styleSheet:
-                              MarkdownStyleSheet.fromTheme(theme).copyWith(
-                            p: theme.textTheme.bodyMedium?.copyWith(
-                              height: 1.6,
-                              fontSize: 16,
-                            ),
-                            h1: theme.textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: theme.primaryColor,
-                              height: 1.5,
-                            ),
-                            h2: theme.textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: theme.colorScheme.onSurface,
-                              height: 1.5,
-                            ),
-                            h3: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              height: 1.4,
-                            ),
-                            listBullet: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.primaryColor,
-                            ),
-                            blockquote: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
-                              fontStyle: FontStyle.italic,
-                            ),
-                            blockquoteDecoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerHighest
-                                  .withValues(alpha: 0.5),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border(
-                                left: BorderSide(
+                          styleSheet: MarkdownStyleSheet.fromTheme(theme)
+                              .copyWith(
+                                p: theme.textTheme.bodyMedium?.copyWith(
+                                  height: 1.6,
+                                  fontSize: 16,
+                                ),
+                                h1: theme.textTheme.headlineMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
                                   color: theme.primaryColor,
-                                  width: 4,
+                                  height: 1.5,
+                                ),
+                                h2: theme.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: theme.colorScheme.onSurface,
+                                  height: 1.5,
+                                ),
+                                h3: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  height: 1.4,
+                                ),
+                                listBullet: theme.textTheme.bodyMedium
+                                    ?.copyWith(color: theme.primaryColor),
+                                blockquote: theme.textTheme.bodyMedium
+                                    ?.copyWith(
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                blockquoteDecoration: BoxDecoration(
+                                  color: theme
+                                      .colorScheme
+                                      .surfaceContainerHighest
+                                      .withValues(alpha: 0.5),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border(
+                                    left: BorderSide(
+                                      color: theme.primaryColor,
+                                      width: 4,
+                                    ),
+                                  ),
+                                ),
+                                code: theme.textTheme.bodySmall?.copyWith(
+                                  fontFamily: 'monospace',
+                                  backgroundColor:
+                                      theme.colorScheme.surfaceContainerHighest,
+                                ),
+                                codeblockDecoration: BoxDecoration(
+                                  color:
+                                      theme.colorScheme.surfaceContainerHighest,
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
-                            ),
-                            code: theme.textTheme.bodySmall?.copyWith(
-                              fontFamily: 'monospace',
-                              backgroundColor:
-                                  theme.colorScheme.surfaceContainerHighest,
-                            ),
-                            codeblockDecoration: BoxDecoration(
-                              color: theme.colorScheme.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
                         ),
                       ],
                     ),

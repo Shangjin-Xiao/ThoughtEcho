@@ -226,8 +226,9 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
       width: double.infinity,
       margin: EdgeInsets.symmetric(
         horizontal: screenWidth > 600 ? 10.0 : 2.0, // 调整外边距使总间距与今日思考一致
-        vertical:
-            isVerySmallScreen ? 8.0 : (isSmallScreen ? 12.0 : 16.0), // 动态调整垂直边距
+        vertical: isVerySmallScreen
+            ? 8.0
+            : (isSmallScreen ? 12.0 : 16.0), // 动态调整垂直边距
       ),
       child: SlidingCard(
         // 单击整个卡片区域复制内容

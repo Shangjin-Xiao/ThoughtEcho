@@ -25,8 +25,9 @@ class MDNSDiscoveryService extends ChangeNotifier {
   bool get isScanning => _isScanning;
 
   /// 开始 mDNS 发现
-  Future<void> startDiscovery(
-      {Duration timeout = const Duration(seconds: 30)}) async {
+  Future<void> startDiscovery({
+    Duration timeout = const Duration(seconds: 30),
+  }) async {
     if (_isScanning) return;
     if (kIsWeb) {
       debugPrint('MDNSDiscoveryService: Web 平台不支持');
@@ -67,22 +68,22 @@ class MDNSDiscoveryService extends ChangeNotifier {
 
       await for (final PtrResourceRecord ptr
           in _client!.lookup<PtrResourceRecord>(
-        ResourceRecordQuery.serverPointer(serviceType),
-      )) {
+            ResourceRecordQuery.serverPointer(serviceType),
+          )) {
         debugPrint('mDNS: 发现服务 ${ptr.domainName}');
 
         // 获取 SRV 记录以获取端口
         await for (final SrvResourceRecord srv
             in _client!.lookup<SrvResourceRecord>(
-          ResourceRecordQuery.service(ptr.domainName),
-        )) {
+              ResourceRecordQuery.service(ptr.domainName),
+            )) {
           debugPrint('mDNS: 服务详情 ${srv.target}:${srv.port}');
 
           // 获取 IP 地址
           await for (final IPAddressResourceRecord ip
               in _client!.lookup<IPAddressResourceRecord>(
-            ResourceRecordQuery.addressIPv4(srv.target),
-          )) {
+                ResourceRecordQuery.addressIPv4(srv.target),
+              )) {
             final device = _createDevice(
               ip: ip.address.address,
               port: srv.port,
@@ -114,8 +115,9 @@ class MDNSDiscoveryService extends ChangeNotifier {
       https: false,
       fingerprint: '$ip:$port', // 临时指纹
       alias: name.isNotEmpty ? name : 'mDNS Device ($ip)',
-      deviceModel:
-          serviceType == _localSendServiceType ? 'LocalSend' : 'ThoughtEcho',
+      deviceModel: serviceType == _localSendServiceType
+          ? 'LocalSend'
+          : 'ThoughtEcho',
       deviceType: DeviceType.desktop,
       download: true,
       discoveryMethods: {MulticastDiscovery()},

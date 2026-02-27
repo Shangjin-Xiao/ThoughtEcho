@@ -230,8 +230,9 @@ class DatabaseBackupService {
           // 收集标签信息（稍后批量插入）
           if (tagIdsString != null && tagIdsString.isNotEmpty) {
             final quoteId = quoteData['id'] as String;
-            final tagIds =
-                tagIdsString.split(',').where((id) => id.trim().isNotEmpty);
+            final tagIds = tagIdsString
+                .split(',')
+                .where((id) => id.trim().isNotEmpty);
             for (final tagId in tagIds) {
               tagRelations.add({'quote_id': quoteId, 'tag_id': tagId.trim()});
             }
@@ -299,17 +300,15 @@ class DatabaseBackupService {
               // 插入成功后，处理标签关联
               if (tagIdsString != null && tagIdsString.isNotEmpty) {
                 final quoteId = quoteData['id'] as String;
-                final tagIds =
-                    tagIdsString.split(',').where((id) => id.trim().isNotEmpty);
+                final tagIds = tagIdsString
+                    .split(',')
+                    .where((id) => id.trim().isNotEmpty);
                 for (final tagId in tagIds) {
                   try {
-                    await txn.insert(
-                        'quote_tags',
-                        {
-                          'quote_id': quoteId,
-                          'tag_id': tagId.trim(),
-                        },
-                        conflictAlgorithm: ConflictAlgorithm.ignore);
+                    await txn.insert('quote_tags', {
+                      'quote_id': quoteId,
+                      'tag_id': tagId.trim(),
+                    }, conflictAlgorithm: ConflictAlgorithm.ignore);
                   } catch (e3) {
                     logDebug('插入标签关联失败: $e3');
                   }
@@ -756,13 +755,10 @@ class DatabaseBackupService {
           }
           final batch = txn.batch();
           for (final tagId in remappedTagIds) {
-            batch.insert(
-                'quote_tags',
-                {
-                  'quote_id': quoteId,
-                  'tag_id': tagId,
-                },
-                conflictAlgorithm: ConflictAlgorithm.ignore);
+            batch.insert('quote_tags', {
+              'quote_id': quoteId,
+              'tag_id': tagId,
+            }, conflictAlgorithm: ConflictAlgorithm.ignore);
           }
           await batch.commit(noResult: true);
         }

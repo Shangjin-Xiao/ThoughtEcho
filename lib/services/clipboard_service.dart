@@ -114,7 +114,8 @@ class ClipboardService extends ChangeNotifier {
       String? matchedSubstring = extractedInfo['matched_substring']; // 获取匹配到的子串
 
       logDebug(
-          '从剪贴板提取信息 - 作者: $author, 出处: $source, 匹配子串长度: ${matchedSubstring?.length}');
+        '从剪贴板提取信息 - 作者: $author, 出处: $source, 匹配子串长度: ${matchedSubstring?.length}',
+      );
 
       // 如果提取到了元数据，从原始内容中移除匹配的子串
       final displayContent = (matchedSubstring != null)
@@ -201,8 +202,9 @@ class ClipboardService extends ChangeNotifier {
       author = clean(m4.group(1));
       matchedSubstring = m4.group(0);
       // 尝试在此基础上再提取出处
-      final remainingText =
-          text.substring(0, text.length - matchedSubstring!.length).trim();
+      final remainingText = text
+          .substring(0, text.length - matchedSubstring!.length)
+          .trim();
       final m4Source = RegExp(
         r'[《（\(]([^》）\)]+?)[》）\)]\s*$',
       ).firstMatch(remainingText);
@@ -226,8 +228,9 @@ class ClipboardService extends ChangeNotifier {
       source = clean(m5.group(1));
       matchedSubstring = m5.group(0);
       // 尝试在此基础上再提取作者
-      final remainingText =
-          text.substring(0, text.length - matchedSubstring!.length).trim();
+      final remainingText = text
+          .substring(0, text.length - matchedSubstring!.length)
+          .trim();
       final m5Author = RegExp(
         r'[-—–]+\s*([^，。,、\.\n《（\(]{2,20})\s*$',
       ).firstMatch(remainingText);
