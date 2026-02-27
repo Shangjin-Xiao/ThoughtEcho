@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import '../gen_l10n/app_localizations.dart';
 
 class AppEmptyView extends StatelessWidget {
   final String? svgAsset;
@@ -18,18 +20,69 @@ class AppEmptyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.inbox,
-            size: 72,
-            color: Theme.of(context).colorScheme.outline,
-          ),
-          const SizedBox(height: 16),
-          Text(text, style: Theme.of(context).textTheme.bodyMedium),
-        ],
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (animation != null)
+              animation!
+            else if (svgAsset != null)
+              Semantics(
+                image: true,
+                label: text,
+                child: SvgPicture.asset(
+                  svgAsset!,
+                  width: 200,
+                  height: 200,
+                  placeholderBuilder:
+                      (context) => Icon(
+                        Icons.inbox,
+                        size: 72,
+                        color: theme.colorScheme.outline.withOpacity(0.5),
+                      ),
+                ),
+              )
+            else
+              Icon(
+                Icons.inbox,
+                size: 72,
+                color: theme.colorScheme.outline.withOpacity(0.5),
+              ),
+            const SizedBox(height: 24),
+            Text(
+              text,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: theme.colorScheme.onSurface,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            if (message != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                message!,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+            if (onRefresh != null) ...[
+              const SizedBox(height: 24),
+              FilledButton.tonal.icon(
+                onPressed: onRefresh,
+                icon: const Icon(Icons.refresh),
+                label: Text(l10n.refresh),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
