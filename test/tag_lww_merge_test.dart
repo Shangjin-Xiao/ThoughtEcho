@@ -92,8 +92,10 @@ void main() {
 
       final categories = await db.getCategories();
 
-      expect(categories.where((c) => c.id == DatabaseService.hiddenTagId).length,
-          1);
+      expect(
+        categories.where((c) => c.id == DatabaseService.hiddenTagId).length,
+        1,
+      );
       expect(categories.last.id, DatabaseService.hiddenTagId);
     });
   });

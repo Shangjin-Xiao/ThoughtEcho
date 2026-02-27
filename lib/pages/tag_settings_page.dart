@@ -448,9 +448,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                       l10n.systemDefaultTag,
                                       style:
                                           theme.textTheme.bodySmall?.copyWith(
-                                        color: colorScheme.primary.withAlpha(
-                                          150,
-                                        ),
+                                        color:
+                                            colorScheme.primary.withAlpha(150),
                                       ),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
@@ -703,6 +702,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
       if (!mounted) return;
       setState(() => _selectedIconName = iconName);
     }
+
     String searchQuery = '';
     Map<String, bool> expandedCategories = {
       l10n.emotion: true,
