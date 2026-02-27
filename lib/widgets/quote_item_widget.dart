@@ -273,10 +273,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     );
 
     return Container(
-      margin: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 6,
-      ),
+      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
         boxShadow: isExpanded
@@ -428,68 +425,55 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                             sigmaX: 1.2,
                                             sigmaY: 1.2,
                                           ),
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            gradient: LinearGradient(
-                                              begin: Alignment.topCenter,
-                                              end: Alignment.bottomCenter,
-                                              colors: [
-                                                innerTheme.colorScheme.surface
-                                                    .withValues(
-                                                  alpha: 0.0,
-                                                ),
-                                                innerTheme.colorScheme.surface
-                                                    .withValues(
-                                                  alpha: 0.08,
-                                                ),
-                                                innerTheme.colorScheme.surface
-                                                    .withValues(
-                                                  alpha: 0.18,
-                                                ),
-                                              ],
-                                              stops: const [
-                                                0.0,
-                                                0.4,
-                                                1.0,
-                                              ],
-                                            ),
-                                          ),
-                                          alignment: Alignment.center,
                                           child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 2,
-                                            ),
                                             decoration: BoxDecoration(
-                                              color: innerTheme
-                                                  .colorScheme.surface
-                                                  .withValues(
-                                                alpha: 0.35,
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(
-                                                12,
+                                              gradient: LinearGradient(
+                                                begin: Alignment.topCenter,
+                                                end: Alignment.bottomCenter,
+                                                colors: [
+                                                  innerTheme.colorScheme.surface
+                                                      .withValues(alpha: 0.0),
+                                                  innerTheme.colorScheme.surface
+                                                      .withValues(alpha: 0.08),
+                                                  innerTheme.colorScheme.surface
+                                                      .withValues(alpha: 0.18),
+                                                ],
+                                                stops: const [0.0, 0.4, 1.0],
                                               ),
                                             ),
-                                            child: Text(
-                                              l10n.doubleTapToViewFull,
-                                              style: innerTheme
-                                                  .textTheme.bodySmall
-                                                  ?.copyWith(
+                                            alignment: Alignment.center,
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: 8,
+                                                vertical: 2,
+                                              ),
+                                              decoration: BoxDecoration(
                                                 color: innerTheme
-                                                    .colorScheme.onSurface
-                                                    .withValues(
-                                                  alpha: 0.65,
+                                                    .colorScheme.surface
+                                                    .withValues(alpha: 0.35),
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                              child: Text(
+                                                l10n.doubleTapToViewFull,
+                                                style: innerTheme
+                                                    .textTheme.bodySmall
+                                                    ?.copyWith(
+                                                  color: innerTheme
+                                                      .colorScheme.onSurface
+                                                      .withValues(
+                                                    alpha: 0.65,
+                                                  ),
+                                                  fontSize: 11,
+                                                  fontStyle: FontStyle.italic,
                                                 ),
-                                                fontSize: 11,
-                                                fontStyle: FontStyle.italic,
                                               ),
                                             ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                  )
+                                    )
                                   : const SizedBox.shrink(),
                             ),
                           ),
@@ -641,9 +625,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                                           alpha: 0.08,
                                                         ),
                                                   borderRadius:
-                                                      BorderRadius.circular(
-                                                    14,
-                                                  ),
+                                                      BorderRadius.circular(14),
                                                   border: Border.all(
                                                     color: isFilteredTag
                                                         ? baseContentColor
@@ -680,7 +662,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                                           ),
                                                         ),
                                                         const SizedBox(
-                                                            width: 3),
+                                                          width: 3,
+                                                        ),
                                                       ] else ...[
                                                         Icon(
                                                           IconUtils.getIconData(
@@ -691,7 +674,8 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                                               secondaryTextColor,
                                                         ),
                                                         const SizedBox(
-                                                            width: 3),
+                                                          width: 3,
+                                                        ),
                                                       ],
                                                     ],
                                                     Text(

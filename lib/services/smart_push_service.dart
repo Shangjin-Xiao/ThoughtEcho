@@ -110,7 +110,8 @@ class SmartPushService extends ChangeNotifier {
       await _initializeNotifications();
 
       AppLogger.i(
-          'SmartPushService settings: enabled=${_settings.enabled}, dailyQuoteEnabled=${_settings.dailyQuotePushEnabled}');
+        'SmartPushService settings: enabled=${_settings.enabled}, dailyQuoteEnabled=${_settings.dailyQuotePushEnabled}',
+      );
 
       // 请求精确闹钟权限（Android 12+）
       // 移除自动请求，改为在 UI 层（SmartPushSettingsPage）引导用户开启
@@ -205,7 +206,10 @@ class SmartPushService extends ChangeNotifier {
   ///
   /// 当精确闹钟不可用时，使用 WorkManager 一次性任务作为备用
   Future<void> _scheduleWorkManagerFallback(
-      int idIndex, tz.TZDateTime scheduledDate, PushTimeSlot slot) async {
+    int idIndex,
+    tz.TZDateTime scheduledDate,
+    PushTimeSlot slot,
+  ) async {
     try {
       final now = DateTime.now();
       final delay = scheduledDate.difference(now);
@@ -381,8 +385,9 @@ class SmartPushService extends ChangeNotifier {
 
   /// 初始化通知插件
   Future<void> _initializeNotifications() async {
-    const androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: false,
@@ -428,7 +433,6 @@ class SmartPushService extends ChangeNotifier {
     try {
       final payload = response.payload;
       if (payload != null && payload.isNotEmpty) {
-
         if (payload.contains('contentType:')) {
           // 解析 contentType 和 noteId
           final parts = payload.split('|');
@@ -556,8 +560,9 @@ class SmartPushService extends ChangeNotifier {
       showModalBottomSheet(
         context: navContext,
         isScrollControlled: true,
-        backgroundColor:
-            Theme.of(navContext).colorScheme.surfaceContainerLowest,
+        backgroundColor: Theme.of(
+          navContext,
+        ).colorScheme.surfaceContainerLowest,
         builder: (context) => AddNoteDialog(
           prefilledContent: content,
           prefilledAuthor: fromWho.isNotEmpty ? fromWho : null,
@@ -577,10 +582,7 @@ class SmartPushService extends ChangeNotifier {
   /// [hitokotoData] 为一言 API 的原始响应，包含 type 等标签分类信息
   void _saveDailyQuoteToCache(Map<String, dynamic> hitokotoData) {
     try {
-      _mmkv.setString(
-        _lastDailyQuoteKey,
-        json.encode(hitokotoData),
-      );
+      _mmkv.setString(_lastDailyQuoteKey, json.encode(hitokotoData));
     } catch (e) {
       AppLogger.w('缓存每日一言失败', error: e);
     }
@@ -925,7 +927,8 @@ class SmartPushService extends ChangeNotifier {
         // 智能模式：使用智能算法计算最佳推送时间
         slotsToSchedule = await _calculateSmartPushTimes();
         AppLogger.i(
-            '智能推送时间: ${slotsToSchedule.map((s) => s.formattedTime).join(", ")}');
+          '智能推送时间: ${slotsToSchedule.map((s) => s.formattedTime).join(", ")}',
+        );
       } else {
         // 自定义模式：使用用户设置的时间
         slotsToSchedule =
@@ -967,7 +970,8 @@ class SmartPushService extends ChangeNotifier {
               allowWhileIdle: true,
             );
             AppLogger.i(
-                '已设定每日一言 Alarm: $scheduledDate (ID: $_dailyQuoteAlarmId)');
+              '已设定每日一言 Alarm: $scheduledDate (ID: $_dailyQuoteAlarmId)',
+            );
           } catch (e) {
             AppLogger.e('设定每日一言 Alarm 失败', error: e);
             // 降级到 WorkManager + 本地通知
@@ -978,15 +982,21 @@ class SmartPushService extends ChangeNotifier {
           await _scheduleDailyQuoteWorkManagerFallback(scheduledDate, slot);
         }
       } else {
-        await _scheduleLocalNotification(100, scheduledDate, slot,
-            isDailyQuote: true);
+        await _scheduleLocalNotification(
+          100,
+          scheduledDate,
+          slot,
+          isDailyQuote: true,
+        );
       }
     }
   }
 
   /// 每日一言 WorkManager 降级方案
   Future<void> _scheduleDailyQuoteWorkManagerFallback(
-      tz.TZDateTime scheduledDate, PushTimeSlot slot) async {
+    tz.TZDateTime scheduledDate,
+    PushTimeSlot slot,
+  ) async {
     try {
       final now = DateTime.now();
       final delay = scheduledDate.difference(now);
@@ -1003,8 +1013,12 @@ class SmartPushService extends ChangeNotifier {
     }
 
     // 同时调度本地通知作为用户可见的提醒
-    await _scheduleLocalNotification(100, scheduledDate, slot,
-        isDailyQuote: true);
+    await _scheduleLocalNotification(
+      100,
+      scheduledDate,
+      slot,
+      isDailyQuote: true,
+    );
   }
 
   /// 智能推送时间计算算法 (SOTA v2)
@@ -1043,17 +1057,16 @@ class SmartPushService extends ChangeNotifier {
           // 添加少量随机分钟数，避免总是整点推送
           final minute = (now.millisecond % 4) * 15; // 0, 15, 30, 45
 
-          selectedSlots.add(PushTimeSlot(
-            hour: hour,
-            minute: minute,
-            label: label,
-          ));
+          selectedSlots.add(
+            PushTimeSlot(hour: hour, minute: minute, label: label),
+          );
         }
 
         if (selectedSlots.isNotEmpty) {
           selectedSlots.sort((a, b) => a.hour.compareTo(b.hour));
           AppLogger.d(
-              'SOTA 智能推送时间: ${selectedSlots.map((s) => s.formattedTime).join(", ")}');
+            'SOTA 智能推送时间: ${selectedSlots.map((s) => s.formattedTime).join(", ")}',
+          );
           return selectedSlots;
         }
       }
@@ -1073,29 +1086,33 @@ class SmartPushService extends ChangeNotifier {
     // 定义时间段及其权重
     final timeSlotCandidates = <_TimeSlotCandidate>[
       _TimeSlotCandidate(
-          hour: 8,
-          minute: 0,
-          label: '早晨灵感',
-          baseScore: 80,
-          avoidCreationPeak: true),
+        hour: 8,
+        minute: 0,
+        label: '早晨灵感',
+        baseScore: 80,
+        avoidCreationPeak: true,
+      ),
       _TimeSlotCandidate(
-          hour: 12,
-          minute: 30,
-          label: '午间小憩',
-          baseScore: 60,
-          avoidCreationPeak: true),
+        hour: 12,
+        minute: 30,
+        label: '午间小憩',
+        baseScore: 60,
+        avoidCreationPeak: true,
+      ),
       _TimeSlotCandidate(
-          hour: 18,
-          minute: 0,
-          label: '傍晚时光',
-          baseScore: 70,
-          avoidCreationPeak: true),
+        hour: 18,
+        minute: 0,
+        label: '傍晚时光',
+        baseScore: 70,
+        avoidCreationPeak: true,
+      ),
       _TimeSlotCandidate(
-          hour: 20,
-          minute: 30,
-          label: '晚间回顾',
-          baseScore: 85,
-          avoidCreationPeak: false),
+        hour: 20,
+        minute: 30,
+        label: '晚间回顾',
+        baseScore: 85,
+        avoidCreationPeak: false,
+      ),
     ];
 
     // 计算每个时段的得分
@@ -1139,11 +1156,13 @@ class SmartPushService extends ChangeNotifier {
       }
 
       if (!hasConflict) {
-        selectedSlots.add(PushTimeSlot(
-          hour: candidate.hour,
-          minute: candidate.minute,
-          label: candidate.label,
-        ));
+        selectedSlots.add(
+          PushTimeSlot(
+            hour: candidate.hour,
+            minute: candidate.minute,
+            label: candidate.label,
+          ),
+        );
       }
     }
 
@@ -1164,7 +1183,10 @@ class SmartPushService extends ChangeNotifier {
 
   /// 调度单个 Alarm
   Future<void> _scheduleSingleAlarm(
-      int idIndex, tz.TZDateTime scheduledDate, PushTimeSlot slot) async {
+    int idIndex,
+    tz.TZDateTime scheduledDate,
+    PushTimeSlot slot,
+  ) async {
     // 1. Android: 优先使用 AlarmManager 实现精确定时
     if (PlatformHelper.isAndroid) {
       // 先检查精确闹钟权限
@@ -1182,7 +1204,8 @@ class SmartPushService extends ChangeNotifier {
             allowWhileIdle: true,
           );
           AppLogger.i(
-              '已设定常规 Alarm: $scheduledDate (ID: ${_androidAlarmId + idIndex})');
+            '已设定常规 Alarm: $scheduledDate (ID: ${_androidAlarmId + idIndex})',
+          );
           return; // 成功，直接返回
         } catch (e) {
           AppLogger.e('设定常规 Alarm 失败', error: e);
@@ -1235,8 +1258,11 @@ class SmartPushService extends ChangeNotifier {
   /// Android 12+ 需要精确闹钟权限才能使用 exactAllowWhileIdle 模式。
   /// 当权限不可用时，自动降级到 inexactAllowWhileIdle 模式（时间可能有 15 分钟误差）。
   Future<void> _scheduleLocalNotification(
-      int id, tz.TZDateTime scheduledDate, PushTimeSlot slot,
-      {bool isDailyQuote = false}) async {
+    int id,
+    tz.TZDateTime scheduledDate,
+    PushTimeSlot slot, {
+    bool isDailyQuote = false,
+  }) async {
     try {
       await _ensureNotificationReady();
       // 尝试预计算要推送的内容
@@ -1305,7 +1331,8 @@ class SmartPushService extends ChangeNotifier {
       );
 
       AppLogger.i(
-          '已设定本地通知: $scheduledDate (模式: ${canScheduleExact ? "精确" : "非精确"})');
+        '已设定本地通知: $scheduledDate (模式: ${canScheduleExact ? "精确" : "非精确"})',
+      );
     } catch (e) {
       AppLogger.e('设定本地通知失败', error: e);
     }
@@ -1328,8 +1355,14 @@ class SmartPushService extends ChangeNotifier {
   /// 计算下一个时间点
   tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
     final now = tz.TZDateTime.now(tz.local);
-    var scheduledDate =
-        tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    var scheduledDate = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      hour,
+      minute,
+    );
     if (scheduledDate.isBefore(now)) {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
     }
@@ -1367,7 +1400,8 @@ class SmartPushService extends ChangeNotifier {
   }) async {
     final now = DateTime.now();
     AppLogger.i(
-        '开始检查推送条件 (isBackground: $isBackground, triggerKind: $triggerKind, time: ${now.hour}:${now.minute})');
+      '开始检查推送条件 (isBackground: $isBackground, triggerKind: $triggerKind, time: ${now.hour}:${now.minute})',
+    );
 
     // 如果是前台手动调用（非后台），默认执行智能推送检查
     if (!isBackground) {
@@ -1383,7 +1417,8 @@ class SmartPushService extends ChangeNotifier {
 
     // 后台逻辑：由 AlarmManager/WorkManager 触发
     AppLogger.w(
-        '后台推送触发 (triggerKind: $triggerKind, time: ${now.hour}:${now.minute})');
+      '后台推送触发 (triggerKind: $triggerKind, time: ${now.hour}:${now.minute})',
+    );
 
     // 防重复：距上次推送不足 3 分钟则跳过
     if (_settings.lastPushTime != null) {
@@ -1420,8 +1455,13 @@ class SmartPushService extends ChangeNotifier {
       // 尝试每日一言推送
       if (_settings.dailyQuotePushEnabled) {
         final slot = _settings.dailyQuotePushTime;
-        final slotTime =
-            DateTime(now.year, now.month, now.day, slot.hour, slot.minute);
+        final slotTime = DateTime(
+          now.year,
+          now.month,
+          now.day,
+          slot.hour,
+          slot.minute,
+        );
         final diff = now.difference(slotTime).inMinutes.abs();
 
         if (diff <= 10) {
@@ -1490,8 +1530,10 @@ class SmartPushService extends ChangeNotifier {
   /// - 疲劳预防检查（虚拟预算 + 冷却期）
   /// - Thompson Sampling 内容选择
   /// - 推送效果追踪
-  Future<void> _performSmartPush(
-      {bool isTest = false, bool isBackground = false}) async {
+  Future<void> _performSmartPush({
+    bool isTest = false,
+    bool isBackground = false,
+  }) async {
     try {
       // 测试模式不检查 enabled 和频率
       if (!isTest) {
@@ -1595,8 +1637,11 @@ class SmartPushService extends ChangeNotifier {
       }
 
       if (noteToShow != null) {
-        await _showNotification(noteToShow,
-            title: title, contentType: contentType);
+        await _showNotification(
+          noteToShow,
+          title: title,
+          contentType: contentType,
+        );
 
         // 记录推送历史（避免重复推送，测试模式也不记录）
         if (!isDailyQuote && noteToShow.id != null && !isTest) {
@@ -1613,7 +1658,8 @@ class SmartPushService extends ChangeNotifier {
         }
 
         AppLogger.i(
-            '推送成功: ${noteToShow.content.substring(0, min(50, noteToShow.content.length))}...');
+          '推送成功: ${noteToShow.content.substring(0, min(50, noteToShow.content.length))}...',
+        );
       } else {
         AppLogger.d('没有内容可推送');
       }
@@ -1826,9 +1872,11 @@ class SmartPushService extends ChangeNotifier {
   Quote? _selectUnpushedNote(List<Quote> candidates) {
     // 优先选择未推送过的
     final unpushed = candidates
-        .where((note) =>
-            note.id == null ||
-            !_settings.recentlyPushedNoteIds.contains(note.id))
+        .where(
+          (note) =>
+              note.id == null ||
+              !_settings.recentlyPushedNoteIds.contains(note.id),
+        )
         .toList();
 
     if (unpushed.isNotEmpty) {
@@ -1931,8 +1979,9 @@ class SmartPushService extends ChangeNotifier {
   Future<void> _ensureNotificationReady() async {
     if (_notificationPluginReady) return;
     try {
-      const androidSettings =
-          AndroidInitializationSettings('@mipmap/ic_launcher');
+      const androidSettings = AndroidInitializationSettings(
+        '@mipmap/ic_launcher',
+      );
       const iosSettings = DarwinInitializationSettings(
         requestAlertPermission: false,
         requestBadgePermission: false,
@@ -2023,8 +2072,11 @@ class SmartPushService extends ChangeNotifier {
       );
       AppLogger.i('通知已成功发送: $title');
     } catch (e, stack) {
-      AppLogger.e('通知发送失败 (_notificationsPlugin.show)',
-          error: e, stackTrace: stack);
+      AppLogger.e(
+        '通知发送失败 (_notificationsPlugin.show)',
+        error: e,
+        stackTrace: stack,
+      );
     }
   }
 
@@ -2103,8 +2155,10 @@ class SmartPushService extends ChangeNotifier {
 
     // 应用标签筛选（如果配置了）
     if (_settings.filterTagIds.isNotEmpty) {
-      candidates.removeWhere((note) =>
-          !note.tagIds.any((tagId) => _settings.filterTagIds.contains(tagId)));
+      candidates.removeWhere(
+        (note) =>
+            !note.tagIds.any((tagId) => _settings.filterTagIds.contains(tagId)),
+      );
     }
 
     // 去重
@@ -2259,8 +2313,9 @@ class SmartPushService extends ChangeNotifier {
       return notes.where((note) {
         if (note.weather == null || note.weather!.isEmpty) return false;
         final lowerWeather = note.weather!.toLowerCase();
-        return weatherKeywords
-            .any((keyword) => lowerWeather.contains(keyword.toLowerCase()));
+        return weatherKeywords.any(
+          (keyword) => lowerWeather.contains(keyword.toLowerCase()),
+        );
       }).toList();
     }
 
@@ -2305,7 +2360,7 @@ class SmartPushService extends ChangeNotifier {
       'cloudy',
       'rain',
       'snow',
-      'fog'
+      'fog',
     ];
 
     for (final term in coreWeatherTerms) {
@@ -2362,11 +2417,7 @@ class _PushContent {
   final String body;
   final String? noteId;
 
-  _PushContent({
-    required this.title,
-    required this.body,
-    this.noteId,
-  });
+  _PushContent({required this.title, required this.body, this.noteId});
 }
 
 /// 智能选择结果辅助类
