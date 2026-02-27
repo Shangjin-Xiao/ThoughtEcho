@@ -520,29 +520,40 @@ class SmartPushService extends ChangeNotifier {
     }
   }
 
-  /// 导航到每日一言（从 MMKV 缓存读取，使用 AddNoteDialog 底部弹窗）
+  /// 导航到每日一言（使用 AddNoteDialog 底部弹窗）
   ///
-  /// 行为与首页双击每日一言一致：打开非全屏编辑器，自动填充来源和标签信息
+  /// 行为与首页双击每日一言一致：打开非全屏编辑器，自动填充来源和标签信息。
+  /// 优先读取 MMKV 缓存，缓存不存在时实时获取新的每日一言。
   Future<void> _navigateToDailyQuote() async {
     try {
+      // 1. 获取每日一言数据：优先缓存，缓存缺失时实时获取
+      Map<String, dynamic>? hitokotoData;
       final cachedJson = _mmkv.getString(_lastDailyQuoteKey);
-      if (cachedJson == null || cachedJson.isEmpty) {
-        AppLogger.w('每日一言导航已取消：缓存中无数据');
-        return;
+      if (cachedJson != null && cachedJson.isNotEmpty) {
+        hitokotoData = json.decode(cachedJson) as Map<String, dynamic>?;
       }
 
-      final hitokotoData = json.decode(cachedJson) as Map<String, dynamic>;
-      final content = hitokotoData['hitokoto'] as String?;
-      if (content == null || content.isEmpty) {
-        AppLogger.w('每日一言导航已取消：缓存内容为空');
-        return;
+      if (hitokotoData == null || hitokotoData['hitokoto'] == null) {
+        AppLogger.d('每日一言缓存为空，实时获取...');
+        final quote = await _fetchDailyQuote();
+        if (quote == null) {
+          AppLogger.w('每日一言导航已取消：无法获取内容');
+          return;
+        }
+        // _fetchDailyQuote 内部已缓存，重新读取
+        final freshJson = _mmkv.getString(_lastDailyQuoteKey);
+        if (freshJson != null && freshJson.isNotEmpty) {
+          hitokotoData = json.decode(freshJson) as Map<String, dynamic>?;
+        }
+        if (hitokotoData == null) return;
       }
 
+      final content = hitokotoData['hitokoto'] as String;
       final fromWho = hitokotoData['from_who'] as String? ?? '';
       final from = hitokotoData['from'] as String? ?? '';
       final categories = await _databaseService.getCategories();
 
-      // 等待 navigatorKey 就绪（冷启动场景）
+      // 2. 等待 navigatorKey 就绪（冷启动场景）
       int retryCount = 0;
       const maxRetries = 15;
       while (navigatorKey.currentState == null && retryCount < maxRetries) {
@@ -551,24 +562,41 @@ class SmartPushService extends ChangeNotifier {
         retryCount++;
       }
 
-      final navContext = navigatorKey.currentContext;
-      if (navContext == null) {
-        AppLogger.w('每日一言导航失败：navigatorKey.currentContext 在多次重试后仍为空');
+      if (navigatorKey.currentState == null) {
+        AppLogger.w('每日一言导航失败：navigatorKey 在多次重试后仍为空');
         return;
       }
 
-      showModalBottomSheet(
-        context: navContext,
-        isScrollControlled: true,
-        backgroundColor: Theme.of(
-          navContext,
-        ).colorScheme.surfaceContainerLowest,
-        builder: (context) => AddNoteDialog(
-          prefilledContent: content,
-          prefilledAuthor: fromWho.isNotEmpty ? fromWho : null,
-          prefilledWork: from.isNotEmpty ? from : null,
-          hitokotoData: hitokotoData,
-          tags: categories,
+      // 3. 通过 push 一个透明页面，在其中 showModalBottomSheet
+      //    直接对 navigatorKey.currentContext 调用 showModalBottomSheet
+      //    会因为 context 本身就是 Navigator 而导致 Navigator.of 查找失败
+      navigatorKey.currentState!.push(
+        PageRouteBuilder(
+          opaque: false,
+          barrierColor: Colors.black54,
+          barrierDismissible: true,
+          pageBuilder: (context, _, __) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor:
+                    Theme.of(context).colorScheme.surfaceContainerLowest,
+                builder: (_) => AddNoteDialog(
+                  prefilledContent: content,
+                  prefilledAuthor: fromWho.isNotEmpty ? fromWho : null,
+                  prefilledWork: from.isNotEmpty ? from : null,
+                  hitokotoData: hitokotoData,
+                  tags: categories,
+                ),
+              ).whenComplete(() {
+                if (navigatorKey.currentState?.canPop() ?? false) {
+                  navigatorKey.currentState!.pop();
+                }
+              });
+            });
+            return const SizedBox.shrink();
+          },
         ),
       );
       AppLogger.i('已成功触发每日一言添加弹窗');
