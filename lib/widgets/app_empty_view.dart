@@ -21,7 +21,7 @@ class AppEmptyView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     return Center(
       child: SingleChildScrollView(
@@ -40,11 +40,12 @@ class AppEmptyView extends StatelessWidget {
                   svgAsset!,
                   width: 200,
                   height: 200,
-                  placeholderBuilder: (context) => Icon(
-                    Icons.inbox,
-                    size: 72,
-                    color: theme.colorScheme.outline.withOpacity(0.5),
-                  ),
+                  placeholderBuilder:
+                      (context) => Icon(
+                        Icons.inbox,
+                        size: 72,
+                        color: theme.colorScheme.outline.withOpacity(0.5),
+                      ),
                 ),
               )
             else
@@ -74,10 +75,18 @@ class AppEmptyView extends StatelessWidget {
             ],
             if (onRefresh != null) ...[
               const SizedBox(height: 24),
-              FilledButton.tonal.icon(
+              // Use standard FilledButton.icon with tonal style override or just FilledButton.icon
+              // Actually, Flutter 3.x has FilledButton.tonal and FilledButton.icon, but FilledButton.tonal.icon isn't standard.
+              // To get a tonal button with an icon, we use FilledButton.tonal(child: Row(...)) or use styleFrom.
+              // A better alternative that matches standard patterns:
+              FilledButton.icon(
                 onPressed: onRefresh,
                 icon: const Icon(Icons.refresh),
                 label: Text(l10n.refresh),
+                style: FilledButton.styleFrom(
+                  backgroundColor: theme.colorScheme.secondaryContainer,
+                  foregroundColor: theme.colorScheme.onSecondaryContainer,
+                ),
               ),
             ],
           ],
