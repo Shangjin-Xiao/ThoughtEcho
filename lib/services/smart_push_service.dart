@@ -77,12 +77,12 @@ class SmartPushService extends ChangeNotifier {
     FlutterLocalNotificationsPlugin? notificationsPlugin,
     WeatherService? weatherService,
     SmartPushAnalytics? analytics,
-  }) : _databaseService = databaseService,
-       _locationService = locationService,
-       _mmkv = mmkvService ?? MMKVService(),
-       _notificationsPlugin =
-           notificationsPlugin ?? FlutterLocalNotificationsPlugin(),
-       _weatherService = weatherService {
+  })  : _databaseService = databaseService,
+        _locationService = locationService,
+        _mmkv = mmkvService ?? MMKVService(),
+        _notificationsPlugin =
+            notificationsPlugin ?? FlutterLocalNotificationsPlugin(),
+        _weatherService = weatherService {
     _analytics = analytics ?? SmartPushAnalytics(mmkvService: _mmkv);
   }
 
@@ -187,10 +187,9 @@ class SmartPushService extends ChangeNotifier {
     if (!PlatformHelper.isAndroid) return true;
 
     try {
-      final androidPlugin = _notificationsPlugin
-          .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin
-          >();
+      final androidPlugin =
+          _notificationsPlugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
       if (androidPlugin != null) {
         final canSchedule =
             await androidPlugin.canScheduleExactNotifications() ?? false;
@@ -406,10 +405,9 @@ class SmartPushService extends ChangeNotifier {
 
     // 创建通知频道（Android 8.0+）
     if (PlatformHelper.isAndroid) {
-      final androidPlugin = _notificationsPlugin
-          .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin
-          >();
+      final androidPlugin =
+          _notificationsPlugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
       if (androidPlugin != null) {
         await androidPlugin.createNotificationChannel(
           const AndroidNotificationChannel(
@@ -594,10 +592,9 @@ class SmartPushService extends ChangeNotifier {
   Future<bool> requestNotificationPermission() async {
     try {
       if (PlatformHelper.isAndroid) {
-        final androidPlugin = _notificationsPlugin
-            .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin
-            >();
+        final androidPlugin =
+            _notificationsPlugin.resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>();
         if (androidPlugin != null) {
           final granted = await androidPlugin.requestNotificationsPermission();
           return granted ?? false;
@@ -605,10 +602,9 @@ class SmartPushService extends ChangeNotifier {
       }
 
       if (PlatformHelper.isIOS) {
-        final iosPlugin = _notificationsPlugin
-            .resolvePlatformSpecificImplementation<
-              IOSFlutterLocalNotificationsPlugin
-            >();
+        final iosPlugin =
+            _notificationsPlugin.resolvePlatformSpecificImplementation<
+                IOSFlutterLocalNotificationsPlugin>();
         if (iosPlugin != null) {
           final granted = await iosPlugin.requestPermissions(
             alert: true,
@@ -634,10 +630,9 @@ class SmartPushService extends ChangeNotifier {
     if (!PlatformHelper.isAndroid) return true;
 
     try {
-      final androidPlugin = _notificationsPlugin
-          .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin
-          >();
+      final androidPlugin =
+          _notificationsPlugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
       if (androidPlugin != null) {
         // 1. 首先检查通知权限
         final notificationsEnabled =
@@ -672,10 +667,9 @@ class SmartPushService extends ChangeNotifier {
     if (!PlatformHelper.isAndroid) return true;
 
     try {
-      final androidPlugin = _notificationsPlugin
-          .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin
-          >();
+      final androidPlugin =
+          _notificationsPlugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
       if (androidPlugin != null) {
         // 检查是否已有权限
         final canSchedule =
@@ -772,10 +766,9 @@ class SmartPushService extends ChangeNotifier {
     if (!PlatformHelper.isAndroid) return true;
 
     try {
-      final androidPlugin = _notificationsPlugin
-          .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin
-          >();
+      final androidPlugin =
+          _notificationsPlugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
       if (androidPlugin != null) {
         return await androidPlugin.areNotificationsEnabled() ?? false;
       }
@@ -938,9 +931,8 @@ class SmartPushService extends ChangeNotifier {
         );
       } else {
         // 自定义模式：使用用户设置的时间
-        slotsToSchedule = _settings.pushTimeSlots
-            .where((s) => s.enabled)
-            .toList();
+        slotsToSchedule =
+            _settings.pushTimeSlots.where((s) => s.enabled).toList();
       }
 
       // 持久化今日实际调度的时间（供后台周期性检查使用）
@@ -1083,8 +1075,8 @@ class SmartPushService extends ChangeNotifier {
     }
 
     // 2. 降级：使用传统的笔记创建时间分析（SQL 聚合，不加载内容）
-    final hourDistribution = await _databaseService
-        .getHourDistributionForSmartPush();
+    final hourDistribution =
+        await _databaseService.getHourDistributionForSmartPush();
 
     final totalNotes = hourDistribution.reduce((a, b) => a + b);
     if (totalNotes < 10) {
@@ -2002,10 +1994,9 @@ class SmartPushService extends ChangeNotifier {
       await _notificationsPlugin.initialize(initSettings);
 
       if (PlatformHelper.isAndroid) {
-        final androidPlugin = _notificationsPlugin
-            .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin
-            >();
+        final androidPlugin =
+            _notificationsPlugin.resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>();
         if (androidPlugin != null) {
           await androidPlugin.createNotificationChannel(
             const AndroidNotificationChannel(
@@ -2444,11 +2435,11 @@ class _SmartSelectResult {
   });
 
   factory _SmartSelectResult.empty() => _SmartSelectResult(
-    note: null,
-    title: '',
-    isDailyQuote: false,
-    contentType: '',
-  );
+        note: null,
+        title: '',
+        isDailyQuote: false,
+        contentType: '',
+      );
 }
 
 /// 智能时间候选辅助类
