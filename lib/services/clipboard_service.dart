@@ -15,32 +15,16 @@ class ClipboardService extends ChangeNotifier {
   static const String _keyEnableClipboardMonitoring =
       'enable_clipboard_monitoring';
 
-  // 预编译的正则表达式，避免重复编译
-  static final RegExp _cleanPattern = RegExp(r'^[—–\-—\s]+|[—–\-—\s]+$');
-
-  // 1. 匹配 ——作者《出处》 或 --作者《出处》 等
-  static final RegExp _authorSourcePattern = RegExp(
-    r'[-—–]+\s*([^《（\(]+?)?\s*[《（\(]([^》）\)]+?)[》）\)]\s*$',
+  // 常见的引述格式匹配
+  static final RegExp _quoteAuthorPattern = RegExp(
+    r'[-—–]\s*([^，。,\.、\n]{2,20})$|《([^》]+)》\s*[-—–]\s*([^，。,\.、\n]{2,20})|"(.+)"\s*[-—–]\s*([^，。,\.、\n]{2,20})',
+    multiLine: true,
   );
 
-  // 2. 匹配 《出处》——作者 或 《出处》--作者 等
-  static final RegExp _sourceAuthorPattern = RegExp(
-    r'[《（\(]([^》）\)]+?)[》）\)]\s*[-—–]+\s*([^，。,、\.\n]+)\s*$',
-  );
-
-  // 3. 匹配 "文"——作者 或 "文"--作者 等
-  static final RegExp _quotePattern = RegExp(
-    r'["""](.+?)["""]\s*[-—–]+\s*([^，。,、\.\n]+)\s*$',
-  );
-
-  // 4. 回退提取作者（匹配末尾的 ——作者 或 --作者）
-  static final RegExp _authorFallbackPattern = RegExp(
-    r'[-—–]+\s*([^，。,、\.\n《（\(]{2,20})\s*$',
-  );
-
-  // 5. 回退提取出处（匹配末尾的 《出处》 或 （出处））
-  static final RegExp _sourceFallbackPattern = RegExp(
-    r'[《（\(]([^》）\)]+?)[》）\)]\s*$',
+  // 可能的出处标识
+  static final RegExp _sourcePattern = RegExp(
+    r'[（\(](.{2,30}?)[）\)]$|《(.{2,30}?)》$|摘自[《]?(.{2,30}?)[》]?$|选自[《]?(.{2,30}?)[》]?$|出自[《]?(.{2,30}?)[》]?$',
+    multiLine: true,
   );
 
   // 是否启用剪贴板监控
@@ -124,7 +108,7 @@ class ClipboardService extends ChangeNotifier {
       _lastProcessedContent = content;
 
       // 提取作者和出处（如果有）
-      final extractedInfo = extractAuthorAndSource(content);
+      final extractedInfo = _extractAuthorAndSource(content);
       String? author = extractedInfo['author'];
       String? source = extractedInfo['source'];
       String? matchedSubstring = extractedInfo['matched_substring']; // 获取匹配到的子串
@@ -151,8 +135,7 @@ class ClipboardService extends ChangeNotifier {
 
   // 从文本中提取作者和出处信息（类似一言格式）
   // 返回包含 'author', 'source', 'matched_substring' 的 Map
-  @visibleForTesting
-  Map<String, String?> extractAuthorAndSource(String content) {
+  Map<String, String?> _extractAuthorAndSource(String content) {
     final text = content.trim();
     String? author;
     String? source;
@@ -160,11 +143,16 @@ class ClipboardService extends ChangeNotifier {
 
     // 定义清理函数，去除前后空格和特定标点
     String? clean(String? input) {
-      return input?.trim().replaceAll(_cleanPattern, '').trim();
+      return input
+          ?.trim()
+          .replaceAll(RegExp(r'^[—–\-—\s]+|[—–\-—\s]+$'), '')
+          .trim();
     }
 
     // 1. 匹配 ——作者《出处》 或 --作者《出处》 等
-    final m1 = _authorSourcePattern.firstMatch(text);
+    final m1 = RegExp(
+      r'[-—–]+\s*([^《（\(]+?)?\s*[《（\(]([^》）\)]+?)[》）\)]\s*$',
+    ).firstMatch(text);
     if (m1 != null) {
       author = clean(m1.group(1));
       source = clean(m1.group(2));
@@ -177,7 +165,9 @@ class ClipboardService extends ChangeNotifier {
     }
 
     // 2. 匹配 《出处》——作者 或 《出处》--作者 等
-    final m2 = _sourceAuthorPattern.firstMatch(text);
+    final m2 = RegExp(
+      r'[《（\(]([^》）\)]+?)[》）\)]\s*[-—–]+\s*([^，。,、\.\n]+)\s*$',
+    ).firstMatch(text);
     if (m2 != null) {
       source = clean(m2.group(1));
       author = clean(m2.group(2));
@@ -190,7 +180,9 @@ class ClipboardService extends ChangeNotifier {
     }
 
     // 3. 匹配 "文"——作者 或 "文"--作者 等
-    final m3 = _quotePattern.firstMatch(text);
+    final m3 = RegExp(
+      r'["""](.+?)["""]\s*[-—–]+\s*([^，。,、\.\n]+)\s*$',
+    ).firstMatch(text);
     if (m3 != null) {
       // 这种情况通常只提取作者，引用的内容在前面
       author = clean(m3.group(2));
@@ -204,14 +196,16 @@ class ClipboardService extends ChangeNotifier {
     }
 
     // 4. 回退提取作者（匹配末尾的 ——作者 或 --作者）
-    final m4 = _authorFallbackPattern.firstMatch(text);
+    final m4 = RegExp(r'[-—–]+\s*([^，。,、\.\n《（\(]{2,20})\s*$').firstMatch(text);
     if (m4 != null) {
       author = clean(m4.group(1));
       matchedSubstring = m4.group(0);
       // 尝试在此基础上再提取出处
       final remainingText =
           text.substring(0, text.length - matchedSubstring!.length).trim();
-      final m4Source = _sourceFallbackPattern.firstMatch(remainingText);
+      final m4Source = RegExp(
+        r'[《（\(]([^》）\)]+?)[》）\)]\s*$',
+      ).firstMatch(remainingText);
       if (m4Source != null) {
         source = clean(m4Source.group(1));
         // 更新匹配的子串以包含出处部分 (可能不精确，但尝试包含)
@@ -227,14 +221,16 @@ class ClipboardService extends ChangeNotifier {
     }
 
     // 5. 回退提取出处（匹配末尾的 《出处》 或 （出处））
-    final m5 = _sourceFallbackPattern.firstMatch(text);
+    final m5 = RegExp(r'[《（\(]([^》）\)]+?)[》）\)]\s*$').firstMatch(text);
     if (m5 != null) {
       source = clean(m5.group(1));
       matchedSubstring = m5.group(0);
       // 尝试在此基础上再提取作者
       final remainingText =
           text.substring(0, text.length - matchedSubstring!.length).trim();
-      final m5Author = _authorFallbackPattern.firstMatch(remainingText);
+      final m5Author = RegExp(
+        r'[-—–]+\s*([^，。,、\.\n《（\(]{2,20})\s*$',
+      ).firstMatch(remainingText);
       if (m5Author != null) {
         author = clean(m5Author.group(1));
         // 更新匹配的子串以包含作者部分 (可能不精确，但尝试包含)
