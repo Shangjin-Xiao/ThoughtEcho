@@ -73,8 +73,9 @@ class AINetworkManager {
     try {
       final headers = config.buildHeaders();
       final adjustedData = config.adjustData(data);
-      final finalUrl =
-          urlOverride?.isNotEmpty == true ? urlOverride! : config.apiUrl;
+      final finalUrl = urlOverride?.isNotEmpty == true
+          ? urlOverride!
+          : config.apiUrl;
 
       // 调试信息：检查stream参数类型
       if (adjustedData.containsKey('stream')) {

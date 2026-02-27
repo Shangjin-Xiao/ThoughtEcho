@@ -120,10 +120,7 @@ class DraftService {
         // 返回包含原始ID的数据（从key中提取）
         // key format: draft_xxx
         final originalId = latestKey.substring(6);
-        return {
-          'id': originalId,
-          ...latestData,
-        };
+        return {'id': originalId, ...latestData};
       }
       return null;
     } catch (e) {

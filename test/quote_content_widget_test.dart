@@ -12,7 +12,7 @@ class _TestSettingsService extends ChangeNotifier implements SettingsService {
   bool _prioritizeBold;
 
   _TestSettingsService({bool prioritizeBold = false})
-      : _prioritizeBold = prioritizeBold;
+    : _prioritizeBold = prioritizeBold;
 
   @override
   bool get prioritizeBoldContentInCollapse => _prioritizeBold;

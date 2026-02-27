@@ -204,8 +204,8 @@ class MergeReportBuilder {
   final String? _sourceDevice;
 
   MergeReportBuilder({String? sourceDevice})
-      : _startTime = DateTime.now(),
-        _sourceDevice = sourceDevice;
+    : _startTime = DateTime.now(),
+      _sourceDevice = sourceDevice;
 
   // 笔记操作统计
   void addAppliedQuote() => _appliedQuotes++;

@@ -114,19 +114,24 @@ class LocationService extends ChangeNotifier {
       if (_isLocationServiceEnabled) {
         logDebug('位置服务已启用');
         final permission = await Geolocator.checkPermission();
-        _hasLocationPermission = (permission == LocationPermission.whileInUse ||
+        _hasLocationPermission =
+            (permission == LocationPermission.whileInUse ||
             permission == LocationPermission.always);
         logDebug('位置权限状态: $_hasLocationPermission');
 
         // 只在首次获取到权限时尝试获取位置
         if (_hasLocationPermission) {
-          getCurrentLocation(highAccuracy: false).then((position) {
-            if (position != null) {
-              logDebug('初始化时获取位置: ${position.latitude}, ${position.longitude}');
-            }
-          }).catchError((e) {
-            logDebug('初始化时获取位置失败: $e');
-          });
+          getCurrentLocation(highAccuracy: false)
+              .then((position) {
+                if (position != null) {
+                  logDebug(
+                    '初始化时获取位置: ${position.latitude}, ${position.longitude}',
+                  );
+                }
+              })
+              .catchError((e) {
+                logDebug('初始化时获取位置失败: $e');
+              });
         }
       } else {
         _hasLocationPermission = false;
@@ -178,7 +183,8 @@ class LocationService extends ChangeNotifier {
         return false;
       }
 
-      _hasLocationPermission = (permission == LocationPermission.whileInUse ||
+      _hasLocationPermission =
+          (permission == LocationPermission.whileInUse ||
           permission == LocationPermission.always);
 
       notifyListeners();
@@ -201,7 +207,8 @@ class LocationService extends ChangeNotifier {
         permission = await Geolocator.requestPermission();
       }
 
-      _hasLocationPermission = (permission == LocationPermission.whileInUse ||
+      _hasLocationPermission =
+          (permission == LocationPermission.whileInUse ||
           permission == LocationPermission.always);
       notifyListeners();
       return _hasLocationPermission;
@@ -220,7 +227,8 @@ class LocationService extends ChangeNotifier {
       _isLocationServiceEnabled = await Geolocator.isLocationServiceEnabled();
 
       final permission = await Geolocator.checkPermission();
-      _hasLocationPermission = (permission == LocationPermission.whileInUse ||
+      _hasLocationPermission =
+          (permission == LocationPermission.whileInUse ||
           permission == LocationPermission.always);
 
       if (wasEnabled != _isLocationServiceEnabled ||
@@ -254,7 +262,8 @@ class LocationService extends ChangeNotifier {
     if (!_hasLocationPermission && !skipPermissionRequest) {
       // 检查权限，但不自动请求
       final permission = await Geolocator.checkPermission();
-      _hasLocationPermission = (permission == LocationPermission.whileInUse ||
+      _hasLocationPermission =
+          (permission == LocationPermission.whileInUse ||
           permission == LocationPermission.always);
 
       if (!_hasLocationPermission) {
@@ -274,15 +283,16 @@ class LocationService extends ChangeNotifier {
       logDebug('开始获取位置，使用${highAccuracy ? "高" : "低"}精度模式...');
 
       // 使用LocalGeocodingService获取位置，并添加超时控制
-      _currentPosition = await LocalGeocodingService.getCurrentPosition(
-        highAccuracy: highAccuracy,
-      ).timeout(
-        const Duration(seconds: 15), // 15秒超时
-        onTimeout: () {
-          logDebug('位置获取超时');
-          throw Exception('位置获取超时，请重试');
-        },
-      );
+      _currentPosition =
+          await LocalGeocodingService.getCurrentPosition(
+            highAccuracy: highAccuracy,
+          ).timeout(
+            const Duration(seconds: 15), // 15秒超时
+            onTimeout: () {
+              logDebug('位置获取超时');
+              throw Exception('位置获取超时，请重试');
+            },
+          );
 
       if (_currentPosition != null) {
         logDebug(
@@ -334,10 +344,10 @@ class LocationService extends ChangeNotifier {
       // Step 1: 系统SDK解析（含缓存）
       final systemResult =
           await LocalGeocodingService.getAddressFromCoordinates(
-        lat,
-        lon,
-        localeCode: _apiLanguageParam,
-      );
+            lat,
+            lon,
+            localeCode: _apiLanguageParam,
+          );
 
       if (token != _geocodeToken) return;
 
@@ -644,10 +654,9 @@ class LocationService extends ChangeNotifier {
 
     try {
       // 添加总体超时控制（使用 .timeout 替代 Future.any 避免未完成 Future 泄漏）
-      final results = await _searchCityWithTimeout(query).timeout(
-        const Duration(seconds: 12),
-        onTimeout: () => <CityInfo>[],
-      );
+      final results = await _searchCityWithTimeout(
+        query,
+      ).timeout(const Duration(seconds: 12), onTimeout: () => <CityInfo>[]);
 
       _searchResults = results;
       return _searchResults;
@@ -711,8 +720,9 @@ class LocationService extends ChangeNotifier {
     // Unicode范围：CJK统一汉字 + Extension A + 兼容汉字 + 部首
     // CJK Unified: 0x4E00-0x9FFF, Extension A: 0x3400-0x4DBF
     // CJK Compat Ideographs: 0xF900-0xFAFF, Radicals: 0x2E80-0x2FFF
-    final chineseRegex =
-        RegExp(r'[\u2e80-\u2fff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]');
+    final chineseRegex = RegExp(
+      r'[\u2e80-\u2fff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]',
+    );
     return chineseRegex.hasMatch(text);
   }
 
@@ -724,8 +734,9 @@ class LocationService extends ChangeNotifier {
 
       // 根据输入语言和用户语言设置选择合适的语言参数
       // 如果输入包含中文，使用中文结果；否则根据用户语言设置
-      final String languageParam =
-          _containsChinese(query) ? 'zh' : _apiLanguageParam;
+      final String languageParam = _containsChinese(query)
+          ? 'zh'
+          : _apiLanguageParam;
 
       // OpenMeteo地理编码API - 使用URL编码的查询参数
       final url =
@@ -854,13 +865,15 @@ class LocationService extends ChangeNotifier {
 
           // 更灵活地处理地点名称
           String placeName = item['name'] ?? '';
-          String cityName = address['city'] ??
+          String cityName =
+              address['city'] ??
               address['town'] ??
               address['village'] ??
               address['municipality'] ??
               placeName;
           String country = address['country'] ?? '';
-          String state = address['state'] ??
+          String state =
+              address['state'] ??
               address['province'] ??
               address['county'] ??
               '';
@@ -1204,8 +1217,9 @@ class LocationService extends ChangeNotifier {
       parseLocationString(address);
     } else {
       // 离线状态标记（保留 failed 标记以区分状态）
-      _currentAddress =
-          isFailedMarker(address) ? kAddressFailed : kAddressPending;
+      _currentAddress = isFailedMarker(address)
+          ? kAddressFailed
+          : kAddressPending;
       _country = null;
       _province = null;
       _city = null;
@@ -1260,8 +1274,9 @@ class LocationService extends ChangeNotifier {
         _district,
       ].whereType<String>().toList();
 
-      _currentAddress =
-          addressParts.isNotEmpty ? addressParts.join(', ') : null;
+      _currentAddress = addressParts.isNotEmpty
+          ? addressParts.join(', ')
+          : null;
     }
   }
 }

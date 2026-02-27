@@ -285,7 +285,7 @@ class OnboardingController extends ChangeNotifier {
   void _updateNavigationState() {
     final canGoNext =
         _state.currentPageIndex < OnboardingConfig.totalPages - 1 ||
-            _canCompleteOnboarding();
+        _canCompleteOnboarding();
     final canGoPrevious = _state.currentPageIndex > 0;
 
     _state = _state.copyWith(

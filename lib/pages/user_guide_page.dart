@@ -27,10 +27,7 @@ class GuideSection {
   final String title;
   final List<String> items;
 
-  GuideSection({
-    required this.title,
-    required this.items,
-  });
+  GuideSection({required this.title, required this.items});
 }
 
 class UserGuidePage extends StatefulWidget {
@@ -89,12 +86,14 @@ class _UserGuidePageState extends State<UserGuidePage> {
       final isZh = locale.languageCode == 'zh';
 
       // Load content from the single source of truth
-      final String fullContent =
-          await rootBundle.loadString('docs/USER_MANUAL.md');
+      final String fullContent = await rootBundle.loadString(
+        'docs/USER_MANUAL.md',
+      );
 
       // Extract the language-specific block
-      final String langMarker =
-          isZh ? '<div id="-中文版本">' : '<div id="-english-version">';
+      final String langMarker = isZh
+          ? '<div id="-中文版本">'
+          : '<div id="-english-version">';
       final int startIndex = fullContent.indexOf(langMarker);
       if (startIndex == -1) {
         throw Exception('Language block not found: $langMarker');
@@ -178,7 +177,7 @@ class _UserGuidePageState extends State<UserGuidePage> {
         Icons.sync,
         Icons.save_as,
         Icons.tune,
-        Icons.help_center
+        Icons.help_center,
       ];
       return defaults[index % defaults.length];
     }
@@ -189,8 +188,9 @@ class _UserGuidePageState extends State<UserGuidePage> {
 
       // Chapter: ## N. Title
       if (trimmed.startsWith('## ')) {
-        final title =
-            trimmed.substring(3).replaceFirst(RegExp(r'^\d+\.\s*'), '');
+        final title = trimmed
+            .substring(3)
+            .replaceFirst(RegExp(r'^\d+\.\s*'), '');
         currentChapter = GuideChapter(
           id: 'chapter_${chapters.length}',
           title: title,
@@ -206,10 +206,7 @@ class _UserGuidePageState extends State<UserGuidePage> {
 
       // Section: ### Title
       if (trimmed.startsWith('### ')) {
-        currentSection = GuideSection(
-          title: trimmed.substring(4),
-          items: [],
-        );
+        currentSection = GuideSection(title: trimmed.substring(4), items: []);
         currentChapter.sections.add(currentSection);
         continue;
       }
@@ -298,15 +295,18 @@ class _UserGuidePageState extends State<UserGuidePage> {
     } else {
       _filteredChapters = [];
       for (var chapter in _chapters) {
-        bool chapterMatches =
-            chapter.title.toLowerCase().contains(_searchQuery);
+        bool chapterMatches = chapter.title.toLowerCase().contains(
+          _searchQuery,
+        );
         List<GuideSection> matchingSections = [];
 
         for (var section in chapter.sections) {
-          bool sectionMatches =
-              section.title.toLowerCase().contains(_searchQuery);
-          bool itemMatches = section.items
-              .any((item) => item.toLowerCase().contains(_searchQuery));
+          bool sectionMatches = section.title.toLowerCase().contains(
+            _searchQuery,
+          );
+          bool itemMatches = section.items.any(
+            (item) => item.toLowerCase().contains(_searchQuery),
+          );
 
           if (chapterMatches || sectionMatches || itemMatches) {
             matchingSections.add(section);
@@ -335,9 +335,9 @@ class _UserGuidePageState extends State<UserGuidePage> {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.cannotOpenLink(url))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.cannotOpenLink(url))));
       }
     }
   }
@@ -364,194 +364,210 @@ class _UserGuidePageState extends State<UserGuidePage> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(
-                  child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline,
-                          size: 64, color: Colors.red),
-                      const SizedBox(height: 16),
-                      Text(_error!, textAlign: TextAlign.center),
-                      const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        onPressed: _loadManual,
-                        icon: const Icon(Icons.refresh),
-                        label: Text(l10n.retry),
-                      ),
-                    ],
-                  ),
-                ))
-              : CustomScrollView(
-                  controller: _scrollController,
-                  slivers: [
-                    SliverAppBar.medium(
-                      title: Text(l10n.userGuide),
-                      centerTitle: true,
-                      actions: [
-                        IconButton(
-                          icon: const Icon(Icons.open_in_new),
-                          tooltip: l10n.userGuideOnlineDoc,
-                          onPressed: _launchOnlineDocs,
-                        ),
-                      ],
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Colors.red,
                     ),
-
-                    // Search Bar
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                        child: SearchBar(
-                          controller: _searchController,
-                          hintText: l10n.userGuideSearchHint,
-                          leading: const Icon(Icons.search),
-                          trailing: _searchController.text.isNotEmpty
-                              ? [
-                                  IconButton(
-                                    icon: const Icon(Icons.clear),
-                                    onPressed: () => _searchController.clear(),
-                                  )
-                                ]
-                              : null,
-                          elevation: WidgetStateProperty.all(0),
-                          backgroundColor: WidgetStateProperty.all(
-                            colorScheme.surfaceContainerHighest
-                                .withValues(alpha: 0.5),
-                          ),
-                        ),
-                      ),
+                    const SizedBox(height: 16),
+                    Text(_error!, textAlign: TextAlign.center),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: _loadManual,
+                      icon: const Icon(Icons.refresh),
+                      label: Text(l10n.retry),
                     ),
-
-                    // Chapter Chips Navigation
-                    SliverToBoxAdapter(
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
-                        child: Row(
-                          children: _chapters.map((chapter) {
-                            return Padding(
-                              padding: const EdgeInsets.only(right: 8),
-                              child: FilterChip(
-                                label: Text(chapter.title),
-                                avatar: Icon(chapter.icon, size: 18),
-                                selected: false,
-                                onSelected: (_) => _scrollToChapter(chapter.id),
-                                visualDensity: VisualDensity.compact,
-                                side: BorderSide.none,
-                                backgroundColor: colorScheme
-                                    .surfaceContainerHighest
-                                    .withValues(alpha: 0.3),
-                                labelStyle: TextStyle(
-                                  color: colorScheme.onSurfaceVariant,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                    ),
-
-                    // Content
-                    if (_filteredChapters.isEmpty)
-                      SliverFillRemaining(
-                        child: Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.search_off_rounded,
-                                size: 64,
-                                color:
-                                    colorScheme.outline.withValues(alpha: 0.5),
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                l10n.userGuideNoResults,
-                                style: TextStyle(
-                                  color: colorScheme.outline,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      )
-                    else
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-                          child: Column(
-                            children: _filteredChapters.map((chapter) {
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: Card(
-                                  key: _chapterKeys[chapter.id],
-                                  elevation: 0,
-                                  color: colorScheme.surfaceContainerLow,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(
-                                        AppTheme.cardRadius),
-                                    side: BorderSide(
-                                      color: colorScheme.outlineVariant
-                                          .withValues(alpha: 0.5),
-                                    ),
-                                  ),
-                                  clipBehavior: Clip.antiAlias,
-                                  child: Theme(
-                                    data: theme.copyWith(
-                                        dividerColor: Colors.transparent),
-                                    child: ExpansionTile(
-                                      initiallyExpanded: chapter.isExpanded,
-                                      shape: const Border(),
-                                      collapsedShape: const Border(),
-                                      leading: Container(
-                                        padding: const EdgeInsets.all(8),
-                                        decoration: BoxDecoration(
-                                          color: colorScheme.primaryContainer,
-                                          borderRadius:
-                                              BorderRadius.circular(12),
-                                        ),
-                                        child: Icon(
-                                          chapter.icon,
-                                          color: colorScheme.onPrimaryContainer,
-                                          size: 24,
-                                        ),
-                                      ),
-                                      title: Text(
-                                        chapter.title,
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: colorScheme.onSurface,
-                                          fontSize: 16,
-                                        ),
-                                      ),
-                                      childrenPadding:
-                                          const EdgeInsets.fromLTRB(
-                                              16, 0, 16, 16),
-                                      expandedCrossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: chapter.sections.map((section) {
-                                        return _buildSection(
-                                            context, section, colorScheme);
-                                      }).toList(),
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      ),
                   ],
                 ),
+              ),
+            )
+          : CustomScrollView(
+              controller: _scrollController,
+              slivers: [
+                SliverAppBar.medium(
+                  title: Text(l10n.userGuide),
+                  centerTitle: true,
+                  actions: [
+                    IconButton(
+                      icon: const Icon(Icons.open_in_new),
+                      tooltip: l10n.userGuideOnlineDoc,
+                      onPressed: _launchOnlineDocs,
+                    ),
+                  ],
+                ),
+
+                // Search Bar
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: SearchBar(
+                      controller: _searchController,
+                      hintText: l10n.userGuideSearchHint,
+                      leading: const Icon(Icons.search),
+                      trailing: _searchController.text.isNotEmpty
+                          ? [
+                              IconButton(
+                                icon: const Icon(Icons.clear),
+                                onPressed: () => _searchController.clear(),
+                              ),
+                            ]
+                          : null,
+                      elevation: WidgetStateProperty.all(0),
+                      backgroundColor: WidgetStateProperty.all(
+                        colorScheme.surfaceContainerHighest.withValues(
+                          alpha: 0.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Chapter Chips Navigation
+                SliverToBoxAdapter(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      children: _chapters.map((chapter) {
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: FilterChip(
+                            label: Text(chapter.title),
+                            avatar: Icon(chapter.icon, size: 18),
+                            selected: false,
+                            onSelected: (_) => _scrollToChapter(chapter.id),
+                            visualDensity: VisualDensity.compact,
+                            side: BorderSide.none,
+                            backgroundColor: colorScheme.surfaceContainerHighest
+                                .withValues(alpha: 0.3),
+                            labelStyle: TextStyle(
+                              color: colorScheme.onSurfaceVariant,
+                              fontSize: 13,
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ),
+
+                // Content
+                if (_filteredChapters.isEmpty)
+                  SliverFillRemaining(
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.search_off_rounded,
+                            size: 64,
+                            color: colorScheme.outline.withValues(alpha: 0.5),
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            l10n.userGuideNoResults,
+                            style: TextStyle(
+                              color: colorScheme.outline,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                else
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                      child: Column(
+                        children: _filteredChapters.map((chapter) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: Card(
+                              key: _chapterKeys[chapter.id],
+                              elevation: 0,
+                              color: colorScheme.surfaceContainerLow,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  AppTheme.cardRadius,
+                                ),
+                                side: BorderSide(
+                                  color: colorScheme.outlineVariant.withValues(
+                                    alpha: 0.5,
+                                  ),
+                                ),
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              child: Theme(
+                                data: theme.copyWith(
+                                  dividerColor: Colors.transparent,
+                                ),
+                                child: ExpansionTile(
+                                  initiallyExpanded: chapter.isExpanded,
+                                  shape: const Border(),
+                                  collapsedShape: const Border(),
+                                  leading: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.primaryContainer,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Icon(
+                                      chapter.icon,
+                                      color: colorScheme.onPrimaryContainer,
+                                      size: 24,
+                                    ),
+                                  ),
+                                  title: Text(
+                                    chapter.title,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: colorScheme.onSurface,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  childrenPadding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    0,
+                                    16,
+                                    16,
+                                  ),
+                                  expandedCrossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: chapter.sections.map((section) {
+                                    return _buildSection(
+                                      context,
+                                      section,
+                                      colorScheme,
+                                    );
+                                  }).toList(),
+                                ),
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
     );
   }
 
   Widget _buildSection(
-      BuildContext context, GuideSection section, ColorScheme colorScheme) {
+    BuildContext context,
+    GuideSection section,
+    ColorScheme colorScheme,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(top: 16),
       child: Column(
@@ -582,35 +598,37 @@ class _UserGuidePageState extends State<UserGuidePage> {
               ],
             ),
           if (section.title.isNotEmpty) const SizedBox(height: 8),
-          ...section.items.map((item) => Padding(
-                padding: const EdgeInsets.only(left: 12, bottom: 6),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6, right: 8),
-                      child: Container(
-                        width: 4,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: colorScheme.onSurfaceVariant,
-                          shape: BoxShape.circle,
-                        ),
+          ...section.items.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(left: 12, bottom: 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6, right: 8),
+                    child: Container(
+                      width: 4,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: colorScheme.onSurfaceVariant,
+                        shape: BoxShape.circle,
                       ),
                     ),
-                    Expanded(
-                      child: Text(
-                        item,
-                        style: TextStyle(
-                          fontSize: 14,
-                          height: 1.5,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      item,
+                      style: TextStyle(
+                        fontSize: 14,
+                        height: 1.5,
+                        color: colorScheme.onSurfaceVariant,
                       ),
                     ),
-                  ],
-                ),
-              )),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );

@@ -7,6 +7,13 @@ import 'receive_controller.dart';
 import 'package:flutter/foundation.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
+class PayloadTooLargeException implements Exception {
+  final String message;
+  PayloadTooLargeException(this.message);
+  @override
+  String toString() => 'PayloadTooLargeException: $message';
+}
+
 /// Simple HTTP server for LocalSend protocol
 /// Based on LocalSend's server but simplified for ThoughtEcho
 class LocalSendServer {
@@ -16,9 +23,9 @@ class LocalSendServer {
   int _port = defaultPort;
   final Set<String> _preApprovedFingerprints = {}; // 预先批准一次性
   Function(String sessionId, int totalBytes, String senderAlias)?
-      _onReceiveSessionCreated;
+  _onReceiveSessionCreated;
   Future<bool> Function(String sessionId, int totalBytes, String senderAlias)?
-      _onApprovalNeeded;
+  _onApprovalNeeded;
 
   bool get isRunning => _isRunning;
   int get port => _port;
@@ -29,9 +36,9 @@ class LocalSendServer {
     Function(String filePath)? onFileReceived,
     Function(int received, int total)? onReceiveProgress,
     Function(String sessionId, int totalBytes, String senderAlias)?
-        onReceiveSessionCreated,
+    onReceiveSessionCreated,
     Future<bool> Function(String sessionId, int totalBytes, String senderAlias)?
-        onApprovalNeeded,
+    onApprovalNeeded,
   }) async {
     if (_isRunning) return;
 
@@ -315,7 +322,7 @@ class LocalSendServer {
           source: 'LocalSend',
         );
 
-        if (e.toString().contains('Request body too large')) {
+        if (e is PayloadTooLargeException) {
           statusCode = 413; // Payload Too Large
           responseData = {'error': 'Request entity too large'};
         } else {
@@ -375,10 +382,15 @@ class LocalSendServer {
   /// Safely reads the request body with a size limit
   /// Throws an exception if the body exceeds the limit
   Future<List<int>> _readRequestBody(HttpRequest request) async {
-    const int maxBodySize = 10 * 1024 * 1024; // 10MB limit to support large metadata (e.g. 50k+ files)
+    const int maxBodySize =
+        10 *
+        1024 *
+        1024; // 10MB limit to support large metadata (e.g. 50k+ files)
 
     if (request.contentLength > maxBodySize) {
-      throw Exception('Request body too large (Content-Length: ${request.contentLength})');
+      throw PayloadTooLargeException(
+        'Request body too large (Content-Length: ${request.contentLength})',
+      );
     }
 
     final bodyBytes = <int>[];
@@ -387,7 +399,9 @@ class LocalSendServer {
     await for (final chunk in request) {
       currentSize += chunk.length;
       if (currentSize > maxBodySize) {
-        throw Exception('Request body too large (exceeded limit during read)');
+        throw PayloadTooLargeException(
+          'Request body too large (exceeded limit during read)',
+        );
       }
       bodyBytes.addAll(chunk);
     }

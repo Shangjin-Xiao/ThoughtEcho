@@ -230,8 +230,9 @@ class DeviceMemoryManager {
         );
 
         // 如果系统报告低内存，调整可用内存估算
-        final adjustedAvailMem =
-            lowMemory ? (availMem * 0.5).toInt() : availMem;
+        final adjustedAvailMem = lowMemory
+            ? (availMem * 0.5).toInt()
+            : availMem;
 
         return {
           'total': totalMem,

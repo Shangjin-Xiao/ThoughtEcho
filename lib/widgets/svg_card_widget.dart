@@ -79,21 +79,21 @@ class SVGCardWidget extends StatelessWidget {
         allowDrawingOutsideViewBox: false, // 与offscreen renderer保持一致
         placeholderBuilder: showLoadingIndicator
             ? (context) => Container(
-                  color: Colors.grey[200],
-                  child: const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 8),
-                        Text(
-                          '正在加载SVG...',
-                          style: TextStyle(color: Colors.grey, fontSize: 12),
-                        ),
-                      ],
-                    ),
+                color: Colors.grey[200],
+                child: const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 8),
+                      Text(
+                        '正在加载SVG...',
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
+                    ],
                   ),
-                )
+                ),
+              )
             : null,
         errorBuilder: (context, error, stackTrace) {
           AppLogger.e(
@@ -201,21 +201,21 @@ class SVGCardWidget extends StatelessWidget {
         fit: fit,
         placeholderBuilder: showLoadingIndicator
             ? (context) => Container(
-                  color: Colors.grey[100],
-                  child: const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 8),
-                        Text(
-                          '正在加载备用模板...',
-                          style: TextStyle(color: Colors.grey, fontSize: 12),
-                        ),
-                      ],
-                    ),
+                color: Colors.grey[100],
+                child: const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 8),
+                      Text(
+                        '正在加载备用模板...',
+                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                      ),
+                    ],
                   ),
-                )
+                ),
+              )
             : null,
         errorBuilder: (context, error, stackTrace) {
           AppLogger.e(
@@ -306,8 +306,9 @@ class SVGCardWidget extends StatelessWidget {
   /// 生成回退SVG内容
   String _generateFallbackSVGContent(String content) {
     // 限制内容长度
-    final displayContent =
-        content.length > 50 ? '${content.substring(0, 50)}...' : content;
+    final displayContent = content.length > 50
+        ? '${content.substring(0, 50)}...'
+        : content;
 
     return '''
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 600">
@@ -362,7 +363,7 @@ class GeneratedCardWidget extends StatelessWidget {
   final Future<void> Function(GeneratedCard card)? onSave;
   final Future<void> Function()? onRegenerate;
   final Future<GeneratedCard> Function(GeneratedCard currentCard)?
-      onRegenerateWithExclude;
+  onRegenerateWithExclude;
   final bool showActions;
   final bool actionsEnabled;
   final double? width;
@@ -481,7 +482,7 @@ class CardPreviewDialog extends StatefulWidget {
   final Future<void> Function(GeneratedCard card)? onSave;
   final Future<GeneratedCard> Function()? onRegenerate;
   final Future<GeneratedCard> Function(GeneratedCard currentCard)?
-      onRegenerateWithExclude;
+  onRegenerateWithExclude;
 
   const CardPreviewDialog({
     super.key,
@@ -631,9 +632,7 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
                               // 标题
                               Text(
                                 l10n.featuredCards,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleLarge
+                                style: Theme.of(context).textTheme.titleLarge
                                     ?.copyWith(fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 16),
@@ -642,7 +641,8 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
                                 card: _currentCard,
                                 onShare: widget.onShare,
                                 onSave: widget.onSave,
-                                onRegenerate: widget.onRegenerate == null &&
+                                onRegenerate:
+                                    widget.onRegenerate == null &&
                                         widget.onRegenerateWithExclude == null
                                     ? null
                                     : () async => await _handleRegenerate(),
@@ -666,9 +666,9 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
                                     const SizedBox(width: 8),
                                     Text(
                                       l10n.regeneratingCard,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium,
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodyMedium,
                                     ),
                                   ],
                                 ),
@@ -694,11 +694,7 @@ class CardGenerationLoadingDialog extends StatelessWidget {
   final String? message;
   final VoidCallback? onCancel;
 
-  const CardGenerationLoadingDialog({
-    super.key,
-    this.message,
-    this.onCancel,
-  });
+  const CardGenerationLoadingDialog({super.key, this.message, this.onCancel});
 
   @override
   Widget build(BuildContext context) {

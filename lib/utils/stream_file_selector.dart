@@ -330,13 +330,15 @@ class StreamFileSelector {
     if (!_useNativeSelector) return false;
 
     try {
-      final result = await _channel.invokeMethod('isAvailable').timeout(
-        const Duration(seconds: 2),
-        onTimeout: () {
-          logDebug('原生文件选择器检查超时');
-          return false;
-        },
-      );
+      final result = await _channel
+          .invokeMethod('isAvailable')
+          .timeout(
+            const Duration(seconds: 2),
+            onTimeout: () {
+              logDebug('原生文件选择器检查超时');
+              return false;
+            },
+          );
       return result == true;
     } catch (e) {
       logDebug('检查原生文件选择器可用性失败: $e');

@@ -252,9 +252,11 @@ class MediaReferenceService {
       final storedVariants = snapshot.storedIndex[canonicalKey];
       final quoteVariants = snapshot.quoteIndex[canonicalKey];
 
-      final hasStoredRefs = storedVariants != null &&
+      final hasStoredRefs =
+          storedVariants != null &&
           storedVariants.values.any((refs) => refs.isNotEmpty);
-      final hasQuoteRefs = quoteVariants != null &&
+      final hasQuoteRefs =
+          quoteVariants != null &&
           quoteVariants.values.any((refs) => refs.isNotEmpty);
 
       if (hasQuoteRefs) {
@@ -290,8 +292,10 @@ class MediaReferenceService {
   static Future<_CleanupPlan> _planOrphanCleanupStreamed() async {
     final storedIndex = await _fetchStoredReferenceIndex();
     final quoteIndex = await _collectQuoteReferenceIndexStreamed();
-    final snapshot =
-        ReferenceSnapshot(storedIndex: storedIndex, quoteIndex: quoteIndex);
+    final snapshot = ReferenceSnapshot(
+      storedIndex: storedIndex,
+      quoteIndex: quoteIndex,
+    );
     final allMediaFiles = await _getAllMediaFiles();
     final candidates = <_OrphanCandidate>[];
     final missingReferences = <String, Map<String, Set<String>>>{};
@@ -303,9 +307,11 @@ class MediaReferenceService {
       final storedVariants = snapshot.storedIndex[canonicalKey];
       final quoteVariants = snapshot.quoteIndex[canonicalKey];
 
-      final hasStoredRefs = storedVariants != null &&
+      final hasStoredRefs =
+          storedVariants != null &&
           storedVariants.values.any((refs) => refs.isNotEmpty);
-      final hasQuoteRefs = quoteVariants != null &&
+      final hasQuoteRefs =
+          quoteVariants != null &&
           quoteVariants.values.any((refs) => refs.isNotEmpty);
 
       if (hasQuoteRefs) {
@@ -385,7 +391,7 @@ class MediaReferenceService {
   }
 
   static Future<Map<String, Map<String, Set<String>>>>
-      _fetchStoredReferenceIndex() async {
+  _fetchStoredReferenceIndex() async {
     final db = await database;
     final rows = await db.query(_tableName, columns: ['file_path', 'quote_id']);
 
@@ -410,11 +416,12 @@ class MediaReferenceService {
   }
 
   static Future<Map<String, Map<String, Set<String>>>>
-      _collectQuoteReferenceIndex() async {
+  _collectQuoteReferenceIndex() async {
     final databaseService = DatabaseService();
     // 媒体引用索引需要包含所有笔记（包括隐藏笔记）
-    final quotes =
-        await databaseService.getAllQuotes(excludeHiddenNotes: false);
+    final quotes = await databaseService.getAllQuotes(
+      excludeHiddenNotes: false,
+    );
 
     final index = <String, Map<String, Set<String>>>{};
 
@@ -441,7 +448,7 @@ class MediaReferenceService {
 
   /// 流式收集引用索引，避免一次性加载全部笔记
   static Future<Map<String, Map<String, Set<String>>>>
-      _collectQuoteReferenceIndexStreamed() async {
+  _collectQuoteReferenceIndexStreamed() async {
     final databaseService = DatabaseService();
     final index = <String, Map<String, Set<String>>>{};
     const int pageSize = 200;
@@ -467,8 +474,10 @@ class MediaReferenceService {
           final variantPath = path.normalize(mediaPath);
           final key = _canonicalComparisonKey(variantPath);
 
-          final variants =
-              index.putIfAbsent(key, () => <String, Set<String>>{});
+          final variants = index.putIfAbsent(
+            key,
+            () => <String, Set<String>>{},
+          );
           final quoteSet = variants.putIfAbsent(variantPath, () => <String>{});
           quoteSet.add(quoteId);
         }
@@ -568,12 +577,14 @@ class MediaReferenceService {
       // 2. 二次确认：即使引用表说没有，也从笔记内容中全文搜索一次（防止引用表损坏/不同步导致的误删）
       // 注意：这步对于数据安全至关重要
       final dbService = DatabaseService();
-      final quotesWithFile =
-          await dbService.searchQuotesByContent(normalizedPath);
+      final quotesWithFile = await dbService.searchQuotesByContent(
+        normalizedPath,
+      );
 
       if (quotesWithFile.isNotEmpty) {
         logDebug(
-            '警告：文件 $filePath 在引用表中无记录，但在 ${quotesWithFile.length} 条笔记内容中发现引用。正在自动修复引用表并跳过删除。');
+          '警告：文件 $filePath 在引用表中无记录，但在 ${quotesWithFile.length} 条笔记内容中发现引用。正在自动修复引用表并跳过删除。',
+        );
         // 自动修复逻辑：重建引用记录
         for (final quote in quotesWithFile) {
           if (quote.id != null) {
@@ -609,9 +620,11 @@ class MediaReferenceService {
       final storedVariants = snapshot.storedIndex[canonicalKey];
       final quoteVariants = snapshot.quoteIndex[canonicalKey];
 
-      final hasStoredRefs = storedVariants != null &&
+      final hasStoredRefs =
+          storedVariants != null &&
           storedVariants.values.any((refs) => refs.isNotEmpty);
-      final hasQuoteRefs = quoteVariants != null &&
+      final hasQuoteRefs =
+          quoteVariants != null &&
           quoteVariants.values.any((refs) => refs.isNotEmpty);
 
       // 如果在笔记内容中找到引用，先尝试修复缺失的引用记录
@@ -748,11 +761,7 @@ class MediaReferenceService {
       }
 
       // 先移除该笔记的所有现有引用
-      await txn.delete(
-        _tableName,
-        where: 'quote_id = ?',
-        whereArgs: [quoteId],
-      );
+      await txn.delete(_tableName, where: 'quote_id = ?', whereArgs: [quoteId]);
 
       // 从笔记内容中提取媒体文件路径
       final mediaPaths = await extractMediaPathsFromQuote(quote);
@@ -760,16 +769,12 @@ class MediaReferenceService {
       // 添加新的引用
       for (final mediaPath in mediaPaths) {
         final normalizedPath = await _normalizeFilePath(mediaPath);
-        await txn.insert(
-          _tableName,
-          {
-            'id': const Uuid().v4(),
-            'file_path': normalizedPath,
-            'quote_id': quoteId,
-            'created_at': DateTime.now().toIso8601String(),
-          },
-          conflictAlgorithm: ConflictAlgorithm.ignore,
-        );
+        await txn.insert(_tableName, {
+          'id': const Uuid().v4(),
+          'file_path': normalizedPath,
+          'quote_id': quoteId,
+          'created_at': DateTime.now().toIso8601String(),
+        }, conflictAlgorithm: ConflictAlgorithm.ignore);
       }
 
       logDebug('同步笔记媒体文件引用完成: $quoteId, 共 ${mediaPaths.length} 个文件');
@@ -825,7 +830,8 @@ class MediaReferenceService {
 
       sanitized = path.normalize(sanitized);
 
-      final appPath = cachedAppPath ??
+      final appPath =
+          cachedAppPath ??
           path.normalize((await getApplicationDocumentsDirectory()).path);
 
       if (sanitized.startsWith(appPath)) {

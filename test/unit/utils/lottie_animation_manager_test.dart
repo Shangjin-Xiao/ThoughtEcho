@@ -7,45 +7,63 @@ void main() {
       for (final type in LottieAnimationType.values) {
         final path = LottieAnimationManager.getAnimationPath(type);
         expect(path, isNotEmpty, reason: 'Path for $type should not be empty');
-        expect(path, startsWith('assets/lottie/'),
-            reason: 'Path for $type should start with assets/lottie/');
-        expect(path, endsWith('.json'),
-            reason: 'Path for $type should end with .json');
+        expect(
+          path,
+          startsWith('assets/lottie/'),
+          reason: 'Path for $type should start with assets/lottie/',
+        );
+        expect(
+          path,
+          endsWith('.json'),
+          reason: 'Path for $type should end with .json',
+        );
       }
 
       // Verify specific mappings
       expect(
-          LottieAnimationManager.getAnimationPath(LottieAnimationType.loading),
-          'assets/lottie/custom_loading.json');
+        LottieAnimationManager.getAnimationPath(LottieAnimationType.loading),
+        'assets/lottie/custom_loading.json',
+      );
       expect(
-          LottieAnimationManager.getAnimationPath(
-              LottieAnimationType.searchLoading),
-          'assets/lottie/search_loading.json');
+        LottieAnimationManager.getAnimationPath(
+          LottieAnimationType.searchLoading,
+        ),
+        'assets/lottie/search_loading.json',
+      );
       expect(
-          LottieAnimationManager.getAnimationPath(
-              LottieAnimationType.weatherSearchLoading),
-          'assets/lottie/weather_search_loading.json');
+        LottieAnimationManager.getAnimationPath(
+          LottieAnimationType.weatherSearchLoading,
+        ),
+        'assets/lottie/weather_search_loading.json',
+      );
       expect(
-          LottieAnimationManager.getAnimationPath(LottieAnimationType.notFound),
-          'assets/lottie/not_found.json');
+        LottieAnimationManager.getAnimationPath(LottieAnimationType.notFound),
+        'assets/lottie/not_found.json',
+      );
 
       // Verify other loading types default to custom_loading.json
       expect(
-          LottieAnimationManager.getAnimationPath(
-              LottieAnimationType.modernLoading),
-          'assets/lottie/custom_loading.json');
+        LottieAnimationManager.getAnimationPath(
+          LottieAnimationType.modernLoading,
+        ),
+        'assets/lottie/custom_loading.json',
+      );
       expect(
-          LottieAnimationManager.getAnimationPath(
-              LottieAnimationType.pulseLoading),
-          'assets/lottie/custom_loading.json');
+        LottieAnimationManager.getAnimationPath(
+          LottieAnimationType.pulseLoading,
+        ),
+        'assets/lottie/custom_loading.json',
+      );
       expect(
-          LottieAnimationManager.getAnimationPath(
-              LottieAnimationType.aiThinking),
-          'assets/lottie/custom_loading.json');
+        LottieAnimationManager.getAnimationPath(LottieAnimationType.aiThinking),
+        'assets/lottie/custom_loading.json',
+      );
       expect(
-          LottieAnimationManager.getAnimationPath(
-              LottieAnimationType.customLoading),
-          'assets/lottie/custom_loading.json');
+        LottieAnimationManager.getAnimationPath(
+          LottieAnimationType.customLoading,
+        ),
+        'assets/lottie/custom_loading.json',
+      );
     });
 
     test('getAnimationConfig returns correct configuration for all types', () {
@@ -62,19 +80,32 @@ void main() {
         final config = LottieAnimationManager.getAnimationConfig(type);
         expect(config.width, 80, reason: 'Width for $type should be 80');
         expect(config.height, 80, reason: 'Height for $type should be 80');
-        expect(config.repeat, isTrue,
-            reason: 'Repeat for $type should be true');
-        expect(config.reverse, isFalse,
-            reason: 'Reverse for $type should be false');
-        expect(config.autoPlay, isTrue,
-            reason: 'AutoPlay for $type should be true');
-        expect(config.semanticLabel, isNull,
-            reason: 'SemanticLabel for $type should be null');
+        expect(
+          config.repeat,
+          isTrue,
+          reason: 'Repeat for $type should be true',
+        );
+        expect(
+          config.reverse,
+          isFalse,
+          reason: 'Reverse for $type should be false',
+        );
+        expect(
+          config.autoPlay,
+          isTrue,
+          reason: 'AutoPlay for $type should be true',
+        );
+        expect(
+          config.semanticLabel,
+          isNull,
+          reason: 'SemanticLabel for $type should be null',
+        );
       }
 
       // Test Search Loading
       final searchConfig = LottieAnimationManager.getAnimationConfig(
-          LottieAnimationType.searchLoading);
+        LottieAnimationType.searchLoading,
+      );
       expect(searchConfig.width, 360);
       expect(searchConfig.height, 360);
       expect(searchConfig.repeat, isTrue);
@@ -84,7 +115,8 @@ void main() {
 
       // Test Weather Search Loading
       final weatherConfig = LottieAnimationManager.getAnimationConfig(
-          LottieAnimationType.weatherSearchLoading);
+        LottieAnimationType.weatherSearchLoading,
+      );
       expect(weatherConfig.width, 540);
       expect(weatherConfig.height, 540);
       expect(weatherConfig.repeat, isTrue);
@@ -94,7 +126,8 @@ void main() {
 
       // Test Not Found
       final notFoundConfig = LottieAnimationManager.getAnimationConfig(
-          LottieAnimationType.notFound);
+        LottieAnimationType.notFound,
+      );
       expect(notFoundConfig.width, 120);
       expect(notFoundConfig.height, 120);
       expect(notFoundConfig.repeat, isTrue);
