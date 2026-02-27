@@ -181,9 +181,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
           final hasValidKey = await apiKeyManager.hasValidProviderApiKey(
             provider.id,
           );
-          statusMessage = hasValidKey
-              ? l10n.apiKeyVerified
-              : l10n.apiKeyInvalid;
+          statusMessage =
+              hasValidKey ? l10n.apiKeyVerified : l10n.apiKeyInvalid;
         }
       }
 
@@ -612,14 +611,12 @@ class _AISettingsPageState extends State<AISettingsPage> {
       final apiKeyManager = APIKeyManager();
       await apiKeyManager.removeProviderApiKey(provider.id);
 
-      final updatedProviders = _multiSettings.providers
-          .where((p) => p.id != provider.id)
-          .toList();
+      final updatedProviders =
+          _multiSettings.providers.where((p) => p.id != provider.id).toList();
       String? newCurrentProviderId = _multiSettings.currentProviderId;
       if (_currentProvider?.id == provider.id) {
-        newCurrentProviderId = updatedProviders.isNotEmpty
-            ? updatedProviders.first.id
-            : null;
+        newCurrentProviderId =
+            updatedProviders.isNotEmpty ? updatedProviders.first.id : null;
       }
 
       final updatedMultiSettings = _multiSettings.copyWith(
@@ -733,9 +730,9 @@ class _AISettingsPageState extends State<AISettingsPage> {
     return Text(
       title,
       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-        color: Theme.of(context).colorScheme.primary,
-        fontWeight: FontWeight.bold,
-      ),
+            color: Theme.of(context).colorScheme.primary,
+            fontWeight: FontWeight.bold,
+          ),
     );
   }
 
@@ -797,8 +794,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
               context,
               Icons.vpn_key,
               l10n.apiKeyLabel(_apiKeyStatus),
-              color:
-                  _apiKeyStatus.contains('有效') ||
+              color: _apiKeyStatus.contains('有效') ||
                       _apiKeyStatus.contains('valid')
                   ? Colors.green
                   : Colors.orange,
