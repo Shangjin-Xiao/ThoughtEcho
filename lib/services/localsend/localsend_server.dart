@@ -181,10 +181,7 @@ class LocalSendServer {
           try {
             if (request.method == 'POST') {
               // Drain body to avoid socket issues (ignore content for now)
-              final bodyBytes = await request.fold<List<int>>(
-                <int>[],
-                (p, e) => p..addAll(e),
-              );
+              final bodyBytes = await _readRequestBody(request);
               if (bodyBytes.isNotEmpty) {
                 logDebug(
                   'register_body_len=${bodyBytes.length}',
@@ -203,10 +200,7 @@ class LocalSendServer {
         } else if (path == '/api/thoughtecho/v1/sync-intent' &&
             request.method == 'POST') {
           // 轻量意向握手：请求体包含 fingerprint, alias, estimatedNotes(optional)
-          final bodyBytes = await request.fold<List<int>>(
-            <int>[],
-            (p, e) => p..addAll(e),
-          );
+          final bodyBytes = await _readRequestBody(request);
           final bodyString = utf8.decode(bodyBytes);
           Map<String, dynamic> req = {};
           try {
@@ -235,10 +229,7 @@ class LocalSendServer {
                 path == '/api/localsend/v1/send-request') &&
             request.method == 'POST') {
           logDebug('prepare_start', source: 'LocalSend');
-          final bodyBytes = await request.fold<List<int>>(
-            <int>[],
-            (previous, element) => previous..addAll(element),
-          );
+          final bodyBytes = await _readRequestBody(request);
           final bodyString = utf8.decode(bodyBytes);
           logDebug(
             'prepare_body_len=${bodyString.length}',
@@ -290,10 +281,7 @@ class LocalSendServer {
           // 取消会话接口（简化版）
           if (path == '/api/localsend/v2/cancel' && request.method == 'POST') {
             try {
-              final bodyBytes = await request.fold<List<int>>(
-                <int>[],
-                (p, e) => p..addAll(e),
-              );
+              final bodyBytes = await _readRequestBody(request);
               final body = utf8.decode(bodyBytes);
               final data = jsonDecode(body) as Map<String, dynamic>;
               final sessionId = data['sessionId'] as String?;
@@ -326,8 +314,14 @@ class LocalSendServer {
           stackTrace: stack,
           source: 'LocalSend',
         );
-        statusCode = 500;
-        responseData = {'error': e.toString()};
+
+        if (e.toString().contains('Request body too large')) {
+          statusCode = 413; // Payload Too Large
+          responseData = {'error': 'Request entity too large'};
+        } else {
+          statusCode = 500;
+          responseData = {'error': e.toString()};
+        }
       }
 
       // Send response
@@ -377,4 +371,27 @@ class LocalSendServer {
 
   /// Get receive controller
   ReceiveController get receiveController => _receiveController;
+
+  /// Safely reads the request body with a size limit
+  /// Throws an exception if the body exceeds the limit
+  Future<List<int>> _readRequestBody(HttpRequest request) async {
+    const int maxBodySize = 10 * 1024 * 1024; // 10MB limit to support large metadata (e.g. 50k+ files)
+
+    if (request.contentLength > maxBodySize) {
+      throw Exception('Request body too large (Content-Length: ${request.contentLength})');
+    }
+
+    final bodyBytes = <int>[];
+    int currentSize = 0;
+
+    await for (final chunk in request) {
+      currentSize += chunk.length;
+      if (currentSize > maxBodySize) {
+        throw Exception('Request body too large (exceeded limit during read)');
+      }
+      bodyBytes.addAll(chunk);
+    }
+
+    return bodyBytes;
+  }
 }
