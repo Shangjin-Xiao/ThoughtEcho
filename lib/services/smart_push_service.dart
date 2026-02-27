@@ -428,7 +428,6 @@ class SmartPushService extends ChangeNotifier {
     try {
       final payload = response.payload;
       if (payload != null && payload.isNotEmpty) {
-
         if (payload.contains('contentType:')) {
           // 解析 contentType 和 noteId
           final parts = payload.split('|');

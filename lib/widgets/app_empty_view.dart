@@ -40,12 +40,11 @@ class AppEmptyView extends StatelessWidget {
                   svgAsset!,
                   width: 200,
                   height: 200,
-                  placeholderBuilder:
-                      (context) => Icon(
-                        Icons.inbox,
-                        size: 72,
-                        color: theme.colorScheme.outline.withOpacity(0.5),
-                      ),
+                  placeholderBuilder: (context) => Icon(
+                    Icons.inbox,
+                    size: 72,
+                    color: theme.colorScheme.outline.withOpacity(0.5),
+                  ),
                 ),
               )
             else

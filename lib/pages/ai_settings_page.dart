@@ -405,8 +405,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
 
     // 从安全存储加载 API Key，而不是检查 provider.apiKey（始终为空）
     final apiKeyManager = APIKeyManager();
-    final hasValidKey =
-        await apiKeyManager.hasValidProviderApiKey(provider.id);
+    final hasValidKey = await apiKeyManager.hasValidProviderApiKey(provider.id);
     if (!hasValidKey) {
       throw Exception(l10n.apiKeyRequired(provider.name));
     }
@@ -833,8 +832,8 @@ class _AISettingsPageState extends State<AISettingsPage> {
                         if (!mounted) return;
                         messenger.showSnackBar(
                           SnackBar(
-                            content: Text(
-                                l10n.connectionTestFailed(e.toString())),
+                            content:
+                                Text(l10n.connectionTestFailed(e.toString())),
                             backgroundColor: Colors.red,
                           ),
                         );

@@ -428,68 +428,69 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                             sigmaX: 1.2,
                                             sigmaY: 1.2,
                                           ),
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            gradient: LinearGradient(
-                                              begin: Alignment.topCenter,
-                                              end: Alignment.bottomCenter,
-                                              colors: [
-                                                innerTheme.colorScheme.surface
-                                                    .withValues(
-                                                  alpha: 0.0,
-                                                ),
-                                                innerTheme.colorScheme.surface
-                                                    .withValues(
-                                                  alpha: 0.08,
-                                                ),
-                                                innerTheme.colorScheme.surface
-                                                    .withValues(
-                                                  alpha: 0.18,
-                                                ),
-                                              ],
-                                              stops: const [
-                                                0.0,
-                                                0.4,
-                                                1.0,
-                                              ],
-                                            ),
-                                          ),
-                                          alignment: Alignment.center,
                                           child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 8,
-                                              vertical: 2,
-                                            ),
                                             decoration: BoxDecoration(
-                                              color: innerTheme
-                                                  .colorScheme.surface
-                                                  .withValues(
-                                                alpha: 0.35,
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(
-                                                12,
+                                              gradient: LinearGradient(
+                                                begin: Alignment.topCenter,
+                                                end: Alignment.bottomCenter,
+                                                colors: [
+                                                  innerTheme.colorScheme.surface
+                                                      .withValues(
+                                                    alpha: 0.0,
+                                                  ),
+                                                  innerTheme.colorScheme.surface
+                                                      .withValues(
+                                                    alpha: 0.08,
+                                                  ),
+                                                  innerTheme.colorScheme.surface
+                                                      .withValues(
+                                                    alpha: 0.18,
+                                                  ),
+                                                ],
+                                                stops: const [
+                                                  0.0,
+                                                  0.4,
+                                                  1.0,
+                                                ],
                                               ),
                                             ),
-                                            child: Text(
-                                              l10n.doubleTapToViewFull,
-                                              style: innerTheme
-                                                  .textTheme.bodySmall
-                                                  ?.copyWith(
+                                            alignment: Alignment.center,
+                                            child: Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                horizontal: 8,
+                                                vertical: 2,
+                                              ),
+                                              decoration: BoxDecoration(
                                                 color: innerTheme
-                                                    .colorScheme.onSurface
+                                                    .colorScheme.surface
                                                     .withValues(
-                                                  alpha: 0.65,
+                                                  alpha: 0.35,
                                                 ),
-                                                fontSize: 11,
-                                                fontStyle: FontStyle.italic,
+                                                borderRadius:
+                                                    BorderRadius.circular(
+                                                  12,
+                                                ),
+                                              ),
+                                              child: Text(
+                                                l10n.doubleTapToViewFull,
+                                                style: innerTheme
+                                                    .textTheme.bodySmall
+                                                    ?.copyWith(
+                                                  color: innerTheme
+                                                      .colorScheme.onSurface
+                                                      .withValues(
+                                                    alpha: 0.65,
+                                                  ),
+                                                  fontSize: 11,
+                                                  fontStyle: FontStyle.italic,
+                                                ),
                                               ),
                                             ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                  )
+                                    )
                                   : const SizedBox.shrink(),
                             ),
                           ),

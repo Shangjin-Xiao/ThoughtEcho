@@ -703,6 +703,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
       if (!mounted) return;
       setState(() => _selectedIconName = iconName);
     }
+
     String searchQuery = '';
     Map<String, bool> expandedCategories = {
       l10n.emotion: true,
