@@ -24,6 +24,7 @@ import '../widgets/streaming_text_dialog.dart'; // 导入 StreamingTextDialog
 import 'package:flutter/services.dart';
 import 'dart:async';
 import '../utils/app_logger.dart';
+import '../utils/string_utils.dart';
 import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
 import 'package:flutter/foundation.dart' show kIsWeb, compute;
 import '../utils/device_memory_manager.dart';
@@ -3120,7 +3121,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
   // 分析来源
   Future<void> _analyzeSource() async {
-    final plainText = _controller.document.toPlainText().trim();
+    final plainText = StringUtils.removeObjectReplacementChar(
+      _controller.document.toPlainText(),
+    ).trim();
     if (plainText.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -3270,7 +3273,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
   // 润色文本 (使用流式传输)
   Future<void> _polishText() async {
-    final plainText = _controller.document.toPlainText().trim();
+    final plainText = StringUtils.removeObjectReplacementChar(
+      _controller.document.toPlainText(),
+    ).trim();
     if (plainText.isEmpty) {
       if (mounted) {
         final l10n = AppLocalizations.of(context);
@@ -3323,7 +3328,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
   // 续写文本 (使用流式传输)
   Future<void> _continueText() async {
-    final plainText = _controller.document.toPlainText().trim();
+    final plainText = StringUtils.removeObjectReplacementChar(
+      _controller.document.toPlainText(),
+    ).trim();
     if (plainText.isEmpty) {
       if (mounted) {
         final l10n = AppLocalizations.of(context);
@@ -3380,7 +3387,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
   // 深度分析内容 (使用流式传输)
   Future<void> _analyzeContent() async {
-    final plainText = _controller.document.toPlainText().trim();
+    final plainText = StringUtils.removeObjectReplacementChar(
+      _controller.document.toPlainText(),
+    ).trim();
     if (plainText.isEmpty) {
       if (mounted) {
         final l10n = AppLocalizations.of(context);
@@ -3446,7 +3455,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
   // 问笔记功能
   Future<void> _askNoteQuestion() async {
-    final plainText = _controller.document.toPlainText().trim();
+    final plainText = StringUtils.removeObjectReplacementChar(
+      _controller.document.toPlainText(),
+    ).trim();
     if (plainText.isEmpty) {
       final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(

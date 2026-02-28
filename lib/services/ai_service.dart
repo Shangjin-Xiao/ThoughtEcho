@@ -9,6 +9,7 @@ import '../utils/ai_network_manager.dart';
 import '../utils/ai_prompt_manager.dart';
 import '../utils/ai_request_helper.dart';
 import '../utils/app_logger.dart';
+import '../utils/string_utils.dart';
 import '../gen_l10n/app_localizations.dart';
 
 // 定义流式响应的回调类型
@@ -207,8 +208,9 @@ class AIService extends ChangeNotifier {
         final multiSettings = _settingsService.multiAISettings;
         final currentProvider = multiSettings.currentProvider!;
 
-        // 直接使用Quote的content字段（纯文本内容）
-        final content = quote.content.trim();
+        // 直接使用Quote的content字段（纯文本内容），移除媒体占位符
+        final content =
+            StringUtils.removeObjectReplacementChar(quote.content).trim();
 
         if (content.isEmpty) {
           throw Exception('没有可分析的文本内容');
@@ -241,8 +243,9 @@ class AIService extends ChangeNotifier {
         final multiSettings = _settingsService.multiAISettings;
         final currentProvider = multiSettings.currentProvider!;
 
-        // 直接使用Quote的content字段（纯文本内容）
-        final content = quote.content.trim();
+        // 直接使用Quote的content字段（纯文本内容），移除媒体占位符
+        final content =
+            StringUtils.removeObjectReplacementChar(quote.content).trim();
 
         if (content.isEmpty) {
           controller.addError(Exception('没有可分析的文本内容'));
@@ -1125,8 +1128,9 @@ class AIService extends ChangeNotifier {
         await _validateSettings();
         final currentProvider = await _getCurrentProviderWithApiKey();
 
-        // 直接使用Quote的content字段（纯文本内容）
-        final content = quote.content.trim();
+        // 直接使用Quote的content字段（纯文本内容），移除媒体占位符
+        final content =
+            StringUtils.removeObjectReplacementChar(quote.content).trim();
 
         if (content.isEmpty) {
           throw Exception('没有可分析的文本内容');
@@ -1164,8 +1168,9 @@ class AIService extends ChangeNotifier {
         await _validateSettings();
         final currentProvider = await _getCurrentProviderWithApiKey();
 
-        // 直接使用Quote的content字段（纯文本内容）
-        final content = quote.content.trim();
+        // 直接使用Quote的content字段（纯文本内容），移除媒体占位符
+        final content =
+            StringUtils.removeObjectReplacementChar(quote.content).trim();
 
         if (content.isEmpty) {
           controller.addError(Exception('没有可分析的文本内容'));
@@ -1282,8 +1287,9 @@ class AIService extends ChangeNotifier {
     try {
       final multiSettings = _settingsService.multiAISettings;
 
-      // 直接使用Quote的content字段（纯文本内容）
-      final content = quote.content.trim();
+      // 直接使用Quote的content字段（纯文本内容），移除媒体占位符
+      final content =
+          StringUtils.removeObjectReplacementChar(quote.content).trim();
 
       if (content.isEmpty) {
         throw Exception('没有可分析的文本内容');
