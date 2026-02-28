@@ -2,7 +2,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/scheduler.dart';
 // 仅在 Windows 平台下使用 sqflite_common_ffi，其它平台直接使用 sqflite 默认实现
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
@@ -440,8 +440,8 @@ class DatabaseService extends ChangeNotifier {
       await _performStartupHealthCheck();
 
       // 延迟通知监听者，让UI知道数据库已准备好
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        notifyListeners();
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (!_isDisposed) notifyListeners();
       });
     } catch (e) {
       logDebug('数据库初始化失败: $e');
@@ -542,8 +542,8 @@ class DatabaseService extends ChangeNotifier {
       _isInitialized = true;
 
       // 修复：延迟通知，避免在build期间调用setState
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        notifyListeners();
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (!_isDisposed) notifyListeners();
       });
       logDebug('成功初始化新数据库');
     } catch (e) {
@@ -3028,8 +3028,8 @@ class DatabaseService extends ChangeNotifier {
             });
           } else {
             // 其他平台立即通知
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              notifyListeners();
+            SchedulerBinding.instance.addPostFrameCallback((_) {
+              if (!_isDisposed) notifyListeners();
             });
           }
         } catch (e) {
