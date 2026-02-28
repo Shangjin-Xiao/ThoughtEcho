@@ -63,4 +63,14 @@ class StringUtils {
   static bool needsExpansion(String text, {int threshold = 100}) {
     return text.length > threshold;
   }
+
+  /// 移除文本中的 Object Replacement Character (U+FFFC)
+  ///
+  /// 当富文本编辑器中包含图片、音频、视频等嵌入媒体时，
+  /// toPlainText() 会用 U+FFFC 字符作为占位符，
+  /// 在手机上显示为方框内写着 "OBJ" 的图标。
+  /// 此方法用于在展示、AI 分析、SVG 卡片生成等场景中清除该字符。
+  static String removeObjectReplacementChar(String text) {
+    return text.replaceAll('\u{FFFC}', '');
+  }
 }

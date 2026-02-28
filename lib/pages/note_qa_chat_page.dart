@@ -11,6 +11,7 @@ import '../gen_l10n/app_localizations.dart';
 import '../models/quote_model.dart';
 import '../services/ai_service.dart';
 import '../utils/app_logger.dart';
+import '../utils/string_utils.dart';
 
 /// 现代化的问笔记聊天界面页面
 class NoteQAChatPage extends StatefulWidget {
@@ -72,7 +73,8 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
   }
 
   String _getQuotePreview() {
-    final content = widget.quote.content;
+    final content =
+        StringUtils.removeObjectReplacementChar(widget.quote.content);
     if (content.length <= 100) {
       return content;
     }
@@ -252,7 +254,7 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
                   style: Theme.of(context).textTheme.labelMedium),
               const SizedBox(height: 4),
               Text(
-                widget.quote.content,
+                StringUtils.removeObjectReplacementChar(widget.quote.content),
                 maxLines: 10,
                 overflow: TextOverflow.ellipsis,
               ),
