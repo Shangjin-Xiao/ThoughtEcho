@@ -33,7 +33,7 @@ class ApiKeyDebugger {
           '   配置中的API Key: ${currentProvider.apiKey.isEmpty ? "空" : "${currentProvider.apiKey.length}字符"}',
         );
         logDebug(
-          '   配置中的API Key内容: ${currentProvider.apiKey.isEmpty ? "空" : currentProvider.apiKey.substring(0, math.min(20, currentProvider.apiKey.length))}...',
+          '   配置中的API Key内容: ${currentProvider.apiKey.isEmpty ? "空" : "${currentProvider.apiKey.substring(0, math.min(4, currentProvider.apiKey.length))}****"}',
         );
 
         // 3. 检查加密存储中的API Key状态
@@ -45,7 +45,7 @@ class ApiKeyDebugger {
           '   安全存储中的API Key: ${secureApiKey.isEmpty ? "空" : "${secureApiKey.length}字符"}',
         );
         logDebug(
-          '   安全存储中的API Key内容: ${secureApiKey.isEmpty ? "空" : secureApiKey.substring(0, math.min(20, secureApiKey.length))}...',
+          '   安全存储中的API Key内容: ${secureApiKey.isEmpty ? "空" : "${secureApiKey.substring(0, math.min(4, secureApiKey.length))}****"}',
         );
 
         // 4. 检查有效性验证结果
