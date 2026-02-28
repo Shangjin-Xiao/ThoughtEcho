@@ -457,6 +457,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   }
 
   /// 获取新建笔记的实时位置（与全屏编辑器逻辑一致）
+  // TODO(low): 位置/天气获取逻辑与 note_full_editor_page.dart 大量重复，
+  // 可提取为 LocationWeatherHelper 共享。
   Future<void> _fetchLocationForNewNote() async {
     final locationService = _cachedLocationService;
     if (locationService == null) return;

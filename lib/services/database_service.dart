@@ -82,6 +82,7 @@ class DatabaseService extends ChangeNotifier {
   bool _watchHasMore = true;
   String? _watchSearchQuery;
 
+  // TODO(low): 以下 5 个 Map 手动实现 LRU + 过期缓存，可提取为通用 LRU 缓存类简化维护。
   /// 修复：优化查询缓存，实现更好的LRU机制
   final Map<String, List<Quote>> _filterCache = {};
   final Map<String, DateTime> _cacheTimestamps = {}; // 缓存时间戳
@@ -2084,7 +2085,7 @@ class DatabaseService extends ChangeNotifier {
     final queryTime = stopwatch.elapsedMilliseconds;
 
     // 记录查询统计（用于性能分析）
-    _recordQueryStats('getQuotesCount', queryTime);
+    _updateQueryStats('getQuotesCount', queryTime);
 
     // 慢查询检测和警告（阈值降低到100ms，更敏感）
     if (queryTime > 100) {
@@ -2125,10 +2126,7 @@ class DatabaseService extends ChangeNotifier {
     _healthService.recordQueryStats(queryType, timeMs);
   }
 
-  /// 记录查询统计（_updateQueryStats的别名，保持代码一致性）
-  void _recordQueryStats(String queryType, int timeMs) {
-    _updateQueryStats(queryType, timeMs);
-  }
+
 
   /// 智能推送专用轻量查询
   ///
