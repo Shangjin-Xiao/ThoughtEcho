@@ -1,3 +1,4 @@
+// TODO(refactor): 本文件已超 2600 行，应拆分报告生成、图表渲染、导出等为独立组件。
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';

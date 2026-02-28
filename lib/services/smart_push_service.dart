@@ -1,3 +1,4 @@
+// TODO(refactor): 本文件已超 2500 行，应拆分推送策略、时间调度、内容选择等为独立模块。
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/foundation.dart';
