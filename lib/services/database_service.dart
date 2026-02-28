@@ -691,6 +691,8 @@ class DatabaseService extends ChangeNotifier {
     }
 
     // 搜索查询
+    // TODO(low): 该 LIKE 搜索模式在第 696、1992、2430 行重复了 3 次，
+    // 可提取为共享方法。当前量级（个人笔记）性能足够，暂不需要 FTS5。
     if (searchQuery != null && searchQuery.isNotEmpty) {
       conditions.add(
         '(q.content LIKE ? OR (q.source LIKE ? OR q.source_author LIKE ? OR q.source_work LIKE ?))',
@@ -2053,6 +2055,7 @@ class DatabaseService extends ChangeNotifier {
 
     /// 修复：始终使用 qt.tag_id 获取所有标签
     // 优化：指定查询列，排除大文本字段(ai_analysis, summary等)以提升列表加载性能
+    // 注意：delta_content 必须保留！列表卡片通过 QuoteContent 组件渲染富文本（加粗、图片等）
     final query = '''
       SELECT
         q.id, q.content, q.date, q.source, q.source_author, q.source_work,
