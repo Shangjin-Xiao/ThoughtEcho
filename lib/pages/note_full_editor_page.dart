@@ -1,3 +1,4 @@
+// TODO(refactor): 本文件已超 3700 行，应拆分为独立组件（工具栏、媒体处理、位置天气等）。
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;

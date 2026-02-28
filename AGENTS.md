@@ -34,7 +34,7 @@ ThoughtEcho/
 | Task | Location | Notes |
 |------|----------|-------|
 | 应用初始化 | `lib/main.dart` | Provider 注入顺序关键 |
-| 数据库操作 | `lib/services/database_service.dart` | 5820 行，核心 CRUD + 迁移 |
+| 数据库操作 | `lib/services/database_service.dart` | 3730+ 行，核心 CRUD + 迁移 |
 | AI 功能 | `lib/services/ai_service.dart` | 多 provider 架构，流式响应 |
 | 状态管理 | Provider + ChangeNotifier | 服务层继承 ChangeNotifier |
 | 富文本编辑 | `lib/pages/note_full_editor_page.dart` | FlutterQuill，双格式存储 |
@@ -80,15 +80,21 @@ ThoughtEcho/
 | 忽略 `notifyListeners()` | UI 不会刷新 |
 | 编辑生成文件 (`gen_l10n/`, `*.mocks.dart`) | 会被覆盖 |
 | 主动运行 `flutter test` 全量测试 | 除非用户明确要求 |
+| 单文件超过 500 行 | 新建或修改文件时，单文件不得超过 500 行。超过时必须拆分为独立组件/模块。已有超标文件见 COMPLEXITY HOTSPOTS，后续修改时应逐步拆分而非继续膨胀 |
+| 服务层引用 `flutter/widgets.dart` | 服务层应使用 `flutter/scheduler.dart` 替代 `WidgetsBinding`，保持关注点分离 |
+| 重复逻辑超过 3 处 | 提取为共享方法/工具类，避免改一处漏多处 |
+| 未验证即提优化建议 | 修改前必须先阅读实际代码，确认问题真实存在，不可仅凭命名或直觉判断 |
+| 移除 SQL 查询中的字段 | 必须先检查 UI 层是否依赖该字段渲染，如 `delta_content` 在列表卡片中用于富文本显示 |
 
 ## COMPLEXITY HOTSPOTS
 
 | File | Lines | Issue |
 |------|-------|-------|
-| `database_service.dart` | 5820 | God class，考虑拆分 |
-| `note_full_editor_page.dart` | 3083 | 过大，建议提取组件 |
-| `ai_periodic_report_page.dart` | 2435 | 复杂报告逻辑 |
-| `note_list_view.dart` | 1939 | 列表+筛选+交互混合 |
+| `database_service.dart` | 3730+ | God class，考虑拆分 |
+| `note_full_editor_page.dart` | 3720+ | 过大，建议提取工具栏/媒体/位置天气组件 |
+| `ai_periodic_report_page.dart` | 2680+ | 复杂报告逻辑，拆分图表/导出 |
+| `smart_push_service.dart` | 2560+ | 推送策略/时间调度/内容选择应拆分 |
+| `note_list_view.dart` | 2100+ | 列表+筛选+交互混合 |
 
 ## DEPRECATED (待迁移)
 
