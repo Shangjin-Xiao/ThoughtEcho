@@ -7,7 +7,7 @@ import 'dart:convert';
 import '../utils/mmkv_ffi_fix.dart'; // 导入MMKV安全包装类
 import '../utils/app_logger.dart'; // 导入日志工具
 
-///import '../utils/app_logger.dart'; 本地地理编码服务类
+/// 本地地理编码服务类
 /// 优先使用系统级SDK获取地理位置并进行反向地理编码
 class LocalGeocodingService {
   // 串行化 setLocaleIdentifier + placemarkFromCoordinates，避免竞态
