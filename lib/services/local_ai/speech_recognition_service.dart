@@ -75,14 +75,14 @@ class SpeechRecognitionService extends ChangeNotifier {
   /// 是否正在做一次预览解码（避免重入）
   bool _partialDecodeInProgress = false;
 
-  /// 实时预览解码间隔（越小越实时，但越吃 CPU）
-  static const Duration _partialDecodeInterval = Duration(milliseconds: 900);
+  /// 实时预览解码间隔（优化：增加到1500ms减少CPU负担和UI卡顿）
+  static const Duration _partialDecodeInterval = Duration(milliseconds: 1500);
 
-  /// 每次触发预览解码前至少新增的样本数（避免过于频繁）
-  static const int _minNewSamplesForPartialDecode = 16000; // ~1s @16k
+  /// 每次触发预览解码前至少新增的样本数（优化：增加到24000，约1.5秒）
+  static const int _minNewSamplesForPartialDecode = 24000; // ~1.5s @16k
 
-  /// 高核设备上的线程上限，避免占用过高导致 UI 抖动
-  static const int _maxRecommendedThreads = 6;
+  /// 高核设备上的线程上限，避免占用过高导致 UI 抖动（优化：降低到4避免过多线程竞争）
+  static const int _maxRecommendedThreads = 4;
 
   /// 录音计时器
   Timer? _recordingTimer;
@@ -211,9 +211,17 @@ class SpeechRecognitionService extends ChangeNotifier {
   }
 
   /// 根据设备 CPU 动态设置线程数，兼顾速度和稳定性
+  /// 优化：更保守的线程分配策略，避免UI线程竞争
   int _recommendedThreadCount() {
     final cores = Platform.numberOfProcessors;
-    return math.max(1, math.min(cores ~/ 2, _maxRecommendedThreads));
+    // 低核设备（≤4核）使用2线程，高核设备最多4线程
+    if (cores <= 4) {
+      return 2;
+    } else if (cores <= 8) {
+      return 3;
+    } else {
+      return 4;
+    }
   }
 
   /// 确保 sherpa_onnx 已完成必要的全局初始化。
@@ -803,11 +811,11 @@ class SpeechRecognitionService extends ChangeNotifier {
     return samples;
   }
 
-  /// 开始录音计时器
+  /// 开始录音计时器（优化：减少更新频率到500ms降低UI负担）
   void _startRecordingTimer() {
     _recordingTimer?.cancel();
     _recordingTimer =
-        Timer.periodic(const Duration(milliseconds: 300), (timer) {
+        Timer.periodic(const Duration(milliseconds: 500), (timer) {
       if (!_status.isRecording) {
         timer.cancel();
         return;
@@ -818,7 +826,7 @@ class SpeechRecognitionService extends ChangeNotifier {
       final timeFactor = _status.durationSeconds * 3.14;
       final simulatedVolume = 0.3 + 0.2 * (0.5 + 0.5 * math.sin(timeFactor));
       _status = _status.copyWith(
-        durationSeconds: _status.durationSeconds + 0.3,
+        durationSeconds: _status.durationSeconds + 0.5,
         volumeLevel: simulatedVolume.clamp(0.0, 1.0),
       );
       notifyListeners();
