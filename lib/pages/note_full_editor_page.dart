@@ -1056,6 +1056,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     }
   }
 
+  // TODO(low): 位置/天气获取逻辑与 add_note_dialog.dart 大量重复（约 400 行），
+  // 可提取为 LocationWeatherHelper 共享。
   Future<void> _fetchLocationWeather() async {
     final locationService = Provider.of<LocationService>(
       context,
