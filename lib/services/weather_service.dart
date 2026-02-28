@@ -22,18 +22,8 @@ class WeatherService extends ChangeNotifier {
 
   final WeatherCacheManager _cacheManager = WeatherCacheManager();
   bool _isInitialized = false;
-  late final Future<void> _initFuture = _init();
+  Future<void>? _initFuture;
   final Map<String, Future<void>> _pendingWeatherRequests = {};
-
-  // 当前语言设置
-  String? _currentLocaleCode;
-
-  String? get currentLocaleCode => _currentLocaleCode;
-  set currentLocaleCode(String? code) {
-    if (_currentLocaleCode == code) return;
-    _currentLocaleCode = code;
-    notifyListeners();
-  }
 
   // Getters
   WeatherData? get currentWeatherData => _currentWeatherData;
@@ -50,24 +40,30 @@ class WeatherService extends ChangeNotifier {
   String? get weatherIcon => _currentWeatherData?.iconCode;
   double? get temperatureValue => _currentWeatherData?.temperature;
 
-  // 初始化服务
-  Future<void> _init() async {
+  /// 确保服务已初始化（失败后允许重试，与 LocationService 行为一致）
+  Future<void> _ensureInitialized() async {
+    if (_isInitialized) return;
+
+    _initFuture ??= _doInit();
     try {
-      await _cacheManager.initialize();
-      _isInitialized = true;
-      logDebug('天气服务初始化完成');
+      await _initFuture;
     } catch (e) {
-      logError('天气服务初始化失败: $e', error: e);
+      _initFuture = null;
+      _isInitialized = false;
       _lastError = '服务初始化失败: $e';
+      rethrow;
+    }
+
+    if (!_isInitialized) {
+      _initFuture = null;
+      throw Exception('Weather service initialization failed');
     }
   }
 
-  /// 确保服务已初始化
-  Future<void> _ensureInitialized() async {
-    await _initFuture;
-    if (!_isInitialized) {
-      throw Exception('Weather service initialization failed');
-    }
+  Future<void> _doInit() async {
+    await _cacheManager.initialize();
+    _isInitialized = true;
+    logDebug('天气服务初始化完成');
   }
 
   /// 获取天气数据的主要方法

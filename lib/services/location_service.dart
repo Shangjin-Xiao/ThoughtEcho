@@ -71,10 +71,48 @@ class LocationService extends ChangeNotifier {
   String? get currentLocaleCode => _currentLocaleCode;
 
   /// 设置当前语言代码并通知监听者（避免不必要重复刷新）
+  /// 语言变更时自动使用新语言重新解析已有坐标的地址
   set currentLocaleCode(String? code) {
     if (_currentLocaleCode == code) return;
     _currentLocaleCode = code;
     notifyListeners();
+    // 语言变更时，用新语言重新解析已有坐标的地址
+    _refreshAddressForNewLocale();
+  }
+
+  /// 语言变更后重新解析地址，失败时保留旧地址
+  Future<void> _refreshAddressForNewLocale() async {
+    if (_currentPosition == null) return;
+    // 没有有效地址时无需刷新（可能还在初始化中）
+    if (isNonDisplayMarker(_currentAddress)) return;
+
+    // 保留旧地址作为回退
+    final oldCountry = _country;
+    final oldProvince = _province;
+    final oldCity = _city;
+    final oldDistrict = _district;
+    final oldAddress = _currentAddress;
+
+    try {
+      await getAddressFromLatLng();
+      // 如果新解析失败，恢复旧地址
+      if (isNonDisplayMarker(_currentAddress) &&
+          !isNonDisplayMarker(oldAddress)) {
+        _country = oldCountry;
+        _province = oldProvince;
+        _city = oldCity;
+        _district = oldDistrict;
+        _currentAddress = oldAddress;
+        notifyListeners();
+      }
+    } catch (e) {
+      logDebug('语言变更后重新解析地址失败，保留旧地址: $e');
+      _country = oldCountry;
+      _province = oldProvince;
+      _city = oldCity;
+      _district = oldDistrict;
+      _currentAddress = oldAddress;
+    }
   }
 
   /// 获取 API 调用使用的语言参数

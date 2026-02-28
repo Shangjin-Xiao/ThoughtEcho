@@ -974,20 +974,19 @@ class _HomePageState extends State<HomePage>
           );
           final isConnected = connectivityService.isConnected;
 
-          // 异步获取天气，不阻塞主流程
-          Future.microtask(() async {
-            try {
-              await weatherService.getWeatherData(
-                position.latitude,
-                position.longitude,
-                forceRefresh: isConnected,
-                timeout: const Duration(seconds: 10),
-              );
-              logDebug('天气数据更新完成: ${weatherService.currentWeather}');
-            } catch (e) {
-              logDebug('天气数据更新失败: $e');
-            }
-          });
+          // 异步获取天气，不阻塞主流程（使用事件队列调度，避免 microtask 抢占 UI）
+          unawaited(
+            weatherService
+                .getWeatherData(
+                  position.latitude,
+                  position.longitude,
+                  forceRefresh: isConnected,
+                  timeout: const Duration(seconds: 10),
+                )
+                .then((_) =>
+                    logDebug('天气数据更新完成: ${weatherService.currentWeather}'))
+                .catchError((e) => logDebug('天气数据更新失败: $e')),
+          );
         } else {
           logDebug('位置获取失败');
         }
