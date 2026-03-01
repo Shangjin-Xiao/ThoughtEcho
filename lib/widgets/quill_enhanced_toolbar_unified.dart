@@ -99,10 +99,15 @@ class _UnifiedQuillToolbarState extends State<UnifiedQuillToolbar> {
             ),
             _buildDivider(),
 
-            // 第五组：颜色（仅保留字体颜色，背景色已移至元数据编辑抽屉）
+            // 第五组：颜色
             quill.QuillToolbarColorButton(
               controller: widget.controller,
               isBackground: false,
+              options: const quill.QuillToolbarColorButtonOptions(),
+            ),
+            quill.QuillToolbarColorButton(
+              controller: widget.controller,
+              isBackground: true,
               options: const quill.QuillToolbarColorButtonOptions(),
             ),
             _buildDivider(),
