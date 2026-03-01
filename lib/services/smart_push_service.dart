@@ -15,7 +15,6 @@ import 'package:device_info_plus/device_info_plus.dart';
 import '../models/smart_push_settings.dart';
 import '../models/quote_model.dart';
 import '../pages/note_full_editor_page.dart';
-import '../widgets/add_note_dialog.dart';
 import '../main.dart' show navigatorKey;
 import 'database_service.dart';
 import 'mmkv_service.dart';
@@ -59,6 +58,10 @@ class SmartPushService extends ChangeNotifier {
   static const String _notificationChannelName = '智能推送';
   static const String _scheduledTimesKey = 'smart_push_scheduled_times_today';
   static const String _lastDailyQuoteKey = 'smart_push_last_daily_quote';
+  static const String _lastDailyQuoteDateKey =
+      'smart_push_last_daily_quote_date';
+  static const String _pendingHomeDailyQuoteKey =
+      'smart_push_pending_home_daily_quote';
 
   SmartPushSettings _settings = SmartPushSettings.defaultSettings();
   SmartPushSettings get settings => _settings;
@@ -85,6 +88,29 @@ class SmartPushService extends ChangeNotifier {
             notificationsPlugin ?? FlutterLocalNotificationsPlugin(),
         _weatherService = weatherService {
     _analytics = analytics ?? SmartPushAnalytics(mmkvService: _mmkv);
+  }
+
+  /// 统一每日一言数据格式，确保首页与推送使用同一结构。
+  static Map<String, dynamic>? normalizeDailyQuoteData(
+    Map<String, dynamic>? rawData,
+  ) {
+    if (rawData == null) return null;
+
+    final content =
+        (rawData['hitokoto'] ?? rawData['content'])?.toString().trim() ?? '';
+    if (content.isEmpty) return null;
+
+    final fromWho =
+        (rawData['from_who'] ?? rawData['author'] ?? '').toString().trim();
+    final from = (rawData['from'] ?? rawData['source'] ?? '').toString().trim();
+    final type = (rawData['type'] ?? '').toString().trim();
+
+    return {
+      'hitokoto': content,
+      'from_who': fromWho,
+      'from': from,
+      if (type.isNotEmpty) 'type': type,
+    };
   }
 
   /// 设置天气服务（延迟注入）
@@ -473,7 +499,7 @@ class SmartPushService extends ChangeNotifier {
         AppLogger.e('通知导航失败', error: e);
       });
     } else if (contentType == 'dailyQuote') {
-      // 每日一言：从 MMKV 读取缓存的每日一言内容并打开编辑器
+      // 每日一言：仅标记首页展示，不直接弹出添加弹窗
       _navigateToDailyQuote().catchError((e) {
         AppLogger.e('每日一言导航失败', error: e);
       });
@@ -521,88 +547,27 @@ class SmartPushService extends ChangeNotifier {
     }
   }
 
-  /// 导航到每日一言（使用 AddNoteDialog 底部弹窗）
-  ///
-  /// 行为与首页双击每日一言一致：打开非全屏编辑器，自动填充来源和标签信息。
-  /// 优先读取 MMKV 缓存，缓存不存在时实时获取新的每日一言。
+  /// 标记每日一言通知点击后的首页展示内容（一次性消费）。
   Future<void> _navigateToDailyQuote() async {
     try {
-      // 1. 获取每日一言数据：优先缓存，缓存缺失时实时获取
-      Map<String, dynamic>? hitokotoData;
-      final cachedJson = _mmkv.getString(_lastDailyQuoteKey);
-      if (cachedJson != null && cachedJson.isNotEmpty) {
-        hitokotoData = json.decode(cachedJson) as Map<String, dynamic>?;
-      }
-
-      if (hitokotoData == null || hitokotoData['hitokoto'] == null) {
-        AppLogger.d('每日一言缓存为空，实时获取...');
-        final quote = await _fetchDailyQuote();
-        if (quote == null) {
-          AppLogger.w('每日一言导航已取消：无法获取内容');
+      var hitokotoData = getCachedDailyQuoteForToday();
+      if (hitokotoData == null) {
+        AppLogger.d('通知点击时缓存为空，实时获取每日一言...');
+        hitokotoData = await _loadDailyQuoteData(preferCache: false);
+        if (hitokotoData == null) {
+          AppLogger.w('每日一言通知点击处理取消：无法获取内容');
           return;
         }
-        // _fetchDailyQuote 内部已缓存，重新读取
-        final freshJson = _mmkv.getString(_lastDailyQuoteKey);
-        if (freshJson != null && freshJson.isNotEmpty) {
-          hitokotoData = json.decode(freshJson) as Map<String, dynamic>?;
-        }
-        if (hitokotoData == null) return;
       }
 
-      final content = hitokotoData['hitokoto'] as String;
-      final fromWho = hitokotoData['from_who'] as String? ?? '';
-      final from = hitokotoData['from'] as String? ?? '';
-      final categories = await _databaseService.getCategories();
-
-      // 2. 等待 navigatorKey 就绪（冷启动场景）
-      int retryCount = 0;
-      const maxRetries = 15;
-      while (navigatorKey.currentState == null && retryCount < maxRetries) {
-        AppLogger.d('等待 navigatorKey 就绪... ($retryCount)');
-        await Future.delayed(const Duration(milliseconds: 300));
-        retryCount++;
-      }
-
-      if (navigatorKey.currentState == null) {
-        AppLogger.w('每日一言导航失败：navigatorKey 在多次重试后仍为空');
-        return;
-      }
-
-      // 3. 通过 push 一个透明页面，在其中 showModalBottomSheet
-      //    直接对 navigatorKey.currentContext 调用 showModalBottomSheet
-      //    会因为 context 本身就是 Navigator 而导致 Navigator.of 查找失败
-      navigatorKey.currentState!.push(
-        PageRouteBuilder(
-          opaque: false,
-          barrierColor: Colors.black54,
-          barrierDismissible: true,
-          pageBuilder: (context, _, __) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor:
-                    Theme.of(context).colorScheme.surfaceContainerLowest,
-                builder: (_) => AddNoteDialog(
-                  prefilledContent: content,
-                  prefilledAuthor: fromWho.isNotEmpty ? fromWho : null,
-                  prefilledWork: from.isNotEmpty ? from : null,
-                  hitokotoData: hitokotoData,
-                  tags: categories,
-                ),
-              ).whenComplete(() {
-                if (navigatorKey.currentState?.canPop() ?? false) {
-                  navigatorKey.currentState!.pop();
-                }
-              });
-            });
-            return const SizedBox.shrink();
-          },
-        ),
+      await _mmkv.setString(
+        _pendingHomeDailyQuoteKey,
+        json.encode(hitokotoData),
       );
-      AppLogger.i('已成功触发每日一言添加弹窗');
+      notifyListeners();
+      AppLogger.i('已标记每日一言通知内容用于首页展示');
     } catch (e) {
-      AppLogger.e('每日一言导航逻辑出错', error: e);
+      AppLogger.e('每日一言通知点击处理出错', error: e);
     }
   }
 
@@ -611,10 +576,98 @@ class SmartPushService extends ChangeNotifier {
   /// [hitokotoData] 为一言 API 的原始响应，包含 type 等标签分类信息
   void _saveDailyQuoteToCache(Map<String, dynamic> hitokotoData) {
     try {
-      _mmkv.setString(_lastDailyQuoteKey, json.encode(hitokotoData));
+      final normalizedData = normalizeDailyQuoteData(hitokotoData);
+      if (normalizedData == null) return;
+
+      _mmkv.setString(_lastDailyQuoteKey, json.encode(normalizedData));
+      _mmkv.setString(_lastDailyQuoteDateKey, _todayDateKey());
     } catch (e) {
       AppLogger.w('缓存每日一言失败', error: e);
     }
+  }
+
+  String _todayDateKey() => DateTime.now().toIso8601String().substring(0, 10);
+
+  /// 读取当天缓存的一言数据，跨首页与推送共用。
+  Map<String, dynamic>? getCachedDailyQuoteForToday() {
+    try {
+      final cachedDate = _mmkv.getString(_lastDailyQuoteDateKey);
+      if (cachedDate == null || cachedDate != _todayDateKey()) {
+        return null;
+      }
+
+      final cachedJson = _mmkv.getString(_lastDailyQuoteKey);
+      if (cachedJson == null || cachedJson.isEmpty) {
+        return null;
+      }
+
+      final decoded = json.decode(cachedJson);
+      if (decoded is! Map<String, dynamic>) {
+        return null;
+      }
+
+      return normalizeDailyQuoteData(decoded);
+    } catch (e) {
+      AppLogger.w('读取每日一言缓存失败', error: e);
+      return null;
+    }
+  }
+
+  /// 主动写入当天一言缓存，供首页/推送共用。
+  void cacheDailyQuoteForToday(Map<String, dynamic> quoteData) {
+    _saveDailyQuoteToCache(quoteData);
+  }
+
+  /// 一次性消费“通知点击后首页展示”的每日一言内容。
+  Future<Map<String, dynamic>?> consumePendingDailyQuoteForHomeDisplay() async {
+    try {
+      final pendingJson = _mmkv.getString(_pendingHomeDailyQuoteKey);
+      if (pendingJson == null || pendingJson.isEmpty) {
+        return null;
+      }
+
+      final decoded = json.decode(pendingJson);
+      if (decoded is! Map<String, dynamic>) {
+        await _mmkv.remove(_pendingHomeDailyQuoteKey);
+        return null;
+      }
+
+      final normalizedData = normalizeDailyQuoteData(decoded);
+      await _mmkv.remove(_pendingHomeDailyQuoteKey);
+      return normalizedData;
+    } catch (e) {
+      AppLogger.w('读取待展示每日一言失败', error: e);
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> _loadDailyQuoteData({
+    bool preferCache = true,
+  }) async {
+    if (preferCache) {
+      final cachedData = getCachedDailyQuoteForToday();
+      if (cachedData != null) {
+        return cachedData;
+      }
+    }
+
+    final response = await NetworkService.instance.get(
+      'https://v1.hitokoto.cn/?c=d&c=e&c=i&c=k',
+      timeoutSeconds: 10,
+    );
+
+    if (response.statusCode != 200) {
+      return null;
+    }
+
+    final data = json.decode(response.body) as Map<String, dynamic>?;
+    final normalizedData = normalizeDailyQuoteData(data);
+    if (normalizedData == null) {
+      return null;
+    }
+
+    _saveDailyQuoteToCache(normalizedData);
+    return normalizedData;
   }
 
   /// 请求通知权限
@@ -1975,28 +2028,17 @@ class SmartPushService extends ChangeNotifier {
   /// 获取每日一言
   Future<Quote?> _fetchDailyQuote() async {
     try {
-      final response = await NetworkService.instance.get(
-        'https://v1.hitokoto.cn/?c=d&c=e&c=i&c=k',
-        timeoutSeconds: 10,
+      final data = await _loadDailyQuoteData();
+      if (data == null) return null;
+
+      final fromWho = data['from_who'] as String? ?? '';
+      final from = data['from'] as String? ?? '';
+      return Quote(
+        content: data['hitokoto'] as String,
+        date: DateTime.now().toIso8601String(),
+        sourceAuthor: fromWho,
+        source: from.isNotEmpty ? from : null,
       );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body) as Map<String, dynamic>?;
-        if (data != null && data['hitokoto'] != null) {
-          // 缓存原始 API 数据，供通知点击时构建 AddNoteDialog
-          _saveDailyQuoteToCache(data);
-
-          final fromWho = data['from_who'] as String? ?? '';
-          final from = data['from'] as String? ?? '';
-          return Quote(
-            content: data['hitokoto'] as String,
-            date: DateTime.now().toIso8601String(),
-            sourceAuthor: fromWho,
-            source: from.isNotEmpty ? from : null,
-          );
-        }
-      }
-      return null;
     } catch (e) {
       AppLogger.w('获取每日一言失败', error: e);
       return null;
