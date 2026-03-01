@@ -5,6 +5,7 @@ import '../services/api_service.dart';
 import '../services/settings_service.dart';
 import '../services/database_service.dart';
 import '../services/connectivity_service.dart';
+import '../services/smart_push_service.dart';
 import '../widgets/sliding_card.dart';
 import 'dart:async'; // Import async for StreamController and StreamSubscription
 import 'package:thoughtecho/utils/app_logger.dart';
@@ -28,11 +29,63 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
     'author': '',
     'type': 'a',
   };
+  SmartPushService? _smartPushService;
 
   @override
   void initState() {
     super.initState();
     _loadDailyQuote();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final nextSmartPushService = Provider.of<SmartPushService>(
+      context,
+      listen: false,
+    );
+    if (!identical(_smartPushService, nextSmartPushService)) {
+      _smartPushService?.removeListener(_onSmartPushServiceChanged);
+      _smartPushService = nextSmartPushService;
+      _smartPushService?.addListener(_onSmartPushServiceChanged);
+    }
+  }
+
+  @override
+  void dispose() {
+    _smartPushService?.removeListener(_onSmartPushServiceChanged);
+    super.dispose();
+  }
+
+  void _onSmartPushServiceChanged() {
+    final service = _smartPushService;
+    if (service == null) return;
+    unawaited(_applyPendingQuoteIfNeeded(service));
+  }
+
+  Map<String, dynamic> _convertSharedQuoteToDailyQuote(
+    Map<String, dynamic> quoteData,
+  ) {
+    return {
+      'content': quoteData['hitokoto'] ?? '',
+      'source': quoteData['from'] ?? '',
+      'author': quoteData['from_who'] ?? '',
+      'type': quoteData['type'] ?? 'a',
+      'from_who': quoteData['from_who'] ?? '',
+      'from': quoteData['from'] ?? '',
+    };
+  }
+
+  Future<bool> _applyPendingQuoteIfNeeded(SmartPushService service) async {
+    final pendingQuote = await service.consumePendingDailyQuoteForHomeDisplay();
+    if (!mounted || pendingQuote == null) {
+      return false;
+    }
+
+    setState(() {
+      dailyQuote = _convertSharedQuoteToDailyQuote(pendingQuote);
+    });
+    return true;
   }
 
   Future<void> _loadDailyQuote() async {
@@ -46,6 +99,10 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
         listen: false,
       );
       final connectivityService = Provider.of<ConnectivityService>(
+        context,
+        listen: false,
+      );
+      final smartPushService = Provider.of<SmartPushService>(
         context,
         listen: false,
       );
@@ -79,6 +136,12 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
         }
       });
 
+      // 仅在“点击每日一言通知进入应用”时，首页消费并展示该条推送内容
+      if (await _applyPendingQuoteIfNeeded(smartPushService)) {
+        return;
+      }
+
+      if (!mounted) return;
       final l10n = AppLocalizations.of(context);
       final quote = await ApiService.getDailyQuote(
         l10n,
@@ -245,7 +308,7 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
             ),
           );
         },
-        // 双击整个卡片区域快速添加到笔记
+        // 双击整个卡片区域快速保存到笔记
         onDoubleTap: () {
           widget.onAddQuote(
             dailyQuote['content'],
