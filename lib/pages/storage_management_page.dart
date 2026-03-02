@@ -457,6 +457,7 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
     final logDbSize = _stats?.logDatabaseSize ?? 0;
     final aiDbSize = _stats?.aiDatabaseSize ?? 0;
     final mediaSize = _stats?.mediaFilesSize ?? 0;
+    final modelSize = _stats?.localAiModelsSize ?? 0;
     final cacheSize = _stats?.cacheSize ?? 0;
 
     return Card(
@@ -528,6 +529,11 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                           flex: (mediaSize * 1000 / totalSize).round(),
                           child: Container(color: Colors.green),
                         ),
+                      if (modelSize > 0)
+                        Expanded(
+                          flex: (modelSize * 1000 / totalSize).round(),
+                          child: Container(color: Colors.indigo),
+                        ),
                       if (cacheSize > 0)
                         Expanded(
                           flex: (cacheSize * 1000 / totalSize).round(),
@@ -562,6 +568,12 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
                       l10n.mediaFilesUsage,
                       Colors.green,
                       mediaSize,
+                    ),
+                  if (modelSize > 0)
+                    _buildLegendItem(
+                      l10n.modelManagement,
+                      Colors.indigo,
+                      modelSize,
                     ),
                   if (cacheSize > 0)
                     _buildLegendItem(l10n.cacheUsage, Colors.grey, cacheSize),
@@ -623,6 +635,13 @@ class _StorageManagementPageState extends State<StorageManagementPage> {
             label: l10n.logDatabase,
             size: _stats?.logDatabaseSize ?? 0,
             color: Colors.orange,
+          ),
+          const Divider(height: 1),
+          _buildStorageItem(
+            icon: Icons.memory_outlined,
+            label: l10n.modelManagement,
+            size: _stats?.localAiModelsSize ?? 0,
+            color: Colors.indigo,
           ),
         ],
       ),

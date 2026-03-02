@@ -561,7 +561,22 @@ class SettingsPageState extends State<SettingsPage> {
                     );
                   },
                 ),
-                // 本地AI功能 - 仅在开发者模式下显示
+                // 语音转文字 (ASR) - 对所有用户可见
+                ListTile(
+                  title: Text(l10n.localAISpeechToText),
+                  subtitle: Text(l10n.settingsAsrDesc),
+                  leading: const Icon(Icons.mic_rounded),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const LocalAISettingsPage(),
+                      ),
+                    );
+                  },
+                ),
+                // 本地AI完整功能 - 仅在开发者模式下显示
                 Consumer<SettingsService>(
                   builder: (context, settingsService, _) {
                     if (!settingsService.appSettings.developerMode) {
@@ -572,7 +587,7 @@ class SettingsPageState extends State<SettingsPage> {
                         children: [
                           Flexible(
                             child: Text(
-                              l10n.localAiFeatures,
+                              l10n.localAiFeaturesAdvanced,
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
@@ -599,7 +614,7 @@ class SettingsPageState extends State<SettingsPage> {
                           ),
                         ],
                       ),
-                      subtitle: Text(l10n.localAiFeaturesDesc),
+                      subtitle: Text(l10n.localAiFeaturesAdvancedDesc),
                       leading: const Icon(Icons.device_hub),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () {

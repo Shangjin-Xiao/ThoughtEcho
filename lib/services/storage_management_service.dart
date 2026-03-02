@@ -24,6 +24,9 @@ class StorageStats {
   /// 媒体文件总大小（字节）
   final int mediaFilesSize;
 
+  /// 本地模型文件大小（字节）
+  final int localAiModelsSize;
+
   /// 缓存文件大小（字节）
   final int cacheSize;
 
@@ -33,6 +36,7 @@ class StorageStats {
       logDatabaseSize +
       aiDatabaseSize +
       mediaFilesSize +
+      localAiModelsSize +
       cacheSize;
 
   /// 媒体文件详细统计
@@ -43,6 +47,7 @@ class StorageStats {
     required this.logDatabaseSize,
     required this.aiDatabaseSize,
     required this.mediaFilesSize,
+    required this.localAiModelsSize,
     required this.cacheSize,
     required this.mediaBreakdown,
   });
@@ -111,6 +116,7 @@ class StorageManagementService {
           logDatabaseSize: 0,
           aiDatabaseSize: 0,
           mediaFilesSize: 0,
+          localAiModelsSize: 0,
           cacheSize: 0,
           mediaBreakdown: MediaFilesBreakdown(
             imagesSize: 0,
@@ -164,6 +170,7 @@ class StorageManagementService {
       _getLogDatabaseSizeIsolate(params.appDirPath),
       _getAIDatabaseSizeIsolate(params.appDirPath),
       _getMediaFilesSizeIsolate(params.appDirPath),
+      _getLocalAIModelsSizeIsolate(params.appDirPath),
       _getCacheSizeIsolate(params.tempDirPath),
     ]);
 
@@ -172,7 +179,8 @@ class StorageManagementService {
       logDatabaseSize: results[1] as int,
       aiDatabaseSize: results[2] as int,
       mediaFilesSize: (results[3] as Map<String, dynamic>)['total'] as int,
-      cacheSize: results[4] as int,
+      localAiModelsSize: results[4] as int,
+      cacheSize: results[5] as int,
       mediaBreakdown: (results[3] as Map<String, dynamic>)['breakdown']
           as MediaFilesBreakdown,
     );
@@ -209,6 +217,17 @@ class StorageManagementService {
       final aiDbFile = File(aiDbPath);
       if (!await aiDbFile.exists()) return 0;
       return await aiDbFile.length();
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  /// Isolate 版本：获取本地模型文件大小
+  static Future<int> _getLocalAIModelsSizeIsolate(String appDirPath) async {
+    try {
+      final modelsDir = path.join(appDirPath, 'local_ai_models');
+      final stats = await _getDirectorySizeIsolate(modelsDir);
+      return stats['size'] as int;
     } catch (e) {
       return 0;
     }

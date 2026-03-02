@@ -3184,6 +3184,9 @@
   "localAiFeatures": "本地 AI 功能",
   "localAiFeaturesPreview": "预览版",
   "localAiFeaturesDesc": "使用设备端 AI 能力增强笔记体验",
+  "localAiFeaturesAdvanced": "本地 AI 高级功能",
+  "localAiFeaturesAdvancedDesc": "OCR、智能标签等高级 AI 功能",
+  "settingsAsrDesc": "下载模型并启用语音转文字功能",
   "enableLocalAi": "启用本地 AI",
   "enableLocalAiDesc": "开启后将启用设备端 AI 功能",
   "localAiPreviewNote": "此功能目前处于预览阶段，部分功能可能不稳定",
@@ -3479,5 +3482,71 @@
   "locationTimeoutCheckPermission": "位置获取超时，请检查位置权限设置",
   "cannotGetCurrentLocation": "无法获取当前位置，请确保已授予位置权限",
   "cannotGetSelectedCityLocation": "无法获取选中城市的位置信息",
-  "cityInfoIncomplete": "城市信息不完整"
+  "cityInfoIncomplete": "城市信息不完整",
+
+  "voiceInitializing": "正在初始化...",
+  "voiceInitializingHint": "请稍候，正在准备语音识别",
+  "voiceNoTextRecognized": "未识别到文字",
+  "voiceStopRecording": "停止录音",
+  "pleaseSwitchToAsrModel": "请先下载语音识别模型",
+  "modelImportASR": "选择语音识别模型文件",
+  "modelTypeASR": "语音识别",
+  "featureNotEnabled": "该功能未启用，请在设置中开启",
+  "modelExtractFailed": "解压失败",
+  "filePathNotAvailable": "无法获取文件路径",
+  "modelManagement": "模型管理",
+  "modelManagementDesc": "下载和管理本地 AI 模型",
+  "modelDownload": "下载模型",
+  "modelDownloading": "下载中...",
+  "modelDownloadProgress": "下载进度：{progress}%",
+  "@modelDownloadProgress": {"placeholders": {"progress": {"type": "int"}}},
+  "modelDownloadSource": "下载源",
+  "modelDownloadSourceHint": "模型将从 HuggingFace/GitHub 下载",
+  "modelDownloaded": "已下载",
+  "modelDownloadedCount": "已下载 {count} 个模型",
+  "@modelDownloadedCount": {"placeholders": {"count": {"type": "int"}}},
+  "modelDelete": "删除模型",
+  "modelDeleteConfirm": "确定要删除此模型吗？删除后需要重新下载。",
+  "modelImport": "导入模型",
+  "modelImportHint": "从本地文件导入模型",
+  "modelImportFailed": "模型导入失败: {error}",
+  "@modelImportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String",
+        "example": "下载失败"
+      }
+    }
+  },
+  "modelImportSuccess": "模型导入成功",
+  "modelImporting": "正在导入模型...",
+  "modelError": "错误",
+  "modelLoaded": "已加载",
+  "modelLoading": "加载中",
+  "modelNotDownloaded": "未下载",
+  "modelPrepare": "准备模型",
+  "modelPrepareHint": "解压/加载（可能需要一些时间）",
+  "modelPrepareSuccess": "模型已准备就绪",
+  "modelPreparing": "正在准备模型...",
+  "modelHighAccuracy": "高精度",
+  "modelLightweight": "轻量",
+  "modelRecommended": "推荐",
+  "modelManagedByPackage": "此模型由内置模型管理功能处理：请配置下载地址或导入 .task 模型文件",
+  "modelRequiresDownload": "此功能需要先下载相应的模型",
+  "modelStorageUsage": "模型存储占用：{size}",
+  "@modelStorageUsage": {
+    "placeholders": {
+      "size": {
+        "type": "String",
+        "example": "125 MB"
+      }
+    }
+  },
+  "modelClearAll": "清除所有模型",
+  "modelClearAllConfirm": "确定要删除所有已下载的模型吗？",
+  "modelTypeLLM": "语言模型",
+  "modelTypeEmbedding": "嵌入模型",
+  "modelTypeOCR": "文字识别",
+  "modelImportOCR": "选择 OCR 模型文件",
+  "pleaseSwitchToOcrModel": "请先下载 OCR 模型"
 }
