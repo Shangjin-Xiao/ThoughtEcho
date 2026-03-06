@@ -2126,8 +2126,6 @@ class DatabaseService extends ChangeNotifier {
     _healthService.recordQueryStats(queryType, timeMs);
   }
 
-
-
   /// 智能推送专用轻量查询
   ///
   /// 不加载大字段（delta_content, ai_analysis, summary, keywords），
