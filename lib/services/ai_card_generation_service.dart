@@ -178,8 +178,7 @@ class AICardGenerationService {
     final cardType = _determineTemplateType(note,
         isRegeneration: isRegeneration, excludeType: excludeType);
     final languageCode = _currentLanguageCode;
-    final cleanContent =
-        StringUtils.removeObjectReplacementChar(note.content);
+    final cleanContent = StringUtils.removeObjectReplacementChar(note.content);
     final fallbackSVG = CardTemplates.getTemplateByType(
       brandName: brandName,
       type: cardType,
