@@ -195,11 +195,15 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
       }
 
       try {
-        for (final analysis in _analyses) {
-          if (analysis.id != null) {
-            await _aiAnalysisDatabaseService!.deleteAnalysis(analysis.id!);
+        await Future.wait(_analyses.map((analysis) async {
+          try {
+            if (analysis.id != null) {
+              await _aiAnalysisDatabaseService!.deleteAnalysis(analysis.id!);
+            }
+          } catch (itemErr) {
+            logDebug('删除单个AI分析记录失败: ${analysis.id}, $itemErr');
           }
-        }
+        }));
         _loadAnalyses();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

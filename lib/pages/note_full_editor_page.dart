@@ -1684,13 +1684,17 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     } catch (e) {
       // 数据库保存失败，回滚本次移动到永久目录的媒体文件，避免产生孤儿
       try {
-        for (final p in movedToPermanentForThisSave) {
-          final f = File(p);
-          if (await f.exists()) {
-            await f.delete();
-            logDebug('因保存失败，回滚删除永久媒体文件: $p');
+        await Future.wait(movedToPermanentForThisSave.map((p) async {
+          try {
+            final f = File(p);
+            if (await f.exists()) {
+              await f.delete();
+              logDebug('因保存失败，回滚删除永久媒体文件: $p');
+            }
+          } catch (itemErr) {
+            logDebug('单个媒体文件回滚删除失败: $p, $itemErr');
           }
-        }
+        }));
       } catch (rollbackErr) {
         logDebug('保存失败后的媒体回滚删除出错: $rollbackErr');
       }
@@ -3706,12 +3710,12 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       // 获取草稿引用的媒体文件，避免误删
       final draftMediaPaths = await DraftService().getAllMediaPathsInDrafts();
 
-      for (final p in _sessionImportedMedia) {
+      await Future.wait(_sessionImportedMedia.map((p) async {
         try {
           // 如果被草稿引用，跳过删除
           if (draftMediaPaths.contains(p)) {
             logDebug('文件被草稿引用，跳过会话级清理: $p');
-            continue;
+            return;
           }
 
           final refCount = await MediaReferenceService.getReferenceCount(p);
@@ -3724,7 +3728,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         } catch (e) {
           logDebug('清理会话媒体失败: $p, 错误: $e');
         }
-      }
+      }));
     } catch (e) {
       logDebug('执行会话级媒体清理出错: $e');
     }
