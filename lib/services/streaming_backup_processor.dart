@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:archive/archive.dart';
 import '../utils/app_logger.dart';
+import '../utils/path_security_utils.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 
@@ -150,6 +151,10 @@ class StreamingBackupProcessor {
               }
 
               final targetPath = p.join(appDir.path, safeRelativePath);
+
+              // 安全检查：防止Zip Slip路径穿越漏洞
+              PathSecurityUtils.validateExtractionPath(targetPath, appDir.path);
+
               final targetDir = Directory(p.dirname(targetPath));
               if (!await targetDir.exists()) {
                 await targetDir.create(recursive: true);
