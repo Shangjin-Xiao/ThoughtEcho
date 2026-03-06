@@ -94,7 +94,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
       },
       {
         'name': l10n.openapiCompatible,
-        'apiUrl': 'http://your-openapi-server/v1/chat/completions',
+        'apiUrl': 'https://your-openapi-server/v1/chat/completions',
         'model': '',
       },
     ];
