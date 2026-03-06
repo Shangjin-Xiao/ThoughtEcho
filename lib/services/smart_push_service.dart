@@ -1902,10 +1902,46 @@ class SmartPushService extends ChangeNotifier {
       }
     }
 
-    // 7. 所有筛选器均未命中，记录诊断日志以便排查
-    if (allNotes.isNotEmpty) {
+    // 7. 所有特定筛选器均未命中，尝试宽泛兜底
+    if (availableContent.isEmpty && allNotes.isNotEmpty) {
+      // 排除今天创建的笔记，从所有历史笔记中随机选取
+      final historyNotes = allNotes.where((note) {
+        try {
+          final noteDate = DateTime.parse(note.date);
+          return !(noteDate.year == now.year &&
+              noteDate.month == now.month &&
+              noteDate.day == now.day);
+        } catch (e) {
+          return false;
+        }
+      }).toList();
+
+      if (historyNotes.isNotEmpty) {
+        // 随机决定推送笔记回顾还是每日一言（各 50% 概率）
+        if (_random.nextBool()) {
+          final note = _selectUnpushedNote(historyNotes);
+          if (note != null) {
+            AppLogger.i(
+              '智能选择：特定筛选器未命中，兜底随机选择历史笔记 '
+              '(总笔记数: ${allNotes.length}, 历史笔记: ${historyNotes.length})',
+            );
+            return _SmartSelectResult(
+              note: note,
+              title: '💭 往日回忆',
+              isDailyQuote: false,
+              contentType: 'randomMemory',
+            );
+          }
+        } else {
+          AppLogger.i('智能选择：特定筛选器未命中，兜底随机选择每日一言');
+        }
+      }
+    }
+
+    // 8. 记录诊断日志
+    if (allNotes.isNotEmpty && availableContent.isEmpty) {
       AppLogger.w(
-        '智能选择：所有筛选器均未命中，回退到每日一言 '
+        '智能选择：回退到每日一言 '
         '(总笔记数: ${allNotes.length}, '
         'yearAgo: ${yearAgoNotes.length}, '
         'sameTime: ${sameTimeNotes.length}, '
@@ -1916,7 +1952,7 @@ class SmartPushService extends ChangeNotifier {
       );
     }
 
-    // 8. 尝试每日一言
+    // 9. 每日一言
     final dailyQuote = await _fetchDailyQuote();
     if (dailyQuote != null) {
       return _SmartSelectResult(
