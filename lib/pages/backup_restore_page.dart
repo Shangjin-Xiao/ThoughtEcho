@@ -825,12 +825,7 @@ Details: $e''';
           children: [
             const Icon(Icons.error, color: Colors.red),
             const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                title,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
+            Flexible(child: Text(title, overflow: TextOverflow.ellipsis)),
           ],
         ),
         content: Text(message),

@@ -27,10 +27,7 @@ class GuideSection {
   final String title;
   final List<String> items;
 
-  GuideSection({
-    required this.title,
-    required this.items,
-  });
+  GuideSection({required this.title, required this.items});
 }
 
 class UserGuidePage extends StatefulWidget {
@@ -89,8 +86,9 @@ class _UserGuidePageState extends State<UserGuidePage> {
       final isZh = locale.languageCode == 'zh';
 
       // Load content from the single source of truth
-      final String fullContent =
-          await rootBundle.loadString('docs/USER_MANUAL.md');
+      final String fullContent = await rootBundle.loadString(
+        'docs/USER_MANUAL.md',
+      );
 
       // Extract the language-specific block
       final String langMarker =
@@ -178,7 +176,7 @@ class _UserGuidePageState extends State<UserGuidePage> {
         Icons.sync,
         Icons.save_as,
         Icons.tune,
-        Icons.help_center
+        Icons.help_center,
       ];
       return defaults[index % defaults.length];
     }
@@ -206,10 +204,7 @@ class _UserGuidePageState extends State<UserGuidePage> {
 
       // Section: ### Title
       if (trimmed.startsWith('### ')) {
-        currentSection = GuideSection(
-          title: trimmed.substring(4),
-          items: [],
-        );
+        currentSection = GuideSection(title: trimmed.substring(4), items: []);
         currentChapter.sections.add(currentSection);
         continue;
       }
@@ -298,15 +293,18 @@ class _UserGuidePageState extends State<UserGuidePage> {
     } else {
       _filteredChapters = [];
       for (var chapter in _chapters) {
-        bool chapterMatches =
-            chapter.title.toLowerCase().contains(_searchQuery);
+        bool chapterMatches = chapter.title.toLowerCase().contains(
+              _searchQuery,
+            );
         List<GuideSection> matchingSections = [];
 
         for (var section in chapter.sections) {
-          bool sectionMatches =
-              section.title.toLowerCase().contains(_searchQuery);
-          bool itemMatches = section.items
-              .any((item) => item.toLowerCase().contains(_searchQuery));
+          bool sectionMatches = section.title.toLowerCase().contains(
+                _searchQuery,
+              );
+          bool itemMatches = section.items.any(
+            (item) => item.toLowerCase().contains(_searchQuery),
+          );
 
           if (chapterMatches || sectionMatches || itemMatches) {
             matchingSections.add(section);
@@ -335,9 +333,9 @@ class _UserGuidePageState extends State<UserGuidePage> {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.cannotOpenLink(url))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.cannotOpenLink(url))));
       }
     }
   }
@@ -366,23 +364,27 @@ class _UserGuidePageState extends State<UserGuidePage> {
           : _error != null
               ? Center(
                   child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline,
-                          size: 64, color: Colors.red),
-                      const SizedBox(height: 16),
-                      Text(_error!, textAlign: TextAlign.center),
-                      const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        onPressed: _loadManual,
-                        icon: const Icon(Icons.refresh),
-                        label: Text(l10n.retry),
-                      ),
-                    ],
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: Colors.red,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(_error!, textAlign: TextAlign.center),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          onPressed: _loadManual,
+                          icon: const Icon(Icons.refresh),
+                          label: Text(l10n.retry),
+                        ),
+                      ],
+                    ),
                   ),
-                ))
+                )
               : CustomScrollView(
                   controller: _scrollController,
                   slivers: [
@@ -411,13 +413,14 @@ class _UserGuidePageState extends State<UserGuidePage> {
                                   IconButton(
                                     icon: const Icon(Icons.clear),
                                     onPressed: () => _searchController.clear(),
-                                  )
+                                  ),
                                 ]
                               : null,
                           elevation: WidgetStateProperty.all(0),
                           backgroundColor: WidgetStateProperty.all(
-                            colorScheme.surfaceContainerHighest
-                                .withValues(alpha: 0.5),
+                            colorScheme.surfaceContainerHighest.withValues(
+                              alpha: 0.5,
+                            ),
                           ),
                         ),
                       ),
@@ -428,7 +431,9 @@ class _UserGuidePageState extends State<UserGuidePage> {
                       child: SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 8),
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
                         child: Row(
                           children: _chapters.map((chapter) {
                             return Padding(
@@ -493,16 +498,20 @@ class _UserGuidePageState extends State<UserGuidePage> {
                                   color: colorScheme.surfaceContainerLow,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(
-                                        AppTheme.cardRadius),
+                                      AppTheme.cardRadius,
+                                    ),
                                     side: BorderSide(
-                                      color: colorScheme.outlineVariant
-                                          .withValues(alpha: 0.5),
+                                      color:
+                                          colorScheme.outlineVariant.withValues(
+                                        alpha: 0.5,
+                                      ),
                                     ),
                                   ),
                                   clipBehavior: Clip.antiAlias,
                                   child: Theme(
                                     data: theme.copyWith(
-                                        dividerColor: Colors.transparent),
+                                      dividerColor: Colors.transparent,
+                                    ),
                                     child: ExpansionTile(
                                       initiallyExpanded: chapter.isExpanded,
                                       shape: const Border(),
@@ -530,12 +539,19 @@ class _UserGuidePageState extends State<UserGuidePage> {
                                       ),
                                       childrenPadding:
                                           const EdgeInsets.fromLTRB(
-                                              16, 0, 16, 16),
+                                        16,
+                                        0,
+                                        16,
+                                        16,
+                                      ),
                                       expandedCrossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: chapter.sections.map((section) {
                                         return _buildSection(
-                                            context, section, colorScheme);
+                                          context,
+                                          section,
+                                          colorScheme,
+                                        );
                                       }).toList(),
                                     ),
                                   ),
@@ -551,7 +567,10 @@ class _UserGuidePageState extends State<UserGuidePage> {
   }
 
   Widget _buildSection(
-      BuildContext context, GuideSection section, ColorScheme colorScheme) {
+    BuildContext context,
+    GuideSection section,
+    ColorScheme colorScheme,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(top: 16),
       child: Column(
@@ -582,35 +601,37 @@ class _UserGuidePageState extends State<UserGuidePage> {
               ],
             ),
           if (section.title.isNotEmpty) const SizedBox(height: 8),
-          ...section.items.map((item) => Padding(
-                padding: const EdgeInsets.only(left: 12, bottom: 6),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6, right: 8),
-                      child: Container(
-                        width: 4,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: colorScheme.onSurfaceVariant,
-                          shape: BoxShape.circle,
-                        ),
+          ...section.items.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(left: 12, bottom: 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 6, right: 8),
+                    child: Container(
+                      width: 4,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: colorScheme.onSurfaceVariant,
+                        shape: BoxShape.circle,
                       ),
                     ),
-                    Expanded(
-                      child: Text(
-                        item,
-                        style: TextStyle(
-                          fontSize: 14,
-                          height: 1.5,
-                          color: colorScheme.onSurfaceVariant,
-                        ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      item,
+                      style: TextStyle(
+                        fontSize: 14,
+                        height: 1.5,
+                        color: colorScheme.onSurfaceVariant,
                       ),
                     ),
-                  ],
-                ),
-              )),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );

@@ -58,9 +58,7 @@ class QuoteContent extends StatelessWidget {
   /// 使用 Timer.run 将每批任务推入 event queue，确保让出主线程给渲染帧
   static void prewarmDocumentCache(List<Quote> quotes) {
     final richQuotes = quotes
-        .where(
-          (q) => q.deltaContent != null && q.editSource == 'fullscreen',
-        )
+        .where((q) => q.deltaContent != null && q.editSource == 'fullscreen')
         .toList();
     if (richQuotes.isEmpty) return;
 

@@ -867,9 +867,10 @@ class _ProgressiveSystemLicensesPageState
       final merged = _mergeEntries(list);
       // 按包名排序
       merged.sort(
-        (a, b) => a.packages.join('').toLowerCase().compareTo(
-              b.packages.join('').toLowerCase(),
-            ),
+        (a, b) => a.packages
+            .join('')
+            .toLowerCase()
+            .compareTo(b.packages.join('').toLowerCase()),
       );
       if (mounted) {
         setState(() {
@@ -973,8 +974,9 @@ class _ProgressiveSystemLicensesPageState
                     backgroundColor: Theme.of(
                       context,
                     ).colorScheme.primaryContainer,
-                    foregroundColor:
-                        Theme.of(context).colorScheme.onPrimaryContainer,
+                    foregroundColor: Theme.of(
+                      context,
+                    ).colorScheme.onPrimaryContainer,
                     radius: 24,
                     child: Text(
                       initials,

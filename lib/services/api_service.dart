@@ -115,12 +115,14 @@ class ApiService {
           }
         } catch (e) {
           logDebug(
-              '一言API JSON解析失败: $e, 响应体: ${response.body.length > 50 ? '${response.body.substring(0, 50)}...' : response.body}');
+            '一言API JSON解析失败: $e, 响应体: ${response.body.length > 50 ? '${response.body.substring(0, 50)}...' : response.body}',
+          );
           return await _getLocalQuoteOrDefault(l10n, databaseService);
         }
       } else {
         logDebug(
-            '一言API请求失败: ${response.statusCode}, 响应体: ${response.body.length > 50 ? '${response.body.substring(0, 50)}...' : response.body}');
+          '一言API请求失败: ${response.statusCode}, 响应体: ${response.body.length > 50 ? '${response.body.substring(0, 50)}...' : response.body}',
+        );
         return await _getLocalQuoteOrDefault(l10n, databaseService);
       }
     } catch (e) {

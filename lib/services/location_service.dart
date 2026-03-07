@@ -160,7 +160,9 @@ class LocationService extends ChangeNotifier {
         if (_hasLocationPermission) {
           getCurrentLocation(highAccuracy: false).then((position) {
             if (position != null) {
-              logDebug('初始化时获取位置: ${position.latitude}, ${position.longitude}');
+              logDebug(
+                '初始化时获取位置: ${position.latitude}, ${position.longitude}',
+              );
             }
           }).catchError((e) {
             logDebug('初始化时获取位置失败: $e');
@@ -682,10 +684,9 @@ class LocationService extends ChangeNotifier {
 
     try {
       // 添加总体超时控制（使用 .timeout 替代 Future.any 避免未完成 Future 泄漏）
-      final results = await _searchCityWithTimeout(query).timeout(
-        const Duration(seconds: 12),
-        onTimeout: () => <CityInfo>[],
-      );
+      final results = await _searchCityWithTimeout(
+        query,
+      ).timeout(const Duration(seconds: 12), onTimeout: () => <CityInfo>[]);
 
       _searchResults = results;
       return _searchResults;
@@ -749,8 +750,9 @@ class LocationService extends ChangeNotifier {
     // Unicode范围：CJK统一汉字 + Extension A + 兼容汉字 + 部首
     // CJK Unified: 0x4E00-0x9FFF, Extension A: 0x3400-0x4DBF
     // CJK Compat Ideographs: 0xF900-0xFAFF, Radicals: 0x2E80-0x2FFF
-    final chineseRegex =
-        RegExp(r'[\u2e80-\u2fff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]');
+    final chineseRegex = RegExp(
+      r'[\u2e80-\u2fff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]',
+    );
     return chineseRegex.hasMatch(text);
   }
 

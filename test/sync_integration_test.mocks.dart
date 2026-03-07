@@ -388,8 +388,9 @@ class MockDatabaseService extends _i1.Mock implements _i12.DatabaseService {
   @override
   _i9.Future<List<_i14.Quote>> getAllQuotes({bool excludeHiddenNotes = true}) =>
       (super.noSuchMethod(
-        Invocation.method(
-            #getAllQuotes, [], {#excludeHiddenNotes: excludeHiddenNotes}),
+        Invocation.method(#getAllQuotes, [], {
+          #excludeHiddenNotes: excludeHiddenNotes,
+        }),
         returnValue: _i9.Future<List<_i14.Quote>>.value(<_i14.Quote>[]),
       ) as _i9.Future<List<_i14.Quote>>);
 

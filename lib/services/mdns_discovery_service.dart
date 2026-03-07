@@ -25,8 +25,9 @@ class MDNSDiscoveryService extends ChangeNotifier {
   bool get isScanning => _isScanning;
 
   /// 开始 mDNS 发现
-  Future<void> startDiscovery(
-      {Duration timeout = const Duration(seconds: 30)}) async {
+  Future<void> startDiscovery({
+    Duration timeout = const Duration(seconds: 30),
+  }) async {
     if (_isScanning) return;
     if (kIsWeb) {
       debugPrint('MDNSDiscoveryService: Web 平台不支持');

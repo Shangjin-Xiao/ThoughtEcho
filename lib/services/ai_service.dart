@@ -209,8 +209,9 @@ class AIService extends ChangeNotifier {
         final currentProvider = multiSettings.currentProvider!;
 
         // 直接使用Quote的content字段（纯文本内容），移除媒体占位符
-        final content =
-            StringUtils.removeObjectReplacementChar(quote.content).trim();
+        final content = StringUtils.removeObjectReplacementChar(
+          quote.content,
+        ).trim();
 
         if (content.isEmpty) {
           throw Exception('没有可分析的文本内容');
@@ -244,8 +245,9 @@ class AIService extends ChangeNotifier {
         final currentProvider = multiSettings.currentProvider!;
 
         // 直接使用Quote的content字段（纯文本内容），移除媒体占位符
-        final content =
-            StringUtils.removeObjectReplacementChar(quote.content).trim();
+        final content = StringUtils.removeObjectReplacementChar(
+          quote.content,
+        ).trim();
 
         if (content.isEmpty) {
           controller.addError(Exception('没有可分析的文本内容'));
@@ -1129,8 +1131,9 @@ class AIService extends ChangeNotifier {
         final currentProvider = await _getCurrentProviderWithApiKey();
 
         // 直接使用Quote的content字段（纯文本内容），移除媒体占位符
-        final content =
-            StringUtils.removeObjectReplacementChar(quote.content).trim();
+        final content = StringUtils.removeObjectReplacementChar(
+          quote.content,
+        ).trim();
 
         if (content.isEmpty) {
           throw Exception('没有可分析的文本内容');
@@ -1169,8 +1172,9 @@ class AIService extends ChangeNotifier {
         final currentProvider = await _getCurrentProviderWithApiKey();
 
         // 直接使用Quote的content字段（纯文本内容），移除媒体占位符
-        final content =
-            StringUtils.removeObjectReplacementChar(quote.content).trim();
+        final content = StringUtils.removeObjectReplacementChar(
+          quote.content,
+        ).trim();
 
         if (content.isEmpty) {
           controller.addError(Exception('没有可分析的文本内容'));
@@ -1288,8 +1292,9 @@ class AIService extends ChangeNotifier {
       final multiSettings = _settingsService.multiAISettings;
 
       // 直接使用Quote的content字段（纯文本内容），移除媒体占位符
-      final content =
-          StringUtils.removeObjectReplacementChar(quote.content).trim();
+      final content = StringUtils.removeObjectReplacementChar(
+        quote.content,
+      ).trim();
 
       if (content.isEmpty) {
         throw Exception('没有可分析的文本内容');

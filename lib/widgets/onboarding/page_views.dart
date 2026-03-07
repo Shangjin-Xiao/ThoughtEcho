@@ -37,7 +37,7 @@ class _WelcomePageViewState extends State<WelcomePageView>
     'ko',
     'es',
     'fr',
-    'de'
+    'de',
   ];
 
   @override

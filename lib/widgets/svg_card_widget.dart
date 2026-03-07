@@ -666,9 +666,9 @@ class _CardPreviewDialogState extends State<CardPreviewDialog>
                                     const SizedBox(width: 8),
                                     Text(
                                       l10n.regeneratingCard,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium,
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodyMedium,
                                     ),
                                   ],
                                 ),
@@ -694,11 +694,7 @@ class CardGenerationLoadingDialog extends StatelessWidget {
   final String? message;
   final VoidCallback? onCancel;
 
-  const CardGenerationLoadingDialog({
-    super.key,
-    this.message,
-    this.onCancel,
-  });
+  const CardGenerationLoadingDialog({super.key, this.message, this.onCancel});
 
   @override
   Widget build(BuildContext context) {

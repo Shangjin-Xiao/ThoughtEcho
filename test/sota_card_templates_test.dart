@@ -10,23 +10,25 @@ void main() {
     const testAuthor = 'Sisyphus';
     const testDate = 'Jan 22, 2026';
 
-    test('sotaModernTemplate should contain mesh gradient and shadow elements',
-        () {
-      final svg = CardTemplates.sotaModernTemplate(
-        brandName: testBrand,
-        content: testContent,
-        author: testAuthor,
-        date: testDate,
-      );
+    test(
+      'sotaModernTemplate should contain mesh gradient and shadow elements',
+      () {
+        final svg = CardTemplates.sotaModernTemplate(
+          brandName: testBrand,
+          content: testContent,
+          author: testAuthor,
+          date: testDate,
+        );
 
-      expect(svg, contains('<svg'));
-      expect(svg, contains('sotaBlur'));
-      expect(svg, contains('cardShadow'));
-      expect(svg, contains('sotaOverlay'));
-      expect(svg, contains('Inter')); // SOTA Font
-      expect(svg, contains(testBrand.toUpperCase()));
-      expect(svg, contains(testAuthor));
-    });
+        expect(svg, contains('<svg'));
+        expect(svg, contains('sotaBlur'));
+        expect(svg, contains('cardShadow'));
+        expect(svg, contains('sotaOverlay'));
+        expect(svg, contains('Inter')); // SOTA Font
+        expect(svg, contains(testBrand.toUpperCase()));
+        expect(svg, contains(testAuthor));
+      },
+    );
 
     test('knowledgeTemplate upgraded with SOTA mesh and icons', () {
       final svg = CardTemplates.knowledgeTemplate(
@@ -39,9 +41,9 @@ void main() {
       expect(svg, contains('auroraBlur'));
       expect(svg, contains('textShadow'));
       expect(
-          svg,
-          contains(
-              'M6 17h3l2-4V7H5v6h3l-2 4zm8 0h3l2-4V7h-6v6h3l-2 4z')); // Quote icon path
+        svg,
+        contains('M6 17h3l2-4V7H5v6h3l-2 4zm8 0h3l2-4V7h-6v6h3l-2 4z'),
+      ); // Quote icon path
     });
 
     test('getTemplateByType handles sotaModern', () {

@@ -51,10 +51,11 @@ Future<File> _createMotionPhotoFile(Directory directory) async {
     '/></x:xmpmeta>',
   );
 
-  await file.writeAsBytes(
-    <int>[...imageBytes, ...xmpBytes, ..._motionPhotoMp4Trailer],
-    flush: true,
-  );
+  await file.writeAsBytes(<int>[
+    ...imageBytes,
+    ...xmpBytes,
+    ..._motionPhotoMp4Trailer,
+  ], flush: true);
   return file;
 }
 

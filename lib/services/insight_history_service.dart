@@ -127,8 +127,9 @@ class InsightHistoryService extends ChangeNotifier {
   /// 根据数据签名获取洞察
   PeriodicInsight? getInsightBySignature(String signature) {
     try {
-      return _insights
-          .firstWhere((insight) => insight.dataSignature == signature);
+      return _insights.firstWhere(
+        (insight) => insight.dataSignature == signature,
+      );
     } catch (e) {
       return null;
     }

@@ -247,14 +247,17 @@ class _OnboardingPageState extends State<OnboardingPage>
                   type: LottieAnimationType.pulseLoading,
                   width: s,
                   height: s,
-                  semanticLabel:
-                      AppLocalizations.of(context).onboardingPreparing,
+                  semanticLabel: AppLocalizations.of(
+                    context,
+                  ).onboardingPreparing,
                 );
               },
             ),
             const SizedBox(height: 20),
-            Text(AppLocalizations.of(context).onboardingPreparing,
-                style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              AppLocalizations.of(context).onboardingPreparing,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
           ],
         ),
       ),
@@ -279,10 +282,7 @@ class _OnboardingPageState extends State<OnboardingPage>
                 color: theme.colorScheme.error,
               ),
               const SizedBox(height: 20),
-              Text(
-                l10n.onboardingError,
-                style: theme.textTheme.headlineSmall,
-              ),
+              Text(l10n.onboardingError, style: theme.textTheme.headlineSmall),
               const SizedBox(height: 12),
               Text(
                 _errorMessage!,
@@ -292,9 +292,7 @@ class _OnboardingPageState extends State<OnboardingPage>
               const SizedBox(height: 32),
               FilledButton(
                 onPressed: _navigateToHome,
-                child: Text(
-                  l10n.onboardingContinueUsing,
-                ),
+                child: Text(l10n.onboardingContinueUsing),
               ),
             ],
           ),

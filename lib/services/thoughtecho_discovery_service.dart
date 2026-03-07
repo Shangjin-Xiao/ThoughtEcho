@@ -497,10 +497,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     debugPrint('可用套接字数: ${_sockets.length}');
 
     if (_sockets.isEmpty) {
-      logWarning(
-        'discovery_broadcast_no_sockets',
-        source: 'LocalSend',
-      );
+      logWarning('discovery_broadcast_no_sockets', source: 'LocalSend');
       return;
     }
 
@@ -561,10 +558,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
         } else if (errorCode == 1) {
           // errno = 1: Operation not permitted
           _lastSendError = '网络操作被拒绝 (errno=1)，请检查网络权限';
-          logError(
-            'discovery_send_not_permitted errno=1',
-            source: 'LocalSend',
-          );
+          logError('discovery_send_not_permitted errno=1', source: 'LocalSend');
           debugPrint('❌ 网络操作被拒绝 (errno=1)');
         } else {
           _lastSendError = 'Socket 错误: ${e.message}';

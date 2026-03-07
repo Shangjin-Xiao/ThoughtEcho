@@ -113,7 +113,9 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
   /// 获取本地化的天气筛选分类标签
   String _getWeatherFilterLabel(BuildContext context, String filterCategory) {
     return WeatherService.getLocalizedFilterCategoryLabel(
-        context, filterCategory);
+      context,
+      filterCategory,
+    );
   }
 
   /// 获取本地化的时间段标签
@@ -387,9 +389,9 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
 
       if (!authenticated) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.biometricAuthFailed)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l10n.biometricAuthFailed)));
         }
         return;
       }

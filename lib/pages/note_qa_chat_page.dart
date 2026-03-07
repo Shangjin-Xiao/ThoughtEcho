@@ -73,8 +73,9 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
   }
 
   String _getQuotePreview() {
-    final content =
-        StringUtils.removeObjectReplacementChar(widget.quote.content);
+    final content = StringUtils.removeObjectReplacementChar(
+      widget.quote.content,
+    );
     if (content.length <= 100) {
       return content;
     }
@@ -123,8 +124,9 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
           setState(() {
             // 替换 loading 消息内容
             final messages = _chatController.messages;
-            final index =
-                messages.indexWhere((msg) => msg.id == _currentLoadingId);
+            final index = messages.indexWhere(
+              (msg) => msg.id == _currentLoadingId,
+            );
             if (index != -1) {
               final loadingMsg = messages[index];
               final updatedMsg = TextMessage(
@@ -141,8 +143,9 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
           // 完成回复，生成最终消息
           setState(() {
             final messages = _chatController.messages;
-            final index =
-                messages.indexWhere((msg) => msg.id == _currentLoadingId);
+            final index = messages.indexWhere(
+              (msg) => msg.id == _currentLoadingId,
+            );
             if (index != -1) {
               final loadingMsg = messages[index];
               final finalMsg = TextMessage(
@@ -162,8 +165,9 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
           AppLogger.e('AI回答失败', error: error);
           setState(() {
             final messages = _chatController.messages;
-            final index =
-                messages.indexWhere((msg) => msg.id == _currentLoadingId);
+            final index = messages.indexWhere(
+              (msg) => msg.id == _currentLoadingId,
+            );
             if (index != -1) {
               final loadingMsg = messages[index];
               final errorMsg = TextMessage(
@@ -242,19 +246,25 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (widget.quote.source != null) ...[
-                Text(l10n.source,
-                    style: Theme.of(context).textTheme.labelMedium),
+                Text(
+                  l10n.source,
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
                 const SizedBox(height: 4),
                 Text(widget.quote.source!),
                 const SizedBox(height: 16),
               ],
-              Text(l10n.createdAt,
-                  style: Theme.of(context).textTheme.labelMedium),
+              Text(
+                l10n.createdAt,
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
               const SizedBox(height: 4),
               Text(DateTime.parse(widget.quote.date).toString()),
               const SizedBox(height: 16),
-              Text(l10n.content,
-                  style: Theme.of(context).textTheme.labelMedium),
+              Text(
+                l10n.content,
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
               const SizedBox(height: 4),
               Text(
                 StringUtils.removeObjectReplacementChar(widget.quote.content),

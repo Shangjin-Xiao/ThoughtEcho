@@ -255,9 +255,7 @@ class _TagListItem extends StatelessWidget {
         children: [
           leading,
           const SizedBox(width: 8),
-          Flexible(
-            child: Text(displayName, overflow: TextOverflow.ellipsis),
-          ),
+          Flexible(child: Text(displayName, overflow: TextOverflow.ellipsis)),
         ],
       ),
       subtitle: isHiddenTag
@@ -339,8 +337,10 @@ class SelectedTagsDisplay extends StatelessWidget {
                             style: const TextStyle(fontSize: 20),
                           ),
                           const SizedBox(width: 4),
-                          Text(displayName,
-                              style: const TextStyle(fontSize: 12)),
+                          Text(
+                            displayName,
+                            style: const TextStyle(fontSize: 12),
+                          ),
                         ],
                       )
                     : Text(displayName),

@@ -375,9 +375,8 @@ class NoteListViewState extends State<NoteListView> {
         return;
       }
 
-      final bool hasExpandable = _quotes.take(80).any(
-            QuoteItemWidget.needsExpansionFor,
-          );
+      final bool hasExpandable =
+          _quotes.take(80).any(QuoteItemWidget.needsExpansionFor);
 
       if (!mounted) {
         return;
@@ -1252,8 +1251,9 @@ class NoteListViewState extends State<NoteListView> {
             _startFirstOpenScrollPerfCapture();
           } else if (_firstOpenScrollPerfRecording &&
               notification is ScrollUpdateNotification) {
-            _firstOpenScrollUpdateMicros
-                .add(DateTime.now().microsecondsSinceEpoch);
+            _firstOpenScrollUpdateMicros.add(
+              DateTime.now().microsecondsSinceEpoch,
+            );
           } else if (notification is ScrollEndNotification) {
             _stopFirstOpenScrollPerfCapture();
           }
@@ -1350,7 +1350,9 @@ class NoteListViewState extends State<NoteListView> {
 
               final expansionNotifier = _obtainExpansionNotifier(quoteId);
               _expandedItems.putIfAbsent(
-                  quoteId, () => expansionNotifier.value);
+                quoteId,
+                () => expansionNotifier.value,
+              );
 
               return KeyedSubtree(
                 key: _itemKeys[quoteId],
@@ -1624,7 +1626,8 @@ class NoteListViewState extends State<NoteListView> {
                                       // 如果有搜索词，重新搜索
                                       if (_searchController.text.isNotEmpty) {
                                         _onSearchChanged(
-                                            _searchController.text);
+                                          _searchController.text,
+                                        );
                                       }
                                     },
                                   );
@@ -1824,8 +1827,10 @@ class NoteListViewState extends State<NoteListView> {
 
       allChips.addAll(
         categorySet.map((cat) {
-          final label =
-              WeatherService.getLocalizedFilterCategoryLabel(context, cat);
+          final label = WeatherService.getLocalizedFilterCategoryLabel(
+            context,
+            cat,
+          );
           final icon = WeatherService.getFilterCategoryIcon(cat);
           return TweenAnimationBuilder<double>(
             key: ValueKey('weather_cat_$cat'),

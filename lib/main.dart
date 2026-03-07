@@ -265,8 +265,9 @@ Future<void> main() async {
         final unifiedLogService = UnifiedLogService.instance;
 
         // 根据开发者模式设置日志服务的持久化状态
-        unifiedLogService
-            .setPersistenceEnabled(settingsService.appSettings.developerMode);
+        unifiedLogService.setPersistenceEnabled(
+          settingsService.appSettings.developerMode,
+        );
 
         final aiAnalysisDbService = AIAnalysisDatabaseService();
         final connectivityService = ConnectivityService();
@@ -1175,8 +1176,9 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
                         } catch (e) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content:
-                                  Text(l10n.emergencyOpenBackupFailed('$e')),
+                              content: Text(
+                                l10n.emergencyOpenBackupFailed('$e'),
+                              ),
                               backgroundColor: Colors.red,
                               duration: const Duration(seconds: 3),
                             ),

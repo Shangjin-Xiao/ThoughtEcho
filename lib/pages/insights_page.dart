@@ -761,7 +761,8 @@ class _InsightsPageState extends State<InsightsPage> {
               borderRadius: BorderRadius.circular(AppTheme.cardRadius),
               border: _showCustomPrompt
                   ? Border.all(
-                      color: theme.colorScheme.outline.withValues(alpha: 0.2))
+                      color: theme.colorScheme.outline.withValues(alpha: 0.2),
+                    )
                   : null,
             ),
             padding:
@@ -809,15 +810,18 @@ class _InsightsPageState extends State<InsightsPage> {
                       labelText: l10n.customPrompt,
                       hintText: l10n.customPromptHint,
                       border: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppTheme.inputRadius),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.inputRadius,
+                        ),
                       ),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppTheme.inputRadius),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.inputRadius,
+                        ),
                         borderSide: BorderSide(
-                          color:
-                              theme.colorScheme.outline.withValues(alpha: 0.3),
+                          color: theme.colorScheme.outline.withValues(
+                            alpha: 0.3,
+                          ),
                         ),
                       ),
                       filled: true,
@@ -848,8 +852,9 @@ class _InsightsPageState extends State<InsightsPage> {
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.secondaryContainer
-                      .withValues(alpha: 0.5),
+                  color: theme.colorScheme.secondaryContainer.withValues(
+                    alpha: 0.5,
+                  ),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -966,13 +971,15 @@ class _InsightsPageState extends State<InsightsPage> {
       elevation: isSelected ? 4 : 0.5, // Better elevation
       shadowColor: theme.shadowColor.withValues(alpha: 0.2),
       shape: RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.circular(AppTheme.cardRadius), // Use AppTheme
+        borderRadius: BorderRadius.circular(
+          AppTheme.cardRadius,
+        ), // Use AppTheme
         side: BorderSide(
           color: isSelected
               ? theme.colorScheme.primary
-              : theme.colorScheme.outline
-                  .withValues(alpha: 0.1), // Subtle border
+              : theme.colorScheme.outline.withValues(
+                  alpha: 0.1,
+                ), // Subtle border
           width: isSelected ? 2 : 1,
         ),
       ),
@@ -1150,9 +1157,8 @@ class _InsightsPageState extends State<InsightsPage> {
                               fontWeight: FontWeight.w600,
                               height: 1.4,
                             ),
-                            listBullet: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.primaryColor,
-                            ),
+                            listBullet: theme.textTheme.bodyMedium
+                                ?.copyWith(color: theme.primaryColor),
                             blockquote: theme.textTheme.bodyMedium?.copyWith(
                               color: theme.colorScheme.onSurfaceVariant,
                               fontStyle: FontStyle.italic,

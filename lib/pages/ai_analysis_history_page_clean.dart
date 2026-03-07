@@ -124,8 +124,9 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(AppLocalizations.of(context)
-                  .serviceNotInitializedDeleteFailed),
+              content: Text(
+                AppLocalizations.of(context).serviceNotInitializedDeleteFailed,
+              ),
               duration: AppConstants.snackBarDurationError,
             ),
           );
@@ -185,8 +186,9 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(AppLocalizations.of(context)
-                  .serviceNotInitializedDeleteFailed),
+              content: Text(
+                AppLocalizations.of(context).serviceNotInitializedDeleteFailed,
+              ),
               duration: AppConstants.snackBarDurationError,
             ),
           );
@@ -195,15 +197,17 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
       }
 
       try {
-        await Future.wait(_analyses.map((analysis) async {
-          try {
-            if (analysis.id != null) {
-              await _aiAnalysisDatabaseService!.deleteAnalysis(analysis.id!);
+        await Future.wait(
+          _analyses.map((analysis) async {
+            try {
+              if (analysis.id != null) {
+                await _aiAnalysisDatabaseService!.deleteAnalysis(analysis.id!);
+              }
+            } catch (itemErr) {
+              AppLogger.e('删除单个AI分析记录失败: ${analysis.id}', error: itemErr);
             }
-          } catch (itemErr) {
-            AppLogger.e('删除单个AI分析记录失败: ${analysis.id}', error: itemErr);
-          }
-        }));
+          }),
+        );
         _loadAnalyses();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -273,9 +277,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                           style: Theme.of(context)
                               .textTheme
                               .headlineSmall
-                              ?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
+                              ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 4),
                         Row(
@@ -283,9 +285,9 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                             Icon(
                               Icons.access_time,
                               size: 14,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                             ),
                             const SizedBox(width: 4),
                             Text(
@@ -295,9 +297,9 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                                   .textTheme
                                   .bodySmall
                                   ?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
                                   ),
                             ),
                           ],
@@ -350,15 +352,16 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                               fontWeight: FontWeight.bold,
                               color: Theme.of(context).colorScheme.primary,
                             ),
-                        h2: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        h2: Theme.of(context)
+                            .textTheme
+                            .titleLarge
+                            ?.copyWith(fontWeight: FontWeight.bold),
                         blockquote:
                             Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   fontStyle: FontStyle.italic,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
                                 ),
                         blockquoteDecoration: BoxDecoration(
                           color: Theme.of(context)
@@ -375,14 +378,14 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                         ),
                         code: Theme.of(context).textTheme.bodySmall?.copyWith(
                               fontFamily: 'monospace',
-                              backgroundColor: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest,
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest,
                             ),
                         codeblockDecoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
@@ -399,14 +402,13 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
   }
 
   Widget _buildSectionHeader(
-      BuildContext context, String title, IconData icon) {
+    BuildContext context,
+    String title,
+    IconData icon,
+  ) {
     return Row(
       children: [
-        Icon(
-          icon,
-          size: 20,
-          color: Theme.of(context).colorScheme.primary,
-        ),
+        Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
         const SizedBox(width: 8),
         Text(
           title,
@@ -550,8 +552,10 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(AppLocalizations.of(context).selectReportTypePrompt,
-                  style: const TextStyle(fontSize: 16)),
+              Text(
+                AppLocalizations.of(context).selectReportTypePrompt,
+                style: const TextStyle(fontSize: 16),
+              ),
               const SizedBox(height: 20),
               _buildReportOption(
                 context,
@@ -566,8 +570,9 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                 context,
                 icon: Icons.dashboard,
                 title: AppLocalizations.of(context).nativeFlutterReport,
-                description:
-                    AppLocalizations.of(context).nativeFlutterReportDesc,
+                description: AppLocalizations.of(
+                  context,
+                ).nativeFlutterReportDesc,
                 color: Colors.blue,
                 onTap: () => Navigator.pop(context, 'flutter'),
               ),
@@ -610,8 +615,9 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content:
-                Text(AppLocalizations.of(context).generateAnnualReportFailed),
+            content: Text(
+              AppLocalizations.of(context).generateAnnualReportFailed,
+            ),
             duration: AppConstants.snackBarDurationError,
           ),
         );
@@ -813,8 +819,9 @@ $positiveQuotesText
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content:
-                    Text(AppLocalizations.of(context).aiReturnFormatAbnormal),
+                content: Text(
+                  AppLocalizations.of(context).aiReturnFormatAbnormal,
+                ),
                 duration: AppConstants.snackBarDurationImportant,
               ),
             );
@@ -869,7 +876,8 @@ $positiveQuotesText
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-                '${AppLocalizations.of(context).generateAnnualReportFailed}: ${e.toString()}'),
+              '${AppLocalizations.of(context).generateAnnualReportFailed}: ${e.toString()}',
+            ),
             duration: AppConstants.snackBarDurationError,
           ),
         );
@@ -1083,19 +1091,17 @@ $positiveQuotesText
                           return Card(
                             margin: const EdgeInsets.only(bottom: 12),
                             elevation: 2,
-                            shadowColor: Theme.of(context)
-                                .colorScheme
-                                .shadow
-                                .withValues(alpha: 0.1),
+                            shadowColor: Theme.of(
+                              context,
+                            ).colorScheme.shadow.withValues(alpha: 0.1),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(
                                 AppTheme.cardRadius,
                               ),
                               side: BorderSide(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .outline
-                                    .withValues(alpha: 0.1),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.outline.withValues(alpha: 0.1),
                               ),
                             ),
                             child: InkWell(
@@ -1165,9 +1171,9 @@ $positiveQuotesText
                                         PopupMenuButton<String>(
                                           icon: Icon(
                                             Icons.more_vert,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurfaceVariant,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onSurfaceVariant,
                                           ),
                                           onSelected: (value) {
                                             if (value == 'delete') {
@@ -1182,18 +1188,19 @@ $positiveQuotesText
                                                   Icon(
                                                     Icons.delete_outline,
                                                     size: 20,
-                                                    color: Theme.of(context)
-                                                        .colorScheme
-                                                        .error,
+                                                    color: Theme.of(
+                                                      context,
+                                                    ).colorScheme.error,
                                                   ),
                                                   const SizedBox(width: 8),
                                                   Text(
-                                                    AppLocalizations.of(context)
-                                                        .delete,
+                                                    AppLocalizations.of(
+                                                      context,
+                                                    ).delete,
                                                     style: TextStyle(
-                                                      color: Theme.of(context)
-                                                          .colorScheme
-                                                          .error,
+                                                      color: Theme.of(
+                                                        context,
+                                                      ).colorScheme.error,
                                                     ),
                                                   ),
                                                 ],
@@ -1219,9 +1226,7 @@ $positiveQuotesText
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodyMedium
-                                            ?.copyWith(
-                                              height: 1.5,
-                                            ),
+                                            ?.copyWith(height: 1.5),
                                         maxLines: 3,
                                         overflow: TextOverflow.ellipsis,
                                       ),

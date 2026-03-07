@@ -396,9 +396,7 @@ class _HomePageState extends State<HomePage>
           if (LocationService.isNonDisplayMarker(quote.location) &&
               quote.latitude != null &&
               quote.longitude != null) {
-            final updatedQuote = quote.copyWith(
-              location: resolvedAddress,
-            );
+            final updatedQuote = quote.copyWith(location: resolvedAddress);
             await dbService.updateQuote(updatedQuote);
             updatedCount++;
           }
@@ -999,8 +997,9 @@ class _HomePageState extends State<HomePage>
                   forceRefresh: isConnected,
                   timeout: const Duration(seconds: 10),
                 )
-                .then((_) =>
-                    logDebug('天气数据更新完成: ${weatherService.currentWeather}'))
+                .then(
+                  (_) => logDebug('天气数据更新完成: ${weatherService.currentWeather}'),
+                )
                 .catchError((e) => logDebug('天气数据更新失败: $e')),
           );
         } else {

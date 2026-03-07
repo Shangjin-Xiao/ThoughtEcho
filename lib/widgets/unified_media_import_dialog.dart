@@ -46,9 +46,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(
-        l10n.unifiedMediaImportImportMedia(
-          _getMediaTypeName(widget.mediaType),
-        ),
+        l10n.unifiedMediaImportImportMedia(_getMediaTypeName(widget.mediaType)),
       ),
       content: SizedBox(
         width: 400,
@@ -181,7 +179,7 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
 
   List<Widget> _buildImportingActions() {
     return [
-      TextButton(onPressed: _cancelImport, child: Text(l10n.cancelImport))
+      TextButton(onPressed: _cancelImport, child: Text(l10n.cancelImport)),
     ];
   }
 
@@ -369,8 +367,9 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
       }
 
       setState(() {
-        _statusMessage =
-            l10n.processingMedia(_getMediaTypeName(widget.mediaType));
+        _statusMessage = l10n.processingMedia(
+          _getMediaTypeName(widget.mediaType),
+        );
         _progress = 0.5;
       });
 

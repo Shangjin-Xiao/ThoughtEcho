@@ -418,13 +418,16 @@ class BackupMediaProcessor {
           filePath,
           appPath: appPath,
         );
-        final canonicalKey =
-            MediaReferenceService.canonicalKeyForBackup(normalizedPath);
-        final hasStoredRefs = snapshot.storedIndex[canonicalKey]?.values
-                .any((refs) => refs.isNotEmpty) ??
+        final canonicalKey = MediaReferenceService.canonicalKeyForBackup(
+          normalizedPath,
+        );
+        final hasStoredRefs = snapshot.storedIndex[canonicalKey]?.values.any(
+              (refs) => refs.isNotEmpty,
+            ) ??
             false;
-        final hasQuoteRefs = snapshot.quoteIndex[canonicalKey]?.values
-                .any((refs) => refs.isNotEmpty) ??
+        final hasQuoteRefs = snapshot.quoteIndex[canonicalKey]?.values.any(
+              (refs) => refs.isNotEmpty,
+            ) ??
             false;
 
         if (hasStoredRefs || hasQuoteRefs) {

@@ -16,7 +16,8 @@ void main() {
     await db.execute('CREATE TABLE categories(id TEXT PRIMARY KEY, name TEXT)');
     await db.execute('CREATE TABLE quotes(id TEXT PRIMARY KEY, tag_ids TEXT)');
     await db.execute(
-        'CREATE TABLE quote_tags(quote_id TEXT, tag_id TEXT, PRIMARY KEY(quote_id, tag_id))');
+      'CREATE TABLE quote_tags(quote_id TEXT, tag_id TEXT, PRIMARY KEY(quote_id, tag_id))',
+    );
 
     // Seed data
     final uuid = const Uuid();
@@ -34,10 +35,7 @@ void main() {
     final quotes = List.generate(2000, (i) {
       final numTags = random.nextInt(5) + 1;
       final tags = (List.of(categoryIds)..shuffle()).take(numTags).toList();
-      return {
-        'id': uuid.v4(),
-        'tag_ids': tags.join(','),
-      };
+      return {'id': uuid.v4(), 'tag_ids': tags.join(',')};
     });
 
     // Batch insert quotes
@@ -101,7 +99,8 @@ void main() {
 
     // Verify count
     final countSlow = Sqflite.firstIntValue(
-        await db.rawQuery('SELECT COUNT(*) FROM quote_tags'));
+      await db.rawQuery('SELECT COUNT(*) FROM quote_tags'),
+    );
     print('Slow migration inserted $countSlow records.');
 
     // --- Cleanup for Fast Benchmark ---
@@ -160,7 +159,8 @@ void main() {
 
     // Verify count (Fast)
     final countFast = Sqflite.firstIntValue(
-        await db.rawQuery('SELECT COUNT(*) FROM quote_tags'));
+      await db.rawQuery('SELECT COUNT(*) FROM quote_tags'),
+    );
     print('Fast migration inserted $countFast records.');
 
     // Ensure both strategies produce the same result.

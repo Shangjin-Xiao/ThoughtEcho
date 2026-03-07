@@ -87,9 +87,7 @@ class DatabaseSchemaManager {
     );
 
     // 搜索优化索引
-    await db.execute(
-      'CREATE INDEX idx_quotes_content_fts ON quotes(content)',
-    );
+    await db.execute('CREATE INDEX idx_quotes_content_fts ON quotes(content)');
 
     // 天气和时间段查询索引
     await db.execute(
@@ -138,7 +136,10 @@ class DatabaseSchemaManager {
   }
 
   Future<void> upgradeDatabase(
-      Database db, int oldVersion, int newVersion) async {
+    Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
     logDebug('开始数据库升级: $oldVersion -> $newVersion');
 
     try {
@@ -387,8 +388,11 @@ class DatabaseSchemaManager {
           logDebug('数据库升级：delta_content 字段已存在，跳过添加');
         }
       } catch (e) {
-        logError('delta_content 字段升级失败: $e',
-            error: e, source: 'DatabaseUpgrade');
+        logError(
+          'delta_content 字段升级失败: $e',
+          error: e,
+          source: 'DatabaseUpgrade',
+        );
       }
     }
 

@@ -40,7 +40,8 @@ class WeatherSearchResult {
         return l10n.citySelectedWeatherUpdated(cityName ?? '');
       case WeatherSearchResultType.currentLocationSuccess:
         return l10n.currentLocationWeatherUpdated(
-            cityName ?? l10n.currentLocationLabel);
+          cityName ?? l10n.currentLocationLabel,
+        );
       case WeatherSearchResultType.weatherTimeout:
         return l10n.weatherTimeoutRetry;
       case WeatherSearchResultType.weatherFetchFailed:

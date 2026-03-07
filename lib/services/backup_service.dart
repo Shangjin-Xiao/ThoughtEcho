@@ -629,14 +629,10 @@ class BackupService {
           );
           quote[deltaField] = jsonEncode(convertedDelta);
           successCount++;
-          logDebug(
-            '处理笔记 ${quote['id']} 的富文本内容成功 (field: $deltaField)',
-          );
+          logDebug('处理笔记 ${quote['id']} 的富文本内容成功 (field: $deltaField)');
         } catch (e) {
           failureCount++;
-          logDebug(
-            '处理笔记 ${quote['id']} 的富文本内容时出错 (field: $deltaField): $e',
-          );
+          logDebug('处理笔记 ${quote['id']} 的富文本内容时出错 (field: $deltaField): $e');
           // 如果处理失败，保持原内容不变
         }
       }
@@ -692,14 +688,10 @@ class BackupService {
           );
           quote[deltaField] = jsonEncode(convertedDelta);
           successCount++;
-          logDebug(
-            '还原笔记 ${quote['id']} 的富文本内容成功 (field: $deltaField)',
-          );
+          logDebug('还原笔记 ${quote['id']} 的富文本内容成功 (field: $deltaField)');
         } catch (e) {
           failureCount++;
-          logDebug(
-            '还原笔记 ${quote['id']} 的富文本内容时出错 (field: $deltaField): $e',
-          );
+          logDebug('还原笔记 ${quote['id']} 的富文本内容时出错 (field: $deltaField): $e');
           // 如果处理失败，保持原内容不变
         }
       }

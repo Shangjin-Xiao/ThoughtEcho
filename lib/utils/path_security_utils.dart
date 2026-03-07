@@ -16,8 +16,10 @@ class PathSecurityUtils {
     }
 
     // 额外的相对路径检查作为深度防御
-    final relative =
-        path.relative(normalizedTarget, from: normalizedExtractDir);
+    final relative = path.relative(
+      normalizedTarget,
+      from: normalizedExtractDir,
+    );
     if (relative.startsWith('..') || path.isAbsolute(relative)) {
       throw Exception('安全警告：路径尝试穿越到父目录 ($targetPath)');
     }
