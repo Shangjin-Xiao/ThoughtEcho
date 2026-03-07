@@ -1904,9 +1904,9 @@
     }
   },
   "aiProviderOpenAI": "OpenAI",
-  "aiProviderOpenRouter": "OuvrirRouter",
-  "aiProviderDeepSeek": "Recherche profonde",
-  "aiProviderAnthropic": "Anthropique (Claude)",
+  "aiProviderOpenRouter": "OpenRouter",
+  "aiProviderDeepSeek": "DeepSeek",
+  "aiProviderAnthropic": "Anthropic (Claude)",
   "aiProviderOllama": "Ollama",
   "aiProviderLMStudio": "LMStudio",
   "apiKeyStatusEmpty": "vide",
