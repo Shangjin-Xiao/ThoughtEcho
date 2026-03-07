@@ -130,6 +130,7 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     _actualServerPort = port;
     debugPrint('设备发现服务更新服务器端口为: $port');
     logInfo('discovery_port_set port=$port', source: 'LocalSend');
+    notifyListeners();
   }
 
   /// 开始设备发现
