@@ -1,6 +1,12 @@
 {
   "@@locale": "fr",
   "appTitle": "ThoughtEcho",
+  "draftRestored": "Brouillon restauré automatiquement",
+  "draftRecoverTitle": "Restaurer le brouillon non enregistré",
+  "draftRecoverMessage": "Vous avez du contenu non enregistré de votre dernière session. Souhaitez-vous le restaurer ?",
+  "restore": "Restaurer",
+  "discard": "Jeter",
+  "draftSaved": "Brouillon enregistré",
   "cancel": "Annuler",
   "confirm": "Confirmer",
   "delete": "Supprimer",
@@ -84,6 +90,14 @@
   "prefMoreOptionsHint": "Plus d'options de personnalisation et de fonctionnalités IA disponibles dans Paramètres > Préférences.",
   "settingsTitle": "Paramètres",
   "settingsLocationWeather": "Paramètres de localisation et météo",
+  "settingsAutoAttachLocation": "Attacher automatiquement l'emplacement lors de l'ajout de notes",
+  "settingsAutoAttachLocationDesc": "Vérifier automatiquement l'emplacement lors de la création de nouvelles notes",
+  "settingsAutoAttachWeather": "Joindre automatiquement la météo lors de l'ajout de notes",
+  "settingsAutoAttachWeatherDesc": "Vérifier automatiquement la météo lors de la création de nouvelles notes",
+  "weatherFetchFailedTitle": "Échec de la récupération météo",
+  "weatherFetchFailedDesc": "Impossible d'obtenir les informations météorologiques actuelles. Veuillez vérifier votre connexion réseau ou réessayer plus tard",
+  "locationFetchFailedNoNetwork": "Pas de réseau, coordonnées enregistrées",
+  "locationAndWeatherUnavailable": "Impossible d'obtenir des informations de localisation et de météo pour le moment",
   "settingsUseLocationService": "Utiliser le service de localisation",
   "settingsLocationEnabled": "Permission accordée et activée",
   "settingsLocationPermissionOnly": "Permission accordée mais service désactivé",
@@ -124,6 +138,84 @@
   "settingsCheckUpdate": "Vérifier les mises à jour",
   "settingsCheckUpdateDesc": "Vérifier si une nouvelle version est disponible",
   "settingsClose": "Fermer",
+  "developerModeEnabled": "🎉 Mode développeur activé !",
+  "developerModeDisabled": "✅ Mode développeur désactivé",
+  "devFirstScrollPerfMonitorTitle": "Moniteur de saccades au premier défilement (Dev)",
+  "devFirstScrollPerfMonitorDesc": "Mesurez les temps d'images pour le premier défilement gestuel après l'ouverture de Notes (pas la première image)",
+  "devFirstScrollPerfResult": "Performances au premier défilement : total {total}, jenk {jank}, moyenne {avgMs}ms, pire {worstMs}ms",
+  "@devFirstScrollPerfResult": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "jank": {
+        "type": "int"
+      },
+      "avgMs": {
+        "type": "String"
+      },
+      "worstMs": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyRecoveryTitle": "ThoughtEcho - Récupération de données",
+  "emergencyRecoveryHeading": "L'initialisation de la base de données a échoué",
+  "emergencyRecoveryDescription": "L'application ne peut pas démarrer normalement. La base de données est peut-être corrompue ou inaccessible.\n\nVous pouvez essayer de sauvegarder les données existantes pour éviter toute perte ou essayer de redémarrer l'application.",
+  "emergencyBackupAndRestoreButton": "Sauvegarder et restaurer les données",
+  "emergencyTryRestartAppButton": "Essayez de redémarrer l'application",
+  "emergencyReinitializeFailed": "Échec de la réinitialisation : {error}",
+  "@emergencyReinitializeFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyRecoveryHint": "Astuce : Si le problème persiste, vous devrez peut-être réinstaller l'application. Veuillez sauvegarder vos données au préalable.",
+  "emergencyAppTitle": "ThoughtEcho - Récupération d'urgence",
+  "emergencyModeTitle": "Mode de récupération d'urgence",
+  "emergencyAppStartFailedTitle": "L'application n'a pas pu démarrer",
+  "emergencyAppStartFailedDesc": "Une erreur grave s'est produite lors du démarrage de ThoughtEcho. Cela peut être dû à une corruption des données ou à des problèmes d'autorisation de stockage.",
+  "emergencyErrorLabel": "Erreur:",
+  "emergencyTechnicalDetails": "Détails techniques",
+  "emergencyExitAppButton": "Quitter l'application",
+  "emergencyPersistentIssueHint": "Si le problème persiste, essayez de réinstaller l'application ou contactez le développeur pour obtenir de l'aide.",
+  "emergencyBackupPageTitle": "Récupération de données d'urgence",
+  "emergencyBackupToolTitle": "Outil de récupération de données d'urgence",
+  "emergencyBackupToolDesc": "En raison d'une erreur critique, vous pouvez essayer :\n\n1. Exporter le fichier de base de données - exportez le fichier de base de données brut pour une récupération professionnelle\n2. Essayez d'ouvrir la page de sauvegarde et de restauration. Remarque : cela peut ne pas fonctionner si la base de données est endommagée.",
+  "emergencyProcessing": "Traitement...",
+  "emergencyExportDatabaseButton": "Exporter le fichier de base de données",
+  "emergencyOpenBackupPageButton": "Essayez d'ouvrir la sauvegarde et la restauration standard",
+  "emergencyOpenBackupFailed": "Impossible d'ouvrir la page de sauvegarde et de restauration : {error}",
+  "@emergencyOpenBackupFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyExportHint": "Astuce : Vous pouvez envoyer le fichier de base de données exporté au développeur pour récupération.",
+  "emergencyLocatingDatabase": "Localisation du fichier de base de données...",
+  "emergencyDatabaseNotFound": "Fichier de base de données introuvable",
+  "emergencyPreparingExport": "Préparation de l'exportation...",
+  "emergencyCopyingFile": "Copie du fichier...",
+  "emergencyDatabaseExported": "Fichier de base de données exporté vers : {path}",
+  "@emergencyDatabaseExported": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "emergencyExportFailed": "Échec de l'exportation : {error}",
+  "@emergencyExportFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "locationPermissionDenied": "Permission de localisation refusée, impossible d'activer le service de localisation",
   "enableLocationService": "Veuillez activer le service de localisation",
   "enableLocationServiceDesc": "ThoughtEcho a besoin d'accéder à votre position pour fournir la météo et d'autres fonctionnalités. Veuillez activer le service de localisation dans les paramètres système.",
@@ -143,6 +235,33 @@
   "pleaseWait": "Veuillez patienter...",
   "close": "Fermer",
   "ok": "OK",
+  "timeJustNow": "Tout à l'heure",
+  "timeMinutesAgo": "il y a {count} minutes",
+  "@timeMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeHoursAgo": "Il y a {count} heures",
+  "@timeHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeDaysAgo": "il y a {count} jours",
+  "@timeDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "timeYesterday": "Hier",
+  "exactAlarmDeniedHint": "Autorisation d'alarme exacte refusée, le timing de poussée peut être inexact",
   "error": "Erreur",
   "success": "Succès",
   "warning": "Avertissement",
@@ -289,6 +408,7 @@
     }
   },
   "view": "Voir",
+  "viewImage": "Voir l'image",
   "todayThoughts": "Pensées du jour",
   "loadingTodayThoughts": "Chargement des pensées du jour...",
   "fetchingDefaultPrompt": "Récupération de l'invite par défaut...",
@@ -992,6 +1112,10 @@
   "noteSearchEmptySubtitle": "Essayez d'autres mots-clés ou vérifiez votre orthographe",
   "noteSearchTimeoutMessage": "La recherche a expiré, veuillez réessayer",
   "searchingLabel": "Recherche en cours",
+  "guideAddNoteTagHiddenTitle": "Masquer les notes",
+  "guideAddNoteTagHiddenDesc": "Sélectionnez des balises pour masquer les notes",
+  "guideNoteItemMoreShareTitle": "Partager la carte",
+  "guideNoteItemMoreShareDesc": "Générez des cartes de partage ici",
   "filterAndSortTooltip": "Filtrer/Trier",
   "noNotesFound": "Aucune note trouvée, veuillez ajouter quelques notes d'abord",
   "generateInsightsError": "Échec de la génération des aperçus : {error}",
@@ -1491,10 +1615,1844 @@
       }
     }
   },
+  "dataOverview": "Aperçu des données",
+  "featuredCards": "Cartes en vedette",
+  "timeRange": "Plage de temps",
+  "selectDate": "Sélectionnez une date",
+  "thisWeek": "Cette semaine",
+  "thisMonth": "Ce mois-ci",
+  "thisYear": "Cette année",
+  "noteCount": "Nombre de notes",
+  "notesUnitPlain": "remarques",
+  "totalWordCount": "Total des mots",
+  "wordsUnitPlain": "mots",
+  "avgWords": "Moy. Mots",
+  "wordsPerNote": "mots/note",
+  "activeDays": "Journées actives",
+  "daysUnitPlain": "jours",
+  "commonPeriod": "Période commune",
+  "noDataYet": "N / A",
+  "commonWeather": "Météo commune",
+  "commonTag": "Balise commune",
+  "generatingInsightsForPeriod": "Génération d'insights pour ce {period}...",
+  "@generatingInsightsForPeriod": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "noFavoritesInPeriod": "Pas de favoris sur cette période. Allez donner un peu d'amour à vos notes !",
+  "mostFavoritedInPeriod": "Les plus favoris cette période",
+  "recentNotes": "Notes récentes",
+  "noNotesInPeriodForPeriod": "Aucune note dans ce {period}",
+  "@noNotesInPeriodForPeriod": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "startRecordingThoughts": "Commencez à enregistrer vos pensées",
+  "totalCards": "{count} cartes au total",
+  "@totalCards": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "cardSelected": "Carte {index} sélectionnée",
+  "@cardSelected": {
+    "placeholders": {
+      "index": {
+        "type": "int"
+      }
+    }
+  },
+  "generateCards": "Générer des cartes",
+  "aiCardGenerationDisabledLog": "Génération de cartes IA désactivée, à l'aide de modèles locaux",
+  "missingGalleryPermission": "Aucune autorisation d'accès à la galerie, veuillez l'activer dans les paramètres",
+  "desktopGalleryNotSupported": "L'enregistrement dans la galerie n'est pas pris en charge sur le bureau, veuillez utiliser la fonction de partage",
+  "cardFileNamePrefix": "CarteEcho_Pensée",
+  "aiProviderConfigMissing": "Aucune configuration de fournisseur d'IA disponible trouvée",
+  "aiSvgEmpty": "L'IA a renvoyé du contenu SVG vide",
+  "unsafeSvgContent": "Le contenu SVG contient des éléments dangereux",
+  "invalidSvgContent": "Le contenu renvoyé par l'IA ne contient pas de code SVG valide",
+  "noFeaturedCards": "Aucune carte en vedette pour l'instant",
+  "featuredCardGenerationTip": "Générez de superbes cartes de partage à partir de vos notes : AI On = Smart Design, AI Off = Modèles intégrés.",
+  "cardFromReport": "Une belle carte du rapport périodique de ThoughtEcho",
+  "loadDataFailed": "Échec du chargement des données : {error}",
+  "@loadDataFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "thisPeriod": "Ce {period}",
+  "@thisPeriod": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "periodWeek": "Semaine",
+  "periodMonth": "Mois",
+  "periodYear": "Année",
+  "periodDuring": "Période",
+  "dateRange": "{startDate} - {endDate}",
+  "@dateRange": {
+    "placeholders": {
+      "startDate": {
+        "type": "String"
+      },
+      "endDate": {
+        "type": "String"
+      }
+    }
+  },
+  "yearMonth": "{month}, {year}",
+  "@yearMonth": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      },
+      "month": {
+        "type": "int"
+      }
+    }
+  },
+  "yearOnly": "{year}",
+  "@yearOnly": {
+    "placeholders": {
+      "year": {
+        "type": "int"
+      }
+    }
+  },
+  "detectedAIJSONFormat": "⚠️ L'IA détectée a renvoyé des données JSON\n\nCela indique que le modèle d'IA a peut-être mal compris la demande, renvoyant une analyse des données au lieu d'un rapport HTML.\n\nContenu renvoyé :\n{json}\n\nCauses possibles :\n• L'IA a confondu la génération de rapports annuels et l'analyse de contenu.\n• L'invite doit encore être optimisée.\n• Problème de version ou de configuration du modèle\n\nSolutions suggérées :\n1. Régénérer le rapport (l'IA pourrait corriger l'erreur)\n2. Vérifiez la configuration du modèle dans les paramètres AI\n3. Essayez d'utiliser la fonctionnalité de rapport Flutter native\n4. Mettre à jour la configuration de l'invite AI\n\nPour obtenir une assistance technique, veuillez enregistrer ce message d'erreur et contacter le développeur.",
+  "@detectedAIJSONFormat": {
+    "placeholders": {
+      "json": {
+        "type": "String"
+      }
+    }
+  },
+  "detectedAbnormalFormat": "⚠️ Format de données anormal détecté\n\nL'IA a renvoyé des données JSON qui n'ont pas pu être analysées correctement, ce qui peut être dû à :\n• Problèmes de transport en réseau\n• Exception relative au service IA\n• Erreur de format de données\n\nContenu original :\n{content}\n\nIl est suggéré de régénérer le rapport ou d'utiliser la fonctionnalité de rapport native.",
+  "@detectedAbnormalFormat": {
+    "placeholders": {
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "aiGeneratedTextContent": "📄 Contenu texte généré par l'IA\n\n{content}\n\n💡 Astuce : IA a renvoyé un résumé en texte brut au lieu d'un rapport HTML.\nCela peut être dû au fait que le modèle a compris le contenu mais ne l'a pas généré au format HTML.\n\nLe contenu complet peut être visualisé dans un navigateur et le système l'encapsulera automatiquement au format HTML.",
+  "@aiGeneratedTextContent": {
+    "placeholders": {
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "htmlReportCopiedSteps": "Contenu du rapport HTML copié dans le presse-papiers. Veuillez suivre ces étapes :",
+  "browserInstructionsStep1": "1. Ouvrez le navigateur (Chrome/Safari, etc.)",
+  "browserInstructionsStep2": "2. Ouvrez une nouvelle page ou un nouvel onglet vierge",
+  "browserInstructionsStep3": "3. Dans la barre d'adresse, saisissez : data:text/html,",
+  "browserInstructionsStep4": "4. Collez le contenu copié",
+  "browserInstructionsStep5": "5. Appuyez sur Entrée pour afficher le rapport",
+  "desktopInstructionsStep1": "1. Créez un nouveau fichier texte et collez le contenu",
+  "desktopInstructionsStep2": "2. Enregistrez le fichier avec l'extension .html",
+  "desktopInstructionsStep3": "3. Double-cliquez sur le fichier pour l'ouvrir dans le navigateur",
+  "annualReportHtmlTitle": "ThoughtEcho {year} Rapport annuel",
+  "generationTimeLabel": "Généré à : {time}",
+  "askNoteTitle": "Demander une note",
+  "noteInfoTitle": "Remarque Informations",
+  "meUser": "Moi",
+  "aiAssistantUser": "Assistant IA",
+  "aiAssistantWelcome": "Bonjour! Je suis votre assistant de notes. Vous pouvez me poser toutes les questions sur cette note et je vous fournirai des réponses détaillées en fonction du contenu.\n\n📝 Aperçu du contenu de la note :\n{preview}\n\n💡 Vous pouvez essayer ces questions :\n• Quelle est l'idée centrale de cette note ?\n• Quelle inspiration peut-on tirer de cette note ?\n• Comment appliquer les idées de cette note à la vie réelle ?\n• Quel modèle de pensée cette note reflète-t-elle ?",
+  "thinkingInProgress": "Pensée...",
+  "aiMisunderstoodQuestion": "Désolé, je n'ai pas compris cette question. S'il vous plaît, essayez de demander d'une manière différente.",
+  "aiResponseError": "Désolé, une erreur s'est produite lors de la réponse : {error}",
+  "apiKeyDiagnosticsTitle": "Diagnostic des clés API",
+  "apiKeyDiagnosticsTool": "Outil de diagnostic de clé API",
+  "apiKeyDiagnosticsDesc": "Cet outil vérifie le stockage et la récupération des clés API pour aider à diagnostiquer les erreurs d'authentification 401.",
+  "runDiagnostics": "Exécuter des diagnostics",
+  "diagnosticResultLabel": "Résultat du diagnostic :",
+  "diagnosticReportHeader": "=== Rapport de diagnostic de clé API ===",
+  "diagnosticReportTime": "Heure : {time}",
+  "diagnosticMultiProviderCheck": "1. Configuration multi-fournisseurs...",
+  "diagnosticCurrentProvider": "- Fournisseur actuel : {name}",
+  "diagnosticAvailableProviders": "- Fournisseurs disponibles : {count}",
+  "diagnosticEnabledProviders": "- Fournisseurs activés : {count}",
+  "diagnosticProviderDetails": "2. Détails du fournisseur actuel...",
+  "diagnosticProviderId": "-Identifiant : {id}",
+  "diagnosticProviderName": "- Nom : {name}",
+  "diagnosticProviderUrl": "-URL de l'API : {url}",
+  "diagnosticProviderModel": "- Modèle : {model}",
+  "diagnosticProviderEnabled": "- Activé : {status}",
+  "diagnosticApiKeyCheck": "3. Vérification de la clé API...",
+  "diagnosticApiKeyInSettings": "- Saisissez les paramètres : {status}",
+  "diagnosticApiKeyLength": "- Longueur de clé dans les paramètres : {length}",
+  "diagnosticApiKeyPrefix": "- Préfixe clé dans les paramètres : {prefix}",
+  "diagnosticSecureApiKeyExists": "- Clé dans un stockage sécurisé : {status}",
+  "diagnosticSecureApiKeyLength": "- Longueur de la clé en stockage sécurisé : {length}",
+  "diagnosticSecureApiKeyPrefix": "- Préfixe de clé dans le stockage sécurisé : {prefix}",
+  "diagnosticApiKeyValidation": "4. Validation des clés...",
+  "diagnosticAsyncValidation": "- Validation asynchrone : {status}",
+  "diagnosticFormatValidation": "- Validation du format : {status}",
+  "diagnosticErrorNoProvider": "2. Erreur : aucun fournisseur actuel sélectionné",
+  "diagnosticAllProvidersStatus": "5. Statut de tous les fournisseurs...",
+  "diagnosticProviderStatusItem": "- {name} : {keyStatus} {enabledStatus}",
+  "diagnosticSuggestions": "6. Suggestions...",
+  "diagnosticSuggestionSelectProvider": "- Veuillez sélectionner un fournisseur d'IA",
+  "diagnosticSuggestionEnableProvider": "- Veuillez activer le fournisseur d'IA actuellement sélectionné",
+  "diagnosticSuggestionConfigureKey": "- Veuillez configurer une clé API valide pour {name}",
+  "diagnosticSuggestionNormal": "- ✓ La configuration de la clé API est normale",
+  "diagnosticComplete": "=== Diagnostic terminé ===",
+  "diagnosticError": "Erreur lors du diagnostic : {error}",
+  "passStatus": "Passer",
+  "failStatus": "Échouer",
+  "yesStatus": "Oui",
+  "noStatus": "Non",
+  "notSelectedStatus": "Non sélectionné",
+  "importInstructions": "Instructions d'importation",
+  "selectingFile": "Sélection du fichier...",
+  "validatingFile": "Validation du fichier...",
+  "checkingFileCompatibility": "Vérification de la compatibilité des fichiers...",
+  "importingFile": "Importation du fichier...",
+  "importComplete": "Importation terminée !",
+  "fileSaveFailed": "L'enregistrement du fichier a échoué",
+  "processingMedia": "Traitement de {mediaType}...",
+  "@processingMedia": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadingFile": "Téléchargement du fichier...",
+  "downloadComplete": "Téléchargement terminé !",
+  "connectingToServer": "Connexion au serveur...",
+  "savingFile": "Enregistrement du fichier...",
+  "waitingForAIContent": "En attente de contenu IA...",
+  "occurredError": "[Une erreur s'est produite : {error}]",
+  "cancelLabel": "Annuler",
+  "selectFromGallery": "Sélectionnez {mediaType} dans la galerie",
+  "@selectFromGallery": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "selectFromFilesWithTypeName": "Sélectionnez {mediaType} dans les fichiers",
+  "@selectFromFilesWithTypeName": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "importTipsImage": "• Prend en charge les formats JPG, PNG, GIF et WebP\n• Enregistrez directement dans la bibliothèque multimédia de l'application, réduisant ainsi les doublons.\n• Utiliser la technologie de protection de la mémoire pour les images volumineuses\n• Les fichiers non enregistrés sont automatiquement nettoyés",
+  "importTipsVideo": "• Prend en charge les formats MP4, MOV, AVI, MKV\n• Enregistrez directement dans la bibliothèque multimédia de l'application, réduisant ainsi les doublons.\n• Technologie de streaming pour éviter le MOO\n• Les fichiers non enregistrés sont automatiquement nettoyés",
+  "importTipsAudio": "• Prend en charge les formats MP3, WAV, AAC et M4A\n• Enregistrez directement dans la bibliothèque multimédia de l'application, réduisant ainsi les doublons.\n• Stockage optimisé, chargement rapide\n• Les fichiers non enregistrés sont automatiquement nettoyés",
+  "importTipsDefault": "• Prend en charge plusieurs formats multimédias\n• Enregistrez directement dans la bibliothèque multimédia de l'application, protection de la mémoire.\n• Les fichiers non enregistrés sont automatiquement nettoyés",
+  "formattedDate": "{month}/{day}",
+  "@formattedDate": {
+    "placeholders": {
+      "month": {
+        "type": "int"
+      },
+      "day": {
+        "type": "int"
+      }
+    }
+  },
+  "noteMetaWithLocation": "[{date}·{location}] {content}",
+  "@noteMetaWithLocation": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "location": {
+        "type": "String"
+      },
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "noteMeta": "[{date}] {content}",
+  "@noteMeta": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "content": {
+        "type": "String"
+      }
+    }
+  },
+  "weatherInfo": "(Météo : {weather})",
+  "@weatherInfo": {
+    "placeholders": {
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "aiProviderOpenAI": "OpenAI",
+  "aiProviderOpenRouter": "OpenRouter",
+  "aiProviderDeepSeek": "DeepSeek",
+  "aiProviderAnthropic": "Anthropic (Claude)",
+  "aiProviderOllama": "Ollama",
+  "aiProviderLMStudio": "LMStudio",
+  "apiKeyStatusEmpty": "vide",
+  "apiKeyStatusNotEmpty": "{length} caractères",
+  "@apiKeyStatusNotEmpty": {
+    "placeholders": {
+      "length": {
+        "type": "int"
+      }
+    }
+  },
+  "noProvider": "Aucun",
+  "connectionTestSystemMessage": "Vous êtes un assistant IA. Veuillez répondre brièvement par « Test de connexion réussi ».",
+  "connectionTestUserMessage": "Tester la connexion",
+  "apiKeySavedForProvider": "Clé API enregistrée pour {providerName} pour sécuriser le stockage",
+  "@apiKeySavedForProvider": {
+    "placeholders": {
+      "providerName": {
+        "type": "String"
+      }
+    }
+  },
+  "generatingAiReport": "Génération du rapport annuel sur l'IA...",
+  "testFailedEmptyContent": "Échec du test : l'IA a renvoyé du contenu vide",
+  "includeMediaFilesHint": "Inclure les images, l'audio et d'autres fichiers multimédias lorsque cette case est cochée (fichier plus volumineux mais plus complet)",
+  "overwriteImport": "Écraser l'importation (effacer les données existantes)",
+  "overwriteImportDesc": "Supprimez toutes les données actuelles et remplacez-les par le contenu de sauvegarde",
+  "mergeImport": "Fusionner l'importation (stratégie LWW)",
+  "mergeImportDesc": "Conservez les données existantes et fusionnez avec les données de sauvegarde au moment de la mise à jour",
+  "restoreSuccess": "Données restaurées avec succès ! Toutes les données ont été mises à jour.",
+  "mergeImportHint": "Cette opération conservera les données actuelles et fusionnera avec les données de sauvegarde :",
+  "mergeImportReversible": "Cette opération est réversible : vous pouvez importer une sauvegarde par écrasement ou poursuivre la fusion.",
+  "confirmRestoreBtn": "Confirmer la restauration",
+  "favoriteCountWithNum": "Favoris ({count})",
+  "@favoriteCountWithNum": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "analysisRecordDeleted": "Enregistrement d'analyse supprimé",
+  "loadFailed": "Échec du chargement : {error}",
+  "@loadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteConfirmTitle": "Confirmation de suppression",
+  "deleteRecordConfirm": "Etes-vous sûr de vouloir supprimer cet enregistrement d'analyse ?",
+  "confirmDeleteAll": "Confirmer Supprimer tout",
+  "deleteAllRecordsConfirm": "Êtes-vous sûr de vouloir supprimer tous les enregistrements d'analyse ? Cette action ne peut pas être annulée.",
+  "allRecordsDeleted": "Tous les enregistrements supprimés",
+  "selectAnnualReportType": "Sélectionnez le type de rapport annuel",
+  "selectReportTypeHint": "Veuillez sélectionner le type de rapport annuel à générer :",
+  "unknownTag": "Balise inconnue",
+  "morning": "Matin",
+  "forenoon": "Matinée",
+  "afternoon": "Après-midi",
+  "evening": "Soirée",
+  "night": "Nuit",
+  "learning": "Apprentissage",
+  "progress": "Progrès",
+  "happiness": "Bonheur",
+  "gratitude": "Gratitude",
+  "harvest": "Récolte",
+  "breakthrough": "Percée",
+  "hope": "Espoir",
+  "backupFormatZip": "Créera un fichier de sauvegarde ZIP contenant toutes les notes, paramètres et fichiers multimédias",
+  "backupFormatJson": "Créera un fichier de sauvegarde JSON contenant toutes les notes et paramètres",
+  "supportedBackupFormats": "Prend en charge le nouveau format ZIP et les anciens fichiers de sauvegarde au format JSON",
+  "restoringData": "Restauration des données... {current}/{total}",
+  "@restoringData": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "restoreFailedGeneric": "Échec de la restauration des données : {error}",
+  "@restoreFailedGeneric": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "restoreFailedOutOfMemory": "Échec de la restauration : mémoire insuffisante\n\nSuggestions :\n• Fermez les autres applications pour libérer de la mémoire\n• Redémarrez l'application et réessayez\n• Vérifiez si le fichier de sauvegarde est trop volumineux",
+  "restoreFailedNoSpace": "Échec de la restauration : espace de stockage insuffisant\n\nVeuillez effacer le stockage de l'appareil et réessayer.",
+  "restoreFailedPermission": "Échec de la restauration : autorisation refusée\n\nVeuillez vérifier les paramètres d'autorisation de stockage de l'application.",
+  "restoreCancelled": "Restauration annulée",
+  "restoreFailedCorrupt": "Échec de la restauration : le fichier de sauvegarde est corrompu ou dans un format incorrect\n\nVeuillez vérifier si le fichier de sauvegarde est complet.",
+  "restoreConfirmDialogTitle": "Confirmer la restauration",
+  "restoreConfirmDialogDesc": "Cette opération va :",
+  "restoreConfirmDialogItem1": "• Supprimer toutes les notes et tous les paramètres de cet appareil.",
+  "restoreConfirmDialogItem2": "• Remplacer par les données du fichier de sauvegarde",
+  "restoreConfirmDialogItem3": "• Cette action ne peut pas être annulée",
+  "restoreConfirmDialogWarning": "Veuillez vous assurer d'avoir sauvegardé les données importantes.",
+  "mergeConfirmDialogTitle": "Confirmer l'importation de fusion",
+  "mergeConfirmDialogDesc": "Cette opération conservera les données actuelles et fusionnera avec les données de sauvegarde :",
+  "mergeConfirmDialogItem1": "• Les notes avec le même ID conserveront la version la plus récente (Last-Write-Wins).",
+  "mergeConfirmDialogItem2": "• Les notes avec des identifiants différents seront toutes conservées",
+  "mergeConfirmDialogItem3": "• Les paramètres et les données d'analyse de l'IA seront fusionnés",
+  "mergeConfirmDialogReversible": "Cette opération est réversible : vous pouvez importer une sauvegarde par écrasement ou poursuivre la fusion.",
+  "tagSettingsDescription": "Créez et gérez votre système de balises personnelles",
+  "addNewTag": "Ajouter une nouvelle balise",
+  "tagNameHint": "Veuillez saisir un nom de balise",
+  "loadingTags": "Chargement des balises...",
+  "loadTagsError": "Échec du chargement des balises",
+  "noTagsHint": "Créez votre premier tag pour commencer à organiser vos pensées",
+  "myTags": "Mes balises",
+  "confirmDeleteTag": "Confirmer la suppression",
+  "deleteTagDialogContent": "Êtes-vous sûr de vouloir supprimer la balise « {name} » ?\n\nLes notes utilisant cette balise n'afficheront plus cette balise.",
+  "@deleteTagDialogContent": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "enterEmojiDirectly": "Saisissez directement un emoji...",
+  "useAsTagIcon": "Utilisez \"{emoji}\" comme icône",
+  "@useAsTagIcon": {
+    "placeholders": {
+      "emoji": {
+        "type": "String"
+      }
+    }
+  },
+  "noteSync": "Synchronisation des notes",
+  "refreshDeviceList": "Actualiser la liste des appareils",
+  "initializingService": "Départ...",
+  "startFailed": "Échec du démarrage : {error}",
+  "@startFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "scanningDevices": "Numérisation... appareils {count}",
+  "@scanningDevices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "scanningDevicesWithTime": "Numérisation... appareils {count} ({seconds})",
+  "@scanningDevicesWithTime": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "seconds": {
+        "type": "int"
+      }
+    }
+  },
+  "foundDevicesCount": "Appareils {count} trouvés",
+  "@foundDevicesCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "localDeviceLoading": "Chargement de l'ID de l'appareil local...",
+  "localDeviceId": "Locale #{fingerprint}",
+  "@localDeviceId": {
+    "placeholders": {
+      "fingerprint": {
+        "type": "String"
+      }
+    }
+  },
+  "noNearbyDevices": "Aucun appareil à proximité trouvé",
+  "ensureDeviceOnSameNetwork": "Assurez-vous que la page de synchronisation ThoughtEcho est également ouverte sur l'appareil cible.\net les deux appareils sont sur le même réseau WiFi",
+  "networkInfoUnknown": "Informations réseau inconnues",
+  "portNumber": "Port {port}",
+  "@portNumber": {
+    "placeholders": {
+      "port": {
+        "type": "int"
+      }
+    }
+  },
+  "send": "Envoyer",
+  "sendConfirmTitle": "Envoyer une confirmation",
+  "sendConfirmContent": "Vous êtes sur le point d'envoyer toutes les notes au périphérique « {alias} ».",
+  "@sendConfirmContent": {
+    "placeholders": {
+      "alias": {
+        "type": "String"
+      }
+    }
+  },
+  "includeMediaFilesOption": "Inclure des fichiers multimédias",
+  "includeMediaFilesHintSync": "Images/audio/vidéos, peuvent augmenter la taille et la durée",
+  "startSend": "Démarrer l'envoi",
+  "sendTextOnlyHint": "Enverra uniquement le texte de la note (pas de fichiers multimédias)",
+  "sendStarted": "Synchronisation des notes démarrée, ID de session : {sessionId}",
+  "@sendStarted": {
+    "placeholders": {
+      "sessionId": {
+        "type": "String"
+      }
+    }
+  },
+  "sendFailedWithError": "Échec de l'envoi : {error}",
+  "@sendFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "confirmLeave": "Confirmer le congé",
+  "leaveWhileSyncing": "Synchronisation en cours ({status}). Quitter interrompra le processus et arrêtera le serveur. Êtes-vous sûr de vouloir partir ?",
+  "@leaveWhileSyncing": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "leaveWhileScanning": "Je découvre actuellement des appareils. Quitter arrêtera la découverte et fermera le serveur. Êtes-vous sûr de vouloir partir ?",
+  "leaveWhileSending": "Envoi actuel de données. Quitter interrompra l’envoi et fermera le serveur. Êtes-vous sûr de vouloir partir ?",
+  "syncServiceNotReady": "Le service de synchronisation n'est pas prêt, veuillez réinitialiser",
+  "syncServiceInitializing": "Le service de synchronisation est en cours d'initialisation, veuillez patienter",
+  "searchingNearbyDevices": "Recherche d'appareils à proximité...",
+  "initializingSyncService": "Initialisation du service de synchronisation...",
+  "syncServiceStartFailed": "Le service de synchronisation n'a pas pu démarrer : {error}",
+  "@syncServiceStartFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceDiscoveryCancelled": "Découverte de l'appareil annulée",
+  "deviceDiscoveryFailed": "Échec de la découverte du périphérique : {error}",
+  "@deviceDiscoveryFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "deviceAliasAndModel": "{model}\nAlias : {alias}",
+  "@deviceAliasAndModel": {
+    "placeholders": {
+      "model": {
+        "type": "String"
+      },
+      "alias": {
+        "type": "String"
+      }
+    }
+  },
+  "copiedText": "Copié : {text}",
+  "@copiedText": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "copiedFingerprint": "Empreinte digitale locale copiée : {fingerprint}",
+  "@copiedFingerprint": {
+    "placeholders": {
+      "fingerprint": {
+        "type": "String"
+      }
+    }
+  },
+  "usageInstructionsTitle": "Instructions d'utilisation",
+  "syncUsageInstruction1": "Appuyez sur le bouton d'envoi sur le côté droit d'un appareil pour partager vos notes",
+  "syncUsageInstruction2": "Les notes reçues seront automatiquement fusionnées avec les notes existantes",
+  "syncUsageInstruction3": "Les notes en double conserveront la dernière version",
+  "syncUsageInstruction4": "Assurez-vous que les deux appareils sont connectés au même réseau WiFi",
+  "initializing": "Initialisation",
+  "cancelDiscovery": "Annuler la découverte",
+  "discoverDevices": "Découvrir les appareils",
+  "cancelDiscoveryTooltip": "Annuler la découverte actuelle du périphérique",
+  "startDiscoveryTooltip": "Commencez à découvrir les appareils à proximité",
+  "receiveSyncRequest": "Recevoir une demande de synchronisation",
+  "waitingPeerApproval": "En attente de l'approbation des pairs",
+  "deviceWantsToSync": "L'appareil \"{alias}\" souhaite synchroniser les notes",
+  "@deviceWantsToSync": {
+    "placeholders": {
+      "alias": {
+        "type": "String"
+      }
+    }
+  },
+  "doNotAskAgain": "Ne demande plus",
+  "autoAcceptSyncRequests": "Acceptera automatiquement les demandes de synchronisation d'autres appareils",
+  "waitingLabel": "En attendant",
+  "syncRequestSent": "Demande de synchronisation envoyée à l'appareil cible. Veuillez attendre la confirmation.",
+  "reject": "Rejeter",
+  "accept": "Accepter",
+  "cancelReceive": "Annuler la réception",
+  "cancelSend": "Annuler l'envoi",
+  "syncCompleted": "Synchronisation terminée",
+  "syncStatusIdle": "Inactif",
+  "syncStatusPackaging": "Données d'emballage",
+  "syncStatusSending": "Envoi",
+  "syncStatusReceiving": "Réception",
+  "syncStatusMerging": "Fusion",
+  "syncStatusCompleted": "Synchronisation terminée",
+  "syncStatusFailed": "La synchronisation a échoué",
+  "sendingProgressMessage": "Envoyé {sent}MB / {total}MB{extra}",
+  "@sendingProgressMessage": {
+    "placeholders": {
+      "sent": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      },
+      "extra": {
+        "type": "String"
+      }
+    }
+  },
+  "receivingProgressMessage": "Reçu {from}{received}MB / {total}MB{extra}",
+  "@receivingProgressMessage": {
+    "placeholders": {
+      "from": {
+        "type": "String"
+      },
+      "received": {
+        "type": "String"
+      },
+      "total": {
+        "type": "String"
+      },
+      "extra": {
+        "type": "String"
+      }
+    }
+  },
+  "weatherClear": "Clair",
+  "weatherPartlyCloudy": "Partiellement nuageux",
+  "weatherCloudy": "Nuageux",
+  "weatherFog": "Brouillard",
+  "weatherDrizzle": "Bruine",
+  "weatherFreezingRain": "Pluie verglaçante",
+  "weatherRain": "Pluie",
+  "weatherSnow": "Neige",
+  "weatherSnowGrains": "Grains de neige",
+  "weatherRainShower": "Douche de pluie",
+  "weatherSnowShower": "Averse de neige",
+  "weatherThunderstorm": "Orage",
+  "weatherThunderstormHeavy": "Fort orage",
+  "weatherUnknown": "Inconnu",
+  "weatherError": "Échec de la récupération",
+  "weatherDataFetchFailed": "Échec de la récupération des données météorologiques",
+  "unknownWeather": "Météo inconnue",
+  "noAiAnalysisRecords": "Aucun enregistrement d'analyse d'IA",
+  "aiAssistant": "Assistant IA",
+  "analyzingSource": "Analyse de la source...",
+  "analysisResult": "Résultat de l'analyse",
+  "confidenceLevel": "Confiance : {confidence}",
+  "@confidenceLevel": {
+    "placeholders": {
+      "confidence": {
+        "type": "String"
+      }
+    }
+  },
+  "author": "Auteur",
+  "authorLabel": "Auteur : {author}",
+  "@authorLabel": {
+    "placeholders": {
+      "author": {
+        "type": "String"
+      }
+    }
+  },
+  "workLabel": "Travail : {work}",
+  "@workLabel": {
+    "placeholders": {
+      "work": {
+        "type": "String"
+      }
+    }
+  },
+  "applyResult": "Appliquer le résultat",
+  "parseResultFailedWithError": "Échec de l'analyse du résultat : {error}",
+  "@parseResultFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "analysisFailedWithError": "Échec de l'analyse : {error}",
+  "@analysisFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "polishResult": "Résultat polonais",
+  "applyChanges": "Appliquer les modifications",
+  "polishFailedWithError": "Échec du polissage : {error}",
+  "@polishFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "continueResult": "Continuer Résultat",
+  "appendToNote": "Ajouter à la note",
+  "continueFailedWithError": "Échec de la poursuite : {error}",
+  "@continueFailedWithError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noteAnalysis": "Analyse des notes",
+  "applyToNote": "Appliquer à la note",
+  "analysisComplete": "Analyse terminée",
+  "filterAndSort": "Filtrer et trier",
+  "resetFilter": "Réinitialiser",
+  "tagFilter": "Filtre de balises",
+  "weatherFilter": "Filtre météo",
+  "weatherFilterSunny": "Ensoleillé",
+  "weatherFilterRainy": "Pluvieux",
+  "weatherFilterCloudy": "Nuageux",
+  "weatherFilterSnowy": "Neigeux",
+  "timePeriodFilter": "Filtre de période",
+  "sortMethod": "Méthode de tri",
+  "sortByTime": "Trier par heure",
+  "sortByName": "Trier par nom",
+  "sortByFavorite": "Trier par favori",
+  "ascending": "Ascendant",
+  "applyFilter": "Appliquer",
+  "editNoteMenu": "Modifier la note",
+  "askAIMenu": "Demandez à l'IA",
+  "generateCardShareMenu": "Générer une carte",
+  "deleteNoteMenu": "Supprimer la note",
+  "doubleTapToViewFull": "Appuyez deux fois pour afficher l'intégralité",
+  "logLevel": "Niveau : {level}",
+  "@logLevel": {
+    "placeholders": {
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "prefSettingsTitle": "Préférences",
+  "personalizationSettings": "Personnalisation",
+  "personalizationSettingsDesc": "Ajustez le comportement de l'application en fonction de vos habitudes d'utilisation",
+  "commonPreferences": "Préférences communes",
+  "clipboardMonitoring": "Surveillance du presse-papiers",
+  "clipboardMonitoringDesc": "Détecter automatiquement le contenu du presse-papiers et inviter à ajouter des notes",
+  "showFavoriteButton": "Afficher le bouton Favoris",
+  "showFavoriteButtonDesc": "Afficher le bouton en forme de cœur sur les cartes de correspondance",
+  "prioritizeBoldContent": "Privilégiez le contenu audacieux",
+  "prioritizeBoldContentDesc": "Afficher d'abord le texte en gras une fois réduit",
+  "useLocalNotesOnly": "Utiliser uniquement les notes locales",
+  "useLocalNotesOnlyDesc": "Lorsqu'il est désactivé, utiliser automatiquement les enregistrements locaux en mode hors connexion",
+  "aiSmartFeatures": "Fonctionnalités intelligentes de l'IA",
+  "aiGenerateDailyPrompt": "Invite quotidienne générée par l'IA",
+  "aiGenerateDailyPromptDesc": "Utilisez l'IA pour générer des invites quotidiennes sur la page d'accueil",
+  "periodicReportAiInsights": "Rapport périodique AI Insights",
+  "periodicReportAiInsightsDesc": "Activez les informations sur l'IA lors de la génération de rapports hebdomadaires/mensuels",
+  "aiCardGenerationLabel": "Génération de cartes IA",
+  "aiCardGenerationLabelDesc": "Générer des cartes SVG visuelles pour les notes",
+  "moreAiSettings": "Plus de paramètres d'IA",
+  "moreAiSettingsDesc": "Configurez les fournisseurs d'IA, les modèles, etc.",
+  "licenseInfo": "Informations sur la licence",
+  "appLicense": "Licence d'application",
+  "viewAppLicense": "Afficher la LICENCE de l'application",
+  "loadLicenseFailed": "Échec du chargement de la licence de l'application : {error}",
+  "@loadLicenseFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "licenseFileNotFound": "Fichier de LICENCE d'application introuvable.",
+  "openSourceAcknowledgements": "Bibliothèques Open Source et remerciements",
+  "lottieAnimationLicense": "Licence d'animation Lottie",
+  "systemLicenses": "Licences système",
+  "openSourceDesc": "Cette application est construite sur le framework Flutter, utilisant et remerciant les bibliothèques et services open source suivants :",
+  "framework": "Cadre",
+  "stateManagement": "Gestion de l'État",
+  "animationSupport": "Prise en charge des animations",
+  "localStorage": "Stockage local",
+  "syncIntegrationNote": "Remarque sur l'intégration de la synchronisation :",
+  "serviceApiAcknowledgements": "Remerciements pour les services et l'API :",
+  "weatherData": "Données météorologiques",
+  "dailyQuoteApi": "API de devis quotidien",
+  "viewFullDependencyList": "Afficher la liste complète des dépendances",
+  "thankOpenSourceContributors": "Merci à tous les projets open source et aux contributeurs de la communauté. Ces outils et services rendent cette application possible. Veuillez vous référer au référentiel de chaque projet ou à la page de gestion des packages pour les licences spécifiques.",
+  "lottieFilesCredits": "Cette application utilise les ressources d'animation de LottieFiles :",
+  "searchLoadingAnimation": "Rechercher Chargement de l'animation",
+  "weatherSearchAnimation": "Animation de recherche météo",
+  "aiThinkingAnimation": "Animation de réflexion IA",
+  "noResultsAnimation": "Aucun résultat Animation",
+  "thankLottieFiles": "Merci à LottieFiles pour avoir fourni des ressources d'animation de qualité.",
+  "sourceLabel": "Source:",
+  "systemLicensesDesc": "Les licences système incluent les licences du SDK Flutter et des packages de dépendances. Cliquez sur le bouton ci-dessous pour afficher la liste complète.",
+  "viewSystemLicenses": "Afficher les licences système",
+  "expandCollapseAll": "Développer/Réduire tout",
+  "licensePageDesc": "Cette page résume automatiquement les informations de licence de Flutter et de tous les packages de dépendances. Le contenu est automatiquement généré par chaque déclaration de package de dépendances et sert uniquement de référence.",
+  "searchPackageOrLicense": "Rechercher le nom du package ou le contenu de la licence (premier paragraphe uniquement)",
+  "loadSystemLicensesFailed": "Échec du chargement des licences système : {error}",
+  "@loadSystemLicensesFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "noSystemLicensesFound": "Aucune entrée de licence système trouvée",
+  "noMatchingLicensesFound": "Aucune entrée de licence correspondante trouvée",
+  "licenseEntriesCount": "Entrées {visible}/{total}",
+  "@licenseEntriesCount": {
+    "placeholders": {
+      "visible": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "unnamed": "Anonyme",
+  "noLicenseContent": "(Aucun contenu de licence)",
+  "copyLicense": "Copier la licence",
+  "licenseCopied": "Contenu de la licence copié",
+  "searchAnalysisRecords": "Rechercher des enregistrements d'analyse...",
+  "authorPerson": "Auteur/Personne",
+  "workSource": "Travail/Source",
+  "searchTags": "Rechercher des balises...",
+  "writeYourThoughts": "Écrivez vos pensées...",
+  "workName": "Nom du travail",
+  "searchNotes": "Notes de recherche...",
+  "searchCity": "Rechercher une ville...",
+  "logSettingsTitle": "Paramètres du journal",
+  "viewLogs": "Afficher les journaux",
+  "logLevelDescription": "Sélectionnez le niveau de détail de journalisation pour l'application. Des journaux plus détaillés facilitent le débogage mais peuvent affecter les performances et utiliser plus d'espace de stockage.",
+  "logLevelVerbose": "Enregistrez toutes les informations détaillées pour un débogage approfondi.",
+  "logLevelDebug": "Enregistrez les informations relatives au débogage.",
+  "logLevelInfo": "Enregistrez les informations sur les opérations régulières. (Recommandé)",
+  "logLevelWarning": "Enregistrez les problèmes ou avertissements potentiels.",
+  "logLevelError": "Enregistrez uniquement les informations sur les erreurs.",
+  "logLevelNone": "N’enregistrez aucun journal.",
+  "updateFoundNewVersion": "Nouvelle version disponible",
+  "updateCurrentVersion": "Version actuelle",
+  "updateLatestVersion": "Dernière version",
+  "updateReleaseNotes": "Notes de version",
+  "updateReleaseTime": "Heure de sortie : {date}",
+  "@updateReleaseTime": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "updateAlreadyLatest": "Déjà à jour",
+  "updateCurrentVersionLabel": "Version actuelle {version}",
+  "@updateCurrentVersionLabel": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updateUsingLatestVersion": "Vous utilisez la dernière version",
+  "updateIgnoreForever": "Ignorer pour toujours",
+  "updateIgnoreThisTime": "Ignorer cette fois",
+  "updateViewDetails": "Afficher les détails",
+  "updateGoToStore": "Aller au magasin",
+  "updateNow": "Mettre à jour maintenant",
+  "updateVersionIgnored": "Cette mise à jour de version a été ignorée",
+  "updateOpenStoreFailed": "Échec de l'ouverture du Microsoft Store : {error}",
+  "@updateOpenStoreFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "updateOpenLinkFailed": "Échec de l'ouverture du lien de téléchargement : {error}",
+  "@updateOpenLinkFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "selectCity": "Sélectionnez la ville",
+  "currentWeather": "Météo actuelle",
+  "cityNotSetHint": "Aucune ville définie, recherchez et sélectionnez ci-dessous",
+  "clickRefreshHint": "Ville : {city} (cliquez sur le bouton Actualiser)",
+  "@clickRefreshHint": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      }
+    }
+  },
+  "refreshWeather": "Actualiser la météo",
+  "weatherUpdated": "Météo mise à jour",
+  "weatherUpdateFailed": "Échec de la mise à jour météo, veuillez réessayer plus tard",
+  "weatherFetchFailed": "Échec de la récupération météo",
+  "pleaseSelectCityFirst": "Veuillez d'abord sélectionner une ville ou activer le service de localisation",
+  "useCurrentLocation": "Utiliser l'emplacement actuel",
+  "useFreeOnlineReverseGeocoding": "Utilisez le géocodage inversé en ligne gratuit",
+  "onlineReverseGeocodingNeedsLocation": "Veuillez d'abord obtenir votre position actuelle",
+  "onlineReverseGeocodingFailed": "Échec du géocodage inversé en ligne",
+  "onlineReverseGeocodingSuccess": "Géocodage inversé en ligne mis à jour : {address}",
+  "@onlineReverseGeocodingSuccess": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "weatherProvidedBy": "Données météorologiques fournies par Open-Meteo",
+  "processing": "Traitement...",
+  "searchingCity": "Recherche de villes...",
+  "noCityFound": "Aucune ville correspondante trouvée",
+  "tryDifferentKeywords": "Essayez différents mots-clés ou noms de villes",
+  "enterCityToSearch": "Entrez le nom de la ville à rechercher",
+  "addInfo": "Ajouter des informations",
+  "selectTagsWithCount": "Sélectionnez les balises ({count})",
+  "@selectTagsWithCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noTagsAvailableHint": "Aucune balise disponible, veuillez d'abord ajouter des balises",
+  "addLocationPrefix": "Ajouter un emplacement",
+  "locationServiceUnavailable": "Service de localisation indisponible",
+  "sourceInfo": "Informations sur la source",
+  "tagsLabel": "Balises",
+  "selectedTagsCount": "Balises {count} sélectionnées",
+  "@selectedTagsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectedTags": "Balises sélectionnées",
+  "unknownTagWithId": "Balise inconnue (ID :{id}...)",
+  "@unknownTagWithId": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "colorLabel": "Couleur",
+  "selectCardColorLabel": "Sélectionnez la couleur de la carte",
+  "noColor": "Pas de couleur",
+  "colorSet": "Ensemble de couleurs",
+  "locationAndWeather": "Emplacement et météo",
+  "recordedOnFirstSave": "Enregistré lors de la première sauvegarde",
+  "locationLabel": "Emplacement",
+  "weatherLabel": "Météo",
+  "refreshLocationWeather": "Actualiser l'emplacement et la météo",
+  "gettingLocationHint": "Obtenir l'emplacement...",
+  "noteNoLocationWeatherInfo": "Cette note n'a pas enregistré les informations de localisation et météo lors de la première sauvegarde",
+  "aiAssistantLabel": "Assistant IA",
+  "polishingText": "Polissage du texte...",
+  "continuingText": "Texte continu....",
+  "analyzingNote": "Note d'analyse...",
+  "analysisResultWithConfidence": "Résultat de l'analyse (Confiance : {confidence})",
+  "@analysisResultWithConfidence": {
+    "placeholders": {
+      "confidence": {
+        "type": "String"
+      }
+    }
+  },
+  "possibleAuthor": "Auteur possible :",
+  "possibleWork": "Travaux possibles :",
+  "analysisExplanation": "Explication de l'analyse :",
+  "noAuthorWorkIdentified": "Impossible d'identifier un auteur ou une œuvre clair",
+  "applyAnalysisResult": "Appliquer le résultat de l'analyse",
+  "parseResultFailed": "Échec du résultat de l'analyse : {error}",
+  "@parseResultFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "pleaseInputContent": "Veuillez d'abord saisir le contenu",
+  "copyResult": "Copier le résultat",
+  "cannotAddLocation": "Impossible d'ajouter un emplacement",
+  "cannotAddLocationDesc": "Cette note n'a pas enregistré les informations de localisation lors de la première sauvegarde et ne peut pas être ajoutée ultérieurement.\n\nPour enregistrer l'emplacement, cochez l'option d'emplacement lors de la création d'une nouvelle note.",
+  "iKnow": "Je comprends",
+  "locationInfo": "Informations sur l'emplacement",
+  "locationUpdateHint": "Emplacement actuel : {coordinates}\n\nVous pouvez essayer de mettre à jour vers une adresse détaillée ou de supprimer l'emplacement (ne peut pas être ajouté à nouveau après la suppression).",
+  "@locationUpdateHint": {
+    "placeholders": {
+      "coordinates": {
+        "type": "String"
+      }
+    }
+  },
+  "locationRemoveHint": "Emplacement actuel : {location}\n\nLes informations de localisation ne peuvent plus être ajoutées ou modifiées après la suppression.",
+  "@locationRemoveHint": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      }
+    }
+  },
+  "remove": "Retirer",
+  "updateLocation": "Mettre à jour l'emplacement",
+  "locationUpdatedTo": "Emplacement mis à jour : {address}",
+  "@locationUpdatedTo": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotGetAddress": "Impossible d'obtenir l'adresse, veuillez vérifier le réseau",
+  "updateFailed": "Échec de la mise à jour : {error}",
+  "@updateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotAddWeather": "Impossible d'ajouter la météo",
+  "cannotAddWeatherDesc": "Cette note n'a pas enregistré d'informations météorologiques lors de la première sauvegarde et ne peut pas être ajoutée ultérieurement.\n\nPour enregistrer la météo, cochez l'option météo lors de la création d'une nouvelle note.",
+  "weatherInfo2": "Informations météo",
+  "weatherRemoveHint": "Météo actuelle : {weather}\n\nLes informations météorologiques ne peuvent plus être ajoutées ou modifiées après la suppression.",
+  "@weatherRemoveHint": {
+    "placeholders": {
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotGetLocationTitle": "Impossible d'obtenir l'emplacement",
+  "cannotGetLocationDesc": "Impossible d'obtenir la position actuelle. Veuillez vérifier l'autorisation de localisation ou l'état du réseau.",
+  "getLocationFailedTitle": "Échec de l'obtention de la position",
+  "getLocationFailedDesc": "Échec de l'obtention de la position : {error}",
+  "@getLocationFailedDesc": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "cannotGetLocationPermissionShort": "Impossible d'obtenir l'autorisation de localisation",
+  "savingNote": "Économie",
+  "saveComplete": "Complet",
+  "writingDatabase": "Écriture dans la base de données...",
+  "preparingProcess": "Préparation...",
+  "mediaProcessFailed": "Échec du traitement du fichier multimédia : {error}",
+  "@mediaProcessFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "documentLoadFailed": "Échec du chargement du document, veuillez rouvrir l'éditeur",
+  "tagsCount": "Balises {count}",
+  "@tagsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "editMetadataShort": "Modifier les métadonnées",
+  "startWritingHint": "Commencez à écrire vos pensées...",
+  "unknownLocation": "Emplacement inconnu",
+  "dayPeriodDawn": "Aube",
+  "dayPeriodMorning": "Matin",
+  "dayPeriodAfternoon": "Après-midi",
+  "dayPeriodDusk": "Crépuscule",
+  "dayPeriodEvening": "Soirée",
+  "dayPeriodMidnight": "Tard dans la nuit",
+  "showExactTime": "Afficher l'heure exacte",
+  "showExactTimeDesc": "Afficher l'heure (heure:minute) dans les notes",
+  "guideHomepageDailyQuoteTitle": "Conseils de devis quotidiens",
+  "guideHomepageDailyQuoteDesc": "Appuyez une fois pour copier le contenu\nAppuyez deux fois pour ajouter rapidement aux notes",
+  "guideNotePageFilterTitle": "Filtrer et trier",
+  "guideNotePageFilterDesc": "Appuyez ici pour filtrer et trier vos notes\nPrend en charge le filtrage par balises, météo, heure et plus",
+  "guideNotePageFavoriteTitle": "Marque préférée",
+  "guideNotePageFavoriteDesc": "Appuyez sur l'icône en forme de cœur pour marquer comme favori\nVous pouvez trier par favoris dans les filtres",
+  "guideNotePageExpandTitle": "Développer/Réduire les notes",
+  "guideNotePageExpandDesc": "Appuyez deux fois sur la carte pour développer le contenu complet\nAppuyez à nouveau deux fois pour réduire",
+  "guideEditorMetadataTitle": "Modifier les métadonnées des notes",
+  "guideEditorMetadataDesc": "Appuyez ici pour modifier les balises de note, les catégories et plus encore",
+  "guideEditorToolbarUsageTitle": "Conseils sur la barre d'outils",
+  "guideEditorToolbarUsageDesc": "La barre d'outils prend en charge le défilement horizontal\nEssayez d'ajouter des images, des vidéos et d'autres médias !",
+  "guideAddNoteFullscreenButtonTitle": "Éditeur plein écran",
+  "guideAddNoteFullscreenButtonDesc": "Appuyez ici pour ouvrir l'éditeur plein écran\nPrend en charge le texte enrichi, les images, l'audio et la vidéo",
+  "guideSettingsPreferencesTitle": "Préférences",
+  "guideSettingsPreferencesDesc": "Activez ici la priorité du texte en gras, la surveillance du presse-papiers et d’autres paramètres de personnalisation.",
+  "guideSettingsStartupTitle": "Page de démarrage par défaut",
+  "guideSettingsStartupDesc": "Définir la page par défaut à ouvrir lors du lancement de l'application",
+  "guideSettingsThemeTitle": "Paramètres du thème",
+  "guideSettingsThemeDesc": "Personnalisez les couleurs et l'apparence du thème de l'application ici",
+  "apkDownloadTitle": "Télécharger l'APK",
+  "apkDownloading": "Téléchargement de ThoughtEcho {version}...",
+  "@apkDownloading": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "apkDownloadHint": "Veuillez ne pas fermer l'application. L'installation démarrera automatiquement après le téléchargement.",
+  "apkDownloadStarted": "J'ai commencé à télécharger ThoughtEcho {version}",
+  "@apkDownloadStarted": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "apkDownloadProgress": "Téléchargement... {progress}%",
+  "@apkDownloadProgress": {
+    "placeholders": {
+      "progress": {
+        "type": "int"
+      }
+    }
+  },
+  "apkDownloadComplete": "Téléchargement terminé, installation...",
+  "apkDownloadFailed": "Échec du téléchargement : {error}",
+  "@apkDownloadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apkInstallReady": "Le fichier APK est prêt. Veuillez terminer l'installation dans le programme d'installation du système.",
+  "apkOpenFailed": "Impossible d'ouvrir le fichier APK : {error}",
+  "@apkOpenFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apkInstallFailed": "Échec de l'installation : {error}",
+  "@apkInstallFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "apkNotificationTitle": "Télécharger l'APK",
+  "storagePermissionRequired": "Autorisation de stockage requise",
+  "storagePermissionDesc": "Une autorisation de stockage est requise pour télécharger les fichiers APK. Veuillez autoriser l'accès au stockage dans les paramètres.",
+  "installPermissionRequired": "Autorisation d'installation requise",
+  "installPermissionDesc": "L'autorisation d'installer des applications inconnues est requise pour installer l'APK. Veuillez autoriser l'installation d'applications provenant de sources inconnues dans les paramètres.",
+  "errorTitle": "Erreur",
+  "cannotGetDownloadDir": "Impossible d'obtenir le répertoire de téléchargement",
+  "webPlatformApkNotSupported": "Le téléchargement de l'APK n'est pas pris en charge sur la plateforme Web",
+  "serviceNotInitializedDeleteFailed": "Service non initialisé, échec de la suppression",
+  "deleteAllConfirmMessage": "Êtes-vous sûr de vouloir supprimer tous les enregistrements d'analyse ? Cette action ne peut pas être annulée.",
+  "deleteFailedSimple": "Échec de la suppression",
+  "aiAnalysisDetails": "Détails de l'analyse de l'IA",
+  "analysisTime": "Temps d'analyse",
+  "analysisContent": "Contenu de l'analyse",
+  "aiAnalysisResult": "Résultat de l'analyse de l'IA",
+  "emotionalAnalysis": "Analyse émotionnelle",
+  "comprehensiveAnalysis": "Analyse complète",
+  "mindMapAnalysis": "Carte mentale",
+  "growthAnalysis": "Analyse de croissance",
+  "aiAnalysis": "Analyse de l'IA",
+  "selectReportTypePrompt": "Veuillez sélectionner le type de rapport annuel à générer :",
+  "aiSmartReport": "Rapport intelligent sur l'IA",
+  "aiSmartReportDesc": "Magnifique rapport HTML généré sur la base d'une analyse de l'IA, comprenant des informations approfondies et des graphiques visuels",
+  "nativeFlutterReport": "Rapport de flottement natif",
+  "nativeFlutterReportDesc": "Rapport interactif généré à l'aide de composants Flutter natifs avec des animations fluides",
+  "generateAnnualReportFailed": "Échec de la génération du rapport annuel",
+  "generatingAIAnnualReport": "Génération du rapport annuel sur l'IA...",
+  "cannotReadReportTemplate": "Impossible de lire le modèle de rapport",
+  "aiReturnFormatAbnormal": "Format de retour IA anormal, modèle de sauvegarde utilisé pour générer le rapport",
+  "aiServiceAbnormal": "Service IA anormal, modèle de sauvegarde utilisé pour générer le rapport",
+  "monthJan": "Jan",
+  "monthFeb": "Fév",
+  "monthMar": "Mar",
+  "monthApr": "Avr",
+  "monthMay": "Mai",
+  "monthJun": "juin",
+  "monthJul": "Juillet",
+  "monthAug": "Août",
+  "monthSep": "Sep",
+  "monthOct": "Octobre",
+  "monthNov": "Nov",
+  "monthDec": "Déc",
+  "achievementRecordMaster": "Maître des enregistrements",
+  "achievementPersistent": "Persistant",
+  "achievementWriter": "Écrivain",
+  "achievementOrganizer": "Organisateur",
+  "continuingToGrow": "Continuer à grandir",
+  "allDayLong": "Toute la journée",
+  "preparingBackup": "Préparation de la sauvegarde...",
+  "collectingData": "Collecte de données...",
+  "processingNoteData": "Traitement des données de note...",
+  "processingMediaFiles": "Traitement des fichiers multimédias...",
+  "creatingBackupFile": "Création du fichier de sauvegarde...",
+  "verifyingBackupFile": "Vérification du fichier de sauvegarde...",
+  "thoughtEchoBackupFile": "Fichier de sauvegarde ThoughtEcho",
+  "backupFileReady": "Le fichier de sauvegarde est prêt, veuillez l'enregistrer via le partage",
+  "backupCompleteSelectLocation": "Sauvegarde terminée, veuillez choisir l'emplacement de sauvegarde",
+  "zipFile": "Fichier ZIP",
+  "jsonFile": "Fichier JSON",
+  "outOfMemoryText": "Manque de mémoire",
+  "storageSpaceText": "Espace de stockage",
+  "permissionText": "Autorisation",
+  "backupCancelled": "Sauvegarde annulée",
+  "backupFailedText": "La sauvegarde a échoué",
+  "selectFileError": "Échec de la sélection du fichier",
+  "mergingDataProgress": "Fusion de données...",
+  "yearAIAnnualReport": "{year} Rapport annuel sur l'IA",
+  "@yearAIAnnualReport": {
+    "placeholders": {
+      "year": {
+        "type": "String"
+      }
+    }
+  },
+  "openInBrowser": "Ouvrir dans le navigateur",
+  "shareReport": "Partager le rapport",
+  "saveReport": "Enregistrer le rapport",
+  "processingReport": "Rapport de traitement...",
+  "personalizedSummaryByAI": "Résumé personnalisé basé sur l'analyse de l'IA",
+  "aiGeneratedReview": "L'IA a généré votre rapport annuel exclusif, comprenant une analyse des données, des informations sur la croissance et des suggestions futures.",
+  "reportPreview": "Aperçu du rapport",
+  "fullReportViewInBrowser": "Le rapport complet contient de superbes graphiques et des effets interactifs, qu'il est recommandé de visualiser dans le navigateur.",
+  "openFullReportInBrowser": "Ouvrir le rapport complet dans le navigateur",
+  "shareBtn": "Partager",
+  "regenerateCard": "Régénérer",
+  "regeneratingCard": "Régénérant...",
+  "cardGenerating": "Génération de la carte...",
+  "generatingCards": "Génération de cartes...",
+  "loadMoreCards": "Charger plus de cartes",
+  "remainingCards": "{count} plus disponible",
+  "@remainingCards": {
+    "description": "Remaining cards count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "saveBtn": "Sauvegarder",
+  "work": "Travail:",
+  "explanation": "Explication:",
+  "generatingReportContent": "Génération du contenu du rapport...",
+  "reportOpenedInBrowser": "Rapport ouvert dans le navigateur",
+  "cannotOpenBrowserUseShare": "Impossible d'ouvrir le navigateur directement, veuillez utiliser la fonction de partage pour sélectionner le navigateur",
+  "reportFileSavedInstructions": "Fichier de rapport enregistré, veuillez suivre ces étapes pour l'ouvrir dans le navigateur :",
+  "step1OpenFileManager": "1. Ouvrez le gestionnaire de fichiers du téléphone",
+  "step2NavigateToPath": "2. Accédez au chemin suivant :",
+  "step3TapHtmlFile": "3. Appuyez sur le fichier HTML",
+  "step4SelectBrowser": "4. Sélectionnez le navigateur à ouvrir",
+  "gotIt": "J'ai compris",
+  "copyPath": "Copier le chemin",
+  "pathCopied": "Chemin du fichier copié dans le presse-papiers",
+  "howToViewInBrowser": "Comment afficher dans le navigateur",
+  "htmlContentCopied": "Contenu du rapport HTML copié dans le presse-papiers. Veuillez suivre ces étapes :",
+  "mobileSteps": "📱Mobile :",
+  "desktopSteps": "💻 Bureau :",
+  "copyPrefix": "Copier le préfixe",
+  "addressBarPrefixCopied": "Préfixe de la barre d'adresse copié, veuillez le coller dans le navigateur, puis coller le contenu HTML",
+  "reportShared": "Rapport partagé",
+  "reportSavedLocally": "Rapport enregistré dans un fichier local",
+  "cannotSaveFileCopyToClipboard": "Impossible d'enregistrer le fichier, contenu copié dans le presse-papiers",
+  "videoFileNotFound": "Fichier vidéo introuvable",
+  "initializingLargeVideo": "Initialisation d'un gros fichier vidéo",
+  "videoLoadingTooLong": "Le chargement de la vidéo prend trop de temps, veuillez essayer d'utiliser un fichier vidéo plus petit",
+  "videoInitTimeout": "Délai d'initialisation de la vidéo écoulé, le fichier est peut-être trop volumineux",
+  "largeVideoInitSuccess": "Grande vidéo initialisée avec succès",
+  "playbackSpeed": "Vitesse de lecture",
+  "subtitles": "Sous-titres",
+  "shareVideo": "Partager la vidéo",
+  "videoInfo": "Informations vidéo",
+  "videoLoadFailed": "Échec du chargement de la vidéo",
+  "timeout": "Temps mort",
+  "videoLoadTimeout": "Expiration du délai de chargement de la vidéo",
+  "fileTooLargeUseSmaller": "Le fichier est peut-être trop volumineux, veuillez réessayer plus tard ou utiliser un fichier vidéo plus petit",
+  "format": "Format",
+  "unsupportedVideoFormat": "Format vidéo non pris en charge",
+  "useCommonFormats": "Veuillez utiliser des formats courants comme MP4, MOV",
+  "cannotAccessVideoFile": "Impossible d'accéder au fichier vidéo",
+  "checkFilePermissions": "Veuillez vérifier les autorisations des fichiers",
+  "checkFileIntegrity": "Veuillez vérifier si le fichier est complet ou essayez de le réimporter",
+  "outOfMemoryVideo": "Mémoire insuffisante, impossible de charger la vidéo",
+  "audioFileNotFound": "Fichier audio introuvable",
+  "clickToPlayVideo": "Appuyez pour lire la vidéo",
+  "motionPhoto": "En direct",
+  "viewPhoto": "Voir la photo",
+  "motionPhotoPlayFailed": "Impossible de lire cette photo animée",
+  "loadingVideo": "Chargement de la vidéo...",
+  "shareAudio": "Partager l'audio",
+  "fileInfo": "Informations sur le fichier",
+  "audioInfo": "Informations audio",
+  "fileName": "Nom de fichier",
+  "duration": "Durée",
+  "path": "Chemin",
+  "resolution": "Résolution",
+  "aspectRatio": "Rapport hauteur/largeur",
+  "featureInDevelopment": "Fonctionnalité de partage en cours de développement...",
+  "selectFromFiles": "Sélectionner parmi les fichiers",
+  "supportsLargeFiles": "Prend en charge les fichiers volumineux avec une gestion sécurisée de la mémoire",
+  "unifiedMediaImportImportMedia": "Importer {mediaType}",
+  "@unifiedMediaImportImportMedia": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "mediaTypeImage": "Image",
+  "mediaTypeVideo": "Vidéo",
+  "mediaTypeAudio": "Audio",
+  "mediaTypeMedia": "Médias",
+  "takePhoto": "Prendre une photo",
+  "recordVideo": "Enregistrer une vidéo",
+  "recordAudio": "Enregistrer l'audio",
+  "takePhotoDirectly": "Prendre une photo directement",
+  "recordVideoDirectly": "Enregistrer directement",
+  "recordAudioDirectly": "Enregistrer directement",
+  "enterUrlHint": "Entrez l'URL du fichier multimédia",
+  "image": "Image",
+  "video": "Vidéo",
+  "audio": "Audio",
+  "weatherSunny": "Ensoleillé",
+  "weatherUnknownWeather": "Météo inconnue",
+  "weatherShowers": "Douches",
+  "weatherSnowShowers": "Averses de neige",
+  "weatherThunderstormWithHail": "Orage avec grêle",
+  "fileTypeImage": "Image",
+  "fileTypeVideo": "Vidéo",
+  "fileTypeAudio": "Audio",
+  "fileTypeDocument": "Document",
+  "fileTypeText": "Texte",
+  "fileTypeApplication": "Application",
+  "fileTypeOther": "Autre",
+  "fileStatusQueued": "En file d'attente",
+  "fileStatusSending": "Envoi",
+  "fileStatusCompleted": "Complété",
+  "fileStatusFailed": "Échoué",
+  "fileStatusSkipped": "Sauté",
+  "sessionStatusWaiting": "En attendant",
+  "sessionStatusSending": "Envoi",
+  "sessionStatusReceiving": "Réception",
+  "sessionStatusCompleted": "Complété",
+  "sessionStatusCancelled": "Annulé",
+  "sessionStatusRejected": "Rejeté",
+  "sessionStatusError": "Erreur",
+  "timeMorning": "Matin",
+  "timeAfternoon": "Après-midi",
+  "timeEvening": "Soirée",
+  "timeLateNight": "Tard dans la nuit",
+  "promptDefault1": "De quoi es-tu reconnaissant aujourd’hui ?",
+  "promptDefault2": "Que diriez-vous pour encourager votre passé ?",
+  "promptDefault3": "Quelle nouvelle chose passionnante avez-vous apprise aujourd’hui ?",
+  "promptDefault4": "Quelle belle idée attend d’être réalisée ?",
+  "promptDefault5": "Qu’est-ce qui vous a rendu heureux et épanoui récemment ?",
+  "promptDefault6": "Quelles informations précieuses avez-vous acquises en surmontant les défis ?",
+  "promptDefault7": "Si demain était totalement libre, quelle chose significative voudriez-vous le plus faire ?",
+  "promptDefault8": "Quelle expérience précieuse le défi d’aujourd’hui vous a-t-il appris ?",
+  "promptDefault9": "Quelles petites habitudes positives vous rendent meilleur ?",
+  "promptDefault10": "Quels mots chaleureux souhaitez-vous dire à votre futur moi en ce moment ?",
+  "promptDefault11": "Quelle petite réalisation aujourd’hui mérite votre fierté ?",
+  "promptDefault12": "Quel souvenir chaleureux vous fait sourire ?",
+  "promptGeneric1": "En ce moment, avez-vous des pensées particulières ou de beaux sentiments que vous souhaitez enregistrer ?",
+  "promptGeneric2": "En repensant à aujourd’hui, quel moment chaleureux vous a impressionné ?",
+  "promptGeneric3": "Calmez-vous et ressentez vos émotions actuelles, quel beau message véhiculent-elles ?",
+  "promptGeneric4": "Quel petit progrès ou gain aujourd’hui vous rend gratifiant ?",
+  "promptGeneric5": "Qu’est-ce qui vous donne espoir et motivation ?",
+  "promptMorning1": "Une nouvelle journée commence, quelles belles attentes avez-vous pour aujourd’hui ?",
+  "promptMorning2": "Quelle est l’odeur de l’air du matin ? Quel souvenir chaleureux cela vous rappelle-t-il ?",
+  "promptMorning3": "Fixez-vous un petit objectif passionnant pour aujourd’hui, qu’est-ce que cela pourrait être ?",
+  "promptMorning4": "Dans la lumière du matin, quelles pensées positives germent dans votre cœur ?",
+  "promptAfternoon1": "Quelles sensations agréables le soleil ou la brise de l’après-midi vous procure-t-elle ?",
+  "promptAfternoon2": "Au milieu de la journée, y a-t-il quelque chose qui se passe bien et qui vous satisfait ?",
+  "promptAfternoon3": "Prenez le temps de vous détendre et de réfléchir aux choses qui vous mettent à l’aise et heureux.",
+  "promptAfternoon4": "L’après-midi, quels beaux projets se préparent dans votre cœur ?",
+  "promptEvening1": "À la tombée de la nuit, en regardant le jour d’aujourd’hui, qu’est-ce qui mérite d’être célébré ou d’être reconnaissant ?",
+  "promptEvening2": "Ce moment de tranquillité est propice à la réflexion, quelle belle scène émerge dans votre esprit ?",
+  "promptEvening3": "Élaborez un plan ou une vision pleine d’espoir pour demain.",
+  "promptEvening4": "Alors que le soleil se couche, quel moment de la journée vous a fait particulièrement chaud ?",
+  "promptLateNight1": "Dans le calme de la fin de la nuit, quelles pensées chaleureuses ou quelle belle inspiration émergent tranquillement ?",
+  "promptLateNight2": "À quels précieux souvenirs ce silence vous fait-il penser ?",
+  "promptLateNight3": "Avant de dormir, mettez de côté les distractions et enregistrez la paix et le contentement de votre cœur.",
+  "promptLateNight4": "Sous le ciel étoilé, quels beaux vœux brillent dans votre cœur ?",
+  "promptClearMorning": "La lumière du soleil du matin remplit le rebord de la fenêtre, comment vous sentez-vous en ce moment ? Des beaux projets ?",
+  "promptRainMorning": "En écoutant la douce pluie du matin, votre cœur est-il particulièrement paisible ? Des idées chaleureuses ?",
+  "promptCloudyMorning": "Une matinée nuageuse est parfaite pour savourer lentement et réfléchir aux magnifiques gains récents.",
+  "promptClearAfternoon": "Le chaud soleil de l'après-midi est parfait pour un court repos, enregistrez ce moment de confort et de satisfaction.",
+  "promptRainAfternoon": "Un après-midi pluvieux, avec de la pluie battante dehors, il est idéal à l'intérieur pour lire un livre ou écrire des pensées chaleureuses.",
+  "promptClearEvening": "À la tombée de la nuit, sous la lumière des étoiles ou de la lune, quels beaux souhaits ou quels souvenirs chaleureux avez-vous ?",
+  "promptRainEvening": "Par une nuit pluvieuse, propice à une réflexion solitaire, qu’est-ce qui vous a récemment fait sentir satisfait ou attendu ?",
+  "promptWindEvening": "Par une nuit avec une douce brise du soir, vos pensées dérivent-elles avec le vent ? Enregistrez la belle inspiration de ce moment.",
+  "promptClearWeather1": "Par une journée aussi ensoleillée, qu’est-ce qui vous rend heureux et énergique ?",
+  "promptClearWeather2": "Avec un temps aussi beau, quelles activités relaxantes et joyeuses convient-il de faire ?",
+  "promptRainWeather1": "En écoutant la pluie, votre humeur est-elle particulièrement calme et apaisée ?",
+  "promptRainWeather2": "Les jours de pluie sont propices à la contemplation, quelles pensées chaleureuses persistent dans votre esprit ?",
+  "promptCloudyWeather1": "Sous un ciel nuageux, où dérivent vos pensées ?",
+  "promptCloudyWeather2": "Les journées nuageuses ont parfois leur propre charme, quels précieux souvenirs vous rappellent-elles ?",
+  "promptSnowWeather1": "Quels sentiments purs la scène de neige à l’extérieur vous procure-t-elle ?",
+  "promptSnowWeather2": "Les jours de neige, à quelles belles choses peut-on penser tout en se blottissant au chaud ?",
+  "promptHotWeather": "Il fait un peu chaud, quelle chose confortable aimeriez-vous faire le plus pour profiter de l'été ?",
+  "promptColdWeather": "Il fait un peu froid, tout en restant au chaud, quelles pensées réconfortantes vous ont-elles ?",
+  "promptCityContext": "Étant à {city}, quelle inspiration cette ville vous a-t-elle apportée aujourd'hui ?",
+  "@promptCityContext": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      }
+    }
+  },
+  "promptFallback": "Aujourd’hui, quelles nouvelles idées ou belles pensées souhaitez-vous partager ?",
+  "citySuffix": "",
+  "locationDisplayFormat": "{city}{suffix}",
+  "@locationDisplayFormat": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      },
+      "suffix": {
+        "type": "String"
+      }
+    }
+  },
+  "locationDisplayWithDistrict": "{city} · {district}",
+  "@locationDisplayWithDistrict": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      },
+      "district": {
+        "type": "String"
+      }
+    }
+  },
+  "noLocationInfo": "Aucune information de localisation",
+  "currentLocationLabel": "Emplacement actuel",
+  "annualReportOpenedInBrowser": "Rapport ouvert dans le navigateur",
+  "annualReportCannotOpenBrowser": "Impossible d'ouvrir le navigateur directement, veuillez utiliser le partage pour choisir le navigateur",
+  "annualReportOpenInBrowser": "Ouvrir dans le navigateur",
+  "annualReportHowToView": "Comment afficher dans le navigateur",
+  "annualReportMobileInstructions": "📱Mobile :",
+  "annualReportDesktopInstructions": "💻 Bureau :",
+  "annualReportSavedToLocal": "Rapport enregistré dans un fichier local",
+  "annualReportCopiedToClipboard": "Impossible d'enregistrer le fichier, contenu copié dans le presse-papiers",
+  "fullscreenEditTooltip": "Modifier en plein écran",
+  "fullscreenEditLongTextTip": "Modification plein écran recommandée pour le texte long",
+  "sourcePreviewFormat": "S'affichera comme : {source}",
+  "@sourcePreviewFormat": {
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "addWeatherWithValue": "Ajouter la météo : {weather}",
+  "@addWeatherWithValue": {
+    "placeholders": {
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "addWeatherInfo": "Ajouter des informations météo",
+  "cardColorSet": "Jeu de couleurs de carte",
+  "setCardColor": "Définir la couleur de la carte",
+  "openFullEditorFailedSimple": "Échec de l'ouverture de l'éditeur plein écran",
+  "loadingLargeDocument": "Chargement d'un document volumineux...",
+  "documentLoadFailedRetry": "Échec du chargement du document, veuillez rouvrir l'éditeur",
+  "contentCopiedToClipboard": "Copié dans le presse-papiers",
+  "messageCopiedToClipboard": "Message copié dans le presse-papier",
+  "fetchHitokotoFailed": "Échec de la récupération du devis : {error}",
+  "@fetchHitokotoFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "copyMessage": "Copier le message",
+  "shareMessage": "Partager un message",
+  "shareFeatureInDevelopment": "Fonctionnalité de partage en développement",
+  "cancelImport": "Annuler l'importation",
+  "enterMediaUrl": "Saisissez l'URL {mediaType}",
+  "@enterMediaUrl": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      }
+    }
+  },
+  "insertMediaFailed": "Échec de l'insertion de {mediaType} : {error}",
+  "@insertMediaFailed": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "audioFileNotFoundWithPath": "Fichier audio introuvable : {path}",
+  "@audioFileNotFoundWithPath": {
+    "placeholders": {
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "audioLoadFailed": "Échec du chargement audio : {error}",
+  "@audioLoadFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "outOfMemoryVideoLoad": "Mémoire insuffisante, impossible de charger la vidéo",
+  "codeCopiedToClipboard": "Code copié dans le presse-papier",
+  "videoLoadTooLong": "Le temps de chargement de la vidéo est trop long, veuillez essayer d'utiliser un fichier vidéo plus petit",
+  "outOfMemorySuggestions": "Suggestions :\n• Fermez les autres applications pour libérer de la mémoire\n• Redémarrez l'application et réessayez\n• Utilisez un fichier vidéo plus petit",
+  "fullscreenEditorPlaceholder": "Commencez à écrire vos pensées...",
+  "unsavedChangesTitle": "Modifications non enregistrées",
+  "unsavedChangesDesc": "Vous avez des modifications non enregistrées. Voulez-vous annuler ces modifications ?",
+  "continueEditing": "Continuer la modification",
+  "discardChanges": "Ignorer les modifications",
+  "actionFavorite": "Préféré",
+  "actionUnfavorite": "Supprimer des favoris",
+  "clearFavoriteTitle": "Effacer le favori",
+  "clearFavoriteMessage": "Êtes-vous sûr de vouloir supprimer {count} favori(s) de cette note ?",
+  "@clearFavoriteMessage": {
+    "description": "Clear favorite confirmation message",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clearFavoriteSuccess": "Favoris effacés",
+  "clearFavoriteFailed": "Échec de la suppression des favoris",
+  "moreOptions": "Plus d'options",
+  "localAiFeatures": "Fonctionnalités d'IA locale",
+  "localAiFeaturesPreview": "Aperçu",
+  "localAiFeaturesDesc": "Améliorez votre expérience de prise de notes avec l'IA sur l'appareil",
+  "enableLocalAi": "Activer l'IA locale",
+  "enableLocalAiDesc": "Activez pour activer les fonctionnalités d'IA sur l'appareil",
+  "localAiPreviewNote": "Cette fonctionnalité est actuellement en préversion. Certaines fonctionnalités peuvent être instables",
+  "inputEnhancement": "Amélioration de l'entrée",
+  "searchAndDiscovery": "Recherche et découverte",
+  "contentAnalysis": "Analyse de contenu",
+  "speechToText": "Parole en texte",
+  "speechToTextDesc": "Appuyez longuement sur le bouton d'enregistrement pour convertir la parole en texte en temps réel",
+  "ocrRecognition": "Reconnaissance OCR",
+  "ocrRecognitionDesc": "Prendre une photo pour reconnaître le texte des images",
+  "aiCorrection": "Correction de l'IA",
+  "aiCorrectionDesc": "Corrigez intelligemment les erreurs de reconnaissance vocale et OCR",
+  "sourceRecognition": "Reconnaissance de sources",
+  "sourceRecognitionDesc": "Extraire automatiquement les informations sur l'auteur et l'œuvre du texte",
+  "aiSearch": "Recherche sémantique IA",
+  "aiSearchDesc": "Utilisez l'IA pour comprendre l'intention de recherche et trouver des notes sémantiquement liées",
+  "relatedNotes": "Notes connexes",
+  "relatedNotesDesc": "Recommander des notes associées en fonction de la similarité du contenu",
+  "smartTags": "Balises intelligentes",
+  "smartTagsDesc": "Suggérer intelligemment des balises lors de l'enregistrement de notes",
+  "noteClassification": "Remarque Classement",
+  "noteClassificationDesc": "Identifiez automatiquement les types de notes (informations, extraits, journal, etc.)",
+  "emotionDetection": "Détection des émotions",
+  "emotionDetectionDesc": "Analyser le sentiment émotionnel du contenu d'une note",
+  "swipeUpForOcr": "Faites glisser votre doigt vers le haut pour l'OCR",
+  "listening": "Écoute...",
+  "recording": "Enregistrement",
+  "releaseToFinish": "Relâcher pour terminer",
+  "applyToEditor": "Postuler à l'éditeur",
+  "noSourceFound": "Aucune information source trouvée",
+  "sourceFound": "Source trouvée",
+  "correcting": "Corriger...",
+  "correctionComplete": "Correction terminée",
+  "recognizing": "Reconnaître...",
+  "recognitionComplete": "Reconnaissance terminée",
+  "voiceInputTitle": "Entrée vocale",
+  "voiceResultTitle": "Résultat de la reconnaissance vocale",
+  "ocrCaptureTitle": "Reconnaissance de texte OCR",
+  "ocrResultTitle": "Résultat de la reconnaissance OCR",
+  "selectTextRegions": "Sélectionnez les zones de texte à extraire",
+  "takeAnotherPhoto": "Prendre une autre photo",
+  "finishSelection": "Terminer la sélection",
+  "noTextDetected": "Aucun texte détecté",
+  "tapToSelectRegion": "Appuyez pour sélectionner la zone de texte",
+  "aiSearchMode": "Recherche IA",
+  "normalSearchMode": "Recherche normale",
+  "switchToAiSearch": "Passer à la recherche sémantique IA",
+  "switchToNormalSearch": "Passer à la recherche normale",
+  "recommendedTags": "Balises recommandées",
+  "noteType": "Type de note",
+  "emotionAnalysis": "Analyse des émotions",
+  "viewRelatedNotes": "Afficher les notes associées",
+  "localAiNotEnabled": "Fonctionnalités d'IA locale non activées",
+  "enableInSettings": "Veuillez activer dans les paramètres",
+  "featureNotAvailable": "Fonctionnalité non disponible",
+  "featureComingSoon": "Fonctionnalité à venir",
+  "localAISettings": "Fonctionnalités d'IA locale",
+  "localAISettingsDesc": "Fonctionnalités d'IA sur l'appareil (aperçu)",
+  "localAIPreviewBadge": "Aperçu",
+  "localAIEnabled": "Activer l'IA locale",
+  "localAIEnabledDesc": "Activer les fonctionnalités d'IA sur l'appareil",
+  "localAIInputEnhancement": "Amélioration de l'entrée",
+  "localAISpeechToText": "Parole en texte",
+  "localAISpeechToTextDesc": "Appuyez longuement sur FAB pour enregistrer et transcrire",
+  "localAIOCR": "Reconnaissance de texte OCR",
+  "localAIOCRDesc": "Extraire le texte des images",
+  "localAICorrection": "Correction de l'IA",
+  "localAICorrectionDesc": "Corriger les erreurs de reconnaissance vocale et OCR",
+  "localAISourceRecognition": "Reconnaissance intelligente de la source",
+  "localAISourceRecognitionDesc": "Extraction automatique des noms d'auteur et d'œuvre",
+  "localAISearchDiscovery": "Recherche et découverte",
+  "localAISemanticSearch": "Recherche sémantique IA",
+  "localAISemanticSearchDesc": "Utiliser l'IA pour comprendre l'intention de recherche",
+  "localAIRelatedNotes": "Notes connexes Recommandation",
+  "localAIRelatedNotesDesc": "Découvrez le contenu des notes associées",
+  "localAIContentAnalysis": "Analyse de contenu",
+  "localAISmartTags": "Recommandation de balise active",
+  "localAISmartTagsDesc": "L'IA recommande des balises appropriées",
+  "localAINoteClassification": "Classification des types de notes",
+  "localAINoteClassificationDesc": "Identifier automatiquement les types de notes",
+  "localAIEmotionDetection": "Détection des émotions",
+  "localAIEmotionDetectionDesc": "Analyser le sentiment émotionnel",
+  "voiceRecording": "Enregistrement...",
+  "voiceRecordingHint": "Relâchez pour terminer, balayez vers le haut pour l'OCR",
+  "voiceProcessing": "Traitement...",
+  "voiceTranscribing": "Transcription...",
+  "voiceEditResult": "Modifier le résultat de la reconnaissance",
+  "voiceApplyCorrection": "Correction de l'IA",
+  "voiceRecognizeSource": "Reconnaître la source",
+  "voiceInsertToEditor": "Insérer dans l'éditeur",
+  "ocrCapture": "Prendre une photo",
+  "ocrCaptureHint": "Aligner avec la zone de texte",
+  "ocrSelectRegion": "Sélectionnez la région du texte",
+  "ocrSelectRegionHint": "Appuyez sur la zone de texte pour reconnaître",
+  "ocrProcessing": "Reconnaître...",
+  "ocrNoTextDetected": "Aucun texte détecté",
+  "aiSearching": "Recherche par l'IA...",
+  "aiCorrectionApplied": "Correction IA appliquée",
+  "aiSourceRecognized": "Source reconnue",
+  "aiNoSourceFound": "Aucune information claire sur l'auteur ou l'œuvre trouvée",
+  "smartTagsRecommendation": "Balises recommandées par l'IA",
+  "smartTagsApply": "Appliquer les recommandations",
+  "noteTypeDetected": "Type de note détecté",
+  "emotionDetectedLabel": "Analyse des émotions",
+  "relatedNotesTitle": "Notes connexes",
+  "relatedNotesEmpty": "Aucune note associée",
+  "hiddenNotesFeature": "Notes cachées",
+  "hiddenNotesFeatureDesc": "Lorsqu'elle est activée, une balise \"Cachée\" apparaîtra. Les notes avec cette balise seront masquées de la liste principale",
+  "requireBiometricForHidden": "Exiger une authentification pour les notes masquées",
+  "requireBiometricForHiddenDesc": "L'authentification biométrique est requise pour afficher les notes cachées",
+  "hiddenTag": "Caché",
+  "hiddenTagDesc": "Les notes avec cette balise seront masquées de la liste principale",
+  "hiddenTagUsageHint": "Après avoir ajouté cette balise, les notes seront masquées de la liste principale et ne pourront être visualisées qu'en filtrant la balise \"Cachée\"",
+  "systemTag": "Balise système",
+  "systemTagCannotEdit": "Les balises système ne peuvent pas être modifiées",
+  "systemTagCannotDelete": "Les balises système ne peuvent pas être supprimées",
+  "biometricAuthRequired": "Authentification requise",
+  "biometricAuthReason": "Veuillez vérifier votre identité pour afficher les notes masquées",
+  "biometricAuthFailed": "L'authentification a échoué",
+  "biometricNotAvailable": "L'authentification biométrique n'est pas disponible sur cet appareil",
+  "biometricNotSetup": "Veuillez d'abord configurer la reconnaissance des empreintes digitales ou du visage dans les paramètres système.",
+  "privacyAndSecurity": "Confidentialité et sécurité",
+  "smartPushTitle": "Poussée intelligente",
+  "smartPushTitlePreview": "Push intelligent (aperçu)",
+  "smartPushDesc": "Planifiez des notifications push pour les notes passées et les citations quotidiennes",
+  "smartPushEnable": "Activer le Push intelligent",
+  "smartPushEnableDesc": "Envoyez des notes de mémoire ou des citations quotidiennes à des heures programmées",
+  "smartPushContentType": "Mode poussée",
+  "smartPushDailyQuote": "Devis quotidien",
+  "smartPushDailyQuoteDesc": "Push des citations organisées",
+  "smartPushPastNotes": "Notes passées",
+  "smartPushPastNotesDesc": "Pousser les révisions de notes historiques",
+  "smartPushModeSmart": "Poussée intelligente",
+  "smartPushModeSmartDesc": "Sélectionnez automatiquement le contenu le plus significatif",
+  "smartPushModeBoth": "Poussée aléatoire",
+  "smartPushModeBothDesc": "Poussez au hasard les citations quotidiennes ou les notes passées",
+  "smartPushPastNoteTypes": "Types d'avis",
+  "smartPushYearAgoToday": "Il y a un an aujourd'hui",
+  "smartPushYearAgoTodayDesc": "Notes push du même jour les années précédentes",
+  "smartPushMonthAgoToday": "Il y a un mois aujourd'hui",
+  "smartPushMonthAgoTodayDesc": "Notes push du même jour au cours des mois précédents",
+  "smartPushWeekAgoToday": "Il y a une semaine",
+  "smartPushWeekAgoTodayDesc": "Notes push d'il y a une semaine",
+  "smartPushRandomMemory": "Mémoire aléatoire",
+  "smartPushRandomMemoryDesc": "Pousser au hasard des notes historiques",
+  "smartPushSameLocation": "Même emplacement",
+  "smartPushSameLocationDesc": "Push notes de la même zone",
+  "smartPushSameWeather": "Même météo",
+  "smartPushSameWeatherDesc": "Notes push enregistrées dans des conditions météorologiques similaires",
+  "smartPushWeatherFilter": "Filtre météo",
+  "smartPushTagFilter": "Filtre de balises",
+  "smartPushTagFilterDesc": "Uniquement les notes push avec les balises sélectionnées (aucune sélection signifie aucune restriction)",
+  "smartPushTimeSettings": "Temps de poussée",
+  "smartPushAddTime": "Ajouter un temps de poussée",
+  "smartPushFrequency": "Fréquence de poussée",
+  "smartPushFrequencyDaily": "Tous les jours",
+  "smartPushFrequencyWeekdays": "Jours de la semaine",
+  "smartPushFrequencyWeekends": "Week-ends",
+  "smartPushFrequencyCustom": "Coutume",
+  "smartPushAdvancedOptions": "Options avancées",
+  "smartPushTest": "Envoyer un test push",
+  "smartPushTestSent": "Notification de test envoyée, veuillez vérifier les notifications",
+  "smartPushNoMatchingNotes": "Aucun contenu correspondant à pousser",
+  "smartPushPermissionRequired": "Une autorisation de notification est requise pour envoyer un push",
+  "smartPushNotice": "Conseils",
+  "smartPushNoticeDesc": "• Les notifications push nécessitent une autorisation de notification\n• Activez le démarrage automatique et l'exécution en arrière-plan dans les paramètres système pour une livraison fiable.\n• Certains appareils peuvent nécessiter la désactivation de l'optimisation de la batterie.\n• Le mode intelligent sélectionne automatiquement le contenu le plus pertinent",
+  "smartPushModeCustom": "Push personnalisé",
+  "smartPushModeCustomDesc": "Sélectionnez manuellement les types d'avis et les filtres",
+  "smartPushExactAlarmHint": "Activer l'autorisation d'alarme exacte pour des notifications push fiables",
+  "smartPushExactAlarmTitle": "Autorisation d'alarme exacte",
+  "smartPushExactAlarmMessage": "Pour garantir que les notifications arrivent à temps, veuillez accorder une autorisation d'alarme exacte. Vous pouvez toujours utiliser Push sans cela, mais le temps peut varier de quelques minutes.",
+  "smartPushGoToSettings": "Allez dans Paramètres",
+  "smartPushPermissionWarningTitle": "Configuration des autorisations incomplète",
+  "smartPushPermissionWarningDesc": "Certaines autorisations ne sont pas accordées, ce qui peut entraîner l'échec des notifications push. Appuyez sur les éléments ci-dessous pour configurer.",
+  "smartPushNotificationPermission": "Autorisation de notification",
+  "smartPushBatteryOptimization": "Désactiver l'optimisation de la batterie",
+  "smartPushAutoStartPermission": "Autorisation de démarrage automatique",
+  "smartPushAutoStartHint": "Requis pour le push en arrière-plan sur certains appareils",
+  "smartPushAutoStartTitle": "Guide de configuration du démarrage automatique",
+  "smartPushAutoStartInstructions": "Veuillez suivre ces étapes :",
+  "smartPushAutoStartNote": "Remarque : L'interface peut varier légèrement selon les versions du système. Veuillez trouver ThoughtEcho dans la gestion des applications et autoriser le démarrage automatique et l'activité en arrière-plan.",
+  "smartPushUnknownManufacturer": "Appareil inconnu",
+  "iHaveConfigured": "j'ai configuré",
+  "recommended": "Recommandé",
+  "settingsUserManual": "Manuel d'utilisation",
+  "settingsUserManualDesc": "Apprenez à utiliser les fonctionnalités de ThoughtEcho",
+  "manualTitle": "Manuel d'utilisation",
+  "manualLoadFailed": "Échec du chargement du contenu manuel",
+  "viewing": "Affichage...",
+  "backToAnalysis": "Retour à l'analyse",
+  "userGuide": "Guide de l'utilisateur",
+  "userGuideDesc": "Apprenez à utiliser les fonctionnalités de ThoughtEcho",
+  "userGuideSearchHint": "Rechercher le guide de l'utilisateur...",
+  "userGuideNoResults": "Aucun résultat trouvé",
+  "userGuideOnlineDoc": "Documentation complète en ligne",
   "tileNoLocationPermission": "Pas de localisation",
+  "tileLocationServiceOff": "GPS désactivé",
   "tileOffline": "Hors ligne",
   "tileNoNetwork": "Pas de réseau",
   "tileLoading": "Chargement...",
   "tileNoWeather": "Pas de météo",
-  "tileCachedSuffix": "(Cache)"
+  "tileCachedSuffix": "(Cache)",
+  "noteAutoFillSection": "Remarque Remplissage automatique",
+  "noteAutoFillSectionDesc": "Remplissage automatique de l'auteur, de la source et des balises lors de la création de notes",
+  "defaultAuthor": "Auteur par défaut",
+  "defaultAuthorDesc": "Auteur à remplir automatiquement lors de la création de nouvelles notes",
+  "defaultAuthorHint": "Entrez le nom de l'auteur par défaut",
+  "defaultSource": "Source par défaut",
+  "defaultSourceDesc": "Source/travail à remplir automatiquement lors de la création de nouvelles notes",
+  "defaultSourceHint": "Saisissez la source par défaut ou le nom de l'œuvre",
+  "defaultTags": "Balises par défaut",
+  "defaultTagsDesc": "Balises à ajouter automatiquement lors de la création de nouvelles notes",
+  "defaultTagsNone": "Non défini",
+  "defaultTagsCount": "Balises {count} sélectionnées",
+  "@defaultTagsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "selectDefaultTags": "Sélectionnez les balises par défaut",
+  "autoFillEnabled": "Remplissage automatique activé",
+  "clearDefaultValue": "Clair",
+  "saveDefaultValue": "Sauvegarder",
+  "defaultValueSaved": "Valeur par défaut enregistrée",
+  "defaultValueCleared": "Valeur par défaut effacée",
+  "citySelectedWeatherUpdated": "Ville sélectionnée : {cityName}, météo mise à jour",
+  "@citySelectedWeatherUpdated": {
+    "placeholders": {
+      "cityName": {
+        "type": "String"
+      }
+    }
+  },
+  "citySelectionError": "Erreur lors de la sélection de la ville : {error}",
+  "@citySelectionError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "currentLocationWeatherUpdated": "Utilisation de la position actuelle : {cityName}, météo mise à jour",
+  "@currentLocationWeatherUpdated": {
+    "placeholders": {
+      "cityName": {
+        "type": "String"
+      }
+    }
+  },
+  "locationFetchError": "Échec de l'obtention de l'emplacement : {error}",
+  "@locationFetchError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "weatherTimeoutRetry": "La récupération météo a expiré. Veuillez réessayer plus tard.",
+  "weatherFetchFailedCheckNetwork": "Échec de la récupération météo, veuillez vérifier la connexion réseau",
+  "locationTimeoutCheckPermission": "La récupération de localisation a expiré. Veuillez vérifier l'autorisation de localisation.",
+  "cannotGetCurrentLocation": "Impossible d'obtenir la position actuelle. Veuillez vous assurer que l'autorisation de localisation est accordée.",
+  "cannotGetSelectedCityLocation": "Impossible d'obtenir l'emplacement de la ville sélectionnée",
+  "cityInfoIncomplete": "Les informations sur la ville sont incomplètes",
+  "contentLengthLabel": "Longueur du contenu : {length}",
+  "htmlFormatLabel": "Format HTML : {status}",
+  "jsonFormatLabel": "Format JSON : {status}",
+  "containsHtmlTagsLabel": "Contient des balises HTML : {status}",
+  "viewNoteInfo": "Afficher les informations sur les notes",
+  "first100CharsLabel": "100 premiers caractères :"
 }
