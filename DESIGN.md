@@ -506,3 +506,145 @@ lib/
 - AI功能: `AIService`
 - 位置与天气: `LocationService`, `WeatherService`
 - 系统交互: `ClipboardService`
+
+## 9. 每日一言多语言 API 规划（2026-03）
+
+### 9.1 目标与约束
+- 在不大改现有“每日一言”架构的前提下，为应用增加中文之外的 quote provider 支持。
+- 保留现有 `hitokotoType`、默认分类/默认标签、双击保存、离线回退和本地“每日一言”逻辑。
+- 统一继续输出当前 UI 和保存流程已依赖的数据结构：
+  - `content`
+  - `source`
+  - `author`
+  - `type`
+  - `from_who`
+  - `from`
+
+### 9.2 现有实现中的关键耦合点
+- `lib/services/api_service.dart` 当前直接绑定 Hitokoto，并将响应归一化为兼容结构。
+- `lib/models/app_settings.dart` 使用 `hitokotoType` 保存逗号分隔的内部类型码。
+- `lib/pages/home_page.dart` 和 `lib/widgets/add_note_dialog.dart` 会根据 `type` 把每日一言保存到固定默认分类 ID。
+- `lib/services/database_service.dart` 初始化固定默认分类；`lib/services/database_health_service.dart` 的本地回退还依赖分类名 `每日一言`。
+- `lib/widgets/daily_quote_view.dart` 默认按 `——作者 《出处》` 渲染来源，所以新的 provider 最好至少返回作者，出处没有时要允许空值优雅降级。
+
+### 9.3 候选 API 对比
+
+| Provider | 语言/范围 | 随机能力 | 分类/标签过滤 | 关键字段 | 鉴权 | 大陆可用性判断 | 适配结论 |
+|---|---|---|---|---|---|---|---|
+| Hitokoto | 中文为主 | 强 | 强，`c=` 多分类 | `hitokoto/from/from_who/type` | 无 | 最优 | 继续作为中文默认源 |
+| Quotable | 英文 | 强，`/quotes/random` | 强，`tags/author/length` | `content/author/tags[]` | 无 | `.io` 存在不稳定风险 | 最适合做首个英文公共 provider |
+| API Ninjas Quotes | 英文 | 强，`/v2/randomquotes` | 强，`categories/author/work` | `quote/author/work/categories[]` | `X-Api-Key` | 海外商业服务，需实机验证 | 最完整英文增强源 |
+| TheySaidSo | 英文为主，QOD 场景强 | 有，但随机/搜索多为私有能力 | 有，QOD 分类 + 搜索分类/作者/长度 | `quote/author/tags/category/language/date/permalink` | QOD 文档称可公开限流；随机/搜索依赖 Key | 海外服务；当前环境直连 `qod/random/search` 均 401 | 适合“Quote of the Day”可选源，不适合首发默认替代 |
+| Forismatic | 英/俄 | 有 | 弱 | `quoteText/quoteAuthor` | 无 | 海外服务，稳定性一般 | 可做实验性语言源，但不适合默认标签体系 |
+| Animechan | 动漫台词 | 强 | 按 `anime/character` | `quote/anime/character` | 无 | 海外服务 | 适合作为动漫垂直 provider，不是通用多语言方案 |
+| FavQs / ZenQuotes / DummyJSON | 英文或样例数据 | 有 | 较弱 | 多数只有 quote + author + tags/分类片段 | 多数无或能力受限 | 海外服务 | 可作补充候选，不宜作为主方案 |
+
+### 9.4 TheySaidSo 详细判断
+- 官方文档：`https://theysaidso.com/api/?shell`
+- 文档能力：
+  - `GET /qod(.json)`：按 `category` 获取每日一句
+  - `GET /qod/categories.json`：获取 QOD 分类
+  - `GET /quote/random.json`：随机 quote
+  - `GET /quote/search.json`：按 `category`、`author`、`minlength`、`maxlength` 检索
+- 官方文档示例返回：
+  - `quote`
+  - `author`
+  - `tags[]`
+  - `category`
+  - `language`
+  - `date`
+  - `permalink`
+  - `id`
+  - `background`
+  - `title`
+- 优势：
+  - 比普通 quotes API 更像“内容平台”，带有 QOD 分类、图片背景和 permalink。
+  - 如果后续想要做“今天固定一句 + 配图分享”，扩展潜力不错。
+- 问题：
+  - 没有 `work/source` 字段，不如 API Ninjas 贴合当前 UI 的出处展示。
+  - 文档明确提醒公共客户端不要直接暴露 API Key；对于 Web 端尤其不友好。
+  - 免费公开限流低（文档写 10 次/小时），随机/搜索能力更依赖 API Key。
+  - 当前环境直连 `https://quotes.rest/qod?category=inspire`、`/quote/random.json`、`/quote/search.json` 都返回 `401`，因此实际接入前必须再做真实终端验证。
+- 结论：
+  - **如果目标是“固定的 Quote of the Day”**，TheySaidSo 值得保留为可选 provider。
+  - **如果目标是“尽量贴近现在可刷新、可随机、无感切换的一言体验”**，它优先级低于 Quotable 和 API Ninjas。
+
+### 9.5 实现多 provider 的三种方案
+
+#### 方案 A：最小改动的 provider 适配层（推荐）
+1. 在设置中新增 `dailyQuoteProvider`、`dailyQuoteLanguage`（或 `dailyQuoteLocale`）。
+2. 保留 `hitokotoType` 作为应用内部稳定分类码。
+3. 在 `ApiService` 前增加 provider adapter，将各家响应归一化为当前结构。
+4. 当第三方不支持分类或缺少出处时，用内部默认映射兜底。
+
+**优点**
+- 改动面最小。
+- 不破坏默认标签设计。
+- `home_page.dart` / `add_note_dialog.dart` 基本可不动。
+
+**缺点**
+- 需要维护 provider 能力差异映射。
+
+#### 方案 B：能力驱动的 provider 配置层
+1. 为每个 provider 定义能力描述：是否支持随机、QOD、分类、作者过滤、出处字段、API Key。
+2. 设置页根据 provider 能力动态展示可用选项。
+3. 请求层根据能力降级。
+
+**优点**
+- 可扩展性好，后续接更多 provider 时更清晰。
+
+**缺点**
+- UI 和设置逻辑改动比方案 A 略大。
+
+#### 方案 C：统一后端/自托管聚合层
+1. 服务端统一接多个外部 provider。
+2. 客户端永远请求自己的统一接口。
+3. 在服务端处理 API Key、速率限制、缓存与大陆可达性。
+
+**优点**
+- 线上可控性最佳。
+- 对大陆访问和第三方 API 波动最友好。
+
+**缺点**
+- 明显超出当前“少改设计”的范围。
+- 需要额外部署和维护成本。
+
+### 9.6 推荐路线
+1. **第一阶段**：继续保留 Hitokoto，新增 Quotable 作为首个英文公共 provider。
+2. **第二阶段**：新增 API Ninjas 作为“更完整但需要 Key”的英文增强 provider。
+3. **第三阶段**：如果产品要强调“每日固定一句”或配图分享，再新增 TheySaidSo 作为可选 QOD provider。
+4. **第四阶段**：视大陆访问和稳定性情况，预留自托管/镜像能力。
+
+### 9.7 推荐的内部映射原则
+- 不把第三方原始 tag/category 直接写入 `type`。
+- `type` 始终映射回应用内部稳定类型码（优先沿用 `a-k/l`）。
+- 无法可靠映射时，回退到用户当前已选类型中的首个类型码。
+
+示例：
+- Hitokoto：继续用原始 `type`
+- Quotable：`philosophy/wisdom -> k`，`poetry -> i`，其他无法稳定映射时回退
+- API Ninjas：`philosophy -> k`，`art/writing -> d`，`humor -> l`
+- TheySaidSo：`inspire/life/management/funny` 等先映射到最接近的内部类型；若无法稳定映射则回退到首选类型码
+- Animechan：固定映射 `a`
+
+### 9.8 预计改动面
+**需要改动**
+- `lib/models/app_settings.dart`
+- `lib/services/settings_service.dart`
+- `lib/services/api_service.dart`
+- `lib/pages/hitokoto_settings_page.dart`
+- `lib/l10n/app_zh.arb`
+- `lib/l10n/app_en.arb`
+
+**尽量不动**
+- `lib/pages/home_page.dart`
+- `lib/widgets/add_note_dialog.dart`
+- `lib/services/database_service.dart`
+- `lib/services/database_health_service.dart`
+
+### 9.9 测试与验收重点
+- 各 provider 响应的统一归一化测试
+- 类型码映射测试
+- provider 失败 -> 本地笔记 -> 默认文案的回退链测试
+- 设置迁移测试，确保不破坏现有 `hitokotoType`
+- 双击每日一言保存后的默认分类/默认标签落库回归测试
