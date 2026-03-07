@@ -11,7 +11,6 @@ import '../services/weather_service.dart';
 import '../services/ai_service.dart';
 import '../services/clipboard_service.dart';
 import '../services/connectivity_service.dart';
-import '../services/smart_push_service.dart';
 import '../controllers/search_controller.dart'; // 导入搜索控制器
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
@@ -53,21 +52,6 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage>
     with TickerProviderStateMixin, WidgetsBindingObserver {
-  static const Map<String, String> _hitokotoTypeToSystemTagId = {
-    'a': DatabaseService.defaultCategoryIdAnime,
-    'b': DatabaseService.defaultCategoryIdComic,
-    'c': DatabaseService.defaultCategoryIdGame,
-    'd': DatabaseService.defaultCategoryIdNovel,
-    'e': DatabaseService.defaultCategoryIdOriginal,
-    'f': DatabaseService.defaultCategoryIdInternet,
-    'g': DatabaseService.defaultCategoryIdOther,
-    'h': DatabaseService.defaultCategoryIdMovie,
-    'i': DatabaseService.defaultCategoryIdPoem,
-    'j': DatabaseService.defaultCategoryIdMusic,
-    'k': DatabaseService.defaultCategoryIdPhilosophy,
-    'l': DatabaseService.defaultCategoryIdJoke,
-  };
-
   int _currentIndex = 0;
   late TabController _aiTabController; // AI页面的TabController
   List<NoteCategory> _tags = [];
@@ -1081,76 +1065,6 @@ class _HomePageState extends State<HomePage>
     });
   }
 
-  Future<void> _saveDailyQuoteByDoubleTap(
-    String content,
-    String? author,
-    String? work,
-    Map<String, dynamic> hitokotoData,
-  ) async {
-    final normalizedContent = content.trim();
-    if (normalizedContent.isEmpty) return;
-
-    try {
-      await _loadTags();
-
-      if (!mounted) return;
-
-      context.read<SmartPushService>().cacheDailyQuoteForToday(hitokotoData);
-
-      final selectedTagIds = <String>{};
-
-      String? hitokotoTagId;
-      for (final tag in _tags) {
-        if (tag.id == DatabaseService.defaultCategoryIdHitokoto) {
-          hitokotoTagId = tag.id;
-          break;
-        }
-      }
-      if (hitokotoTagId != null) {
-        selectedTagIds.add(hitokotoTagId);
-      }
-
-      final hitokotoType = hitokotoData['type']?.toString().trim() ?? '';
-      final systemTagId = _hitokotoTypeToSystemTagId[hitokotoType];
-      if (systemTagId != null && _tags.any((tag) => tag.id == systemTagId)) {
-        selectedTagIds.add(systemTagId);
-      }
-
-      final quote = Quote(
-        content: normalizedContent,
-        date: DateTime.now().toIso8601String(),
-        sourceAuthor:
-            author != null && author.trim().isNotEmpty ? author.trim() : null,
-        sourceWork: work != null && work.trim().isNotEmpty ? work.trim() : null,
-        tagIds: selectedTagIds.toList(growable: false),
-      );
-
-      await context.read<DatabaseService>().addQuote(quote);
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context).noteSaved),
-          duration: AppConstants.snackBarDurationImportant,
-        ),
-      );
-
-      _noteListViewKey.currentState?.resetAndLoad();
-    } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            AppLocalizations.of(context).saveFailedWithError(e.toString()),
-          ),
-          duration: AppConstants.snackBarDurationError,
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
 
   // FAB 短按处理
   void _onFABTap() {
@@ -1951,11 +1865,11 @@ class _HomePageState extends State<HomePage>
                                 key: _dailyQuoteViewKey,
                                 onAddQuote:
                                     (content, author, work, hitokotoData) =>
-                                        _saveDailyQuoteByDoubleTap(
-                                  content,
-                                  author,
-                                  work,
-                                  hitokotoData,
+                                        _showAddQuoteDialog(
+                                  prefilledContent: content,
+                                  prefilledAuthor: author,
+                                  prefilledWork: work,
+                                  hitokotoData: hitokotoData,
                                 ),
                               ),
                             ),
