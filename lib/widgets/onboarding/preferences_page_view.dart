@@ -210,9 +210,10 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
             if (!hasPermission) {
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('位置权限被拒绝，无法启用位置服务'),
-                    duration: Duration(seconds: 2),
+                  SnackBar(
+                    content: Text(
+                        AppLocalizations.of(context).locationPermissionDenied),
+                    duration: const Duration(seconds: 2),
                   ),
                 );
               }

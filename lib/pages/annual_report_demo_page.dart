@@ -1,5 +1,6 @@
 // ignore_for_file: deprecated_member_use_from_same_package
 import 'package:flutter/material.dart';
+import '../gen_l10n/app_localizations.dart';
 import '../models/quote_model.dart';
 import 'annual_report_page.dart';
 
@@ -9,7 +10,8 @@ class AnnualReportDemoPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('年度报告演示')),
+      appBar:
+          AppBar(title: Text(AppLocalizations.of(context).annualReportDemo)),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
