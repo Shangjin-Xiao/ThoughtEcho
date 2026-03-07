@@ -1,5 +1,3 @@
-// ignore_for_file: implementation_imports
-
 import 'dart:async';
 import 'dart:collection';
 
@@ -7,13 +5,13 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
-import 'package:flutter_quill_extensions/src/editor/image/widgets/image.dart'
-    show ImageTapWrapper;
 import 'package:visibility_detector/visibility_detector.dart';
 
+import '../gen_l10n/app_localizations.dart';
 import '../utils/app_logger.dart';
 import '../utils/optimized_image_loader.dart';
 import '../widgets/media_player_widget.dart';
+import '../widgets/motion_photo_preview_page.dart';
 
 /// 全局滚动状态信号，由 NoteListView 的 NotificationListener 写入。
 /// _LazyQuillImage 通过读取此信号判断列表是否仍在 ballistic（惯性）滚动阶段，
@@ -98,18 +96,6 @@ class _CustomAudioEmbedBuilder extends quill.EmbedBuilder {
 }
 
 class _OptimizedImageEmbedBuilder extends quill.EmbedBuilder {
-  static const QuillEditorImageEmbedConfig _imageConfig =
-      QuillEditorImageEmbedConfig(
-    imageProviderBuilder: _optimizedImageProviderBuilder,
-  );
-
-  static ImageProvider? _optimizedImageProviderBuilder(
-    BuildContext context,
-    String imageUrl,
-  ) {
-    return createOptimizedImageProvider(imageUrl);
-  }
-
   @override
   String get key => 'image';
 
@@ -138,7 +124,6 @@ class _OptimizedImageEmbedBuilder extends quill.EmbedBuilder {
         specifiedWidth: specifiedWidth,
         specifiedHeight: specifiedHeight,
         uniqueId: embedContext.node.hashCode,
-        config: _imageConfig,
       ),
     );
   }
@@ -177,14 +162,12 @@ class _LazyQuillImage extends StatefulWidget {
     required this.uniqueId,
     this.specifiedWidth,
     this.specifiedHeight,
-    required this.config,
   });
 
   final String source;
   final int uniqueId;
   final double? specifiedWidth;
   final double? specifiedHeight;
-  final QuillEditorImageEmbedConfig config;
 
   @override
   State<_LazyQuillImage> createState() => _LazyQuillImageState();
@@ -377,7 +360,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
 
     return Semantics(
       button: true,
-      label: '查看图片',
+      label: AppLocalizations.of(context).viewImage,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => _openImagePreview(context),
@@ -494,8 +477,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
 
     await Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) =>
-            ImageTapWrapper(imageUrl: widget.source, config: widget.config),
+        builder: (_) => MotionPhotoPreviewPage(imageUrl: widget.source),
       ),
     );
   }

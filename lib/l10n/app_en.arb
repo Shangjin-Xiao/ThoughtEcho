@@ -408,6 +408,7 @@
     }
   },
   "view": "View",
+  "viewImage": "View image",
   "todayThoughts": "Today's Thoughts",
   "loadingTodayThoughts": "Loading today's thoughts...",
   "fetchingDefaultPrompt": "Fetching default prompt...",
@@ -2942,6 +2943,9 @@
   "outOfMemoryVideo": "Out of memory, cannot load video",
   "audioFileNotFound": "Audio file not found",
   "clickToPlayVideo": "Tap to play video",
+  "motionPhoto": "Live",
+  "viewPhoto": "View photo",
+  "motionPhotoPlayFailed": "Unable to play this motion photo",
   "loadingVideo": "Loading video...",
   "shareAudio": "Share Audio",
   "fileInfo": "File Info",

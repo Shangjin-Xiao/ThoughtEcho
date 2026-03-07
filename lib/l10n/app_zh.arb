@@ -408,6 +408,7 @@
     }
   },
   "view": "查看",
+  "viewImage": "查看图片",
   "todayThoughts": "今日思考",
   "loadingTodayThoughts": "正在加载今日思考...",
   "fetchingDefaultPrompt": "正在获取默认提示...",
@@ -2951,6 +2952,9 @@
   "outOfMemoryVideo": "内存不足，无法加载视频",
   "audioFileNotFound": "音频文件不存在",
   "clickToPlayVideo": "点击播放视频",
+  "motionPhoto": "实况",
+  "viewPhoto": "查看照片",
+  "motionPhotoPlayFailed": "无法播放这张动态照片",
   "loadingVideo": "正在加载视频...",
   "shareAudio": "分享音频",
   "fileInfo": "文件信息",
