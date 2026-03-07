@@ -39,8 +39,9 @@
         <span class="content-zh">跳到主要内容</span>
         <span class="content-en">Skip to content</span>
     </a>
-    <!-- 导航栏 (SOTA Redesign) -->
+    <!-- 导航栏 -->
     <nav>
+        <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
         <div class="nav-container">
             <a href="#top" class="nav-brand" aria-label="ThoughtEcho Home">
                 <div class="nav-logo">
@@ -50,23 +51,13 @@
                 <span class="nav-title content-en">ThoughtEcho</span>
             </a>
 
-            <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
-            
             <ul class="nav-links" id="navLinks">
-                <li><a href="#features"><span class="content-zh">特性</span><span class="content-en">Features</span></a></li>
-                <li><a href="#screenshots"><span class="content-zh">画廊</span><span class="content-en">Gallery</span></a></li>
-                <li><a href="#tech"><span class="content-zh">技术</span><span class="content-en">Tech</span></a></li>
-                <li><a href="user-guide.html"><span class="content-zh">指南</span><span class="content-en">Guide</span></a></li>
-                <li class="mobile-only">
-                    <div class="nav-actions-mobile">
-                        <button class="theme-toggle" id="themeToggleMobile" aria-label="Toggle Theme">
-                            <span id="themeIconMobile">🌙</span>
-                        </button>
-                        <button class="lang-toggle" id="langToggleMobile">
-                            <span id="langTextMobile">CN</span>
-                        </button>
-                    </div>
-                </li>
+                <li><a href="#features"><span class="content-zh">功能特性</span><span class="content-en">Features</span></a></li>
+                <li><a href="#screenshots"><span class="content-zh">应用截图</span><span class="content-en">Screenshots</span></a></li>
+                <li><a href="#tech"><span class="content-zh">技术栈</span><span class="content-en">Tech Stack</span></a></li>
+                <li><a href="#quickstart"><span class="content-zh">快速开始</span><span class="content-en">Quick Start</span></a></li>
+                <li><a href="user-guide.html"><span class="content-zh">用户指南</span><span class="content-en">User Guide</span></a></li>
+                <li><a href="privacy.html"><span class="content-zh">隐私政策</span><span class="content-en">Privacy</span></a></li>
             </ul>
 
             <div class="nav-actions">
@@ -77,8 +68,8 @@
                     <span id="langText">EN</span>
                 </button>
                 <a href="#download" class="btn-notebook">
-                    <span class="content-zh">下载</span>
-                    <span class="content-en">Get App</span>
+                    <span class="content-zh">立即下载</span>
+                    <span class="content-en">Download</span>
                 </a>
                 <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Menu">☰</button>
             </div>
@@ -137,9 +128,23 @@
                 </div>
             </div>
 
-            <div class="hero-visual fade-in">
-                <div class="hero-visual-card">
-                    <img src="screenshot/home_page.jpg" alt="ThoughtEcho App Interface" loading="eager" style="width: 100%; height: auto; border-radius: 12px; display: block;">
+            <div class="hero-notebook fade-in">
+                <div class="notebook-page">
+                    <div class="binding-holes">
+                        <div class="hole"></div>
+                        <div class="hole"></div>
+                        <div class="hole"></div>
+                        <div class="hole"></div>
+                        <div class="hole"></div>
+                    </div>
+                    <div class="notebook-content" style="display: flex; align-items: center; justify-content: center;">
+                        <ul class="notebook-list" style="margin-top: 0;">
+                            <li><a href="#feature-tailored"><span class="content-zh">🎨 专为你打造的心迹</span><span class="content-en">🎨 Tailored for You</span></a></li>
+                            <li><a href="#feature-understanding"><span class="content-zh">💡 懂你所想的心迹</span><span class="content-en">💡 Understanding You</span></a></li>
+                            <li><a href="#feature-secure"><span class="content-zh">🛡️ 安全无忧的心迹</span><span class="content-en">🛡️ Safe & Secure</span></a></li>
+                            <li><a href="#feature-open"><span class="content-zh">🚀 开放自由的心迹</span><span class="content-en">🚀 Open & Free</span></a></li>
+                        </ul>
+                    </div>
                 </div>
             </div>
         </div>
@@ -179,7 +184,7 @@
                 </p>
             </div>
             <div class="features-grid">
-                <div class="bento-card">
+                <div class="sticky-note">
                     <span class="feature-icon">✍️</span>
                     <h3 class="feature-title">
                         <span class="content-zh">富文本笔记</span>
@@ -195,7 +200,7 @@
                     </ul>
                 </div>
 
-                <div class="bento-card">
+                <div class="sticky-note">
                     <span class="feature-icon">🏷️</span>
                     <h3 class="feature-title">
                         <span class="content-zh">标签与搜索</span>
@@ -211,7 +216,7 @@
                     </ul>
                 </div>
 
-                <div class="bento-card">
+                <div class="sticky-note">
                     <span class="feature-icon">🎯</span>
                     <h3 class="feature-title">
                         <span class="content-zh">AI 卡片生成</span>
@@ -223,7 +228,7 @@
                     </p>
                 </div>
 
-                <div class="bento-card">
+                <div class="sticky-note">
                     <span class="feature-icon">⚡</span>
                     <h3 class="feature-title">
                         <span class="content-zh">快速捕获</span>
@@ -235,7 +240,7 @@
                     </p>
                 </div>
 
-                <div class="bento-card">
+                <div class="sticky-note">
                     <span class="feature-icon">🎨</span>
                     <h3 class="feature-title">
                         <span class="content-zh">个性化主题</span>
@@ -247,7 +252,7 @@
                     </p>
                 </div>
 
-                <div class="bento-card">
+                <div class="sticky-note">
                     <span class="feature-icon">🔔</span>
                     <h3 class="feature-title">
                         <span class="content-zh">智能推送 (Beta)</span>
@@ -274,7 +279,7 @@
                 </p>
             </div>
             <div class="features-grid">
-                <div class="bento-card">
+                <div class="sticky-note">
                     <span class="feature-icon">✨</span>
                     <h3 class="feature-title">
                         <span class="content-zh">AI 助手</span>
@@ -290,7 +295,7 @@
                     </ul>
                 </div>
 
-                <div class="bento-card">
+                <div class="sticky-note">
                     <span class="feature-icon">🌍</span>
                     <h3 class="feature-title">
                         <span class="content-zh">情境记录</span>
@@ -302,7 +307,7 @@
                     </p>
                 </div>
 
-                <div class="bento-card">
+                <div class="sticky-note">
                     <span class="feature-icon">📊</span>
                     <h3 class="feature-title">
                         <span class="content-zh">洞察与报告</span>
@@ -314,7 +319,7 @@
                     </p>
                 </div>
 
-                <div class="bento-card">
+                <div class="sticky-note">
                     <span class="feature-icon">📝</span>
                     <h3 class="feature-title">
                         <span class="content-zh">智能润色</span>
@@ -326,7 +331,7 @@
                     </p>
                 </div>
 
-                <div class="bento-card">
+                <div class="sticky-note">
                     <span class="feature-icon">🌤️</span>
                     <h3 class="feature-title">
                         <span class="content-zh">每日情境提示</span>
@@ -353,7 +358,7 @@
                 </p>
             </div>
             <div class="features-grid">
-                <div class="bento-card">
+                <div class="sticky-note">
                     <span class="feature-icon">🔒</span>
                     <h3 class="feature-title">
                         <span class="content-zh">本地优先</span>
@@ -365,7 +370,7 @@
                     </p>
                 </div>
 
-                <div class="bento-card">
+                <div class="sticky-note">
                     <span class="feature-icon">🙈</span>
                     <h3 class="feature-title">
                         <span class="content-zh">隐藏笔记</span>
@@ -377,7 +382,7 @@
                     </p>
                 </div>
 
-                <div class="bento-card">
+                <div class="sticky-note">
                     <span class="feature-icon">💾</span>
                     <h3 class="feature-title">
                         <span class="content-zh">草稿自动保存</span>
@@ -389,7 +394,7 @@
                     </p>
                 </div>
 
-                <div class="bento-card">
+                <div class="sticky-note">
                     <span class="feature-icon">📦</span>
                     <h3 class="feature-title">
                         <span class="content-zh">备份中心</span>
@@ -401,7 +406,7 @@
                     </p>
                 </div>
 
-                <div class="bento-card">
+                <div class="sticky-note">
                     <span class="feature-icon">🚫</span>
                     <h3 class="feature-title">
                         <span class="content-zh">零遥测</span>
@@ -413,7 +418,7 @@
                     </p>
                 </div>
 
-                <div class="bento-card">
+                <div class="sticky-note">
                     <span class="feature-icon">🔑</span>
                     <h3 class="feature-title">
                         <span class="content-zh">加密存储</span>
@@ -440,7 +445,7 @@
                 </p>
             </div>
             <div class="features-grid">
-                <div class="bento-card">
+                <div class="sticky-note">
                     <span class="feature-icon">📖</span>
                     <h3 class="feature-title">
                         <span class="content-zh">开源透明</span>
@@ -452,7 +457,7 @@
                     </p>
                 </div>
 
-                <div class="bento-card">
+                <div class="sticky-note">
                     <span class="feature-icon">🔄</span>
                     <h3 class="feature-title">
                         <span class="content-zh">模型自由</span>
@@ -464,7 +469,7 @@
                     </p>
                 </div>
 
-                <div class="bento-card">
+                <div class="sticky-note">
                     <span class="feature-icon">📱</span>
                     <h3 class="feature-title">
                         <span class="content-zh">全平台支持</span>
@@ -476,7 +481,7 @@
                     </p>
                 </div>
 
-                <div class="bento-card">
+                <div class="sticky-note">
                     <span class="feature-icon">🔌</span>
                     <h3 class="feature-title">
                         <span class="content-zh">自定义 API</span>
@@ -488,7 +493,7 @@
                     </p>
                 </div>
 
-                <div class="bento-card">
+                <div class="sticky-note">
                     <span class="feature-icon">📲</span>
                     <h3 class="feature-title">
                         <span class="content-zh">多端同步</span>
@@ -533,10 +538,8 @@
                     <!-- 1. 主页 -->
                     <li class="carousel-slide">
                         <div class="screenshot-item">
-                            <div class="screenshot-image-wrapper">
-                                <div class="device-mockup" data-modal-src="screenshot/home_page.jpg" data-modal-title="主页">
-                                    <img src="screenshot/home_page.jpg" alt="主页" loading="lazy">
-                                </div>
+                            <div class="screenshot-image" data-modal-src="screenshot/home_page.jpg" data-modal-title="主页">
+                                <img src="screenshot/home_page.jpg" alt="主页" loading="lazy">
                             </div>
                             <div class="screenshot-content">
                                 <div class="arrow-doodle"></div>
@@ -548,16 +551,14 @@
 
                     <!-- 2. 编辑器 -->
                     <li class="carousel-slide">
-                        <div class="screenshot-item reverse">
-                            <div class="screenshot-image-wrapper">
-                                <div class="device-mockup" data-modal-src="screenshot/note_full_editor_page.jpg" data-modal-title="富文本编辑器">
-                                    <img src="screenshot/note_full_editor_page.jpg" alt="富文本编辑器" loading="lazy">
-                                </div>
-                            </div>
+                        <div class="screenshot-item">
                             <div class="screenshot-content">
                                 <div class="arrow-doodle"></div>
                                 <h4><span class="content-zh">强大的富文本编辑器</span><span class="content-en">Powerful Rich Text Editor</span></h4>
                                 <p><span class="content-zh">支持标题、列表、引用等多种格式，可插入图片、音频、视频，满足你多样化的记录需求。</span><span class="content-en">Supports various formats like headings, lists, quotes, and allows inserting images, audio, and video to meet your diverse recording needs.</span></p>
+                            </div>
+                            <div class="screenshot-image" data-modal-src="screenshot/note_full_editor_page.dart.jpg" data-modal-title="富文本编辑器">
+                                <img src="screenshot/note_full_editor_page.dart.jpg" alt="富文本编辑器" loading="lazy">
                             </div>
                         </div>
                     </li>
@@ -565,10 +566,8 @@
                     <!-- 3. AI问答 -->
                     <li class="carousel-slide">
                         <div class="screenshot-item">
-                            <div class="screenshot-image-wrapper">
-                                <div class="device-mockup" data-modal-src="screenshot/note_qa_chat_page.jpg" data-modal-title="AI问答">
-                                    <img src="screenshot/note_qa_chat_page.jpg" alt="AI问答对话" loading="lazy">
-                                </div>
+                            <div class="screenshot-image" data-modal-src="screenshot/note_qa_chat_page.jpg" data-modal-title="AI问答">
+                                <img src="screenshot/note_qa_chat_page.jpg" alt="AI问答对话" loading="lazy">
                             </div>
                             <div class="screenshot-content">
                                 <div class="arrow-doodle"></div>
@@ -580,16 +579,14 @@
 
                     <!-- 4. 筛选排序 -->
                     <li class="carousel-slide">
-                        <div class="screenshot-item reverse">
-                            <div class="screenshot-image-wrapper">
-                                <div class="device-mockup" data-modal-src="screenshot/note_filter_sort_sheet.jpg" data-modal-title="筛选排序">
-                                    <img src="screenshot/note_filter_sort_sheet.jpg" alt="筛选与排序" loading="lazy">
-                                </div>
-                            </div>
+                        <div class="screenshot-item">
                             <div class="screenshot-content">
                                 <div class="arrow-doodle"></div>
                                 <h4><span class="content-zh">智能筛选与排序</span><span class="content-en">Smart Filter & Sort</span></h4>
                                 <p><span class="content-zh">通过标签、内容、时间等多维度进行筛选和排序，帮你快速定位所需信息。</span><span class="content-en">Filter and sort by tags, content, time, and other dimensions to help you quickly locate the information you need.</span></p>
+                            </div>
+                            <div class="screenshot-image" data-modal-src="screenshot/note_filter_sort_sheet.dart.jpg" data-modal-title="筛选排序">
+                                <img src="screenshot/note_filter_sort_sheet.dart.jpg" alt="筛选与排序" loading="lazy">
                             </div>
                         </div>
                     </li>
@@ -597,10 +594,8 @@
                     <!-- 5. 洞察分析 -->
                     <li class="carousel-slide">
                         <div class="screenshot-item">
-                            <div class="screenshot-image-wrapper">
-                                <div class="device-mockup" data-modal-src="screenshot/insights_page.jpg" data-modal-title="洞察分析">
-                                    <img src="screenshot/insights_page.jpg" alt="洞察分析" loading="lazy">
-                                </div>
+                            <div class="screenshot-image" data-modal-src="screenshot/insights_page.jpg" data-modal-title="洞察分析">
+                                <img src="screenshot/insights_page.jpg" alt="洞察分析" loading="lazy">
                             </div>
                             <div class="screenshot-content">
                                 <div class="arrow-doodle"></div>
@@ -612,16 +607,14 @@
 
                     <!-- 6. 同步 -->
                     <li class="carousel-slide">
-                        <div class="screenshot-item reverse">
-                            <div class="screenshot-image-wrapper">
-                                <div class="device-mockup" data-modal-src="screenshot/note_sync.jpg" data-modal-title="笔记同步">
-                                    <img src="screenshot/note_sync.jpg" alt="笔记同步" loading="lazy">
-                                </div>
-                            </div>
+                        <div class="screenshot-item">
                             <div class="screenshot-content">
                                 <div class="arrow-doodle"></div>
                                 <h4><span class="content-zh">跨设备同步</span><span class="content-en">Cross-Device Sync</span></h4>
                                 <p><span class="content-zh">通过局域网内的设备发现和数据同步功能，轻松实现多设备间的数据无缝流转。</span><span class="content-en">Seamlessly transfer data between multiple devices through local network device discovery and data synchronization.</span></p>
+                            </div>
+                            <div class="screenshot-image" data-modal-src="screenshot/note_sync.jpg" data-modal-title="笔记同步">
+                                <img src="screenshot/note_sync.jpg" alt="笔记同步" loading="lazy">
                             </div>
                         </div>
                     </li>
@@ -629,10 +622,8 @@
                     <!-- 7. 主题 -->
                     <li class="carousel-slide">
                         <div class="screenshot-item">
-                            <div class="screenshot-image-wrapper">
-                                <div class="device-mockup" data-modal-src="screenshot/theme_settings_page.jpg" data-modal-title="主题设置">
-                                    <img src="screenshot/theme_settings_page.jpg" alt="主题设置" loading="lazy">
-                                </div>
+                            <div class="screenshot-image" data-modal-src="screenshot/theme_settings_page.jpg" data-modal-title="主题设置">
+                                <img src="screenshot/theme_settings_page.jpg" alt="主题设置" loading="lazy">
                             </div>
                             <div class="screenshot-content">
                                 <div class="arrow-doodle"></div>
@@ -644,16 +635,14 @@
 
                     <!-- 8. 备份 -->
                     <li class="carousel-slide">
-                        <div class="screenshot-item reverse">
-                            <div class="screenshot-image-wrapper">
-                                <div class="device-mockup" data-modal-src="screenshot/backup_restore_page.jpg" data-modal-title="备份恢复">
-                                    <img src="screenshot/backup_restore_page.jpg" alt="备份恢复" loading="lazy">
-                                </div>
-                            </div>
+                        <div class="screenshot-item">
                             <div class="screenshot-content">
                                 <div class="arrow-doodle"></div>
                                 <h4><span class="content-zh">数据备份与恢复</span><span class="content-en">Backup & Restore</span></h4>
                                 <p><span class="content-zh">提供完整的数据备份和恢复功能，包括笔记、媒体文件和设置，保障你的数据安全。</span><span class="content-en">Provides complete data backup and recovery functions, including notes, media files, and settings, to ensure your data security.</span></p>
+                            </div>
+                            <div class="screenshot-image" data-modal-src="screenshot/backup_restore_page.jpg" data-modal-title="备份恢复">
+                                <img src="screenshot/backup_restore_page.jpg" alt="备份恢复" loading="lazy">
                             </div>
                         </div>
                     </li>
