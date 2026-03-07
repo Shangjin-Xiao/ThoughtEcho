@@ -350,11 +350,11 @@
 
         /* ==================== Hero 区域 ==================== */
         .hero {
-            min-height: 100vh;
+            min-height: auto;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 9rem 2rem 5rem;
+            padding: 6rem 2rem 4rem;
             position: relative;
             overflow: hidden;
         }
@@ -1094,8 +1094,8 @@
             transform: translateY(-50%) scale(0.98);
         }
 
-        .prev-btn { left: 10px; }
-        .next-btn { right: 10px; }
+        .prev-btn { left: 0; }
+        .next-btn { right: 0; }
 
         .carousel-dots {
             display: flex;
@@ -2212,13 +2212,7 @@ nav {
     gap: 0.5rem;
 }
 
-/* Hero Section */
-.hero {
-    padding: 8rem 2rem 6rem;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-}
+/* Hero Section - padding inherited from main .hero rule */
 
 .hero h1 {
     font-size: clamp(2.5rem, 5vw, 4.5rem);
@@ -2226,13 +2220,6 @@ nav {
     background: linear-gradient(135deg, var(--ink-primary) 0%, var(--ink-secondary) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-}
-
-.hero-subtitle {
-    font-size: 1.25rem;
-    color: var(--ink-secondary);
-    max-width: 600px;
-    margin: 0 auto 3rem;
 }
 
 /* Paper Cards (Feature & Screenshots) */
@@ -2386,21 +2373,10 @@ p { font-size: 1.125rem; line-height: 1.8; color: var(--ink-secondary); margin-b
 }
 
 /* 4. Screenshot Carousel Refinements */
-.carousel-container {
-    padding: 3rem 0;
-    background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.02) 20%, rgba(0,0,0,0.02) 80%, transparent);
-}
-
 .screenshot-item {
     transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
     border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-}
-
-.screenshot-item:hover {
-    transform: scale(1.02) translateY(-5px);
-    box-shadow: 0 16px 40px rgba(0,0,0,0.15);
 }
 
 /* 5. Feature Icons */
