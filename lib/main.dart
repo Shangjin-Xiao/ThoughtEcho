@@ -609,9 +609,13 @@ Future<void> main() async {
                 );
                 // 延迟显示更新对话框，确保UI已完全初始化
                 Future.delayed(const Duration(seconds: 2), () {
-                  final context = navigatorKey.currentContext;
-                  if (context != null && context.mounted) {
-                    UpdateDialogHelper.showUpdateDialog(context, versionInfo);
+                  try {
+                    final context = navigatorKey.currentContext;
+                    if (context != null && context.mounted) {
+                      UpdateDialogHelper.showUpdateDialog(context, versionInfo);
+                    }
+                  } catch (e) {
+                    logWarning('显示更新对话框失败: $e', source: 'VersionCheck');
                   }
                 });
               },
@@ -721,15 +725,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     // 修复问题3：应用进入后台时清理缓存，释放内存
     if (state == AppLifecycleState.paused) {
       logDebug('应用进入后台，清理富文本缓存', source: 'AppLifecycle');
-      try {
-        // 使用 Future.microtask 避免在生命周期回调中执行耗时操作
-        Future.microtask(() {
+      // 使用 Future.microtask 避免在生命周期回调中执行耗时操作
+      Future.microtask(() {
+        try {
           QuoteContent.resetCaches();
           logDebug('富文本缓存已清理', source: 'AppLifecycle');
-        });
-      } catch (e) {
-        logError('清理缓存失败: $e', error: e, source: 'AppLifecycle');
-      }
+        } catch (e) {
+          logError('清理缓存失败: $e', error: e, source: 'AppLifecycle');
+        }
+      });
     }
   }
 

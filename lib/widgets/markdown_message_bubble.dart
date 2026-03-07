@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:flutter_chat_types/flutter_chat_types.dart' as types;
 import 'package:url_launcher/url_launcher.dart';
+import '../gen_l10n/app_localizations.dart';
 import '../utils/chat_markdown_styles.dart';
 import '../constants/app_constants.dart';
 import '../utils/time_utils.dart';
@@ -144,13 +145,13 @@ class MarkdownMessageBubble extends StatelessWidget {
           children: [
             ListTile(
               leading: const Icon(Icons.copy),
-              title: const Text('复制消息'),
+              title: Text(AppLocalizations.of(context).copyMessage),
               onTap: () {
                 Clipboard.setData(ClipboardData(text: message.text));
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('消息已复制到剪贴板'),
+                  SnackBar(
+                    content: Text(AppLocalizations.of(context).messageCopied),
                     duration: AppConstants.snackBarDurationNormal,
                   ),
                 );
@@ -159,13 +160,14 @@ class MarkdownMessageBubble extends StatelessWidget {
             if (!isCurrentUser) ...[
               ListTile(
                 leading: const Icon(Icons.share),
-                title: const Text('分享消息'),
+                title: Text(AppLocalizations.of(context).shareMessage),
                 onTap: () {
                   Navigator.pop(context);
                   // 这里可以添加分享功能
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('分享功能开发中'),
+                    SnackBar(
+                      content: Text(AppLocalizations.of(context)
+                          .shareFeatureInDevelopment),
                       duration: AppConstants.snackBarDurationNormal,
                     ),
                   );

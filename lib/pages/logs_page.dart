@@ -822,69 +822,77 @@ class _LogsPageState extends State<LogsPage> {
 
               // 过滤选项
               Expanded(
-                child: ListView(
+                child: ListView.builder(
                   padding: const EdgeInsets.all(16),
-                  children: [
-                    // 日志级别过滤
-                    Text(
-                      AppLocalizations.of(context).logFilterByLevel,
-                      style: theme.textTheme.titleSmall,
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8.0,
-                      runSpacing: 8.0,
-                      children: UnifiedLogLevel.values
-                          .where(
-                            (level) => level != UnifiedLogLevel.none,
-                          ) // 排除"不记录"选项
-                          .map(
-                            (level) => FilterChip(
-                              label: Text(level.name.toUpperCase()),
-                              selected: tempFilterLevel == level,
-                              onSelected: (selected) {
-                                setState(() {
-                                  tempFilterLevel = selected ? level : null;
-                                });
-                              },
-                              avatar: Icon(
-                                _getLogLevelIcon(level),
-                                color: _getLogLevelColor(level, theme),
-                                size: 18,
-                              ),
-                              backgroundColor:
-                                  theme.colorScheme.surfaceContainerHighest,
-                              selectedColor:
-                                  theme.colorScheme.secondaryContainer,
-                            ),
-                          )
-                          .toList(),
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // 源过滤
-                    Text(
-                      AppLocalizations.of(context).logFilterBySource,
-                      style: theme.textTheme.titleSmall,
-                    ),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: sourceController,
-                      decoration: InputDecoration(
-                        hintText: AppLocalizations.of(
-                          context,
-                        ).logFilterSourceHint,
-                        prefixIcon: const Icon(Icons.source_outlined),
-                        border: const OutlineInputBorder(),
-                      ),
-                      onChanged: (value) {
-                        setState(() {
-                          tempFilterSource = value.isEmpty ? null : value;
-                        });
-                      },
-                    ),
-                  ],
+                  itemCount: 7,
+                  itemBuilder: (context, index) {
+                    switch (index) {
+                      case 0:
+                        return Text(
+                          AppLocalizations.of(context).logFilterByLevel,
+                          style: theme.textTheme.titleSmall,
+                        );
+                      case 1:
+                        return const SizedBox(height: 8);
+                      case 2:
+                        return Wrap(
+                          spacing: 8.0,
+                          runSpacing: 8.0,
+                          children: UnifiedLogLevel.values
+                              .where(
+                                (level) => level != UnifiedLogLevel.none,
+                              ) // 排除"不记录"选项
+                              .map(
+                                (level) => FilterChip(
+                                  label: Text(level.name.toUpperCase()),
+                                  selected: tempFilterLevel == level,
+                                  onSelected: (selected) {
+                                    setState(() {
+                                      tempFilterLevel = selected ? level : null;
+                                    });
+                                  },
+                                  avatar: Icon(
+                                    _getLogLevelIcon(level),
+                                    color: _getLogLevelColor(level, theme),
+                                    size: 18,
+                                  ),
+                                  backgroundColor:
+                                      theme.colorScheme.surfaceContainerHighest,
+                                  selectedColor:
+                                      theme.colorScheme.secondaryContainer,
+                                ),
+                              )
+                              .toList(),
+                        );
+                      case 3:
+                        return const SizedBox(height: 24);
+                      case 4:
+                        return Text(
+                          AppLocalizations.of(context).logFilterBySource,
+                          style: theme.textTheme.titleSmall,
+                        );
+                      case 5:
+                        return const SizedBox(height: 8);
+                      case 6:
+                        return TextField(
+                          controller: sourceController,
+                          decoration: InputDecoration(
+                            hintText: AppLocalizations.of(
+                              context,
+                            ).logFilterSourceHint,
+                            prefixIcon: const Icon(Icons.source_outlined),
+                            border: const OutlineInputBorder(),
+                          ),
+                          onChanged: (value) {
+                            setState(() {
+                              tempFilterSource = value.isEmpty ? null : value;
+                            });
+                          },
+                        );
+                      default:
+                        return const SizedBox.shrink();
+                    }
+                  },
                 ),
               ),
 

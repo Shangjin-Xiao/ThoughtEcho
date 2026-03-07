@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
+import '../gen_l10n/app_localizations.dart';
 import 'unified_media_import_dialog.dart';
 
 /// 统一的增强工具栏组件
@@ -285,9 +286,13 @@ class _UnifiedQuillToolbarState extends State<UnifiedQuillToolbar> {
     } catch (e) {
       debugPrint('插入媒体文件失败: $e');
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('插入${_getMediaTypeName(mediaType)}失败: $e'),
+            content: Text(l10n.insertMediaFailed(
+              _getMediaTypeName(context, mediaType),
+              e.toString(),
+            )),
             duration: const Duration(seconds: 3),
           ),
         );
@@ -295,16 +300,17 @@ class _UnifiedQuillToolbarState extends State<UnifiedQuillToolbar> {
     }
   }
 
-  String _getMediaTypeName(String type) {
+  String _getMediaTypeName(BuildContext context, String type) {
+    final l10n = AppLocalizations.of(context);
     switch (type) {
       case 'image':
-        return '图片';
+        return l10n.mediaTypeImage;
       case 'video':
-        return '视频';
+        return l10n.mediaTypeVideo;
       case 'audio':
-        return '音频';
+        return l10n.mediaTypeAudio;
       default:
-        return '媒体';
+        return l10n.mediaTypeMedia;
     }
   }
 }

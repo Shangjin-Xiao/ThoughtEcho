@@ -3461,5 +3461,32 @@
   "jsonFormatLabel": "JSON format: {status}",
   "containsHtmlTagsLabel": "Contains HTML tags: {status}",
   "viewNoteInfo": "View note information",
-  "first100CharsLabel": "First 100 characters:"
+  "first100CharsLabel": "First 100 characters:",
+  "annualReportDemo": "Annual Report Demo",
+  "manualApiTest": "Manual API Test",
+  "testApiKey": "Test API Key",
+  "aiReturnedEmptyContent": "AI returned empty content, please try again",
+  "askNote": "Ask Note",
+  "chatWithAiAssistant": "Chat with AI assistant to explore note content",
+  "codeCopiedToClipboard": "Code copied to clipboard",
+  "locationPermissionDenied": "Location permission denied, cannot enable location service",
+  "copyMessage": "Copy Message",
+  "messageCopied": "Message copied to clipboard",
+  "shareMessage": "Share Message",
+  "shareFeatureInDevelopment": "Share feature is under development",
+  "insertMediaFailed": "Failed to insert {mediaType}: {error}",
+  "@insertMediaFailed": {
+    "placeholders": {
+      "mediaType": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "mediaTypeImage": "Image",
+  "mediaTypeVideo": "Video",
+  "mediaTypeAudio": "Audio",
+  "mediaTypeMedia": "Media"
 }

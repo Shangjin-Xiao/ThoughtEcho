@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../gen_l10n/app_localizations.dart';
 import '../models/quote_model.dart';
 import '../pages/note_qa_chat_page.dart';
 
@@ -21,7 +22,7 @@ class QuickAskNoteButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return IconButton(
       icon: child ?? const Icon(Icons.chat),
-      tooltip: tooltip ?? '问笔记',
+      tooltip: tooltip ?? AppLocalizations.of(context).askNote,
       onPressed: () {
         Navigator.of(context).push(
           MaterialPageRoute(
@@ -57,7 +58,7 @@ class AskNoteFloatingButton extends StatelessWidget {
         );
       },
       icon: const Icon(Icons.chat),
-      label: const Text('问笔记'),
+      label: Text(AppLocalizations.of(context).askNote),
       backgroundColor: Theme.of(
         context,
       ).colorScheme.secondaryContainer, // 使用浅色系
@@ -79,8 +80,8 @@ class AskNoteListTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListTile(
       leading: const Icon(Icons.chat),
-      title: const Text('问笔记'),
-      subtitle: const Text('与AI助手对话，深入探讨笔记内容'),
+      title: Text(AppLocalizations.of(context).askNote),
+      subtitle: Text(AppLocalizations.of(context).chatWithAiAssistant),
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(

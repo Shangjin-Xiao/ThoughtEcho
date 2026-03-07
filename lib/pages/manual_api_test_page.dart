@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
+import '../gen_l10n/app_localizations.dart';
 import 'dart:convert';
 
 /// 手动API密钥测试工具
@@ -29,7 +30,7 @@ class _ManualApiKeyTestPageState extends State<ManualApiKeyTestPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('手动API测试'),
+        title: Text(AppLocalizations.of(context).manualApiTest),
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
       ),
       body: Padding(
@@ -80,7 +81,7 @@ class _ManualApiKeyTestPageState extends State<ManualApiKeyTestPage> {
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Text('测试API密钥'),
+                  : Text(AppLocalizations.of(context).testApiKey),
             ),
             const SizedBox(height: 24),
             if (_testResult.isNotEmpty) ...[
