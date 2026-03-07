@@ -201,7 +201,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
               await _aiAnalysisDatabaseService!.deleteAnalysis(analysis.id!);
             }
           } catch (itemErr) {
-            logDebug('删除单个AI分析记录失败: ${analysis.id}, $itemErr');
+            AppLogger.e('删除单个AI分析记录失败: ${analysis.id}', error: itemErr);
           }
         }));
         _loadAnalyses();
