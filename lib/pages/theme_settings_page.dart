@@ -396,8 +396,7 @@ class _ThemeSettingsPageState extends State<ThemeSettingsPage> {
         child: isSelected
             ? Icon(
                 Icons.check,
-                color:
-                    ThemeData.estimateBrightnessForColor(color) ==
+                color: ThemeData.estimateBrightnessForColor(color) ==
                         Brightness.light
                     ? Colors.black
                     : Colors.white,

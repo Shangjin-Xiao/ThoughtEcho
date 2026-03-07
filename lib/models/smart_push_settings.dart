@@ -212,8 +212,7 @@ class SmartPushSettings {
               orElse: () => PushFrequency.daily,
             )
           : PushFrequency.daily,
-      enabledPastNoteTypes:
-          (json['enabledPastNoteTypes'] as List<dynamic>?)
+      enabledPastNoteTypes: (json['enabledPastNoteTypes'] as List<dynamic>?)
               ?.map(
                 (e) => PastNoteType.values.firstWhere(
                   (type) => type.name == e,
@@ -222,13 +221,11 @@ class SmartPushSettings {
               )
               .toSet() ??
           {PastNoteType.yearAgoToday, PastNoteType.randomMemory},
-      filterTagIds:
-          (json['filterTagIds'] as List<dynamic>?)
+      filterTagIds: (json['filterTagIds'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           [],
-      filterWeatherTypes:
-          (json['filterWeatherTypes'] as List<dynamic>?)
+      filterWeatherTypes: (json['filterWeatherTypes'] as List<dynamic>?)
               ?.map(
                 (e) => WeatherFilterType.values.firstWhere(
                   (type) => type.name == e,
@@ -237,8 +234,7 @@ class SmartPushSettings {
               )
               .toSet() ??
           {},
-      pushTimeSlots:
-          (json['pushTimeSlots'] as List<dynamic>?)
+      pushTimeSlots: (json['pushTimeSlots'] as List<dynamic>?)
               ?.map((e) => PushTimeSlot.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [const PushTimeSlot(hour: 8, minute: 0)],
@@ -252,8 +248,7 @@ class SmartPushSettings {
       lastPushTime: json['lastPushTime'] != null
           ? DateTime.tryParse(json['lastPushTime'] as String)
           : null,
-      recentlyPushedNoteIds:
-          (json['recentlyPushedNoteIds'] as List<dynamic>?)
+      recentlyPushedNoteIds: (json['recentlyPushedNoteIds'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           [],

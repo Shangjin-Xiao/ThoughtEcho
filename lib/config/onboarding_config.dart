@@ -37,22 +37,22 @@ class OnboardingConfig {
 
   // 兼容旧代码的静态访问器（使用占位符，实际使用时应通过getPages获取）
   static List<OnboardingPageData> get pages => [
-    const OnboardingPageData(
-      title: '',
-      subtitle: '',
-      type: OnboardingPageType.welcome,
-    ),
-    const OnboardingPageData(
-      title: '',
-      subtitle: '',
-      type: OnboardingPageType.features,
-    ),
-    const OnboardingPageData(
-      title: '',
-      subtitle: '',
-      type: OnboardingPageType.preferences,
-    ),
-  ];
+        const OnboardingPageData(
+          title: '',
+          subtitle: '',
+          type: OnboardingPageType.welcome,
+        ),
+        const OnboardingPageData(
+          title: '',
+          subtitle: '',
+          type: OnboardingPageType.features,
+        ),
+        const OnboardingPageData(
+          title: '',
+          subtitle: '',
+          type: OnboardingPageType.preferences,
+        ),
+      ];
 
   /// 获取核心功能列表（动态国际化）
   static List<OnboardingFeature> getCoreFeatures(BuildContext context) {

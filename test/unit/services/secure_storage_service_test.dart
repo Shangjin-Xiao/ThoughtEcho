@@ -29,23 +29,22 @@ void main() {
     // Mock FlutterSecureStorage
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-          if (methodCall.method == 'read') {
-            return storage[methodCall.arguments['key']];
-          }
-          if (methodCall.method == 'write') {
-            storage[methodCall.arguments['key']] =
-                methodCall.arguments['value'];
-            return null;
-          }
-          if (methodCall.method == 'delete') {
-            storage.remove(methodCall.arguments['key']);
-            return null;
-          }
-          if (methodCall.method == 'readAll') {
-            return storage;
-          }
-          return null;
-        });
+      if (methodCall.method == 'read') {
+        return storage[methodCall.arguments['key']];
+      }
+      if (methodCall.method == 'write') {
+        storage[methodCall.arguments['key']] = methodCall.arguments['value'];
+        return null;
+      }
+      if (methodCall.method == 'delete') {
+        storage.remove(methodCall.arguments['key']);
+        return null;
+      }
+      if (methodCall.method == 'readAll') {
+        return storage;
+      }
+      return null;
+    });
   });
 
   test('SecureStorageService should save, retrieve and remove keys', () async {

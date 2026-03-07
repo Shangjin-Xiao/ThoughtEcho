@@ -84,10 +84,13 @@ void main() {
         }
 
         for (final tagId in validTagIds) {
-          await txn.insert('quote_tags', {
-            'quote_id': quoteId,
-            'tag_id': tagId,
-          }, conflictAlgorithm: ConflictAlgorithm.ignore);
+          await txn.insert(
+              'quote_tags',
+              {
+                'quote_id': quoteId,
+                'tag_id': tagId,
+              },
+              conflictAlgorithm: ConflictAlgorithm.ignore);
         }
       }
     });
@@ -116,9 +119,8 @@ void main() {
 
       // 1. Fetch all category IDs once
       final allCategories = await txn.query('categories', columns: ['id']);
-      final allCategoryIds = allCategories
-          .map((c) => c['id'] as String)
-          .toSet();
+      final allCategoryIds =
+          allCategories.map((c) => c['id'] as String).toSet();
 
       // 2. Prepare batch
       final batch = txn.batch();
@@ -139,10 +141,13 @@ void main() {
 
         for (final tagId in validTagIds) {
           // 4. Batch insert
-          batch.insert('quote_tags', {
-            'quote_id': quoteId,
-            'tag_id': tagId,
-          }, conflictAlgorithm: ConflictAlgorithm.ignore);
+          batch.insert(
+              'quote_tags',
+              {
+                'quote_id': quoteId,
+                'tag_id': tagId,
+              },
+              conflictAlgorithm: ConflictAlgorithm.ignore);
         }
       }
 
@@ -161,8 +166,7 @@ void main() {
     // Ensure both strategies produce the same result.
     expect(countFast, countSlow);
 
-    final improvement =
-        (stopwatchSlow.elapsedMilliseconds -
+    final improvement = (stopwatchSlow.elapsedMilliseconds -
             stopwatchFast.elapsedMilliseconds) /
         stopwatchSlow.elapsedMilliseconds *
         100;

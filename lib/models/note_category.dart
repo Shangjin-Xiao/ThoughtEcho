@@ -13,9 +13,9 @@ class NoteCategory {
     this.iconName,
     this.lastModified,
     this.icon,
-  }) : assert(id.isNotEmpty, '分类ID不能为空'),
-       assert(name.isNotEmpty, '分类名称不能为空'),
-       assert(name.length <= 50, '分类名称不能超过50字符');
+  })  : assert(id.isNotEmpty, '分类ID不能为空'),
+        assert(name.isNotEmpty, '分类名称不能为空'),
+        assert(name.length <= 50, '分类名称不能超过50字符');
 
   /// 修复：添加数据验证方法
   static bool isValidName(String name) {

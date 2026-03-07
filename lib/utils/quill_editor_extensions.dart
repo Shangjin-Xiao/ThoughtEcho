@@ -425,7 +425,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
                     child: CircularProgressIndicator(
                       value: progress.expectedTotalBytes != null
                           ? progress.cumulativeBytesLoaded /
-                                progress.expectedTotalBytes!
+                              progress.expectedTotalBytes!
                           : null,
                       strokeWidth: 2,
                     ),

@@ -684,8 +684,8 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
             final List<NoteCategory> filteredCategories = categories
                 .where(
                   (tag) => tag.name.toLowerCase().contains(
-                    searchQuery.toLowerCase().trim(),
-                  ),
+                        searchQuery.toLowerCase().trim(),
+                      ),
                 )
                 .toList();
 
@@ -726,7 +726,9 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                               ),
                               child: Text(
                                 l10n.defaultTagsCount(selectedIds.length),
-                                style: Theme.of(context).textTheme.bodyMedium
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
                                     ?.copyWith(fontWeight: FontWeight.w600),
                               ),
                             ),
@@ -762,9 +764,9 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                                           dense: true,
                                           contentPadding:
                                               const EdgeInsets.symmetric(
-                                                horizontal: 4,
-                                                vertical: 2,
-                                              ),
+                                            horizontal: 4,
+                                            vertical: 2,
+                                          ),
                                           leading: _buildTagIcon(
                                             context,
                                             tag.iconName,

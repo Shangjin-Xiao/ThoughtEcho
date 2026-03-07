@@ -156,10 +156,10 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             Text(
               _includeMediaFiles ? l10n.backupFormatZip : l10n.backupFormatJson,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
             ),
           ],
         ),
@@ -250,10 +250,10 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
             Text(
               l10n.supportedBackupFormats,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
             ),
           ],
         ),
@@ -284,8 +284,8 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
                 Text(
                   l10n.importantNotes,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
               ],
             ),
@@ -676,8 +676,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           ).firstMatch(e.toString());
           final columnName = columnMatch?.group(1) ?? l10n.unknownTag;
 
-          errorMessage =
-              '''${l10n.restoreFailedCorrupt}
+          errorMessage = '''${l10n.restoreFailedCorrupt}
 
 Column: $columnName
 Details: $e''';

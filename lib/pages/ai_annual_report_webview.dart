@@ -44,11 +44,11 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
     );
     _slideAnimation =
         Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _animationController,
-            curve: Curves.easeOutCubic,
-          ),
-        );
+      CurvedAnimation(
+        parent: _animationController,
+        curve: Curves.easeOutCubic,
+      ),
+    );
 
     _animationController.forward();
   }
@@ -420,8 +420,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
       // 如果不是HTML格式，包装成HTML
       if (!widget.htmlContent.trim().toLowerCase().startsWith('<!doctype') &&
           !widget.htmlContent.trim().toLowerCase().startsWith('<html')) {
-        contentToWrite =
-            '''
+        contentToWrite = '''
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -906,8 +905,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
       String contentToShare = widget.htmlContent;
       if (!widget.htmlContent.trim().toLowerCase().startsWith('<!doctype') &&
           !widget.htmlContent.trim().toLowerCase().startsWith('<html')) {
-        contentToShare =
-            '''
+        contentToShare = '''
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>

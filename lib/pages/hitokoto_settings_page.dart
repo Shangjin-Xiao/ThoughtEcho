@@ -432,9 +432,8 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
           ? Icon(Icons.check_rounded, size: 16, color: colorScheme.onPrimary)
           : null,
       labelStyle: TextStyle(
-        color: isSelected
-            ? colorScheme.onPrimary
-            : colorScheme.onSurfaceVariant,
+        color:
+            isSelected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
         fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
         fontSize: 13,
       ),

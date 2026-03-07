@@ -52,8 +52,7 @@ class CardTemplates {
     );
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY =
-        contentAreaTop +
+    final contentStartY = contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -124,8 +123,7 @@ class CardTemplates {
     final textLines = _wrapText(content, 18, maxLines);
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY =
-        contentAreaTop +
+    final contentStartY = contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -232,8 +230,7 @@ class CardTemplates {
     );
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY =
-        contentAreaTop +
+    final contentStartY = contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -312,8 +309,7 @@ class CardTemplates {
     );
 
     final contentHeight = textLines.length * contentFontSize * _lineHeight;
-    final contentStartY =
-        contentAreaTop +
+    final contentStartY = contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         contentFontSize;
 
@@ -400,8 +396,7 @@ class CardTemplates {
     final authorDisplay = author ?? source ?? '';
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY =
-        contentAreaTop +
+    final contentStartY = contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -479,8 +474,7 @@ class CardTemplates {
     );
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY =
-        contentAreaTop +
+    final contentStartY = contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -558,8 +552,7 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#f8fafc',
     );
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY =
-        contentAreaTop +
+    final contentStartY = contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -627,8 +620,7 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#f8fafc',
     );
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY =
-        contentAreaTop +
+    final contentStartY = contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -694,8 +686,7 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#14532d',
     );
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY =
-        contentAreaTop +
+    final contentStartY = contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -763,8 +754,7 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#451a03',
     );
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY =
-        contentAreaTop +
+    final contentStartY = contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -828,8 +818,7 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#1c1917',
     );
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY =
-        contentAreaTop +
+    final contentStartY = contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -902,8 +891,7 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#e2e8f0',
     );
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY =
-        contentAreaTop +
+    final contentStartY = contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -967,8 +955,7 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#111827',
     );
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY =
-        contentAreaTop +
+    final contentStartY = contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -1033,8 +1020,7 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#0c4a6e',
     );
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY =
-        contentAreaTop +
+    final contentStartY = contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -1098,8 +1084,7 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#881337',
     );
 
     final contentHeight = textLines.length * contentFontSize * _lineHeight;
-    final contentStartY =
-        contentAreaTop +
+    final contentStartY = contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         contentFontSize;
 
@@ -1145,7 +1130,8 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#881337',
       for (int i = 0; i < textLines.length; i++) {
         final y = contentStartY + i * lineSpacing;
         // 简单的语法高亮模拟：奇数行白色，偶数行浅蓝 (太复杂，统一用亮色)
-        buffer.writeln('<text x="70" y="$y" text-anchor="start" fill="#d4d4d4" font-family="monospace" font-size="${contentFontSize.toStringAsFixed(0)}">${_escape(textLines[i])}</text>');
+        buffer.writeln(
+            '<text x="70" y="$y" text-anchor="start" fill="#d4d4d4" font-family="monospace" font-size="${contentFontSize.toStringAsFixed(0)}">${_escape(textLines[i])}</text>');
       }
       return buffer.toString();
     })()}
@@ -1190,8 +1176,7 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#881337',
     );
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY =
-        contentAreaTop +
+    final contentStartY = contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -1265,8 +1250,7 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#2C1810',
 
     // 计算内容高度，用于左对齐渲染
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY =
-        contentAreaTop +
+    final contentStartY = contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -1349,8 +1333,7 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#2C1810',
     );
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY =
-        contentAreaTop +
+    final contentStartY = contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -1423,8 +1406,7 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#ffffff',
     );
 
     final contentHeight = textLines.length * _contentFontSize * _lineHeight;
-    final contentStartY =
-        contentAreaTop +
+    final contentStartY = contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -1510,8 +1492,7 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#ffffff',
     final remainingLines = _wrapText(remainingText, 15, remainingMaxLines);
     final contentHeight =
         remainingLines.length * _contentFontSize * _lineHeight;
-    final contentStartY =
-        contentAreaTop +
+    final contentStartY = contentAreaTop +
         (contentAreaHeight - contentHeight) / 2 +
         _contentFontSize;
 
@@ -1833,10 +1814,8 @@ ${_renderTextLines(textLines, 200.0, contentStartY, _contentFontSize, '#ffffff',
     int maxCharsPerLine,
     int maxLines,
   ) {
-    final normalized = text
-        .replaceAll('\r\n', '\n')
-        .replaceAll('\r', '\n')
-        .trimRight();
+    final normalized =
+        text.replaceAll('\r\n', '\n').replaceAll('\r', '\n').trimRight();
     if (normalized.trim().isEmpty) {
       return [''];
     }

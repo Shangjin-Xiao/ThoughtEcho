@@ -19,19 +19,18 @@ void main() {
         );
 
         // We use a timeout because offscreen rendering can sometimes hang in test environments if not properly configured
-        final bytes =
-            await SvgToImageService.convertSvgToImage(
-              svg,
-              width: 400,
-              height: 600,
-              useCache: false,
-            ).timeout(
-              const Duration(seconds: 15),
-              onTimeout: () {
-                // If it times out, it might be due to test environment limitations, but we want to see if it even starts
-                return Uint8List(0);
-              },
-            );
+        final bytes = await SvgToImageService.convertSvgToImage(
+          svg,
+          width: 400,
+          height: 600,
+          useCache: false,
+        ).timeout(
+          const Duration(seconds: 15),
+          onTimeout: () {
+            // If it times out, it might be due to test environment limitations, but we want to see if it even starts
+            return Uint8List(0);
+          },
+        );
 
         // In some headless test environments, real rendering might fail or return empty,
         // but it shouldn't crash with OOM or other fatal errors.

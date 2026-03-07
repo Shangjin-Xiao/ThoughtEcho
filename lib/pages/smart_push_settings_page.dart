@@ -119,8 +119,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
     try {
       final smartPushService = context.read<SmartPushService>();
 
-      final hasPermission = await smartPushService
-          .requestNotificationPermission();
+      final hasPermission =
+          await smartPushService.requestNotificationPermission();
       if (!hasPermission) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -182,8 +182,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
     if (!mounted) return;
     try {
       final smartPushService = context.read<SmartPushService>();
-      final hasExactAlarmPermission = await smartPushService
-          .checkExactAlarmPermission();
+      final hasExactAlarmPermission =
+          await smartPushService.checkExactAlarmPermission();
 
       if (!hasExactAlarmPermission && mounted) {
         // 直接申请精确闹钟权限（无需询问）
@@ -366,8 +366,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                   final smartPushService = context.read<SmartPushService>();
 
                   // 1. 请求通知权限
-                  final hasNotificationPermission = await smartPushService
-                      .requestNotificationPermission();
+                  final hasNotificationPermission =
+                      await smartPushService.requestNotificationPermission();
                   if (!hasNotificationPermission) {
                     if (!mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -381,13 +381,13 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                   }
 
                   // 2. 检查精确闹钟权限 (Android 12+)
-                  final hasExactAlarmPermission = await smartPushService
-                      .checkExactAlarmPermission();
+                  final hasExactAlarmPermission =
+                      await smartPushService.checkExactAlarmPermission();
                   if (!hasExactAlarmPermission) {
                     if (!mounted) return;
                     // 直接申请精确闹钟权限（无需询问）
-                    final granted = await smartPushService
-                        .requestExactAlarmPermission();
+                    final granted =
+                        await smartPushService.requestExactAlarmPermission();
                     if (!granted && mounted) {
                       // 显示降级提示
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -892,8 +892,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                       spacing: 8,
                       runSpacing: 8,
                       children: PastNoteType.values.map((type) {
-                        final isSelected = _settings.enabledPastNoteTypes
-                            .contains(type);
+                        final isSelected =
+                            _settings.enabledPastNoteTypes.contains(type);
                         return FilterChip(
                           avatar: Icon(_getPastNoteTypeIcon(type), size: 16),
                           label: Text(_getPastNoteTypeLabel(l10n, type)),
@@ -934,8 +934,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                       spacing: 8,
                       runSpacing: 8,
                       children: WeatherFilterType.values.map((weather) {
-                        final isSelected = _settings.filterWeatherTypes
-                            .contains(weather);
+                        final isSelected =
+                            _settings.filterWeatherTypes.contains(weather);
                         return FilterChip(
                           avatar: Text(_getWeatherEmoji(weather)),
                           label: Text(_getWeatherLabel(l10n, weather)),
@@ -1384,8 +1384,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                     onTap: status.notificationEnabled
                         ? null
                         : () async {
-                            final smartPushService = context
-                                .read<SmartPushService>();
+                            final smartPushService =
+                                context.read<SmartPushService>();
                             await smartPushService
                                 .requestNotificationPermission();
                             setState(() {});
@@ -1403,8 +1403,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                       onTap: status.exactAlarmEnabled
                           ? null
                           : () async {
-                              final smartPushService = context
-                                  .read<SmartPushService>();
+                              final smartPushService =
+                                  context.read<SmartPushService>();
                               await smartPushService
                                   .requestExactAlarmPermission();
                               setState(() {});
@@ -1421,8 +1421,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                     onTap: status.batteryOptimizationExempted
                         ? null
                         : () async {
-                            final smartPushService = context
-                                .read<SmartPushService>();
+                            final smartPushService =
+                                context.read<SmartPushService>();
                             await smartPushService
                                 .requestBatteryOptimizationExemption();
                             setState(() {});
@@ -1536,9 +1536,8 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                       l10n.smartPushAutoStartPermission,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: colorScheme.onErrorContainer,
-                        decoration: isGranted
-                            ? TextDecoration.lineThrough
-                            : null,
+                        decoration:
+                            isGranted ? TextDecoration.lineThrough : null,
                       ),
                     ),
                     Text(

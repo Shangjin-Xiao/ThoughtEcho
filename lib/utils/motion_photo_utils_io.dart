@@ -135,8 +135,7 @@ MotionPhotoInfo? _extractVideoInfoFromAttributes(
     return null;
   }
 
-  final hasMotionTag =
-      attributes['GCamera:MotionPhoto'] == '1' ||
+  final hasMotionTag = attributes['GCamera:MotionPhoto'] == '1' ||
       attributes['GCamera:MicroVideo'] == '1' ||
       (attributes['Item:Mime']?.startsWith('video') ?? false);
 

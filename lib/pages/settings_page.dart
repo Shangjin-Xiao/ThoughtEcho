@@ -75,8 +75,8 @@ class SettingsPageState extends State<SettingsPage> {
 
     final allShown =
         FeatureGuideHelper.hasShown(context, 'settings_preferences') &&
-        FeatureGuideHelper.hasShown(context, 'settings_startup') &&
-        FeatureGuideHelper.hasShown(context, 'settings_theme');
+            FeatureGuideHelper.hasShown(context, 'settings_startup') &&
+            FeatureGuideHelper.hasShown(context, 'settings_theme');
 
     if (allShown) {
       _guidesTriggered = true;
@@ -227,8 +227,8 @@ class SettingsPageState extends State<SettingsPage> {
                 // 刷新设置页面的状态
                 if (mounted) {
                   setState(() {
-                    _locationController.text = locationService
-                        .getFormattedLocation();
+                    _locationController.text =
+                        locationService.getFormattedLocation();
                   });
                 }
               },
@@ -323,25 +323,23 @@ class SettingsPageState extends State<SettingsPage> {
                   subtitle: Text(
                     locationService.hasLocationPermission
                         ? (locationService.isLocationServiceEnabled
-                              ? l10n.settingsLocationEnabled
-                              : l10n.settingsLocationPermissionOnly)
+                            ? l10n.settingsLocationEnabled
+                            : l10n.settingsLocationPermissionOnly)
                         : l10n.settingsLocationNoPermission,
                     style: TextStyle(
                       fontSize: 12,
-                      color:
-                          locationService.hasLocationPermission &&
+                      color: locationService.hasLocationPermission &&
                               locationService.isLocationServiceEnabled
                           ? theme.colorScheme.primary
                           : theme.colorScheme.error,
                     ),
                   ),
-                  value:
-                      locationService.hasLocationPermission &&
+                  value: locationService.hasLocationPermission &&
                       locationService.isLocationServiceEnabled,
                   onChanged: (value) async {
                     if (value) {
-                      bool permissionGranted = await locationService
-                          .requestLocationPermission();
+                      bool permissionGranted =
+                          await locationService.requestLocationPermission();
                       if (!permissionGranted) {
                         if (mounted && context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -398,8 +396,8 @@ class SettingsPageState extends State<SettingsPage> {
                           ),
                         );
                       }
-                      final position = await locationService
-                          .getCurrentLocation();
+                      final position =
+                          await locationService.getCurrentLocation();
                       if (!mounted) return; // Add this check
                       if (position != null) {
                         if (context.mounted) {
@@ -415,8 +413,8 @@ class SettingsPageState extends State<SettingsPage> {
                           );
                         }
                         setState(() {
-                          _locationController.text = locationService
-                              .getFormattedLocation();
+                          _locationController.text =
+                              locationService.getFormattedLocation();
                         });
                       } else {
                         if (!mounted) return;
@@ -1358,9 +1356,8 @@ class SettingsPageState extends State<SettingsPage> {
             0,
             (sum, quote) => sum + quote.content.length,
           );
-          final averageWordsPerNote = totalNotes > 0
-              ? (totalWords / totalNotes).round()
-              : 0;
+          final averageWordsPerNote =
+              totalNotes > 0 ? (totalWords / totalNotes).round() : 0;
 
           // 获取标签统计
           final Map<String, int> tagCounts = {};
@@ -1452,8 +1449,7 @@ class SettingsPageState extends State<SettingsPage> {
               .toSet()
               .length;
 
-          final prompt =
-              '''基于以下用户笔记数据，生成一份完整的HTML年度报告。
+          final prompt = '''基于以下用户笔记数据，生成一份完整的HTML年度报告。
 
 用户数据统计：
 - 年份：$currentYear
@@ -1499,7 +1495,7 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
             // 检查返回内容的格式
             final isHtml =
                 result.trim().toLowerCase().startsWith('<!doctype') ||
-                result.trim().toLowerCase().startsWith('<html');
+                    result.trim().toLowerCase().startsWith('<html');
             final isJson =
                 result.trim().startsWith('{') || result.trim().startsWith('[');
 
@@ -1652,12 +1648,10 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
         if (mounted && result.isNotEmpty) {
           // 详细检查返回内容
           final trimmed = result.trim();
-          final isHtml =
-              trimmed.toLowerCase().startsWith('<!doctype') ||
+          final isHtml = trimmed.toLowerCase().startsWith('<!doctype') ||
               trimmed.toLowerCase().startsWith('<html');
           final isJson = trimmed.startsWith('{') || trimmed.startsWith('[');
-          final containsHtmlTags =
-              trimmed.contains('<html') ||
+          final containsHtmlTags = trimmed.contains('<html') ||
               trimmed.contains('<body') ||
               trimmed.contains('<div');
 

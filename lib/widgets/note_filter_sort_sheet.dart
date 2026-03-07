@@ -21,8 +21,7 @@ class NoteFilterSortSheet extends StatefulWidget {
     bool sortAscending,
     List<String> selectedWeathers,
     List<String> selectedDayPeriods,
-  )
-  onApply;
+  ) onApply;
 
   const NoteFilterSortSheet({
     super.key,
@@ -340,8 +339,8 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
               isEmoji
                   ? Text(tag.iconName!, style: const TextStyle(fontSize: 16))
                   : (tagIcon is IconData)
-                  ? Icon(tagIcon, size: 16)
-                  : const SizedBox.shrink(),
+                      ? Icon(tagIcon, size: 16)
+                      : const SizedBox.shrink(),
             const SizedBox(width: 4),
             Flexible(
               child: Text(

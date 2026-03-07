@@ -44,7 +44,7 @@ class SmartPushAnalytics extends ChangeNotifier {
   };
 
   SmartPushAnalytics({MMKVService? mmkvService})
-    : _mmkv = mmkvService ?? MMKVService();
+      : _mmkv = mmkvService ?? MMKVService();
 
   // ============================================================
   // 1. 响应性热图 - 用户 App 打开时间分析
@@ -125,9 +125,10 @@ class SmartPushAnalytics extends ChangeNotifier {
     final heatmap = await calculateResponsivenessHeatmap();
 
     // 过滤并排序
-    final validWindows =
-        heatmap.entries.where((e) => e.value >= minScore).toList()
-          ..sort((a, b) => b.value.compareTo(a.value));
+    final validWindows = heatmap.entries
+        .where((e) => e.value >= minScore)
+        .toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
 
     // 确保时间间隔至少 3 小时
     final selected = <MapEntry<int, double>>[];

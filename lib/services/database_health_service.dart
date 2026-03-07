@@ -109,8 +109,7 @@ class DatabaseHealthService {
 
       // 1. 验证外键约束状态
       final foreignKeysResult = await db.rawQuery('PRAGMA foreign_keys');
-      final foreignKeysEnabled =
-          foreignKeysResult.isNotEmpty &&
+      final foreignKeysEnabled = foreignKeysResult.isNotEmpty &&
           foreignKeysResult.first['foreign_keys'] == 1;
 
       // 2. 获取数据库版本

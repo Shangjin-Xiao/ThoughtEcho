@@ -4,8 +4,7 @@ import 'package:flutter/widgets.dart';
 
 import 'optimized_image_loader_base.dart';
 import 'optimized_image_loader_stub.dart'
-    if (dart.library.io) 'optimized_image_loader_io.dart'
-    as impl;
+    if (dart.library.io) 'optimized_image_loader_io.dart' as impl;
 
 ImageProvider? createOptimizedImageProvider(
   String source, {

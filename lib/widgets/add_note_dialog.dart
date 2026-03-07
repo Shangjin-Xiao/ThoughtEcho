@@ -292,8 +292,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       _originalTemperature = widget.initialQuote!.temperature;
 
       // 根据现有笔记的位置和天气信息设置复选框状态
-      _includeLocation =
-          widget.initialQuote!.location != null ||
+      _includeLocation = widget.initialQuote!.location != null ||
           (widget.initialQuote!.latitude != null &&
               widget.initialQuote!.longitude != null);
       _includeWeather = widget.initialQuote!.weather != null;
@@ -466,8 +465,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
     // 检查并请求权限（与全屏编辑器一致）
     if (!locationService.hasLocationPermission) {
-      bool permissionGranted = await locationService
-          .requestLocationPermission();
+      bool permissionGranted =
+          await locationService.requestLocationPermission();
       if (!permissionGranted) {
         if (mounted && context.mounted) {
           final l10n = AppLocalizations.of(context);
@@ -677,8 +676,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     ThemeData theme,
   ) async {
     final l10n = AppLocalizations.of(context);
-    final hasLocationData =
-        _originalLocation != null ||
+    final hasLocationData = _originalLocation != null ||
         (_originalLatitude != null && _originalLongitude != null);
     final hasCoordinates =
         _originalLatitude != null && _originalLongitude != null;
@@ -745,10 +743,10 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         final localeCode = _cachedLocationService?.currentLocaleCode;
         final addressInfo =
             await LocalGeocodingService.getAddressFromCoordinates(
-              _originalLatitude!,
-              _originalLongitude!,
-              localeCode: localeCode,
-            );
+          _originalLatitude!,
+          _originalLongitude!,
+          localeCode: localeCode,
+        );
         if (addressInfo != null && mounted) {
           final formattedAddress = addressInfo['formatted_address'];
           if (formattedAddress != null && formattedAddress.isNotEmpty) {
@@ -936,10 +934,10 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         final localeCode = locationService?.currentLocaleCode;
         final addressInfo =
             await LocalGeocodingService.getAddressFromCoordinates(
-              _newLatitude!,
-              _newLongitude!,
-              localeCode: localeCode,
-            );
+          _newLatitude!,
+          _newLongitude!,
+          localeCode: localeCode,
+        );
         if (addressInfo != null && mounted) {
           final formattedAddress = addressInfo['formatted_address'];
           if (formattedAddress != null && formattedAddress.isNotEmpty) {
@@ -1430,11 +1428,11 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                 // 获取所有标签数据
                                 final databaseService =
                                     Provider.of<DatabaseService>(
-                                      context,
-                                      listen: false,
-                                    );
-                                final allTags = await databaseService
-                                    .getCategories();
+                                  context,
+                                  listen: false,
+                                );
+                                final allTags =
+                                    await databaseService.getCategories();
 
                                 // 修复内存泄露：在异步操作后检查mounted状态
                                 if (!mounted) return;
@@ -1443,14 +1441,14 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                 // 创建包含当前元数据的临时Quote对象，确保全屏编辑器能继承所有元数据
                                 final locationService =
                                     Provider.of<LocationService>(
-                                      context,
-                                      listen: false,
-                                    );
+                                  context,
+                                  listen: false,
+                                );
                                 final weatherService =
                                     Provider.of<WeatherService>(
-                                      context,
-                                      listen: false,
-                                    );
+                                  context,
+                                  listen: false,
+                                );
 
                                 // 获取位置和天气信息
                                 String? currentLocation;
@@ -1458,17 +1456,14 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                 String? currentTemperature;
 
                                 if (_includeLocation) {
-                                  currentLocation =
-                                      _originalLocation ??
+                                  currentLocation = _originalLocation ??
                                       locationService.getFormattedLocation();
                                 }
 
                                 if (_includeWeather) {
-                                  currentWeather =
-                                      _originalWeather ??
+                                  currentWeather = _originalWeather ??
                                       weatherService.currentWeather;
-                                  currentTemperature =
-                                      _originalTemperature ??
+                                  currentTemperature = _originalTemperature ??
                                       weatherService.temperature;
                                 }
 
@@ -1477,41 +1472,35 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                 final currentLat = widget.initialQuote != null
                                     ? _originalLatitude
                                     : _newLatitude ??
-                                          locationService
-                                              .currentPosition
-                                              ?.latitude;
+                                        locationService
+                                            .currentPosition?.latitude;
                                 final currentLon = widget.initialQuote != null
                                     ? _originalLongitude
                                     : _newLongitude ??
-                                          locationService
-                                              .currentPosition
-                                              ?.longitude;
+                                        locationService
+                                            .currentPosition?.longitude;
 
                                 final tempQuote = Quote(
                                   id: widget
-                                      .initialQuote
-                                      ?.id, // 保持原有ID（如果是编辑模式）
+                                      .initialQuote?.id, // 保持原有ID（如果是编辑模式）
                                   content: _contentController.text,
-                                  date:
-                                      widget.initialQuote?.date ??
+                                  date: widget.initialQuote?.date ??
                                       DateTime.now().toIso8601String(),
                                   sourceAuthor:
                                       _authorController.text.trim().isEmpty
-                                      ? null
-                                      : _authorController.text.trim(),
+                                          ? null
+                                          : _authorController.text.trim(),
                                   sourceWork:
                                       _workController.text.trim().isEmpty
-                                      ? null
-                                      : _workController.text.trim(),
+                                          ? null
+                                          : _workController.text.trim(),
                                   tagIds: _selectedTagIds,
                                   colorHex: _selectedColorHex,
                                   location: currentLocation,
-                                  latitude: _includeLocation
-                                      ? currentLat
-                                      : null,
-                                  longitude: _includeLocation
-                                      ? currentLon
-                                      : null,
+                                  latitude:
+                                      _includeLocation ? currentLat : null,
+                                  longitude:
+                                      _includeLocation ? currentLon : null,
                                   weather: currentWeather,
                                   temperature: currentTemperature,
                                   aiAnalysis: widget.initialQuote?.aiAnalysis,
@@ -1728,8 +1717,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                       // 仅在需要显示时读取服务，避免每次 build 都触发
                       final weatherService = _cachedWeatherService;
                       final weather = weatherService?.currentWeather;
-                      final formattedWeather = weatherService
-                          ?.getFormattedWeather(l10n);
+                      final formattedWeather =
+                          weatherService?.getFormattedWeather(l10n);
                       return Tooltip(
                         message: weather != null && weatherService != null
                             ? l10n.addWeatherWithValue(
@@ -1950,8 +1939,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                             final Quote quote = Quote(
                               id: widget.initialQuote?.id ?? const Uuid().v4(),
                               content: _contentController.text,
-                              date:
-                                  widget.initialQuote?.date ??
+                              date: widget.initialQuote?.date ??
                                   DateTime.now().toIso8601String(),
                               aiAnalysis: _aiSummary,
                               source: _formatSource(
@@ -1964,48 +1952,45 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                               sentiment: baseQuote?.sentiment,
                               keywords: baseQuote?.keywords,
                               summary: baseQuote?.summary,
-                              categoryId:
-                                  _selectedCategory?.id ??
+                              categoryId: _selectedCategory?.id ??
                                   widget.initialQuote?.categoryId,
                               colorHex: _selectedColorHex,
                               location: _includeLocation
                                   ? (isEditing
-                                        ? _originalLocation
-                                        : () {
-                                            final loc =
-                                                _newLocation ??
-                                                _cachedLocationService
-                                                    ?.getFormattedLocation();
-                                            if ((loc == null || loc.isEmpty) &&
-                                                _newLatitude != null) {
-                                              return LocationService
-                                                  .kAddressPending;
-                                            }
-                                            return loc;
-                                          }())
+                                      ? _originalLocation
+                                      : () {
+                                          final loc = _newLocation ??
+                                              _cachedLocationService
+                                                  ?.getFormattedLocation();
+                                          if ((loc == null || loc.isEmpty) &&
+                                              _newLatitude != null) {
+                                            return LocationService
+                                                .kAddressPending;
+                                          }
+                                          return loc;
+                                        }())
                                   : null,
                               latitude: (_includeLocation || _includeWeather)
                                   ? (isEditing
-                                        ? _originalLatitude
-                                        : _newLatitude)
+                                      ? _originalLatitude
+                                      : _newLatitude)
                                   : null,
                               longitude: (_includeLocation || _includeWeather)
                                   ? (isEditing
-                                        ? _originalLongitude
-                                        : _newLongitude)
+                                      ? _originalLongitude
+                                      : _newLongitude)
                                   : null,
                               weather: _includeWeather
                                   ? (isEditing
-                                        ? _originalWeather
-                                        : _cachedWeatherService?.currentWeather)
+                                      ? _originalWeather
+                                      : _cachedWeatherService?.currentWeather)
                                   : null,
                               temperature: _includeWeather
                                   ? (isEditing
-                                        ? _originalTemperature
-                                        : _cachedWeatherService?.temperature)
+                                      ? _originalTemperature
+                                      : _cachedWeatherService?.temperature)
                                   : null,
-                              dayPeriod:
-                                  widget.initialQuote?.dayPeriod ??
+                              dayPeriod: widget.initialQuote?.dayPeriod ??
                                   currentDayPeriodKey, // 保存 Key
                               editSource:
                                   widget.initialQuote?.editSource, // 保证兼容

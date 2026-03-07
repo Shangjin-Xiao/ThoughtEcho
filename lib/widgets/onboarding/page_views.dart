@@ -57,11 +57,11 @@ class _WelcomePageViewState extends State<WelcomePageView>
 
     _slideAnimation =
         Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _animationController,
-            curve: const Interval(0.3, 1.0, curve: Curves.easeOutBack),
-          ),
-        );
+      CurvedAnimation(
+        parent: _animationController,
+        curve: const Interval(0.3, 1.0, curve: Curves.easeOutBack),
+      ),
+    );
 
     // 初始化语言选择控制器
     _languageScrollController = FixedExtentScrollController(initialItem: 0);
@@ -128,9 +128,8 @@ class _WelcomePageViewState extends State<WelcomePageView>
     final locationService = context.read<LocationService>();
     settingsService.setLocale(selectedCode.isEmpty ? null : selectedCode);
     // 同步更新位置服务的语言设置
-    locationService.currentLocaleCode = selectedCode.isEmpty
-        ? null
-        : selectedCode;
+    locationService.currentLocaleCode =
+        selectedCode.isEmpty ? null : selectedCode;
   }
 
   @override
@@ -279,9 +278,8 @@ class _WelcomePageViewState extends State<WelcomePageView>
                     duration: const Duration(milliseconds: 200),
                     style: TextStyle(
                       fontSize: isSelected ? 18 : 15,
-                      fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.normal,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.normal,
                       color: isSelected
                           ? theme.colorScheme.primary
                           : theme.colorScheme.onSurface.withValues(alpha: 0.45),
@@ -523,9 +521,8 @@ class _FeatureCard extends StatelessWidget {
 
     return Card(
       elevation: isHighlight ? 8 : 2,
-      shadowColor: isHighlight
-          ? theme.colorScheme.primary.withValues(alpha: 0.3)
-          : null,
+      shadowColor:
+          isHighlight ? theme.colorScheme.primary.withValues(alpha: 0.3) : null,
       child: Container(
         decoration: isHighlight
             ? BoxDecoration(

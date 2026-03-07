@@ -851,8 +851,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     ThemeData theme,
   ) async {
     final l10n = AppLocalizations.of(context);
-    final hasLocationData =
-        _originalLocation != null ||
+    final hasLocationData = _originalLocation != null ||
         (_originalLatitude != null && _originalLongitude != null);
     final hasCoordinates =
         _originalLatitude != null && _originalLongitude != null;
@@ -930,10 +929,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         final localeCode = locationService.currentLocaleCode;
         final addressInfo =
             await LocalGeocodingService.getAddressFromCoordinates(
-              _originalLatitude!,
-              _originalLongitude!,
-              localeCode: localeCode,
-            );
+          _originalLatitude!,
+          _originalLongitude!,
+          localeCode: localeCode,
+        );
         if (addressInfo != null && mounted) {
           final formattedAddress = addressInfo['formatted_address'];
           if (formattedAddress != null && formattedAddress.isNotEmpty) {
@@ -1076,8 +1075,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
     // 检查并请求权限
     if (!locationService.hasLocationPermission) {
-      bool permissionGranted = await locationService
-          .requestLocationPermission();
+      bool permissionGranted =
+          await locationService.requestLocationPermission();
       if (!permissionGranted) {
         if (mounted && context.mounted) {
           final l10n = AppLocalizations.of(context);
@@ -1165,8 +1164,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
     // 检查并请求权限
     if (!locationService.hasLocationPermission) {
-      bool permissionGranted = await locationService
-          .requestLocationPermission();
+      bool permissionGranted =
+          await locationService.requestLocationPermission();
       if (!permissionGranted) {
         if (mounted) {
           final l10n = AppLocalizations.of(context);
@@ -1378,8 +1377,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
     // 检查并请求权限
     if (!locationService.hasLocationPermission) {
-      bool permissionGranted = await locationService
-          .requestLocationPermission();
+      bool permissionGranted =
+          await locationService.requestLocationPermission();
       if (!permissionGranted) {
         if (mounted && context.mounted) {
           final l10n = AppLocalizations.of(context);
@@ -1629,7 +1628,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       colorHex: _selectedColorHex,
       location: _showLocation
           ? (_location ??
-                (_latitude != null ? LocationService.kAddressPending : null))
+              (_latitude != null ? LocationService.kAddressPending : null))
           : null,
       latitude: _showLocation ? _latitude : null,
       longitude: _showLocation ? _longitude : null,
@@ -1869,8 +1868,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                 color: isSelected
                                     ? colorScheme.primary
                                     : color == Colors.transparent
-                                    ? Colors.grey.applyOpacity(0.5) // MODIFIED
-                                    : Colors.transparent,
+                                        ? Colors.grey
+                                            .applyOpacity(0.5) // MODIFIED
+                                        : Colors.transparent,
                                 width: 2,
                               ),
                               boxShadow: [
@@ -1888,20 +1888,19 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                               child: isSelected
                                   ? Icon(
                                       Icons.check_circle,
-                                      color:
-                                          color == Colors.transparent ||
+                                      color: color == Colors.transparent ||
                                               color.computeLuminance() > 0.7
                                           ? colorScheme.primary
                                           : Colors.white,
                                       size: 24,
                                     )
                                   : color == Colors.transparent
-                                  ? const Icon(
-                                      Icons.block,
-                                      color: Colors.grey,
-                                      size: 18,
-                                    )
-                                  : null,
+                                      ? const Icon(
+                                          Icons.block,
+                                          color: Colors.grey,
+                                          size: 18,
+                                        )
+                                      : null,
                             ),
                           ),
                         );
@@ -2258,8 +2257,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                       value: _saveProgress >= 0.99
                                           ? 1.0
                                           : (_saveProgress <= 0
-                                                ? null
-                                                : _saveProgress),
+                                              ? null
+                                              : _saveProgress),
                                       strokeWidth: 3,
                                     ),
                                   ),
@@ -2333,11 +2332,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                         width: 40,
                         height: 4,
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.onSurfaceVariant
-                              .applyOpacity(
-                                // MODIFIED
-                                0.4,
-                              ),
+                          color:
+                              theme.colorScheme.onSurfaceVariant.applyOpacity(
+                            // MODIFIED
+                            0.4,
+                          ),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -2599,8 +2598,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                                 }
                                               },
                                               selectedColor: theme
-                                                  .colorScheme
-                                                  .primaryContainer,
+                                                  .colorScheme.primaryContainer,
                                             ),
                                             // 小红点：有坐标但没地址时提示可更新（仅已保存笔记）
                                             if (widget.initialQuote?.id !=
@@ -2650,8 +2648,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                               if (_originalWeather == null) {
                                                 final l10n =
                                                     AppLocalizations.of(
-                                                      context,
-                                                    );
+                                                  context,
+                                                );
                                                 await showDialog(
                                                   context: context,
                                                   builder: (ctx) => AlertDialog(
@@ -2703,8 +2701,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                             }
                                           },
                                           selectedColor: theme
-                                              .colorScheme
-                                              .primaryContainer,
+                                              .colorScheme.primaryContainer,
                                         ),
                                       ),
                                       // 刷新按钮 - 仅新建模式显示（未保存的笔记）
@@ -2746,20 +2743,22 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                             child: Text(
                                               // 优先显示地址，没有地址时显示坐标
                                               (_location != null &&
-                                                      LocationService.formatLocationForDisplay(
+                                                      LocationService
+                                                          .formatLocationForDisplay(
                                                         _location,
                                                       ).isNotEmpty)
-                                                  ? LocationService.formatLocationForDisplay(
+                                                  ? LocationService
+                                                      .formatLocationForDisplay(
                                                       _location,
                                                     )
                                                   : ((_latitude != null &&
-                                                            _longitude != null)
-                                                        ? '📍 ${LocationService.formatCoordinates(_latitude, _longitude)}'
-                                                        : l10n.gettingLocationHint),
+                                                          _longitude != null)
+                                                      ? '📍 ${LocationService.formatCoordinates(_latitude, _longitude)}'
+                                                      : l10n
+                                                          .gettingLocationHint),
                                               style: TextStyle(
                                                 fontSize: 14,
-                                                color: theme
-                                                    .colorScheme
+                                                color: theme.colorScheme
                                                     .onSurfaceVariant,
                                               ),
                                             ),
@@ -2777,15 +2776,15 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                         ),
                                         const SizedBox(width: 8),
                                         Text(
-                                          WeatherService.getLocalizedWeatherDescription(
+                                          WeatherService
+                                              .getLocalizedWeatherDescription(
                                             AppLocalizations.of(context),
                                             _weather!,
                                           ),
                                           style: TextStyle(
                                             fontSize: 14,
                                             color: theme
-                                                .colorScheme
-                                                .onSurfaceVariant,
+                                                .colorScheme.onSurfaceVariant,
                                           ),
                                         ),
                                         if (_temperature != null)
@@ -2794,8 +2793,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                             style: TextStyle(
                                               fontSize: 14,
                                               color: theme
-                                                  .colorScheme
-                                                  .onSurfaceVariant,
+                                                  .colorScheme.onSurfaceVariant,
                                             ),
                                           ),
                                       ],
@@ -2902,16 +2900,13 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                     child: Builder(
                                       builder: (context) {
                                         // 过滤标签
-                                        final filteredTags = widget.allTags!
-                                            .where((tag) {
-                                              return _tagSearchQuery.isEmpty ||
-                                                  tag.name
-                                                      .toLowerCase()
-                                                      .contains(
-                                                        _tagSearchQuery,
-                                                      );
-                                            })
-                                            .toList();
+                                        final filteredTags =
+                                            widget.allTags!.where((tag) {
+                                          return _tagSearchQuery.isEmpty ||
+                                              tag.name.toLowerCase().contains(
+                                                    _tagSearchQuery,
+                                                  );
+                                        }).toList();
 
                                         if (filteredTags.isEmpty) {
                                           return Center(
@@ -2952,8 +2947,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                                 });
                                               },
                                               selectedColor: theme
-                                                  .colorScheme
-                                                  .primaryContainer,
+                                                  .colorScheme.primaryContainer,
                                               checkmarkColor:
                                                   theme.colorScheme.primary,
                                             );

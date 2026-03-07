@@ -63,9 +63,8 @@ class ApiKeyDebugger {
         final authHeader =
             headers['Authorization'] ?? headers['x-api-key'] ?? '';
         if (authHeader.isNotEmpty) {
-          final apiKeyFromHeader = authHeader
-              .replaceAll('Bearer ', '')
-              .replaceAll('x-api-key ', '');
+          final apiKeyFromHeader =
+              authHeader.replaceAll('Bearer ', '').replaceAll('x-api-key ', '');
           logDebug(
             '   Headers中的API Key: ${apiKeyFromHeader.isEmpty ? "空" : "${apiKeyFromHeader.length}字符"}',
           );

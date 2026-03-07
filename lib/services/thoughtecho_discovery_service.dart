@@ -106,9 +106,8 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
             : info.computerName.trim();
       } else if (Platform.isLinux) {
         final info = await plugin.linuxInfo;
-        model = info.prettyName.trim().isEmpty
-            ? 'Linux'
-            : info.prettyName.trim();
+        model =
+            info.prettyName.trim().isEmpty ? 'Linux' : info.prettyName.trim();
       } else {
         model = Platform.operatingSystem;
       }
@@ -156,8 +155,8 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
         debugPrint('iOS/macOS: 触发本地网络权限对话框...');
 
         _iosPermissionTriggered = true;
-        final permissionResult = await IOSLocalNetworkPermission.I
-            .triggerPermissionDialog();
+        final permissionResult =
+            await IOSLocalNetworkPermission.I.triggerPermissionDialog();
         _iosPermissionGranted = permissionResult;
 
         if (!permissionResult) {

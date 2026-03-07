@@ -713,20 +713,17 @@ class DatabaseService extends ChangeNotifier {
 
     // 时间段筛选
     if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-      final dayPeriodPlaceholders = selectedDayPeriods
-          .map((_) => '?')
-          .join(',');
+      final dayPeriodPlaceholders =
+          selectedDayPeriods.map((_) => '?').join(',');
       conditions.add('q.day_period IN ($dayPeriodPlaceholders)');
       args.addAll(selectedDayPeriods);
     }
 
-    final whereClause = conditions.isNotEmpty
-        ? 'WHERE ${conditions.join(' AND ')}'
-        : '';
+    final whereClause =
+        conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
 
     // 优化：使用JOIN一次性获取所有数据，避免N+1查询问题
-    final query =
-        '''
+    final query = '''
       SELECT 
         q.*,
         GROUP_CONCAT(qt.tag_id) as tag_ids_joined
@@ -795,9 +792,8 @@ class DatabaseService extends ChangeNotifier {
     if (kIsWeb) {
       // Web 平台逻辑：检查内存中的 _categoryStore
       final defaultCategories = _getDefaultHitokotoCategories();
-      final existingNamesLower = _categoryStore
-          .map((c) => c.name.toLowerCase())
-          .toSet();
+      final existingNamesLower =
+          _categoryStore.map((c) => c.name.toLowerCase()).toSet();
       for (final category in defaultCategories) {
         if (!existingNamesLower.contains(category.name.toLowerCase())) {
           _categoryStore.add(category);
@@ -885,12 +881,15 @@ class DatabaseService extends ChangeNotifier {
         if (idsToUpdate.containsKey(category.id)) {
           continue;
         }
-        batch.insert('categories', {
-          'id': category.id,
-          'name': category.name,
-          'is_default': category.isDefault ? 1 : 0,
-          'icon_name': category.iconName,
-        }, conflictAlgorithm: ConflictAlgorithm.ignore);
+        batch.insert(
+            'categories',
+            {
+              'id': category.id,
+              'name': category.name,
+              'is_default': category.isDefault ? 1 : 0,
+              'icon_name': category.iconName,
+            },
+            conflictAlgorithm: ConflictAlgorithm.ignore);
         logDebug('添加默认一言分类: ${category.name}');
       }
 
@@ -1070,12 +1069,10 @@ class DatabaseService extends ChangeNotifier {
   List<NoteCategory> _moveHiddenCategoryToBottom(
     List<NoteCategory> categories,
   ) {
-    final hiddenCategories = categories
-        .where((category) => category.id == hiddenTagId)
-        .toList();
-    final normalCategories = categories
-        .where((category) => category.id != hiddenTagId)
-        .toList();
+    final hiddenCategories =
+        categories.where((category) => category.id == hiddenTagId).toList();
+    final normalCategories =
+        categories.where((category) => category.id != hiddenTagId).toList();
     return [...normalCategories, ...hiddenCategories];
   }
 
@@ -1324,9 +1321,8 @@ class DatabaseService extends ChangeNotifier {
     String name, {
     String? excludeId,
   }) async {
-    final whereClause = excludeId != null
-        ? 'LOWER(name) = ? AND id != ?'
-        : 'LOWER(name) = ?';
+    final whereClause =
+        excludeId != null ? 'LOWER(name) = ? AND id != ?' : 'LOWER(name) = ?';
     final whereArgs = excludeId != null
         ? [name.toLowerCase(), excludeId]
         : [name.toLowerCase()];
@@ -1587,9 +1583,8 @@ class DatabaseService extends ChangeNotifier {
       try {
         final db = await safeDatabase;
         final newQuoteId = quote.id ?? _uuid.v4();
-        final quoteWithId = quote.id == null
-            ? quote.copyWith(id: newQuoteId)
-            : quote;
+        final quoteWithId =
+            quote.id == null ? quote.copyWith(id: newQuoteId) : quote;
 
         await db.transaction((txn) async {
           final quoteMap = quoteWithId.toJson();
@@ -1635,10 +1630,13 @@ class DatabaseService extends ChangeNotifier {
           // 修复：插入标签关联，避免事务嵌套
           if (quote.tagIds.isNotEmpty) {
             for (final tagId in quote.tagIds) {
-              await txn.insert('quote_tags', {
-                'quote_id': newQuoteId,
-                'tag_id': tagId,
-              }, conflictAlgorithm: ConflictAlgorithm.ignore);
+              await txn.insert(
+                  'quote_tags',
+                  {
+                    'quote_id': newQuoteId,
+                    'tag_id': tagId,
+                  },
+                  conflictAlgorithm: ConflictAlgorithm.ignore);
             }
           }
         });
@@ -1762,9 +1760,8 @@ class DatabaseService extends ChangeNotifier {
 
         // 排除隐藏笔记（除非正在查询隐藏标签）
         if (shouldExcludeHidden) {
-          filtered = filtered
-              .where((q) => !q.tagIds.contains(hiddenTagId))
-              .toList();
+          filtered =
+              filtered.where((q) => !q.tagIds.contains(hiddenTagId)).toList();
         }
 
         if (tagIds != null && tagIds.isNotEmpty) {
@@ -1891,24 +1888,22 @@ class DatabaseService extends ChangeNotifier {
         });
 
         // 异步执行查询
-        query()
-            .then((result) {
-              timeoutTimer?.cancel();
-              if (!completer.isCompleted) {
-                completer.complete(result);
-              }
-            })
-            .catchError((error) {
-              timeoutTimer?.cancel();
-              if (!completer.isCompleted) {
-                logError(
-                  '数据库查询失败: $error',
-                  error: error,
-                  source: 'DatabaseService',
-                );
-                completer.completeError(error);
-              }
-            });
+        query().then((result) {
+          timeoutTimer?.cancel();
+          if (!completer.isCompleted) {
+            completer.complete(result);
+          }
+        }).catchError((error) {
+          timeoutTimer?.cancel();
+          if (!completer.isCompleted) {
+            logError(
+              '数据库查询失败: $error',
+              error: error,
+              source: 'DatabaseService',
+            );
+            completer.completeError(error);
+          }
+        });
 
         final result = await completer.future;
         timeoutTimer.cancel();
@@ -2012,9 +2007,8 @@ class DatabaseService extends ChangeNotifier {
 
     // 时间段筛选
     if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-      final dayPeriodPlaceholders = selectedDayPeriods
-          .map((_) => '?')
-          .join(',');
+      final dayPeriodPlaceholders =
+          selectedDayPeriods.map((_) => '?').join(',');
       conditions.add('q.day_period IN ($dayPeriodPlaceholders)');
       args.addAll(selectedDayPeriods);
     }
@@ -2053,9 +2047,8 @@ class DatabaseService extends ChangeNotifier {
     joinClause = 'LEFT JOIN quote_tags qt ON q.id = qt.quote_id';
     groupByClause = 'GROUP BY q.id';
 
-    final where = conditions.isNotEmpty
-        ? 'WHERE ${conditions.join(' AND ')}'
-        : '';
+    final where =
+        conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
 
     final orderByParts = orderBy.split(' ');
     final correctedOrderBy =
@@ -2064,8 +2057,7 @@ class DatabaseService extends ChangeNotifier {
     /// 修复：始终使用 qt.tag_id 获取所有标签
     // 优化：指定查询列，排除大文本字段(ai_analysis, summary等)以提升列表加载性能
     // 注意：delta_content 必须保留！列表卡片通过 QuoteContent 组件渲染富文本（加粗、图片等）
-    final query =
-        '''
+    final query = '''
       SELECT
         q.id, q.content, q.date, q.source, q.source_author, q.source_work,
         q.category_id, q.color_hex, q.location, q.latitude, q.longitude,
@@ -2100,8 +2092,8 @@ class DatabaseService extends ChangeNotifier {
       final level = queryTime > 1000
           ? '🔴 严重慢查询'
           : queryTime > 500
-          ? '⚠️ 慢查询警告'
-          : 'ℹ️ 性能提示';
+              ? '⚠️ 慢查询警告'
+              : 'ℹ️ 性能提示';
       logDebug('$level: 查询耗时 ${queryTime}ms');
 
       if (queryTime > 500) {
@@ -2186,13 +2178,11 @@ class DatabaseService extends ChangeNotifier {
         }
       }
 
-      final where = conditions.isNotEmpty
-          ? 'WHERE ${conditions.join(' AND ')}'
-          : '';
+      final where =
+          conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
 
       // 只取必要列，不取 delta_content/ai_analysis/summary/keywords
-      final query =
-          '''
+      final query = '''
         SELECT q.id, q.content, q.date, q.source, q.source_author, q.source_work,
                q.category_id, q.color_hex, q.location, q.latitude, q.longitude,
                q.weather, q.temperature, q.edit_source, q.day_period,
@@ -2324,8 +2314,7 @@ class DatabaseService extends ChangeNotifier {
 
       // 修复：使用 LEFT JOIN 获取笔记及其关联的标签
       // 这样可以正确获取每个笔记的 tagIds
-      final String query =
-          '''
+      final String query = '''
         SELECT q.*, GROUP_CONCAT(qt.tag_id) as tag_ids
         FROM quotes q
         LEFT JOIN quote_tags qt ON q.id = qt.quote_id
@@ -2371,9 +2360,8 @@ class DatabaseService extends ChangeNotifier {
 
       // 排除隐藏笔记
       if (shouldExcludeHidden) {
-        filtered = filtered
-            .where((q) => !q.tagIds.contains(hiddenTagId))
-            .toList();
+        filtered =
+            filtered.where((q) => !q.tagIds.contains(hiddenTagId)).toList();
       }
 
       if (tagIds != null && tagIds.isNotEmpty) {
@@ -2459,9 +2447,8 @@ class DatabaseService extends ChangeNotifier {
 
       // 时间段筛选
       if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-        final dayPeriodPlaceholders = selectedDayPeriods
-            .map((_) => '?')
-            .join(',');
+        final dayPeriodPlaceholders =
+            selectedDayPeriods.map((_) => '?').join(',');
         conditions.add('q.day_period IN ($dayPeriodPlaceholders)');
         args.addAll(selectedDayPeriods);
       }
@@ -2482,15 +2469,13 @@ class DatabaseService extends ChangeNotifier {
         conditions.add('qt.tag_id IN ($tagPlaceholders)');
         finalArgs.addAll(tagIds);
 
-        final whereClause = conditions.isNotEmpty
-            ? 'WHERE ${conditions.join(' AND ')}'
-            : '';
+        final whereClause =
+            conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
 
         String havingClause = 'HAVING COUNT(DISTINCT qt.tag_id) = ?';
         finalArgs.add(tagIds.length);
 
-        query =
-            '''
+        query = '''
           SELECT COUNT(*) FROM (
             $subQuery
             $whereClause
@@ -2500,9 +2485,8 @@ class DatabaseService extends ChangeNotifier {
         ''';
       } else {
         // 没有标签筛选，使用简单的 COUNT
-        final whereClause = conditions.isNotEmpty
-            ? 'WHERE ${conditions.join(' AND ')}'
-            : '';
+        final whereClause =
+            conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
         query = 'SELECT COUNT(*) as count FROM quotes q $whereClause';
       }
 
@@ -2558,8 +2542,8 @@ class DatabaseService extends ChangeNotifier {
           final quoteFromDb = Quote.fromJson(quoteRow);
           final extracted =
               await MediaReferenceService.extractMediaPathsFromQuote(
-                quoteFromDb,
-              );
+            quoteFromDb,
+          );
           mediaPathsToCheck.addAll(extracted);
         } catch (e) {
           logDebug('从笔记内容提取媒体路径失败，继续使用引用表: $e');
@@ -2591,8 +2575,8 @@ class DatabaseService extends ChangeNotifier {
             // 使用轻量级检查（仅查引用表计数）
             final deleted =
                 await MediaReferenceService.quickCheckAndDeleteIfOrphan(
-                  absolutePath,
-                );
+              absolutePath,
+            );
             if (deleted) {
               logDebug('已清理孤儿媒体文件: $absolutePath (原始记录: $storedPath)');
             }
@@ -2718,10 +2702,13 @@ class DatabaseService extends ChangeNotifier {
           /// 修复：插入新的标签关联，避免事务嵌套
           if (quote.tagIds.isNotEmpty) {
             for (final tagId in quote.tagIds) {
-              await txn.insert('quote_tags', {
-                'quote_id': quote.id!,
-                'tag_id': tagId,
-              }, conflictAlgorithm: ConflictAlgorithm.ignore);
+              await txn.insert(
+                  'quote_tags',
+                  {
+                    'quote_id': quote.id!,
+                    'tag_id': tagId,
+                  },
+                  conflictAlgorithm: ConflictAlgorithm.ignore);
             }
           }
 
@@ -2746,8 +2733,8 @@ class DatabaseService extends ChangeNotifier {
             // 使用增强版的 quickCheckAndDeleteIfOrphan（包含内容二次校验）
             final deleted =
                 await MediaReferenceService.quickCheckAndDeleteIfOrphan(
-                  absolutePath,
-                );
+              absolutePath,
+            );
             if (deleted) {
               logDebug('已清理无引用媒体文件: $absolutePath');
             }
@@ -2818,9 +2805,8 @@ class DatabaseService extends ChangeNotifier {
       try {
         // 记录操作前的状态
         final index = _currentQuotes.indexWhere((q) => q.id == quoteId);
-        final oldCount = index != -1
-            ? _currentQuotes[index].favoriteCount
-            : null;
+        final oldCount =
+            index != -1 ? _currentQuotes[index].favoriteCount : null;
         logDebug(
           '收藏操作开始: quoteId=$quoteId, 内存旧值=$oldCount',
           source: 'IncrementFavorite',
@@ -2910,9 +2896,8 @@ class DatabaseService extends ChangeNotifier {
     return _executeWithLock('resetFavorite_$quoteId', () async {
       try {
         final index = _currentQuotes.indexWhere((q) => q.id == quoteId);
-        final oldCount = index != -1
-            ? _currentQuotes[index].favoriteCount
-            : null;
+        final oldCount =
+            index != -1 ? _currentQuotes[index].favoriteCount : null;
         logDebug(
           '清除收藏操作开始: quoteId=$quoteId, 内存旧值=$oldCount',
           source: 'ResetFavorite',
@@ -3058,7 +3043,7 @@ class DatabaseService extends ChangeNotifier {
     // 修复：检查是否是首次调用
     bool isFirstCall =
         (_quotesController == null || _quotesController!.isClosed) ||
-        (_currentQuotes.isEmpty);
+            (_currentQuotes.isEmpty);
 
     logDebug(
       'watchQuotes调用 - isFirstCall: $isFirstCall, hasController: ${_quotesController != null}, '
@@ -3254,23 +3239,22 @@ class DatabaseService extends ChangeNotifier {
     );
 
     try {
-      final quotes =
-          await getUserQuotes(
-            tagIds: tagIds,
-            categoryId: categoryId,
-            offset: _currentQuotes.length,
-            limit: _watchLimit,
-            orderBy: _watchOrderBy,
-            searchQuery: searchQuery,
-            selectedWeathers: selectedWeathers,
-            selectedDayPeriods: selectedDayPeriods,
-          ).timeout(
-            const Duration(seconds: 5), // 缩短超时时间
-            onTimeout: () {
-              logError('getUserQuotes 查询超时（5秒）', source: 'DatabaseService');
-              throw TimeoutException('数据库查询超时', const Duration(seconds: 5));
-            },
-          );
+      final quotes = await getUserQuotes(
+        tagIds: tagIds,
+        categoryId: categoryId,
+        offset: _currentQuotes.length,
+        limit: _watchLimit,
+        orderBy: _watchOrderBy,
+        searchQuery: searchQuery,
+        selectedWeathers: selectedWeathers,
+        selectedDayPeriods: selectedDayPeriods,
+      ).timeout(
+        const Duration(seconds: 5), // 缩短超时时间
+        onTimeout: () {
+          logError('getUserQuotes 查询超时（5秒）', source: 'DatabaseService');
+          throw TimeoutException('数据库查询超时', const Duration(seconds: 5));
+        },
+      );
 
       if (quotes.isEmpty) {
         // 没有更多数据了

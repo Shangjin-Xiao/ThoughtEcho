@@ -3,8 +3,7 @@ import 'dart:io';
 import 'package:uuid/uuid.dart';
 // 条件导入：Web平台使用stub实现，其他平台使用gal
 import '../utils/stub_implementations.dart'
-    if (dart.library.io) 'package:gal/gal.dart'
-    as gal;
+    if (dart.library.io) 'package:gal/gal.dart' as gal;
 import '../models/quote_model.dart';
 import '../models/generated_card.dart';
 import '../constants/ai_card_prompts.dart';
@@ -257,7 +256,7 @@ class AICardGenerationService {
         case DatabaseService.defaultCategoryIdMusic: // 音乐 -> 情感/日记
           return CardType.emotional;
         case DatabaseService
-            .defaultCategoryIdInternet: // 网络 -> 开发者/代码 (通常是网络段子或技术梗)
+              .defaultCategoryIdInternet: // 网络 -> 开发者/代码 (通常是网络段子或技术梗)
           return CardType.dev;
         case DatabaseService.defaultCategoryIdMovie: // 影视 -> 引用/剧照感
           return CardType.quote;
@@ -712,8 +711,8 @@ class AICardGenerationService {
       // 先渲染图片（此时尚未出现 async gap，满足 use_build_context_synchronously 规范）
       final safeContext =
           (context != null && context is Element && !context.mounted)
-          ? null
-          : context;
+              ? null
+              : context;
 
       // 关键修复：直接使用原始 svgContent，不做任何标准化处理
       // 这样保证保存时的渲染与预览完全一致（预览使用 SVGCardWidget 直接渲染原始 SVG）

@@ -213,9 +213,8 @@ class ClipboardService extends ChangeNotifier {
       author = clean(m4.group(1));
       matchedSubstring = m4.group(0);
       // 尝试在此基础上再提取出处
-      final remainingText = text
-          .substring(0, text.length - matchedSubstring!.length)
-          .trim();
+      final remainingText =
+          text.substring(0, text.length - matchedSubstring!.length).trim();
       final m4Source = _pattern4Source.firstMatch(remainingText);
       if (m4Source != null) {
         source = clean(m4Source.group(1));
@@ -237,9 +236,8 @@ class ClipboardService extends ChangeNotifier {
       source = clean(m5.group(1));
       matchedSubstring = m5.group(0);
       // 尝试在此基础上再提取作者
-      final remainingText = text
-          .substring(0, text.length - matchedSubstring!.length)
-          .trim();
+      final remainingText =
+          text.substring(0, text.length - matchedSubstring!.length).trim();
       final m5Author = _pattern5Author.firstMatch(remainingText);
       if (m5Author != null) {
         author = clean(m5Author.group(1));

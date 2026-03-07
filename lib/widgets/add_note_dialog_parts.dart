@@ -262,8 +262,8 @@ class _TagListItem extends StatelessWidget {
           ? Text(
               l10n.hiddenTagUsageHint,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             )
@@ -324,9 +324,8 @@ class SelectedTagsDisplay extends StatelessWidget {
               // 检查是否是隐藏标签
               final bool isHiddenTag = tagId == DatabaseService.hiddenTagId;
               // 隐藏标签使用国际化名称
-              final String displayName = isHiddenTag
-                  ? l10n.hiddenTag
-                  : tag.name;
+              final String displayName =
+                  isHiddenTag ? l10n.hiddenTag : tag.name;
 
               return Chip(
                 label: IconUtils.isEmoji(tag.iconName)
