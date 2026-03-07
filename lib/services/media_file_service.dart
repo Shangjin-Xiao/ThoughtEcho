@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/utils/path_security_utils.dart';
 import 'large_file_manager.dart';
 import 'streaming_file_processor.dart';
 
@@ -413,11 +414,11 @@ class MediaFileService {
           final relativePath = path.relative(file.path, from: backupMediaDir);
           final targetPath = path.join(appDir.path, relativePath);
 
-          // 路径遍历防护：确保目标路径在应用目录内
-          final canonicalTarget = path.canonicalize(targetPath);
-          final canonicalAppDir = path.canonicalize(appDir.path);
-          if (!canonicalTarget.startsWith(canonicalAppDir)) {
-            debugPrint('路径安全检查失败，跳过: $relativePath');
+          // 路径遍历防护：使用 PathSecurityUtils 深度验证
+          try {
+            PathSecurityUtils.validateExtractionPath(targetPath, appDir.path);
+          } catch (e) {
+            debugPrint('路径安全检查失败，跳过: $relativePath ($e)');
             continue;
           }
 

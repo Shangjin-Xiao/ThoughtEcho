@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../models/ai_settings.dart';
 import '../models/ai_provider_settings.dart';
 import '../models/quote_model.dart';
@@ -217,7 +218,9 @@ class AIRequestHelper {
         data['choices'][0]['message'] != null) {
       return data['choices'][0]['message']['content'];
     } else {
-      logDebug('API响应格式错误: $data');
+      if (kDebugMode) {
+        logDebug('API响应格式错误: $data');
+      }
       throw Exception('API响应格式错误');
     }
   }

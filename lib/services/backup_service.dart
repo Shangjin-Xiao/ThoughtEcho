@@ -9,6 +9,7 @@ import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/services/large_file_manager.dart';
 import 'package:thoughtecho/utils/zip_stream_processor.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:thoughtecho/utils/path_security_utils.dart';
 import 'package:thoughtecho/utils/device_memory_manager.dart';
 import 'package:thoughtecho/models/merge_report.dart';
 import 'streaming_backup_processor.dart';
@@ -837,11 +838,11 @@ class BackupService {
           // 将路径中的正斜杠转换为当前平台的路径分隔符
           final normalizedPath = originalPath.replaceAll('/', path.separator);
           final absolutePath = path.join(appPath, normalizedPath);
-          // 路径遍历防护：确保还原路径在应用目录内
-          final canonicalResult = path.canonicalize(absolutePath);
-          final canonicalApp = path.canonicalize(appPath);
-          if (!canonicalResult.startsWith(canonicalApp)) {
-            logError('路径安全检查失败，拒绝还原: $originalPath');
+          // 路径遍历防护：使用 PathSecurityUtils 深度验证
+          try {
+            PathSecurityUtils.validateExtractionPath(absolutePath, appPath);
+          } catch (e) {
+            logError('路径安全检查失败，拒绝还原: $originalPath ($e)');
             return originalPath;
           }
           logDebug('媒体路径还原: $originalPath -> $absolutePath');

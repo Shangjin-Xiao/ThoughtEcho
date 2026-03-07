@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:convert';
@@ -232,7 +233,8 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(l10n.parseResultFailedWithError(e.toString())),
+              content: Text(l10n
+                  .parseResultFailedWithError(kDebugMode ? e.toString() : '')),
               duration: AppConstants.snackBarDurationError,
             ),
           );
@@ -248,7 +250,8 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10n.analysisFailedWithError(e.toString())),
+            content: Text(
+                l10n.analysisFailedWithError(kDebugMode ? e.toString() : '')),
             duration: AppConstants.snackBarDurationError,
           ),
         );

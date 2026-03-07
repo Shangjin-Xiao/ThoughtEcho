@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../models/ai_settings.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 
@@ -216,23 +217,31 @@ class StreamingUtils {
     // 安全的JSON编码，避免类型转换错误
     try {
       final jsonString = json.encode(validatedRequestBody);
-      logDebug('请求体: $jsonString');
+      if (kDebugMode) {
+        logDebug('请求体: $jsonString');
+      }
     } catch (e) {
-      logDebug('JSON编码错误: $e');
-      logDebug('请求体数据类型检查:');
-      validatedRequestBody.forEach((key, value) {
-        logDebug('  $key: ${value.runtimeType} = $value');
-      });
+      if (kDebugMode) {
+        logDebug('JSON编码错误: $e');
+        logDebug('请求体数据类型检查:');
+        validatedRequestBody.forEach((key, value) {
+          logDebug('  $key: ${value.runtimeType} = $value');
+        });
+      }
       // 尝试修复数据类型问题
       final fixedRequestBody = _fixDataTypes(validatedRequestBody);
       try {
         final jsonString = json.encode(fixedRequestBody);
-        logDebug('修复后的请求体: $jsonString');
+        if (kDebugMode) {
+          logDebug('修复后的请求体: $jsonString');
+        }
         // 使用修复后的数据
         validatedRequestBody.clear();
         validatedRequestBody.addAll(fixedRequestBody);
       } catch (e2) {
-        logDebug('修复后仍然无法编码JSON: $e2');
+        if (kDebugMode) {
+          logDebug('修复后仍然无法编码JSON: $e2');
+        }
         throw Exception('请求数据格式错误: $e2');
       }
     }
