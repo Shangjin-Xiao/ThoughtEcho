@@ -114,7 +114,8 @@ class SVGCardWidget extends StatelessWidget {
       );
     } catch (e) {
       AppLogger.e('SVG组件构建错误: $e', error: e, source: 'SvgCardWidget');
-      return _buildErrorWidget('SVG组件错误: ${e.toString()}');
+      return _buildErrorWidget(
+          kDebugMode ? 'SVG error: $e' : 'SVG render error');
     }
   }
 

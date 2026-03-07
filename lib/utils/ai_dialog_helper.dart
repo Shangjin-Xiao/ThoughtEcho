@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/quote_model.dart';
@@ -141,7 +142,8 @@ class AiDialogHelper {
     } catch (e) {
       if (!context.mounted) return;
       Navigator.of(context).pop();
-      _showSnackBar(l10n.analysisFailedWithError(e.toString()));
+      _showSnackBar(
+          l10n.analysisFailedWithError(kDebugMode ? e.toString() : ''));
     }
   }
 
@@ -233,7 +235,8 @@ class AiDialogHelper {
         },
       );
     } catch (e) {
-      _showSnackBar(l10n.analysisFailedWithError(e.toString()));
+      _showSnackBar(
+          l10n.analysisFailedWithError(kDebugMode ? e.toString() : ''));
     }
   }
 

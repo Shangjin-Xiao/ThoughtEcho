@@ -659,7 +659,9 @@ class NoteListViewState extends State<NoteListView> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
-                '加载失败: ${error.toString().contains('TimeoutException') ? '查询超时' : error.toString()}',
+                error.toString().contains('TimeoutException')
+                    ? '查询超时'
+                    : (kDebugMode ? error.toString() : '加载失败'),
               ),
               duration: AppConstants.snackBarDurationImportant,
               backgroundColor: Colors.red,

@@ -389,35 +389,49 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
   void _handleMulticastMessage(Datagram datagram) {
     try {
       final message = utf8.decode(datagram.data);
-      debugPrint('=== 收到UDP组播消息 ===');
-      debugPrint('来源: ${datagram.address.address}:${datagram.port}');
-      debugPrint('消息长度: ${message.length} 字符');
-      debugPrint('完整消息: $message');
+      if (kDebugMode) {
+        debugPrint('=== 收到UDP组播消息 ===');
+        debugPrint('来源: ${datagram.address.address}:${datagram.port}');
+        debugPrint('消息长度: ${message.length} 字符');
+        debugPrint('完整消息: $message');
+      }
 
       final json = jsonDecode(message) as Map<String, dynamic>;
-      debugPrint('解析JSON成功: $json');
+      if (kDebugMode) {
+        debugPrint('解析JSON成功: $json');
+      }
 
       final dto = MulticastDto.fromJson(json);
-      debugPrint('创建MulticastDto成功');
+      if (kDebugMode) {
+        debugPrint('创建MulticastDto成功');
+      }
 
       // 详细记录指纹信息
       final remoteFingerprint = dto.fingerprint;
       final localFingerprint = _getDeviceFingerprint();
-      debugPrint('远程设备指纹: $remoteFingerprint');
-      debugPrint('本机设备指纹: $localFingerprint');
-      debugPrint('指纹匹配: ${remoteFingerprint == localFingerprint}');
+      if (kDebugMode) {
+        debugPrint('远程设备指纹: $remoteFingerprint');
+        debugPrint('本机设备指纹: $localFingerprint');
+        debugPrint('指纹匹配: ${remoteFingerprint == localFingerprint}');
+      }
 
       // 忽略自己发送的消息
       if (remoteFingerprint == localFingerprint) {
-        debugPrint('✓ 忽略自己发送的消息');
+        if (kDebugMode) {
+          debugPrint('✓ 忽略自己发送的消息');
+        }
         return;
       }
 
       final ip = datagram.address.address;
       final devicePort = dto.port ?? defaultPort;
-      debugPrint('创建设备对象，IP: $ip, 端口: $devicePort');
+      if (kDebugMode) {
+        debugPrint('创建设备对象，IP: $ip, 端口: $devicePort');
+      }
       final device = dto.toDevice(ip, devicePort, false);
-      debugPrint('设备信息: ${device.alias} (${device.ip}:${device.port})');
+      if (kDebugMode) {
+        debugPrint('设备信息: ${device.alias} (${device.ip}:${device.port})');
+      }
 
       // 检查是否已存在
       final existingIndex = _devices.indexWhere(
@@ -428,25 +442,33 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
         _devices.add(device);
         _deviceLastSeen[device.fingerprint] = DateTime.now();
         notifyListeners();
-        debugPrint('✓ 发现新设备: ${device.alias} (${device.ip}:${device.port})');
-        debugPrint(
-          '当前设备列表: ${_devices.map((d) => '${d.alias}(${d.ip}:${d.port})').join(', ')}',
-        );
+        if (kDebugMode) {
+          debugPrint('✓ 发现新设备: ${device.alias} (${device.ip}:${device.port})');
+          debugPrint(
+            '当前设备列表: ${_devices.map((d) => '${d.alias}(${d.ip}:${d.port})').join(', ')}',
+          );
+        }
 
         // 如果是公告消息，回应一个注册消息
         if (dto.announcement == true || dto.announce == true) {
-          debugPrint('收到公告消息，准备发送回应');
+          if (kDebugMode) {
+            debugPrint('收到公告消息，准备发送回应');
+          }
           _respondToAnnouncement(device);
         }
       } else {
         // 更新 last seen
         _deviceLastSeen[device.fingerprint] = DateTime.now();
-        debugPrint('设备已存在: ${device.alias} (${device.ip}:${device.port})');
+        if (kDebugMode) {
+          debugPrint('设备已存在: ${device.alias} (${device.ip}:${device.port})');
+        }
       }
     } catch (e, stack) {
-      debugPrint('解析组播消息失败: $e');
-      debugPrint('堆栈: $stack');
-      debugPrint('原始消息: ${utf8.decode(datagram.data, allowMalformed: true)}');
+      if (kDebugMode) {
+        debugPrint('解析组播消息失败: $e');
+        debugPrint('堆栈: $stack');
+        debugPrint('原始消息: ${utf8.decode(datagram.data, allowMalformed: true)}');
+      }
     }
   }
 

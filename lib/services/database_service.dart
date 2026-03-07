@@ -244,15 +244,20 @@ class DatabaseService extends ChangeNotifier {
     String operationId,
     Future<T> Function() action,
   ) async {
-    // 使用 while 循环确保多个等待者在锁释放后按序竞争，避免并发进入临界区
-    while (_databaseLock.containsKey(operationId)) {
+    // 等待已有锁释放，使用循环处理多个等待者竞争的情况
+    for (;;) {
+      final existing = _databaseLock[operationId];
+      if (existing == null) break;
       try {
-        await _databaseLock[operationId]!.future;
+        await existing.future;
       } catch (_) {
         // 前一个操作的失败不影响当前操作获取锁
       }
+      // 重新检查：其他等待者可能已抢先获取锁
     }
 
+    // Safe: break→assign is synchronous (no await), so Dart's event loop
+    // cannot interleave another coroutine between the check and the set.
     final completer = Completer<void>();
     _databaseLock[operationId] = completer;
 
@@ -2075,7 +2080,9 @@ class DatabaseService extends ChangeNotifier {
 
     args.addAll([limit, offset]);
 
-    logDebug('执行优化查询: $query\n参数: $args');
+    if (kDebugMode) {
+      logDebug('执行优化查询: $query\n参数: $args');
+    }
 
     /// 修复：增强查询性能监控和慢查询检测
     final stopwatch = Stopwatch()..start();

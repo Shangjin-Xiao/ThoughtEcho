@@ -1,6 +1,7 @@
 // filepath: /workspaces/ThoughtEcho/lib/services/clipboard_service.dart
 // ignore_for_file: unused_field
 import '../constants/app_constants.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/note_category.dart';
@@ -94,9 +95,11 @@ class ClipboardService extends ChangeNotifier {
       }
 
       final content = data.text!;
-      logDebug(
-        '检测到新的剪贴板内容: ${content.length > 20 ? '${content.substring(0, 20)}...' : content} (已脱敏)',
-      );
+      if (kDebugMode) {
+        logDebug(
+          '检测到新的剪贴板内容: ${content.length > 20 ? '${content.substring(0, 20)}...' : content} (已脱敏)',
+        );
+      }
 
       // 内容过长或过短不处理
       if (content.length > 5000 || content.length < 5) {

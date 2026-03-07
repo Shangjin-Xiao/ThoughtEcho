@@ -650,7 +650,11 @@ Future<void> main() async {
         _isEmergencyMode = true;
 
         runApp(
-          EmergencyApp(error: e.toString(), stackTrace: stackTrace.toString()),
+          EmergencyApp(
+            error:
+                kDebugMode ? e.toString() : 'Application initialization failed',
+            stackTrace: kDebugMode ? stackTrace.toString() : '',
+          ),
         );
       }
     },
