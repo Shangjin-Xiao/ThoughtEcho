@@ -273,6 +273,14 @@ class DataDirectoryService {
             final relativePath = path.relative(filePath, from: currentPath);
             final targetPath = path.join(newPath, relativePath);
 
+            // 路径遍历防护：确保目标路径在新目录内
+            final canonicalTarget = path.canonicalize(targetPath);
+            final canonicalNew = path.canonicalize(newPath);
+            if (!canonicalTarget.startsWith(canonicalNew)) {
+              logError('路径安全检查失败，跳过: $relativePath');
+              continue;
+            }
+
             onStatusUpdate?.call('正在复制: $relativePath');
 
             // 确保目标目录存在

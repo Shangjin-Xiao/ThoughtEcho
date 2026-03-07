@@ -239,21 +239,24 @@ class DatabaseService extends ChangeNotifier {
     return _database!;
   }
 
-  /// 修复：带锁和超时的数据库操作执行器，防止死锁
+  /// 带锁和超时的数据库操作执行器，防止死锁
   Future<T> _executeWithLock<T>(
     String operationId,
     Future<T> Function() action,
   ) async {
-    // 如果已有相同操作在执行，等待其完成
-    if (_databaseLock.containsKey(operationId)) {
-      await _databaseLock[operationId]!.future;
+    // 使用 while 循环确保多个等待者在锁释放后按序竞争，避免并发进入临界区
+    while (_databaseLock.containsKey(operationId)) {
+      try {
+        await _databaseLock[operationId]!.future;
+      } catch (_) {
+        // 前一个操作的失败不影响当前操作获取锁
+      }
     }
 
     final completer = Completer<void>();
     _databaseLock[operationId] = completer;
 
     try {
-      // 添加超时机制（30秒超时）
       final result = await action().timeout(
         const Duration(seconds: 30),
         onTimeout: () {
@@ -263,14 +266,13 @@ class DatabaseService extends ChangeNotifier {
           );
         },
       );
-      completer.complete();
-      _databaseLock.remove(operationId);
       return result;
     } catch (e) {
-      completer.completeError(e);
-      _databaseLock.remove(operationId);
       logError('数据库操作失败: $operationId', error: e);
       rethrow;
+    } finally {
+      completer.complete();
+      _databaseLock.remove(operationId);
     }
   }
 

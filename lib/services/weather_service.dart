@@ -348,8 +348,9 @@ class WeatherService extends ChangeNotifier {
   /// 设置模拟天气数据（兼容性方法）
   void setMockWeatherData() {
     _currentWeatherData = WeatherData.error();
-    _setState(WeatherServiceState.error);
     _lastError = 'weather_fetch_failed';
+    _state = WeatherServiceState.error;
+    notifyListeners();
     logDebug('天气数据获取失败，显示错误状态');
   }
 

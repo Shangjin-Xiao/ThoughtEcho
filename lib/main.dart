@@ -228,20 +228,17 @@ Future<void> main() async {
         }
       };
       try {
-        // 先初始化必要的平台特定的数据库配置
-        await initializeDatabasePlatform();
-
-        // 初始化轻量级且必须的服务
+        // 并行初始化无依赖关系的服务，加速启动
         final mmkvService = MMKVService();
-        await mmkvService.init();
-
-        // 初始化网络服务
-        await NetworkService.instance.init();
-
-        // 初始化设置服务
-        final settingsService = await SettingsService.create();
-        // 自动获取应用版本号
-        final packageInfo = await PackageInfo.fromPlatform();
+        late final SettingsService settingsService;
+        late final PackageInfo packageInfo;
+        await Future.wait([
+          initializeDatabasePlatform(),
+          mmkvService.init(),
+          NetworkService.instance.init(),
+          SettingsService.create().then((s) => settingsService = s),
+          PackageInfo.fromPlatform().then((p) => packageInfo = p),
+        ]);
         final String currentVersion = packageInfo.version;
         final String? lastVersion = settingsService.getAppVersion();
         final bool hasCompletedOnboarding =

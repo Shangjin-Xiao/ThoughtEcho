@@ -837,6 +837,13 @@ class BackupService {
           // 将路径中的正斜杠转换为当前平台的路径分隔符
           final normalizedPath = originalPath.replaceAll('/', path.separator);
           final absolutePath = path.join(appPath, normalizedPath);
+          // 路径遍历防护：确保还原路径在应用目录内
+          final canonicalResult = path.canonicalize(absolutePath);
+          final canonicalApp = path.canonicalize(appPath);
+          if (!canonicalResult.startsWith(canonicalApp)) {
+            logError('路径安全检查失败，拒绝还原: $originalPath');
+            return originalPath;
+          }
           logDebug('媒体路径还原: $originalPath -> $absolutePath');
           return absolutePath;
         }
