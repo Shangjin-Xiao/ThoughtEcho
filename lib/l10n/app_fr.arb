@@ -140,8 +140,8 @@
   "settingsClose": "Fermer",
   "developerModeEnabled": "🎉 Mode développeur activé !",
   "developerModeDisabled": "✅ Mode développeur désactivé",
-  "devFirstScrollPerfMonitorTitle": "Moniteur de courrier indésirable au premier défilement (Dev)",
-  "devFirstScrollPerfMonitorDesc": "Mesurez les timings des images pour le premier défilement gestuel après l'ouverture de Notes (pas la première image)",
+  "devFirstScrollPerfMonitorTitle": "Moniteur de saccades au premier défilement (Dev)",
+  "devFirstScrollPerfMonitorDesc": "Mesurez les temps d'images pour le premier défilement gestuel après l'ouverture de Notes (pas la première image)",
   "devFirstScrollPerfResult": "Performances au premier défilement : total {total}, jenk {jank}, moyenne {avgMs}ms, pire {worstMs}ms",
   "@devFirstScrollPerfResult": {
     "placeholders": {
