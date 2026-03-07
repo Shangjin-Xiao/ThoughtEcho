@@ -116,6 +116,7 @@ class SmartPushService extends ChangeNotifier {
   /// 设置天气服务（延迟注入）
   void setWeatherService(WeatherService service) {
     _weatherService = service;
+    notifyListeners();
   }
 
   /// 获取自启动权限是否已手动授予（仅用于持久化状态，因为 Android 无法检测该权限）
