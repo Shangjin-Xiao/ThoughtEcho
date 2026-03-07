@@ -8,7 +8,8 @@ class ChatThemeHelper {
     dynamic message,
     int index, {
     required bool isSentByMe,
-  }) createTextMessageBuilder(ThemeData appTheme) {
+  })
+  createTextMessageBuilder(ThemeData appTheme) {
     final colorScheme = appTheme.colorScheme;
     return (context, message, index, {required bool isSentByMe}) {
       return Container(

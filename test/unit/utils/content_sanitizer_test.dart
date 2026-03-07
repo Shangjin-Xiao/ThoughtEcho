@@ -33,8 +33,10 @@ void main() {
 ''';
       final result = ContentSanitizer.injectCsp(html);
       expect(result, contains(expectedCspTag));
-      expect(result,
-          contains('<head>\n    $expectedCspTag\n    <title>Test</title>'));
+      expect(
+        result,
+        contains('<head>\n    $expectedCspTag\n    <title>Test</title>'),
+      );
     });
 
     test('injectCsp injects CSP into <head> with attributes', () {
@@ -50,25 +52,30 @@ void main() {
       final result = ContentSanitizer.injectCsp(html);
       expect(result, contains(expectedCspTag));
       expect(
-          result,
-          contains(
-              '<head profile="http://example.com">\n    $expectedCspTag\n    <title>Test</title>'));
+        result,
+        contains(
+          '<head profile="http://example.com">\n    $expectedCspTag\n    <title>Test</title>',
+        ),
+      );
     });
 
     test(
-        'injectCsp creates <head> and injects CSP if <html> exists but no <head>',
-        () {
-      const html = '''
+      'injectCsp creates <head> and injects CSP if <html> exists but no <head>',
+      () {
+        const html = '''
 <!DOCTYPE html>
 <html>
 <body>Hello</body>
 </html>
 ''';
-      final result = ContentSanitizer.injectCsp(html);
-      expect(result, contains(expectedCspTag));
-      expect(result,
-          contains('<html>\n<head>\n    $expectedCspTag\n</head>\n<body>'));
-    });
+        final result = ContentSanitizer.injectCsp(html);
+        expect(result, contains(expectedCspTag));
+        expect(
+          result,
+          contains('<html>\n<head>\n    $expectedCspTag\n</head>\n<body>'),
+        );
+      },
+    );
 
     test('injectCsp creates <head> when <html> has attributes', () {
       const html = '''
@@ -80,9 +87,11 @@ void main() {
       final result = ContentSanitizer.injectCsp(html);
       expect(result, contains(expectedCspTag));
       expect(
-          result,
-          contains(
-              '<html lang="en">\n<head>\n    $expectedCspTag\n</head>\n<body>'));
+        result,
+        contains(
+          '<html lang="en">\n<head>\n    $expectedCspTag\n</head>\n<body>',
+        ),
+      );
     });
 
     test('injectCsp prepends CSP if no html structure exists', () {

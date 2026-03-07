@@ -178,8 +178,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     // 新建笔记时，自动填充默认作者、出处和标签
     if (widget.initialQuote == null) {
       try {
-        final settingsService =
-            Provider.of<SettingsService>(context, listen: false);
+        final settingsService = Provider.of<SettingsService>(
+          context,
+          listen: false,
+        );
         if (_authorController.text.isEmpty &&
             settingsService.defaultAuthor != null &&
             settingsService.defaultAuthor!.isNotEmpty) {
@@ -206,8 +208,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         if (!mounted) return;
         Future.delayed(const Duration(milliseconds: 300), () {
           if (!mounted) return;
-          final settingsService =
-              Provider.of<SettingsService>(context, listen: false);
+          final settingsService = Provider.of<SettingsService>(
+            context,
+            listen: false,
+          );
           final autoLocation = settingsService.autoAttachLocation;
           final autoWeather = settingsService.autoAttachWeather;
 
@@ -847,7 +851,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     ThemeData theme,
   ) async {
     final l10n = AppLocalizations.of(context);
-    final hasLocationData = _originalLocation != null ||
+    final hasLocationData =
+        _originalLocation != null ||
         (_originalLatitude != null && _originalLongitude != null);
     final hasCoordinates =
         _originalLatitude != null && _originalLongitude != null;
@@ -918,15 +923,17 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       try {
         // 获取当前语言设置（在异步操作前获取，避免context跨越异步间隙）
         if (!context.mounted) return;
-        final locationService =
-            Provider.of<LocationService>(context, listen: false);
+        final locationService = Provider.of<LocationService>(
+          context,
+          listen: false,
+        );
         final localeCode = locationService.currentLocaleCode;
         final addressInfo =
             await LocalGeocodingService.getAddressFromCoordinates(
-          _originalLatitude!,
-          _originalLongitude!,
-          localeCode: localeCode,
-        );
+              _originalLatitude!,
+              _originalLongitude!,
+              localeCode: localeCode,
+            );
         if (addressInfo != null && mounted) {
           final formattedAddress = addressInfo['formatted_address'];
           if (formattedAddress != null && formattedAddress.isNotEmpty) {
@@ -1069,8 +1076,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
     // 检查并请求权限
     if (!locationService.hasLocationPermission) {
-      bool permissionGranted =
-          await locationService.requestLocationPermission();
+      bool permissionGranted = await locationService
+          .requestLocationPermission();
       if (!permissionGranted) {
         if (mounted && context.mounted) {
           final l10n = AppLocalizations.of(context);
@@ -1158,8 +1165,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
     // 检查并请求权限
     if (!locationService.hasLocationPermission) {
-      bool permissionGranted =
-          await locationService.requestLocationPermission();
+      bool permissionGranted = await locationService
+          .requestLocationPermission();
       if (!permissionGranted) {
         if (mounted) {
           final l10n = AppLocalizations.of(context);
@@ -1275,7 +1282,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   /// 新建模式下获取位置和天气，失败时调用回调取消选中
   /// 用于天气按钮点击时的处理
   Future<void> _fetchLocationWeatherWithFailCallback(
-      VoidCallback onFail) async {
+    VoidCallback onFail,
+  ) async {
     final weatherService = Provider.of<WeatherService>(context, listen: false);
     final result = await _fetchLocationCore(onFail: onFail);
     if (result.permissionDenied) return;
@@ -1363,13 +1371,15 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   Future<({bool permissionDenied, Position? position})> _fetchLocationCore({
     required VoidCallback onFail,
   }) async {
-    final locationService =
-        Provider.of<LocationService>(context, listen: false);
+    final locationService = Provider.of<LocationService>(
+      context,
+      listen: false,
+    );
 
     // 检查并请求权限
     if (!locationService.hasLocationPermission) {
-      bool permissionGranted =
-          await locationService.requestLocationPermission();
+      bool permissionGranted = await locationService
+          .requestLocationPermission();
       if (!permissionGranted) {
         if (mounted && context.mounted) {
           final l10n = AppLocalizations.of(context);
@@ -1415,7 +1425,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
   /// 新建模式下获取位置，失败时调用回调取消选中
   Future<void> _fetchLocationForNewNoteWithFailCallback(
-      VoidCallback onFail) async {
+    VoidCallback onFail,
+  ) async {
     final result = await _fetchLocationCore(onFail: onFail);
     if (result.permissionDenied) return;
 
@@ -1618,7 +1629,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       colorHex: _selectedColorHex,
       location: _showLocation
           ? (_location ??
-              (_latitude != null ? LocationService.kAddressPending : null))
+                (_latitude != null ? LocationService.kAddressPending : null))
           : null,
       latitude: _showLocation ? _latitude : null,
       longitude: _showLocation ? _longitude : null,
@@ -1684,17 +1695,19 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     } catch (e) {
       // 数据库保存失败，回滚本次移动到永久目录的媒体文件，避免产生孤儿
       try {
-        await Future.wait(movedToPermanentForThisSave.map((p) async {
-          try {
-            final f = File(p);
-            if (await f.exists()) {
-              await f.delete();
-              logDebug('因保存失败，回滚删除永久媒体文件: $p');
+        await Future.wait(
+          movedToPermanentForThisSave.map((p) async {
+            try {
+              final f = File(p);
+              if (await f.exists()) {
+                await f.delete();
+                logDebug('因保存失败，回滚删除永久媒体文件: $p');
+              }
+            } catch (itemErr) {
+              logDebug('单个媒体文件回滚删除失败: $p, $itemErr');
             }
-          } catch (itemErr) {
-            logDebug('单个媒体文件回滚删除失败: $p, $itemErr');
-          }
-        }));
+          }),
+        );
       } catch (rollbackErr) {
         logDebug('保存失败后的媒体回滚删除出错: $rollbackErr');
       }
@@ -1856,9 +1869,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                 color: isSelected
                                     ? colorScheme.primary
                                     : color == Colors.transparent
-                                        ? Colors.grey
-                                            .applyOpacity(0.5) // MODIFIED
-                                        : Colors.transparent,
+                                    ? Colors.grey.applyOpacity(0.5) // MODIFIED
+                                    : Colors.transparent,
                                 width: 2,
                               ),
                               boxShadow: [
@@ -1876,19 +1888,20 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                               child: isSelected
                                   ? Icon(
                                       Icons.check_circle,
-                                      color: color == Colors.transparent ||
+                                      color:
+                                          color == Colors.transparent ||
                                               color.computeLuminance() > 0.7
                                           ? colorScheme.primary
                                           : Colors.white,
                                       size: 24,
                                     )
                                   : color == Colors.transparent
-                                      ? const Icon(
-                                          Icons.block,
-                                          color: Colors.grey,
-                                          size: 18,
-                                        )
-                                      : null,
+                                  ? const Icon(
+                                      Icons.block,
+                                      color: Colors.grey,
+                                      size: 18,
+                                    )
+                                  : null,
                             ),
                           ),
                         );
@@ -2101,10 +2114,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                         color: theme.colorScheme.surface,
                         border: Border(
                           bottom: BorderSide(
-                            color:
-                                theme.colorScheme.outlineVariant.applyOpacity(
-                              0.1,
-                            ),
+                            color: theme.colorScheme.outlineVariant
+                                .applyOpacity(0.1),
                             width: 1,
                           ),
                         ),
@@ -2140,10 +2151,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                   ),
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
-                                    color:
-                                        theme.colorScheme.outline.applyOpacity(
-                                      0.2,
-                                    ),
+                                    color: theme.colorScheme.outline
+                                        .applyOpacity(0.2),
                                     width: 1,
                                   ),
                                 ),
@@ -2197,8 +2206,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                               : QuillEditorExtensions.getEmbedBuilders(
                                   optimizedImages: false,
                                 ),
-                          placeholder: AppLocalizations.of(context)
-                              .fullscreenEditorPlaceholder,
+                          placeholder: AppLocalizations.of(
+                            context,
+                          ).fullscreenEditorPlaceholder,
                           padding: const EdgeInsets.all(16),
                           autoFocus: false,
                           expands: false,
@@ -2248,8 +2258,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                       value: _saveProgress >= 0.99
                                           ? 1.0
                                           : (_saveProgress <= 0
-                                              ? null
-                                              : _saveProgress),
+                                                ? null
+                                                : _saveProgress),
                                       strokeWidth: 3,
                                     ),
                                   ),
@@ -2323,11 +2333,11 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                         width: 40,
                         height: 4,
                         decoration: BoxDecoration(
-                          color:
-                              theme.colorScheme.onSurfaceVariant.applyOpacity(
-                            // MODIFIED
-                            0.4,
-                          ),
+                          color: theme.colorScheme.onSurfaceVariant
+                              .applyOpacity(
+                                // MODIFIED
+                                0.4,
+                              ),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -2539,7 +2549,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                           children: [
                                             FilterChip(
                                               key: const ValueKey(
-                                                  'full_editor_location_chip'),
+                                                'full_editor_location_chip',
+                                              ),
                                               avatar: Icon(
                                                 Icons.location_on,
                                                 color: _showLocation
@@ -2572,13 +2583,14 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                                   });
                                                   setState(() {});
                                                   await _fetchLocationForNewNoteWithFailCallback(
-                                                      () {
-                                                    // 失败回调：取消选中
-                                                    this.setState(() {
-                                                      _showLocation = false;
-                                                    });
-                                                    setState(() {});
-                                                  });
+                                                    () {
+                                                      // 失败回调：取消选中
+                                                      this.setState(() {
+                                                        _showLocation = false;
+                                                      });
+                                                      setState(() {});
+                                                    },
+                                                  );
                                                 } else {
                                                   this.setState(() {
                                                     _showLocation = value;
@@ -2587,7 +2599,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                                 }
                                               },
                                               selectedColor: theme
-                                                  .colorScheme.primaryContainer,
+                                                  .colorScheme
+                                                  .primaryContainer,
                                             ),
                                             // 小红点：有坐标但没地址时提示可更新（仅已保存笔记）
                                             if (widget.initialQuote?.id !=
@@ -2616,7 +2629,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                       Expanded(
                                         child: FilterChip(
                                           key: const ValueKey(
-                                              'full_editor_weather_chip'),
+                                            'full_editor_weather_chip',
+                                          ),
                                           avatar: Icon(
                                             _weather != null
                                                 ? _getWeatherIcon(_weather!)
@@ -2636,14 +2650,17 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                               if (_originalWeather == null) {
                                                 final l10n =
                                                     AppLocalizations.of(
-                                                        context);
+                                                      context,
+                                                    );
                                                 await showDialog(
                                                   context: context,
                                                   builder: (ctx) => AlertDialog(
                                                     title: Text(
-                                                        l10n.cannotAddWeather),
-                                                    content: Text(l10n
-                                                        .cannotAddWeatherDesc),
+                                                      l10n.cannotAddWeather,
+                                                    ),
+                                                    content: Text(
+                                                      l10n.cannotAddWeatherDesc,
+                                                    ),
                                                     actions: [
                                                       TextButton(
                                                         onPressed: () =>
@@ -2670,13 +2687,14 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                               });
                                               setState(() {});
                                               await _fetchLocationWeatherWithFailCallback(
-                                                  () {
-                                                // 失败回调：取消选中
-                                                this.setState(() {
-                                                  _showWeather = false;
-                                                });
-                                                setState(() {});
-                                              });
+                                                () {
+                                                  // 失败回调：取消选中
+                                                  this.setState(() {
+                                                    _showWeather = false;
+                                                  });
+                                                  setState(() {});
+                                                },
+                                              );
                                             } else {
                                               this.setState(() {
                                                 _showWeather = value;
@@ -2685,7 +2703,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                             }
                                           },
                                           selectedColor: theme
-                                              .colorScheme.primaryContainer,
+                                              .colorScheme
+                                              .primaryContainer,
                                         ),
                                       ),
                                       // 刷新按钮 - 仅新建模式显示（未保存的笔记）
@@ -2727,22 +2746,20 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                             child: Text(
                                               // 优先显示地址，没有地址时显示坐标
                                               (_location != null &&
-                                                      LocationService
-                                                          .formatLocationForDisplay(
+                                                      LocationService.formatLocationForDisplay(
                                                         _location,
                                                       ).isNotEmpty)
-                                                  ? LocationService
-                                                      .formatLocationForDisplay(
+                                                  ? LocationService.formatLocationForDisplay(
                                                       _location,
                                                     )
                                                   : ((_latitude != null &&
-                                                          _longitude != null)
-                                                      ? '📍 ${LocationService.formatCoordinates(_latitude, _longitude)}'
-                                                      : l10n
-                                                          .gettingLocationHint),
+                                                            _longitude != null)
+                                                        ? '📍 ${LocationService.formatCoordinates(_latitude, _longitude)}'
+                                                        : l10n.gettingLocationHint),
                                               style: TextStyle(
                                                 fontSize: 14,
-                                                color: theme.colorScheme
+                                                color: theme
+                                                    .colorScheme
                                                     .onSurfaceVariant,
                                               ),
                                             ),
@@ -2760,15 +2777,15 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                         ),
                                         const SizedBox(width: 8),
                                         Text(
-                                          WeatherService
-                                              .getLocalizedWeatherDescription(
+                                          WeatherService.getLocalizedWeatherDescription(
                                             AppLocalizations.of(context),
                                             _weather!,
                                           ),
                                           style: TextStyle(
                                             fontSize: 14,
                                             color: theme
-                                                .colorScheme.onSurfaceVariant,
+                                                .colorScheme
+                                                .onSurfaceVariant,
                                           ),
                                         ),
                                         if (_temperature != null)
@@ -2777,7 +2794,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                             style: TextStyle(
                                               fontSize: 14,
                                               color: theme
-                                                  .colorScheme.onSurfaceVariant,
+                                                  .colorScheme
+                                                  .onSurfaceVariant,
                                             ),
                                           ),
                                       ],
@@ -2884,13 +2902,16 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                     child: Builder(
                                       builder: (context) {
                                         // 过滤标签
-                                        final filteredTags =
-                                            widget.allTags!.where((tag) {
-                                          return _tagSearchQuery.isEmpty ||
-                                              tag.name.toLowerCase().contains(
-                                                    _tagSearchQuery,
-                                                  );
-                                        }).toList();
+                                        final filteredTags = widget.allTags!
+                                            .where((tag) {
+                                              return _tagSearchQuery.isEmpty ||
+                                                  tag.name
+                                                      .toLowerCase()
+                                                      .contains(
+                                                        _tagSearchQuery,
+                                                      );
+                                            })
+                                            .toList();
 
                                         if (filteredTags.isEmpty) {
                                           return Center(
@@ -2931,7 +2952,8 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                                                 });
                                               },
                                               selectedColor: theme
-                                                  .colorScheme.primaryContainer,
+                                                  .colorScheme
+                                                  .primaryContainer,
                                               checkmarkColor:
                                                   theme.colorScheme.primary,
                                             );
@@ -3710,25 +3732,27 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
       // 获取草稿引用的媒体文件，避免误删
       final draftMediaPaths = await DraftService().getAllMediaPathsInDrafts();
 
-      await Future.wait(_sessionImportedMedia.map((p) async {
-        try {
-          // 如果被草稿引用，跳过删除
-          if (draftMediaPaths.contains(p)) {
-            logDebug('文件被草稿引用，跳过会话级清理: $p');
-            return;
-          }
-
-          final refCount = await MediaReferenceService.getReferenceCount(p);
-          if (refCount <= 0) {
-            final deleted = await MediaFileService.deleteMediaFile(p);
-            if (deleted) {
-              logDebug('未保存退出，已删除未引用媒体文件: $p');
+      await Future.wait(
+        _sessionImportedMedia.map((p) async {
+          try {
+            // 如果被草稿引用，跳过删除
+            if (draftMediaPaths.contains(p)) {
+              logDebug('文件被草稿引用，跳过会话级清理: $p');
+              return;
             }
+
+            final refCount = await MediaReferenceService.getReferenceCount(p);
+            if (refCount <= 0) {
+              final deleted = await MediaFileService.deleteMediaFile(p);
+              if (deleted) {
+                logDebug('未保存退出，已删除未引用媒体文件: $p');
+              }
+            }
+          } catch (e) {
+            logDebug('清理会话媒体失败: $p, 错误: $e');
           }
-        } catch (e) {
-          logDebug('清理会话媒体失败: $p, 错误: $e');
-        }
-      }));
+        }),
+      );
     } catch (e) {
       logDebug('执行会话级媒体清理出错: $e');
     }

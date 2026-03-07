@@ -21,7 +21,8 @@ class NoteFilterSortSheet extends StatefulWidget {
     bool sortAscending,
     List<String> selectedWeathers,
     List<String> selectedDayPeriods,
-  ) onApply;
+  )
+  onApply;
 
   const NoteFilterSortSheet({
     super.key,
@@ -113,7 +114,9 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
   /// 获取本地化的天气筛选分类标签
   String _getWeatherFilterLabel(BuildContext context, String filterCategory) {
     return WeatherService.getLocalizedFilterCategoryLabel(
-        context, filterCategory);
+      context,
+      filterCategory,
+    );
   }
 
   /// 获取本地化的时间段标签
@@ -337,8 +340,8 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
               isEmoji
                   ? Text(tag.iconName!, style: const TextStyle(fontSize: 16))
                   : (tagIcon is IconData)
-                      ? Icon(tagIcon, size: 16)
-                      : const SizedBox.shrink(),
+                  ? Icon(tagIcon, size: 16)
+                  : const SizedBox.shrink(),
             const SizedBox(width: 4),
             Flexible(
               child: Text(
@@ -387,9 +390,9 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
 
       if (!authenticated) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.biometricAuthFailed)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l10n.biometricAuthFailed)));
         }
         return;
       }

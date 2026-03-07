@@ -24,7 +24,7 @@ class AIService extends ChangeNotifier {
   final AIRequestHelper _requestHelper = AIRequestHelper();
 
   AIService({required SettingsService settingsService})
-      : _settingsService = settingsService;
+    : _settingsService = settingsService;
 
   Future<void> _validateSettings({bool testNetwork = false}) async {
     try {
@@ -95,8 +95,9 @@ class AIService extends ChangeNotifier {
       );
 
       final content = _requestHelper.parseResponse(response);
-      final preview =
-          content.length > 20 ? '${content.substring(0, 20)}...' : content;
+      final preview = content.length > 20
+          ? '${content.substring(0, 20)}...'
+          : content;
       logDebug('AI连接测试成功: $preview');
       return true;
     } catch (e) {
@@ -126,8 +127,9 @@ class AIService extends ChangeNotifier {
       }
 
       // 如果没有当前provider，检查是否有任何可用的provider
-      final availableProviders =
-          multiSettings.providers.where((p) => p.isEnabled).toList();
+      final availableProviders = multiSettings.providers
+          .where((p) => p.isEnabled)
+          .toList();
 
       return availableProviders.isNotEmpty;
     } catch (e) {
@@ -209,8 +211,9 @@ class AIService extends ChangeNotifier {
         final currentProvider = multiSettings.currentProvider!;
 
         // 直接使用Quote的content字段（纯文本内容），移除媒体占位符
-        final content =
-            StringUtils.removeObjectReplacementChar(quote.content).trim();
+        final content = StringUtils.removeObjectReplacementChar(
+          quote.content,
+        ).trim();
 
         if (content.isEmpty) {
           throw Exception('没有可分析的文本内容');
@@ -244,8 +247,9 @@ class AIService extends ChangeNotifier {
         final currentProvider = multiSettings.currentProvider!;
 
         // 直接使用Quote的content字段（纯文本内容），移除媒体占位符
-        final content =
-            StringUtils.removeObjectReplacementChar(quote.content).trim();
+        final content = StringUtils.removeObjectReplacementChar(
+          quote.content,
+        ).trim();
 
         if (content.isEmpty) {
           controller.addError(Exception('没有可分析的文本内容'));
@@ -427,14 +431,14 @@ class AIService extends ChangeNotifier {
           logDebug('API Key有效，使用AI生成每日提示');
 
           // 获取包含环境信息的系统提示词
-          final systemPromptWithContext =
-              _promptManager.getDailyPromptSystemPromptWithContext(
-            city: city,
-            weather: weather,
-            temperature: temperature,
-            historicalInsights: historicalInsights, // 传递历史洞察
-            languageCode: languageCode, // 传递语言代码
-          );
+          final systemPromptWithContext = _promptManager
+              .getDailyPromptSystemPromptWithContext(
+                city: city,
+                weather: weather,
+                temperature: temperature,
+                historicalInsights: historicalInsights, // 传递历史洞察
+                languageCode: languageCode, // 传递语言代码
+              );
 
           final userMessage = _promptManager.buildDailyPromptUserMessage(
             city: city,
@@ -1129,8 +1133,9 @@ class AIService extends ChangeNotifier {
         final currentProvider = await _getCurrentProviderWithApiKey();
 
         // 直接使用Quote的content字段（纯文本内容），移除媒体占位符
-        final content =
-            StringUtils.removeObjectReplacementChar(quote.content).trim();
+        final content = StringUtils.removeObjectReplacementChar(
+          quote.content,
+        ).trim();
 
         if (content.isEmpty) {
           throw Exception('没有可分析的文本内容');
@@ -1169,8 +1174,9 @@ class AIService extends ChangeNotifier {
         final currentProvider = await _getCurrentProviderWithApiKey();
 
         // 直接使用Quote的content字段（纯文本内容），移除媒体占位符
-        final content =
-            StringUtils.removeObjectReplacementChar(quote.content).trim();
+        final content = StringUtils.removeObjectReplacementChar(
+          quote.content,
+        ).trim();
 
         if (content.isEmpty) {
           controller.addError(Exception('没有可分析的文本内容'));
@@ -1229,8 +1235,9 @@ class AIService extends ChangeNotifier {
         );
 
         final content = _requestHelper.parseResponse(response);
-        final preview =
-            content.length > 20 ? '${content.substring(0, 20)}...' : content;
+        final preview = content.length > 20
+            ? '${content.substring(0, 20)}...'
+            : content;
         logDebug('AI连接测试成功: $preview');
       },
       context: 'AI连接测试',
@@ -1288,8 +1295,9 @@ class AIService extends ChangeNotifier {
       final multiSettings = _settingsService.multiAISettings;
 
       // 直接使用Quote的content字段（纯文本内容），移除媒体占位符
-      final content =
-          StringUtils.removeObjectReplacementChar(quote.content).trim();
+      final content = StringUtils.removeObjectReplacementChar(
+        quote.content,
+      ).trim();
 
       if (content.isEmpty) {
         throw Exception('没有可分析的文本内容');

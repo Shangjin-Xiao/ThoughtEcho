@@ -322,8 +322,9 @@ class SvgToImageService {
       source: 'SvgToImageService',
     );
 
-    final safeScale =
-        scaleFactor.isFinite && scaleFactor > 0 ? scaleFactor : 1.0;
+    final safeScale = scaleFactor.isFinite && scaleFactor > 0
+        ? scaleFactor
+        : 1.0;
 
     final outputSize = Size(width.toDouble(), height.toDouble());
     final fit = switch (renderMode) {
@@ -756,7 +757,8 @@ class SvgToImageService {
         final attrs = _parseAttributes(rawTag);
         double x = _parseDimension(attrs['x']);
         final y = _parseDimension(attrs['y']);
-        final anchor = attrs['text-anchor'] ??
+        final anchor =
+            attrs['text-anchor'] ??
             _parseStyleValue(attrs['style'], 'text-anchor') ??
             'start';
         final fill = _extractFill(attrs, defaultColor: '#000000');

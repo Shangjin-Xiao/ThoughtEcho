@@ -101,28 +101,28 @@ class AppSettings {
   }
 
   factory AppSettings.defaultSettings() => AppSettings(
-        hitokotoType: 'a,b,c,d,e,f,g,h,i,j,k',
-        clipboardMonitoringEnabled: false,
-        defaultStartPage: 0,
-        hasCompletedOnboarding: false,
-        aiCardGenerationEnabled: true,
-        reportInsightsUseAI: false,
-        todayThoughtsUseAI: true,
-        prioritizeBoldContentInCollapse: false,
-        showFavoriteButton: true,
-        useLocalQuotesOnly: false,
-        localeCode: null, // 默认跟随系统
-        showExactTime: false, // 默认不显示精确时间
-        enableHiddenNotes: false, // 默认不启用隐藏笔记功能
-        requireBiometricForHidden: false, // 默认不需要生物识别验证
-        developerMode: false, // 默认关闭开发者模式
-        enableFirstOpenScrollPerfMonitor: false,
-        autoAttachLocation: false, // 默认不自动勾选位置
-        autoAttachWeather: false, // 默认不自动勾选天气
-        defaultAuthor: null,
-        defaultSource: null,
-        defaultTagIds: const [],
-      );
+    hitokotoType: 'a,b,c,d,e,f,g,h,i,j,k',
+    clipboardMonitoringEnabled: false,
+    defaultStartPage: 0,
+    hasCompletedOnboarding: false,
+    aiCardGenerationEnabled: true,
+    reportInsightsUseAI: false,
+    todayThoughtsUseAI: true,
+    prioritizeBoldContentInCollapse: false,
+    showFavoriteButton: true,
+    useLocalQuotesOnly: false,
+    localeCode: null, // 默认跟随系统
+    showExactTime: false, // 默认不显示精确时间
+    enableHiddenNotes: false, // 默认不启用隐藏笔记功能
+    requireBiometricForHidden: false, // 默认不需要生物识别验证
+    developerMode: false, // 默认关闭开发者模式
+    enableFirstOpenScrollPerfMonitor: false,
+    autoAttachLocation: false, // 默认不自动勾选位置
+    autoAttachWeather: false, // 默认不自动勾选天气
+    defaultAuthor: null,
+    defaultSource: null,
+    defaultTagIds: const [],
+  );
 
   /// 使用特殊标记来区分"未指定"和"设置为null（跟随系统）"
   AppSettings copyWith({
@@ -162,7 +162,8 @@ class AppSettings {
           aiCardGenerationEnabled ?? this.aiCardGenerationEnabled,
       reportInsightsUseAI: reportInsightsUseAI ?? this.reportInsightsUseAI,
       todayThoughtsUseAI: todayThoughtsUseAI ?? this.todayThoughtsUseAI,
-      prioritizeBoldContentInCollapse: prioritizeBoldContentInCollapse ??
+      prioritizeBoldContentInCollapse:
+          prioritizeBoldContentInCollapse ??
           this.prioritizeBoldContentInCollapse,
       showFavoriteButton: showFavoriteButton ?? this.showFavoriteButton,
       useLocalQuotesOnly: useLocalQuotesOnly ?? this.useLocalQuotesOnly,
@@ -172,14 +173,17 @@ class AppSettings {
       requireBiometricForHidden:
           requireBiometricForHidden ?? this.requireBiometricForHidden,
       developerMode: developerMode ?? this.developerMode,
-      enableFirstOpenScrollPerfMonitor: enableFirstOpenScrollPerfMonitor ??
+      enableFirstOpenScrollPerfMonitor:
+          enableFirstOpenScrollPerfMonitor ??
           this.enableFirstOpenScrollPerfMonitor,
       autoAttachLocation: autoAttachLocation ?? this.autoAttachLocation,
       autoAttachWeather: autoAttachWeather ?? this.autoAttachWeather,
-      defaultAuthor:
-          clearDefaultAuthor ? null : (defaultAuthor ?? this.defaultAuthor),
-      defaultSource:
-          clearDefaultSource ? null : (defaultSource ?? this.defaultSource),
+      defaultAuthor: clearDefaultAuthor
+          ? null
+          : (defaultAuthor ?? this.defaultAuthor),
+      defaultSource: clearDefaultSource
+          ? null
+          : (defaultSource ?? this.defaultSource),
       defaultTagIds: defaultTagIds ?? this.defaultTagIds,
     );
   }

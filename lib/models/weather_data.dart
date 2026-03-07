@@ -81,7 +81,8 @@ class WeatherData {
       temperature: json['temperature']?.toDouble(),
       temperatureText: json['temperatureText'],
       iconCode: json['iconCode'] ?? 'cloudy',
-      timestamp: DateTime.tryParse(json['timestamp']?.toString() ?? '') ??
+      timestamp:
+          DateTime.tryParse(json['timestamp']?.toString() ?? '') ??
           DateTime.now(),
       latitude: json['latitude']?.toDouble(),
       longitude: json['longitude']?.toDouble(),
