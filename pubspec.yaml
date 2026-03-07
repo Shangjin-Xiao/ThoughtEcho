@@ -46,6 +46,7 @@ dependencies:
   flutter_quill_extensions: ^11.0.0
   video_player: ^2.8.17
   chewie: ^1.13.0
+  photo_view: ^0.15.0
   image_picker: ^1.0.4
   package_info_plus: ^8.3.1 # 与 geolocator 兼容
   logging: ^1.2.0 # 添加 logging 包用于日志管理
