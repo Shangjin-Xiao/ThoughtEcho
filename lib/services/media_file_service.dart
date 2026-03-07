@@ -413,6 +413,14 @@ class MediaFileService {
           final relativePath = path.relative(file.path, from: backupMediaDir);
           final targetPath = path.join(appDir.path, relativePath);
 
+          // 路径遍历防护：确保目标路径在应用目录内
+          final canonicalTarget = path.canonicalize(targetPath);
+          final canonicalAppDir = path.canonicalize(appDir.path);
+          if (!canonicalTarget.startsWith(canonicalAppDir)) {
+            debugPrint('路径安全检查失败，跳过: $relativePath');
+            continue;
+          }
+
           debugPrint('恢复文件: $relativePath -> $targetPath');
 
           // 确保目标目录存在
