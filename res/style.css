@@ -172,8 +172,6 @@
             position: relative;
             z-index: 1001; /* Ensure nav items are above overlay */
         }
-            align-items: center;
-        }
 
         .nav-brand {
             display: flex;
