@@ -1410,16 +1410,6 @@
       }
     }
   },
-  "@operationFailed": {
-    "placeholders": {
-      "operation": {
-        "type": "String"
-      },
-      "error": {
-        "type": "String"
-      }
-    }
-  },
   "loadStatsFailed": "Failed to load statistics",
   "mediaFileStats": "Media File Statistics",
   "totalFiles": "Total Files",
@@ -3072,15 +3062,23 @@
   "locationDisplayFormat": "{city}{suffix}",
   "@locationDisplayFormat": {
     "placeholders": {
-      "city": {"type": "String"},
-      "suffix": {"type": "String"}
+      "city": {
+        "type": "String"
+      },
+      "suffix": {
+        "type": "String"
+      }
     }
   },
   "locationDisplayWithDistrict": "{city} · {district}",
   "@locationDisplayWithDistrict": {
     "placeholders": {
-      "city": {"type": "String"},
-      "district": {"type": "String"}
+      "city": {
+        "type": "String"
+      },
+      "district": {
+        "type": "String"
+      }
     }
   },
   "noLocationInfo": "No location info",
@@ -3190,18 +3188,15 @@
   "clearFavoriteSuccess": "Favorite cleared",
   "clearFavoriteFailed": "Failed to clear favorite",
   "moreOptions": "More options",
-
   "localAiFeatures": "Local AI Features",
   "localAiFeaturesPreview": "Preview",
   "localAiFeaturesDesc": "Enhance your note-taking experience with on-device AI",
   "enableLocalAi": "Enable Local AI",
   "enableLocalAiDesc": "Turn on to enable on-device AI features",
   "localAiPreviewNote": "This feature is currently in preview. Some features may be unstable",
-
   "inputEnhancement": "Input Enhancement",
   "searchAndDiscovery": "Search & Discovery",
   "contentAnalysis": "Content Analysis",
-
   "speechToText": "Speech to Text",
   "speechToTextDesc": "Long press the record button to convert speech to text in real-time",
   "ocrRecognition": "OCR Recognition",
@@ -3210,19 +3205,16 @@
   "aiCorrectionDesc": "Intelligently fix recognition errors from speech and OCR",
   "sourceRecognition": "Source Recognition",
   "sourceRecognitionDesc": "Automatically extract author and work information from text",
-
   "aiSearch": "AI Semantic Search",
   "aiSearchDesc": "Use AI to understand search intent and find semantically related notes",
   "relatedNotes": "Related Notes",
   "relatedNotesDesc": "Recommend related notes based on content similarity",
-
   "smartTags": "Smart Tags",
   "smartTagsDesc": "Intelligently suggest tags when saving notes",
   "noteClassification": "Note Classification",
   "noteClassificationDesc": "Automatically identify note types (insights, excerpts, diary, etc.)",
   "emotionDetection": "Emotion Detection",
   "emotionDetectionDesc": "Analyze the emotional sentiment of note content",
-
   "swipeUpForOcr": "Swipe up for OCR",
   "listening": "Listening...",
   "recording": "Recording",
@@ -3234,27 +3226,23 @@
   "correctionComplete": "Correction complete",
   "recognizing": "Recognizing...",
   "recognitionComplete": "Recognition complete",
-
   "voiceInputTitle": "Voice Input",
   "voiceResultTitle": "Voice Recognition Result",
   "ocrCaptureTitle": "OCR Text Recognition",
-  "ocrResultTitle": "Recognition Result",
+  "ocrResultTitle": "OCR Recognition Result",
   "selectTextRegions": "Select text regions to extract",
   "takeAnotherPhoto": "Take Another Photo",
   "finishSelection": "Finish Selection",
   "noTextDetected": "No text detected",
   "tapToSelectRegion": "Tap to select text region",
-
-  "aiSearchMode": "AI Search Mode",
-  "normalSearchMode": "Normal Search Mode",
+  "aiSearchMode": "AI Search",
+  "normalSearchMode": "Normal Search",
   "switchToAiSearch": "Switch to AI semantic search",
   "switchToNormalSearch": "Switch to normal search",
-
   "recommendedTags": "Recommended Tags",
   "noteType": "Note Type",
   "emotionAnalysis": "Emotion Analysis",
   "viewRelatedNotes": "View Related Notes",
-
   "localAiNotEnabled": "Local AI features not enabled",
   "enableInSettings": "Please enable in settings",
   "featureNotAvailable": "Feature not available",
@@ -3289,7 +3277,6 @@
   "voiceRecordingHint": "Release to end, swipe up for OCR",
   "voiceProcessing": "Processing...",
   "voiceTranscribing": "Transcribing...",
-  "voiceResultTitle": "Voice Recognition Result",
   "voiceEditResult": "Edit Recognition Result",
   "voiceApplyCorrection": "AI Correction",
   "voiceRecognizeSource": "Recognize Source",
@@ -3299,10 +3286,7 @@
   "ocrSelectRegion": "Select Text Region",
   "ocrSelectRegionHint": "Tap the text region to recognize",
   "ocrProcessing": "Recognizing...",
-  "ocrResultTitle": "OCR Recognition Result",
   "ocrNoTextDetected": "No text detected",
-  "aiSearchMode": "AI Search",
-  "normalSearchMode": "Normal Search",
   "aiSearching": "AI Searching...",
   "aiCorrectionApplied": "AI correction applied",
   "aiSourceRecognized": "Source recognized",
@@ -3329,7 +3313,6 @@
   "biometricNotAvailable": "Biometric authentication is not available on this device",
   "biometricNotSetup": "Please set up fingerprint or face recognition in system settings first",
   "privacyAndSecurity": "Privacy & Security",
-
   "smartPushTitle": "Smart Push",
   "smartPushTitlePreview": "Smart Push (Preview)",
   "smartPushDesc": "Schedule push notifications for past notes and daily quotes",
@@ -3410,7 +3393,6 @@
   "tileLoading": "Loading...",
   "tileNoWeather": "No Weather",
   "tileCachedSuffix": "(Cached)",
-
   "noteAutoFillSection": "Note Auto-Fill",
   "noteAutoFillSectionDesc": "Auto-fill author, source, and tags when creating notes",
   "defaultAuthor": "Default Author",
@@ -3436,7 +3418,6 @@
   "saveDefaultValue": "Save",
   "defaultValueSaved": "Default value saved",
   "defaultValueCleared": "Default value cleared",
-
   "citySelectedWeatherUpdated": "Selected city: {cityName}, weather updated",
   "@citySelectedWeatherUpdated": {
     "placeholders": {
@@ -3474,5 +3455,11 @@
   "locationTimeoutCheckPermission": "Location fetch timed out, please check location permission",
   "cannotGetCurrentLocation": "Cannot get current location, please ensure location permission is granted",
   "cannotGetSelectedCityLocation": "Cannot get selected city location",
-  "cityInfoIncomplete": "City information is incomplete"
+  "cityInfoIncomplete": "City information is incomplete",
+  "contentLengthLabel": "Content length: {length}",
+  "htmlFormatLabel": "HTML format: {status}",
+  "jsonFormatLabel": "JSON format: {status}",
+  "containsHtmlTagsLabel": "Contains HTML tags: {status}",
+  "viewNoteInfo": "View note information",
+  "first100CharsLabel": "First 100 characters:"
 }
