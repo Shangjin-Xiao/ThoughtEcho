@@ -30,6 +30,8 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
     'type': 'a',
   };
   SmartPushService? _smartPushService;
+  // 标记当前是否正在展示通知推送的每日一言，为 true 时不允许 API 结果覆盖
+  bool _isShowingNotificationQuote = false;
 
   @override
   void initState() {
@@ -84,6 +86,7 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
 
     setState(() {
       dailyQuote = _convertSharedQuoteToDailyQuote(pendingQuote);
+      _isShowingNotificationQuote = true;
     });
     return true;
   }
@@ -151,9 +154,13 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
       );
 
       if (mounted) {
-        setState(() {
-          dailyQuote = quote;
-        });
+        // 若通知推送的每日一言已被展示（由 _onSmartPushServiceChanged 异步设置），
+        // 则跳过 API 结果，避免覆盖通知内容
+        if (!_isShowingNotificationQuote) {
+          setState(() {
+            dailyQuote = quote;
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -229,8 +236,9 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
     return result;
   }
 
-  // 公开刷新方法，供父组件调用
+  // 公开刷新方法，供父组件调用（手动刷新时清除通知标志）
   Future<void> refreshQuote() async {
+    _isShowingNotificationQuote = false;
     await _loadDailyQuote();
   }
 
