@@ -12,6 +12,19 @@ import '../utils/local_video_controller.dart';
 import '../utils/motion_photo_utils.dart';
 import '../utils/optimized_image_loader.dart';
 
+bool shouldAutoReturnToStillImage(VideoPlayerValue value) {
+  if (!value.isInitialized || value.isPlaying) {
+    return false;
+  }
+
+  final duration = value.duration;
+  if (duration <= Duration.zero) {
+    return false;
+  }
+
+  return value.position >= duration;
+}
+
 class MotionPhotoPreviewPage extends StatefulWidget {
   MotionPhotoPreviewPage({
     super.key,
@@ -32,6 +45,7 @@ class _MotionPhotoPreviewPageState extends State<MotionPhotoPreviewPage> {
   String? _extractedVideoPath;
   ChewieController? _chewieController;
   VideoPlayerController? _videoController;
+  VoidCallback? _videoPlaybackListener;
   bool _checkingMotionPhoto = false;
   bool _preparingVideo = false;
   bool _showVideo = false;
@@ -111,14 +125,29 @@ class _MotionPhotoPreviewPageState extends State<MotionPhotoPreviewPage> {
         _extractedVideoPath!,
       );
       await videoController.initialize();
+      await videoController.setLooping(false);
+
+      void playbackListener() {
+        if (!mounted || !_showVideo) {
+          return;
+        }
+        if (shouldAutoReturnToStillImage(videoController.value)) {
+          unawaited(_showImage(resetToStart: true));
+        }
+      }
+
+      _videoPlaybackListener = playbackListener;
+      videoController.addListener(playbackListener);
 
       final chewieController = ChewieController(
         videoPlayerController: videoController,
         autoPlay: true,
         autoInitialize: true,
-        looping: true,
-        allowFullScreen: true,
-        allowPlaybackSpeedChanging: true,
+        looping: false,
+        showControls: false,
+        allowFullScreen: false,
+        allowPlaybackSpeedChanging: false,
+        allowMuting: false,
         materialProgressColors: ChewieProgressColors(
           playedColor: primaryColor,
           handleColor: primaryColor,
@@ -159,8 +188,14 @@ class _MotionPhotoPreviewPageState extends State<MotionPhotoPreviewPage> {
     }
   }
 
-  Future<void> _showImage() async {
-    await _videoController?.pause();
+  Future<void> _showImage({bool resetToStart = false}) async {
+    final videoController = _videoController;
+    if (videoController != null) {
+      await videoController.pause();
+      if (resetToStart && videoController.value.isInitialized) {
+        await videoController.seekTo(Duration.zero);
+      }
+    }
     if (!mounted) {
       return;
     }
@@ -181,12 +216,17 @@ class _MotionPhotoPreviewPageState extends State<MotionPhotoPreviewPage> {
   Future<void> _disposeVideoControllers() async {
     final chewieController = _chewieController;
     final videoController = _videoController;
+    final playbackListener = _videoPlaybackListener;
     _chewieController = null;
     _videoController = null;
+    _videoPlaybackListener = null;
     if (chewieController != null) {
       chewieController.dispose();
     }
     if (videoController != null) {
+      if (playbackListener != null) {
+        videoController.removeListener(playbackListener);
+      }
       await videoController.dispose();
     }
   }
