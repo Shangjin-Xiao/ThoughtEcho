@@ -2351,6 +2351,17 @@
   "weatherFetchFailed": "失敗",
   "pleaseSelectCityFirst": "都市を選択してください",
   "useCurrentLocation": "現在地を使用",
+  "useFreeOnlineReverseGeocoding": "無料のオンライン逆ジオコーディングを使用",
+  "onlineReverseGeocodingNeedsLocation": "まず現在地を取得してください",
+  "onlineReverseGeocodingFailed": "オンライン逆ジオコーディングに失敗しました",
+  "onlineReverseGeocodingSuccess": "オンライン逆ジオコーディングを更新しました：{address}",
+  "@onlineReverseGeocodingSuccess": {
+    "placeholders": {
+      "address": {
+        "type": "String"
+      }
+    }
+  },
   "weatherProvidedBy": "By Open-Meteo",
   "processing": "処理中...",
   "searchingCity": "検索中...",
