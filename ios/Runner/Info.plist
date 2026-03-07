@@ -60,11 +60,11 @@
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>需要访问位置以记录地理信息</string>
 	
-	<!-- 文件访问权限 -->
+	<!-- 文件访问权限 - 禁止在系统文件 App 中暴露应用文档 -->
 	<key>UIFileSharingEnabled</key>
-	<true/>
+	<false/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
-	<true/>
+	<false/>
 	
 	<!-- 网络配置 -->
 	<key>NSAppTransportSecurity</key>
