@@ -39,9 +39,8 @@
         <span class="content-zh">跳到主要内容</span>
         <span class="content-en">Skip to content</span>
     </a>
-    <!-- 导航栏 -->
+    <!-- 导航栏 (SOTA Redesign) -->
     <nav>
-        <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
         <div class="nav-container">
             <a href="#top" class="nav-brand" aria-label="ThoughtEcho Home">
                 <div class="nav-logo">
@@ -51,13 +50,23 @@
                 <span class="nav-title content-en">ThoughtEcho</span>
             </a>
 
+            <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
+            
             <ul class="nav-links" id="navLinks">
-                <li><a href="#features"><span class="content-zh">功能特性</span><span class="content-en">Features</span></a></li>
-                <li><a href="#screenshots"><span class="content-zh">应用截图</span><span class="content-en">Screenshots</span></a></li>
-                <li><a href="#tech"><span class="content-zh">技术栈</span><span class="content-en">Tech Stack</span></a></li>
-                <li><a href="#quickstart"><span class="content-zh">快速开始</span><span class="content-en">Quick Start</span></a></li>
-                <li><a href="user-guide.html"><span class="content-zh">用户指南</span><span class="content-en">User Guide</span></a></li>
-                <li><a href="privacy.html"><span class="content-zh">隐私政策</span><span class="content-en">Privacy</span></a></li>
+                <li><a href="#features"><span class="content-zh">特性</span><span class="content-en">Features</span></a></li>
+                <li><a href="#screenshots"><span class="content-zh">画廊</span><span class="content-en">Gallery</span></a></li>
+                <li><a href="#tech"><span class="content-zh">技术</span><span class="content-en">Tech</span></a></li>
+                <li><a href="user-guide.html"><span class="content-zh">指南</span><span class="content-en">Guide</span></a></li>
+                <li class="mobile-only">
+                    <div class="nav-actions-mobile">
+                        <button class="theme-toggle" id="themeToggleMobile" aria-label="Toggle Theme">
+                            <span id="themeIconMobile">🌙</span>
+                        </button>
+                        <button class="lang-toggle" id="langToggleMobile">
+                            <span id="langTextMobile">CN</span>
+                        </button>
+                    </div>
+                </li>
             </ul>
 
             <div class="nav-actions">
@@ -68,8 +77,8 @@
                     <span id="langText">EN</span>
                 </button>
                 <a href="#download" class="btn-notebook">
-                    <span class="content-zh">立即下载</span>
-                    <span class="content-en">Download</span>
+                    <span class="content-zh">下载</span>
+                    <span class="content-en">Get App</span>
                 </a>
                 <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Menu">☰</button>
             </div>
@@ -128,23 +137,9 @@
                 </div>
             </div>
 
-            <div class="hero-notebook fade-in">
-                <div class="notebook-page">
-                    <div class="binding-holes">
-                        <div class="hole"></div>
-                        <div class="hole"></div>
-                        <div class="hole"></div>
-                        <div class="hole"></div>
-                        <div class="hole"></div>
-                    </div>
-                    <div class="notebook-content" style="display: flex; align-items: center; justify-content: center;">
-                        <ul class="notebook-list" style="margin-top: 0;">
-                            <li><a href="#feature-tailored"><span class="content-zh">🎨 专为你打造的心迹</span><span class="content-en">🎨 Tailored for You</span></a></li>
-                            <li><a href="#feature-understanding"><span class="content-zh">💡 懂你所想的心迹</span><span class="content-en">💡 Understanding You</span></a></li>
-                            <li><a href="#feature-secure"><span class="content-zh">🛡️ 安全无忧的心迹</span><span class="content-en">🛡️ Safe & Secure</span></a></li>
-                            <li><a href="#feature-open"><span class="content-zh">🚀 开放自由的心迹</span><span class="content-en">🚀 Open & Free</span></a></li>
-                        </ul>
-                    </div>
+            <div class="hero-visual fade-in">
+                <div class="hero-visual-card">
+                    <img src="screenshot/home_page.jpg" alt="ThoughtEcho App Interface" loading="eager" style="width: 100%; height: auto; border-radius: 12px; display: block;">
                 </div>
             </div>
         </div>
@@ -184,7 +179,7 @@
                 </p>
             </div>
             <div class="features-grid">
-                <div class="sticky-note">
+                <div class="bento-card">
                     <span class="feature-icon">✍️</span>
                     <h3 class="feature-title">
                         <span class="content-zh">富文本笔记</span>
@@ -200,7 +195,7 @@
                     </ul>
                 </div>
 
-                <div class="sticky-note">
+                <div class="bento-card">
                     <span class="feature-icon">🏷️</span>
                     <h3 class="feature-title">
                         <span class="content-zh">标签与搜索</span>
@@ -216,7 +211,7 @@
                     </ul>
                 </div>
 
-                <div class="sticky-note">
+                <div class="bento-card">
                     <span class="feature-icon">🎯</span>
                     <h3 class="feature-title">
                         <span class="content-zh">AI 卡片生成</span>
@@ -228,7 +223,7 @@
                     </p>
                 </div>
 
-                <div class="sticky-note">
+                <div class="bento-card">
                     <span class="feature-icon">⚡</span>
                     <h3 class="feature-title">
                         <span class="content-zh">快速捕获</span>
@@ -240,7 +235,7 @@
                     </p>
                 </div>
 
-                <div class="sticky-note">
+                <div class="bento-card">
                     <span class="feature-icon">🎨</span>
                     <h3 class="feature-title">
                         <span class="content-zh">个性化主题</span>
@@ -252,7 +247,7 @@
                     </p>
                 </div>
 
-                <div class="sticky-note">
+                <div class="bento-card">
                     <span class="feature-icon">🔔</span>
                     <h3 class="feature-title">
                         <span class="content-zh">智能推送 (Beta)</span>
@@ -279,7 +274,7 @@
                 </p>
             </div>
             <div class="features-grid">
-                <div class="sticky-note">
+                <div class="bento-card">
                     <span class="feature-icon">✨</span>
                     <h3 class="feature-title">
                         <span class="content-zh">AI 助手</span>
@@ -295,7 +290,7 @@
                     </ul>
                 </div>
 
-                <div class="sticky-note">
+                <div class="bento-card">
                     <span class="feature-icon">🌍</span>
                     <h3 class="feature-title">
                         <span class="content-zh">情境记录</span>
@@ -307,7 +302,7 @@
                     </p>
                 </div>
 
-                <div class="sticky-note">
+                <div class="bento-card">
                     <span class="feature-icon">📊</span>
                     <h3 class="feature-title">
                         <span class="content-zh">洞察与报告</span>
@@ -319,7 +314,7 @@
                     </p>
                 </div>
 
-                <div class="sticky-note">
+                <div class="bento-card">
                     <span class="feature-icon">📝</span>
                     <h3 class="feature-title">
                         <span class="content-zh">智能润色</span>
@@ -331,7 +326,7 @@
                     </p>
                 </div>
 
-                <div class="sticky-note">
+                <div class="bento-card">
                     <span class="feature-icon">🌤️</span>
                     <h3 class="feature-title">
                         <span class="content-zh">每日情境提示</span>
@@ -358,7 +353,7 @@
                 </p>
             </div>
             <div class="features-grid">
-                <div class="sticky-note">
+                <div class="bento-card">
                     <span class="feature-icon">🔒</span>
                     <h3 class="feature-title">
                         <span class="content-zh">本地优先</span>
@@ -370,7 +365,7 @@
                     </p>
                 </div>
 
-                <div class="sticky-note">
+                <div class="bento-card">
                     <span class="feature-icon">🙈</span>
                     <h3 class="feature-title">
                         <span class="content-zh">隐藏笔记</span>
@@ -382,7 +377,7 @@
                     </p>
                 </div>
 
-                <div class="sticky-note">
+                <div class="bento-card">
                     <span class="feature-icon">💾</span>
                     <h3 class="feature-title">
                         <span class="content-zh">草稿自动保存</span>
@@ -394,7 +389,7 @@
                     </p>
                 </div>
 
-                <div class="sticky-note">
+                <div class="bento-card">
                     <span class="feature-icon">📦</span>
                     <h3 class="feature-title">
                         <span class="content-zh">备份中心</span>
@@ -406,7 +401,7 @@
                     </p>
                 </div>
 
-                <div class="sticky-note">
+                <div class="bento-card">
                     <span class="feature-icon">🚫</span>
                     <h3 class="feature-title">
                         <span class="content-zh">零遥测</span>
@@ -418,7 +413,7 @@
                     </p>
                 </div>
 
-                <div class="sticky-note">
+                <div class="bento-card">
                     <span class="feature-icon">🔑</span>
                     <h3 class="feature-title">
                         <span class="content-zh">加密存储</span>
@@ -445,7 +440,7 @@
                 </p>
             </div>
             <div class="features-grid">
-                <div class="sticky-note">
+                <div class="bento-card">
                     <span class="feature-icon">📖</span>
                     <h3 class="feature-title">
                         <span class="content-zh">开源透明</span>
@@ -457,7 +452,7 @@
                     </p>
                 </div>
 
-                <div class="sticky-note">
+                <div class="bento-card">
                     <span class="feature-icon">🔄</span>
                     <h3 class="feature-title">
                         <span class="content-zh">模型自由</span>
@@ -469,7 +464,7 @@
                     </p>
                 </div>
 
-                <div class="sticky-note">
+                <div class="bento-card">
                     <span class="feature-icon">📱</span>
                     <h3 class="feature-title">
                         <span class="content-zh">全平台支持</span>
@@ -481,7 +476,7 @@
                     </p>
                 </div>
 
-                <div class="sticky-note">
+                <div class="bento-card">
                     <span class="feature-icon">🔌</span>
                     <h3 class="feature-title">
                         <span class="content-zh">自定义 API</span>
@@ -493,7 +488,7 @@
                     </p>
                 </div>
 
-                <div class="sticky-note">
+                <div class="bento-card">
                     <span class="feature-icon">📲</span>
                     <h3 class="feature-title">
                         <span class="content-zh">多端同步</span>
