@@ -306,23 +306,6 @@ class WeatherService extends ChangeNotifier {
     return WeatherCodeMapper.getIconCode(key);
   }
 
-  /// 检查天气 API 是否可达
-  /// 返回 true 表示 API 不可达，应使用本地缓存
-  @Deprecated('Unused method - consider removing')
-  Future<bool> shouldUseLocalWeather() async {
-    try {
-      // 使用天气API的健康检查端点，使用北京坐标避免海洋中心
-      final result = await NetworkService.instance.get(
-        'https://api.open-meteo.com/v1/forecast?latitude=39.9&longitude=116.4&current=temperature_2m',
-        timeoutSeconds: 5,
-      );
-      return result.statusCode != 200;
-    } catch (e) {
-      logDebug('网络连通性检查失败: $e');
-      return true; // 网络不可用，使用本地天气
-    }
-  }
-
   /// 获取缓存信息（用于调试）
   Future<Map<String, dynamic>?> getCacheInfo() async {
     try {
@@ -372,11 +355,6 @@ class WeatherService extends ChangeNotifier {
     'unknown': '未知',
   };
 
-  /// 兼容旧代码，避免在新代码中继续使用
-  @Deprecated(
-      'Use legacyWeatherKeyToLabel for migration, or getLocalizedWeatherLabel(context, key) for UI display')
-  static const weatherKeyToLabel = legacyWeatherKeyToLabel;
-
   /// 获取天气 key 的本地化标签（UI 显示专用）
   static String getLocalizedWeatherLabel(BuildContext context, String key) {
     final l10n = AppLocalizations.of(context);
@@ -411,16 +389,6 @@ class WeatherService extends ChangeNotifier {
         return key;
     }
   }
-
-  /// 硬编码中文标签（仅用于数据库旧数据兼容），UI 显示应使用 [getLocalizedFilterCategoryLabel]
-  @Deprecated(
-      'Use getLocalizedFilterCategoryLabel(context, key) for UI display')
-  static const filterCategoryToLabel = {
-    'sunny': '晴',
-    'rainy': '雨',
-    'cloudy': '多云',
-    'snowy': '雪',
-  };
 
   // 简化分类到具体天气key的映射
   static const filterCategoryToKeys = {

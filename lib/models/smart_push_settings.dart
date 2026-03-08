@@ -368,10 +368,3 @@ class SmartPushSettings {
     return 'SmartPushSettings(enabled: $enabled, mode: $pushMode, frequency: $frequency)';
   }
 }
-
-// 保留旧枚举以兼容现有代码（可在后续版本移除）
-@Deprecated('Use PushMode instead')
-enum PushContentType {
-  dailyQuote,
-  pastNotes,
-}
