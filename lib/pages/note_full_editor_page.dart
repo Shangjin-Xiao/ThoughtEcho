@@ -2069,7 +2069,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
                   : () async {
                       try {
                         await pauseAllMediaPlayers();
-                      } catch (_) {}
+                      } catch (e) {
+                        debugPrint('[NoteFullEditorPage] pauseAllMediaPlayers failed: $e');
+                      }
                       await _saveContent();
                     },
             ),

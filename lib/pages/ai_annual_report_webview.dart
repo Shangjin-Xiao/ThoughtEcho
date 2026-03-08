@@ -642,7 +642,9 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
           try {
             server?.close(force: true);
             debugPrint('临时报告服务器已自动关闭');
-          } catch (_) {}
+          } catch (e) {
+            debugPrint('[AIAnnualReportWebView] server close error: $e');
+          }
         });
 
         return; // 成功打开，直接返回
@@ -651,7 +653,9 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
       debugPrint('HTTP服务器方式打开失败: $e');
       try {
         server?.close(force: true);
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[AIAnnualReportWebView] server close error: $e');
+      }
       // 继续执行后续的Fallback逻辑
     }
 

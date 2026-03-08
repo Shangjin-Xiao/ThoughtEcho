@@ -97,7 +97,9 @@ class SmartPushAnalytics extends ChangeNotifier {
       try {
         final dt = DateTime.parse(record);
         hourCounts[dt.hour] = (hourCounts[dt.hour] ?? 0) + 1;
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[SmartPushAnalytics._buildActivityHeatmap] parse failed: $e');
+      }
     }
 
     // 找到最大值用于归一化
@@ -203,7 +205,9 @@ class SmartPushAnalytics extends ChangeNotifier {
         if (dt.isAfter(recentCutoff)) {
           recentCounts[dt.hour] = (recentCounts[dt.hour] ?? 0) + 1;
         }
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[SmartPushAnalytics._predictOptimalTime] parse failed: $e');
+      }
     }
 
     final maxRecent = recentCounts.values.fold(1, max);

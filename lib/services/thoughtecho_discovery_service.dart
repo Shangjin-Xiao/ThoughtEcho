@@ -771,7 +771,9 @@ class ThoughtEchoDiscoveryService extends ChangeNotifier {
     for (final s in _sockets) {
       try {
         s.close();
-      } catch (_) {}
+      } catch (e) {
+        logDebug('[ThoughtEchoDiscoveryService] socket close error: $e');
+      }
     }
     _sockets.clear();
     await _startMulticastListener();

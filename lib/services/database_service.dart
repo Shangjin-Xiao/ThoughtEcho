@@ -2577,7 +2577,9 @@ class DatabaseService extends ChangeNotifier {
                 final appDir = await getApplicationDocumentsDirectory();
                 absolutePath = join(appDir.path, storedPath);
               }
-            } catch (_) {}
+            } catch (e) {
+              logDebug('[DatabaseService] path resolution failed: $e');
+            }
 
             // 使用轻量级检查（仅查引用表计数）
             final deleted =

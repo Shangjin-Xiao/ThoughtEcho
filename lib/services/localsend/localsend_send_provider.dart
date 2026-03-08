@@ -38,7 +38,9 @@ class LocalSendProvider {
     // 提前通知 sessionId 以支持取消操作
     try {
       onSessionCreated?.call(sessionId);
-    } catch (_) {}
+    } catch (e) {
+      logDebug('[LocalSendSendProvider] onSessionCreated callback failed: $e');
+    }
 
     // Create session
     final session = SendSession(
@@ -383,7 +385,9 @@ class LocalSendProvider {
               )
               .timeout(const Duration(seconds: 2))
               .catchError((_) => http.Response('{}', 499));
-        } catch (_) {}
+        } catch (e) {
+          logDebug('[LocalSendSendProvider] cancel notify failed: $e');
+        }
       }
     }
   }
