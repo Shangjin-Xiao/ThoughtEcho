@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import 'dart:async';
@@ -1358,6 +1359,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                 TextField(
                   controller: _contentController,
                   focusNode: _contentFocusNode,
+                  maxLength: 10000,
+                  maxLengthEnforcement: MaxLengthEnforcement.enforced,
+                  buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
                   decoration: InputDecoration(
                     hintText: AppLocalizations.of(context).writeYourThoughts,
                     border: const OutlineInputBorder(),

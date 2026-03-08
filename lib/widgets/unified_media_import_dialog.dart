@@ -443,6 +443,17 @@ class _UnifiedMediaImportDialogState extends State<UnifiedMediaImportDialog> {
 
     if (url == null || url.isEmpty) return;
 
+    // Validate URL scheme
+    final uri = Uri.tryParse(url);
+    if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).invalidUrl)),
+        );
+      }
+      return;
+    }
+
     try {
       setState(() {
         _isImporting = true;

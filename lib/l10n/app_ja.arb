@@ -1382,6 +1382,7 @@
   "todayThoughtsUseAiDesc": "プロンプト生成にAIを使用します",
   "apiUrlRequired": "API URLは必須です",
   "invalidUrl": "有効なURLを入力してください",
+  "fieldRequired": "この項目は必須です",
   "mediaManagementTitle": "メディア管理",
   "loadStatsError": "統計読み込み失敗: {error}",
   "@loadStatsError": {

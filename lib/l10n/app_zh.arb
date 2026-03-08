@@ -1382,6 +1382,7 @@
   "todayThoughtsUseAiDesc": "打开后将使用AI生成今日思考提示，关闭则使用本地生成",
   "apiUrlRequired": "API URL不能为空",
   "invalidUrl": "请输入有效的HTTP/HTTPS URL",
+  "fieldRequired": "此字段不能为空",
   "mediaManagementTitle": "媒体文件管理",
   "loadStatsError": "加载统计信息失败: {error}",
   "@loadStatsError": {

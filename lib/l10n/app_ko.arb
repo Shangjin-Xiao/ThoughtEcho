@@ -1382,6 +1382,7 @@
   "todayThoughtsUseAiDesc": "활성화하면 AI를 사용하여 오늘의 생각 프롬프트를 생성합니다. 비활성화하면 로컬 생성을 사용합니다.",
   "apiUrlRequired": "API URL은 비워둘 수 없습니다",
   "invalidUrl": "유효한 HTTP/HTTPS URL을 입력해 주세요",
+  "fieldRequired": "이 필드는 필수입니다",
   "mediaManagementTitle": "미디어 파일 관리",
   "loadStatsError": "통계 로드 실패: {error}",
   "@loadStatsError": {

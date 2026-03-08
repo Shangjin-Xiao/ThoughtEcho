@@ -1000,6 +1000,12 @@ class _AISettingsPageState extends State<AISettingsPage> {
                 const SizedBox(height: 16),
                 TextFormField(
                   controller: _modelController,
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return AppLocalizations.of(context).fieldRequired;
+                    }
+                    return null;
+                  },
                   decoration: InputDecoration(
                     labelText: l10n.modelNameField,
                     border: const OutlineInputBorder(),
