@@ -1,11 +1,11 @@
 part of '../note_full_editor_page.dart';
 
 /// Draft management, save logic, and state helper methods.
-extension NoteEditorSaveAndDraft on _NoteFullEditorPageState {
+extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
   void _initializeAsPlainText() {
     try {
       if (mounted) {
-        setState(() {
+        _updateState(() {
           _controller.dispose(); // 释放旧控制器
           _controller = quill.QuillController(
             document: quill.Document()..insert(0, widget.initialContent),
@@ -20,10 +20,11 @@ extension NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       _initializeEmptyDocument();
     }
   }
+
   void _initializeEmptyDocument() {
     try {
       if (mounted) {
-        setState(() {
+        _updateState(() {
           _controller.dispose(); // 释放旧控制器
           _controller = quill.QuillController.basic();
           _attachDraftListener();
@@ -71,6 +72,7 @@ extension NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       // 这种情况下，保持现有控制器状态
     }
   }
+
   String _buildDraftStorageKey() {
     // 1. 如果明确指定了恢复草稿的ID，优先使用它
     if (widget.restoredDraftId != null && widget.restoredDraftId!.isNotEmpty) {
@@ -137,9 +139,11 @@ extension NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       logDebug('清理草稿失败: $e');
     }
   }
+
   IconData _getWeatherIcon(String weatherKey) {
     return WeatherService.getWeatherIconDataByKey(weatherKey);
   }
+
   bool _hasUnsavedChanges() {
     // 如果是从草稿恢复的且尚未保存，则视为有未保存更改
     if (_isRestoredFromDraft) {
@@ -200,6 +204,7 @@ extension NoteEditorSaveAndDraft on _NoteFullEditorPageState {
 
     return false;
   }
+
   Future<void> _saveContent() async {
     // 立即取消草稿保存定时器，防止在保存过程中再次触发草稿保存
     _draftSaveTimer?.cancel();
@@ -210,7 +215,7 @@ extension NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     final l10n = AppLocalizations.of(context);
     logDebug('开始保存笔记内容...');
     if (mounted) {
-      setState(() {
+      _updateState(() {
         _isSaving = true;
         _saveProgress = 0.0;
         _saveStatus = l10n.preparingProcess;
@@ -224,7 +229,7 @@ extension NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       await _processTemporaryMediaFiles(
         onProgress: (p, status) {
           if (mounted) {
-            setState(() {
+            _updateState(() {
               _saveProgress = p.clamp(0.0, 1.0);
               if (status != null) _saveStatus = status;
             });
@@ -337,7 +342,7 @@ extension NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       );
 
       if (mounted) {
-        setState(() {
+        _updateState(() {
           _saveStatus = l10n.writingDatabase;
           _saveProgress = _saveProgress < 0.9 ? 0.9 : _saveProgress;
         });
@@ -409,13 +414,13 @@ extension NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       }
     } finally {
       if (mounted) {
-        setState(() {
+        _updateState(() {
           _saveProgress = 1.0;
           _saveStatus = l10n.saveComplete;
         });
         Future.delayed(const Duration(milliseconds: 320), () {
           if (mounted) {
-            setState(() {
+            _updateState(() {
               _isSaving = false;
             });
           }
@@ -423,6 +428,7 @@ extension NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       }
     }
   }
+
   String _formatSource(String author, String work) {
     if (author.isEmpty && work.isEmpty) {
       return '';
@@ -444,6 +450,7 @@ extension NoteEditorSaveAndDraft on _NoteFullEditorPageState {
 
     return result;
   }
+
   Widget _tagAvatarSmall(String? iconName) {
     if (IconUtils.isEmoji(iconName)) {
       return Text(
@@ -453,6 +460,7 @@ extension NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     }
     return Icon(IconUtils.getIconData(iconName), size: 16);
   }
+
   Widget _buildTagIcon(NoteCategory tag) {
     return _tagAvatarSmall(tag.iconName);
   }

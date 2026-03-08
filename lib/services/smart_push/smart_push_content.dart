@@ -514,5 +514,4 @@ extension SmartPushContentSelection on SmartPushService {
     }
     return false;
   }
-
 }

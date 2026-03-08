@@ -1,7 +1,7 @@
 part of '../database_service.dart';
 
 /// Mixin providing category CRUD operations for DatabaseService.
-mixin _DatabaseCategoryMixin on ChangeNotifier {
+mixin _DatabaseCategoryMixin on _DatabaseServiceBase {
   /// 获取所有分类列表
   Future<List<Map<String, dynamic>>> getAllCategories() async {
     try {
@@ -36,10 +36,12 @@ mixin _DatabaseCategoryMixin on ChangeNotifier {
   List<NoteCategory> _moveHiddenCategoryToBottom(
     List<NoteCategory> categories,
   ) {
-    final hiddenCategories =
-        categories.where((category) => category.id == hiddenTagId).toList();
-    final normalCategories =
-        categories.where((category) => category.id != hiddenTagId).toList();
+    final hiddenCategories = categories
+        .where((category) => category.id == _DatabaseServiceBase.hiddenTagId)
+        .toList();
+    final normalCategories = categories
+        .where((category) => category.id != _DatabaseServiceBase.hiddenTagId)
+        .toList();
     return [...normalCategories, ...hiddenCategories];
   }
 
@@ -93,7 +95,7 @@ mixin _DatabaseCategoryMixin on ChangeNotifier {
       categoryMap,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    await _updateCategoriesStream();
+    await updateCategoriesStreamForParts();
     notifyListeners();
   }
 
@@ -174,7 +176,7 @@ mixin _DatabaseCategoryMixin on ChangeNotifier {
     }
 
     // 确保数据库已初始化
-    if (_database == null) {
+    if (_DatabaseServiceBase._database == null) {
       try {
         await init();
       } catch (e) {
@@ -243,7 +245,7 @@ mixin _DatabaseCategoryMixin on ChangeNotifier {
       });
 
       // 操作成功后更新流和通知侦听器
-      await _updateCategoriesStream();
+      await updateCategoriesStreamForParts();
       notifyListeners();
     } catch (e) {
       logDebug('添加指定ID分类失败: $e');
@@ -261,7 +263,7 @@ mixin _DatabaseCategoryMixin on ChangeNotifier {
           categoryMap,
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
-        await _updateCategoriesStream();
+        await updateCategoriesStreamForParts();
 
         // 修复：导入/恢复完成后必须重建媒体引用，确保引用表准确
         logInfo('导入完成，开始重建媒体引用记录...');
@@ -278,14 +280,14 @@ mixin _DatabaseCategoryMixin on ChangeNotifier {
 
   /// 监听分类流
   Stream<List<NoteCategory>> watchCategories() {
-    _updateCategoriesStream();
+    updateCategoriesStreamForParts();
     return _categoriesController.stream;
   }
 
   /// 修复：删除指定分类，增加级联删除和孤立数据清理
   Future<void> deleteCategory(String id) async {
     // 系统标签（如隐藏标签）不允许删除
-    if (id == hiddenTagId) {
+    if (id == _DatabaseServiceBase.hiddenTagId) {
       throw Exception('系统标签不允许删除');
     }
 
@@ -334,9 +336,9 @@ mixin _DatabaseCategoryMixin on ChangeNotifier {
     });
 
     // 清理缓存
-    _clearAllCache();
+    clearAllCacheForParts();
 
-    await _updateCategoriesStream();
+    await updateCategoriesStreamForParts();
     notifyListeners();
 
     logDebug('分类删除完成，ID: $id');
@@ -355,7 +357,7 @@ mixin _DatabaseCategoryMixin on ChangeNotifier {
     String? iconName,
   }) async {
     // 系统标签（如隐藏标签）不允许修改
-    if (id == hiddenTagId) {
+    if (id == _DatabaseServiceBase.hiddenTagId) {
       throw Exception('系统标签不允许修改');
     }
 
@@ -433,7 +435,7 @@ mixin _DatabaseCategoryMixin on ChangeNotifier {
       whereArgs: [id],
     );
 
-    await _updateCategoriesStream();
+    await updateCategoriesStreamForParts();
     notifyListeners();
   }
 
@@ -466,5 +468,4 @@ mixin _DatabaseCategoryMixin on ChangeNotifier {
       return null;
     }
   }
-
 }

@@ -1,7 +1,7 @@
 part of '../note_full_editor_page.dart';
 
 /// Metadata editing bottom sheet dialog.
-extension NoteEditorMetadataDialog on _NoteFullEditorPageState {
+extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
   Future<void> _showMetadataDialog(BuildContext context) async {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
@@ -192,7 +192,7 @@ extension NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                 await _showCustomColorPicker(context);
                                 // 强制刷新对话框UI以显示新选的颜色
                                 if (mounted) {
-                                  setState(() {});
+                                  _updateState(() {});
                                 }
                               },
                             ),
@@ -200,7 +200,9 @@ extension NoteEditorMetadataDialog on _NoteFullEditorPageState {
                           const SizedBox(height: 24),
 
                           _buildMetadataLocationWeatherSection(
-                            theme, l10n, setState,
+                            theme,
+                            l10n,
+                            setState,
                           ),
                           const SizedBox(height: 24),
                           // 标签选择
@@ -268,7 +270,7 @@ extension NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                     ),
                                   ),
                                   onChanged: (value) {
-                                    setState(() {
+                                    _updateState(() {
                                       _tagSearchQuery = value.toLowerCase();
                                     });
                                   },
@@ -318,7 +320,7 @@ extension NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                                 tag.iconName,
                                               ),
                                               onSelected: (bool value) {
-                                                setState(() {
+                                                _updateState(() {
                                                   if (value) {
                                                     _selectedTagIds.add(tag.id);
                                                   } else {
@@ -384,7 +386,7 @@ extension NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                         label: Text(tag.name),
                                         avatar: _buildTagIcon(tag),
                                         onDeleted: () {
-                                          setState(() {
+                                          _updateState(() {
                                             _selectedTagIds.remove(tagId);
                                           });
                                         },
@@ -408,7 +410,7 @@ extension NoteEditorMetadataDialog on _NoteFullEditorPageState {
 
     // 优化：对话框关闭后使用单次 setState 更新UI
     if (mounted) {
-      setState(() {
+      _updateState(() {
         // 强制刷新所有状态
       });
     }

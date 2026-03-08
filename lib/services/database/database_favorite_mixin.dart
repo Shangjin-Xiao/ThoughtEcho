@@ -1,7 +1,7 @@
 part of '../database_service.dart';
 
 /// Mixin providing favorite/heart operations for DatabaseService.
-mixin _DatabaseFavoriteMixin on ChangeNotifier {
+mixin _DatabaseFavoriteMixin on _DatabaseServiceBase {
   /// 增加笔记的心形点击次数
   Future<void> incrementFavoriteCount(String quoteId) async {
     if (quoteId.isEmpty) {
@@ -221,5 +221,4 @@ mixin _DatabaseFavoriteMixin on ChangeNotifier {
       return [];
     }
   }
-
 }

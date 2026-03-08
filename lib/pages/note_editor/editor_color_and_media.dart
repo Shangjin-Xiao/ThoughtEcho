@@ -1,7 +1,7 @@
 part of '../note_full_editor_page.dart';
 
 /// Color picker dialog and media file processing.
-extension NoteEditorColorAndMedia on _NoteFullEditorPageState {
+extension _NoteEditorColorAndMedia on _NoteFullEditorPageState {
   Future<void> _showCustomColorPicker(BuildContext context) async {
     final Color initialColor = _selectedColorHex != null
         ? Color(
@@ -196,7 +196,7 @@ extension NoteEditorColorAndMedia on _NoteFullEditorPageState {
 
                   if (advancedColor != null && mounted) {
                     // 优化：合并所有状态更新为单次 setState 调用
-                    setState(() {
+                    _updateState(() {
                       _selectedColorHex = advancedColor == Colors.transparent
                           ? null
                           : '#${advancedColor.toARGB32().toRadixString(16).substring(2)}';
@@ -220,13 +220,14 @@ extension NoteEditorColorAndMedia on _NoteFullEditorPageState {
 
     if (result != null) {
       // 优化：合并所有状态更新为单次 setState 调用
-      setState(() {
+      _updateState(() {
         _selectedColorHex = result == Colors.transparent
             ? null
             : '#${result.toARGB32().toRadixString(16).substring(2)}';
       });
     }
   }
+
   Future<void> _processTemporaryMediaFiles({
     void Function(double progress, String? status)? onProgress,
     void Function(String permanentPath)? onFileMoved,
@@ -385,6 +386,7 @@ extension NoteEditorColorAndMedia on _NoteFullEditorPageState {
       rethrow;
     }
   }
+
   Future<String?> _moveMediaFileSafely(
     String sourcePath,
     Map<String, String> processedFiles, {
@@ -410,6 +412,7 @@ extension NoteEditorColorAndMedia on _NoteFullEditorPageState {
       return null;
     }
   }
+
   Future<void> _cleanupTemporaryMedia() async {
     try {
       await TemporaryMediaService.cleanupExpiredTemporaryFiles();
@@ -418,6 +421,7 @@ extension NoteEditorColorAndMedia on _NoteFullEditorPageState {
       logDebug('清理临时媒体文件失败: $e');
     }
   }
+
   Future<void> _cleanupSessionImportedMediaIfUnsaved() async {
     try {
       if (_didSaveSuccessfully || _sessionImportedMedia.isEmpty) return;

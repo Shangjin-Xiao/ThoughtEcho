@@ -1,7 +1,7 @@
 part of '../database_service.dart';
 
 /// Mixin providing query helper operations for DatabaseService.
-mixin _DatabaseQueryHelpersMixin on ChangeNotifier {
+mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
   /// 修复：直接查询数据库，不进行初始化状态检查，用于内部调用
   Future<List<Quote>> _directGetQuotes({
     List<String>? tagIds,
@@ -61,7 +61,7 @@ mixin _DatabaseQueryHelpersMixin on ChangeNotifier {
     }
 
     // 非Web平台直接查询数据库
-    final db = _database!; // 直接使用数据库，不进行安全检查
+    final db = _DatabaseServiceBase._database!; // 直接使用数据库，不进行安全检查
 
     // 构建查询条件
     final conditions = <String>[];
@@ -202,7 +202,7 @@ mixin _DatabaseQueryHelpersMixin on ChangeNotifier {
           AND qt_hidden.tag_id = ?
         )
       ''');
-      args.add(hiddenTagId);
+      args.add(_DatabaseServiceBase.hiddenTagId);
 
       if (whereSql != null && whereSql.isNotEmpty) {
         conditions.add(whereSql);
@@ -237,6 +237,7 @@ mixin _DatabaseQueryHelpersMixin on ChangeNotifier {
       );
       return [];
     }
+  }
 
   /// 获取笔记总数，用于分页
   /// [excludeHiddenNotes] 是否排除隐藏笔记，默认为 true
@@ -249,7 +250,8 @@ mixin _DatabaseQueryHelpersMixin on ChangeNotifier {
     bool excludeHiddenNotes = true,
   }) async {
     // 判断是否正在查询隐藏标签
-    final isQueryingHiddenTag = tagIds != null && tagIds.contains(hiddenTagId);
+    final isQueryingHiddenTag =
+        tagIds != null && tagIds.contains(_DatabaseServiceBase.hiddenTagId);
     // 如果正在查询隐藏标签，则不排除隐藏笔记
     final shouldExcludeHidden = excludeHiddenNotes && !isQueryingHiddenTag;
 
@@ -259,8 +261,9 @@ mixin _DatabaseQueryHelpersMixin on ChangeNotifier {
 
       // 排除隐藏笔记
       if (shouldExcludeHidden) {
-        filtered =
-            filtered.where((q) => !q.tagIds.contains(hiddenTagId)).toList();
+        filtered = filtered
+            .where((q) => !q.tagIds.contains(_DatabaseServiceBase.hiddenTagId))
+            .toList();
       }
 
       if (tagIds != null && tagIds.isNotEmpty) {
@@ -319,7 +322,7 @@ mixin _DatabaseQueryHelpersMixin on ChangeNotifier {
             WHERE ht.quote_id = q.id AND ht.tag_id = ?
           )
         ''');
-        args.add(hiddenTagId);
+        args.add(_DatabaseServiceBase.hiddenTagId);
       }
 
       // 分类筛选
@@ -397,5 +400,4 @@ mixin _DatabaseQueryHelpersMixin on ChangeNotifier {
       return 0;
     }
   }
-
 }

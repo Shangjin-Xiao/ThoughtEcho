@@ -1,7 +1,7 @@
 part of '../note_list_view.dart';
 
 /// Data stream and subscription management for NoteListViewState.
-extension NoteListDataStreamExtension on NoteListViewState {
+extension _NoteListDataStreamExtension on NoteListViewState {
   void _scheduleExpandableQuoteCheck() {
     _hasExpandableQuoteComputed = false;
     _hasExpandableQuoteCached = false;
@@ -25,7 +25,7 @@ extension NoteListDataStreamExtension on NoteListViewState {
 
       _hasExpandableQuoteComputed = true;
       if (_hasExpandableQuoteCached != hasExpandable) {
-        setState(() {
+        _updateState(() {
           _hasExpandableQuoteCached = hasExpandable;
         });
       } else {
@@ -53,7 +53,7 @@ extension NoteListDataStreamExtension on NoteListViewState {
     _quotesSub = db
         .watchQuotes(
       tagIds: widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
-      limit: _pageSize,
+      limit: NoteListViewState._pageSize,
       orderBy: widget.sortType == 'time'
           ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
           : widget.sortType == 'favorite'
@@ -81,7 +81,7 @@ extension NoteListDataStreamExtension on NoteListViewState {
             );
           }
 
-          setState(() {
+          _updateState(() {
             if (isFirstLoad) {
               _quotes.clear();
             }
@@ -90,7 +90,7 @@ extension NoteListDataStreamExtension on NoteListViewState {
               ..addAll(
                 list,
               ); // Simplified: always replace for consistency, but flag prevents extra sets
-            _hasMore = list.length >= _pageSize;
+            _hasMore = list.length >= NoteListViewState._pageSize;
             _isLoading = false;
             _pruneExpansionControllers();
           });
@@ -168,7 +168,7 @@ extension NoteListDataStreamExtension on NoteListViewState {
       },
       onError: (error) {
         if (mounted) {
-          setState(() {
+          _updateState(() {
             _isLoading = false;
           });
 
@@ -254,7 +254,7 @@ extension NoteListDataStreamExtension on NoteListViewState {
 
     // Set loading only if not first load
     if (_initialDataLoaded) {
-      setState(() {
+      _updateState(() {
         _isLoading = true;
       });
     }
@@ -268,7 +268,7 @@ extension NoteListDataStreamExtension on NoteListViewState {
     _quotesSub = db
         .watchQuotes(
       tagIds: widget.selectedTagIds.isNotEmpty ? widget.selectedTagIds : null,
-      limit: _pageSize,
+      limit: NoteListViewState._pageSize,
       orderBy: widget.sortType == 'time'
           ? 'date ${widget.sortAscending ? 'ASC' : 'DESC'}'
           : widget.sortType == 'favorite'
@@ -284,10 +284,10 @@ extension NoteListDataStreamExtension on NoteListViewState {
         .listen(
       (list) {
         if (mounted) {
-          setState(() {
+          _updateState(() {
             _quotes.clear();
             _quotes.addAll(list);
-            _hasMore = list.length >= _pageSize;
+            _hasMore = list.length >= NoteListViewState._pageSize;
             _isLoading = false;
             _pruneExpansionControllers();
           });
@@ -361,7 +361,7 @@ extension NoteListDataStreamExtension on NoteListViewState {
       },
       onError: (error) {
         if (mounted) {
-          setState(() {
+          _updateState(() {
             _isLoading = false; // 出错时停止加载
           });
 

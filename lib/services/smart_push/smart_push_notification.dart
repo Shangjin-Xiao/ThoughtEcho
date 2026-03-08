@@ -30,8 +30,8 @@ extension SmartPushNotification on SmartPushService {
       if (androidPlugin != null) {
         await androidPlugin.createNotificationChannel(
           const AndroidNotificationChannel(
-            _notificationChannelId,
-            _notificationChannelName,
+            SmartPushService._notificationChannelId,
+            SmartPushService._notificationChannelName,
             description: '回顾过去的笔记和每日一言',
             importance: Importance.high,
           ),
@@ -153,10 +153,10 @@ extension SmartPushNotification on SmartPushService {
       }
 
       await _mmkv.setString(
-        _pendingHomeDailyQuoteKey,
+        SmartPushService._pendingHomeDailyQuoteKey,
         json.encode(hitokotoData),
       );
-      notifyListeners();
+      notifyListenersFromParts();
       AppLogger.i('已标记每日一言通知内容用于首页展示');
     } catch (e) {
       AppLogger.e('每日一言通知点击处理出错', error: e);
@@ -168,11 +168,13 @@ extension SmartPushNotification on SmartPushService {
   /// [hitokotoData] 为一言 API 的原始响应，包含 type 等标签分类信息
   void _saveDailyQuoteToCache(Map<String, dynamic> hitokotoData) {
     try {
-      final normalizedData = normalizeDailyQuoteData(hitokotoData);
+      final normalizedData =
+          SmartPushService.normalizeDailyQuoteData(hitokotoData);
       if (normalizedData == null) return;
 
-      _mmkv.setString(_lastDailyQuoteKey, json.encode(normalizedData));
-      _mmkv.setString(_lastDailyQuoteDateKey, _todayDateKey());
+      _mmkv.setString(
+          SmartPushService._lastDailyQuoteKey, json.encode(normalizedData));
+      _mmkv.setString(SmartPushService._lastDailyQuoteDateKey, _todayDateKey());
     } catch (e) {
       AppLogger.w('缓存每日一言失败', error: e);
     }
@@ -183,12 +185,13 @@ extension SmartPushNotification on SmartPushService {
   /// 读取当天缓存的一言数据，跨首页与推送共用。
   Map<String, dynamic>? getCachedDailyQuoteForToday() {
     try {
-      final cachedDate = _mmkv.getString(_lastDailyQuoteDateKey);
+      final cachedDate =
+          _mmkv.getString(SmartPushService._lastDailyQuoteDateKey);
       if (cachedDate == null || cachedDate != _todayDateKey()) {
         return null;
       }
 
-      final cachedJson = _mmkv.getString(_lastDailyQuoteKey);
+      final cachedJson = _mmkv.getString(SmartPushService._lastDailyQuoteKey);
       if (cachedJson == null || cachedJson.isEmpty) {
         return null;
       }
@@ -198,7 +201,7 @@ extension SmartPushNotification on SmartPushService {
         return null;
       }
 
-      return normalizeDailyQuoteData(decoded);
+      return SmartPushService.normalizeDailyQuoteData(decoded);
     } catch (e) {
       AppLogger.w('读取每日一言缓存失败', error: e);
       return null;
@@ -213,19 +216,20 @@ extension SmartPushNotification on SmartPushService {
   /// 一次性消费"通知点击后首页展示"的每日一言内容。
   Future<Map<String, dynamic>?> consumePendingDailyQuoteForHomeDisplay() async {
     try {
-      final pendingJson = _mmkv.getString(_pendingHomeDailyQuoteKey);
+      final pendingJson =
+          _mmkv.getString(SmartPushService._pendingHomeDailyQuoteKey);
       if (pendingJson == null || pendingJson.isEmpty) {
         return null;
       }
 
       final decoded = json.decode(pendingJson);
       if (decoded is! Map<String, dynamic>) {
-        await _mmkv.remove(_pendingHomeDailyQuoteKey);
+        await _mmkv.remove(SmartPushService._pendingHomeDailyQuoteKey);
         return null;
       }
 
-      final normalizedData = normalizeDailyQuoteData(decoded);
-      await _mmkv.remove(_pendingHomeDailyQuoteKey);
+      final normalizedData = SmartPushService.normalizeDailyQuoteData(decoded);
+      await _mmkv.remove(SmartPushService._pendingHomeDailyQuoteKey);
       return normalizedData;
     } catch (e) {
       AppLogger.w('读取待展示每日一言失败', error: e);
@@ -253,7 +257,7 @@ extension SmartPushNotification on SmartPushService {
     }
 
     final data = json.decode(response.body) as Map<String, dynamic>?;
-    final normalizedData = normalizeDailyQuoteData(data);
+    final normalizedData = SmartPushService.normalizeDailyQuoteData(data);
     if (normalizedData == null) {
       return null;
     }
@@ -286,8 +290,8 @@ extension SmartPushNotification on SmartPushService {
         if (androidPlugin != null) {
           await androidPlugin.createNotificationChannel(
             const AndroidNotificationChannel(
-              _notificationChannelId,
-              _notificationChannelName,
+              SmartPushService._notificationChannelId,
+              SmartPushService._notificationChannelName,
               description: '回顾过去的笔记和每日一言',
               importance: Importance.high,
             ),
@@ -312,8 +316,8 @@ extension SmartPushNotification on SmartPushService {
     final body = _buildNotificationBody(note);
 
     final androidDetails = AndroidNotificationDetails(
-      _notificationChannelId,
-      _notificationChannelName,
+      SmartPushService._notificationChannelId,
+      SmartPushService._notificationChannelName,
       channelDescription: '回顾过去的笔记和每日一言',
       importance: Importance.max,
       priority: Priority.high,

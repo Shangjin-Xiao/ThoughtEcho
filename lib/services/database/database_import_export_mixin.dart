@@ -1,7 +1,7 @@
 part of '../database_service.dart';
 
 /// Mixin providing import/export operations for DatabaseService.
-mixin _DatabaseImportExportMixin on ChangeNotifier {
+mixin _DatabaseImportExportMixin on _DatabaseServiceBase {
   /// 将所有笔记和分类数据导出为Map对象
   Future<Map<String, dynamic>> exportDataAsMap() async {
     return _backupService.exportDataAsMap(database);
@@ -25,7 +25,7 @@ mixin _DatabaseImportExportMixin on ChangeNotifier {
       data,
       clearExisting: clearExisting,
     );
-    await _updateCategoriesStream();
+    await updateCategoriesStreamForParts();
     notifyListeners();
     await patchQuotesDayPeriod();
     await migrateWeatherToKey();
@@ -55,7 +55,7 @@ mixin _DatabaseImportExportMixin on ChangeNotifier {
 
   /// 检查是否可以导出数据（检测数据库是否可访问）
   Future<bool> checkCanExport() async {
-    return _backupService.checkCanExport(_database);
+    return _backupService.checkCanExport(_DatabaseServiceBase._database);
   }
 
   /// 验证备份文件是否有效
@@ -79,10 +79,9 @@ mixin _DatabaseImportExportMixin on ChangeNotifier {
       sourceDevice: sourceDevice,
     );
     await MediaReferenceService.migrateExistingQuotes();
-    _clearAllCache();
+    clearAllCacheForParts();
     notifyListeners();
-    _refreshQuotesStream();
+    refreshQuotesStreamForParts();
     return report;
   }
-
 }

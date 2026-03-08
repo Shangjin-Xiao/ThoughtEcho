@@ -1,7 +1,7 @@
 part of '../database_service.dart';
 
 /// Mixin providing pagination and stream operations for DatabaseService.
-mixin _DatabasePaginationMixin on ChangeNotifier {
+mixin _DatabasePaginationMixin on _DatabaseServiceBase {
   /// 修复：安全地通知笔记流订阅者
   /// 性能优化：由于 _currentQuotes 已通过 _currentQuoteIds 保证唯一性，
   /// 此处直接发送，无需再次遍历去重
@@ -25,7 +25,7 @@ mixin _DatabasePaginationMixin on ChangeNotifier {
     if (_quotesController != null && !_quotesController!.isClosed) {
       logDebug('刷新笔记流数据');
       // 优化：清除所有缓存，确保获取最新数据
-      _clearAllCache();
+      clearAllCacheForParts();
 
       // 重置状态并加载新数据
       _watchOffset = 0;
@@ -357,5 +357,4 @@ mixin _DatabasePaginationMixin on ChangeNotifier {
       _isLoading = false; // 确保加载状态总是被重置
     }
   }
-
 }

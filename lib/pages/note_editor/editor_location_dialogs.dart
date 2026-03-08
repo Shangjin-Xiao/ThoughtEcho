@@ -1,7 +1,7 @@
 part of '../note_full_editor_page.dart';
 
 /// Location and weather dialog handlers and basic fetch methods.
-extension NoteEditorLocationDialogs on _NoteFullEditorPageState {
+extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
   Future<void> _showLocationDialogInEditor(
     BuildContext context,
     ThemeData theme,
@@ -90,7 +90,7 @@ extension NoteEditorLocationDialogs on _NoteFullEditorPageState {
         if (addressInfo != null && mounted) {
           final formattedAddress = addressInfo['formatted_address'];
           if (formattedAddress != null && formattedAddress.isNotEmpty) {
-            setState(() {
+            _updateState(() {
               _location = formattedAddress;
               _originalLocation = formattedAddress;
             });
@@ -149,7 +149,7 @@ extension NoteEditorLocationDialogs on _NoteFullEditorPageState {
         }
       }
     } else if (result == 'remove') {
-      setState(() {
+      _updateState(() {
         _showLocation = false;
       });
     }
@@ -212,7 +212,7 @@ extension NoteEditorLocationDialogs on _NoteFullEditorPageState {
     );
 
     if (result == 'remove') {
-      setState(() {
+      _updateState(() {
         _showWeather = false;
       });
     }
@@ -252,7 +252,7 @@ extension NoteEditorLocationDialogs on _NoteFullEditorPageState {
       // 优化：将网络请求包装为 Future，避免阻塞主线程
       try {
         // 更新位置信息（包括经纬度）
-        setState(() {
+        _updateState(() {
           _location = location.isNotEmpty ? location : null;
           _latitude = position.latitude;
           _longitude = position.longitude;
@@ -297,7 +297,7 @@ extension NoteEditorLocationDialogs on _NoteFullEditorPageState {
 
       // 优化：仅在组件仍然挂载时更新状态
       if (mounted) {
-        setState(() {
+        _updateState(() {
           _weather = weatherService.currentWeather;
           _temperature = weatherService.temperature;
         });

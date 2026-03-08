@@ -32,33 +32,154 @@ part 'database/database_pagination_mixin.dart';
 part 'database/database_import_export_mixin.dart';
 part 'database/database_migration_mixin.dart';
 
-class DatabaseService extends ChangeNotifier
-    with
-        _DatabaseCacheMixin,
-        _DatabaseQueryHelpersMixin,
-        _DatabaseQueryMixin,
-        _DatabaseQuoteCrudMixin,
-        _DatabaseFavoriteMixin,
-        _DatabaseCategoryMixin,
-        _DatabaseCategoryInitMixin,
-        _DatabaseHiddenTagMixin,
-        _DatabasePaginationMixin,
-        _DatabaseImportExportMixin,
-        _DatabaseMigrationMixin {
-  // 单例模式 - 确保所有代码共享同一实例，避免竞态条件
-  static final DatabaseService _instance = DatabaseService._internal();
-  factory DatabaseService() => _instance;
-  DatabaseService._internal();
+abstract class _DatabaseServiceBase extends ChangeNotifier {
+  _DatabaseServiceBase._internal();
 
-  /// 用于单元/Widget 测试的可构造实例（绕过单例工厂）。
-  ///
-  /// 注意：仅测试使用；生产代码应通过 `DatabaseService()` 获取单例。
   @visibleForTesting
-  DatabaseService.forTesting();
+  _DatabaseServiceBase.forTesting();
 
   final DatabaseSchemaManager _schemaManager = DatabaseSchemaManager();
   final DatabaseBackupService _backupService = DatabaseBackupService();
   final DatabaseHealthService _healthService = DatabaseHealthService();
+  static const String defaultCategoryIdHitokoto = 'default_hitokoto';
+  static const String defaultCategoryIdAnime = 'default_anime';
+  static const String defaultCategoryIdComic = 'default_comic';
+  static const String defaultCategoryIdGame = 'default_game';
+  static const String defaultCategoryIdNovel = 'default_novel';
+  static const String defaultCategoryIdOriginal = 'default_original';
+  static const String defaultCategoryIdInternet = 'default_internet';
+  static const String defaultCategoryIdOther = 'default_other';
+  static const String defaultCategoryIdMovie = 'default_movie';
+  static const String defaultCategoryIdPoem = 'default_poem';
+  static const String defaultCategoryIdMusic = 'default_music';
+  static const String defaultCategoryIdPhilosophy = 'default_philosophy';
+  static const String defaultCategoryIdJoke = 'default_joke';
+  static const String hiddenTagId = 'system_hidden_tag';
+  static const String hiddenTagIconName = '🔒';
+
+  Future<void> addQuote(Quote quote);
+  Future<Quote?> getQuoteById(String id);
+  Future<List<Quote>> getAllQuotes({bool excludeHiddenNotes = true});
+  Future<void> deleteQuote(String id);
+  Future<List<Quote>> searchQuotesByContent(String query);
+  Future<void> updateQuote(Quote quote);
+
+  Future<List<Quote>> getUserQuotes({
+    List<String>? tagIds,
+    String? categoryId,
+    int offset = 0,
+    int limit = 20,
+    String orderBy = 'date DESC',
+    String? searchQuery,
+    List<String>? selectedWeathers,
+    List<String>? selectedDayPeriods,
+    bool excludeHiddenNotes = true,
+  });
+  Future<List<Quote>> getQuotesForSmartPush({
+    String? whereSql,
+    List<Object?>? whereArgs,
+    int limit = 200,
+    String orderBy = 'q.date DESC',
+  });
+  Future<int> getQuotesCount({
+    List<String>? tagIds,
+    String? categoryId,
+    String? searchQuery,
+    List<String>? selectedWeathers,
+    List<String>? selectedDayPeriods,
+    bool excludeHiddenNotes = true,
+  });
+
+  Future<void> incrementFavoriteCount(String quoteId);
+  Future<void> resetFavoriteCount(String quoteId);
+  Future<List<Quote>> getMostFavoritedQuotesThisWeek({int limit = 5});
+
+  Future<List<Map<String, dynamic>>> getAllCategories();
+  Future<List<NoteCategory>> getCategories();
+  Future<void> addCategory(String name, {String? iconName});
+  Future<void> addCategoryWithId(String id, String name, {String? iconName});
+  Stream<List<NoteCategory>> watchCategories();
+  Future<void> deleteCategory(String id);
+  Future<void> updateCategory(String id, String name, {String? iconName});
+  Future<NoteCategory?> getCategoryById(String id);
+
+  Future<void> initDefaultHitokotoCategories();
+  Future<NoteCategory?> getOrCreateHiddenTag();
+  bool isHiddenTag(String tagId);
+  Future<void> removeHiddenTag();
+  Future<bool> isQuoteHidden(String quoteId);
+  Future<List<String>> getHiddenQuoteIds();
+
+  void refreshQuotes();
+  Stream<List<Quote>> watchQuotes({
+    List<String>? tagIds,
+    String? categoryId,
+    int limit = 20,
+    String orderBy = 'date DESC',
+    String? searchQuery,
+    List<String>? selectedWeathers,
+    List<String>? selectedDayPeriods,
+  });
+  Future<void> loadMoreQuotes({
+    List<String>? tagIds,
+    String? categoryId,
+    String? searchQuery,
+    List<String>? selectedWeathers,
+    List<String>? selectedDayPeriods,
+  });
+
+  Future<Map<String, dynamic>> exportDataAsMap();
+  Future<String> exportAllData({String? customPath});
+  Future<void> importDataFromMap(
+    Map<String, dynamic> data, {
+    bool clearExisting = true,
+  });
+  Future<void> importData(String filePath, {bool clearExisting = true});
+  Future<bool> checkCanExport();
+  Future<bool> validateBackupFile(String filePath);
+  Future<MergeReport> importDataWithLWWMerge(
+    Map<String, dynamic> data, {
+    String? sourceDevice,
+  });
+
+  Future<void> patchQuotesDayPeriod();
+  Future<void> migrateDayPeriodToKey();
+  Future<void> migrateWeatherToKey();
+  Future<Map<String, dynamic>> checkTagDataConsistency();
+  Future<bool> cleanupTagDataInconsistencies();
+  Future<List<int>> getHourDistributionForSmartPush();
+  Map<String, dynamic> getQueryPerformanceReport();
+  Future<Map<String, dynamic>?> getLocalDailyQuote();
+  Future<Map<String, dynamic>> performDatabaseMaintenance({
+    Function(String)? onProgress,
+  });
+  Future<Map<String, dynamic>> getDatabaseHealthInfo();
+
+  Future<List<Quote>> _directGetQuotes({
+    List<String>? tagIds,
+    String? categoryId,
+    int offset = 0,
+    int limit = 10,
+    String orderBy = 'date DESC',
+    String? searchQuery,
+    List<String>? selectedWeathers,
+    List<String>? selectedDayPeriods,
+  });
+  Future<void> _checkAndFixDatabaseStructure();
+  void _scheduleCacheCleanup();
+  void _clearAllCache();
+  void _safeNotifyQuotesStream();
+  void _refreshQuotesStream();
+  Future<void> _updateCategoriesStream();
+
+  static void setTestDatabase(Database testDb) {
+    _database = testDb;
+  }
+
+  @visibleForTesting
+  static void clearTestDatabase() {
+    _database = null;
+  }
 
   static Database? _database;
   StreamController<List<NoteCategory>> _categoriesController =
@@ -74,26 +195,6 @@ class DatabaseService extends ChangeNotifier
 
   // 提供访问_watchHasMore状态的getter
   bool get hasMoreQuotes => _watchHasMore;
-
-  // 定义默认一言分类的固定 ID
-  static const String defaultCategoryIdHitokoto = 'default_hitokoto';
-  static const String defaultCategoryIdAnime = 'default_anime';
-  static const String defaultCategoryIdComic = 'default_comic';
-  static const String defaultCategoryIdGame = 'default_game';
-  static const String defaultCategoryIdNovel = 'default_novel';
-  static const String defaultCategoryIdOriginal = 'default_original';
-  static const String defaultCategoryIdInternet = 'default_internet';
-  static const String defaultCategoryIdOther = 'default_other';
-  static const String defaultCategoryIdMovie = 'default_movie';
-  static const String defaultCategoryIdPoem = 'default_poem';
-  static const String defaultCategoryIdMusic = 'default_music';
-  static const String defaultCategoryIdPhilosophy = 'default_philosophy';
-  static const String defaultCategoryIdJoke = 'default_joke';
-
-  // 隐藏笔记特殊标签 ID
-  static const String hiddenTagId = 'system_hidden_tag';
-  // 隐藏标签图标：使用 emoji 小锁
-  static const String hiddenTagIconName = '🔒';
 
   // 新增：流式分页加载笔记
   StreamController<List<Quote>>? _quotesController;
@@ -146,6 +247,21 @@ class DatabaseService extends ChangeNotifier
 
   // 性能优化：增量维护的 ID Set，避免每次去重时遍历
   final Set<String> _currentQuoteIds = {};
+
+  @protected
+  void clearAllCacheForParts() => _clearAllCache();
+
+  @protected
+  void refreshQuotesStreamForParts() => _refreshQuotesStream();
+
+  @protected
+  void scheduleCacheCleanupForParts() => _scheduleCacheCleanup();
+
+  @protected
+  Future<void> updateCategoriesStreamForParts() => _updateCategoriesStream();
+
+  @protected
+  void safeNotifyQuotesStreamForParts() => _safeNotifyQuotesStream();
 
   Database get database {
     if (_database == null || !_database!.isOpen) {
@@ -239,17 +355,6 @@ class DatabaseService extends ChangeNotifier
       completer.complete();
       _databaseLock.remove(operationId);
     }
-  }
-
-  /// Test method to set a test database instance
-  static void setTestDatabase(Database testDb) {
-    _database = testDb;
-  }
-
-  /// Test method to clear the test database instance
-  @visibleForTesting
-  static void clearTestDatabase() {
-    _database = null;
   }
 
   /// 修复：初始化数据库，增加并发控制
@@ -690,4 +795,52 @@ class DatabaseService extends ChangeNotifier
       rethrow;
     }
   }
+}
+
+class DatabaseService extends _DatabaseServiceBase
+    with
+        _DatabaseCacheMixin,
+        _DatabaseQueryHelpersMixin,
+        _DatabaseQueryMixin,
+        _DatabaseQuoteCrudMixin,
+        _DatabaseFavoriteMixin,
+        _DatabaseCategoryMixin,
+        _DatabaseCategoryInitMixin,
+        _DatabaseHiddenTagMixin,
+        _DatabasePaginationMixin,
+        _DatabaseImportExportMixin,
+        _DatabaseMigrationMixin {
+  static final DatabaseService _instance = DatabaseService._internal();
+  factory DatabaseService() => _instance;
+
+  static const String defaultCategoryIdHitokoto = 'default_hitokoto';
+  static const String defaultCategoryIdAnime = 'default_anime';
+  static const String defaultCategoryIdComic = 'default_comic';
+  static const String defaultCategoryIdGame = 'default_game';
+  static const String defaultCategoryIdNovel = 'default_novel';
+  static const String defaultCategoryIdOriginal = 'default_original';
+  static const String defaultCategoryIdInternet = 'default_internet';
+  static const String defaultCategoryIdOther = 'default_other';
+  static const String defaultCategoryIdMovie = 'default_movie';
+  static const String defaultCategoryIdPoem = 'default_poem';
+  static const String defaultCategoryIdMusic = 'default_music';
+  static const String defaultCategoryIdPhilosophy = 'default_philosophy';
+  static const String defaultCategoryIdJoke = 'default_joke';
+  static const String hiddenTagId = 'system_hidden_tag';
+  static const String hiddenTagIconName = '🔒';
+
+  static Database? get rawDatabaseInstance => _DatabaseServiceBase._database;
+
+  static void setTestDatabase(Database testDb) {
+    _DatabaseServiceBase.setTestDatabase(testDb);
+  }
+
+  static void clearTestDatabase() {
+    _DatabaseServiceBase.clearTestDatabase();
+  }
+
+  DatabaseService._internal() : super._internal();
+
+  @visibleForTesting
+  DatabaseService.forTesting() : super.forTesting();
 }

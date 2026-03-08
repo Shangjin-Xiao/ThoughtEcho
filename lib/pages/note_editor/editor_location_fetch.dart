@@ -1,7 +1,7 @@
 part of '../note_full_editor_page.dart';
 
 /// Location and weather fetch methods with notification and failure handling.
-extension NoteEditorLocationFetch on _NoteFullEditorPageState {
+extension _NoteEditorLocationFetch on _NoteFullEditorPageState {
   Future<void> _fetchLocationWeatherWithNotification() async {
     final locationService = Provider.of<LocationService>(
       context,
@@ -16,7 +16,7 @@ extension NoteEditorLocationFetch on _NoteFullEditorPageState {
       if (!permissionGranted) {
         if (mounted) {
           final l10n = AppLocalizations.of(context);
-          setState(() {
+          _updateState(() {
             _showLocation = false;
             _showWeather = false;
           });
@@ -42,7 +42,7 @@ extension NoteEditorLocationFetch on _NoteFullEditorPageState {
     if (position != null && mounted) {
       final location = locationService.getFormattedLocation();
 
-      setState(() {
+      _updateState(() {
         _location = location.isNotEmpty ? location : null;
         _latitude = position.latitude;
         _longitude = position.longitude;
@@ -55,14 +55,14 @@ extension NoteEditorLocationFetch on _NoteFullEditorPageState {
           position.longitude,
         );
         if (mounted) {
-          setState(() {
+          _updateState(() {
             _weather = weatherService.currentWeather;
             _temperature = weatherService.temperature;
           });
           // 天气获取失败（无数据）
           if (_weather == null && _showWeather) {
             final l10n = AppLocalizations.of(context);
-            setState(() {
+            _updateState(() {
               _showWeather = false;
             });
             showDialog(
@@ -84,7 +84,7 @@ extension NoteEditorLocationFetch on _NoteFullEditorPageState {
         logError('获取天气数据失败', error: e, source: 'NoteFullEditorPage');
         if (mounted && _showWeather) {
           final l10n = AppLocalizations.of(context);
-          setState(() {
+          _updateState(() {
             _showWeather = false;
           });
           showDialog(
@@ -105,7 +105,7 @@ extension NoteEditorLocationFetch on _NoteFullEditorPageState {
     } else if (mounted) {
       // 位置获取失败
       final l10n = AppLocalizations.of(context);
-      setState(() {
+      _updateState(() {
         _showLocation = false;
         _showWeather = false;
       });
@@ -162,7 +162,7 @@ extension NoteEditorLocationFetch on _NoteFullEditorPageState {
         result.position!.longitude,
       );
       if (mounted) {
-        setState(() {
+        _updateState(() {
           _weather = weatherService.currentWeather;
           _temperature = weatherService.temperature;
         });
@@ -250,7 +250,7 @@ extension NoteEditorLocationFetch on _NoteFullEditorPageState {
       if (position != null && mounted) {
         final location = locationService.getFormattedLocation();
 
-        setState(() {
+        _updateState(() {
           _location = location.isNotEmpty ? location : null;
           _latitude = position.latitude;
           _longitude = position.longitude;

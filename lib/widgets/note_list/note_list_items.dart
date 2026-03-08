@@ -1,7 +1,7 @@
 part of '../note_list_view.dart';
 
 /// List building, search, and item rendering for NoteListViewState.
-extension NoteListItemsExtension on NoteListViewState {
+extension _NoteListItemsExtension on NoteListViewState {
   Widget _buildNoteListView(BuildContext context) {
     final db = Provider.of<DatabaseService>(context);
     final searchController = Provider.of<NoteSearchController>(context);
@@ -15,7 +15,7 @@ extension NoteListItemsExtension on NoteListViewState {
     if (searchController.searchError != null && _isLoading) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          setState(() {
+          _updateState(() {
             _isLoading = false;
           });
           searchController.resetSearchState();
@@ -101,7 +101,7 @@ extension NoteListItemsExtension on NoteListViewState {
                                         ? l10n.aiSearchMode
                                         : l10n.normalSearchMode,
                                     onPressed: () {
-                                      setState(() {
+                                      _updateState(() {
                                         _isAISearchMode = !_isAISearchMode;
                                       });
                                       // 如果有搜索词，重新搜索
@@ -501,7 +501,7 @@ extension NoteListItemsExtension on NoteListViewState {
         (value.isNotEmpty && value.length >= AppConstants.minSearchLength);
 
     if (shouldSetLoading && !_isLoading) {
-      setState(() {
+      _updateState(() {
         _isLoading = true;
       });
       if (value.isEmpty) {
@@ -554,7 +554,7 @@ extension NoteListItemsExtension on NoteListViewState {
     if (value.isNotEmpty && value.length >= AppConstants.minSearchLength) {
       Timer(AppConstants.searchTimeout, () {
         if (mounted && _isLoading) {
-          setState(() {
+          _updateState(() {
             _isLoading = false;
           });
           try {

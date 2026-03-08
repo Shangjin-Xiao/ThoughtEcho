@@ -1,6 +1,6 @@
 part of '../ai_periodic_report_page.dart';
 
-extension AIReportStats on _AIPeriodicReportPageState {
+extension _AIReportStats on _AIPeriodicReportPageState {
   /// 构建统计卡片
   Widget _buildStatCard(
     String title,

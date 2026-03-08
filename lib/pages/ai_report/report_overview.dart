@@ -1,6 +1,6 @@
 part of '../ai_periodic_report_page.dart';
 
-extension AIReportOverview on _AIPeriodicReportPageState {
+extension _AIReportOverview on _AIPeriodicReportPageState {
   /// 构建数据概览
   Widget _buildDataOverview() {
     final l10n = AppLocalizations.of(context);

@@ -17,9 +17,10 @@ extension SmartPushScheduling on SmartPushService {
       // 后台只取消 AlarmManager 定时器，不取消本地通知
       if (PlatformHelper.isAndroid) {
         for (int i = 0; i < 10; i++) {
-          await AndroidAlarmManager.cancel(_androidAlarmId + i);
+          await AndroidAlarmManager.cancel(
+              SmartPushService._androidAlarmId + i);
         }
-        await AndroidAlarmManager.cancel(_dailyQuoteAlarmId);
+        await AndroidAlarmManager.cancel(SmartPushService._dailyQuoteAlarmId);
       }
       AppLogger.d('后台重新调度：仅取消 AlarmManager 定时器');
     } else {
@@ -70,7 +71,7 @@ extension SmartPushScheduling on SmartPushService {
           try {
             await AndroidAlarmManager.oneShotAt(
               scheduledDate,
-              _dailyQuoteAlarmId,
+              SmartPushService._dailyQuoteAlarmId,
               backgroundPushCallback,
               exact: true,
               wakeup: true,
@@ -78,7 +79,7 @@ extension SmartPushScheduling on SmartPushService {
               allowWhileIdle: true,
             );
             AppLogger.i(
-              '已设定每日一言 Alarm: $scheduledDate (ID: $_dailyQuoteAlarmId)',
+              '已设定每日一言 Alarm: $scheduledDate (ID: ${SmartPushService._dailyQuoteAlarmId})',
             );
           } catch (e) {
             AppLogger.e('设定每日一言 Alarm 失败', error: e);
@@ -293,14 +294,15 @@ extension SmartPushScheduling on SmartPushService {
   Future<void> _persistScheduledTimes(List<PushTimeSlot> slots) async {
     final today = DateTime.now().toIso8601String().substring(0, 10);
     final timesStr = slots.map((s) => '${s.hour}:${s.minute}').join(',');
-    await _mmkv.setString(_scheduledTimesKey, '$today|$timesStr');
+    await _mmkv.setString(
+        SmartPushService._scheduledTimesKey, '$today|$timesStr');
     AppLogger.d('已持久化今日推送时间: $timesStr');
   }
 
   /// 获取今日实际调度的推送时间（后台周期性检查用）
   List<PushTimeSlot> getScheduledTimesForToday() {
     try {
-      final data = _mmkv.getString(_scheduledTimesKey);
+      final data = _mmkv.getString(SmartPushService._scheduledTimesKey);
       if (data == null || data.isEmpty) return [];
 
       final parts = data.split('|');

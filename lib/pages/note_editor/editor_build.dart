@@ -1,7 +1,7 @@
 part of '../note_full_editor_page.dart';
 
 /// Main build method for the note editor page.
-extension NoteEditorBuild on _NoteFullEditorPageState {
+extension _NoteEditorBuild on _NoteFullEditorPageState {
   Widget _buildEditorPage(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
@@ -85,7 +85,8 @@ extension NoteEditorBuild on _NoteFullEditorPageState {
                       try {
                         await pauseAllMediaPlayers();
                       } catch (e) {
-                        debugPrint('[NoteFullEditorPage] pauseAllMediaPlayers failed: $e');
+                        debugPrint(
+                            '[NoteFullEditorPage] pauseAllMediaPlayers failed: $e');
                       }
                       await _saveContent();
                     },

@@ -2,7 +2,7 @@ part of '../note_full_editor_page.dart';
 
 /// AI assistant features: source analysis, text polishing,
 /// continuation, deep analysis, and note Q&A.
-extension NoteEditorAIFeatures on _NoteFullEditorPageState {
+extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
   void _showAIOptions(BuildContext context) {
     final theme = Theme.of(context);
 
@@ -205,7 +205,7 @@ extension NoteEditorAIFeatures on _NoteFullEditorPageState {
                     TextButton(
                       child: Text(l10n.applyAnalysisResult),
                       onPressed: () {
-                        setState(() {
+                        _updateState(() {
                           if (author != null && author.isNotEmpty) {
                             _authorController.text = author;
                           }
@@ -304,7 +304,7 @@ extension NoteEditorAIFeatures on _NoteFullEditorPageState {
 
     // 如果showDialog返回了结果 (用户点击了应用)，更新编辑器内容
     if (finalResult != null && mounted) {
-      setState(() {
+      _updateState(() {
         _controller.document = quill.Document.fromJson([
           {"insert": finalResult},
         ]);
