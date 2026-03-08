@@ -7,7 +7,7 @@
         android:largeHeap="true"
         android:hardwareAccelerated="true"
         android:vmSafeMode="true"
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:requestLegacyExternalStorage="true"
         android:usesCleartextTraffic="true"
         android:extractNativeLibs="true"
