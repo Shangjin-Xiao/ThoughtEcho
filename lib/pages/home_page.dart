@@ -1065,7 +1065,6 @@ class _HomePageState extends State<HomePage>
     });
   }
 
-
   // FAB 短按处理
   void _onFABTap() {
     _showAddQuoteDialog();
@@ -1733,9 +1732,6 @@ class _HomePageState extends State<HomePage>
     final locationService = Provider.of<LocationService>(context);
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    final aiService = context.read<AIService>();
-    final settingsService = context.read<SettingsService>();
-
     // 直接用context.watch<bool>()获取服务初始化状态（仅变化一次）
     final bool servicesInitialized = context.watch<bool>();
 
@@ -1869,157 +1865,165 @@ class _HomePageState extends State<HomePage>
                           ), // 每日提示部分 - 固定在底部，紧凑布局
                           Consumer2<AIService, SettingsService>(
                             builder: (context, aiSvc, settingsSvc, _) {
-                              final bool isAiConfigured =
-                                  aiSvc.hasValidApiKey() &&
-                                      settingsSvc
-                                          .aiSettings.apiUrl.isNotEmpty &&
-                                      settingsSvc
-                                          .aiSettings.model.isNotEmpty;
+                              final bool isAiConfigured = aiSvc
+                                      .hasValidApiKey() &&
+                                  settingsSvc.aiSettings.apiUrl.isNotEmpty &&
+                                  settingsSvc.aiSettings.model.isNotEmpty;
                               return Container(
                                 width: double.infinity,
-                            margin: EdgeInsets.fromLTRB(
-                              screenWidth > 600
-                                  ? 16.0
-                                  : (isVerySmallScreen ? 8.0 : 12.0), // 动态调整边距
-                              isVerySmallScreen ? 2.0 : 4.0, // 极小屏幕减少上边距
-                              screenWidth > 600
-                                  ? 16.0
-                                  : (isVerySmallScreen ? 8.0 : 12.0), // 动态调整边距
-                              isVerySmallScreen ? 8.0 : 12.0, // 极小屏幕减少下边距
-                            ),
-                            padding: EdgeInsets.all(
-                              screenWidth > 600
-                                  ? 18.0
-                                  : (isVerySmallScreen
-                                      ? 10.0
-                                      : 14.0), // 动态调整内边距
-                            ),
-                            decoration: BoxDecoration(
-                              color: theme.colorScheme.surface,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: AppTheme.defaultShadow,
-                              border: Border.all(
-                                color: theme.colorScheme.outline.withAlpha(30),
-                                width: 1,
-                              ),
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
+                                margin: EdgeInsets.fromLTRB(
+                                  screenWidth > 600
+                                      ? 16.0
+                                      : (isVerySmallScreen
+                                          ? 8.0
+                                          : 12.0), // 动态调整边距
+                                  isVerySmallScreen ? 2.0 : 4.0, // 极小屏幕减少上边距
+                                  screenWidth > 600
+                                      ? 16.0
+                                      : (isVerySmallScreen
+                                          ? 8.0
+                                          : 12.0), // 动态调整边距
+                                  isVerySmallScreen ? 8.0 : 12.0, // 极小屏幕减少下边距
+                                ),
+                                padding: EdgeInsets.all(
+                                  screenWidth > 600
+                                      ? 18.0
+                                      : (isVerySmallScreen
+                                          ? 10.0
+                                          : 14.0), // 动态调整内边距
+                                ),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.surface,
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: AppTheme.defaultShadow,
+                                  border: Border.all(
+                                    color:
+                                        theme.colorScheme.outline.withAlpha(30),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    Icon(
-                                      Icons.lightbulb_outline,
-                                      color: theme.colorScheme.primary,
-                                      size: screenWidth > 600
-                                          ? 22
-                                          : (isVerySmallScreen
-                                              ? 16
-                                              : 18), // 动态调整图标大小
+                                    Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Icon(
+                                          Icons.lightbulb_outline,
+                                          color: theme.colorScheme.primary,
+                                          size: screenWidth > 600
+                                              ? 22
+                                              : (isVerySmallScreen
+                                                  ? 16
+                                                  : 18), // 动态调整图标大小
+                                        ),
+                                        SizedBox(
+                                          width: isVerySmallScreen ? 4 : 6,
+                                        ), // 动态调整间距
+                                        Text(
+                                          AppLocalizations.of(
+                                            context,
+                                          ).todayThoughts,
+                                          style: theme.textTheme.titleMedium
+                                              ?.copyWith(
+                                            color: theme.colorScheme.primary,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: screenWidth > 600
+                                                ? 16
+                                                : (isVerySmallScreen
+                                                    ? 13
+                                                    : 15), // 动态调整字体
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                     SizedBox(
-                                      width: isVerySmallScreen ? 4 : 6,
+                                      height: isVerySmallScreen
+                                          ? 4
+                                          : (isSmallScreen ? 6 : 8),
                                     ), // 动态调整间距
-                                    Text(
-                                      AppLocalizations.of(
-                                        context,
-                                      ).todayThoughts,
-                                      style:
-                                          theme.textTheme.titleMedium?.copyWith(
-                                        color: theme.colorScheme.primary,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: screenWidth > 600
-                                            ? 16
-                                            : (isVerySmallScreen
-                                                ? 13
-                                                : 15), // 动态调整字体
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(
-                                  height: isVerySmallScreen
-                                      ? 4
-                                      : (isSmallScreen ? 6 : 8),
-                                ), // 动态调整间距
-                                // 提示内容区域 - 更紧凑
-                                _isGeneratingDailyPrompt &&
-                                        _accumulatedPromptText.isEmpty
-                                    ? Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          SizedBox(
-                                            width: isVerySmallScreen
-                                                ? 16
-                                                : 18, // 动态调整加载指示器大小
-                                            height: isVerySmallScreen ? 16 : 18,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: theme.colorScheme.primary,
-                                            ),
-                                          ),
-                                          SizedBox(
-                                            height: isVerySmallScreen
-                                                ? 3
-                                                : (isSmallScreen ? 4 : 6),
-                                          ), // 动态调整间距
-                                          Text(
-                                            isAiConfigured
-                                                ? AppLocalizations.of(
-                                                    context,
-                                                  ).loadingTodayThoughts
-                                                : AppLocalizations.of(
-                                                    context,
-                                                  ).fetchingDefaultPrompt,
-                                            style: theme.textTheme.bodySmall
+                                    // 提示内容区域 - 更紧凑
+                                    _isGeneratingDailyPrompt &&
+                                            _accumulatedPromptText.isEmpty
+                                        ? Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              SizedBox(
+                                                width: isVerySmallScreen
+                                                    ? 16
+                                                    : 18, // 动态调整加载指示器大小
+                                                height:
+                                                    isVerySmallScreen ? 16 : 18,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                  color:
+                                                      theme.colorScheme.primary,
+                                                ),
+                                              ),
+                                              SizedBox(
+                                                height: isVerySmallScreen
+                                                    ? 3
+                                                    : (isSmallScreen ? 4 : 6),
+                                              ), // 动态调整间距
+                                              Text(
+                                                isAiConfigured
+                                                    ? AppLocalizations.of(
+                                                        context,
+                                                      ).loadingTodayThoughts
+                                                    : AppLocalizations.of(
+                                                        context,
+                                                      ).fetchingDefaultPrompt,
+                                                style: theme.textTheme.bodySmall
+                                                    ?.copyWith(
+                                                  color: theme
+                                                      .colorScheme.onSurface
+                                                      .withAlpha(160),
+                                                  fontSize: screenWidth > 600
+                                                      ? 13
+                                                      : (isVerySmallScreen
+                                                          ? 10
+                                                          : 12), // 动态调整字体
+                                                ),
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            ],
+                                          )
+                                        : Text(
+                                            _accumulatedPromptText.isNotEmpty
+                                                ? _accumulatedPromptText.trim()
+                                                : (isAiConfigured
+                                                    ? AppLocalizations.of(
+                                                        context,
+                                                      ).waitingForTodayThoughts
+                                                    : AppLocalizations.of(
+                                                        context,
+                                                      ).noTodayThoughts),
+                                            style: theme.textTheme.bodyMedium
                                                 ?.copyWith(
-                                              color: theme.colorScheme.onSurface
-                                                  .withAlpha(160),
+                                              height: 1.4,
                                               fontSize: screenWidth > 600
-                                                  ? 13
+                                                  ? 15
                                                   : (isVerySmallScreen
-                                                      ? 10
-                                                      : 12), // 动态调整字体
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                        ],
-                                      )
-                                    : Text(
-                                        _accumulatedPromptText.isNotEmpty
-                                            ? _accumulatedPromptText.trim()
-                                            : (isAiConfigured
-                                                ? AppLocalizations.of(
-                                                    context,
-                                                  ).waitingForTodayThoughts
-                                                : AppLocalizations.of(
-                                                    context,
-                                                  ).noTodayThoughts),
-                                        style: theme.textTheme.bodyMedium
-                                            ?.copyWith(
-                                          height: 1.4,
-                                          fontSize: screenWidth > 600
-                                              ? 15
-                                              : (isVerySmallScreen
-                                                  ? 12
-                                                  : 14), // 动态调整字体
-                                          color:
-                                              _accumulatedPromptText.isNotEmpty
+                                                      ? 12
+                                                      : 14), // 动态调整字体
+                                              color: _accumulatedPromptText
+                                                      .isNotEmpty
                                                   ? theme.textTheme.bodyMedium
                                                       ?.color
                                                   : theme.colorScheme.onSurface
                                                       .withAlpha(120),
-                                        ),
-                                        textAlign: TextAlign.center,
-                                        maxLines: isVerySmallScreen
-                                            ? 2
-                                            : 3, // 极小屏幕最多2行
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                              ],
-                            ),
+                                            ),
+                                            textAlign: TextAlign.center,
+                                            maxLines: isVerySmallScreen
+                                                ? 2
+                                                : 3, // 极小屏幕最多2行
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                  ],
+                                ),
                               );
                             },
                           ),
@@ -2092,24 +2096,24 @@ class _HomePageState extends State<HomePage>
           child: GestureDetector(
             onLongPressStart: (_) => _onFABLongPress(),
             child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: AppTheme.accentShadow,
-            ),
-            child: FloatingActionButton(
-              heroTag: 'homePageFAB',
-              tooltip: '${l10n.add} / ${l10n.voiceInputTitle}',
-              onPressed: _onFABTap,
-              elevation: 0,
-              backgroundColor:
-                  theme.floatingActionButtonTheme.backgroundColor, // 使用主题定义的颜色
-              foregroundColor:
-                  theme.floatingActionButtonTheme.foregroundColor, // 使用主题定义的颜色
-              shape: RoundedRectangleBorder(
+              decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
+                boxShadow: AppTheme.accentShadow,
               ),
-              child: const Icon(Icons.add, size: 28),
-            ),
+              child: FloatingActionButton(
+                heroTag: 'homePageFAB',
+                tooltip: '${l10n.add} / ${l10n.voiceInputTitle}',
+                onPressed: _onFABTap,
+                elevation: 0,
+                backgroundColor: theme
+                    .floatingActionButtonTheme.backgroundColor, // 使用主题定义的颜色
+                foregroundColor: theme
+                    .floatingActionButtonTheme.foregroundColor, // 使用主题定义的颜色
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(Icons.add, size: 28),
+              ),
             ),
           ),
         ),

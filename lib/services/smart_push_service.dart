@@ -99,6 +99,11 @@ class SmartPushService extends ChangeNotifier {
 
   bool _notificationPluginReady = false;
 
+  @protected
+  void notifyListenersFromParts() {
+    notifyListeners();
+  }
+
   /// 统一每日一言数据格式，确保首页与推送使用同一结构。
   static Map<String, dynamic>? normalizeDailyQuoteData(
     Map<String, dynamic>? rawData,

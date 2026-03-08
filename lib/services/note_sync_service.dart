@@ -16,6 +16,7 @@ import 'package:dio/dio.dart';
 import 'device_identity_manager.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:http/http.dart' as http;
 
 /// 同步状态枚举
 enum SyncStatus {

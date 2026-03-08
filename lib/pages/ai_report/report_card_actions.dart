@@ -1,6 +1,6 @@
 part of '../ai_periodic_report_page.dart';
 
-extension AIReportCardActions on _AIPeriodicReportPageState {
+extension _AIReportCardActions on _AIPeriodicReportPageState {
   /// 显示卡片详情
   void _showCardDetail(GeneratedCard card) {
     // 添加触觉反馈
@@ -8,7 +8,7 @@ extension AIReportCardActions on _AIPeriodicReportPageState {
 
     // 设置选中状态
     final cardIndex = _featuredCards.indexOf(card);
-    setState(() {
+    _updateState(() {
       _selectedCardIndex = cardIndex;
     });
 
@@ -29,7 +29,7 @@ extension AIReportCardActions on _AIPeriodicReportPageState {
           brandName: AppLocalizations.of(context).appTitle,
         );
         if (mounted) {
-          setState(() {
+          _updateState(() {
             final index = _featuredCards.indexWhere(
               (existing) => existing.id == card.id,
             );
@@ -54,7 +54,7 @@ extension AIReportCardActions on _AIPeriodicReportPageState {
       ),
     ).then((_) {
       // 对话框关闭后清除选中状态
-      setState(() {
+      _updateState(() {
         _selectedCardIndex = null;
       });
     });

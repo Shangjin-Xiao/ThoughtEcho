@@ -194,7 +194,7 @@ extension SmartPushPlatform on SmartPushService {
         try {
           await AndroidAlarmManager.oneShotAt(
             scheduledDate,
-            _androidAlarmId + idIndex,
+            SmartPushService._androidAlarmId + idIndex,
             backgroundPushCallback,
             exact: true,
             wakeup: true,
@@ -202,7 +202,7 @@ extension SmartPushPlatform on SmartPushService {
             allowWhileIdle: true,
           );
           AppLogger.i(
-            '已设定常规 Alarm: $scheduledDate (ID: ${_androidAlarmId + idIndex})',
+            '已设定常规 Alarm: $scheduledDate (ID: ${SmartPushService._androidAlarmId + idIndex})',
           );
           return; // 成功，直接返回
         } catch (e) {
@@ -279,8 +279,8 @@ extension SmartPushPlatform on SmartPushService {
       }
 
       final androidDetails = AndroidNotificationDetails(
-        _notificationChannelId,
-        _notificationChannelName,
+        SmartPushService._notificationChannelId,
+        SmartPushService._notificationChannelName,
         channelDescription: '回顾过去的笔记和每日一言',
         importance: Importance.high,
         priority: Priority.high,
@@ -341,10 +341,10 @@ extension SmartPushPlatform on SmartPushService {
     if (PlatformHelper.isAndroid) {
       // 取消常规推送
       for (int i = 0; i < 10; i++) {
-        await AndroidAlarmManager.cancel(_androidAlarmId + i);
+        await AndroidAlarmManager.cancel(SmartPushService._androidAlarmId + i);
       }
       // 取消每日一言
-      await AndroidAlarmManager.cancel(_dailyQuoteAlarmId);
+      await AndroidAlarmManager.cancel(SmartPushService._dailyQuoteAlarmId);
     }
     // 取消 WorkManager 周期性任务
     await _cancelPeriodicFallbackTask();

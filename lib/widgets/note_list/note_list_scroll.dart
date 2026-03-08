@@ -1,7 +1,7 @@
 part of '../note_list_view.dart';
 
 /// Scroll-related methods for NoteListViewState.
-extension NoteListScrollExtension on NoteListViewState {
+extension _NoteListScrollExtension on NoteListViewState {
   void _startFirstOpenScrollPerfCapture() {
     if (!_firstOpenScrollPerfEnabled ||
         _firstOpenScrollPerfCaptured ||
@@ -137,7 +137,8 @@ extension NoteListScrollExtension on NoteListViewState {
           source: 'NoteListView',
         );
 
-        if (_scrollExtentCheckCounter >= _maxScrollExtentChecks) {
+        if (_scrollExtentCheckCounter >=
+            NoteListViewState._maxScrollExtentChecks) {
           // 多次检测到异常，尝试强制加载更多
           logDebug('触发强制加载更多数据以修复滚动范围', source: 'NoteListView');
           _scrollExtentCheckCounter = 0;
@@ -146,7 +147,7 @@ extension NoteListScrollExtension on NoteListViewState {
       } else if (!dbHasMore && _hasMore) {
         // 数据库表示没有更多数据，但本地状态不一致，同步状态
         logDebug('同步 _hasMore 状态: 从 true 改为 false', source: 'NoteListView');
-        setState(() {
+        _updateState(() {
           _hasMore = false;
         });
         _scrollExtentCheckCounter = 0;
@@ -163,7 +164,7 @@ extension NoteListScrollExtension on NoteListViewState {
 
     logDebug('强制加载更多数据开始', source: 'NoteListView');
 
-    setState(() {
+    _updateState(() {
       _isLoading = true;
     });
 
@@ -172,7 +173,7 @@ extension NoteListScrollExtension on NoteListViewState {
       await db.loadMoreQuotes();
 
       if (mounted) {
-        setState(() {
+        _updateState(() {
           _hasMore = db.hasMoreQuotes;
           _isLoading = false;
         });
@@ -180,7 +181,7 @@ extension NoteListScrollExtension on NoteListViewState {
     } catch (e) {
       logError('强制加载更多数据失败: $e', error: e, source: 'NoteListView');
       if (mounted) {
-        setState(() {
+        _updateState(() {
           _isLoading = false;
         });
       }
@@ -302,14 +303,14 @@ extension NoteListScrollExtension on NoteListViewState {
     final db = Provider.of<DatabaseService>(context, listen: false);
     if (!db.hasMoreQuotes) {
       logDebug('数据库显示无更多数据，同步 _hasMore 为 false', source: 'NoteListView');
-      setState(() {
+      _updateState(() {
         _hasMore = false;
       });
       return;
     }
 
     // 修复：立即设置加载状态，防止并发调用
-    setState(() {
+    _updateState(() {
       _isLoading = true;
     });
 
@@ -319,7 +320,7 @@ extension NoteListScrollExtension on NoteListViewState {
 
       // 强制检查状态更新
       if (mounted) {
-        setState(() {
+        _updateState(() {
           _hasMore = db.hasMoreQuotes;
           _isLoading = false; // 加载完成后重置状态
         });
@@ -329,7 +330,7 @@ extension NoteListScrollExtension on NoteListViewState {
     } catch (e) {
       // 修复：出错时也要重置加载状态
       if (mounted) {
-        setState(() {
+        _updateState(() {
           _isLoading = false;
         });
       }

@@ -2,7 +2,7 @@ part of '../note_full_editor_page.dart';
 
 /// Document initialization, content processing, and memory-safe content
 /// retrieval for the rich text editor.
-extension NoteEditorDocumentInit on _NoteFullEditorPageState {
+extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
   /// 异步获取完整笔记数据
   Future<void> _fetchFullQuote() async {
     if (!mounted || widget.initialQuote?.id == null) return;
@@ -11,7 +11,7 @@ extension NoteEditorDocumentInit on _NoteFullEditorPageState {
       final db = Provider.of<DatabaseService>(context, listen: false);
       final fullQuote = await db.getQuoteById(widget.initialQuote!.id!);
       if (fullQuote != null && mounted) {
-        setState(() {
+        _updateState(() {
           _fullInitialQuote = fullQuote;
         });
         logDebug('已获取完整笔记数据，ID: ${fullQuote.id}');
@@ -20,7 +20,7 @@ extension NoteEditorDocumentInit on _NoteFullEditorPageState {
       logDebug('获取完整笔记数据失败: $e');
     } finally {
       if (mounted) {
-        setState(() {
+        _updateState(() {
           _isLoadingFullQuote = false;
         });
       }
@@ -126,7 +126,7 @@ extension NoteEditorDocumentInit on _NoteFullEditorPageState {
       final document = quill.Document.fromJson(deltaJson);
 
       if (mounted) {
-        setState(() {
+        _updateState(() {
           _controller.dispose();
           _controller = quill.QuillController(
             document: document,
@@ -182,11 +182,14 @@ extension NoteEditorDocumentInit on _NoteFullEditorPageState {
   /// 使用Isolate初始化富文本内容
   Future<void> _initializeWithIsolate(String deltaContent) async {
     try {
-      final deltaJson = await compute(_parseJsonInIsolate, deltaContent);
+      final deltaJson = await compute(
+        _NoteFullEditorPageState._parseJsonInIsolate,
+        deltaContent,
+      );
       final document = quill.Document.fromJson(deltaJson);
 
       if (mounted) {
-        setState(() {
+        _updateState(() {
           _controller.dispose();
           _controller = quill.QuillController(
             document: document,
@@ -212,7 +215,7 @@ extension NoteEditorDocumentInit on _NoteFullEditorPageState {
       final placeholderDocument = quill.Document()..insert(0, '正在加载大型文档...');
 
       if (mounted) {
-        setState(() {
+        _updateState(() {
           _controller.dispose();
           _controller = quill.QuillController(
             document: placeholderDocument,
@@ -233,7 +236,7 @@ extension NoteEditorDocumentInit on _NoteFullEditorPageState {
 
       // 替换为实际文档
       if (mounted) {
-        setState(() {
+        _updateState(() {
           _controller.dispose();
           _controller = quill.QuillController(
             document: document,
@@ -286,10 +289,16 @@ extension NoteEditorDocumentInit on _NoteFullEditorPageState {
 
         // 尝试简化内容
         final simplifiedContent = _simplifyLargeContent(deltaContent);
-        return await compute(_parseJsonInIsolate, simplifiedContent);
+        return await compute(
+          _NoteFullEditorPageState._parseJsonInIsolate,
+          simplifiedContent,
+        );
       } else {
         // 正常处理
-        return await compute(_parseJsonInIsolate, deltaContent);
+        return await compute(
+          _NoteFullEditorPageState._parseJsonInIsolate,
+          deltaContent,
+        );
       }
     } catch (e) {
       logDebug('大型内容处理失败: $e');
@@ -308,6 +317,7 @@ extension NoteEditorDocumentInit on _NoteFullEditorPageState {
       return deltaContent;
     }
   }
+
   Future<String> _getDocumentContentSafely() async {
     try {
       final memoryManager = DeviceMemoryManager();
@@ -365,7 +375,10 @@ extension NoteEditorDocumentInit on _NoteFullEditorPageState {
   /// 使用Isolate处理文档内容
   Future<String> _getDocumentContentWithIsolate(dynamic deltaData) async {
     try {
-      return await compute(_encodeJsonInIsolate, deltaData);
+      return await compute(
+        _NoteFullEditorPageState._encodeJsonInIsolate,
+        deltaData,
+      );
     } catch (e) {
       logDebug('后台处理失败: $e');
       return _getMinimalDocumentContent();
@@ -382,7 +395,10 @@ extension NoteEditorDocumentInit on _NoteFullEditorPageState {
       final simplifiedData = _simplifyDeltaData(deltaData);
 
       // 然后使用Isolate处理简化后的数据
-      return await compute(_encodeJsonInIsolate, simplifiedData);
+      return await compute(
+        _NoteFullEditorPageState._encodeJsonInIsolate,
+        simplifiedData,
+      );
     } catch (e) {
       logDebug('分段处理失败: $e');
       return _getMinimalDocumentContent();
@@ -421,6 +437,7 @@ extension NoteEditorDocumentInit on _NoteFullEditorPageState {
       return deltaData;
     }
   }
+
   dynamic _deepCopy(dynamic original) {
     if (original == null) {
       return null;

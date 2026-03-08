@@ -1,7 +1,7 @@
 part of '../database_service.dart';
 
 /// Mixin providing default category initialization for DatabaseService.
-mixin _DatabaseCategoryInitMixin on ChangeNotifier {
+mixin _DatabaseCategoryInitMixin on _DatabaseServiceBase {
   /// 初始化默认一言分类标签
   Future<void> initDefaultHitokotoCategories() async {
     if (kIsWeb) {
@@ -23,7 +23,7 @@ mixin _DatabaseCategoryInitMixin on ChangeNotifier {
 
     try {
       // 首先确保数据库已初始化
-      if (_database == null) {
+      if (_DatabaseServiceBase._database == null) {
         logDebug('数据库尚未初始化，尝试先进行初始化');
         try {
           await init();
@@ -33,7 +33,7 @@ mixin _DatabaseCategoryInitMixin on ChangeNotifier {
       }
 
       // 即使init()失败，也尝试获取数据库，如果還是null則提前返回
-      if (_database == null) {
+      if (_DatabaseServiceBase._database == null) {
         logDebug('数据库仍为null，无法创建默认标签');
         return;
       }
@@ -119,7 +119,7 @@ mixin _DatabaseCategoryInitMixin on ChangeNotifier {
       }
 
       // 更新分类流
-      await _updateCategoriesStream();
+      await updateCategoriesStreamForParts();
     } catch (e) {
       logDebug('初始化默认一言分类出错: $e');
     }
@@ -129,78 +129,77 @@ mixin _DatabaseCategoryInitMixin on ChangeNotifier {
   List<NoteCategory> _getDefaultHitokotoCategories() {
     return [
       NoteCategory(
-        id: defaultCategoryIdHitokoto, // 使用固定 ID
+        id: _DatabaseServiceBase.defaultCategoryIdHitokoto, // 使用固定 ID
         name: '每日一言',
         isDefault: true,
         iconName: 'format_quote',
       ),
       NoteCategory(
-        id: defaultCategoryIdAnime, // 使用固定 ID
+        id: _DatabaseServiceBase.defaultCategoryIdAnime, // 使用固定 ID
         name: '动画',
         isDefault: true,
         iconName: '🎬',
       ),
       NoteCategory(
-        id: defaultCategoryIdComic, // 使用固定 ID
+        id: _DatabaseServiceBase.defaultCategoryIdComic, // 使用固定 ID
         name: '漫画',
         isDefault: true,
         iconName: '📚',
       ),
       NoteCategory(
-        id: defaultCategoryIdGame, // 使用固定 ID
+        id: _DatabaseServiceBase.defaultCategoryIdGame, // 使用固定 ID
         name: '游戏',
         isDefault: true,
         iconName: '🎮',
       ),
       NoteCategory(
-        id: defaultCategoryIdNovel, // 使用固定 ID
+        id: _DatabaseServiceBase.defaultCategoryIdNovel, // 使用固定 ID
         name: '文学',
         isDefault: true,
         iconName: '📖',
       ),
       NoteCategory(
-        id: defaultCategoryIdOriginal, // 使用固定 ID
+        id: _DatabaseServiceBase.defaultCategoryIdOriginal, // 使用固定 ID
         name: '原创',
         isDefault: true,
         iconName: '✨',
       ),
       NoteCategory(
-        id: defaultCategoryIdInternet, // 使用固定 ID
+        id: _DatabaseServiceBase.defaultCategoryIdInternet, // 使用固定 ID
         name: '来自网络',
         isDefault: true,
         iconName: '🌐',
       ),
       NoteCategory(
-        id: defaultCategoryIdOther, // 使用固定 ID
+        id: _DatabaseServiceBase.defaultCategoryIdOther, // 使用固定 ID
         name: '其他',
         isDefault: true,
         iconName: '📦',
       ),
       NoteCategory(
-        id: defaultCategoryIdMovie, // 使用固定 ID
+        id: _DatabaseServiceBase.defaultCategoryIdMovie, // 使用固定 ID
         name: '影视',
         isDefault: true,
         iconName: '🎞️',
       ),
       NoteCategory(
-        id: defaultCategoryIdPoem, // 使用固定 ID
+        id: _DatabaseServiceBase.defaultCategoryIdPoem, // 使用固定 ID
         name: '诗词',
         isDefault: true,
         iconName: '🪶',
       ),
       NoteCategory(
-        id: defaultCategoryIdMusic, // 使用固定 ID
+        id: _DatabaseServiceBase.defaultCategoryIdMusic, // 使用固定 ID
         name: '网易云',
         isDefault: true,
         iconName: '🎧',
       ),
       NoteCategory(
-        id: defaultCategoryIdPhilosophy, // 使用固定 ID
+        id: _DatabaseServiceBase.defaultCategoryIdPhilosophy, // 使用固定 ID
         name: '哲学',
         isDefault: true,
         iconName: '🤔',
       ),
     ];
   }
-
 }

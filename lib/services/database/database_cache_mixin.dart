@@ -1,7 +1,7 @@
 part of '../database_service.dart';
 
 /// Mixin providing cache management operations for DatabaseService.
-mixin _DatabaseCacheMixin on ChangeNotifier {
+mixin _DatabaseCacheMixin on _DatabaseServiceBase {
   /// 优化：定期清理过期缓存，而不是每次查询都清理
   /// 兼容性说明：这个变更不影响外部API，只是内部优化
   void _scheduleCacheCleanup() {
@@ -156,5 +156,4 @@ mixin _DatabaseCacheMixin on ChangeNotifier {
       logDebug('LRU缓存淘汰，移除缓存条目: $lruKey');
     }
   }
-
 }

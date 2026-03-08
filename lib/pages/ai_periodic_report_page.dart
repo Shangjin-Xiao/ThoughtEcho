@@ -86,6 +86,10 @@ class _AIPeriodicReportPageState extends State<AIPeriodicReportPage>
   // 服务
   AICardGenerationService? _aiCardService;
 
+  void _updateState(VoidCallback fn) {
+    if (!mounted) return;
+    setState(fn);
+  }
 
   @override
   void initState() {

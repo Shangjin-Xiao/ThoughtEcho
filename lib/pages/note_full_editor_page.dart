@@ -131,6 +131,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   String? _draftStorageKey;
   bool _draftLoaded = false;
 
+  void _updateState(VoidCallback fn) {
+    if (!mounted) return;
+    setState(fn);
+  }
 
   /// 在Isolate中解析JSON
   static dynamic _parseJsonInIsolate(String jsonString) {

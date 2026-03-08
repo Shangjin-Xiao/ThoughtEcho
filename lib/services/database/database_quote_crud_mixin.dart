@@ -1,7 +1,7 @@
 part of '../database_service.dart';
 
 /// Mixin providing quote CRUD operations for DatabaseService.
-mixin _DatabaseQuoteCrudMixin on ChangeNotifier {
+mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
   /// 修复：添加一条引用（笔记），增加数据验证和并发控制
   Future<void> addQuote(Quote quote) async {
     // 修复：添加数据验证
@@ -83,10 +83,10 @@ mixin _DatabaseQuoteCrudMixin on ChangeNotifier {
         await MediaReferenceService.syncQuoteMediaReferences(quoteWithId);
 
         // 优化：数据变更后清空缓存
-        _clearAllCache();
+        clearAllCacheForParts();
 
         // 修复：避免直接操作_currentQuotes，使用刷新机制确保数据一致性
-        _refreshQuotesStream();
+        refreshQuotesStreamForParts();
         notifyListeners(); // 通知其他监听者（如Homepage的FAB）
       } catch (e) {
         logDebug('保存笔记到数据库时出错: $e');
@@ -136,7 +136,9 @@ mixin _DatabaseQuoteCrudMixin on ChangeNotifier {
     if (kIsWeb) {
       var result = List<Quote>.from(_memoryStore);
       if (excludeHiddenNotes) {
-        result = result.where((q) => !q.tagIds.contains(hiddenTagId)).toList();
+        result = result
+            .where((q) => !q.tagIds.contains(_DatabaseServiceBase.hiddenTagId))
+            .toList();
       }
       return result;
     }
@@ -161,7 +163,7 @@ mixin _DatabaseQuoteCrudMixin on ChangeNotifier {
       ''';
 
       final List<Map<String, dynamic>> maps = excludeHiddenNotes
-          ? await db.rawQuery(query, [hiddenTagId])
+          ? await db.rawQuery(query, [_DatabaseServiceBase.hiddenTagId])
           : await db.rawQuery(query);
 
       return maps.map((m) => Quote.fromJson(m)).toList();
@@ -181,7 +183,7 @@ mixin _DatabaseQuoteCrudMixin on ChangeNotifier {
     if (kIsWeb) {
       _memoryStore.removeWhere((quote) => quote.id == id);
       notifyListeners();
-      _refreshQuotesStream();
+      refreshQuotesStreamForParts();
       return;
     }
 
@@ -260,7 +262,7 @@ mixin _DatabaseQuoteCrudMixin on ChangeNotifier {
         }
 
         // 清理缓存
-        _clearAllCache();
+        clearAllCacheForParts();
 
         // 修复问题1：清理富文本控制器缓存
         QuoteContent.removeCacheForQuote(id);
@@ -436,5 +438,4 @@ mixin _DatabaseQuoteCrudMixin on ChangeNotifier {
       }
     });
   }
-
 }

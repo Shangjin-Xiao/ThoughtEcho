@@ -140,6 +140,11 @@ class NoteListViewState extends State<NoteListView> {
   double _lastScrollOffset = 0;
   static const double _scrollThreshold = 5.0; // 性能优化：5像素阈值
 
+  void _updateState(VoidCallback fn) {
+    if (!mounted) return;
+    setState(fn);
+  }
+
   /// 获取有效的标签列表：优先使用外部传入的，若为空则使用本地缓存
   List<NoteCategory> get _effectiveTags =>
       widget.tags.isNotEmpty ? widget.tags : _localTagsCache;

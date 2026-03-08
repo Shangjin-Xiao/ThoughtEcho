@@ -1,6 +1,6 @@
 part of '../ai_periodic_report_page.dart';
 
-extension AIReportFeaturedCards on _AIPeriodicReportPageState {
+extension _AIReportFeaturedCards on _AIPeriodicReportPageState {
   /// 是否还有更多卡片可加载
   bool get _hasMoreCards => _pendingQuotesForCards.isNotEmpty;
 
@@ -10,7 +10,7 @@ extension AIReportFeaturedCards on _AIPeriodicReportPageState {
       return;
     }
 
-    setState(() {
+    _updateState(() {
       _isGeneratingCards = true;
       _featuredCards = []; // 清空现有卡片
     });
@@ -23,21 +23,25 @@ extension AIReportFeaturedCards on _AIPeriodicReportPageState {
       );
 
       // 首批生成 _cardsPerBatch 张
-      final firstBatch = allSelectedQuotes.take(_cardsPerBatch).toList();
-      _pendingQuotesForCards = allSelectedQuotes.skip(_cardsPerBatch).toList();
+      final firstBatch = allSelectedQuotes
+          .take(_AIPeriodicReportPageState._cardsPerBatch)
+          .toList();
+      _pendingQuotesForCards = allSelectedQuotes
+          .skip(_AIPeriodicReportPageState._cardsPerBatch)
+          .toList();
 
       final cards = await _aiCardService!.generateFeaturedCards(
         notes: firstBatch,
         brandName: AppLocalizations.of(context).appTitle,
-        maxCards: _cardsPerBatch,
+        maxCards: _AIPeriodicReportPageState._cardsPerBatch,
       );
 
-      setState(() {
+      _updateState(() {
         _featuredCards = cards;
         _isGeneratingCards = false;
       });
     } catch (e) {
-      setState(() {
+      _updateState(() {
         _isGeneratingCards = false;
       });
       AppLogger.e('Failed to generate featured cards', error: e);
@@ -62,28 +66,31 @@ extension AIReportFeaturedCards on _AIPeriodicReportPageState {
       return;
     }
 
-    setState(() {
+    _updateState(() {
       _isLoadingMoreCards = true;
     });
 
     try {
       // 取下一批笔记
-      final nextBatch = _pendingQuotesForCards.take(_cardsPerBatch).toList();
-      _pendingQuotesForCards =
-          _pendingQuotesForCards.skip(_cardsPerBatch).toList();
+      final nextBatch = _pendingQuotesForCards
+          .take(_AIPeriodicReportPageState._cardsPerBatch)
+          .toList();
+      _pendingQuotesForCards = _pendingQuotesForCards
+          .skip(_AIPeriodicReportPageState._cardsPerBatch)
+          .toList();
 
       final newCards = await _aiCardService!.generateFeaturedCards(
         notes: nextBatch,
         brandName: AppLocalizations.of(context).appTitle,
-        maxCards: _cardsPerBatch,
+        maxCards: _AIPeriodicReportPageState._cardsPerBatch,
       );
 
-      setState(() {
+      _updateState(() {
         _featuredCards.addAll(newCards);
         _isLoadingMoreCards = false;
       });
     } catch (e) {
-      setState(() {
+      _updateState(() {
         _isLoadingMoreCards = false;
       });
       AppLogger.e('Failed to load more cards', error: e);
@@ -260,7 +267,7 @@ extension AIReportFeaturedCards on _AIPeriodicReportPageState {
               else if (_featuredCards.isNotEmpty)
                 FilledButton.icon(
                   onPressed: () {
-                    setState(() {
+                    _updateState(() {
                       _featuredCards = [];
                       _pendingQuotesForCards = [];
                     });

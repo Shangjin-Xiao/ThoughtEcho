@@ -1,7 +1,7 @@
 part of '../database_service.dart';
 
 /// Mixin providing core query operations for DatabaseService.
-mixin _DatabaseQueryMixin on ChangeNotifier {
+mixin _DatabaseQueryMixin on _DatabaseServiceBase {
   /// 获取笔记列表，支持标签、分类、搜索、天气和时间段筛选
   Future<List<Quote>> getUserQuotes({
     List<String>? tagIds,
@@ -26,11 +26,11 @@ mixin _DatabaseQueryMixin on ChangeNotifier {
       }
 
       // 优化：定期清理缓存而不是每次查询都清理
-      _scheduleCacheCleanup();
+      scheduleCacheCleanupForParts();
 
       // 判断是否正在查询隐藏标签
       final isQueryingHiddenTag =
-          tagIds != null && tagIds.contains(hiddenTagId);
+          tagIds != null && tagIds.contains(_DatabaseServiceBase.hiddenTagId);
       // 如果正在查询隐藏标签，则不排除隐藏笔记
       final shouldExcludeHidden = excludeHiddenNotes && !isQueryingHiddenTag;
 
@@ -40,8 +40,10 @@ mixin _DatabaseQueryMixin on ChangeNotifier {
 
         // 排除隐藏笔记（除非正在查询隐藏标签）
         if (shouldExcludeHidden) {
-          filtered =
-              filtered.where((q) => !q.tagIds.contains(hiddenTagId)).toList();
+          filtered = filtered
+              .where(
+                  (q) => !q.tagIds.contains(_DatabaseServiceBase.hiddenTagId))
+              .toList();
         }
 
         if (tagIds != null && tagIds.isNotEmpty) {
@@ -259,7 +261,7 @@ mixin _DatabaseQueryMixin on ChangeNotifier {
           AND qt_hidden.tag_id = ?
         )
       ''');
-      args.add(hiddenTagId);
+      args.add(_DatabaseServiceBase.hiddenTagId);
     }
 
     // 分类筛选
@@ -407,5 +409,4 @@ mixin _DatabaseQueryMixin on ChangeNotifier {
   void _updateQueryStats(String queryType, int timeMs) {
     _healthService.recordQueryStats(queryType, timeMs);
   }
-
 }

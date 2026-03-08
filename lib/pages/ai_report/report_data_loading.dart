@@ -1,9 +1,9 @@
 part of '../ai_periodic_report_page.dart';
 
-extension AIReportDataLoading on _AIPeriodicReportPageState {
+extension _AIReportDataLoading on _AIPeriodicReportPageState {
   /// 加载周期数据
   Future<void> _loadPeriodData() async {
-    setState(() {
+    _updateState(() {
       _isLoadingData = true;
     });
 
@@ -27,7 +27,7 @@ extension AIReportDataLoading on _AIPeriodicReportPageState {
           '${_selectedPeriod}_${_selectedDate.millisecondsSinceEpoch}';
       final dataChanged = newDataKey != _dataKey;
 
-      setState(() {
+      _updateState(() {
         _periodQuotes = filteredQuotes;
         _isLoadingData = false;
         _dataKey = newDataKey;
@@ -39,7 +39,7 @@ extension AIReportDataLoading on _AIPeriodicReportPageState {
       // 计算“最多”指标并触发洞察
       await _computeExtrasAndInsight();
     } catch (e) {
-      setState(() {
+      _updateState(() {
         _isLoadingData = false;
       });
       AppLogger.e('Failed to load period data', error: e);
@@ -183,7 +183,7 @@ extension AIReportDataLoading on _AIPeriodicReportPageState {
       }
     }
     if (!mounted) return;
-    setState(() {
+    _updateState(() {
       _totalWordCount = totalWords;
       _mostDayPeriod = mostPeriod;
       _mostWeather = mostWeather;
@@ -219,7 +219,7 @@ extension AIReportDataLoading on _AIPeriodicReportPageState {
     if (cachedInsight != null) {
       // 如果有缓存，直接使用缓存
       if (mounted) {
-        setState(() {
+        _updateState(() {
           _insightText = cachedInsight.insight;
           _insightLoading = false;
         });
@@ -231,7 +231,7 @@ extension AIReportDataLoading on _AIPeriodicReportPageState {
     // 如果没有数据，不进行生成
     if (noteCount == 0) {
       if (mounted) {
-        setState(() {
+        _updateState(() {
           _insightText = '';
           _insightLoading = false;
         });
@@ -240,7 +240,7 @@ extension AIReportDataLoading on _AIPeriodicReportPageState {
     }
 
     if (useAI) {
-      setState(() {
+      _updateState(() {
         _insightText = '';
         _insightLoading = true;
       });
@@ -295,7 +295,7 @@ extension AIReportDataLoading on _AIPeriodicReportPageState {
         (chunk) {
           if (!mounted) return;
           // 直接更新文本，UI会立即显示新内容（真正的流式显示）
-          setState(() {
+          _updateState(() {
             _insightText += chunk;
           });
         },
@@ -310,7 +310,7 @@ extension AIReportDataLoading on _AIPeriodicReportPageState {
                 noteCount: noteCount,
                 totalWordCount: _totalWordCount,
               );
-          setState(() {
+          _updateState(() {
             _insightText = local;
             _insightLoading = false;
           });
@@ -322,7 +322,7 @@ extension AIReportDataLoading on _AIPeriodicReportPageState {
         },
         onDone: () {
           if (!mounted) return;
-          setState(() {
+          _updateState(() {
             _insightLoading = false;
           });
 
@@ -349,7 +349,7 @@ extension AIReportDataLoading on _AIPeriodicReportPageState {
             totalWordCount: _totalWordCount,
           );
 
-      setState(() {
+      _updateState(() {
         _insightText = local;
         _insightLoading = false;
       });

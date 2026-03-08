@@ -1,7 +1,7 @@
 part of '../database_service.dart';
 
 /// Mixin providing migration and maintenance operations for DatabaseService.
-mixin _DatabaseMigrationMixin on ChangeNotifier {
+mixin _DatabaseMigrationMixin on _DatabaseServiceBase {
   /// 批量为旧笔记补全 dayPeriod 字段（根据 date 字段推算并写入）
   Future<void> patchQuotesDayPeriod() async {
     await _schemaManager.patchQuotesDayPeriod(database);
@@ -34,7 +34,7 @@ mixin _DatabaseMigrationMixin on ChangeNotifier {
     final result = await _healthService.cleanupTagDataInconsistencies(
       await safeDatabase,
     );
-    _clearAllCache();
+    clearAllCacheForParts();
     return result;
   }
 
@@ -148,5 +148,4 @@ mixin _DatabaseMigrationMixin on ChangeNotifier {
       webCategoryCount: _categoryStore.length,
     );
   }
-
 }

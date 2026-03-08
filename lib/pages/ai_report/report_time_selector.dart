@@ -1,6 +1,6 @@
 part of '../ai_periodic_report_page.dart';
 
-extension AIReportTimeSelector on _AIPeriodicReportPageState {
+extension _AIReportTimeSelector on _AIPeriodicReportPageState {
   Widget _buildReportPage(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Column(
@@ -35,14 +35,14 @@ extension AIReportTimeSelector on _AIPeriodicReportPageState {
                 // 向上滚动时折叠
                 if (notification.scrollDelta! > 10 &&
                     !_isTimeSelectorCollapsed) {
-                  setState(() {
+                  _updateState(() {
                     _isTimeSelectorCollapsed = true;
                   });
                 }
                 // 向下滚动时展开
                 else if (notification.scrollDelta! < -10 &&
                     _isTimeSelectorCollapsed) {
-                  setState(() {
+                  _updateState(() {
                     _isTimeSelectorCollapsed = false;
                   });
                 }
@@ -119,7 +119,7 @@ extension AIReportTimeSelector on _AIPeriodicReportPageState {
   Widget _buildTimeSelector() {
     return GestureDetector(
       onTap: () {
-        setState(() {
+        _updateState(() {
           _isTimeSelectorCollapsed = !_isTimeSelectorCollapsed;
         });
       },
@@ -281,7 +281,7 @@ extension AIReportTimeSelector on _AIPeriodicReportPageState {
             ],
             selected: {_selectedPeriod},
             onSelectionChanged: (Set<String> selection) {
-              setState(() {
+              _updateState(() {
                 _selectedPeriod = selection.first;
                 // 切换时间范围时，重置生成的内容
                 _featuredCards = [];
@@ -309,7 +309,7 @@ extension AIReportTimeSelector on _AIPeriodicReportPageState {
     );
 
     if (picked != null && picked != _selectedDate) {
-      setState(() {
+      _updateState(() {
         _selectedDate = picked;
         // 切换日期时，重置生成的内容
         _featuredCards = [];
