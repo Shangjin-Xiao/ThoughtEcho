@@ -12,11 +12,11 @@
 
 | 维度 | 🔴 严重 | 🟡 中等 | 🟢 轻微 | 总计 | ✅ 已修复 |
 |------|---------|---------|---------|------|----------|
-| 代码质量 | 3 | 4 | 1 | 8 | 3 |
-| 架构设计 | 3 | 2 | 1 | 6 | 2 |
-| 性能体验 | 2 | 4 | 2 | 8 | 1 |
-| 安全数据 | 3 | 5 | 2 | 10 | 4 |
-| **合计** | **11** | **15** | **6** | **32** | **10** |
+| 代码质量 | 3 | 4 | 1 | 8 | 6 |
+| 架构设计 | 3 | 2 | 1 | 6 | 3 |
+| 性能体验 | 2 | 4 | 2 | 8 | 2 |
+| 安全数据 | 3 | 5 | 2 | 10 | 7 |
+| **合计** | **11** | **15** | **6** | **32** | **18** |
 
 > **⚠️ 审计误报说明（2026-03-08 验证）**:
 > - **1.6 内存泄漏**: `daily_quote_view`/`note_list_view`/`quote_content_widget`/`string_utils` 经逐行核查均已正确管理，为误报
@@ -388,11 +388,11 @@ WeatherService, LocationService, AIService, SettingsService, bool
 
 | # | 问题 | 影响 | 预估工作量 | 状态 |
 |---|------|------|-----------|------|
-| 1 | 82 处吞异常 `catch (_) {}` | 生产问题不可追踪 | 2-3 天 | ⏳ 待处理 |
+| 1 | 82 处吞异常 `catch (_) {}` | 生产问题不可追踪 | 2-3 天 | ✅ **已修复** `719c159`（46 处空 catch 加日志） |
 | 2 | 路径遍历攻击（备份恢复） | 安全漏洞 | 0.5 天 | ✅ **已修复** `753628d` |
 | 3 | `_executeWithLock` 竞态条件 | 数据库并发写入损坏 | 0.5 天 | ✅ **已修复** `753628d` |
 | 4 | 敏感日志泄露（6 处） | 隐私合规 | 0.5 天 | ✅ **已修复** `753628d` |
-| 5 | HomePage 过度 rebuild | 用户体验卡顿 | 1 天 | ⏳ 待处理 |
+| 5 | HomePage 过度 rebuild | 用户体验卡顿 | 1 天 | ✅ **已修复** `bf9a1fa`（watch→read + Consumer2） |
 | 6 | 启动串行 await 优化 | 冷启动慢 300-500ms | 0.5 天 | ✅ **已核查**（原已并行化，为误报） |
 
 ### 🟡 P1 — 大版本推荐（影响质量/体验）
@@ -405,8 +405,8 @@ WeatherService, LocationService, AIService, SettingsService, bool
 | 10 | 3 处 notifyListeners 遗漏 | UI 不刷新 | 0.5 天 | ✅ **已修复** `6584408`（2/3 为真实问题）|
 | 11 | SmartPush 主线程 500 条处理 | 推送时卡顿 | 1 天 | ⏳ 待处理 |
 | 12 | 错误信息泄露（9 处） | 暴露内部实现 | 1 天 | ✅ **已修复** `753628d` |
-| 13 | Android 权限精简 | 商店审核 | 0.5 天 | ⏳ 待处理 |
-| 14 | iOS ATS / CleartextTraffic | 网络安全 | 0.5 天 | ⏳ 待处理 |
+| 13 | Android 权限精简 | 商店审核 | 0.5 天 | ✅ **已核查**（权限均有实际用途；allowBackup 已关闭 `0775ecc`） |
+| 14 | iOS ATS / CleartextTraffic | 网络安全 | 0.5 天 | ✅ **部分修复** `0775ecc`（移除 audio bg 模式、always-location；ATS 待确认） |
 
 ### 🟢 P2 — 后续迭代（改善可维护性）
 
@@ -414,14 +414,14 @@ WeatherService, LocationService, AIService, SettingsService, bool
 |---|------|------|-----------|------|
 | 15 | 7 个超 2000 行文件拆分 | 可维护性 | 5-7 天 | ⏳ 待处理 |
 | 16 | DatabaseService God Class 拆分 | 架构健康 | 3-5 天 | ⏳ 待处理 |
-| 17 | 12 个服务文件解耦 UI 库 | 架构规范 | 2 天 | ⏳ 待处理 |
+| 17 | 12 个服务文件解耦 UI 库 | 架构规范 | 2 天 | ✅ **部分修复** `c2220c0`（2/12 文件；其余 10 文件合理依赖 UI 库） |
 | 18 | SnackBar 统一封装 (506 处) | 一致性 | 2 天 | ⏳ 待处理 |
 | 19 | 3 套 HTTP 库统一 | 包体积 | 1-2 天 | ⏳ 待处理 |
-| 20 | 无障碍标签补全 | 可访问性 | 1 天 | ⏳ 待处理 |
+| 20 | 无障碍标签补全 | 可访问性 | 1 天 | ✅ **已修复** `bf9a1fa`（4 处 Semantics 补全） |
 | 21 | Web 平台兼容修复 | 多平台支持 | 1-2 天 | ⏳ 待处理 |
-| 22 | 废弃代码清理 | 代码整洁 | 0.5 天 | ⏳ 待处理 |
+| 22 | 废弃代码清理 | 代码整洁 | 0.5 天 | ✅ **已修复** `faca653`（8 项废弃代码删除 + 孤立文件清理） |
 | 23 | `category_id` 外键约束 | 数据完整性 | 0.5 天 | ⏳ 待处理 |
-| 24 | 输入验证完善 | 健壮性 | 1 天 | ⏳ 待处理 |
+| 24 | 输入验证完善 | 健壮性 | 1 天 | ✅ **已修复** `c425d23`（4 处输入验证 + URL scheme 校验） |
 
 ---
 
@@ -433,6 +433,12 @@ WeatherService, LocationService, AIService, SettingsService, bool
 | `753628d` | 路径遍历改用 PathSecurityUtils；敏感日志加 kDebugMode 守卫；修复 `_executeWithLock` 竞态；错误信息泄露加 kDebugMode 守卫 | 13 |
 | `1178961` | 17+ 处硬编码中文迁移至 ARB i18n；main.dart fire-and-forget 加 try/catch | 12 |
 | `fec684e` | 撤回误用 ListView.builder 的 filter 对话框（回退为正确的 ListView） | 1 |
+| `faca653` | 清理 8 项废弃代码（time_utils、weather_service、smart_push_settings、merge_report）+ 删除孤立 demo 页面 | 5 |
+| `0775ecc` | Android allowBackup=false；iOS 移除 audio bg 模式和 always-location 权限 | 2 |
+| `c2220c0` | log_service/log_service_adapter 解耦 flutter/widgets.dart 依赖 | 2 |
+| `719c159` | 46 处空 catch 块添加日志（debugPrint/logDebug） | 21 |
+| `bf9a1fa` | HomePage rebuild 优化（watch→read + Consumer2）+ 4 处 Semantics 无障碍标签 | 4 |
+| `c425d23` | 4 处输入验证（笔记长度、标签长度、模型名必填、URL scheme 校验） | 9 |
 
 ---
 
