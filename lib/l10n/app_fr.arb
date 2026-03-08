@@ -3386,7 +3386,7 @@
   "tileNoNetwork": "Pas de réseau",
   "tileLoading": "Chargement...",
   "tileNoWeather": "Pas de météo",
-  "tileCachedSuffix": "(Cache)",
+  "tileCachedSuffix": "Cache",
   "noteAutoFillSection": "Remarque Remplissage automatique",
   "noteAutoFillSectionDesc": "Remplissage automatique de l'auteur, de la source et des balises lors de la création de notes",
   "defaultAuthor": "Auteur par défaut",
