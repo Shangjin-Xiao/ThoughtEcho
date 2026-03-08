@@ -57,8 +57,6 @@
 	<string>需要访问麦克风以录制音频</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>需要访问位置以记录地理信息</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>需要访问位置以记录地理信息</string>
 	
 	<!-- 文件访问权限 - 禁止在系统文件 App 中暴露应用文档 -->
 	<key>UIFileSharingEnabled</key>
@@ -92,7 +90,6 @@
 	<!-- 后台模式 -->
 	<key>UIBackgroundModes</key>
 	<array>
-		<string>audio</string>
 		<string>fetch</string>
 		<string>processing</string>
 	</array>
