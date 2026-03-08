@@ -1,3 +1,4 @@
+document.addEventListener('DOMContentLoaded', () => {
         // 主题切换
         const themeToggle = document.getElementById('themeToggle');
         const themeIcon = document.getElementById('themeIcon');
@@ -540,3 +541,5 @@ if (nextBtnNav) {
     });
 }
 
+
+});

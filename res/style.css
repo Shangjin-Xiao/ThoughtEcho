@@ -254,6 +254,8 @@
         }
 
         .nav-actions {
+            position: relative;
+            z-index: 1001;
             display: flex;
             gap: 1rem;
             align-items: center;
@@ -1958,6 +1960,8 @@
             }
 
             .nav-actions {
+            position: relative;
+            z-index: 1001;
                 gap: 0.4rem;
             }
 
