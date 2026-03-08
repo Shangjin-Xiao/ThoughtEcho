@@ -181,38 +181,6 @@ class TimeUtils {
     return '${_twoDigits(dateTime.hour)}:${_twoDigits(dateTime.minute)}';
   }
 
-  /// 兼容旧代码：调用 formatRelativeDateTime
-  @Deprecated('请使用 formatRelativeDateTimeLocalized 或 formatQuoteTime 拆分后的方法')
-  static String formatTime(DateTime dateTime) =>
-      formatRelativeDateTime(dateTime);
-
-  /// 相对时间格式（仅日期范围 + 时间），用于列表场景
-  /// - 今天：HH:mm
-  /// - 昨天：昨天 HH:mm
-  /// - 7天内：EEE HH:mm
-  /// - 当年：MM-dd HH:mm
-  /// - 往年：yyyy-MM-dd HH:mm
-  @Deprecated('请使用 formatRelativeDateTimeLocalized')
-  static String formatRelativeDateTime(DateTime dateTime) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final yesterday = today.subtract(const Duration(days: 1));
-    final weekAgo = now.subtract(const Duration(days: 7));
-    final dateOnly = DateTime(dateTime.year, dateTime.month, dateTime.day);
-
-    if (dateOnly == today) {
-      return formatQuoteTime(dateTime);
-    } else if (dateOnly == yesterday) {
-      return '昨天 ${formatQuoteTime(dateTime)}';
-    } else if (dateTime.isAfter(weekAgo)) {
-      return DateFormat('EEE HH:mm', 'zh_CN').format(dateTime);
-    } else if (dateTime.year == now.year) {
-      return '${_twoDigits(dateTime.month)}-${_twoDigits(dateTime.day)} ${formatQuoteTime(dateTime)}';
-    } else {
-      return '${dateTime.year}-${_twoDigits(dateTime.month)}-${_twoDigits(dateTime.day)} ${formatQuoteTime(dateTime)}';
-    }
-  }
-
   /// 格式化日期（仅日期部分）
   /// 格式：2025年6月21日
   static String formatDate(DateTime dateTime) {

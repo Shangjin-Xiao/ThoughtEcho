@@ -105,18 +105,6 @@ class MergeReport {
     return copyWith(skippedCategories: skippedCategories + 1);
   }
 
-  /// 兼容旧API：添加成功应用的笔记（默认视为更新）
-  @Deprecated(
-    'Use addInsertedQuote or addUpdatedQuote; this wrapper will be removed',
-  )
-  MergeReport addAppliedQuote() => addUpdatedQuote();
-
-  /// 兼容旧API：添加成功应用的分类（默认视为更新）
-  @Deprecated(
-    'Use addInsertedCategory or addUpdatedCategory; this wrapper will be removed',
-  )
-  MergeReport addAppliedCategory() => addUpdatedCategory();
-
   /// 添加错误信息
   MergeReport addError(String error) {
     return copyWith(errors: [...errors, error]);
@@ -288,11 +276,7 @@ class MergeReportBuilder {
       : _startTime = DateTime.now(),
         _sourceDevice = sourceDevice;
 
-  // 兼容旧方法（默认视为更新）
-  void addAppliedQuote() => addUpdatedQuote();
-  void addAppliedCategory() => addUpdatedCategory();
-
-  // 新增细分方法
+  // 细分方法
   void addInsertedQuote() {
     _insertedQuotes++;
     _appliedQuotes++;
