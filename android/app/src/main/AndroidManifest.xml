@@ -9,7 +9,7 @@
         android:vmSafeMode="true"
         android:allowBackup="false"
         android:requestLegacyExternalStorage="true"
-        android:usesCleartextTraffic="true"
+        android:networkSecurityConfig="@xml/network_security_config"
         android:extractNativeLibs="true"
         android:supportsRtl="true"> <!-- 保持64位设备性能，动态处理32位设备 -->
         <activity

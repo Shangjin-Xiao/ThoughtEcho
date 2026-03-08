@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!--
+        Android 不支持像 iOS NSAllowsLocalNetworking 一样按 RFC 1918 通配局域网，
+        保留 cleartext 以兼容用户配置的 HTTP AI 端点 (Ollama/LMStudio 等)。
+        未来可通过应用层拦截器限制外网 HTTP 请求。
+    -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

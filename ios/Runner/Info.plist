@@ -64,10 +64,12 @@
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<false/>
 	
-	<!-- 网络配置 -->
+	<!-- 网络配置: 外网强制 HTTPS，局域网/localhost 允许 HTTP -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+		<key>NSAllowsLocalNetworking</key>
 		<true/>
 	</dict>
 	
