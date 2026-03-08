@@ -97,7 +97,9 @@ class QuoteContent extends StatelessWidget {
           return quill.Document.fromJson(ops);
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[QuoteContent] delta content parse failed: $e');
+    }
     return quill.Document()..insert(0, '');
   }
 
@@ -769,12 +771,18 @@ class _CachedControllerSet {
   void dispose() {
     try {
       quillController.dispose();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[_CachedControllerSet] quillController dispose error: $e');
+    }
     try {
       scrollController.dispose();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[_CachedControllerSet] scrollController dispose error: $e');
+    }
     try {
       focusNode.dispose();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[_CachedControllerSet] focusNode dispose error: $e');
+    }
   }
 }

@@ -123,7 +123,9 @@ class ReceiveController {
             totalBytes,
             prepareRequest.info.alias,
           );
-        } catch (_) {}
+        } catch (e) {
+          logDebug('[ReceiveController] onSessionCreated callback failed: $e');
+        }
 
         approved = true; // 默认通过除非显式需要用户确认
         if (onApprovalNeeded != null) {
@@ -310,7 +312,9 @@ class ReceiveController {
           try {
             final f = File(deletePath);
             if (await f.exists()) await f.delete();
-          } catch (_) {}
+          } catch (e) {
+            logDebug('[ReceiveController] temp file cleanup failed: $e');
+          }
         });
       }
 
@@ -334,12 +338,16 @@ class ReceiveController {
       );
       try {
         await raf?.close();
-      } catch (_) {}
+      } catch (e) {
+        logDebug('[ReceiveController] raf close error: $e');
+      }
       try {
         if (tempFile != null && await tempFile.exists()) {
           await tempFile.delete();
         }
-      } catch (_) {}
+      } catch (e) {
+        logDebug('[ReceiveController] temp file cleanup error: $e');
+      }
       throw Exception('Upload failed: $e');
     }
   }

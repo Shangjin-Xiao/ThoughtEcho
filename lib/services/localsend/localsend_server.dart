@@ -211,7 +211,9 @@ class LocalSendServer {
           Map<String, dynamic> req = {};
           try {
             req = jsonDecode(bodyString) as Map<String, dynamic>;
-          } catch (_) {}
+          } catch (e) {
+            logDebug('[LocalSendServer] JSON decode failed: $e');
+          }
           final senderFp = req['fingerprint'] as String?;
           final senderAlias = req['alias'] as String? ?? '对方';
           bool approved = true;
@@ -220,10 +222,13 @@ class LocalSendServer {
             final tempId = 'intent_${DateTime.now().millisecondsSinceEpoch}';
             try {
               _onReceiveSessionCreated!(tempId, 0, senderAlias);
-            } catch (_) {}
+            } catch (e) {
+              logDebug('[LocalSendServer] onReceiveSessionCreated callback failed: $e');
+            }
             try {
               approved = await _onApprovalNeeded!(tempId, 0, senderAlias);
-            } catch (_) {
+            } catch (e) {
+              logDebug('[LocalSendServer] onApprovalNeeded callback failed: $e');
               approved = false;
             }
           }

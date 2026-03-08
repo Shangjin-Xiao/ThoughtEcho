@@ -638,7 +638,9 @@ Future<void> main() async {
                 'stackTrace': stackTrace,
                 'source': 'background_init',
               });
-            } catch (_) {}
+            } catch (e) {
+              debugPrint('[main] deferred error recording failed: $e');
+            }
           }
         });
       } catch (e, stackTrace) {
@@ -680,7 +682,9 @@ Future<void> main() async {
           'stackTrace': stackTrace,
           'source': 'runZonedGuarded',
         });
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[main] deferred error recording failed: $e');
+      }
     },
   );
 }

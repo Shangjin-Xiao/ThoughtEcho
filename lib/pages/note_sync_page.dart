@@ -1355,7 +1355,9 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           ),
         );
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[NoteSyncPage._copyIpPort] clipboard copy failed: $e');
+    }
   }
 
   /// 构建简短指纹徽章（显示后 6 位），便于区分同名设备

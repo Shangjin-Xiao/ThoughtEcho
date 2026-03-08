@@ -288,7 +288,9 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     if (_initCompleter != null) {
       try {
         await _initCompleter!.future;
-      } catch (_) {}
+      } catch (e) {
+        debugPrint('[UnifiedLogService] init completer failed: $e');
+      }
       return;
     }
 
@@ -901,7 +903,9 @@ class UnifiedLogService with ChangeNotifier, WidgetsBindingObserver {
     _isDisposed = true;
     try {
       WidgetsBinding.instance.removeObserver(this);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[UnifiedLogService] dispose cleanup error: $e');
+    }
     _batchSaveTimer?.cancel();
     // 虽然 dispose 不能等待，但仍尽量触发一次持久化
     unawaited(_savePendingLogsToDatabase());

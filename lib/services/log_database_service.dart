@@ -347,7 +347,9 @@ class NativeLogStorage implements LogStorage {
             try {
               await db.execute('PRAGMA journal_mode=WAL;');
               await db.execute('PRAGMA synchronous=NORMAL;');
-            } catch (_) {}
+            } catch (e) {
+              logDebug('[LogDatabaseService] PRAGMA setup failed: $e');
+            }
           },
         );
       } catch (e, stack) {
@@ -373,13 +375,17 @@ class NativeLogStorage implements LogStorage {
         // 旧路径1：系统数据库路径
         final systemDbDir = await getDatabasesPath();
         possibleOldPaths.add(join(systemDbDir, _logDbName));
-      } catch (_) {}
+      } catch (e) {
+        logDebug('[LogDatabaseService] get system DB path failed: $e');
+      }
 
       try {
         // 旧路径2：应用文档目录（没有databases子目录）
         final appDir = await getApplicationDocumentsDirectory();
         possibleOldPaths.add(join(appDir.path, _logDbName));
-      } catch (_) {}
+      } catch (e) {
+        logDebug('[LogDatabaseService] get app documents path failed: $e');
+      }
 
       // 查找并迁移第一个存在的旧数据库
       for (final oldPath in possibleOldPaths) {
@@ -402,7 +408,9 @@ class NativeLogStorage implements LogStorage {
             // 迁移失败时删除可能损坏的目标文件
             try {
               await File(targetPath).delete();
-            } catch (_) {}
+            } catch (e) {
+              logDebug('[LogDatabaseService] delete corrupted target failed: $e');
+            }
           }
         }
       }

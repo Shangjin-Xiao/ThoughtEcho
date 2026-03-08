@@ -328,7 +328,9 @@ class NoteSyncService extends ChangeNotifier {
         if (await backupFile.exists()) {
           size = await backupFile.length();
         }
-      } catch (_) {}
+      } catch (e) {
+        logDebug('[NoteSyncService] backup file size check failed: $e');
+      }
       if (size == 0) {
         // 等待短暂时间再尝试（应对文件系统写入延迟）
         await Future.delayed(const Duration(milliseconds: 300));
@@ -336,7 +338,9 @@ class NoteSyncService extends ChangeNotifier {
           if (await backupFile.exists()) {
             size = await backupFile.length();
           }
-        } catch (_) {}
+        } catch (e) {
+          logDebug('[NoteSyncService] backup file size retry failed: $e');
+        }
       }
       logInfo(
         'backup_zip_ready path=$backupPath size=$size',

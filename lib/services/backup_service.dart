@@ -180,7 +180,9 @@ class BackupService {
         if (await archiveFile.exists()) {
           await archiveFile.delete();
         }
-      } catch (_) {}
+      } catch (e) {
+        logDebug('[BackupService] cleanup incomplete archive failed: $e');
+      }
 
       if (e is CancelledException) {
         logDebug('备份操作已取消');
@@ -195,7 +197,9 @@ class BackupService {
         if (jsonFile != null && await jsonFile.exists()) {
           await jsonFile.delete();
         }
-      } catch (_) {}
+      } catch (e) {
+        logDebug('[BackupService] cleanup temp JSON file failed: $e');
+      }
     }
   }
 

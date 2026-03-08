@@ -190,7 +190,9 @@ class WeatherCodeMapper {
       for (final entry in _keyToDescription.entries) {
         if (entry.value == description) return entry.key;
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[WeatherData.getKeyByDescription] lookup failed: $e');
+    }
     return null;
   }
 

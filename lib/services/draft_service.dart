@@ -157,7 +157,9 @@ class DraftService {
               try {
                 final delta = jsonDecode(deltaContent);
                 _extractMediaFromDelta(delta, mediaPaths);
-              } catch (_) {}
+              } catch (e) {
+                logDebug('[DraftService] delta content parse failed: $e');
+              }
             }
           }
         } catch (e) {
