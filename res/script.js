@@ -105,9 +105,9 @@
         // 定义图片列表以便轮播
         const screenshots = [
             { src: 'screenshot/home_page.jpg', titleZh: '主页', titleEn: 'Homepage' },
-            { src: 'screenshot/note_full_editor_page.dart.jpg', titleZh: '富文本编辑器', titleEn: 'Rich Text Editor' },
+            { src: 'screenshot/note_full_editor_page.jpg', titleZh: '富文本编辑器', titleEn: 'Rich Text Editor' },
             { src: 'screenshot/note_qa_chat_page.jpg', titleZh: 'AI问答', titleEn: 'AI Q&A' },
-            { src: 'screenshot/note_filter_sort_sheet.dart.jpg', titleZh: '筛选排序', titleEn: 'Filter & Sort' },
+            { src: 'screenshot/note_filter_sort_sheet.jpg', titleZh: '筛选排序', titleEn: 'Filter & Sort' },
             { src: 'screenshot/insights_page.jpg', titleZh: '洞察分析', titleEn: 'Insights' },
             { src: 'screenshot/note_sync.jpg', titleZh: '笔记同步', titleEn: 'Sync' },
             { src: 'screenshot/theme_settings_page.jpg', titleZh: '主题设置', titleEn: 'Theme Settings' },
