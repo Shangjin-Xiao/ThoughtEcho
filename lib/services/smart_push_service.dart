@@ -25,6 +25,7 @@ import '../utils/app_logger.dart';
 import '../utils/platform_helper.dart';
 import 'background_push_handler.dart';
 import 'smart_push_analytics.dart';
+import 'smart_push_computation.dart';
 
 /// 智能推送服务
 ///
@@ -1782,39 +1783,55 @@ class SmartPushService extends ChangeNotifier {
       return _SmartSelectResult.empty();
     }
 
+    // 在 Isolate 中运行纯筛选操作，释放主线程
+    final filterInput = SmartPushFilterInput(
+      candidates: allNotes,
+      now: now,
+      recentlyPushedIds: _settings.recentlyPushedNoteIds.toSet(),
+    );
+
+    SmartPushFilterResult filterResult;
+    try {
+      filterResult = await compute(runSmartPushFilters, filterInput);
+    } catch (e) {
+      // Isolate 失败时回退到主线程执行
+      AppLogger.w('Isolate 筛选失败，回退到主线程: $e');
+      filterResult = runSmartPushFilters(filterInput);
+    }
+
+    // 异步筛选器并行执行
+    final asyncResults = await Future.wait([
+      _filterSameLocation(allNotes),
+      _filterSameWeather(allNotes),
+    ]);
+    final sameLocationNotes = asyncResults[0];
+    final sameWeatherNotes = asyncResults[1];
+
     // SOTA: 收集所有可用的内容类型及其候选笔记
     final availableContent = <String, _ContentCandidate>{};
 
     // 1. 那年今日（最高优先级 - 有纪念意义）
-    final yearAgoNotes = _filterYearAgoToday(allNotes, now);
-    if (yearAgoNotes.isNotEmpty) {
-      final note = _selectUnpushedNote(yearAgoNotes);
-      if (note != null) {
-        final noteDate = DateTime.tryParse(note.date);
-        final years = noteDate != null ? now.year - noteDate.year : 1;
-        availableContent['yearAgoToday'] = _ContentCandidate(
-          note: note,
-          title: '📅 $years年前的今天',
-          priority: 100, // 最高优先级
-        );
-      }
+    if (filterResult.selectedYearAgo != null) {
+      final note = filterResult.selectedYearAgo!;
+      final noteDate = DateTime.tryParse(note.date);
+      final years = noteDate != null ? now.year - noteDate.year : 1;
+      availableContent['yearAgoToday'] = _ContentCandidate(
+        note: note,
+        title: '📅 $years年前的今天',
+        priority: 100, // 最高优先级
+      );
     }
 
     // 2. 同一时刻创建的笔记（±30分钟）
-    final sameTimeNotes = _filterSameTimeOfDay(allNotes, now);
-    if (sameTimeNotes.isNotEmpty) {
-      final note = _selectUnpushedNote(sameTimeNotes);
-      if (note != null) {
-        availableContent['sameTimeOfDay'] = _ContentCandidate(
-          note: note,
-          title: '⏰ 此刻的回忆',
-          priority: 80,
-        );
-      }
+    if (filterResult.selectedSameTime != null) {
+      availableContent['sameTimeOfDay'] = _ContentCandidate(
+        note: filterResult.selectedSameTime!,
+        title: '⏰ 此刻的回忆',
+        priority: 80,
+      );
     }
 
     // 3. 相同地点的笔记
-    final sameLocationNotes = await _filterSameLocation(allNotes);
     if (sameLocationNotes.isNotEmpty) {
       final note = _selectUnpushedNote(sameLocationNotes);
       if (note != null) {
@@ -1827,7 +1844,6 @@ class SmartPushService extends ChangeNotifier {
     }
 
     // 4. 相同天气的笔记
-    final sameWeatherNotes = await _filterSameWeather(allNotes);
     if (sameWeatherNotes.isNotEmpty) {
       final note = _selectUnpushedNote(sameWeatherNotes);
       if (note != null) {
@@ -1840,38 +1856,31 @@ class SmartPushService extends ChangeNotifier {
     }
 
     // 5. 往月今日
-    final monthAgoNotes = _filterMonthAgoToday(allNotes, now);
-    if (monthAgoNotes.isNotEmpty) {
-      final note = _selectUnpushedNote(monthAgoNotes);
-      if (note != null) {
-        final noteDate = DateTime.tryParse(note.date);
-        String title = '📅 往月今日';
-        if (noteDate != null) {
-          final monthsDiff =
-              (now.year - noteDate.year) * 12 + (now.month - noteDate.month);
-          if (monthsDiff > 0) {
-            title = '📅 $monthsDiff个月前的今天';
-          }
+    if (filterResult.selectedMonthAgo != null) {
+      final note = filterResult.selectedMonthAgo!;
+      final noteDate = DateTime.tryParse(note.date);
+      String title = '📅 往月今日';
+      if (noteDate != null) {
+        final monthsDiff =
+            (now.year - noteDate.year) * 12 + (now.month - noteDate.month);
+        if (monthsDiff > 0) {
+          title = '📅 $monthsDiff个月前的今天';
         }
-        availableContent['monthAgoToday'] = _ContentCandidate(
-          note: note,
-          title: title,
-          priority: 50,
-        );
       }
+      availableContent['monthAgoToday'] = _ContentCandidate(
+        note: note,
+        title: title,
+        priority: 50,
+      );
     }
 
     // 6. 随机回忆（兜底）
-    final randomNotes = _filterRandomMemory(allNotes, now);
-    if (randomNotes.isNotEmpty) {
-      final note = _selectUnpushedNote(randomNotes);
-      if (note != null) {
-        availableContent['randomMemory'] = _ContentCandidate(
-          note: note,
-          title: '💭 往日回忆',
-          priority: 30,
-        );
-      }
+    if (filterResult.selectedRandom != null) {
+      availableContent['randomMemory'] = _ContentCandidate(
+        note: filterResult.selectedRandom!,
+        title: '💭 往日回忆',
+        priority: 30,
+      );
     }
 
     // SOTA: 使用 Thompson Sampling 选择内容类型
@@ -1944,12 +1953,12 @@ class SmartPushService extends ChangeNotifier {
       AppLogger.w(
         '智能选择：回退到每日一言 '
         '(总笔记数: ${allNotes.length}, '
-        'yearAgo: ${yearAgoNotes.length}, '
-        'sameTime: ${sameTimeNotes.length}, '
+        'yearAgo: ${filterResult.yearAgoQuotes.length}, '
+        'sameTime: ${filterResult.sameTimeQuotes.length}, '
         'sameLocation: ${sameLocationNotes.length}, '
         'sameWeather: ${sameWeatherNotes.length}, '
-        'monthAgo: ${monthAgoNotes.length}, '
-        'random7d: ${randomNotes.length})',
+        'monthAgo: ${filterResult.monthAgoQuotes.length}, '
+        'random7d: ${filterResult.randomQuotes.length})',
       );
     }
 
@@ -1969,47 +1978,16 @@ class SmartPushService extends ChangeNotifier {
 
   /// 筛选同一时刻（±30分钟）创建的笔记
   List<Quote> _filterSameTimeOfDay(List<Quote> notes, DateTime now) {
-    final currentMinutes = now.hour * 60 + now.minute;
-
-    return notes.where((note) {
-      try {
-        final noteDate = DateTime.parse(note.date);
-        final noteMinutes = noteDate.hour * 60 + noteDate.minute;
-        final diff = (currentMinutes - noteMinutes).abs();
-        // 允许 ±30 分钟的时间差，并且不是今天的笔记
-        return diff <= 30 &&
-            !(noteDate.year == now.year &&
-                noteDate.month == now.month &&
-                noteDate.day == now.day);
-      } catch (e) {
-        return false;
-      }
-    }).toList();
+    return filterSameTimeOfDay(notes, now);
   }
 
   /// 从候选列表中选择未被推送过的笔记
   Quote? _selectUnpushedNote(List<Quote> candidates) {
-    // 优先选择未推送过的
-    final unpushed = candidates
-        .where(
-          (note) =>
-              note.id == null ||
-              !_settings.recentlyPushedNoteIds.contains(note.id),
-        )
-        .toList();
-
-    if (unpushed.isNotEmpty) {
-      unpushed.shuffle(_random);
-      return unpushed.first;
-    }
-
-    // 如果都推送过了，随机选一个
-    if (candidates.isNotEmpty) {
-      candidates.shuffle(_random);
-      return candidates.first;
-    }
-
-    return null;
+    return selectUnpushedNote(
+      candidates,
+      _settings.recentlyPushedNoteIds.toSet(),
+      _random,
+    );
   }
 
   /// 生成推送标题
@@ -2286,62 +2264,22 @@ class SmartPushService extends ChangeNotifier {
 
   /// 筛选去年今日的笔记
   List<Quote> _filterYearAgoToday(List<Quote> notes, DateTime now) {
-    return notes.where((note) {
-      try {
-        final noteDate = DateTime.parse(note.date);
-        return noteDate.month == now.month &&
-            noteDate.day == now.day &&
-            noteDate.year < now.year;
-      } catch (e) {
-        return false;
-      }
-    }).toList();
+    return filterYearAgoToday(notes, now);
   }
 
   /// 筛选往月今日的笔记
   List<Quote> _filterMonthAgoToday(List<Quote> notes, DateTime now) {
-    return notes.where((note) {
-      try {
-        final noteDate = DateTime.parse(note.date);
-        return noteDate.day == now.day &&
-            (noteDate.year < now.year ||
-                (noteDate.year == now.year && noteDate.month < now.month));
-      } catch (e) {
-        return false;
-      }
-    }).toList();
+    return filterMonthAgoToday(notes, now);
   }
 
   /// 筛选上周今日的笔记
   List<Quote> _filterWeekAgoToday(List<Quote> notes, DateTime now) {
-    final weekAgo = now.subtract(const Duration(days: 7));
-    return notes.where((note) {
-      try {
-        final noteDate = DateTime.parse(note.date);
-        return noteDate.year == weekAgo.year &&
-            noteDate.month == weekAgo.month &&
-            noteDate.day == weekAgo.day;
-      } catch (e) {
-        return false;
-      }
-    }).toList();
+    return filterWeekAgoToday(notes, now);
   }
 
   /// 筛选随机回忆（7天前的笔记）
   List<Quote> _filterRandomMemory(List<Quote> notes, DateTime now) {
-    final sevenDaysAgo = now.subtract(const Duration(days: 7));
-    final filtered = notes.where((note) {
-      try {
-        final noteDate = DateTime.parse(note.date);
-        return noteDate.isBefore(sevenDaysAgo);
-      } catch (e) {
-        return false;
-      }
-    }).toList();
-
-    // 随机选择最多5条
-    filtered.shuffle(_random);
-    return filtered.take(5).toList();
+    return filterRandomMemory(notes, now, _random);
   }
 
   /// 筛选相同地点的笔记
