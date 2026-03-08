@@ -3,7 +3,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/services/log_database_service.dart';
-import 'package:flutter/widgets.dart'; // Import WidgetsBinding
+import 'package:flutter/scheduler.dart';
 import '../utils/app_logger.dart';
 // 导入main.dart中的全局函数
 import '../main.dart' show getAndClearDeferredErrors;
@@ -366,7 +366,7 @@ class LogService with ChangeNotifier {
     // 延迟通知
     if (!_notifyScheduled) {
       _notifyScheduled = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
         if (hasListeners) {
           notifyListeners();
         }
@@ -388,7 +388,7 @@ class LogService with ChangeNotifier {
     // 延迟通知
     if (!_notifyScheduled) {
       _notifyScheduled = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
         if (hasListeners) {
           notifyListeners();
         }
