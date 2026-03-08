@@ -1618,7 +1618,6 @@ class _HomePageState extends State<HomePage>
     final hasWeather = weatherService.currentWeather != null &&
         weatherService.currentWeather != 'error' &&
         weatherService.currentWeather != 'unknown';
-    final isCached = weatherService.state == WeatherServiceState.cached;
 
     String locationText;
     String weatherText;
@@ -1627,8 +1626,7 @@ class _HomePageState extends State<HomePage>
     // --- 构建天气文本的辅助函数 ---
     String buildWeatherText() {
       return '${WeatherService.getLocalizedWeatherDescription(l10n, weatherService.currentWeather!)}'
-          '${weatherService.temperature != null && weatherService.temperature!.isNotEmpty ? ' ${weatherService.temperature}' : ''}'
-          '${isCached ? ' ${l10n.tileCachedSuffix}' : ''}';
+          '${weatherService.temperature != null && weatherService.temperature!.isNotEmpty ? ' ${weatherService.temperature}' : ''}';
     }
 
     // --- 优先级链：位置显示 ---
