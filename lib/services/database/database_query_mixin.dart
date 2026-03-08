@@ -1,173 +1,145 @@
 part of '../database_service.dart';
 
-/// DatabaseQueryOperations for DatabaseService.
-extension DatabaseQueryOperations on DatabaseService {
-
-  /// 修复：直接查询数据库，不进行初始化状态检查，用于内部调用
-  Future<List<Quote>> _directGetQuotes({
+/// Mixin providing core query operations for DatabaseService.
+mixin _DatabaseQueryMixin on ChangeNotifier {
+  Future<List<Quote>> getUserQuotes({
     List<String>? tagIds,
     String? categoryId,
     int offset = 0,
     int limit = 10,
     String orderBy = 'date DESC',
     String? searchQuery,
-    List<String>? selectedWeathers,
-    List<String>? selectedDayPeriods,
+    List<String>? selectedWeathers, // 天气筛选
+    List<String>? selectedDayPeriods, // 时间段筛选
+    bool excludeHiddenNotes = true, // 默认排除隐藏笔记
   }) async {
-    if (kIsWeb) {
-      // Web平台的完整筛选逻辑
-      var filtered = _memoryStore;
-      if (tagIds != null && tagIds.isNotEmpty) {
-        filtered = filtered
-            .where((q) => q.tagIds.any((tag) => tagIds.contains(tag)))
-            .toList();
-      }
-      if (categoryId != null && categoryId.isNotEmpty) {
-        filtered = filtered.where((q) => q.categoryId == categoryId).toList();
-      }
-      if (searchQuery != null && searchQuery.isNotEmpty) {
-        final query = searchQuery.toLowerCase();
-        filtered = filtered
-            .where(
-              (q) =>
-                  q.content.toLowerCase().contains(query) ||
-                  (q.source?.toLowerCase().contains(query) ?? false) ||
-                  (q.sourceAuthor?.toLowerCase().contains(query) ?? false) ||
-                  (q.sourceWork?.toLowerCase().contains(query) ?? false),
-            )
-            .toList();
+    try {
+      // 修复：确保数据库已完全初始化
+      if (!_isInitialized) {
+        logDebug('数据库尚未初始化，等待初始化完成...');
+        if (_isInitializing && _initCompleter != null) {
+          await _initCompleter!.future;
+        } else {
+          await init();
+        }
       }
 
-      // 排序
-      if (orderBy.contains('date')) {
+      // 优化：定期清理缓存而不是每次查询都清理
+      _scheduleCacheCleanup();
+
+      // 判断是否正在查询隐藏标签
+      final isQueryingHiddenTag =
+          tagIds != null && tagIds.contains(hiddenTagId);
+      // 如果正在查询隐藏标签，则不排除隐藏笔记
+      final shouldExcludeHidden = excludeHiddenNotes && !isQueryingHiddenTag;
+
+      if (kIsWeb) {
+        // Web平台的完整筛选逻辑
+        var filtered = _memoryStore;
+
+        // 排除隐藏笔记（除非正在查询隐藏标签）
+        if (shouldExcludeHidden) {
+          filtered =
+              filtered.where((q) => !q.tagIds.contains(hiddenTagId)).toList();
+        }
+
+        if (tagIds != null && tagIds.isNotEmpty) {
+          filtered = filtered
+              .where((q) => q.tagIds.any((tag) => tagIds.contains(tag)))
+              .toList();
+        }
+        if (categoryId != null && categoryId.isNotEmpty) {
+          filtered = filtered.where((q) => q.categoryId == categoryId).toList();
+        }
+        if (searchQuery != null && searchQuery.isNotEmpty) {
+          final query = searchQuery.toLowerCase();
+          filtered = filtered
+              .where(
+                (q) =>
+                    q.content.toLowerCase().contains(query) ||
+                    (q.source?.toLowerCase().contains(query) ?? false) ||
+                    (q.sourceAuthor?.toLowerCase().contains(query) ?? false) ||
+                    (q.sourceWork?.toLowerCase().contains(query) ?? false),
+              )
+              .toList();
+        }
+        if (selectedWeathers != null && selectedWeathers.isNotEmpty) {
+          filtered = filtered
+              .where(
+                (q) =>
+                    q.weather != null && selectedWeathers.contains(q.weather),
+              )
+              .toList();
+        }
+        if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
+          filtered = filtered
+              .where(
+                (q) =>
+                    q.dayPeriod != null &&
+                    selectedDayPeriods.contains(q.dayPeriod),
+              )
+              .toList();
+        }
+
+        // 排序（支持日期、喜爱度、名称）
         filtered.sort((a, b) {
-          final aDate = DateTime.tryParse(a.date) ?? DateTime.now();
-          final bDate = DateTime.tryParse(b.date) ?? DateTime.now();
-          return orderBy.contains('DESC')
-              ? bDate.compareTo(aDate)
-              : aDate.compareTo(bDate);
+          if (orderBy.startsWith('date')) {
+            final dateA = DateTime.tryParse(a.date) ?? DateTime.now();
+            final dateB = DateTime.tryParse(b.date) ?? DateTime.now();
+            return orderBy.contains('ASC')
+                ? dateA.compareTo(dateB)
+                : dateB.compareTo(dateA);
+          } else if (orderBy.startsWith('favorite_count')) {
+            return orderBy.contains('ASC')
+                ? a.favoriteCount.compareTo(b.favoriteCount)
+                : b.favoriteCount.compareTo(a.favoriteCount);
+          } else {
+            return orderBy.contains('ASC')
+                ? a.content.compareTo(b.content)
+                : b.content.compareTo(a.content);
+          }
         });
-      } else if (orderBy.contains('content')) {
-        filtered.sort((a, b) {
-          return orderBy.contains('DESC')
-              ? b.content.compareTo(a.content)
-              : a.content.compareTo(b.content);
-        });
+
+        // 分页 - 修复：确保正确处理边界情况
+        final start = offset.clamp(0, filtered.length);
+        final end = (offset + limit).clamp(0, filtered.length);
+
+        logDebug(
+          'Web分页：总数据${filtered.length}条，offset=$offset，limit=$limit，start=$start，end=$end',
+        );
+
+        // 如果起始位置已经超出数据范围，直接返回空列表
+        if (start >= filtered.length) {
+          logDebug('起始位置超出范围，返回空列表');
+          return [];
+        }
+
+        final result = filtered.sublist(start, end);
+        logDebug('Web分页返回${result.length}条数据');
+        return result;
       }
 
-      // 分页
-      final start = offset;
-      final end = (start + limit).clamp(0, filtered.length);
-      return filtered.sublist(start, end);
+      // 修复：统一查询超时时间和重试机制
+      return await _executeQueryWithRetry(() async {
+        final db = await safeDatabase; // 使用安全的数据库访问
+        return await _performDatabaseQuery(
+          db: db,
+          tagIds: tagIds,
+          categoryId: categoryId,
+          searchQuery: searchQuery,
+          selectedWeathers: selectedWeathers,
+          selectedDayPeriods: selectedDayPeriods,
+          orderBy: orderBy,
+          limit: limit,
+          offset: offset,
+          excludeHiddenNotes: shouldExcludeHidden,
+        );
+      });
+    } catch (e) {
+      logError('获取笔记失败: $e', error: e, source: 'DatabaseService');
+      return [];
     }
-
-    // 非Web平台直接查询数据库
-    final db = _database!; // 直接使用数据库，不进行安全检查
-
-    // 构建查询条件
-    final conditions = <String>[];
-    final args = <dynamic>[];
-
-    // 标签筛选
-    if (tagIds != null && tagIds.isNotEmpty) {
-      final tagPlaceholders = tagIds.map((_) => '?').join(',');
-      conditions.add(
-        'q.id IN (SELECT quote_id FROM quote_tags WHERE tag_id IN ($tagPlaceholders))',
-      );
-      args.addAll(tagIds);
-    }
-
-    // 分类筛选
-    if (categoryId != null && categoryId.isNotEmpty) {
-      conditions.add('q.category_id = ?');
-      args.add(categoryId);
-    }
-
-    // 搜索查询
-    // TODO(low): 该 LIKE 搜索模式在第 696、1992、2430 行重复了 3 次，
-    // 可提取为共享方法。当前量级（个人笔记）性能足够，暂不需要 FTS5。
-    if (searchQuery != null && searchQuery.isNotEmpty) {
-      conditions.add(
-        '(q.content LIKE ? OR (q.source LIKE ? OR q.source_author LIKE ? OR q.source_work LIKE ?))',
-      );
-      final searchParam = '%$searchQuery%';
-      args.addAll([searchParam, searchParam, searchParam, searchParam]);
-    }
-
-    // 天气筛选
-    if (selectedWeathers != null && selectedWeathers.isNotEmpty) {
-      final weatherPlaceholders = selectedWeathers.map((_) => '?').join(',');
-      conditions.add('q.weather IN ($weatherPlaceholders)');
-      args.addAll(selectedWeathers);
-    }
-
-    // 时间段筛选
-    if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-      final dayPeriodPlaceholders =
-          selectedDayPeriods.map((_) => '?').join(',');
-      conditions.add('q.day_period IN ($dayPeriodPlaceholders)');
-      args.addAll(selectedDayPeriods);
-    }
-
-    final whereClause =
-        conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
-
-    // 优化：使用JOIN一次性获取所有数据，避免N+1查询问题
-    final query = '''
-      SELECT 
-        q.*,
-        GROUP_CONCAT(qt.tag_id) as tag_ids_joined
-      FROM quotes q
-      LEFT JOIN quote_tags qt ON q.id = qt.quote_id
-      $whereClause
-      GROUP BY q.id
-      ORDER BY q.$orderBy
-      LIMIT ? OFFSET ?
-    ''';
-
-    args.addAll([limit, offset]);
-
-    final List<Map<String, dynamic>> maps = await db.rawQuery(query, args);
-    final quotes = <Quote>[];
-
-    for (final map in maps) {
-      try {
-        // 解析聚合的标签ID
-        final tagIdsJoined = map['tag_ids_joined'];
-        final tagIds = <String>{
-          if (tagIdsJoined != null && tagIdsJoined.toString().isNotEmpty)
-            ...tagIdsJoined
-                .toString()
-                .split(',')
-                .map((id) => id.trim())
-                .where((id) => id.isNotEmpty),
-        }.toList();
-
-        // 创建Quote对象（移除临时字段）
-        final quoteData = Map<String, dynamic>.from(map);
-        quoteData.remove('tag_ids_joined');
-
-        final quote = Quote.fromJson({...quoteData, 'tag_ids': tagIds});
-        quotes.add(quote);
-      } catch (e) {
-        logDebug('解析笔记数据失败: $e, 数据: $map');
-      }
-    }
-
-    return quotes;
   }
-
-  /// 获取所有分类列表
-
-
-  /// 检查并修复数据库结构，确保所有必要的列都存在
-  /// 修复：检查并修复数据库结构，包括字段和索引
-  Future<void> _checkAndFixDatabaseStructure() async {
-    await _schemaManager.checkAndFixDatabaseStructure(database);
-  }
-
-  /// 初始化默认一言分类标签
-
 
   /// 修复：带重试机制的查询执行
   Future<T> _executeQueryWithRetry<T>(
@@ -251,9 +223,6 @@ extension DatabaseQueryOperations on DatabaseService {
       return const Duration(seconds: 8); // 桌面平台
     }
   }
-
-  /// 执行实际的数据库查询（修复版本）
-
 
   /// 执行实际的数据库查询（修复版本）
   Future<List<Quote>> _performDatabaseQuery({
@@ -434,43 +403,8 @@ extension DatabaseQueryOperations on DatabaseService {
   }
 
   /// 修复：更新查询性能统计
-
-
-  /// 修复：更新查询性能统计
   void _updateQueryStats(String queryType, int timeMs) {
     _healthService.recordQueryStats(queryType, timeMs);
   }
-
-  /// 智能推送专用轻量查询
-
-
-  /// 修复：安全地创建索引，检查列是否存在
-  Future<void> _createIndexSafely(
-    Database db,
-    String tableName,
-    String columnName,
-    String indexName,
-  ) async {
-    await _healthService.createIndexSafely(
-      db,
-      tableName,
-      columnName,
-      indexName,
-    );
-  }
-
-  /// 修复：检查列是否存在
-
-
-  /// 修复：检查列是否存在
-  Future<bool> _checkColumnExists(
-    Database db,
-    String tableName,
-    String columnName,
-  ) async {
-    return _healthService.checkColumnExists(db, tableName, columnName);
-  }
-
-  /// 启动时执行数据库健康检查
 
 }

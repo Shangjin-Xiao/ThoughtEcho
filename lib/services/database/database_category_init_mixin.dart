@@ -1,9 +1,7 @@
 part of '../database_service.dart';
 
-/// DatabaseCategoryDefaultsOperations for DatabaseService.
-extension DatabaseCategoryDefaultsOperations on DatabaseService {
-
-  /// 初始化默认一言分类标签
+/// Mixin providing default category initialization for DatabaseService.
+mixin _DatabaseCategoryInitMixin on ChangeNotifier {
   Future<void> initDefaultHitokotoCategories() async {
     if (kIsWeb) {
       // Web 平台逻辑：检查内存中的 _categoryStore
@@ -126,10 +124,6 @@ extension DatabaseCategoryDefaultsOperations on DatabaseService {
     }
   }
 
-  /// 获取默认一言分类列表
-
-
-  /// 获取默认一言分类列表
   List<NoteCategory> _getDefaultHitokotoCategories() {
     return [
       NoteCategory(
@@ -206,7 +200,5 @@ extension DatabaseCategoryDefaultsOperations on DatabaseService {
       ),
     ];
   }
-
-  /// 将所有笔记和分类数据导出为Map对象
 
 }
