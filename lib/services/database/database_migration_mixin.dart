@@ -101,6 +101,7 @@ mixin _DatabaseMigrationMixin on ChangeNotifier {
     );
   }
 
+  /// 修复：检查列是否存在
   Future<bool> _checkColumnExists(
     Database db,
     String tableName,

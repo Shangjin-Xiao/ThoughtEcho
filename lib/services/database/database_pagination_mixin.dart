@@ -2,6 +2,9 @@ part of '../database_service.dart';
 
 /// Mixin providing pagination and stream operations for DatabaseService.
 mixin _DatabasePaginationMixin on ChangeNotifier {
+  /// 修复：安全地通知笔记流订阅者
+  /// 性能优化：由于 _currentQuotes 已通过 _currentQuoteIds 保证唯一性，
+  /// 此处直接发送，无需再次遍历去重
   void _safeNotifyQuotesStream() {
     // 修复：检查服务是否已销毁
     if (_isDisposed) return;
@@ -12,10 +15,12 @@ mixin _DatabasePaginationMixin on ChangeNotifier {
     }
   }
 
+  /// 刷新笔记流数据（公开方法）
   void refreshQuotes() {
     _refreshQuotesStream();
   }
 
+  // 在增删改后刷新分页流数据
   void _refreshQuotesStream() {
     if (_quotesController != null && !_quotesController!.isClosed) {
       logDebug('刷新笔记流数据');
@@ -36,6 +41,7 @@ mixin _DatabasePaginationMixin on ChangeNotifier {
     }
   }
 
+  /// 修复：监听笔记列表，支持分页加载和筛选
   Stream<List<Quote>> watchQuotes({
     List<String>? tagIds,
     String? categoryId,
@@ -261,6 +267,7 @@ mixin _DatabasePaginationMixin on ChangeNotifier {
     return _quotesController!.stream;
   }
 
+  /// 修复：加载更多笔记数据（用于分页）
   Future<void> loadMoreQuotes({
     List<String>? tagIds,
     String? categoryId,

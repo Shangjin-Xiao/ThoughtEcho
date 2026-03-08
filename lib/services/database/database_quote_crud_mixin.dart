@@ -2,6 +2,7 @@ part of '../database_service.dart';
 
 /// Mixin providing quote CRUD operations for DatabaseService.
 mixin _DatabaseQuoteCrudMixin on ChangeNotifier {
+  /// 修复：添加一条引用（笔记），增加数据验证和并发控制
   Future<void> addQuote(Quote quote) async {
     // 修复：添加数据验证
     if (!quote.isValid) {
@@ -94,6 +95,7 @@ mixin _DatabaseQuoteCrudMixin on ChangeNotifier {
     });
   }
 
+  /// 根据ID获取单个笔记的完整信息
   Future<Quote?> getQuoteById(String id) async {
     if (kIsWeb) {
       try {
@@ -129,6 +131,7 @@ mixin _DatabaseQuoteCrudMixin on ChangeNotifier {
     }
   }
 
+  /// 获取所有笔记
   Future<List<Quote>> getAllQuotes({bool excludeHiddenNotes = true}) async {
     if (kIsWeb) {
       var result = List<Quote>.from(_memoryStore);
@@ -168,6 +171,7 @@ mixin _DatabaseQuoteCrudMixin on ChangeNotifier {
     }
   }
 
+  /// 修复：删除指定的笔记，增加数据验证和错误处理
   Future<void> deleteQuote(String id) async {
     // 修复：添加参数验证
     if (id.isEmpty) {
@@ -276,6 +280,7 @@ mixin _DatabaseQuoteCrudMixin on ChangeNotifier {
     });
   }
 
+  /// 根据内容搜索笔记（用于媒体引用校验等内部逻辑）
   Future<List<Quote>> searchQuotesByContent(String query) async {
     if (kIsWeb) {
       return _memoryStore
@@ -297,6 +302,7 @@ mixin _DatabaseQuoteCrudMixin on ChangeNotifier {
     return results.map((map) => Quote.fromJson(map)).toList();
   }
 
+  /// 修复：更新笔记内容，增加数据验证和并发控制
   Future<void> updateQuote(Quote quote) async {
     // 修复：添加数据验证
     if (quote.id == null || quote.id!.isEmpty) {

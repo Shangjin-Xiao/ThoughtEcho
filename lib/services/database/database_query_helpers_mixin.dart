@@ -2,6 +2,7 @@ part of '../database_service.dart';
 
 /// Mixin providing query helper operations for DatabaseService.
 mixin _DatabaseQueryHelpersMixin on ChangeNotifier {
+  /// 修复：直接查询数据库，不进行初始化状态检查，用于内部调用
   Future<List<Quote>> _directGetQuotes({
     List<String>? tagIds,
     String? categoryId,
@@ -155,10 +156,13 @@ mixin _DatabaseQueryHelpersMixin on ChangeNotifier {
     return quotes;
   }
 
+  /// 检查并修复数据库结构，确保所有必要的列都存在
+  /// 修复：检查并修复数据库结构，包括字段和索引
   Future<void> _checkAndFixDatabaseStructure() async {
     await _schemaManager.checkAndFixDatabaseStructure(database);
   }
 
+  /// 智能推送专用轻量查询
   Future<List<Quote>> getQuotesForSmartPush({
     String? whereSql,
     List<Object?>? whereArgs,
@@ -234,6 +238,8 @@ mixin _DatabaseQueryHelpersMixin on ChangeNotifier {
       return [];
     }
 
+  /// 获取笔记总数，用于分页
+  /// [excludeHiddenNotes] 是否排除隐藏笔记，默认为 true
   Future<int> getQuotesCount({
     List<String>? tagIds,
     String? categoryId,

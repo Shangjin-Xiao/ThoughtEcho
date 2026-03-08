@@ -2,6 +2,7 @@ part of '../database_service.dart';
 
 /// Mixin providing category CRUD operations for DatabaseService.
 mixin _DatabaseCategoryMixin on ChangeNotifier {
+  /// 获取所有分类列表
   Future<List<Map<String, dynamic>>> getAllCategories() async {
     try {
       if (kIsWeb) {
@@ -42,6 +43,7 @@ mixin _DatabaseCategoryMixin on ChangeNotifier {
     return [...normalCategories, ...hiddenCategories];
   }
 
+  /// 修复：添加一条分类，统一名称唯一性检查
   Future<void> addCategory(String name, {String? iconName}) async {
     // 统一的参数验证
     final trimmedName = name.trim();
@@ -95,6 +97,7 @@ mixin _DatabaseCategoryMixin on ChangeNotifier {
     notifyListeners();
   }
 
+  /// 修复：统一的分类名称唯一性验证
   Future<void> _validateCategoryNameUnique(
     Database db,
     String name, {
@@ -118,6 +121,7 @@ mixin _DatabaseCategoryMixin on ChangeNotifier {
     }
   }
 
+  /// 添加一条分类（使用指定ID）
   Future<void> addCategoryWithId(
     String id,
     String name, {
@@ -272,11 +276,13 @@ mixin _DatabaseCategoryMixin on ChangeNotifier {
     }
   }
 
+  /// 监听分类流
   Stream<List<NoteCategory>> watchCategories() {
     _updateCategoriesStream();
     return _categoriesController.stream;
   }
 
+  /// 修复：删除指定分类，增加级联删除和孤立数据清理
   Future<void> deleteCategory(String id) async {
     // 系统标签（如隐藏标签）不允许删除
     if (id == hiddenTagId) {
@@ -342,6 +348,7 @@ mixin _DatabaseCategoryMixin on ChangeNotifier {
     _categoriesController.add(categories);
   }
 
+  /// 更新分类信息
   Future<void> updateCategory(
     String id,
     String name, {
@@ -430,6 +437,7 @@ mixin _DatabaseCategoryMixin on ChangeNotifier {
     notifyListeners();
   }
 
+  /// 根据 ID 获取分类
   Future<NoteCategory?> getCategoryById(String id) async {
     if (kIsWeb) {
       try {

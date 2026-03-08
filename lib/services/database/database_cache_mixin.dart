@@ -2,6 +2,8 @@ part of '../database_service.dart';
 
 /// Mixin providing cache management operations for DatabaseService.
 mixin _DatabaseCacheMixin on ChangeNotifier {
+  /// 优化：定期清理过期缓存，而不是每次查询都清理
+  /// 兼容性说明：这个变更不影响外部API，只是内部优化
   void _scheduleCacheCleanup() {
     // 如果距离上次清理不到1分钟，跳过
     if (DateTime.now().difference(_lastCacheCleanup).inMinutes < 1) {
@@ -15,6 +17,7 @@ mixin _DatabaseCacheMixin on ChangeNotifier {
     });
   }
 
+  /// 优化：检查并清理过期缓存
   void _cleanExpiredCache() {
     final now = DateTime.now();
     final expiredKeys = <String>[];
@@ -50,6 +53,7 @@ mixin _DatabaseCacheMixin on ChangeNotifier {
     );
   }
 
+  /// 优化：清空所有缓存（在数据变更时调用）
   void _clearAllCache() {
     _filterCache.clear();
     _cacheTimestamps.clear();
@@ -57,6 +61,7 @@ mixin _DatabaseCacheMixin on ChangeNotifier {
     _countCacheTimestamps.clear();
   }
 
+  /// 优化：生成更可靠的缓存键，避免冲突
   String _generateCacheKey({
     List<String>? tagIds,
     String? categoryId,
@@ -76,6 +81,7 @@ mixin _DatabaseCacheMixin on ChangeNotifier {
     return '$tagKey@@$categoryKey@@$searchKey@@$orderBy@@$weatherKey@@$dayPeriodKey';
   }
 
+  /// 修复：从缓存中获取数据，更新LRU访问时间
   List<Quote>? _getFromCache(String cacheKey, int offset, int limit) {
     final cachedData = _filterCache[cacheKey];
     if (cachedData == null || cachedData.isEmpty) {
@@ -99,6 +105,7 @@ mixin _DatabaseCacheMixin on ChangeNotifier {
     return result;
   }
 
+  /// 修复：更智能的LRU缓存管理
   void _addToCache(String cacheKey, List<Quote> quotes, int offset) {
     final now = DateTime.now();
 
@@ -127,6 +134,7 @@ mixin _DatabaseCacheMixin on ChangeNotifier {
     }
   }
 
+  /// 修复：实现真正的LRU缓存淘汰策略
   void _evictLRUCache() {
     if (_cacheAccessTimes.isEmpty) return;
 
