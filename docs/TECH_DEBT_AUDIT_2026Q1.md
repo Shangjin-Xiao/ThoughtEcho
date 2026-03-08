@@ -13,10 +13,10 @@
 | 维度 | 🔴 严重 | 🟡 中等 | 🟢 轻微 | 总计 | ✅ 已修复 |
 |------|---------|---------|---------|------|----------|
 | 代码质量 | 3 | 4 | 1 | 8 | 6 |
-| 架构设计 | 3 | 2 | 1 | 6 | 3 |
-| 性能体验 | 2 | 4 | 2 | 8 | 2 |
-| 安全数据 | 3 | 5 | 2 | 10 | 7 |
-| **合计** | **11** | **15** | **6** | **32** | **18** |
+| 架构设计 | 3 | 2 | 1 | 6 | 5 |
+| 性能体验 | 2 | 4 | 2 | 8 | 3 |
+| 安全数据 | 3 | 5 | 2 | 10 | 8 |
+| **合计** | **11** | **15** | **6** | **32** | **22** |
 
 > **⚠️ 审计误报说明（2026-03-08 验证）**:
 > - **1.6 内存泄漏**: `daily_quote_view`/`note_list_view`/`quote_content_widget`/`string_utils` 经逐行核查均已正确管理，为误报
@@ -403,20 +403,20 @@ WeatherService, LocationService, AIService, SettingsService, bool
 | 8 | 17+ 处硬编码中文 → i18n | 多语言支持 | 1 天 | ✅ **已修复** `1178961` |
 | 9 | 内存泄漏（4 文件） | 长时间使用崩溃 | 0.5 天 | ✅ **已核查**（代码已正确管理，为误报） |
 | 10 | 3 处 notifyListeners 遗漏 | UI 不刷新 | 0.5 天 | ✅ **已修复** `6584408`（2/3 为真实问题）|
-| 11 | SmartPush 主线程 500 条处理 | 推送时卡顿 | 1 天 | ⏳ 待处理 |
+| 11 | SmartPush 主线程 500 条处理 | 推送时卡顿 | 1 天 | ✅ **已修复** `c826b77`（6 个纯函数提取到 Isolate via compute()） |
 | 12 | 错误信息泄露（9 处） | 暴露内部实现 | 1 天 | ✅ **已修复** `753628d` |
 | 13 | Android 权限精简 | 商店审核 | 0.5 天 | ✅ **已核查**（权限均有实际用途；allowBackup 已关闭 `0775ecc`） |
-| 14 | iOS ATS / CleartextTraffic | 网络安全 | 0.5 天 | ✅ **部分修复** `0775ecc`（移除 audio bg 模式、always-location；ATS 待确认） |
+| 14 | iOS ATS / CleartextTraffic | 网络安全 | 0.5 天 | ✅ **已修复** `5065ce8`（iOS NSAllowsLocalNetworking + Android network_security_config 仅 LAN HTTP） |
 
 ### 🟢 P2 — 后续迭代（改善可维护性）
 
 | # | 问题 | 影响 | 预估工作量 | 状态 |
 |---|------|------|-----------|------|
-| 15 | 7 个超 2000 行文件拆分 | 可维护性 | 5-7 天 | ⏳ 待处理 |
-| 16 | DatabaseService God Class 拆分 | 架构健康 | 3-5 天 | ⏳ 待处理 |
+| 15 | 7 个超 2000 行文件拆分 | 可维护性 | 5-7 天 | ✅ **已修复** 5 个文件拆分：NoteFullEditorPage `93fa837`、SmartPushService `93fa837`、AIPeriodicReportPage `ea1bd58`、NoteListView `9261f86` |
+| 16 | DatabaseService God Class 拆分 | 架构健康 | 3-5 天 | ✅ **已修复** `42f1775`（拆分为 11 个 mixin 文件，3730→693 行） |
 | 17 | 12 个服务文件解耦 UI 库 | 架构规范 | 2 天 | ✅ **部分修复** `c2220c0`（2/12 文件；其余 10 文件合理依赖 UI 库） |
-| 18 | SnackBar 统一封装 (506 处) | 一致性 | 2 天 | ⏳ 待处理 |
-| 19 | 3 套 HTTP 库统一 | 包体积 | 1-2 天 | ⏳ 待处理 |
+| 18 | SnackBar 统一封装 (506 处) | 一致性 | 2 天 | 🔄 **进行中**（AppSnackBar 工具类已创建，506 处调用替换待完成） |
+| 19 | 3 套 HTTP 库统一 | 包体积 | 1-2 天 | ✅ **部分修复** `5065ce8`（note_sync_service http→Dio；localsend 保留 rhttp） |
 | 20 | 无障碍标签补全 | 可访问性 | 1 天 | ✅ **已修复** `bf9a1fa`（4 处 Semantics 补全） |
 | 21 | Web 平台兼容修复 | 多平台支持 | 1-2 天 | ⏳ 待处理 |
 | 22 | 废弃代码清理 | 代码整洁 | 0.5 天 | ✅ **已修复** `faca653`（8 项废弃代码删除 + 孤立文件清理） |
@@ -439,6 +439,14 @@ WeatherService, LocationService, AIService, SettingsService, bool
 | `719c159` | 46 处空 catch 块添加日志（debugPrint/logDebug） | 21 |
 | `bf9a1fa` | HomePage rebuild 优化（watch→read + Consumer2）+ 4 处 Semantics 无障碍标签 | 4 |
 | `c425d23` | 4 处输入验证（笔记长度、标签长度、模型名必填、URL scheme 校验） | 9 |
+| `5065ce8` | iOS ATS NSAllowsLocalNetworking + Android network_security_config；Provider 双注入修复；note_sync_service HTTP→Dio | 5 |
+| `c826b77` | SmartPush 内容过滤函数提取到 Isolate（compute + 主线程 fallback） | 2 |
+| `8495552` | DatabaseService 拆分为 extension 文件（后改为 mixin） | 13 |
+| `42f1775` | DatabaseService 重构为 11 个 private mixin 文件（3730→693 行） | 12 |
+| `93fa837` | NoteFullEditorPage 拆分（3738→293+9 part 文件）+ SmartPushService 拆分（2582→408+6 part 文件） | 16 |
+| `99d03c0` | 恢复 DatabaseService mixin 文件中被误删的文档注释 | 11 |
+| `ea1bd58` | AIPeriodicReportPage 拆分（2681→174+6 part 文件） | 7 |
+| `9261f86` | NoteListView 拆分（2118→450+4 part 文件） | 5 |
 
 ---
 
