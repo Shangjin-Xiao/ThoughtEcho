@@ -1733,18 +1733,11 @@ class _HomePageState extends State<HomePage>
     final locationService = Provider.of<LocationService>(context);
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    final aiService =
-        context.watch<AIService>(); // Watch AIService for key changes
-    final settingsService = context
-        .watch<SettingsService>(); // Watch SettingsService for settings changes
+    final aiService = context.read<AIService>();
+    final settingsService = context.read<SettingsService>();
 
-    // 直接用context.watch<bool>()获取服务初始化状态
+    // 直接用context.watch<bool>()获取服务初始化状态（仅变化一次）
     final bool servicesInitialized = context.watch<bool>();
-
-    // Determine if AI is configured (including checking for valid API Key)
-    final bool isAiConfigured = aiService.hasValidApiKey() &&
-        settingsService.aiSettings.apiUrl.isNotEmpty &&
-        settingsService.aiSettings.model.isNotEmpty;
 
     // 修复：根据当前页面动态设置背景色，确保底部安全区域颜色正确
     // 记录页使用专属背景色，其他页面使用通用页面背景色
@@ -1874,8 +1867,16 @@ class _HomePageState extends State<HomePage>
                               ),
                             ),
                           ), // 每日提示部分 - 固定在底部，紧凑布局
-                          Container(
-                            width: double.infinity,
+                          Consumer2<AIService, SettingsService>(
+                            builder: (context, aiSvc, settingsSvc, _) {
+                              final bool isAiConfigured =
+                                  aiSvc.hasValidApiKey() &&
+                                      settingsSvc
+                                          .aiSettings.apiUrl.isNotEmpty &&
+                                      settingsSvc
+                                          .aiSettings.model.isNotEmpty;
+                              return Container(
+                                width: double.infinity,
                             margin: EdgeInsets.fromLTRB(
                               screenWidth > 600
                                   ? 16.0
@@ -2019,6 +2020,8 @@ class _HomePageState extends State<HomePage>
                                       ),
                               ],
                             ),
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -2083,9 +2086,12 @@ class _HomePageState extends State<HomePage>
             SettingsPage(key: _settingsPageKey),
           ],
         ),
-        floatingActionButton: GestureDetector(
-          onLongPressStart: (_) => _onFABLongPress(),
-          child: Container(
+        floatingActionButton: Semantics(
+          button: true,
+          label: '${l10n.add} / ${l10n.voiceInputTitle}',
+          child: GestureDetector(
+            onLongPressStart: (_) => _onFABLongPress(),
+            child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(16),
               boxShadow: AppTheme.accentShadow,
@@ -2103,6 +2109,7 @@ class _HomePageState extends State<HomePage>
                 borderRadius: BorderRadius.circular(16),
               ),
               child: const Icon(Icons.add, size: 28),
+            ),
             ),
           ),
         ),
