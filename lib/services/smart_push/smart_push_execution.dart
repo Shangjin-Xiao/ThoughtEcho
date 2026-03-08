@@ -253,16 +253,12 @@ extension SmartPushExecution on SmartPushService {
         );
 
         // 记录推送历史（避免重复推送，测试模式也不记录）
+        // 统一使用静默保存：saveSettings 内部会调用 scheduleNextPush →
+        // _cancelAllSchedules → cancelAll()，会取消刚刚显示的通知。
+        // 重新调度由函数末尾的 scheduleNextPush() 统一处理。
         if (!isDailyQuote && noteToShow.id != null && !isTest) {
           final updatedSettings = _settings.addPushedNoteId(noteToShow.id!);
-          // 后台推送时使用静默保存，避免 saveSettings 中的
-          // scheduleNextPush → _cancelAllSchedules → cancelAll()
-          // 意外取消刚刚通过 _showNotification 显示的通知
-          if (isBackground) {
-            await _saveSettingsQuietly(updatedSettings);
-          } else {
-            await saveSettings(updatedSettings);
-          }
+          await _saveSettingsQuietly(updatedSettings);
         }
 
         // SOTA: 消费疲劳预算并记录推送（用于效果追踪）
