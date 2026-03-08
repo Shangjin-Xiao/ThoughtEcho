@@ -3393,7 +3393,7 @@
   "tileNoNetwork": "네트워크 없음",
   "tileLoading": "로딩 중...",
   "tileNoWeather": "날씨 없음",
-  "tileCachedSuffix": "(캐시)",
+  "tileCachedSuffix": "캐시",
   "noteAutoFillSection": "노트 자동 채우기",
   "noteAutoFillSectionDesc": "노트 작성 시 작성자, 소스, 태그 자동 채우기",
   "defaultAuthor": "기본 작성자",

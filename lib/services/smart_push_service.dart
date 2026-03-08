@@ -248,6 +248,22 @@ class SmartPushService extends ChangeNotifier {
     }
   }
 
+  /// 仅持久化设置到 MMKV，不触发重新调度
+  ///
+  /// 用于后台推送成功后记录已推送笔记 ID 等场景，
+  /// 避免 [saveSettings] 中的 [scheduleNextPush] / [_cancelAllSchedules]
+  /// 意外取消刚刚显示的通知。
+  Future<void> _saveSettingsQuietly(SmartPushSettings newSettings) async {
+    try {
+      _settings = newSettings;
+      final jsonStr = jsonEncode(newSettings.toJson());
+      await _mmkv.setString(_settingsKey, jsonStr);
+      AppLogger.i('智能推送设置已静默保存（不触发重新调度）');
+    } catch (e, stack) {
+      AppLogger.e('静默保存智能推送设置失败', error: e, stackTrace: stack);
+    }
+  }
+
   /// 预览推送内容
   Future<Quote?> previewPush() async {
     switch (_settings.pushMode) {

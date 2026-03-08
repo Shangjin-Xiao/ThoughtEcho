@@ -3419,7 +3419,7 @@
   "tileNoNetwork": "无网络",
   "tileLoading": "加载中...",
   "tileNoWeather": "无天气",
-  "tileCachedSuffix": "(缓存)",
+  "tileCachedSuffix": "缓存",
 
   "noteAutoFillSection": "笔记默认填充",
   "noteAutoFillSectionDesc": "新建笔记时自动填充作者、出处和标签",

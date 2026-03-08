@@ -3393,7 +3393,7 @@
   "tileNoNetwork": "No Network",
   "tileLoading": "Loading...",
   "tileNoWeather": "No Weather",
-  "tileCachedSuffix": "(Cached)",
+  "tileCachedSuffix": "Cached",
   "noteAutoFillSection": "Note Auto-Fill",
   "noteAutoFillSectionDesc": "Auto-fill author, source, and tags when creating notes",
   "defaultAuthor": "Default Author",
