@@ -1,15 +1,10 @@
 part of '../database_service.dart';
 
-/// DatabaseImportExportOperations for DatabaseService.
-extension DatabaseImportExportOperations on DatabaseService {
-
-  /// 将所有笔记和分类数据导出为Map对象
+/// Mixin providing import/export operations for DatabaseService.
+mixin _DatabaseImportExportMixin on ChangeNotifier {
   Future<Map<String, dynamic>> exportDataAsMap() async {
     return _backupService.exportDataAsMap(database);
   }
-
-  /// 导出全部数据到 JSON 格式
-
 
   /// 导出全部数据到 JSON 格式
   ///
@@ -18,9 +13,6 @@ extension DatabaseImportExportOperations on DatabaseService {
   Future<String> exportAllData({String? customPath}) async {
     return _backupService.exportAllData(database, customPath: customPath);
   }
-
-  /// 从Map对象导入数据
-
 
   /// 从Map对象导入数据
   Future<void> importDataFromMap(
@@ -38,9 +30,6 @@ extension DatabaseImportExportOperations on DatabaseService {
     await migrateWeatherToKey();
     await migrateDayPeriodToKey();
   }
-
-  /// 从 JSON 文件导入数据
-
 
   /// 从 JSON 文件导入数据
   ///
@@ -64,23 +53,14 @@ extension DatabaseImportExportOperations on DatabaseService {
   }
 
   /// 检查是否可以导出数据（检测数据库是否可访问）
-
-
-  /// 检查是否可以导出数据（检测数据库是否可访问）
   Future<bool> checkCanExport() async {
     return _backupService.checkCanExport(_database);
   }
 
   /// 验证备份文件是否有效
-
-
-  /// 验证备份文件是否有效
   Future<bool> validateBackupFile(String filePath) async {
     return _backupService.validateBackupFile(filePath);
   }
-
-  Future<List<NoteCategory>> getCategories() async {
-
 
   /// LWW (Last-Write-Wins) 合并导入数据
   ///
@@ -103,7 +83,5 @@ extension DatabaseImportExportOperations on DatabaseService {
     _refreshQuotesStream();
     return report;
   }
-
-  /// 外部调用的统一刷新入口（同步/恢复后使用）
 
 }

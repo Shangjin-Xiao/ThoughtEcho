@@ -1,9 +1,7 @@
 part of '../database_service.dart';
 
-/// DatabaseQuoteCrudOperations for DatabaseService.
-extension DatabaseQuoteCrudOperations on DatabaseService {
-
-  /// 修复：添加一条引用（笔记），增加数据验证和并发控制
+/// Mixin providing quote CRUD operations for DatabaseService.
+mixin _DatabaseQuoteCrudMixin on ChangeNotifier {
   Future<void> addQuote(Quote quote) async {
     // 修复：添加数据验证
     if (!quote.isValid) {
@@ -96,10 +94,6 @@ extension DatabaseQuoteCrudOperations on DatabaseService {
     });
   }
 
-  /// 刷新笔记流数据（公开方法）
-
-
-  /// 根据ID获取单个笔记的完整信息
   Future<Quote?> getQuoteById(String id) async {
     if (kIsWeb) {
       try {
@@ -135,12 +129,6 @@ extension DatabaseQuoteCrudOperations on DatabaseService {
     }
   }
 
-  /// 获取笔记列表，支持标签、分类、搜索、天气和时间段筛选
-
-
-  /// 获取所有笔记
-  /// [excludeHiddenNotes] 是否排除隐藏笔记，默认为 true
-  /// 注意：媒体引用迁移等需要访问全部数据的场景应传入 false
   Future<List<Quote>> getAllQuotes({bool excludeHiddenNotes = true}) async {
     if (kIsWeb) {
       var result = List<Quote>.from(_memoryStore);
@@ -180,10 +168,6 @@ extension DatabaseQuoteCrudOperations on DatabaseService {
     }
   }
 
-  /// 获取笔记总数，用于分页
-
-
-  /// 修复：删除指定的笔记，增加数据验证和错误处理
   Future<void> deleteQuote(String id) async {
     // 修复：添加参数验证
     if (id.isEmpty) {
@@ -292,10 +276,6 @@ extension DatabaseQuoteCrudOperations on DatabaseService {
     });
   }
 
-  /// 根据内容搜索笔记（用于媒体引用校验等内部逻辑）
-
-
-  /// 根据内容搜索笔记（用于媒体引用校验等内部逻辑）
   Future<List<Quote>> searchQuotesByContent(String query) async {
     if (kIsWeb) {
       return _memoryStore
@@ -317,10 +297,6 @@ extension DatabaseQuoteCrudOperations on DatabaseService {
     return results.map((map) => Quote.fromJson(map)).toList();
   }
 
-  /// 修复：更新笔记内容，增加数据验证和并发控制
-
-
-  /// 修复：更新笔记内容，增加数据验证和并发控制
   Future<void> updateQuote(Quote quote) async {
     // 修复：添加数据验证
     if (quote.id == null || quote.id!.isEmpty) {
@@ -454,7 +430,5 @@ extension DatabaseQuoteCrudOperations on DatabaseService {
       }
     });
   }
-
-  /// 增加笔记的心形点击次数
 
 }

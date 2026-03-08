@@ -1,10 +1,7 @@
 part of '../database_service.dart';
 
-/// DatabaseCacheOperations for DatabaseService.
-extension DatabaseCacheOperations on DatabaseService {
-
-  /// 优化：定期清理过期缓存，而不是每次查询都清理
-  /// 兼容性说明：这个变更不影响外部API，只是内部优化
+/// Mixin providing cache management operations for DatabaseService.
+mixin _DatabaseCacheMixin on ChangeNotifier {
   void _scheduleCacheCleanup() {
     // 如果距离上次清理不到1分钟，跳过
     if (DateTime.now().difference(_lastCacheCleanup).inMinutes < 1) {
@@ -18,8 +15,6 @@ extension DatabaseCacheOperations on DatabaseService {
     });
   }
 
-
-  /// 优化：检查并清理过期缓存
   void _cleanExpiredCache() {
     final now = DateTime.now();
     final expiredKeys = <String>[];
@@ -55,10 +50,6 @@ extension DatabaseCacheOperations on DatabaseService {
     );
   }
 
-  /// 优化：清空所有缓存（在数据变更时调用）
-
-
-  /// 优化：清空所有缓存（在数据变更时调用）
   void _clearAllCache() {
     _filterCache.clear();
     _cacheTimestamps.clear();
@@ -66,11 +57,6 @@ extension DatabaseCacheOperations on DatabaseService {
     _countCacheTimestamps.clear();
   }
 
-  /// 修复：安全地通知笔记流订阅者
-  /// 性能优化：由于 _currentQuotes 已通过 _currentQuoteIds 保证唯一性，
-
-
-  /// 优化：生成更可靠的缓存键，避免冲突
   String _generateCacheKey({
     List<String>? tagIds,
     String? categoryId,
@@ -90,10 +76,6 @@ extension DatabaseCacheOperations on DatabaseService {
     return '$tagKey@@$categoryKey@@$searchKey@@$orderBy@@$weatherKey@@$dayPeriodKey';
   }
 
-  /// 修复：从缓存中获取数据，更新LRU访问时间
-
-
-  /// 修复：从缓存中获取数据，更新LRU访问时间
   List<Quote>? _getFromCache(String cacheKey, int offset, int limit) {
     final cachedData = _filterCache[cacheKey];
     if (cachedData == null || cachedData.isEmpty) {
@@ -117,10 +99,6 @@ extension DatabaseCacheOperations on DatabaseService {
     return result;
   }
 
-  /// 修复：更智能的LRU缓存管理
-
-
-  /// 修复：更智能的LRU缓存管理
   void _addToCache(String cacheKey, List<Quote> quotes, int offset) {
     final now = DateTime.now();
 
@@ -149,10 +127,6 @@ extension DatabaseCacheOperations on DatabaseService {
     }
   }
 
-  /// 修复：实现真正的LRU缓存淘汰策略
-
-
-  /// 修复：实现真正的LRU缓存淘汰策略
   void _evictLRUCache() {
     if (_cacheAccessTimes.isEmpty) return;
 
@@ -174,17 +148,5 @@ extension DatabaseCacheOperations on DatabaseService {
       logDebug('LRU缓存淘汰，移除缓存条目: $lruKey');
     }
   }
-
-  // 添加存储加载状态的变量
-  bool _isLoading = false;
-
-  // 添加存储当前加载的笔记列表的变量
-  List<Quote> _currentQuotes = [];
-
-  // 性能优化：增量维护的 ID Set，避免每次去重时遍历
-  final Set<String> _currentQuoteIds = {};
-
-  /// 更新分类信息
-  Future<void> updateCategory(
 
 }

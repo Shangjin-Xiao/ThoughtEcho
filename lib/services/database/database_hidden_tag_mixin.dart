@@ -1,11 +1,7 @@
 part of '../database_service.dart';
 
-/// DatabaseHiddenTagOperations for DatabaseService.
-extension DatabaseHiddenTagOperations on DatabaseService {
-
-  /// 获取或创建隐藏标签
-  /// 当启用隐藏笔记功能时，确保隐藏标签存在
-  /// 隐藏标签是系统标签，不可编辑或删除
+/// Mixin providing hidden tag operations for DatabaseService.
+mixin _DatabaseHiddenTagMixin on ChangeNotifier {
   Future<NoteCategory?> getOrCreateHiddenTag() async {
     try {
       // 先尝试获取现有的隐藏标签
@@ -71,10 +67,6 @@ extension DatabaseHiddenTagOperations on DatabaseService {
     }
   }
 
-  /// 更新旧版隐藏标签为新格式（系统标签+锁图标）
-
-
-  /// 更新旧版隐藏标签为新格式（系统标签+锁图标）
   Future<void> _updateHiddenTagFormat() async {
     try {
       if (kIsWeb) {
@@ -110,18 +102,10 @@ extension DatabaseHiddenTagOperations on DatabaseService {
     }
   }
 
-  /// 检查标签是否是隐藏标签
-
-
-  /// 检查标签是否是隐藏标签
   bool isHiddenTag(String tagId) {
     return tagId == hiddenTagId;
   }
 
-  /// 删除隐藏标签（当关闭隐藏笔记功能时）
-
-
-  /// 删除隐藏标签（当关闭隐藏笔记功能时）
   Future<void> removeHiddenTag() async {
     try {
       if (kIsWeb) {
@@ -147,10 +131,6 @@ extension DatabaseHiddenTagOperations on DatabaseService {
     }
   }
 
-  /// 检查笔记是否被隐藏（是否带有隐藏标签）
-
-
-  /// 检查笔记是否被隐藏（是否带有隐藏标签）
   Future<bool> isQuoteHidden(String quoteId) async {
     try {
       if (kIsWeb) {
@@ -175,10 +155,6 @@ extension DatabaseHiddenTagOperations on DatabaseService {
     }
   }
 
-  /// 获取所有隐藏笔记的ID列表
-
-
-  /// 获取所有隐藏笔记的ID列表
   Future<List<String>> getHiddenQuoteIds() async {
     try {
       if (kIsWeb) {
@@ -202,7 +178,5 @@ extension DatabaseHiddenTagOperations on DatabaseService {
       return [];
     }
   }
-
-  /// 修复：添加一条分类，统一名称唯一性检查
 
 }

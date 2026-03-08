@@ -1,9 +1,7 @@
 part of '../database_service.dart';
 
-/// DatabaseCategoryOperations for DatabaseService.
-extension DatabaseCategoryOperations on DatabaseService {
-
-  /// 获取所有分类列表
+/// Mixin providing category CRUD operations for DatabaseService.
+mixin _DatabaseCategoryMixin on ChangeNotifier {
   Future<List<Map<String, dynamic>>> getAllCategories() async {
     try {
       if (kIsWeb) {
@@ -16,9 +14,6 @@ extension DatabaseCategoryOperations on DatabaseService {
       return [];
     }
   }
-
-  /// 检查并修复数据库结构，确保所有必要的列都存在
-
 
   Future<List<NoteCategory>> getCategories() async {
     if (kIsWeb) {
@@ -38,9 +33,6 @@ extension DatabaseCategoryOperations on DatabaseService {
   }
 
   List<NoteCategory> _moveHiddenCategoryToBottom(
-
-
-  List<NoteCategory> _moveHiddenCategoryToBottom(
     List<NoteCategory> categories,
   ) {
     final hiddenCategories =
@@ -50,10 +42,6 @@ extension DatabaseCategoryOperations on DatabaseService {
     return [...normalCategories, ...hiddenCategories];
   }
 
-  /// 获取或创建隐藏标签
-
-
-  /// 修复：添加一条分类，统一名称唯一性检查
   Future<void> addCategory(String name, {String? iconName}) async {
     // 统一的参数验证
     final trimmedName = name.trim();
@@ -107,10 +95,6 @@ extension DatabaseCategoryOperations on DatabaseService {
     notifyListeners();
   }
 
-  /// 修复：统一的分类名称唯一性验证
-
-
-  /// 修复：统一的分类名称唯一性验证
   Future<void> _validateCategoryNameUnique(
     Database db,
     String name, {
@@ -134,10 +118,6 @@ extension DatabaseCategoryOperations on DatabaseService {
     }
   }
 
-  /// 添加一条分类（使用指定ID）
-
-
-  /// 添加一条分类（使用指定ID）
   Future<void> addCategoryWithId(
     String id,
     String name, {
@@ -292,19 +272,11 @@ extension DatabaseCategoryOperations on DatabaseService {
     }
   }
 
-  /// 监听分类流
-
-
-  /// 监听分类流
   Stream<List<NoteCategory>> watchCategories() {
     _updateCategoriesStream();
     return _categoriesController.stream;
   }
 
-  /// 修复：删除指定分类，增加级联删除和孤立数据清理
-
-
-  /// 修复：删除指定分类，增加级联删除和孤立数据清理
   Future<void> deleteCategory(String id) async {
     // 系统标签（如隐藏标签）不允许删除
     if (id == hiddenTagId) {
@@ -365,18 +337,11 @@ extension DatabaseCategoryOperations on DatabaseService {
   }
 
   Future<void> _updateCategoriesStream() async {
-
-
-  Future<void> _updateCategoriesStream() async {
     final categories = await getCategories();
     if (_categoriesController.isClosed) return;
     _categoriesController.add(categories);
   }
 
-  /// 修复：添加一条引用（笔记），增加数据验证和并发控制
-
-
-  /// 更新分类信息
   Future<void> updateCategory(
     String id,
     String name, {
@@ -465,10 +430,6 @@ extension DatabaseCategoryOperations on DatabaseService {
     notifyListeners();
   }
 
-  /// 批量为旧笔记补全 dayPeriod 字段（根据 date 字段推算并写入）
-
-
-  /// 根据 ID 获取分类
   Future<NoteCategory?> getCategoryById(String id) async {
     if (kIsWeb) {
       try {
@@ -497,7 +458,5 @@ extension DatabaseCategoryOperations on DatabaseService {
       return null;
     }
   }
-
-  /// 优化：在初始化阶段执行所有数据迁移
 
 }

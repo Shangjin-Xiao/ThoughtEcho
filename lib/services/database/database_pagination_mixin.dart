@@ -1,11 +1,7 @@
 part of '../database_service.dart';
 
-/// DatabasePaginationOperations for DatabaseService.
-extension DatabasePaginationOperations on DatabaseService {
-
-  /// 修复：安全地通知笔记流订阅者
-  /// 性能优化：由于 _currentQuotes 已通过 _currentQuoteIds 保证唯一性，
-  /// 此处直接发送，无需再次遍历去重
+/// Mixin providing pagination and stream operations for DatabaseService.
+mixin _DatabasePaginationMixin on ChangeNotifier {
   void _safeNotifyQuotesStream() {
     // 修复：检查服务是否已销毁
     if (_isDisposed) return;
@@ -16,33 +12,10 @@ extension DatabasePaginationOperations on DatabaseService {
     }
   }
 
-  // 添加存储天气筛选条件的变量
-  List<String>? _watchSelectedWeathers;
-
-  // 添加存储时间段筛选条件的变量
-  List<String>? _watchSelectedDayPeriods;
-
-  // 添加初始化状态标志
-  bool _isInitialized = false;
-  bool get isInitialized => _isInitialized;
-
-  // 添加并发访问控制
-  Completer<void>? _initCompleter;
-  bool _isInitializing = false;
-  final _databaseLock = <String, Completer<void>>{};
-
-  Database get database {
-
-
-  /// 刷新笔记流数据（公开方法）
   void refreshQuotes() {
     _refreshQuotesStream();
   }
 
-  // 在增删改后刷新分页流数据
-
-
-  // 在增删改后刷新分页流数据
   void _refreshQuotesStream() {
     if (_quotesController != null && !_quotesController!.isClosed) {
       logDebug('刷新笔记流数据');
@@ -63,13 +36,6 @@ extension DatabasePaginationOperations on DatabaseService {
     }
   }
 
-  /// 根据ID获取单个笔记的完整信息
-
-
-  /// 监听笔记列表，支持分页加载和筛选
-
-  /// 修复：监听笔记列表，支持分页加载和筛选
-  /// 修复：观察笔记流，增加初始化状态检查
   Stream<List<Quote>> watchQuotes({
     List<String>? tagIds,
     String? categoryId,
@@ -295,10 +261,6 @@ extension DatabasePaginationOperations on DatabaseService {
     return _quotesController!.stream;
   }
 
-  /// 修复：加载更多笔记数据（用于分页）
-
-
-  /// 修复：加载更多笔记数据（用于分页）
   Future<void> loadMoreQuotes({
     List<String>? tagIds,
     String? categoryId,
@@ -388,7 +350,5 @@ extension DatabasePaginationOperations on DatabaseService {
       _isLoading = false; // 确保加载状态总是被重置
     }
   }
-
-  /// 优化：生成更可靠的缓存键，避免冲突
 
 }

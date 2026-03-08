@@ -1,9 +1,7 @@
 part of '../database_service.dart';
 
-/// DatabaseQuoteFavoritesOperations for DatabaseService.
-extension DatabaseQuoteFavoritesOperations on DatabaseService {
-
-  /// 增加笔记的心形点击次数
+/// Mixin providing favorite/heart operations for DatabaseService.
+mixin _DatabaseFavoriteMixin on ChangeNotifier {
   Future<void> incrementFavoriteCount(String quoteId) async {
     if (quoteId.isEmpty) {
       throw ArgumentError('笔记ID不能为空');
@@ -106,10 +104,6 @@ extension DatabaseQuoteFavoritesOperations on DatabaseService {
     });
   }
 
-  /// 重置心形点击次数为0（清除收藏）
-
-
-  /// 重置心形点击次数为0（清除收藏）
   Future<void> resetFavoriteCount(String quoteId) async {
     if (quoteId.isEmpty) {
       throw ArgumentError('笔记ID不能为空');
@@ -188,10 +182,6 @@ extension DatabaseQuoteFavoritesOperations on DatabaseService {
     });
   }
 
-  /// 获取本周期内点心最多的笔记
-
-
-  /// 获取本周期内点心最多的笔记
   Future<List<Quote>> getMostFavoritedQuotesThisWeek({int limit = 5}) async {
     if (kIsWeb) {
       final now = DateTime.now();
@@ -228,10 +218,5 @@ extension DatabaseQuoteFavoritesOperations on DatabaseService {
       return [];
     }
   }
-
-  /// 监听笔记列表，支持分页加载和筛选
-
-  /// 修复：监听笔记列表，支持分页加载和筛选
-  /// 修复：观察笔记流，增加初始化状态检查
 
 }
