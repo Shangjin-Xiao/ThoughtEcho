@@ -2,6 +2,7 @@ part of '../database_service.dart';
 
 /// Mixin providing import/export operations for DatabaseService.
 mixin _DatabaseImportExportMixin on ChangeNotifier {
+  /// 将所有笔记和分类数据导出为Map对象
   Future<Map<String, dynamic>> exportDataAsMap() async {
     return _backupService.exportDataAsMap(database);
   }
