@@ -714,7 +714,10 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                   if (widget.onFavorite != null) ...[
                     Tooltip(
                       message: l10n.actionFavorite,
-                      child: Material(
+                      child: Semantics(
+                        button: true,
+                        label: l10n.actionFavorite,
+                        child: Material(
                         color: Colors.transparent,
                         child: InkWell(
                           key: widget.favoriteButtonGuideKey,
@@ -776,6 +779,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                             ),
                           ),
                         ),
+                      ),
                       ),
                     ),
                     const SizedBox(width: 4),

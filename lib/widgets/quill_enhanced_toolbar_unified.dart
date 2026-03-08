@@ -215,17 +215,26 @@ class _UnifiedQuillToolbarState extends State<UnifiedQuillToolbar> {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 1),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(4),
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(4),
-          child: Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(4)),
-            child: Icon(icon, size: 18, color: theme.colorScheme.onSurface),
+      child: Tooltip(
+        message: tooltip,
+        child: Semantics(
+          button: true,
+          label: tooltip,
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(4),
+            child: InkWell(
+              onTap: onPressed,
+              borderRadius: BorderRadius.circular(4),
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration:
+                    BoxDecoration(borderRadius: BorderRadius.circular(4)),
+                child:
+                    Icon(icon, size: 18, color: theme.colorScheme.onSurface),
+              ),
+            ),
           ),
         ),
       ),
