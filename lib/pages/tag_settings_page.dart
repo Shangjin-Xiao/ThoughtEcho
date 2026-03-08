@@ -154,6 +154,8 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                       Expanded(
                         child: TextField(
                           controller: _tagController,
+                          maxLength: 50,
+                          buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
                           decoration: InputDecoration(
                             labelText: l10n.tagName,
                             hintText: l10n.tagNameHint,

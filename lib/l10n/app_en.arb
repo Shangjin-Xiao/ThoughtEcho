@@ -1382,6 +1382,7 @@
   "todayThoughtsUseAiDesc": "When enabled, AI will be used to generate prompts for Today's Thoughts. If disabled, local generation will be used.",
   "apiUrlRequired": "API URL cannot be empty",
   "invalidUrl": "Please enter a valid HTTP/HTTPS URL",
+  "fieldRequired": "This field is required",
   "mediaManagementTitle": "Media File Management",
   "loadStatsError": "Failed to load statistics: {error}",
   "@loadStatsError": {
