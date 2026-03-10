@@ -409,7 +409,8 @@ class NativeLogStorage implements LogStorage {
             try {
               await File(targetPath).delete();
             } catch (e) {
-              logDebug('[LogDatabaseService] delete corrupted target failed: $e');
+              logDebug(
+                  '[LogDatabaseService] delete corrupted target failed: $e');
             }
           }
         }
