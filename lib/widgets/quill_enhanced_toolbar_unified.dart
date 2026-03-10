@@ -231,8 +231,7 @@ class _UnifiedQuillToolbarState extends State<UnifiedQuillToolbar> {
                 height: 36,
                 decoration:
                     BoxDecoration(borderRadius: BorderRadius.circular(4)),
-                child:
-                    Icon(icon, size: 18, color: theme.colorScheme.onSurface),
+                child: Icon(icon, size: 18, color: theme.colorScheme.onSurface),
               ),
             ),
           ),

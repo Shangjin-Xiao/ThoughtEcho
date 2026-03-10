@@ -140,14 +140,14 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
           label: 'Dismiss',
           button: true,
           child: Center(
-          child: FadeTransition(
-            opacity: _fadeAnimation,
-            child: _buildPopoverCard(
-              context,
-              PopoverArrowDirection.top,
-              arrowOffset: 110,
+            child: FadeTransition(
+              opacity: _fadeAnimation,
+              child: _buildPopoverCard(
+                context,
+                PopoverArrowDirection.top,
+                arrowOffset: 110,
+              ),
             ),
-          ),
           ),
         ),
       ),
