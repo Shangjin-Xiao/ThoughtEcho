@@ -60,5 +60,4 @@ mixin _DatabaseCacheMixin on _DatabaseServiceBase {
     _countCache.clear();
     _countCacheTimestamps.clear();
   }
-
 }
