@@ -220,11 +220,6 @@ extension SmartPushContentSelection on SmartPushService {
     return _SmartSelectResult.empty();
   }
 
-  /// 筛选同一时刻（±30分钟）创建的笔记
-  List<Quote> _filterSameTimeOfDay(List<Quote> notes, DateTime now) {
-    return filterSameTimeOfDay(notes, now);
-  }
-
   /// 从候选列表中选择未被推送过的笔记
   Quote? _selectUnpushedNote(List<Quote> candidates) {
     return selectUnpushedNote(
