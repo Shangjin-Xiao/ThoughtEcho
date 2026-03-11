@@ -21,8 +21,13 @@ class APIKeyManager {
     try {
       final apiKey = await _secureStorage.getProviderApiKey(providerId);
       return apiKey?.trim() ?? '';
-    } catch (e) {
-      logDebug('获取供应商 $providerId 的API密钥失败: $e');
+    } catch (e, stackTrace) {
+      AppLogger.e(
+        '获取供应商 $providerId 的API密钥失败',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'APIKeyManager',
+      );
       return '';
     }
   }
@@ -37,8 +42,13 @@ class APIKeyManager {
         'HasKey: ${apiKey.isNotEmpty}, IsValidFormat: $isValid',
       );
       return isValid;
-    } catch (e) {
-      logDebug('验证API Key失败 - Provider: $providerId, Error: $e');
+    } catch (e, stackTrace) {
+      AppLogger.e(
+        '验证API Key失败 - Provider: $providerId',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'APIKeyManager',
+      );
       return false;
     }
   }

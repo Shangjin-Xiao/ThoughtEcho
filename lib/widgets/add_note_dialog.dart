@@ -1361,7 +1361,11 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                   focusNode: _contentFocusNode,
                   maxLength: 10000,
                   maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                  buildCounter: (context, {required currentLength, required isFocused, maxLength}) => null,
+                  buildCounter: (context,
+                          {required currentLength,
+                          required isFocused,
+                          maxLength}) =>
+                      null,
                   decoration: InputDecoration(
                     hintText: AppLocalizations.of(context).writeYourThoughts,
                     border: const OutlineInputBorder(),
