@@ -268,6 +268,8 @@ class _LogsPageState extends State<LogsPage> {
                         ),
                         IconButton(
                           icon: const Icon(Icons.close),
+                          tooltip: MaterialLocalizations.of(context)
+                              .closeButtonTooltip,
                           onPressed: () => Navigator.of(context).pop(),
                         ),
                       ],
