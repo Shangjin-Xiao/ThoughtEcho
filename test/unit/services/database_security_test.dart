@@ -4,11 +4,6 @@ import 'package:thoughtecho/services/database_service.dart';
 void main() {
   group('Database Security Tests - sanitizeOrderBy', () {
     late DatabaseService databaseService;
-
-    setUp(() {
-      databaseService = DatabaseService();
-    });
-
     test('should allow valid columns and directions', () {
       expect(databaseService.sanitizeOrderBy('date DESC'), equals('date DESC'));
       expect(databaseService.sanitizeOrderBy('favorite_count ASC'),
