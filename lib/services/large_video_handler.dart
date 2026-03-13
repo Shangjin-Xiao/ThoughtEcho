@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as path;
 import '../utils/app_logger.dart';
@@ -344,7 +343,8 @@ class LargeVideoHandler {
                 await targetFile.delete();
               }
             } catch (e) {
-              debugPrint('[LargeVideoHandler] cleanup incomplete file failed: $e');
+              debugPrint(
+                  '[LargeVideoHandler] cleanup incomplete file failed: $e');
             }
             throw const CancelledException();
           }

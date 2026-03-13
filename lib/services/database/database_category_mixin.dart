@@ -3,6 +3,7 @@ part of '../database_service.dart';
 /// Mixin providing category CRUD operations for DatabaseService.
 mixin _DatabaseCategoryMixin on _DatabaseServiceBase {
   /// 获取所有分类列表
+  @override
   Future<List<Map<String, dynamic>>> getAllCategories() async {
     try {
       if (kIsWeb) {
@@ -16,6 +17,7 @@ mixin _DatabaseCategoryMixin on _DatabaseServiceBase {
     }
   }
 
+  @override
   Future<List<NoteCategory>> getCategories() async {
     if (kIsWeb) {
       return _moveHiddenCategoryToBottom(
@@ -46,6 +48,7 @@ mixin _DatabaseCategoryMixin on _DatabaseServiceBase {
   }
 
   /// 修复：添加一条分类，统一名称唯一性检查
+  @override
   Future<void> addCategory(String name, {String? iconName}) async {
     // 统一的参数验证
     final trimmedName = name.trim();
@@ -124,6 +127,7 @@ mixin _DatabaseCategoryMixin on _DatabaseServiceBase {
   }
 
   /// 添加一条分类（使用指定ID）
+  @override
   Future<void> addCategoryWithId(
     String id,
     String name, {
@@ -279,12 +283,14 @@ mixin _DatabaseCategoryMixin on _DatabaseServiceBase {
   }
 
   /// 监听分类流
+  @override
   Stream<List<NoteCategory>> watchCategories() {
     updateCategoriesStreamForParts();
     return _categoriesController.stream;
   }
 
   /// 修复：删除指定分类，增加级联删除和孤立数据清理
+  @override
   Future<void> deleteCategory(String id) async {
     // 系统标签（如隐藏标签）不允许删除
     if (id == _DatabaseServiceBase.hiddenTagId) {
@@ -344,6 +350,7 @@ mixin _DatabaseCategoryMixin on _DatabaseServiceBase {
     logDebug('分类删除完成，ID: $id');
   }
 
+  @override
   Future<void> _updateCategoriesStream() async {
     final categories = await getCategories();
     if (_categoriesController.isClosed) return;
@@ -351,6 +358,7 @@ mixin _DatabaseCategoryMixin on _DatabaseServiceBase {
   }
 
   /// 更新分类信息
+  @override
   Future<void> updateCategory(
     String id,
     String name, {
@@ -440,6 +448,7 @@ mixin _DatabaseCategoryMixin on _DatabaseServiceBase {
   }
 
   /// 根据 ID 获取分类
+  @override
   Future<NoteCategory?> getCategoryById(String id) async {
     if (kIsWeb) {
       try {

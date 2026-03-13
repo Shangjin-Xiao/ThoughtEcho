@@ -533,11 +533,13 @@ lib/
 |---|---|---|---|---|---|---|---|
 | Hitokoto | 中文为主 | 强 | 强，`c=` 多分类 | `hitokoto/from/from_who/type` | 无 | 最优 | 继续作为中文默认源 |
 | Quotable | 英文 | 强，`/quotes/random` | 强，`tags/author/length` | `content/author/tags[]` | 无 | ❌ **2024-09 起域名已停止解析，API 不可用**（GitHub #253） | ~~最适合做首个英文公共 provider~~ → 已死，改用 QuoteSlate 替代 |
-| API Ninjas Quotes | 英文 | 强，`/v2/randomquotes` | 强，`categories/author/work` | `quote/author/work/categories[]` | `X-Api-Key` | 海外商业服务，需实机验证 | 最完整英文增强源 |
-| TheySaidSo | 英文为主，QOD 场景强 | 有，但随机/搜索多为私有能力 | 有，QOD 分类 + 搜索分类/作者/长度 | `quote/author/tags/category/language/date/permalink` | QOD 文档称可公开限流；随机/搜索依赖 Key | 海外服务；当前环境直连 `qod/random/search` 均 401 | 适合“Quote of the Day”可选源，不适合首发默认替代 |
-| Forismatic | 英/俄 | 有 | 弱 | `quoteText/quoteAuthor` | 无 | 海外服务，稳定性一般 | 可做实验性语言源，但不适合默认标签体系 |
-| Animechan | 动漫台词 | 强 | 按 `anime/character` | `quote/anime/character` | 无 | 海外服务 | 适合作为动漫垂直 provider，不是通用多语言方案 |
-| FavQs / ZenQuotes / DummyJSON | 英文或样例数据 | 有 | 较弱 | 多数只有 quote + author + tags/分类片段 | 多数无或能力受限 | 海外服务 | 可作补充候选，不宜作为主方案 |
+| API Ninjas Quotes | 英文 | 强，`/v2/randomquotes` | 强，20 分类 + author/work | `quote/author/work/categories[]` | `X-Api-Key`（免费层仅限非商业） | ✅ 存活，P50=427ms，99.99% SLA；免费 1 条/次，付费最多 100 条 | 最完整英文增强源，有 `work` 出处字段 |
+| TheySaidSo | 英文为主，QOD 场景强 | 有，但随机/搜索多为私有能力 | 有，QOD 分类 + 搜索分类/作者/长度 | `quote/author/tags/category/language/date/permalink` | ⚠️ **已关闭匿名访问**，免费也需注册 Token（`X-TheySaidSo-Api-Secret`），10 次/小时 | 海外服务；直连 `qod/random/search` 均 401（设计如此） | 优先级低：需 Key + 限流严格 |
+| Forismatic | 英/俄 | 有 | 弱 | `quoteText/quoteAuthor` | 无 | ✅ 存活但**本质弃置软件**：无维护、页面有垃圾广告、语料池小、有 CORS 问题 | 不建议：可能随时消失，无 SLA |
+| Animechan | 动漫台词 | 强 | 按 `anime/character` | `quote/anime/character` | ⚠️ 已迁移至 `api.animechan.io/v1`，旧 URL 废弃；免费仅 **5 次/小时** | ✅ 100% 近 90 天 uptime，1.4k stars 活跃维护 | 适合动漫垂直 provider，但限流极严 |
+| FavQs | 英文 | 有 | ✅ tags + 投票 + 收藏 | `quote/author/tags[]/favorites_count` | QOTD 无需 Key；搜索/列表需免费 Token；30 req/20s | ✅ 存活 | ⭐ 元数据最丰富（社区投票/收藏），适合精选内容场景 |
+| ZenQuotes | 英文 | 有，可批量拉 50 条 | 免费无 / 付费有 keywords | `q/a/i (quote/author/image)` | 无需 Key；**5 req/30s** + 必须署名 | ✅ 存活，已服务 2.23 亿+ 请求 | ⭐ 人工精选 3237 条，质量高；批量缓存策略友好 |
+| DummyJSON | 英文样例 | 有 | ❌ 无 | `quote/author`（仅两字段） | 无 | ✅ 存活 | ❌ **仅 100 条**，大写异常，仅适合测试/原型 |
 
 ### 9.4 TheySaidSo 详细判断
 - 官方文档：`https://theysaidso.com/api/?shell`

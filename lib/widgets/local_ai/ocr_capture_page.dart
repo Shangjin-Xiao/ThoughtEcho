@@ -38,7 +38,7 @@ class _OCRCapturePageState extends State<OCRCapturePage> {
             child: Container(
               padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
+                color: Colors.white.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Column(
@@ -47,7 +47,7 @@ class _OCRCapturePageState extends State<OCRCapturePage> {
                   Icon(
                     Icons.camera_alt,
                     size: 64,
-                    color: Colors.white.withOpacity(0.7),
+                    color: Colors.white.withValues(alpha: 0.7),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -95,8 +95,8 @@ class _OCRCapturePageState extends State<OCRCapturePage> {
                   color: Colors.transparent,
                   child: InkResponse(
                     radius: 48,
-                    splashColor: Colors.white.withOpacity(0.15),
-                    highlightColor: Colors.white.withOpacity(0.06),
+                    splashColor: Colors.white.withValues(alpha: 0.15),
+                    highlightColor: Colors.white.withValues(alpha: 0.06),
                     onTap: () {
                       HapticFeedback.selectionClick();
                       // TODO: 拍照逻辑 - 后端实现后添加
@@ -119,7 +119,7 @@ class _OCRCapturePageState extends State<OCRCapturePage> {
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: primary.withOpacity(0.35),
+                            color: primary.withValues(alpha: 0.35),
                             blurRadius: 22,
                             spreadRadius: 1,
                           ),
@@ -131,7 +131,7 @@ class _OCRCapturePageState extends State<OCRCapturePage> {
                           height: 54,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Colors.black.withOpacity(0.06),
+                            color: Colors.black.withValues(alpha: 0.06),
                           ),
                           child: const Icon(
                             Icons.camera_alt,

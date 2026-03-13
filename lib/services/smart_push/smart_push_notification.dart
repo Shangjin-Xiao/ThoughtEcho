@@ -2,6 +2,29 @@ part of '../smart_push_service.dart';
 
 /// 通知显示、点击回调、每日一言缓存
 extension SmartPushNotification on SmartPushService {
+  /// 处理冷启动通知点击
+  ///
+  /// 当 App 由通知点击启动时，`onDidReceiveNotificationResponse` 回调可能未触发
+  /// （因为 App 尚未初始化时的点击不会被回调捕获）。
+  /// 需要通过 `getNotificationAppLaunchDetails()` 主动检查。
+  Future<void> _handleLaunchNotification() async {
+    try {
+      final launchDetails =
+          await _notificationsPlugin.getNotificationAppLaunchDetails();
+      if (launchDetails == null || !launchDetails.didNotificationLaunchApp) {
+        return;
+      }
+
+      final response = launchDetails.notificationResponse;
+      if (response != null) {
+        AppLogger.i('检测到冷启动通知点击，处理 payload: ${response.payload}');
+        _onNotificationTap(response);
+      }
+    } catch (e) {
+      AppLogger.w('处理冷启动通知失败', error: e);
+    }
+  }
+
   /// 初始化通知插件
   Future<void> _initializeNotifications() async {
     const androidSettings = AndroidInitializationSettings(

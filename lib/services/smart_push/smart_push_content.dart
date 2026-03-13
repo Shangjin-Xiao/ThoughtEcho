@@ -9,12 +9,20 @@ extension SmartPushContentSelection on SmartPushService {
   /// 2. 使用 Thompson Sampling 选择最佳内容类型（探索-利用平衡）
   /// 3. 从选中类型中随机选择未推送的笔记
   /// 4. 返回选中内容及其类型（用于效果追踪）
+  ///
+  /// 笔记优先原则：智能推送的核心目标是推送用户自己的笔记，
+  /// 每日一言仅作为完全无笔记时的最终兜底。
   Future<_SmartSelectResult> _smartSelectContent() async {
     final now = DateTime.now();
     final allNotes = await _databaseService.getQuotesForSmartPush(limit: 500);
 
+    AppLogger.i(
+      '智能选择：开始内容选择 (总笔记数: ${allNotes.length})',
+    );
+
     if (allNotes.isEmpty) {
-      // 没有笔记时，返回每日一言
+      // 没有任何笔记时，回退到每日一言
+      AppLogger.w('智能选择：数据库中无笔记，回退到每日一言');
       final dailyQuote = await _fetchDailyQuote();
       if (dailyQuote != null) {
         return _SmartSelectResult(
@@ -50,6 +58,18 @@ extension SmartPushContentSelection on SmartPushService {
     ]);
     final sameLocationNotes = asyncResults[0];
     final sameWeatherNotes = asyncResults[1];
+
+    // 记录详细的筛选结果（诊断日志，帮助排查"为什么没推送笔记"）
+    AppLogger.i(
+      '智能选择筛选结果：'
+      'yearAgo=${filterResult.yearAgoQuotes.length}, '
+      'sameTime=${filterResult.sameTimeQuotes.length}, '
+      'sameLocation=${sameLocationNotes.length}, '
+      'sameWeather=${sameWeatherNotes.length}, '
+      'monthAgo=${filterResult.monthAgoQuotes.length}, '
+      'weekAgo=${filterResult.weekAgoQuotes.length}, '
+      'random7d=${filterResult.randomQuotes.length}',
+    );
 
     // SOTA: 收集所有可用的内容类型及其候选笔记
     final availableContent = <String, _ContentCandidate>{};
@@ -118,7 +138,16 @@ extension SmartPushContentSelection on SmartPushService {
       );
     }
 
-    // 6. 随机回忆（兜底）
+    // 6. 上周今日
+    if (filterResult.selectedWeekAgo != null) {
+      availableContent['weekAgoToday'] = _ContentCandidate(
+        note: filterResult.selectedWeekAgo!,
+        title: '📅 一周前的今天',
+        priority: 45,
+      );
+    }
+
+    // 7. 随机回忆（7天前的笔记）
     if (filterResult.selectedRandom != null) {
       availableContent['randomMemory'] = _ContentCandidate(
         note: filterResult.selectedRandom!,
@@ -131,9 +160,14 @@ extension SmartPushContentSelection on SmartPushService {
     if (availableContent.isNotEmpty) {
       final availableTypes = availableContent.keys.toList();
 
+      AppLogger.i(
+        '智能选择：可用内容类型 $availableTypes',
+      );
+
       // 那年今日始终优先（高纪念价值）
       if (availableContent.containsKey('yearAgoToday')) {
         final candidate = availableContent['yearAgoToday']!;
+        AppLogger.i('智能选择：命中那年今日，优先推送');
         return _SmartSelectResult(
           note: candidate.note,
           title: candidate.title,
@@ -147,6 +181,9 @@ extension SmartPushContentSelection on SmartPushService {
       final candidate = availableContent[selectedType];
 
       if (candidate != null) {
+        AppLogger.i(
+          '智能选择：Thompson Sampling 选中 $selectedType',
+        );
         return _SmartSelectResult(
           note: candidate.note,
           title: candidate.title,
@@ -156,57 +193,41 @@ extension SmartPushContentSelection on SmartPushService {
       }
     }
 
-    // 7. 所有特定筛选器均未命中，尝试宽泛兜底
-    if (availableContent.isEmpty && allNotes.isNotEmpty) {
-      // 排除今天创建的笔记，从所有历史笔记中随机选取
-      final historyNotes = allNotes.where((note) {
-        try {
-          final noteDate = DateTime.parse(note.date);
-          return !(noteDate.year == now.year &&
-              noteDate.month == now.month &&
-              noteDate.day == now.day);
-        } catch (e) {
-          return false;
-        }
-      }).toList();
+    // 8. 所有特定筛选器均未命中，宽泛兜底：从历史笔记中随机选取
+    //    笔记优先 — 只要有历史笔记就推送笔记，不回退到每日一言
+    final historyNotes = allNotes.where((note) {
+      try {
+        final noteDate = DateTime.parse(note.date);
+        return !(noteDate.year == now.year &&
+            noteDate.month == now.month &&
+            noteDate.day == now.day);
+      } catch (e) {
+        return false;
+      }
+    }).toList();
 
-      if (historyNotes.isNotEmpty) {
-        // 随机决定推送笔记回顾还是每日一言（各 50% 概率）
-        if (_random.nextBool()) {
-          final note = _selectUnpushedNote(historyNotes);
-          if (note != null) {
-            AppLogger.i(
-              '智能选择：特定筛选器未命中，兜底随机选择历史笔记 '
-              '(总笔记数: ${allNotes.length}, 历史笔记: ${historyNotes.length})',
-            );
-            return _SmartSelectResult(
-              note: note,
-              title: '💭 往日回忆',
-              isDailyQuote: false,
-              contentType: 'randomMemory',
-            );
-          }
-        } else {
-          AppLogger.i('智能选择：特定筛选器未命中，兜底随机选择每日一言');
-        }
+    if (historyNotes.isNotEmpty) {
+      final note = _selectUnpushedNote(historyNotes);
+      if (note != null) {
+        AppLogger.i(
+          '智能选择：特定筛选器未命中，兜底随机选择历史笔记 '
+          '(总笔记数: ${allNotes.length}, 历史笔记: ${historyNotes.length})',
+        );
+        return _SmartSelectResult(
+          note: note,
+          title: '💭 往日回忆',
+          isDailyQuote: false,
+          contentType: 'randomMemory',
+        );
       }
     }
 
-    // 8. 记录诊断日志
-    if (allNotes.isNotEmpty && availableContent.isEmpty) {
-      AppLogger.w(
-        '智能选择：回退到每日一言 '
-        '(总笔记数: ${allNotes.length}, '
-        'yearAgo: ${filterResult.yearAgoQuotes.length}, '
-        'sameTime: ${filterResult.sameTimeQuotes.length}, '
-        'sameLocation: ${sameLocationNotes.length}, '
-        'sameWeather: ${sameWeatherNotes.length}, '
-        'monthAgo: ${filterResult.monthAgoQuotes.length}, '
-        'random7d: ${filterResult.randomQuotes.length})',
-      );
-    }
-
-    // 9. 每日一言
+    // 9. 所有笔记都是今天创建的 — 完全无历史笔记，回退到每日一言
+    AppLogger.w(
+      '智能选择：无历史笔记可推送 '
+      '(总笔记数: ${allNotes.length}, 历史笔记: ${historyNotes.length})，'
+      '回退到每日一言',
+    );
     final dailyQuote = await _fetchDailyQuote();
     if (dailyQuote != null) {
       return _SmartSelectResult(
@@ -218,11 +239,6 @@ extension SmartPushContentSelection on SmartPushService {
     }
 
     return _SmartSelectResult.empty();
-  }
-
-  /// 筛选同一时刻（±30分钟）创建的笔记
-  List<Quote> _filterSameTimeOfDay(List<Quote> notes, DateTime now) {
-    return filterSameTimeOfDay(notes, now);
   }
 
   /// 从候选列表中选择未被推送过的笔记
@@ -285,10 +301,22 @@ extension SmartPushContentSelection on SmartPushService {
   }
 
   /// 获取每日一言
+  ///
+  /// 优先使用缓存，但如果缓存内容已推送过，则请求新内容。
   Future<Quote?> _fetchDailyQuote() async {
     try {
-      final data = await _loadDailyQuoteData();
+      // 先尝试缓存
+      var data = await _loadDailyQuoteData();
       if (data == null) return null;
+
+      // 如果缓存的内容已经推送过，请求新的
+      final cachedContent = data['hitokoto'] as String? ?? '';
+      if (cachedContent.isNotEmpty &&
+          _hasDailyQuoteContentPushed(cachedContent)) {
+        AppLogger.d('缓存的每日一言已推送过，请求新内容');
+        data = await _loadDailyQuoteData(preferCache: false);
+        if (data == null) return null;
+      }
 
       final fromWho = data['from_who'] as String? ?? '';
       final from = data['from'] as String? ?? '';

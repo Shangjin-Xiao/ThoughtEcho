@@ -20,10 +20,6 @@ mixin _DatabaseMigrationMixin on _DatabaseServiceBase {
     );
   }
 
-  Future<void> _cleanupLegacyTagIdsColumn() async {
-    await _schemaManager.cleanupLegacyTagIdsColumn(database);
-  }
-
   /// 修复：标签数据一致性检查
   Future<Map<String, dynamic>> checkTagDataConsistency() async {
     return _healthService.checkTagDataConsistency(await safeDatabase);
@@ -84,30 +80,6 @@ mixin _DatabaseMigrationMixin on _DatabaseServiceBase {
   /// 修复：获取查询性能报告
   Map<String, dynamic> getQueryPerformanceReport() {
     return _healthService.getQueryPerformanceReport();
-  }
-
-  /// 修复：安全地创建索引，检查列是否存在
-  Future<void> _createIndexSafely(
-    Database db,
-    String tableName,
-    String columnName,
-    String indexName,
-  ) async {
-    await _healthService.createIndexSafely(
-      db,
-      tableName,
-      columnName,
-      indexName,
-    );
-  }
-
-  /// 修复：检查列是否存在
-  Future<bool> _checkColumnExists(
-    Database db,
-    String tableName,
-    String columnName,
-  ) async {
-    return _healthService.checkColumnExists(db, tableName, columnName);
   }
 
   /// 获取适合作为每日一言的本地笔记

@@ -102,24 +102,44 @@ extension SmartPushExecution on SmartPushService {
   }
 
   /// 执行每日一言推送
+  ///
+  /// 独立的每日一言推送通道，允许一天多次推送但不重复推送相同内容。
   Future<void> _performDailyQuotePush({bool isBackground = false}) async {
     try {
       // 每日一言是用户期望的每日固定内容，不受 SOTA 疲劳预防系统限制。
-      // 仅检查防重复：距上次推送不足 3 分钟的逻辑已在 checkAndPush 中处理。
-
+      // 允许一天多次推送，但使用内容哈希去重避免推送相同一言。
       final dailyQuote = await _fetchDailyQuote();
-      if (dailyQuote != null) {
-        await _showNotification(
-          dailyQuote,
-          title: '📖 每日一言',
-          contentType: 'dailyQuote',
-        );
-
-        // 记录推送效果（不消费疲劳预算，每日一言不参与疲劳系统）
-        await _analytics.updateContentScore('dailyQuote', false);
-
-        AppLogger.i('每日一言推送成功');
+      if (dailyQuote == null) {
+        AppLogger.w('每日一言推送：获取内容失败');
+        return;
       }
+
+      // 检查是否已推送过相同内容
+      if (_hasDailyQuoteContentPushed(dailyQuote.content)) {
+        AppLogger.i('每日一言推送：该内容已推送过，跳过 '
+            '("${dailyQuote.content.substring(0, min(30, dailyQuote.content.length))}...")');
+        return;
+      }
+
+      await _showNotification(
+        dailyQuote,
+        title: '📖 每日一言',
+        contentType: 'dailyQuote',
+      );
+
+      // 记录已推送的内容哈希，防止重复
+      _markDailyQuoteContentPushed(dailyQuote.content);
+
+      // 更新 lastPushTime，让 3 分钟防重复机制对后续推送生效
+      final updatedSettings = _settings.copyWith(
+        lastPushTime: DateTime.now(),
+      );
+      await _saveSettingsQuietly(updatedSettings);
+
+      // 记录推送效果（不消费疲劳预算，每日一言不参与疲劳系统）
+      await _analytics.updateContentScore('dailyQuote', false);
+
+      AppLogger.i('每日一言推送成功');
 
       // 重新调度
       if (!isBackground) {
@@ -173,9 +193,11 @@ extension SmartPushExecution on SmartPushService {
       bool isDailyQuote = false;
       String contentType = 'randomMemory';
 
+      AppLogger.i('执行智能推送，模式: ${_settings.pushMode.name}');
+
       switch (_settings.pushMode) {
         case PushMode.smart:
-          // 智能模式：使用 SOTA 智能算法选择最佳内容
+          // 智能模式：使用 SOTA 智能算法选择最佳内容（笔记优先）
           final result = await _smartSelectContent();
           noteToShow = result.note;
           title = result.title;
@@ -184,43 +206,51 @@ extension SmartPushExecution on SmartPushService {
           break;
 
         case PushMode.dailyQuote:
-          // 注意：这里的 PushMode.dailyQuote 是指"回顾推送"模式选了"仅每日一言"
-          // 与独立的每日一言推送是两码事
+          // 推送模式选了"仅每日一言" — 与独立每日一言推送是两条通道
           final dailyQuote = await _fetchDailyQuote();
           if (dailyQuote != null) {
-            noteToShow = dailyQuote;
-            title = '📖 每日一言';
-            isDailyQuote = true;
+            if (!_hasDailyQuoteContentPushed(dailyQuote.content)) {
+              noteToShow = dailyQuote;
+              title = '📖 每日一言';
+              isDailyQuote = true;
+              contentType = 'dailyQuote';
+            } else {
+              AppLogger.i('PushMode.dailyQuote：该内容已推送过，跳过');
+            }
           }
           break;
 
         case PushMode.pastNotes:
+          // 仅推送过去的笔记
           final candidates = await getCandidateNotes();
+          AppLogger.i('PushMode.pastNotes：候选笔记数 ${candidates.length}');
           if (candidates.isNotEmpty) {
             noteToShow = _selectUnpushedNote(candidates);
             if (noteToShow != null) {
               title = _generateTitle(noteToShow);
+              contentType = 'randomMemory';
             }
           }
           break;
 
         case PushMode.both:
-          // 随机选择推送类型
-          if (_random.nextBool()) {
-            final candidates = await getCandidateNotes();
-            if (candidates.isNotEmpty) {
-              noteToShow = _selectUnpushedNote(candidates);
-              if (noteToShow != null) {
-                title = _generateTitle(noteToShow);
-              }
+          // 两者都推送：优先尝试笔记，无笔记时回退每日一言
+          final candidates = await getCandidateNotes();
+          if (candidates.isNotEmpty && _random.nextBool()) {
+            noteToShow = _selectUnpushedNote(candidates);
+            if (noteToShow != null) {
+              title = _generateTitle(noteToShow);
+              contentType = 'randomMemory';
             }
           }
           if (noteToShow == null) {
             final dailyQuote = await _fetchDailyQuote();
-            if (dailyQuote != null) {
+            if (dailyQuote != null &&
+                !_hasDailyQuoteContentPushed(dailyQuote.content)) {
               noteToShow = dailyQuote;
               title = '📖 每日一言';
               isDailyQuote = true;
+              contentType = 'dailyQuote';
             }
           }
           break;
@@ -228,20 +258,15 @@ extension SmartPushExecution on SmartPushService {
         case PushMode.custom:
           // 自定义模式：根据用户选择的类型获取内容
           final candidates = await getCandidateNotes();
+          AppLogger.i('PushMode.custom：候选笔记数 ${candidates.length}');
           if (candidates.isNotEmpty) {
             noteToShow = _selectUnpushedNote(candidates);
             if (noteToShow != null) {
               title = _generateTitle(noteToShow);
-            }
-          } else {
-            // 如果没有匹配的笔记，尝试获取每日一言
-            final dailyQuote = await _fetchDailyQuote();
-            if (dailyQuote != null) {
-              noteToShow = dailyQuote;
-              title = '📖 每日一言';
-              isDailyQuote = true;
+              contentType = 'randomMemory';
             }
           }
+          // 自定义模式不主动回退到每日一言 — 用户选了自定义就只推自定义内容
           break;
       }
 
@@ -253,27 +278,33 @@ extension SmartPushExecution on SmartPushService {
         );
 
         // 记录推送历史（避免重复推送，测试模式也不记录）
-        // 统一使用静默保存：saveSettings 内部会调用 scheduleNextPush →
-        // _cancelAllSchedules → cancelAll()，会取消刚刚显示的通知。
-        // 重新调度由函数末尾的 scheduleNextPush() 统一处理。
         if (!isDailyQuote && noteToShow.id != null && !isTest) {
           final updatedSettings = _settings.addPushedNoteId(noteToShow.id!);
+          await _saveSettingsQuietly(updatedSettings);
+        }
+
+        // 如果推送的是每日一言（来自 PushMode.dailyQuote / PushMode.both 的回退），
+        // 标记内容哈希并更新 lastPushTime
+        if (isDailyQuote && !isTest) {
+          _markDailyQuoteContentPushed(noteToShow.content);
+          final updatedSettings = _settings.copyWith(
+            lastPushTime: DateTime.now(),
+          );
           await _saveSettingsQuietly(updatedSettings);
         }
 
         // SOTA: 消费疲劳预算并记录推送（用于效果追踪）
         if (!isTest && contentType.isNotEmpty) {
           await _analytics.consumeBudget(contentType);
-          // 推送成功，但尚未确定用户是否交互，先记录为未交互
-          // 用户点击通知时会调用 recordInteraction 更新得分
           await _analytics.updateContentScore(contentType, false);
         }
 
         AppLogger.i(
-          '推送成功: ${noteToShow.content.substring(0, min(50, noteToShow.content.length))}...',
+          '推送成功 [${_settings.pushMode.name}]: '
+          '${noteToShow.content.substring(0, min(50, noteToShow.content.length))}...',
         );
       } else {
-        AppLogger.d('没有内容可推送');
+        AppLogger.w('智能推送：没有内容可推送 (模式: ${_settings.pushMode.name})');
       }
 
       // 重新调度下一次推送

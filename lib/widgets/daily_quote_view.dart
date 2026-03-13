@@ -144,6 +144,21 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
         return;
       }
 
+      // 冷启动场景：SmartPushService 可能尚未初始化完成（在 Future.microtask 中运行），
+      // 通知点击写入的 pending quote 还没有就绪。等待初始化后再检查一次。
+      if (!smartPushService.isInitialized) {
+        int waitCount = 0;
+        const maxWait = 30; // 30 * 100ms = 3s
+        while (
+            !smartPushService.isInitialized && waitCount < maxWait && mounted) {
+          await Future.delayed(const Duration(milliseconds: 100));
+          waitCount++;
+        }
+        if (mounted && await _applyPendingQuoteIfNeeded(smartPushService)) {
+          return;
+        }
+      }
+
       if (!mounted) return;
       final l10n = AppLocalizations.of(context);
       final quote = await ApiService.getDailyQuote(
