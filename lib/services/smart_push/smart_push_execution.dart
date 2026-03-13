@@ -231,14 +231,13 @@ extension SmartPushExecution on SmartPushService {
 
         case PushMode.pastNotes:
           // 仅推送过去的笔记
-          final candidates = await getCandidateNotes();
-          AppLogger.i('PushMode.pastNotes：候选笔记数 ${candidates.length}');
-          if (candidates.isNotEmpty) {
-            noteToShow = _selectUnpushedNote(candidates);
-            if (noteToShow != null) {
-              title = _generateTitle(noteToShow);
-              contentType = 'randomMemory';
-            }
+          final typedCandidates = await getTypedCandidateNotes();
+          AppLogger.i('PushMode.pastNotes：候选笔记数 ${typedCandidates.length}');
+          if (typedCandidates.isNotEmpty) {
+            final candidate = typedCandidates.first;
+            noteToShow = candidate.note;
+            title = candidate.title;
+            contentType = candidate.contentType;
           }
           break;
 
@@ -266,14 +265,13 @@ extension SmartPushExecution on SmartPushService {
 
         case PushMode.custom:
           // 自定义模式：根据用户选择的类型获取内容
-          final candidates = await getCandidateNotes();
-          AppLogger.i('PushMode.custom：候选笔记数 ${candidates.length}');
-          if (candidates.isNotEmpty) {
-            noteToShow = _selectUnpushedNote(candidates);
-            if (noteToShow != null) {
-              title = _generateTitle(noteToShow);
-              contentType = 'randomMemory';
-            }
+          final typedCandidates = await getTypedCandidateNotes();
+          AppLogger.i('PushMode.custom：候选笔记数 ${typedCandidates.length}');
+          if (typedCandidates.isNotEmpty) {
+            final candidate = typedCandidates.first;
+            noteToShow = candidate.note;
+            title = candidate.title;
+            contentType = candidate.contentType;
           }
           // 自定义模式不主动回退到每日一言 — 用户选了自定义就只推自定义内容
           break;

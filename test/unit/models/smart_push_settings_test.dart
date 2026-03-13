@@ -62,5 +62,17 @@ void main() {
       expect(settings.nextPushDateFrom(DateTime(2026, 3, 17)),
           DateTime(2026, 3, 18));
     });
+
+    test('selected weekdays round-trip through json', () {
+      const settings = SmartPushSettings(
+        frequency: PushFrequency.custom,
+        selectedWeekdays: {2, 4, 6},
+      );
+
+      final decoded = SmartPushSettings.fromJson(settings.toJson());
+
+      expect(decoded.frequency, PushFrequency.custom);
+      expect(decoded.selectedWeekdays, {2, 4, 6});
+    });
   });
 }

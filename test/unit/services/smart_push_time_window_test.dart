@@ -44,5 +44,50 @@ void main() {
         isFalse,
       );
     });
+
+    test('builds notification payload with actual content type', () {
+      expect(
+        SmartPushService.buildNotificationPayload(
+          noteId: '12345678-1234-1234-1234-1234567890ab',
+          contentType: 'yearAgoToday',
+        ),
+        'contentType:yearAgoToday|noteId:12345678-1234-1234-1234-1234567890ab',
+      );
+      expect(
+        SmartPushService.buildNotificationPayload(contentType: 'dailyQuote'),
+        'contentType:dailyQuote',
+      );
+    });
+
+    test('next scheduled date skips to next active weekday', () {
+      const settings = SmartPushSettings(
+        frequency: PushFrequency.weekdays,
+      );
+
+      final scheduled = SmartPushService.nextScheduledDate(
+        now: DateTime(2026, 3, 14, 9, 0),
+        hour: 8,
+        minute: 0,
+        settings: settings,
+      );
+
+      expect(scheduled, DateTime(2026, 3, 16, 8, 0));
+    });
+
+    test('daily quote scheduling can ignore smart push frequency', () {
+      const settings = SmartPushSettings(
+        frequency: PushFrequency.weekdays,
+      );
+
+      final scheduled = SmartPushService.nextScheduledDate(
+        now: DateTime(2026, 3, 14, 9, 0),
+        hour: 7,
+        minute: 0,
+        settings: settings,
+        respectsFrequency: false,
+      );
+
+      expect(scheduled, DateTime(2026, 3, 15, 7, 0));
+    });
   });
 }

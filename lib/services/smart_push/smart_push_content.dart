@@ -14,7 +14,7 @@ extension SmartPushContentSelection on SmartPushService {
   /// 每日一言仅作为完全无笔记时的最终兜底。
   Future<_SmartSelectResult> _smartSelectContent() async {
     final now = DateTime.now();
-    final allNotes = await _databaseService.getQuotesForSmartPush(limit: 500);
+    final allNotes = await _databaseService.getQuotesForSmartPush(limit: 5000);
 
     AppLogger.i(
       '智能选择：开始内容选择 (总笔记数: ${allNotes.length})',
@@ -334,212 +334,71 @@ extension SmartPushContentSelection on SmartPushService {
 
   /// 获取候选推送笔记
   Future<List<Quote>> getCandidateNotes() async {
-    final candidates = <Quote>[];
-    final allNotes = await _databaseService.getQuotesForSmartPush(limit: 500);
+    final typedCandidates = await getTypedCandidateNotes();
+    return typedCandidates.map((candidate) => candidate.note).toList();
+  }
 
-    if (allNotes.isEmpty) return candidates;
+  Future<List<TypedSmartPushCandidate>> getTypedCandidateNotes() async {
+    final allNotes = await _databaseService.getQuotesForSmartPush(limit: 5000);
+    if (allNotes.isEmpty) return [];
 
     final now = DateTime.now();
+    final currentLocation = await _loadCurrentLocationForMatching();
+    final currentWeather = _loadCurrentWeatherForMatching();
 
-    // 根据启用的类型筛选
-    for (final noteType in _settings.enabledPastNoteTypes) {
-      switch (noteType) {
-        case PastNoteType.yearAgoToday:
-          candidates.addAll(_filterYearAgoToday(allNotes, now));
-          break;
-        case PastNoteType.monthAgoToday:
-          candidates.addAll(_filterMonthAgoToday(allNotes, now));
-          break;
-        case PastNoteType.weekAgoToday:
-          candidates.addAll(_filterWeekAgoToday(allNotes, now));
-          break;
-        case PastNoteType.randomMemory:
-          candidates.addAll(_filterRandomMemory(allNotes, now));
-          break;
-        case PastNoteType.sameLocation:
-          candidates.addAll(await _filterSameLocation(allNotes));
-          break;
-        case PastNoteType.sameWeather:
-          candidates.addAll(await _filterSameWeather(allNotes));
-          break;
-      }
-    }
-
-    // 应用标签筛选（如果配置了）
-    if (_settings.filterTagIds.isNotEmpty) {
-      candidates.removeWhere(
-        (note) =>
-            !note.tagIds.any((tagId) => _settings.filterTagIds.contains(tagId)),
-      );
-    }
-
-    // 去重
-    final uniqueIds = <String>{};
-    candidates.removeWhere((note) {
-      if (note.id == null) return true;
-      if (uniqueIds.contains(note.id)) return true;
-      uniqueIds.add(note.id!);
-      return false;
-    });
-
-    // 打乱顺序增加随机性
-    candidates.shuffle(_random);
-
-    return candidates;
-  }
-
-  /// 筛选去年今日的笔记
-  List<Quote> _filterYearAgoToday(List<Quote> notes, DateTime now) {
-    return filterYearAgoToday(notes, now);
-  }
-
-  /// 筛选往月今日的笔记
-  List<Quote> _filterMonthAgoToday(List<Quote> notes, DateTime now) {
-    return filterMonthAgoToday(notes, now);
-  }
-
-  /// 筛选上周今日的笔记
-  List<Quote> _filterWeekAgoToday(List<Quote> notes, DateTime now) {
-    return filterWeekAgoToday(notes, now);
-  }
-
-  /// 筛选随机回忆（7天前的笔记）
-  List<Quote> _filterRandomMemory(List<Quote> notes, DateTime now) {
-    return filterRandomMemory(notes, now, _random);
+    return buildTypedCandidates(
+      notes: allNotes,
+      now: now,
+      enabledPastNoteTypes: _settings.enabledPastNoteTypes,
+      recentPushedIds: _settings.recentlyPushedNoteIds.toSet(),
+      random: _random,
+      requiredTagIds: _settings.filterTagIds,
+      currentLocation: currentLocation,
+      currentWeather: currentWeather,
+      weatherFilters: _settings.filterWeatherTypes,
+    );
   }
 
   /// 筛选相同地点的笔记
   Future<List<Quote>> _filterSameLocation(List<Quote> notes) async {
     try {
-      final currentLocation = _locationService.getFormattedLocation();
-      if (currentLocation.isEmpty) {
-        await _locationService.init();
-        if (_locationService.getFormattedLocation().isEmpty) return [];
-      }
-
-      final validLocation = _locationService.getFormattedLocation();
-      final currentDistrict = _extractDistrict(validLocation);
-      if (currentDistrict == null) return [];
-
-      return notes.where((note) {
-        if (note.location == null || note.location!.isEmpty) return false;
-        final noteDistrict = _extractDistrict(note.location!);
-        return noteDistrict != null &&
-            noteDistrict.toLowerCase() == currentDistrict.toLowerCase();
-      }).toList();
+      final currentLocation = await _loadCurrentLocationForMatching();
+      return filterSameLocationNotes(notes, DateTime.now(), currentLocation);
     } catch (e) {
       AppLogger.w('位置筛选失败: $e');
       return [];
     }
   }
 
-  /// 从位置字符串提取区/城市名，用于同地点比较
-  /// 支持 CSV 格式 ("国家,省份,城市,区县") 和显示格式 ("城市·区县")
-  String? _extractDistrict(String location) {
-    if (location.contains(',')) {
-      final parts = location.split(',');
-      if (parts.length >= 4 && parts[3].trim().isNotEmpty) {
-        return parts[3].trim();
-      }
-      if (parts.length >= 3 && parts[2].trim().isNotEmpty) {
-        return parts[2].trim();
-      }
-    }
-
-    if (location.contains('·')) {
-      final parts = location.split('·');
-      if (parts.length >= 2) {
-        return parts[1].trim();
-      }
-    }
-
-    final districtMatch = RegExp(r'([^省市县]+(?:区|县|市))').firstMatch(location);
-    if (districtMatch != null) {
-      return districtMatch.group(1);
-    }
-
-    return location;
-  }
-
   /// 筛选相同天气的笔记
   Future<List<Quote>> _filterSameWeather(List<Quote> notes) async {
-    // 获取当前天气
-    String? currentWeather;
-    if (_weatherService != null) {
-      try {
-        currentWeather = _weatherService!.currentWeather;
-      } catch (e) {
-        AppLogger.w('获取当前天气失败', error: e);
-      }
-    }
-
-    if (currentWeather == null || currentWeather.isEmpty) {
-      // 如果没有当前天气，使用用户配置的天气筛选
-      if (_settings.filterWeatherTypes.isEmpty) return [];
-
-      final weatherKeywords = <String>[];
-      for (final weatherType in _settings.filterWeatherTypes) {
-        weatherKeywords.addAll(_getWeatherKeywords(weatherType));
-      }
-
-      return notes.where((note) {
-        if (note.weather == null || note.weather!.isEmpty) return false;
-        final lowerWeather = note.weather!.toLowerCase();
-        return weatherKeywords.any(
-          (keyword) => lowerWeather.contains(keyword.toLowerCase()),
-        );
-      }).toList();
-    }
-
-    // 基于当前天气匹配
-    final currentWeatherLower = currentWeather.toLowerCase();
-    return notes.where((note) {
-      if (note.weather == null || note.weather!.isEmpty) return false;
-      final noteWeatherLower = note.weather!.toLowerCase();
-      // 简单的相似度匹配
-      return _weatherMatches(currentWeatherLower, noteWeatherLower);
-    }).toList();
+    final currentWeather = _loadCurrentWeatherForMatching();
+    return filterSameWeatherNotes(
+      notes,
+      DateTime.now(),
+      currentWeather: currentWeather,
+      weatherFilters: _settings.filterWeatherTypes,
+    );
   }
 
-  /// 获取天气类型关键词
-  List<String> _getWeatherKeywords(WeatherFilterType type) {
-    switch (type) {
-      case WeatherFilterType.clear:
-        return ['晴', 'clear', 'sunny', '阳光'];
-      case WeatherFilterType.cloudy:
-        return ['多云', 'cloudy', '阴', '云'];
-      case WeatherFilterType.rain:
-        return ['雨', 'rain', '阵雨', '小雨', '大雨'];
-      case WeatherFilterType.snow:
-        return ['雪', 'snow', '小雪', '大雪'];
-      case WeatherFilterType.fog:
-        return ['雾', 'fog', '霾', 'haze'];
-    }
+  Future<String?> _loadCurrentLocationForMatching() async {
+    final currentLocation = _locationService.getFormattedLocation();
+    if (currentLocation.isNotEmpty) return currentLocation;
+
+    await _locationService.init();
+    final resolvedLocation = _locationService.getFormattedLocation();
+    return resolvedLocation.isEmpty ? null : resolvedLocation;
   }
 
-  /// 天气匹配
-  bool _weatherMatches(String current, String target) {
-    // 提取核心天气词
-    final coreWeatherTerms = [
-      '晴',
-      '阴',
-      '云',
-      '雨',
-      '雪',
-      '雾',
-      '霾',
-      'clear',
-      'cloudy',
-      'rain',
-      'snow',
-      'fog',
-    ];
-
-    for (final term in coreWeatherTerms) {
-      if (current.contains(term) && target.contains(term)) {
-        return true;
-      }
+  String? _loadCurrentWeatherForMatching() {
+    if (_weatherService == null) return null;
+    try {
+      final currentWeather = _weatherService!.currentWeather;
+      if (currentWeather == null || currentWeather.isEmpty) return null;
+      return currentWeather;
+    } catch (e) {
+      AppLogger.w('获取当前天气失败', error: e);
+      return null;
     }
-    return false;
   }
 }

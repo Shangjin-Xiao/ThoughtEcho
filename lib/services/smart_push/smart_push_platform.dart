@@ -311,9 +311,14 @@ extension SmartPushPlatform on SmartPushService {
       // 构建 payload，确保通知点击时能正确路由
       String? payload;
       if (isDailyQuote) {
-        payload = 'contentType:dailyQuote';
+        payload = SmartPushService.buildNotificationPayload(
+          contentType: 'dailyQuote',
+        );
       } else if (content?.noteId != null) {
-        payload = 'contentType:smartPush|noteId:${content!.noteId}';
+        payload = SmartPushService.buildNotificationPayload(
+          noteId: content!.noteId,
+          contentType: content.contentType ?? 'randomMemory',
+        );
       }
 
       await _notificationsPlugin.zonedSchedule(

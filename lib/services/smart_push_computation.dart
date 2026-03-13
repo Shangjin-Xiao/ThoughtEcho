@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import '../models/quote_model.dart';
+import '../models/smart_push_settings.dart';
 
 /// Input data for smart push filter computation in an isolate.
 class SmartPushFilterInput {
@@ -39,6 +40,20 @@ class SmartPushFilterResult {
     this.selectedMonthAgo,
     this.selectedWeekAgo,
     this.selectedRandom,
+  });
+}
+
+class TypedSmartPushCandidate {
+  final Quote note;
+  final String contentType;
+  final String title;
+  final int priority;
+
+  const TypedSmartPushCandidate({
+    required this.note,
+    required this.contentType,
+    required this.title,
+    required this.priority,
   });
 }
 
@@ -192,4 +207,254 @@ Quote? selectUnpushedNote(
   }
 
   return null;
+}
+
+List<TypedSmartPushCandidate> buildTypedCandidates({
+  required List<Quote> notes,
+  required DateTime now,
+  required Set<PastNoteType> enabledPastNoteTypes,
+  required Set<String> recentPushedIds,
+  required Random random,
+  List<String> requiredTagIds = const [],
+  String? currentLocation,
+  String? currentWeather,
+  Set<WeatherFilterType> weatherFilters = const {},
+}) {
+  final candidatesById = <String, TypedSmartPushCandidate>{};
+
+  void addCandidate(
+    String contentType,
+    List<Quote> source,
+    String Function(Quote note) titleBuilder,
+    int priority,
+  ) {
+    final eligibleSource = requiredTagIds.isEmpty
+        ? source
+        : source
+            .where((note) => note.tagIds.any(requiredTagIds.contains))
+            .toList();
+
+    final selected =
+        selectUnpushedNote(eligibleSource, recentPushedIds, random);
+    if (selected == null || selected.id == null) return;
+
+    final existing = candidatesById[selected.id!];
+    if (existing != null && existing.priority >= priority) {
+      return;
+    }
+
+    candidatesById[selected.id!] = TypedSmartPushCandidate(
+      note: selected,
+      contentType: contentType,
+      title: titleBuilder(selected),
+      priority: priority,
+    );
+  }
+
+  if (enabledPastNoteTypes.contains(PastNoteType.yearAgoToday)) {
+    addCandidate(
+      'yearAgoToday',
+      filterYearAgoToday(notes, now),
+      (note) {
+        final noteDate = DateTime.tryParse(note.date);
+        final years = noteDate != null ? now.year - noteDate.year : 1;
+        return '📅 $years年前的今天';
+      },
+      100,
+    );
+  }
+
+  if (enabledPastNoteTypes.contains(PastNoteType.monthAgoToday)) {
+    addCandidate(
+      'monthAgoToday',
+      filterMonthAgoToday(notes, now),
+      (note) {
+        final noteDate = DateTime.tryParse(note.date);
+        final monthsDiff = noteDate == null
+            ? 1
+            : (now.year - noteDate.year) * 12 + (now.month - noteDate.month);
+        return monthsDiff > 0 ? '📅 $monthsDiff个月前的今天' : '📅 往月今日';
+      },
+      50,
+    );
+  }
+
+  if (enabledPastNoteTypes.contains(PastNoteType.weekAgoToday)) {
+    addCandidate(
+      'weekAgoToday',
+      filterWeekAgoToday(notes, now),
+      (_) => '📅 一周前的今天',
+      45,
+    );
+  }
+
+  if (enabledPastNoteTypes.contains(PastNoteType.randomMemory)) {
+    addCandidate(
+      'randomMemory',
+      filterRandomMemory(notes, now, random),
+      (_) => '💭 往日回忆',
+      30,
+    );
+  }
+
+  if (enabledPastNoteTypes.contains(PastNoteType.sameLocation)) {
+    addCandidate(
+      'sameLocation',
+      filterSameLocationNotes(notes, now, currentLocation),
+      (_) => '📍 熟悉的地方',
+      70,
+    );
+  }
+
+  if (enabledPastNoteTypes.contains(PastNoteType.sameWeather)) {
+    addCandidate(
+      'sameWeather',
+      filterSameWeatherNotes(
+        notes,
+        now,
+        currentWeather: currentWeather,
+        weatherFilters: weatherFilters,
+      ),
+      (_) => '🌤️ 此情此景',
+      60,
+    );
+  }
+
+  final typedCandidates = candidatesById.values.toList()
+    ..sort((a, b) => b.priority.compareTo(a.priority));
+  return typedCandidates;
+}
+
+List<Quote> filterSameLocationNotes(
+  List<Quote> notes,
+  DateTime now,
+  String? currentLocation,
+) {
+  if (currentLocation == null || currentLocation.trim().isEmpty) {
+    return [];
+  }
+
+  final currentDistrict = extractDistrict(currentLocation);
+  if (currentDistrict == null || currentDistrict.isEmpty) {
+    return [];
+  }
+
+  return notes.where((note) {
+    if (!_isHistoricalNote(note, now)) return false;
+    if (note.location == null || note.location!.isEmpty) return false;
+    final noteDistrict = extractDistrict(note.location!);
+    return noteDistrict != null &&
+        noteDistrict.toLowerCase() == currentDistrict.toLowerCase();
+  }).toList();
+}
+
+List<Quote> filterSameWeatherNotes(
+  List<Quote> notes,
+  DateTime now, {
+  String? currentWeather,
+  Set<WeatherFilterType> weatherFilters = const {},
+}) {
+  final filteredByWeatherType = weatherFilters.isNotEmpty
+      ? notes.where((note) {
+          if (!_isHistoricalNote(note, now)) return false;
+          if (note.weather == null || note.weather!.isEmpty) return false;
+          final lowerWeather = note.weather!.toLowerCase();
+          return weatherFilters.any((weatherType) {
+            return getWeatherKeywords(weatherType).any(
+              (keyword) => lowerWeather.contains(keyword.toLowerCase()),
+            );
+          });
+        }).toList()
+      : null;
+
+  if (filteredByWeatherType != null) {
+    return filteredByWeatherType;
+  }
+
+  if (currentWeather == null || currentWeather.isEmpty) {
+    return [];
+  }
+
+  final currentWeatherLower = currentWeather.toLowerCase();
+  return notes.where((note) {
+    if (!_isHistoricalNote(note, now)) return false;
+    if (note.weather == null || note.weather!.isEmpty) return false;
+    return weatherMatches(currentWeatherLower, note.weather!.toLowerCase());
+  }).toList();
+}
+
+String? extractDistrict(String location) {
+  if (location.contains(',')) {
+    final parts = location.split(',');
+    if (parts.length >= 4 && parts[3].trim().isNotEmpty) {
+      return parts[3].trim();
+    }
+    if (parts.length >= 3 && parts[2].trim().isNotEmpty) {
+      return parts[2].trim();
+    }
+  }
+
+  if (location.contains('·')) {
+    final parts = location.split('·');
+    if (parts.length >= 2) {
+      return parts[1].trim();
+    }
+  }
+
+  final districtMatch = RegExp(r'([^省市县]+(?:区|县|市))').firstMatch(location);
+  if (districtMatch != null) {
+    return districtMatch.group(1);
+  }
+
+  return location;
+}
+
+List<String> getWeatherKeywords(WeatherFilterType type) {
+  switch (type) {
+    case WeatherFilterType.clear:
+      return ['晴', 'clear', 'sunny', '阳光'];
+    case WeatherFilterType.cloudy:
+      return ['多云', 'cloudy', '阴', '云'];
+    case WeatherFilterType.rain:
+      return ['雨', 'rain', '阵雨', '小雨', '大雨'];
+    case WeatherFilterType.snow:
+      return ['雪', 'snow', '小雪', '大雪'];
+    case WeatherFilterType.fog:
+      return ['雾', 'fog', '霾', 'haze'];
+  }
+}
+
+bool weatherMatches(String current, String target) {
+  const coreWeatherTerms = [
+    '晴',
+    '阴',
+    '云',
+    '雨',
+    '雪',
+    '雾',
+    '霾',
+    'clear',
+    'cloudy',
+    'rain',
+    'snow',
+    'fog',
+  ];
+
+  for (final term in coreWeatherTerms) {
+    if (current.contains(term) && target.contains(term)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool _isHistoricalNote(Quote note, DateTime now) {
+  try {
+    final noteDate = DateTime.parse(note.date);
+    return !(noteDate.year == now.year &&
+        noteDate.month == now.month &&
+        noteDate.day == now.day);
+  } catch (_) {
+    return false;
+  }
 }
