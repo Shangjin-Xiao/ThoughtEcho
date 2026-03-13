@@ -4,6 +4,11 @@ import 'package:thoughtecho/services/database_service.dart';
 void main() {
   group('Database Security Tests - sanitizeOrderBy', () {
     late DatabaseService databaseService;
+
+    setUp(() {
+      databaseService = DatabaseService();
+    });
+
     test('should allow valid columns and directions', () {
       expect(databaseService.sanitizeOrderBy('date DESC'), equals('date DESC'));
       expect(databaseService.sanitizeOrderBy('favorite_count ASC'),
@@ -33,6 +38,14 @@ void main() {
     test('should fallback to DESC if direction is invalid', () {
       expect(databaseService.sanitizeOrderBy('date DROP'), equals('date DESC'));
       expect(databaseService.sanitizeOrderBy('date 1=1'), equals('date DESC'));
+    });
+
+    test('should allow multiple valid columns and directions', () {
+      expect(databaseService.sanitizeOrderBy('favorite_count DESC, date DESC'),
+          equals('favorite_count DESC, date DESC'));
+      expect(
+          databaseService.sanitizeOrderBy('q.favorite_count DESC, q.date DESC'),
+          equals('favorite_count DESC, date DESC'));
     });
   });
 }
