@@ -47,5 +47,14 @@ void main() {
           databaseService.sanitizeOrderBy('q.favorite_count DESC, q.date DESC'),
           equals('favorite_count DESC, date DESC'));
     });
+
+    test('should prepend prefix correctly', () {
+      expect(
+          databaseService.sanitizeOrderBy('favorite_count DESC, date DESC',
+              prefix: 'q'),
+          equals('q.favorite_count DESC, q.date DESC'));
+      expect(databaseService.sanitizeOrderBy('invalid_column', prefix: 'q'),
+          equals('q.date DESC'));
+    });
   });
 }
