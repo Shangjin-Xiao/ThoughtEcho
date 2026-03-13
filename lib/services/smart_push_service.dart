@@ -202,6 +202,50 @@ class SmartPushService extends ChangeNotifier {
     );
   }
 
+  static String? buildNotificationPayload({
+    String? noteId,
+    required String contentType,
+  }) {
+    if (contentType.isEmpty) return null;
+    if (noteId != null && noteId.isNotEmpty) {
+      return 'contentType:$contentType|noteId:$noteId';
+    }
+    return 'contentType:$contentType';
+  }
+
+  static DateTime nextScheduledDate({
+    required DateTime now,
+    required int hour,
+    required int minute,
+    required SmartPushSettings settings,
+    bool respectsFrequency = true,
+  }) {
+    var scheduledDate = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      hour,
+      minute,
+    );
+
+    if (scheduledDate.isBefore(now)) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+
+    if (!respectsFrequency) {
+      return scheduledDate;
+    }
+
+    final nextAllowedDate = settings.nextPushDateFrom(scheduledDate);
+    return DateTime(
+      nextAllowedDate.year,
+      nextAllowedDate.month,
+      nextAllowedDate.day,
+      hour,
+      minute,
+    );
+  }
+
   /// 设置天气服务（延迟注入）
   void setWeatherService(WeatherService service) {
     _weatherService = service;
@@ -361,9 +405,9 @@ class SmartPushService extends ChangeNotifier {
         return await _fetchDailyQuote();
       case PushMode.pastNotes:
       case PushMode.custom:
-        final candidates = await getCandidateNotes();
+        final candidates = await getTypedCandidateNotes();
         if (candidates.isNotEmpty) {
-          return _selectUnpushedNote(candidates);
+          return candidates.first.note;
         }
         return null;
       case PushMode.both:
@@ -396,8 +440,14 @@ class _PushContent {
   final String title;
   final String body;
   final String? noteId;
+  final String? contentType;
 
-  _PushContent({required this.title, required this.body, this.noteId});
+  _PushContent({
+    required this.title,
+    required this.body,
+    this.noteId,
+    this.contentType,
+  });
 }
 
 /// 智能选择结果辅助类

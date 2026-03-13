@@ -29,7 +29,7 @@ extension SmartPushScheduling on SmartPushService {
     }
 
     // 1. 规划常规推送 (仅当 enabled 为 true 时)
-    if (_settings.enabled && _settings.shouldPushToday()) {
+    if (_settings.enabled) {
       List<PushTimeSlot> slotsToSchedule;
 
       if (_settings.pushMode == PushMode.smart) {
@@ -61,7 +61,11 @@ extension SmartPushScheduling on SmartPushService {
       AppLogger.d('正在规划每日一言独立推送...');
       final slot = _settings.dailyQuotePushTime;
       // 每日一言每天都推，不受 frequency 限制
-      final scheduledDate = _nextInstanceOfTime(slot.hour, slot.minute);
+      final scheduledDate = _nextInstanceOfTime(
+        slot.hour,
+        slot.minute,
+        respectsFrequency: false,
+      );
 
       if (PlatformHelper.isAndroid) {
         // 先检查精确闹钟权限
@@ -324,49 +328,35 @@ extension SmartPushScheduling on SmartPushService {
     bool respectsFrequency = true,
   }) {
     final now = tz.TZDateTime.now(tz.local);
-    var scheduledDate = tz.TZDateTime(
+    final nextDate = SmartPushService.nextScheduledDate(
+      now: now,
+      hour: hour,
+      minute: minute,
+      settings: _settings,
+      respectsFrequency: respectsFrequency,
+    );
+    return tz.TZDateTime(
       tz.local,
-      now.year,
-      now.month,
-      now.day,
+      nextDate.year,
+      nextDate.month,
+      nextDate.day,
       hour,
       minute,
     );
-    if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
-    }
-
-    if (respectsFrequency) {
-      final nextAllowedDate = _settings.nextPushDateFrom(
-        DateTime(
-          scheduledDate.year,
-          scheduledDate.month,
-          scheduledDate.day,
-        ),
-      );
-      scheduledDate = tz.TZDateTime(
-        tz.local,
-        nextAllowedDate.year,
-        nextAllowedDate.month,
-        nextAllowedDate.day,
-        hour,
-        minute,
-      );
-    }
-
-    return scheduledDate;
   }
 
   /// 预计算推送内容
   Future<_PushContent?> _getPrecomputedContent() async {
     try {
-      final candidates = await getCandidateNotes();
+      final candidates = await getTypedCandidateNotes();
       if (candidates.isNotEmpty) {
-        final note = candidates.first;
+        final candidate = candidates.first;
+        final note = candidate.note;
         return _PushContent(
-          title: _generateTitle(note),
+          title: candidate.title,
           body: _truncateContent(note.content),
           noteId: note.id,
+          contentType: candidate.contentType,
         );
       }
       return null;
