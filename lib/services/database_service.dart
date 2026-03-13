@@ -173,8 +173,15 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
 
     // 允许的排序字段
     const allowedColumns = [
-      'id', 'date', 'favorite_count', 'content', 'category_id',
-      'weather', 'day_period', 'last_modified', 'color_hex'
+      'id',
+      'date',
+      'favorite_count',
+      'content',
+      'category_id',
+      'weather',
+      'day_period',
+      'last_modified',
+      'color_hex'
     ];
 
     // 清除前缀（如 q. 或 qt.）
@@ -204,7 +211,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
         direction = dir;
       }
     } else if (orderBy.toUpperCase().contains('ASC')) {
-       direction = 'ASC';
+      direction = 'ASC';
     }
 
     return '$column $direction';
