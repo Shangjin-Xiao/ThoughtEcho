@@ -210,7 +210,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       if (dir == 'ASC' || dir == 'DESC') {
         direction = dir;
       }
-    } else if (cleanOrderBy.toUpperCase().contains('ASC')) {
+    } else if (orderBy.toUpperCase().contains('ASC')) {
       direction = 'ASC';
     }
 
