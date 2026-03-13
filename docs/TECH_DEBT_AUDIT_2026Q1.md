@@ -117,6 +117,9 @@
 | 🟡 | `note_full_editor_page.dart:1061` | `TODO(low): 位置/天气逻辑与 add_note_dialog ~400 行重复` |
 | 🟡 | `database_service.dart:85` | `TODO(low): 5 个 Map 手动 LRU 缓存，可提取通用类` |
 | 🟡 | `database_service.dart:695` | `TODO(low): LIKE 搜索重复 3 次` |
+| 🔴 | `main.dart:137` / `global_exception_handler.dart:14` / `unified_log_service.dart:284` | `TODO(logging): 梳理全局异常捕获链路，消除 FlutterError.onError / PlatformDispatcher.onError 重复注册与相互覆盖，统一 deferred error 缓冲与落库时机` |
+| 🟡 | `unified_log_service.dart:221` / `main.dart:268` | `TODO(logging): 明确日志持久化与日志级别策略，保证 error/warning 在非开发者模式下也可持久化，避免仅 info+ 且受 developerMode 影响导致异常排查信息丢失` |
+| 🟡 | `global_exception_handler.dart:118` | `TODO(logging): 扩展平台通道/隔离区/后台任务错误采集覆盖面，补充平台通道异常、后台 isolate、启动早期错误的验证用例` |
 | — | 其余 11 处 | 分享功能、mDNS、本地 AI 等待实现 |
 
 ---
