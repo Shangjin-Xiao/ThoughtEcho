@@ -273,8 +273,6 @@ class AppTheme with ChangeNotifier {
     ColorScheme? lightScheme,
     ColorScheme? darkScheme,
   ) {
-    bool changed = false;
-
     // 直接使用系统提供的动态颜色方案，不进行紫色过滤
     ColorScheme? processedLightScheme = lightScheme;
     ColorScheme? processedDarkScheme = darkScheme;
@@ -282,12 +280,10 @@ class AppTheme with ChangeNotifier {
     // 更新动态颜色方案
     if (_lightDynamicColorScheme != processedLightScheme) {
       _lightDynamicColorScheme = processedLightScheme;
-      changed = true;
     }
 
     if (_darkDynamicColorScheme != processedDarkScheme) {
       _darkDynamicColorScheme = processedDarkScheme;
-      changed = true;
     }
 
     // 检查系统是否支持动态取色
@@ -312,10 +308,8 @@ class AppTheme with ChangeNotifier {
     // 目前的逻辑是：如果用户在UI上启用了动态取色，即使之前获取失败，
     // 只要现在获取成功，就会使用动态颜色。
 
-    // 只在实际发生变化时通知监听器
-    if (changed) {
-      notifyListeners();
-    }
+    // DynamicColorBuilder 会在系统颜色变化时主动重建 MaterialApp，
+    // 这里避免在 build 过程中再次 notifyListeners() 引发重建冲突。
   }
 
   // 设置自定义颜色
