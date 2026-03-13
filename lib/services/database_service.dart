@@ -184,37 +184,51 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       'color_hex'
     ];
 
-    // 清除前缀（如 q. 或 qt.）
-    String cleanOrderBy = orderBy;
-    if (cleanOrderBy.startsWith('q.')) {
-      cleanOrderBy = cleanOrderBy.substring(2);
-    } else if (cleanOrderBy.startsWith('qt.')) {
-      cleanOrderBy = cleanOrderBy.substring(3);
+    final validTerms = <String>[];
+    final terms = orderBy.split(',');
+
+    for (var term in terms) {
+      term = term.trim();
+      if (term.isEmpty) continue;
+
+      // 清除前缀（如 q. 或 qt.）
+      String cleanTerm = term;
+      if (cleanTerm.startsWith('q.')) {
+        cleanTerm = cleanTerm.substring(2);
+      } else if (cleanTerm.startsWith('qt.')) {
+        cleanTerm = cleanTerm.substring(3);
+      }
+
+      final parts = cleanTerm.split(RegExp(r'\s+'));
+      if (parts.isEmpty) continue;
+
+      final column = parts[0].toLowerCase();
+
+      // 验证列名
+      if (!allowedColumns.contains(column)) {
+        logDebug('发现不合法的排序字段: $column, 跳过该字段');
+        continue;
+      }
+
+      // 验证排序方向
+      String direction = 'DESC';
+      if (parts.length > 1) {
+        final dir = parts[1].toUpperCase();
+        if (dir == 'ASC' || dir == 'DESC') {
+          direction = dir;
+        }
+      } else if (term.toUpperCase().contains('ASC')) {
+        direction = 'ASC';
+      }
+
+      validTerms.add('$column $direction');
     }
 
-    final parts = cleanOrderBy.split(RegExp(r'\s+'));
-    if (parts.isEmpty) return 'date DESC';
-
-    final column = parts[0].toLowerCase();
-
-    // 验证列名
-    if (!allowedColumns.contains(column)) {
-      logDebug('发现不合法的排序字段: $column, 使用默认排序 date DESC');
+    if (validTerms.isEmpty) {
       return 'date DESC';
     }
 
-    // 验证排序方向
-    String direction = 'DESC';
-    if (parts.length > 1) {
-      final dir = parts[1].toUpperCase();
-      if (dir == 'ASC' || dir == 'DESC') {
-        direction = dir;
-      }
-    } else if (orderBy.toUpperCase().contains('ASC')) {
-      direction = 'ASC';
-    }
-
-    return '$column $direction';
+    return validTerms.join(', ');
   }
 
   Future<void> _checkAndFixDatabaseStructure();
