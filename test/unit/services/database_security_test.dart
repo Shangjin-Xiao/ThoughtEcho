@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/database_service.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   group('Database Security Tests - sanitizeOrderBy', () {
     late DatabaseService databaseService;
 
