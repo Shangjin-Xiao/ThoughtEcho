@@ -28,6 +28,7 @@ class _OCRCapturePageState extends State<OCRCapturePage> {
         title: Text(l10n.ocrCapture),
         leading: IconButton(
           icon: const Icon(Icons.close),
+          tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
