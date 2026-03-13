@@ -176,7 +176,8 @@ Quote? selectUnpushedNote(
 ) {
   final unpushed = candidates
       .where(
-        (note) => note.id == null || !recentlyPushedIds.contains(note.id),
+        (note) =>
+            note.id == null || !recentlyPushedIds.contains(note.id),
       )
       .toList();
 

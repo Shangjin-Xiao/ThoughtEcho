@@ -42,8 +42,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
         if (shouldExcludeHidden) {
           filtered = filtered
               .where(
-                (q) => !q.tagIds.contains(_DatabaseServiceBase.hiddenTagId),
-              )
+                  (q) => !q.tagIds.contains(_DatabaseServiceBase.hiddenTagId))
               .toList();
         }
 
