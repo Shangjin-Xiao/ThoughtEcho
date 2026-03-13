@@ -112,6 +112,7 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
         conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
 
     // 优化：使用JOIN一次性获取所有数据，避免N+1查询问题
+    final sanitizedOrderBy = sanitizeOrderBy(orderBy);
     final query = '''
       SELECT 
         q.*,
@@ -120,7 +121,7 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
       LEFT JOIN quote_tags qt ON q.id = qt.quote_id
       $whereClause
       GROUP BY q.id
-      ORDER BY q.$orderBy
+      ORDER BY q.$sanitizedOrderBy
       LIMIT ? OFFSET ?
     ''';
 
@@ -215,6 +216,7 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
           conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
 
       // 只取必要列，不取 delta_content/ai_analysis/summary/keywords
+      final sanitizedOrderBy = sanitizeOrderBy(orderBy);
       final query = '''
         SELECT q.id, q.content, q.date, q.source, q.source_author, q.source_work,
                q.category_id, q.color_hex, q.location, q.latitude, q.longitude,
@@ -222,7 +224,7 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
                q.last_modified, q.favorite_count
         FROM quotes q
         $where
-        ORDER BY $orderBy
+        ORDER BY q.$sanitizedOrderBy
         LIMIT ?
       ''';
       args.add(limit);

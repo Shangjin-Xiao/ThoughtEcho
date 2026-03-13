@@ -333,7 +333,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     final where =
         conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
 
-    final orderByParts = orderBy.split(' ');
+    final orderByParts = sanitizeOrderBy(orderBy).split(' ');
     final correctedOrderBy =
         'q.${orderByParts[0]} ${orderByParts.length > 1 ? orderByParts[1] : ''}';
 

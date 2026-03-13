@@ -165,6 +165,51 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
   });
+
+  /// 修复：验证排序参数，防止 SQL 注入
+  @visibleForTesting
+  String sanitizeOrderBy(String orderBy) {
+    if (orderBy.isEmpty) return 'date DESC';
+
+    // 允许的排序字段
+    const allowedColumns = [
+      'id', 'date', 'favorite_count', 'content', 'category_id',
+      'weather', 'day_period', 'last_modified', 'color_hex'
+    ];
+
+    // 清除前缀（如 q. 或 qt.）
+    String cleanOrderBy = orderBy;
+    if (cleanOrderBy.startsWith('q.')) {
+      cleanOrderBy = cleanOrderBy.substring(2);
+    } else if (cleanOrderBy.startsWith('qt.')) {
+      cleanOrderBy = cleanOrderBy.substring(3);
+    }
+
+    final parts = cleanOrderBy.split(RegExp(r'\s+'));
+    if (parts.isEmpty) return 'date DESC';
+
+    final column = parts[0].toLowerCase();
+
+    // 验证列名
+    if (!allowedColumns.contains(column)) {
+      logDebug('发现不合法的排序字段: $column, 使用默认排序 date DESC');
+      return 'date DESC';
+    }
+
+    // 验证排序方向
+    String direction = 'DESC';
+    if (parts.length > 1) {
+      final dir = parts[1].toUpperCase();
+      if (dir == 'ASC' || dir == 'DESC') {
+        direction = dir;
+      }
+    } else if (orderBy.toUpperCase().contains('ASC')) {
+       direction = 'ASC';
+    }
+
+    return '$column $direction';
+  }
+
   Future<void> _checkAndFixDatabaseStructure();
   void _scheduleCacheCleanup();
   void _clearAllCache();
