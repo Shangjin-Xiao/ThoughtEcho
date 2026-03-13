@@ -115,19 +115,12 @@ extension SmartPushScheduling on SmartPushService {
         kBackgroundPushTask,
         initialDelay: delay > Duration.zero ? delay : Duration.zero,
         inputData: {'triggerKind': 'dailyQuote'},
+        existingWorkPolicy: ExistingWorkPolicy.replace,
       );
       AppLogger.i('已使用 WorkManager 调度每日一言: 延迟 ${delay.inMinutes} 分钟');
     } catch (e) {
       AppLogger.w('每日一言 WorkManager 降级失败', error: e);
     }
-
-    // 同时调度本地通知作为用户可见的提醒
-    await _scheduleLocalNotification(
-      100,
-      scheduledDate,
-      slot,
-      isDailyQuote: true,
-    );
   }
 
   /// 智能推送时间计算算法 (SOTA v2)
@@ -325,7 +318,11 @@ extension SmartPushScheduling on SmartPushService {
   }
 
   /// 计算下一个时间点
-  tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
+  tz.TZDateTime _nextInstanceOfTime(
+    int hour,
+    int minute, {
+    bool respectsFrequency = true,
+  }) {
     final now = tz.TZDateTime.now(tz.local);
     var scheduledDate = tz.TZDateTime(
       tz.local,
@@ -338,6 +335,25 @@ extension SmartPushScheduling on SmartPushService {
     if (scheduledDate.isBefore(now)) {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
     }
+
+    if (respectsFrequency) {
+      final nextAllowedDate = _settings.nextPushDateFrom(
+        DateTime(
+          scheduledDate.year,
+          scheduledDate.month,
+          scheduledDate.day,
+        ),
+      );
+      scheduledDate = tz.TZDateTime(
+        tz.local,
+        nextAllowedDate.year,
+        nextAllowedDate.month,
+        nextAllowedDate.day,
+        hour,
+        minute,
+      );
+    }
+
     return scheduledDate;
   }
 

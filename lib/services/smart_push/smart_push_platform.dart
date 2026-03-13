@@ -74,11 +74,9 @@ extension SmartPushPlatform on SmartPushService {
         kBackgroundPushTask,
         initialDelay: delay > Duration.zero ? delay : Duration.zero,
         inputData: {'triggerKind': 'smartPush'},
+        existingWorkPolicy: ExistingWorkPolicy.replace,
       );
       AppLogger.i('已使用 WorkManager 降级方案调度推送: 延迟 ${delay.inMinutes} 分钟');
-
-      // 同时调度本地通知作为用户可见的提醒
-      await _scheduleLocalNotification(idIndex, scheduledDate, slot);
     } catch (e) {
       AppLogger.e('WorkManager 降级方案也失败', error: e);
       // 最后的降级：仅本地通知

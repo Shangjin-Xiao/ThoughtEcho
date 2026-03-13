@@ -69,17 +69,17 @@ extension SmartPushExecution on SmartPushService {
       // 尝试每日一言推送
       if (_settings.dailyQuotePushEnabled) {
         final slot = _settings.dailyQuotePushTime;
-        final slotTime = DateTime(
-          now.year,
-          now.month,
-          now.day,
-          slot.hour,
-          slot.minute,
-        );
-        final diff = now.difference(slotTime).inMinutes.abs();
-
-        if (diff <= 10) {
-          AppLogger.w('时间推断：触发每日一言推送 (距设定时间 $diff 分钟)');
+        if (SmartPushService.isWithinPushWindow(now, slot)) {
+          final diff = now
+              .difference(DateTime(
+                now.year,
+                now.month,
+                now.day,
+                slot.hour,
+                slot.minute,
+              ))
+              .inMinutes;
+          AppLogger.w('时间推断：触发每日一言推送 (已到设定时间后 $diff 分钟)');
           await _performDailyQuotePush(isBackground: true);
           handled = true;
         }
@@ -87,8 +87,17 @@ extension SmartPushExecution on SmartPushService {
 
       // 尝试常规智能推送（即使已推送每日一言，也允许智能推送，避免遗漏）
       if (!handled && _settings.enabled && _settings.shouldPushToday()) {
-        AppLogger.w('时间推断：触发智能推送');
-        await _performSmartPush(isBackground: true);
+        final scheduledSlots = getScheduledTimesForToday();
+        final slotsToCheck = scheduledSlots.isNotEmpty
+            ? scheduledSlots
+            : _settings.pushTimeSlots.where((slot) => slot.enabled).toList();
+
+        if (SmartPushService.isWithinAnyPushWindow(now, slotsToCheck)) {
+          AppLogger.w('时间推断：触发智能推送');
+          await _performSmartPush(isBackground: true);
+        } else {
+          AppLogger.d('时间推断：当前不在智能推送时间窗口内');
+        }
       }
     }
 
