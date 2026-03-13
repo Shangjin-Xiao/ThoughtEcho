@@ -3,6 +3,7 @@ part of '../database_service.dart';
 /// Mixin providing default category initialization for DatabaseService.
 mixin _DatabaseCategoryInitMixin on _DatabaseServiceBase {
   /// 初始化默认一言分类标签
+  @override
   Future<void> initDefaultHitokotoCategories() async {
     if (kIsWeb) {
       // Web 平台逻辑：检查内存中的 _categoryStore

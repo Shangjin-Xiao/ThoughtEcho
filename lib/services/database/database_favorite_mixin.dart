@@ -3,6 +3,7 @@ part of '../database_service.dart';
 /// Mixin providing favorite/heart operations for DatabaseService.
 mixin _DatabaseFavoriteMixin on _DatabaseServiceBase {
   /// 增加笔记的心形点击次数
+  @override
   Future<void> incrementFavoriteCount(String quoteId) async {
     if (quoteId.isEmpty) {
       throw ArgumentError('笔记ID不能为空');
@@ -106,6 +107,7 @@ mixin _DatabaseFavoriteMixin on _DatabaseServiceBase {
   }
 
   /// 重置心形点击次数为0（清除收藏）
+  @override
   Future<void> resetFavoriteCount(String quoteId) async {
     if (quoteId.isEmpty) {
       throw ArgumentError('笔记ID不能为空');
@@ -185,6 +187,7 @@ mixin _DatabaseFavoriteMixin on _DatabaseServiceBase {
   }
 
   /// 获取本周期内点心最多的笔记
+  @override
   Future<List<Quote>> getMostFavoritedQuotesThisWeek({int limit = 5}) async {
     if (kIsWeb) {
       final now = DateTime.now();

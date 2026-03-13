@@ -5,6 +5,7 @@ mixin _DatabaseHiddenTagMixin on _DatabaseServiceBase {
   /// 获取或创建隐藏标签
   /// 当启用隐藏笔记功能时，确保隐藏标签存在
   /// 隐藏标签是系统标签，不可编辑或删除
+  @override
   Future<NoteCategory?> getOrCreateHiddenTag() async {
     try {
       // 先尝试获取现有的隐藏标签
@@ -112,11 +113,13 @@ mixin _DatabaseHiddenTagMixin on _DatabaseServiceBase {
   }
 
   /// 检查标签是否是隐藏标签
+  @override
   bool isHiddenTag(String tagId) {
     return tagId == _DatabaseServiceBase.hiddenTagId;
   }
 
   /// 删除隐藏标签（当关闭隐藏笔记功能时）
+  @override
   Future<void> removeHiddenTag() async {
     try {
       if (kIsWeb) {
@@ -148,6 +151,7 @@ mixin _DatabaseHiddenTagMixin on _DatabaseServiceBase {
   }
 
   /// 检查笔记是否被隐藏（是否带有隐藏标签）
+  @override
   Future<bool> isQuoteHidden(String quoteId) async {
     try {
       if (kIsWeb) {
@@ -173,6 +177,7 @@ mixin _DatabaseHiddenTagMixin on _DatabaseServiceBase {
   }
 
   /// 获取所有隐藏笔记的ID列表
+  @override
   Future<List<String>> getHiddenQuoteIds() async {
     try {
       if (kIsWeb) {

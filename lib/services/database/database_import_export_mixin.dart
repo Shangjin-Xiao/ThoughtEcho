@@ -3,6 +3,7 @@ part of '../database_service.dart';
 /// Mixin providing import/export operations for DatabaseService.
 mixin _DatabaseImportExportMixin on _DatabaseServiceBase {
   /// 将所有笔记和分类数据导出为Map对象
+  @override
   Future<Map<String, dynamic>> exportDataAsMap() async {
     return _backupService.exportDataAsMap(database);
   }
@@ -11,11 +12,13 @@ mixin _DatabaseImportExportMixin on _DatabaseServiceBase {
   ///
   /// [customPath] - 可选的自定义保存路径。如果提供，将保存到指定路径；否则保存到应用文档目录
   /// 返回保存的文件路径
+  @override
   Future<String> exportAllData({String? customPath}) async {
     return _backupService.exportAllData(database, customPath: customPath);
   }
 
   /// 从Map对象导入数据
+  @override
   Future<void> importDataFromMap(
     Map<String, dynamic> data, {
     bool clearExisting = true,
@@ -36,6 +39,7 @@ mixin _DatabaseImportExportMixin on _DatabaseServiceBase {
   ///
   /// [filePath] - 导入文件的路径
   /// [clearExisting] - 是否清空现有数据，默认为 true
+  @override
   Future<void> importData(String filePath, {bool clearExisting = true}) async {
     try {
       final file = File(filePath);
@@ -54,11 +58,13 @@ mixin _DatabaseImportExportMixin on _DatabaseServiceBase {
   }
 
   /// 检查是否可以导出数据（检测数据库是否可访问）
+  @override
   Future<bool> checkCanExport() async {
     return _backupService.checkCanExport(_DatabaseServiceBase._database);
   }
 
   /// 验证备份文件是否有效
+  @override
   Future<bool> validateBackupFile(String filePath) async {
     return _backupService.validateBackupFile(filePath);
   }

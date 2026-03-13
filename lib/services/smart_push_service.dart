@@ -69,6 +69,8 @@ class SmartPushService extends ChangeNotifier {
       'smart_push_last_daily_quote_date';
   static const String _pendingHomeDailyQuoteKey =
       'smart_push_pending_home_daily_quote';
+  static const String _dailyQuotePushedDateKey =
+      'smart_push_daily_quote_pushed_date';
 
   SmartPushSettings _settings = SmartPushSettings.defaultSettings();
   SmartPushSettings get settings => _settings;
@@ -102,6 +104,49 @@ class SmartPushService extends ChangeNotifier {
   @protected
   void notifyListenersFromParts() {
     notifyListeners();
+  }
+
+  // ================================================================
+  // 每日一言内容去重（基于内容哈希，允许一天多条不同内容）
+  // 放在主类中以便所有 extension part 文件共享访问
+  // ================================================================
+
+  /// 检查某条每日一言内容是否已在今天推送过
+  bool _hasDailyQuoteContentPushed(String content) {
+    final pushedData = _mmkv.getString(_dailyQuotePushedDateKey);
+    if (pushedData == null) return false;
+
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    // 格式: "2026-03-13|hash1,hash2,hash3"
+    if (!pushedData.startsWith('$today|')) return false;
+
+    final contentHash = _contentHash(content);
+    final hashesStr = pushedData.substring(today.length + 1);
+    final pushedHashes = hashesStr.split(',').toSet();
+    return pushedHashes.contains(contentHash);
+  }
+
+  /// 标记某条每日一言内容已推送
+  void _markDailyQuoteContentPushed(String content) {
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final contentHash = _contentHash(content);
+
+    final pushedData = _mmkv.getString(_dailyQuotePushedDateKey);
+    String newData;
+
+    if (pushedData != null && pushedData.startsWith('$today|')) {
+      newData = '$pushedData,$contentHash';
+    } else {
+      newData = '$today|$contentHash';
+    }
+
+    _mmkv.setString(_dailyQuotePushedDateKey, newData);
+  }
+
+  /// 生成内容的简短哈希（用前 50 字符的 hashCode）
+  String _contentHash(String content) {
+    final key = content.length > 50 ? content.substring(0, 50) : content;
+    return key.hashCode.toRadixString(36);
   }
 
   /// 统一每日一言数据格式，确保首页与推送使用同一结构。
@@ -150,6 +195,9 @@ class SmartPushService extends ChangeNotifier {
       await _initializeTimezone();
       await _loadSettings();
       await _initializeNotifications();
+
+      // 处理冷启动场景：检查 App 是否由通知点击启动
+      await _handleLaunchNotification();
 
       AppLogger.i(
         'SmartPushService settings: enabled=${_settings.enabled}, dailyQuoteEnabled=${_settings.dailyQuotePushEnabled}',

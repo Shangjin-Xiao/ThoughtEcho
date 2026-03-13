@@ -211,8 +211,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   /// 修复：优化查询缓存，实现更好的LRU机制
   final Map<String, List<Quote>> _filterCache = {};
   final Map<String, DateTime> _cacheTimestamps = {}; // 缓存时间戳
-  final Map<String, DateTime> _cacheAccessTimes = {}; // 缓存访问时间，用于LRU
-  final int _maxCacheEntries = 30; // 增加缓存容量
+  // _cacheAccessTimes and _maxCacheEntries removed: LRU eviction was never wired up
   final Duration _cacheExpiration = const Duration(minutes: 5); // 调整缓存过期时间
 
   // 优化：查询结果缓存

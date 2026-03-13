@@ -90,7 +90,7 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
                 child: Container(
-                  color: Colors.black.withOpacity(0.6), // 始终使用深色背景以保证文字清晰
+                  color: Colors.black.withValues(alpha: 0.6), // 始终使用深色背景以保证文字清晰
                 ),
               ),
             ),
@@ -109,8 +109,8 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                         icon: const Icon(Icons.close),
                         color: Colors.white,
                         style: IconButton.styleFrom(
-                          backgroundColor: Colors.white.withOpacity(0.1),
-                          highlightColor: Colors.white.withOpacity(0.2),
+                          backgroundColor: Colors.white.withValues(alpha: 0.1),
+                          highlightColor: Colors.white.withValues(alpha: 0.2),
                         ),
                         tooltip: MaterialLocalizations.of(context)
                             .closeButtonTooltip,
@@ -141,8 +141,8 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color:
-                                      colorScheme.primary.withOpacity(opacity),
+                                  color: colorScheme.primary
+                                      .withValues(alpha: opacity),
                                   width: 2,
                                 ),
                               ),
@@ -154,10 +154,11 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                             height: 100 * scale,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: colorScheme.primary.withOpacity(0.2),
+                              color: colorScheme.primary.withValues(alpha: 0.2),
                               boxShadow: [
                                 BoxShadow(
-                                  color: colorScheme.primary.withOpacity(0.4),
+                                  color: colorScheme.primary
+                                      .withValues(alpha: 0.4),
                                   blurRadius: 20,
                                   spreadRadius: 5,
                                 ),
@@ -181,7 +182,8 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: colorScheme.primary.withOpacity(0.5),
+                                  color: colorScheme.primary
+                                      .withValues(alpha: 0.5),
                                   blurRadius: 12,
                                   offset: const Offset(0, 4),
                                 ),
@@ -219,18 +221,18 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                       margin: const EdgeInsets.symmetric(horizontal: 32),
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
+                        color: Colors.white.withValues(alpha: 0.1),
                         borderRadius:
                             BorderRadius.circular(AppTheme.cardRadius),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.1),
+                          color: Colors.white.withValues(alpha: 0.1),
                         ),
                       ),
                       child: Text(
                         widget.transcribedText!,
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodyLarge?.copyWith(
-                          color: Colors.white.withOpacity(0.9),
+                          color: Colors.white.withValues(alpha: 0.9),
                           height: 1.5,
                         ),
                       ),
@@ -239,7 +241,7 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                     Text(
                       l10n.voiceTranscribing,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withOpacity(0.6),
+                        color: Colors.white.withValues(alpha: 0.6),
                       ),
                     ),
 
@@ -271,7 +273,7 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                           style: theme.textTheme.labelLarge?.copyWith(
                             color: willTriggerOCR
                                 ? colorScheme.primaryContainer
-                                : Colors.white.withOpacity(0.8),
+                                : Colors.white.withValues(alpha: 0.8),
                             fontWeight: willTriggerOCR
                                 ? FontWeight.bold
                                 : FontWeight.normal,
@@ -283,7 +285,7 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                           width: 40,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.3),
+                            color: Colors.white.withValues(alpha: 0.3),
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
