@@ -172,6 +172,36 @@ class SmartPushService extends ChangeNotifier {
     };
   }
 
+  static bool isWithinPushWindow(
+    DateTime now,
+    PushTimeSlot slot, {
+    int toleranceMinutes = 10,
+  }) {
+    final slotTime = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      slot.hour,
+      slot.minute,
+    );
+    final diff = now.difference(slotTime).inMinutes;
+    return diff >= 0 && diff <= toleranceMinutes;
+  }
+
+  static bool isWithinAnyPushWindow(
+    DateTime now,
+    Iterable<PushTimeSlot> slots, {
+    int toleranceMinutes = 10,
+  }) {
+    return slots.any(
+      (slot) => isWithinPushWindow(
+        now,
+        slot,
+        toleranceMinutes: toleranceMinutes,
+      ),
+    );
+  }
+
   /// 设置天气服务（延迟注入）
   void setWeatherService(WeatherService service) {
     _weatherService = service;
@@ -287,6 +317,15 @@ class SmartPushService extends ChangeNotifier {
       // 更新计划任务
       if (_settings.enabled || _settings.dailyQuotePushEnabled) {
         await scheduleNextPush();
+
+        if (PlatformHelper.isAndroid) {
+          final canScheduleExact = await _canScheduleExactAlarms();
+          if (canScheduleExact) {
+            await _cancelPeriodicFallbackTask();
+          } else {
+            await _registerPeriodicFallbackTask();
+          }
+        }
       } else {
         await _cancelAllSchedules();
       }

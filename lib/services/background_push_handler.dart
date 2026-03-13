@@ -67,7 +67,7 @@ void callbackDispatcher() {
         case kPeriodicCheckTask:
           // 周期性检查逻辑
           AppLogger.i('执行周期性推送检查...');
-          await pushService.checkAndPush(isBackground: true, triggerKind: null);
+          await backgroundPeriodicCheck();
           break;
 
         default:
@@ -160,7 +160,7 @@ void backgroundPushCallback(int id) async {
 /// 这是 Android 12+ 精确闹钟权限被拒绝时的备用方案
 /// 每15分钟检查一次是否有遗漏的推送
 @pragma('vm:entry-point')
-void backgroundPeriodicCheck() async {
+Future<void> backgroundPeriodicCheck() async {
   WidgetsFlutterBinding.ensureInitialized();
   DartPluginRegistrant.ensureInitialized();
 
@@ -209,11 +209,7 @@ void backgroundPeriodicCheck() async {
           : settings.pushTimeSlots.where((s) => s.enabled).toList();
 
       for (final slot in slotsToCheck) {
-        final slotTime =
-            DateTime(now.year, now.month, now.day, slot.hour, slot.minute);
-        final diff = now.difference(slotTime).inMinutes;
-
-        if (diff >= 0 && diff <= 10) {
+        if (SmartPushService.isWithinPushWindow(now, slot)) {
           AppLogger.i('周期性检查：匹配到推送时间 ${slot.hour}:${slot.minute}，触发推送');
           await pushService.checkAndPush(
               isBackground: true, triggerKind: 'smartPush');
@@ -226,11 +222,7 @@ void backgroundPeriodicCheck() async {
     // 检查每日一言推送
     if (settings.dailyQuotePushEnabled && !pushedRegular) {
       final dailySlot = settings.dailyQuotePushTime;
-      final dailyTime = DateTime(
-          now.year, now.month, now.day, dailySlot.hour, dailySlot.minute);
-      final dailyDiff = now.difference(dailyTime).inMinutes;
-
-      if (dailyDiff >= 0 && dailyDiff <= 10) {
+      if (SmartPushService.isWithinPushWindow(now, dailySlot)) {
         AppLogger.i('周期性检查：当前时间接近每日一言时间 ${dailySlot.formattedTime}，触发推送');
         await pushService.checkAndPush(
             isBackground: true, triggerKind: 'dailyQuote');
