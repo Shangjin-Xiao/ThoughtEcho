@@ -98,7 +98,8 @@ class SmartPushAnalytics extends ChangeNotifier {
         final dt = DateTime.parse(record);
         hourCounts[dt.hour] = (hourCounts[dt.hour] ?? 0) + 1;
       } catch (e) {
-        debugPrint('[SmartPushAnalytics._buildActivityHeatmap] parse failed: $e');
+        debugPrint(
+            '[SmartPushAnalytics._buildActivityHeatmap] parse failed: $e');
       }
     }
 
