@@ -42,7 +42,8 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
         if (shouldExcludeHidden) {
           filtered = filtered
               .where(
-                  (q) => !q.tagIds.contains(_DatabaseServiceBase.hiddenTagId))
+                (q) => !q.tagIds.contains(_DatabaseServiceBase.hiddenTagId),
+              )
               .toList();
         }
 
@@ -170,22 +171,24 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
         });
 
         // 异步执行查询
-        query().then((result) {
-          timeoutTimer?.cancel();
-          if (!completer.isCompleted) {
-            completer.complete(result);
-          }
-        }).catchError((error) {
-          timeoutTimer?.cancel();
-          if (!completer.isCompleted) {
-            logError(
-              '数据库查询失败: $error',
-              error: error,
-              source: 'DatabaseService',
-            );
-            completer.completeError(error);
-          }
-        });
+        query()
+            .then((result) {
+              timeoutTimer?.cancel();
+              if (!completer.isCompleted) {
+                completer.complete(result);
+              }
+            })
+            .catchError((error) {
+              timeoutTimer?.cancel();
+              if (!completer.isCompleted) {
+                logError(
+                  '数据库查询失败: $error',
+                  error: error,
+                  source: 'DatabaseService',
+                );
+                completer.completeError(error);
+              }
+            });
 
         final result = await completer.future;
         timeoutTimer.cancel();
@@ -289,8 +292,9 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
 
     // 时间段筛选
     if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-      final dayPeriodPlaceholders =
-          selectedDayPeriods.map((_) => '?').join(',');
+      final dayPeriodPlaceholders = selectedDayPeriods
+          .map((_) => '?')
+          .join(',');
       conditions.add('q.day_period IN ($dayPeriodPlaceholders)');
       args.addAll(selectedDayPeriods);
     }
@@ -326,11 +330,13 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     }
 
     // 始终使用独立的 LEFT JOIN 来获取所有标签（不受筛选条件影响）
-    joinClause = 'LEFT JOIN quote_tags qt ON q.id = qt.quote_id';
-    groupByClause = 'GROUP BY q.id';
+    // 优化：使用标量子查询替代 LEFT JOIN 和 GROUP BY，避免全表聚合开销
+    joinClause = '';
+    groupByClause = '';
 
-    final where =
-        conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
+    final where = conditions.isNotEmpty
+        ? 'WHERE ${conditions.join(' AND ')}'
+        : '';
 
     final orderByParts = orderBy.split(' ');
     final correctedOrderBy =
@@ -339,13 +345,15 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     /// 修复：始终使用 qt.tag_id 获取所有标签
     // 优化：指定查询列，排除大文本字段(ai_analysis, summary等)以提升列表加载性能
     // 注意：delta_content 必须保留！列表卡片通过 QuoteContent 组件渲染富文本（加粗、图片等）
-    final query = '''
+    // 性能提升：(SELECT GROUP_CONCAT(tag_id) ...) 仅对 LIMIT 返回的数据执行
+    final query =
+        '''
       SELECT
         q.id, q.content, q.date, q.source, q.source_author, q.source_work,
         q.category_id, q.color_hex, q.location, q.latitude, q.longitude,
         q.weather, q.temperature, q.edit_source, q.delta_content, q.day_period,
         q.last_modified, q.favorite_count,
-        GROUP_CONCAT(qt.tag_id) as tag_ids
+        (SELECT GROUP_CONCAT(tag_id) FROM quote_tags WHERE quote_id = q.id) as tag_ids
       $fromClause
       $joinClause
       $where
@@ -376,8 +384,8 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
       final level = queryTime > 1000
           ? '🔴 严重慢查询'
           : queryTime > 500
-              ? '⚠️ 慢查询警告'
-              : 'ℹ️ 性能提示';
+          ? '⚠️ 慢查询警告'
+          : 'ℹ️ 性能提示';
       logDebug('$level: 查询耗时 ${queryTime}ms');
 
       if (queryTime > 500) {
