@@ -333,9 +333,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     final where =
         conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
 
-    final orderByParts = sanitizeOrderBy(orderBy).split(' ');
-    final correctedOrderBy =
-        'q.${orderByParts[0]} ${orderByParts.length > 1 ? orderByParts[1] : ''}';
+    final correctedOrderBy = sanitizeOrderBy(orderBy, prefix: 'q');
 
     /// 修复：始终使用 qt.tag_id 获取所有标签
     // 优化：指定查询列，排除大文本字段(ai_analysis, summary等)以提升列表加载性能

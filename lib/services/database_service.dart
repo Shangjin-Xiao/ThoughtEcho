@@ -168,8 +168,9 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
 
   /// 修复：验证排序参数，防止 SQL 注入
   @visibleForTesting
-  String sanitizeOrderBy(String orderBy) {
-    if (orderBy.isEmpty) return 'date DESC';
+  String sanitizeOrderBy(String orderBy, {String prefix = ''}) {
+    final defaultOrder = prefix.isNotEmpty ? '$prefix.date DESC' : 'date DESC';
+    if (orderBy.isEmpty) return defaultOrder;
 
     // 允许的排序字段
     const allowedColumns = [
@@ -221,11 +222,12 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
         direction = 'ASC';
       }
 
-      validTerms.add('$column $direction');
+      final colWithPrefix = prefix.isNotEmpty ? '$prefix.$column' : column;
+      validTerms.add('$colWithPrefix $direction');
     }
 
     if (validTerms.isEmpty) {
-      return 'date DESC';
+      return defaultOrder;
     }
 
     return validTerms.join(', ');
