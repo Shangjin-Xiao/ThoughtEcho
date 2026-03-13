@@ -22,6 +22,7 @@ import 'performance/day_period_patch_test.dart' as day_period_patch_test;
 
 // Import utility tests
 import 'unit/time_utils_test.dart' as time_utils_test;
+import 'unit/utils/time_utils_test.dart' as time_utils_utils_test;
 import 'unit/utils/motion_photo_utils_test.dart' as motion_photo_utils_test;
 import 'unit/widgets/motion_photo_preview_page_test.dart'
     as motion_photo_preview_page_test;
@@ -50,6 +51,7 @@ void main() {
 
     group('Utility Tests', () {
       time_utils_test.main();
+      time_utils_utils_test.main();
       motion_photo_utils_test.main();
       motion_photo_preview_page_test.main();
     });
