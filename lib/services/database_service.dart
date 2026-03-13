@@ -165,6 +165,74 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
   });
+
+  /// 修复：验证排序参数，防止 SQL 注入
+  @visibleForTesting
+  String sanitizeOrderBy(String orderBy, {String prefix = ''}) {
+    final defaultOrder = prefix.isNotEmpty ? '$prefix.date DESC' : 'date DESC';
+    if (orderBy.isEmpty) return defaultOrder;
+
+    // 允许的排序字段
+    const allowedColumns = [
+      'id',
+      'date',
+      'favorite_count',
+      'content',
+      'category_id',
+      'weather',
+      'day_period',
+      'last_modified',
+      'color_hex'
+    ];
+
+    final validTerms = <String>[];
+    final terms = orderBy.split(',');
+
+    for (var term in terms) {
+      term = term.trim();
+      if (term.isEmpty) continue;
+
+      // 清除前缀（如 q. 或 qt.）
+      String cleanTerm = term;
+      if (cleanTerm.startsWith('q.')) {
+        cleanTerm = cleanTerm.substring(2);
+      } else if (cleanTerm.startsWith('qt.')) {
+        cleanTerm = cleanTerm.substring(3);
+      }
+
+      final parts = cleanTerm.split(RegExp(r'\s+'));
+      if (parts.isEmpty) continue;
+
+      final column = parts[0].toLowerCase();
+
+      // 验证列名
+      if (!allowedColumns.contains(column)) {
+        logDebug('发现不合法的排序字段: $column, 跳过该字段');
+        continue;
+      }
+
+      // 验证排序方向
+      String direction = 'DESC';
+      if (parts.length > 1) {
+        final dir = parts[1].toUpperCase();
+        if (dir == 'ASC' || dir == 'DESC') {
+          direction = dir;
+        }
+      } else if (term.toUpperCase().contains('ASC')) {
+        direction = 'ASC';
+      }
+
+      final colWithPrefix = prefix.isNotEmpty ? '$prefix.$column' : column;
+      validTerms.add('$colWithPrefix $direction');
+    }
+
+    if (validTerms.isEmpty) {
+      return defaultOrder;
+    }
+
+    return validTerms.join(', ');
+  }
+
   Future<void> _checkAndFixDatabaseStructure();
   void _scheduleCacheCleanup();
   void _clearAllCache();
