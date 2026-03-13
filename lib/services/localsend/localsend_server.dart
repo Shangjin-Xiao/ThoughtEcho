@@ -223,12 +223,14 @@ class LocalSendServer {
             try {
               _onReceiveSessionCreated!(tempId, 0, senderAlias);
             } catch (e) {
-              logDebug('[LocalSendServer] onReceiveSessionCreated callback failed: $e');
+              logDebug(
+                  '[LocalSendServer] onReceiveSessionCreated callback failed: $e');
             }
             try {
               approved = await _onApprovalNeeded!(tempId, 0, senderAlias);
             } catch (e) {
-              logDebug('[LocalSendServer] onApprovalNeeded callback failed: $e');
+              logDebug(
+                  '[LocalSendServer] onApprovalNeeded callback failed: $e');
               approved = false;
             }
           }

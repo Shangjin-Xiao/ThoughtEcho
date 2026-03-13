@@ -718,68 +718,69 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                         button: true,
                         label: l10n.actionFavorite,
                         child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          key: widget.favoriteButtonGuideKey,
-                          onTap: widget.onFavorite,
-                          onLongPress: quote.favoriteCount > 0
-                              ? widget.onLongPressFavorite
-                              : null,
-                          borderRadius: BorderRadius.circular(20),
-                          child: Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Stack(
-                              children: [
-                                Icon(
-                                  quote.favoriteCount > 0
-                                      ? Icons.favorite
-                                      : Icons.favorite_border,
-                                  size: 20,
-                                  color: quote.favoriteCount > 0
-                                      ? Colors.red.shade400
-                                      : iconColor,
-                                ),
-                                if (quote.favoriteCount > 0)
-                                  Positioned(
-                                    right: -2,
-                                    top: -2,
-                                    child: Container(
-                                      padding: const EdgeInsets.all(2),
-                                      decoration: BoxDecoration(
-                                        color: Colors.red.shade600,
-                                        borderRadius: BorderRadius.circular(10),
-                                        border: Border.all(
-                                          color: (quote.colorHex == null ||
-                                                  quote.colorHex!.isEmpty)
-                                              ? theme.colorScheme
-                                                  .surfaceContainerLowest
-                                              : cardColor,
-                                          width: 1.5,
+                          color: Colors.transparent,
+                          child: InkWell(
+                            key: widget.favoriteButtonGuideKey,
+                            onTap: widget.onFavorite,
+                            onLongPress: quote.favoriteCount > 0
+                                ? widget.onLongPressFavorite
+                                : null,
+                            borderRadius: BorderRadius.circular(20),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Stack(
+                                children: [
+                                  Icon(
+                                    quote.favoriteCount > 0
+                                        ? Icons.favorite
+                                        : Icons.favorite_border,
+                                    size: 20,
+                                    color: quote.favoriteCount > 0
+                                        ? Colors.red.shade400
+                                        : iconColor,
+                                  ),
+                                  if (quote.favoriteCount > 0)
+                                    Positioned(
+                                      right: -2,
+                                      top: -2,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(2),
+                                        decoration: BoxDecoration(
+                                          color: Colors.red.shade600,
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          border: Border.all(
+                                            color: (quote.colorHex == null ||
+                                                    quote.colorHex!.isEmpty)
+                                                ? theme.colorScheme
+                                                    .surfaceContainerLowest
+                                                : cardColor,
+                                            width: 1.5,
+                                          ),
                                         ),
-                                      ),
-                                      constraints: const BoxConstraints(
-                                        minWidth: 16,
-                                        minHeight: 16,
-                                      ),
-                                      child: Text(
-                                        quote.favoriteCount > 99
-                                            ? '99+'
-                                            : '${quote.favoriteCount}',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.bold,
-                                          height: 1.0,
+                                        constraints: const BoxConstraints(
+                                          minWidth: 16,
+                                          minHeight: 16,
                                         ),
-                                        textAlign: TextAlign.center,
+                                        child: Text(
+                                          quote.favoriteCount > 99
+                                              ? '99+'
+                                              : '${quote.favoriteCount}',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.bold,
+                                            height: 1.0,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
-                      ),
                       ),
                     ),
                     const SizedBox(width: 4),
