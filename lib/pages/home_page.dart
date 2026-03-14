@@ -40,6 +40,7 @@ import 'package:path_provider/path_provider.dart';
 import '../services/svg_to_image_service.dart';
 import '../utils/feature_guide_helper.dart';
 import '../services/draft_service.dart';
+import '../widgets/anniversary_animation_overlay.dart';
 
 class HomePage extends StatefulWidget {
   final int initialPage; // 添加初始页面参数
@@ -443,6 +444,9 @@ class _HomePageState extends State<HomePage>
         );
         _connectivityService!.addListener(_onConnectivityChanged);
       }
+
+      // 检查是否应该显示一周年庆典动画（在其他检查之后，优先级最低）
+      await _checkAndShowAnniversaryAnimation();
     });
 
     // 根据初始页面尝试触发对应的功能引导
@@ -494,6 +498,41 @@ class _HomePageState extends State<HomePage>
         }
       });
     }
+  }
+
+  // 检查是否应该显示一周年庆典动画
+  Future<void> _checkAndShowAnniversaryAnimation() async {
+    if (!mounted) return;
+    final settingsService = context.read<SettingsService>();
+    final settings = settingsService.appSettings;
+
+    // 检查日期范围：2026-03-23 至 2026-04-30
+    final now = DateTime.now();
+    final startDate = DateTime(2026, 3, 23);
+    final endDate = DateTime(2026, 4, 30, 23, 59, 59);
+    final inRange = now.isAfter(startDate) && now.isBefore(endDate);
+
+    // 条件：日期在范围内 + 未显示过 + 动画已启用
+    if (!inRange ||
+        settings.anniversaryShown ||
+        !settings.anniversaryAnimationEnabled) {
+      return;
+    }
+
+    // 标记为已显示
+    await settingsService.setAnniversaryShown(true);
+
+    if (!mounted) return;
+
+    // 显示全屏覆盖动画
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.transparent,
+      builder: (ctx) => AnniversaryAnimationOverlay(
+        onDismiss: () => Navigator.of(ctx).pop(),
+      ),
+    );
   }
 
   // 检查是否有未保存的草稿

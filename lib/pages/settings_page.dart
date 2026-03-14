@@ -33,6 +33,7 @@ import '../utils/feature_guide_helper.dart';
 import 'storage_management_page.dart';
 import 'local_ai_settings_page.dart'; // 导入本地 AI 设置页面
 import 'smart_push_settings_page.dart'; // 导入智能推送设置页面
+import '../widgets/anniversary_animation_overlay.dart'; // 导入一周年动画覆盖层
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -301,6 +302,9 @@ class SettingsPageState extends State<SettingsPage> {
       ),
       body: ListView(
         children: [
+          // 一周年庆典横幅（2026-03-23 至 2026-04-30 期间显示）
+          _buildAnniversaryBanner(context),
+
           // 位置和天气设置 Card
           Card(
             margin: const EdgeInsets.all(8.0),
@@ -1029,6 +1033,74 @@ class SettingsPageState extends State<SettingsPage> {
           ),
 
           // --- 关于信息 Card 结束 ---
+
+          // --- 一周年开发者调试 Card (仅开发者模式可见) ---
+          Consumer<SettingsService>(
+            builder: (context, settingsService, _) {
+              if (!settingsService.appSettings.developerMode) {
+                return const SizedBox.shrink();
+              }
+              final l10n = AppLocalizations.of(context);
+              return Card(
+                margin: const EdgeInsets.all(8.0),
+                child: Column(
+                  children: [
+                    ListTile(
+                      title: Text(l10n.developerAnniversarySection),
+                      leading: const Icon(Icons.cake_outlined),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: Divider(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .outline
+                            .withAlpha((0.2 * 255).round()),
+                      ),
+                    ),
+                    // 启用/禁用周年动画开关
+                    SwitchListTile(
+                      title: Text(l10n.developerAnniversaryEnabled),
+                      subtitle: Text(l10n.developerAnniversaryEnabledDesc),
+                      secondary: const Icon(Icons.celebration_outlined),
+                      value: settingsService.anniversaryAnimationEnabled,
+                      onChanged: (enabled) {
+                        settingsService.setAnniversaryAnimationEnabled(enabled);
+                      },
+                    ),
+                    // 重置"已展示"标志
+                    ListTile(
+                      title: Text(l10n.developerAnniversaryReset),
+                      subtitle: Text(l10n.developerAnniversaryResetDesc),
+                      leading: const Icon(Icons.refresh_outlined),
+                      onTap: () async {
+                        await settingsService.resetAnniversaryShown();
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              AppLocalizations.of(context)
+                                  .developerAnniversaryResetDone,
+                            ),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                    ),
+                    // 预览动画
+                    ListTile(
+                      title: Text(l10n.developerAnniversaryPreview),
+                      subtitle: Text(l10n.developerAnniversaryPreviewDesc),
+                      leading: const Icon(Icons.play_circle_outlined),
+                      onTap: () => _showAnniversaryAnimationInSettings(context),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          // --- 一周年开发者调试 Card 结束 ---
+
           const SizedBox(height: 20), // 底部增加一些间距
         ],
       ),
@@ -1759,5 +1831,98 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
         );
       }
     }
+  }
+
+  // --- 一周年庆典横幅 ---
+  Widget _buildAnniversaryBanner(BuildContext context) {
+    final now = DateTime.now();
+    // 仅在 2026-03-23 至 2026-04-30 期间显示
+    if (now.isBefore(DateTime(2026, 3, 23)) ||
+        now.isAfter(DateTime(2026, 5, 1))) {
+      return const SizedBox.shrink();
+    }
+
+    final l10n = AppLocalizations.of(context);
+
+    return Card(
+      margin: const EdgeInsets.all(8.0),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: () => _showAnniversaryAnimationInSettings(context),
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFFFF6B6B), Color(0xFFFFD700)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Text('🎂', style: TextStyle(fontSize: 24)),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              l10n.anniversaryBannerTitle,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        l10n.anniversaryBannerSubtitle,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        l10n.anniversaryBannerTap,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.7),
+                          fontSize: 11,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.celebration,
+                  color: Colors.white,
+                  size: 40,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAnniversaryAnimationInSettings(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      barrierColor: Colors.transparent,
+      builder: (ctx) => AnniversaryAnimationOverlay(
+        onDismiss: () => Navigator.of(ctx).pop(),
+      ),
+    );
   }
 }

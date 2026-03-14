@@ -189,6 +189,30 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 一周年庆典动画是否已显示过
+  bool get anniversaryShown => _appSettings.anniversaryShown;
+  Future<void> setAnniversaryShown(bool shown) async {
+    _appSettings = _appSettings.copyWith(anniversaryShown: shown);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  // 一周年庆典动画是否启用（开发者模式控制）
+  bool get anniversaryAnimationEnabled =>
+      _appSettings.anniversaryAnimationEnabled;
+  Future<void> setAnniversaryAnimationEnabled(bool enabled) async {
+    _appSettings = _appSettings.copyWith(anniversaryAnimationEnabled: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  /// 重置一周年动画已显示标记（开发者模式使用）
+  Future<void> resetAnniversaryShown() async {
+    _appSettings = _appSettings.copyWith(anniversaryShown: false);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
   SettingsService(this._prefs);
 
   /// 创建SettingsService实例的静态工厂方法

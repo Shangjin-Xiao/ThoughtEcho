@@ -3511,5 +3511,19 @@
   "mediaTypeImage": "图片",
   "mediaTypeVideo": "视频",
   "mediaTypeAudio": "音频",
-  "mediaTypeMedia": "媒体"
+  "mediaTypeMedia": "媒体",
+  "anniversaryTitle": "心迹 · ThoughtEcho",
+  "anniversarySubtitle": "感恩有你，一路同行",
+  "anniversaryEnterApp": "进入应用",
+  "anniversaryBannerTitle": "心迹 ThoughtEcho 一周年",
+  "anniversaryBannerSubtitle": "感恩有你，一路同行 · 2025.3.23 - 2026.3.23",
+  "anniversaryBannerTap": "点击重温庆典动画",
+  "developerAnniversarySection": "一周年庆典控制",
+  "developerAnniversaryEnabled": "启用一周年动画",
+  "developerAnniversaryEnabledDesc": "开关控制是否在启动时展示庆典动画",
+  "developerAnniversaryReset": "重置已显示标记",
+  "developerAnniversaryResetDesc": "重置后下次进入应用将再次播放动画",
+  "developerAnniversaryResetDone": "已重置，下次进入应用将播放动画",
+  "developerAnniversaryPreview": "立即预览动画",
+  "developerAnniversaryPreviewDesc": "点击立即播放一周年庆典动画"
 }
