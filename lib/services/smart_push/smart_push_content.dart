@@ -14,10 +14,12 @@ extension SmartPushContentSelection on SmartPushService {
   /// 每日一言仅作为完全无笔记时的最终兜底。
   Future<_SmartSelectResult> _smartSelectContent() async {
     final now = DateTime.now();
-    final allNotes = await _databaseService.getQuotesForSmartPush(limit: 5000);
 
-    AppLogger.i(
-      '智能选择：开始内容选择 (总笔记数: ${allNotes.length})',
+    // 使用 warning 级别确保后台 Isolate 中也能持久化到日志数据库
+    AppLogger.w('智能选择：开始查询数据库...');
+    final allNotes = await _databaseService.getQuotesForSmartPush(limit: 5000);
+    AppLogger.w(
+      '智能选择：数据库查询完成 (总笔记数: ${allNotes.length})',
     );
 
     if (allNotes.isEmpty) {
@@ -59,8 +61,8 @@ extension SmartPushContentSelection on SmartPushService {
     final sameLocationNotes = asyncResults[0];
     final sameWeatherNotes = asyncResults[1];
 
-    // 记录详细的筛选结果（诊断日志，帮助排查"为什么没推送笔记"）
-    AppLogger.i(
+    // 记录详细的筛选结果（使用 warning 级别确保后台可见）
+    AppLogger.w(
       '智能选择筛选结果：'
       'yearAgo=${filterResult.yearAgoQuotes.length}, '
       'sameTime=${filterResult.sameTimeQuotes.length}, '
@@ -160,14 +162,14 @@ extension SmartPushContentSelection on SmartPushService {
     if (availableContent.isNotEmpty) {
       final availableTypes = availableContent.keys.toList();
 
-      AppLogger.i(
+      AppLogger.w(
         '智能选择：可用内容类型 $availableTypes',
       );
 
       // 那年今日始终优先（高纪念价值）
       if (availableContent.containsKey('yearAgoToday')) {
         final candidate = availableContent['yearAgoToday']!;
-        AppLogger.i('智能选择：命中那年今日，优先推送');
+        AppLogger.w('智能选择：命中那年今日，优先推送');
         return _SmartSelectResult(
           note: candidate.note,
           title: candidate.title,
@@ -181,7 +183,7 @@ extension SmartPushContentSelection on SmartPushService {
       final candidate = availableContent[selectedType];
 
       if (candidate != null) {
-        AppLogger.i(
+        AppLogger.w(
           '智能选择：Thompson Sampling 选中 $selectedType',
         );
         return _SmartSelectResult(
@@ -209,7 +211,7 @@ extension SmartPushContentSelection on SmartPushService {
     if (historyNotes.isNotEmpty) {
       final note = _selectUnpushedNote(historyNotes);
       if (note != null) {
-        AppLogger.i(
+        AppLogger.w(
           '智能选择：特定筛选器未命中，兜底随机选择历史笔记 '
           '(总笔记数: ${allNotes.length}, 历史笔记: ${historyNotes.length})',
         );

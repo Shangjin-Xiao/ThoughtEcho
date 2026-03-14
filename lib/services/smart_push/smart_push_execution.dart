@@ -202,7 +202,7 @@ extension SmartPushExecution on SmartPushService {
       bool isDailyQuote = false;
       String contentType = 'randomMemory';
 
-      AppLogger.i('执行智能推送，模式: ${_settings.pushMode.name}');
+      AppLogger.w('执行智能推送，模式: ${_settings.pushMode.name}');
 
       switch (_settings.pushMode) {
         case PushMode.smart:
@@ -282,6 +282,11 @@ extension SmartPushExecution on SmartPushService {
           noteToShow,
           title: title,
           contentType: contentType,
+        );
+
+        AppLogger.w(
+          '推送成功 [${_settings.pushMode.name}] (contentType: $contentType): '
+          '${noteToShow.content.substring(0, min(50, noteToShow.content.length))}...',
         );
 
         // 记录推送历史（避免重复推送，测试模式也不记录）
