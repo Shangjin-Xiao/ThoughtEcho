@@ -20,6 +20,8 @@ class AppSettings {
   final String? defaultAuthor; // 新增：默认作者（自动填充）
   final String? defaultSource; // 新增：默认出处（自动填充）
   final List<String> defaultTagIds; // 新增：默认标签 ID 列表（自动填充）
+  final bool anniversaryShown; // 一周年庆典动画是否已显示过
+  final bool anniversaryAnimationEnabled; // 一周年庆典动画是否启用（开发者模式控制）
 
   AppSettings({
     this.hitokotoType = 'a,b,c,d,e,f,g,h,i,j,k', // 默认全选所有类型
@@ -43,6 +45,8 @@ class AppSettings {
     this.defaultAuthor, // 默认无自动填充作者
     this.defaultSource, // 默认无自动填充出处
     this.defaultTagIds = const [], // 默认无自动填充标签
+    this.anniversaryShown = false, // 默认未显示过
+    this.anniversaryAnimationEnabled = true, // 默认启用庆典动画
   });
 
   Map<String, dynamic> toJson() {
@@ -68,6 +72,8 @@ class AppSettings {
       'defaultAuthor': defaultAuthor,
       'defaultSource': defaultSource,
       'defaultTagIds': defaultTagIds,
+      'anniversaryShown': anniversaryShown,
+      'anniversaryAnimationEnabled': anniversaryAnimationEnabled,
     };
   }
 
@@ -97,6 +103,8 @@ class AppSettings {
       defaultSource: map['defaultSource'] as String?,
       defaultTagIds:
           (map['defaultTagIds'] as List<dynamic>?)?.cast<String>() ?? const [],
+      anniversaryShown: map['anniversaryShown'] ?? false,
+      anniversaryAnimationEnabled: map['anniversaryAnimationEnabled'] ?? true,
     );
   }
 
@@ -122,6 +130,8 @@ class AppSettings {
         defaultAuthor: null,
         defaultSource: null,
         defaultTagIds: const [],
+        anniversaryShown: false,
+        anniversaryAnimationEnabled: true,
       );
 
   /// 使用特殊标记来区分"未指定"和"设置为null（跟随系统）"
@@ -150,6 +160,8 @@ class AppSettings {
     String? defaultSource,
     bool clearDefaultSource = false,
     List<String>? defaultTagIds,
+    bool? anniversaryShown,
+    bool? anniversaryAnimationEnabled,
   }) {
     return AppSettings(
       hitokotoType: hitokotoType ?? this.hitokotoType,
@@ -181,6 +193,9 @@ class AppSettings {
       defaultSource:
           clearDefaultSource ? null : (defaultSource ?? this.defaultSource),
       defaultTagIds: defaultTagIds ?? this.defaultTagIds,
+      anniversaryShown: anniversaryShown ?? this.anniversaryShown,
+      anniversaryAnimationEnabled:
+          anniversaryAnimationEnabled ?? this.anniversaryAnimationEnabled,
     );
   }
 }
