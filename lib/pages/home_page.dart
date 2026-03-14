@@ -41,6 +41,7 @@ import '../services/svg_to_image_service.dart';
 import '../utils/feature_guide_helper.dart';
 import '../services/draft_service.dart';
 import '../widgets/anniversary_animation_overlay.dart';
+import '../utils/anniversary_display_utils.dart';
 
 class HomePage extends StatefulWidget {
   final int initialPage; // 添加初始页面参数
@@ -506,16 +507,13 @@ class _HomePageState extends State<HomePage>
     final settingsService = context.read<SettingsService>();
     final settings = settingsService.appSettings;
 
-    // 检查日期范围：2026-03-23 至 2026-04-30
     final now = DateTime.now();
-    final startDate = DateTime(2026, 3, 23);
-    final endDate = DateTime(2026, 4, 30, 23, 59, 59);
-    final inRange = now.isAfter(startDate) && now.isBefore(endDate);
-
-    // 条件：日期在范围内 + 未显示过 + 动画已启用
-    if (!inRange ||
-        settings.anniversaryShown ||
-        !settings.anniversaryAnimationEnabled) {
+    final shouldShow = AnniversaryDisplayUtils.shouldAutoShowAnimation(
+      now: now,
+      anniversaryShown: settings.anniversaryShown,
+      anniversaryAnimationEnabled: settings.anniversaryAnimationEnabled,
+    );
+    if (!shouldShow) {
       return;
     }
 
@@ -527,6 +525,7 @@ class _HomePageState extends State<HomePage>
     // 显示全屏覆盖动画
     await showDialog<void>(
       context: context,
+      useSafeArea: false,
       barrierDismissible: false,
       barrierColor: Colors.transparent,
       builder: (ctx) => AnniversaryAnimationOverlay(
