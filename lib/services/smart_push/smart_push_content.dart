@@ -257,7 +257,7 @@ extension SmartPushContentSelection on SmartPushService {
       return '🌤️ 同样的天气';
     }
 
-    return '⏰ 此刻，你曾写下';
+    return '💭 心迹';
   }
 
   /// 截断内容

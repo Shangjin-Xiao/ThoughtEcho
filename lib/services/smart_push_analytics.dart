@@ -40,6 +40,7 @@ class SmartPushAnalytics extends ChangeNotifier {
     'sameWeather': 2.0,
     'monthAgoToday': 2.5,
     'weekAgoToday': 2.0,
+    'pastNote': 2.0, // PushMode.both 随机历史笔记
     'dailyQuote': 1.5,
   };
 
