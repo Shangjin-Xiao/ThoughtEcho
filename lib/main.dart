@@ -154,7 +154,7 @@ Future<void> main() async {
       // 初始化日志系统
       AppLogger.initialize();
 
-      // 初始化全局异常处理器
+      // 初始化全局异常处理器（补充 isolate 捕获，并声明 platform channel 全局捕获限制）
       GlobalExceptionHandler.initialize();
 
       // 全局记录未捕获的异步错误 - 所有平台都启用，Windows平台简化处理
@@ -371,8 +371,6 @@ Future<void> main() async {
             ],
             child: Builder(
               builder: (context) {
-                // 处理延迟的错误
-                GlobalExceptionHandler.processDeferredErrors();
                 return MyApp(
                   navigatorKey: navigatorKey,
                   isEmergencyMode: _isEmergencyMode,

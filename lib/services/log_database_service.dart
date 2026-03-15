@@ -114,6 +114,125 @@ abstract class LogStorage {
   Future<void> close();
 }
 
+class InMemoryLogStorage implements LogStorage {
+  final List<LogEntry> _logs = [];
+  bool _initialized = false;
+
+  @override
+  Future<void> initialize() async {
+    _initialized = true;
+  }
+
+  Future<void> _ensureInitialized() async {
+    if (!_initialized) {
+      await initialize();
+    }
+  }
+
+  @override
+  Future<int> insertLog(Map<String, dynamic> log) async {
+    await _ensureInitialized();
+    _logs.add(LogEntry.fromMap(log));
+    return _logs.length;
+  }
+
+  @override
+  Future<void> insertLogs(List<Map<String, dynamic>> logs) async {
+    await _ensureInitialized();
+    _logs.addAll(logs.map(LogEntry.fromMap));
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> queryLogs({
+    String? level,
+    String? searchText,
+    String? source,
+    String? startDate,
+    String? endDate,
+    int limit = 100,
+    int offset = 0,
+    String orderBy = 'timestamp DESC',
+  }) async {
+    await _ensureInitialized();
+
+    var logs = List<LogEntry>.from(_logs);
+
+    if (level != null && level.isNotEmpty) {
+      logs = logs.where((log) => log.level == level).toList();
+    }
+
+    if (searchText != null && searchText.isNotEmpty) {
+      final normalized = searchText.toLowerCase();
+      logs = logs.where((log) {
+        return log.message.toLowerCase().contains(normalized) ||
+            (log.error ?? '').toLowerCase().contains(normalized);
+      }).toList();
+    }
+
+    if (source != null && source.isNotEmpty) {
+      final normalized = source.toLowerCase();
+      logs = logs.where((log) {
+        return (log.source ?? '').toLowerCase().contains(normalized);
+      }).toList();
+    }
+
+    if (startDate != null) {
+      logs =
+          logs.where((log) => log.timestamp.compareTo(startDate) >= 0).toList();
+    }
+
+    if (endDate != null) {
+      logs =
+          logs.where((log) => log.timestamp.compareTo(endDate) <= 0).toList();
+    }
+
+    logs.sort((a, b) {
+      return orderBy.toLowerCase().contains('desc')
+          ? b.timestamp.compareTo(a.timestamp)
+          : a.timestamp.compareTo(b.timestamp);
+    });
+
+    final start = offset < logs.length ? offset : logs.length;
+    final end = start + limit < logs.length ? start + limit : logs.length;
+    return logs.sublist(start, end).map((log) => log.toMap()).toList();
+  }
+
+  @override
+  Future<int> getLogCount() async {
+    await _ensureInitialized();
+    return _logs.length;
+  }
+
+  @override
+  Future<int> deleteOldLogs(int maxLogCount) async {
+    await _ensureInitialized();
+    if (_logs.length <= maxLogCount) {
+      return 0;
+    }
+
+    _logs.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    final deleteCount = _logs.length - maxLogCount;
+    _logs.removeRange(0, deleteCount);
+    return deleteCount;
+  }
+
+  @override
+  Future<int> clearAllLogs() async {
+    await _ensureInitialized();
+    final count = _logs.length;
+    _logs.clear();
+    return count;
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getRecentLogs(int limit) async {
+    return queryLogs(limit: limit);
+  }
+
+  @override
+  Future<void> close() async {}
+}
+
 /// Web 平台的日志存储实现（使用 SharedPreferences）
 class WebLogStorage implements LogStorage {
   static const String _logStorageKey = 'app_logs_storage';
@@ -696,6 +815,7 @@ class LogDatabaseService {
   // 日志存储实现
   LogStorage? _storage;
   bool _initialized = false;
+  String _storageType = kIsWeb ? 'SharedPreferences' : 'SQLite';
 
   // 获取数据库实例
   Future<void> get ready async {
@@ -713,13 +833,22 @@ class LogDatabaseService {
       if (kIsWeb) {
         // 在Web平台上使用SharedPreferences存储
         _storage = WebLogStorage();
+        _storageType = 'SharedPreferences';
       } else {
         // 在原生平台上使用SQLite存储
         _storage = NativeLogStorage();
+        _storageType = 'SQLite';
       }
 
       // 初始化存储
-      await _storage!.initialize();
+      try {
+        await _storage!.initialize();
+      } catch (e) {
+        logDebug('初始化首选日志存储失败，回退到内存存储: $e');
+        _storage = InMemoryLogStorage();
+        _storageType = 'Memory';
+        await _storage!.initialize();
+      }
 
       // 设置初始化完成标志
       _initialized = true;
@@ -743,7 +872,7 @@ class LogDatabaseService {
   Future<Map<String, dynamic>> getDatabaseStatus() async {
     final status = <String, dynamic>{
       'initialized': _initialized,
-      'storage_type': kIsWeb ? 'SharedPreferences' : 'SQLite',
+      'storage_type': _storageType,
     };
 
     if (_initialized && _storage != null) {
