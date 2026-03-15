@@ -3333,6 +3333,7 @@
   "smartPushContentType": "推送模式",
   "smartPushDailyQuote": "每日一言",
   "smartPushDailyQuoteDesc": "推送精选语录",
+  "smartPushDailyQuoteIndependentNote": "每日一言独立于智能推送，两者互不影响，可分别开启或关闭。",
   "smartPushPastNotes": "往日笔记",
   "smartPushPastNotesDesc": "推送历史笔记回顾",
   "smartPushModeSmart": "智能推送",
