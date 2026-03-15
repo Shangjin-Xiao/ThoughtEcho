@@ -571,6 +571,19 @@ class _HomePageState extends State<HomePage>
     );
   }
 
+  /// 开发者模式预览一周年动画
+  void _showAnniversaryPreview(BuildContext context) {
+    showDialog<void>(
+      context: context,
+      useSafeArea: false,
+      barrierDismissible: false,
+      barrierColor: Colors.transparent,
+      builder: (ctx) => AnniversaryAnimationOverlay(
+        onDismiss: () => Navigator.of(ctx).pop(),
+      ),
+    );
+  }
+
   // 检查是否有未保存的草稿
   Future<bool> _checkDraftRecovery() async {
     if (!mounted) return false;
@@ -1884,6 +1897,20 @@ class _HomePageState extends State<HomePage>
                             child: CircularProgressIndicator(strokeWidth: 2),
                           ),
                         ),
+
+                      // 开发者模式下：一周年动画预览按钮
+                      Consumer<SettingsService>(
+                        builder: (context, settingsSvc, _) {
+                          if (!settingsSvc.appSettings.developerMode) {
+                            return const SizedBox.shrink();
+                          }
+                          return IconButton(
+                            icon: const Icon(Icons.cake_outlined),
+                            tooltip: l10n.developerAnniversaryPreview,
+                            onPressed: () => _showAnniversaryPreview(context),
+                          );
+                        },
+                      ),
 
                       // 显示位置和天气信息（支持多种状态）
                       _buildLocationWeatherDisplay(

@@ -3,7 +3,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:lottie/lottie.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 
 class AnniversaryAnimationOverlay extends StatefulWidget {
@@ -20,13 +20,11 @@ class _AnniversaryAnimationOverlayState
     extends State<AnniversaryAnimationOverlay> with TickerProviderStateMixin {
   late final AnimationController _entryController;
   late final AnimationController _confettiController;
-  late final AnimationController _fireworksController;
-  AnimationController? _lottieController;
+  late final AnimationController _cannonController;
   bool _showButton = false;
   bool _isVisible = false;
-  bool _cakeLoaded = false;
   final List<_ConfettiPiece> _confettiPieces = [];
-  final List<_FireworkBurst> _fireworkBursts = [];
+  final List<_CannonBurst> _cannonBursts = [];
 
   static const _immersiveOverlayStyle = SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
@@ -42,21 +40,22 @@ class _AnniversaryAnimationOverlayState
     super.initState();
     _entryController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 400),
     );
 
     _confettiController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 5),
+      duration: const Duration(seconds: 6),
     )..repeat();
 
-    _fireworksController = AnimationController(
+    // 礼花炮：每 3s 一轮
+    _cannonController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2400),
+      duration: const Duration(milliseconds: 3000),
     )..repeat();
 
     _setupConfetti();
-    _setupFireworks();
+    _setupCannonBursts();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setSystemUIOverlayStyle(_immersiveOverlayStyle);
 
@@ -66,48 +65,101 @@ class _AnniversaryAnimationOverlayState
         _isVisible = true;
       });
       _entryController.forward();
+
+      // 蛋糕直接显示（SVG无需加载回调），1.5s后出现按钮
+      Future.delayed(const Duration(milliseconds: 1500), () {
+        if (!mounted) return;
+        setState(() {
+          _showButton = true;
+        });
+      });
     });
   }
 
   void _setupConfetti() {
     final random = math.Random();
-    for (int i = 0; i < 28; i++) {
-      _confettiPieces.add(_ConfettiPiece(
-        color: _getConfettiColor(random),
-        size: random.nextDouble() * 10 + 6,
-        leftPercent: random.nextDouble(),
-        startDelay: random.nextDouble(),
-        duration: 4.0 + random.nextDouble() * 2.0,
-        sway: 10 + random.nextDouble() * 26,
-        isCircle: random.nextBool(),
-      ));
-    }
-  }
-
-  void _setupFireworks() {
-    final random = math.Random();
-    for (int i = 0; i < 5; i++) {
-      _fireworkBursts.add(
-        _FireworkBurst(
-          xPercent: 0.16 + random.nextDouble() * 0.68,
-          yPercent: 0.12 + random.nextDouble() * 0.3,
-          radius: 46 + random.nextDouble() * 28,
-          startDelay: i / 5,
+    for (int i = 0; i < 36; i++) {
+      _confettiPieces.add(
+        _ConfettiPiece(
           color: _getConfettiColor(random),
-          particleCount: 10 + random.nextInt(6),
+          size: random.nextDouble() * 9 + 5,
+          leftPercent: random.nextDouble(),
+          startDelay: random.nextDouble(),
+          duration: 4.5 + random.nextDouble() * 2.0,
+          sway: 12 + random.nextDouble() * 28,
+          isCircle: random.nextBool(),
         ),
       );
     }
   }
 
+  void _setupCannonBursts() {
+    final random = math.Random();
+    // 左右各一门礼花炮，各3波粒子
+    final positions = [
+      // 左侧炮口
+      _CannonBurst(
+        originXPercent: 0.04,
+        originYPercent: 0.72,
+        spreadAngle: -math.pi / 5, // 向右上方喷射
+        color: _getConfettiColor(random),
+        particleCount: 18,
+        startDelay: 0.0,
+      ),
+      _CannonBurst(
+        originXPercent: 0.04,
+        originYPercent: 0.72,
+        spreadAngle: -math.pi / 5,
+        color: _getConfettiColor(random),
+        particleCount: 18,
+        startDelay: 0.33,
+      ),
+      _CannonBurst(
+        originXPercent: 0.04,
+        originYPercent: 0.72,
+        spreadAngle: -math.pi / 5,
+        color: _getConfettiColor(random),
+        particleCount: 18,
+        startDelay: 0.66,
+      ),
+      // 右侧炮口
+      _CannonBurst(
+        originXPercent: 0.96,
+        originYPercent: 0.72,
+        spreadAngle: -math.pi * 4 / 5, // 向左上方喷射
+        color: _getConfettiColor(random),
+        particleCount: 18,
+        startDelay: 0.16,
+      ),
+      _CannonBurst(
+        originXPercent: 0.96,
+        originYPercent: 0.72,
+        spreadAngle: -math.pi * 4 / 5,
+        color: _getConfettiColor(random),
+        particleCount: 18,
+        startDelay: 0.49,
+      ),
+      _CannonBurst(
+        originXPercent: 0.96,
+        originYPercent: 0.72,
+        spreadAngle: -math.pi * 4 / 5,
+        color: _getConfettiColor(random),
+        particleCount: 18,
+        startDelay: 0.82,
+      ),
+    ];
+    _cannonBursts.addAll(positions);
+  }
+
   Color _getConfettiColor(math.Random random) {
     const colors = [
-      Color(0xFFFFD700), // Gold
-      Color(0xFFFF6B6B), // Red
-      Color(0xFF4ECDC4), // Teal
-      Color(0xFF45B7D1), // Sky
-      Color(0xFF96CEB4), // Green
-      Color(0xFFFFEEAD), // Yellow
+      Color(0xFFFFD700), // 金
+      Color(0xFFFF6B9D), // 粉红
+      Color(0xFF4ECDC4), // 青
+      Color(0xFF45B7D1), // 天蓝
+      Color(0xFF96CEB4), // 薄荷绿
+      Color(0xFFB48EE0), // 浅紫
+      Color(0xFFFF8C42), // 橙
     ];
     return colors[random.nextInt(colors.length)];
   }
@@ -116,29 +168,9 @@ class _AnniversaryAnimationOverlayState
   void dispose() {
     _entryController.dispose();
     _confettiController.dispose();
-    _fireworksController.dispose();
-    _lottieController?.dispose();
+    _cannonController.dispose();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
-  }
-
-  void _handleLottieLoaded(LottieComposition composition) {
-    _lottieController?.dispose();
-    setState(() {
-      _cakeLoaded = true;
-      _lottieController = AnimationController(
-        vsync: this,
-        duration: composition.duration,
-      );
-    });
-    _lottieController!.addStatusListener((status) {
-      if (status == AnimationStatus.completed && !_showButton) {
-        setState(() {
-          _showButton = true;
-        });
-      }
-    });
-    _lottieController!.forward();
   }
 
   @override
@@ -149,43 +181,32 @@ class _AnniversaryAnimationOverlayState
 
     return AnimatedOpacity(
       opacity: _isVisible ? 1.0 : 0.0,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 400),
       child: AnnotatedRegion<SystemUiOverlayStyle>(
         value: _immersiveOverlayStyle,
         child: Scaffold(
           backgroundColor: Colors.transparent,
           body: Stack(
             children: [
+              // 背景层：毛玻璃模糊 + 轻度深色遮罩，保留程序内容可见
               Positioned.fill(
-                child: DecoratedBox(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Color(0xFF1B1036),
-                        Color(0xFF24123B),
-                        Color(0xFF09070F),
-                      ],
-                    ),
-                  ),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                    child: Container(
-                      color: Colors.black.withValues(alpha: 0.28),
-                    ),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                  child: Container(
+                    color: Colors.black.withValues(alpha: 0.38),
                   ),
                 ),
               ),
+              // 顶部微弱光晕
               Positioned.fill(
                 child: IgnorePointer(
                   child: DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: RadialGradient(
-                        center: const Alignment(0, -0.55),
-                        radius: 1.05,
+                        center: const Alignment(0, -0.6),
+                        radius: 0.9,
                         colors: [
-                          const Color(0xFFFFD36B).withValues(alpha: 0.22),
+                          const Color(0xFFB48EE0).withValues(alpha: 0.18),
                           Colors.transparent,
                         ],
                       ),
@@ -193,80 +214,52 @@ class _AnniversaryAnimationOverlayState
                   ),
                 ),
               ),
-              Positioned.fill(child: _buildFireworksLayer()),
-              ..._confettiPieces
-                  .map((piece) => _buildConfettiWidget(piece, size)),
+              // 礼花炮粒子层
+              Positioned.fill(child: _buildCannonLayer()),
+              // 彩带层
+              ..._confettiPieces.map((p) => _buildConfettiWidget(p, size)),
+              // 中央毛玻璃卡片
               Center(
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(28),
                   child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                    filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
                     child: Container(
                       width: glassCardWidth,
-                      padding: const EdgeInsets.fromLTRB(32, 28, 32, 32),
+                      padding: const EdgeInsets.fromLTRB(28, 24, 28, 28),
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.14),
+                        color: Colors.white.withValues(alpha: 0.16),
                         borderRadius: BorderRadius.circular(28),
                         border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.24),
+                          color: Colors.white.withValues(alpha: 0.28),
                           width: 1.2,
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.24),
-                            blurRadius: 34,
-                            offset: const Offset(0, 18),
+                            color: Colors.black.withValues(alpha: 0.20),
+                            blurRadius: 30,
+                            offset: const Offset(0, 14),
                           ),
                         ],
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          // SVG 蛋糕
                           SizedBox(
-                            width: 220,
-                            height: 220,
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                DecoratedBox(
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    gradient: RadialGradient(
-                                      colors: [
-                                        const Color(0xFFFFF0BF)
-                                            .withValues(alpha: 0.34),
-                                        Colors.transparent,
-                                      ],
-                                    ),
-                                  ),
-                                  child: const SizedBox(
-                                    width: 176,
-                                    height: 176,
-                                  ),
-                                ),
-                                AnimatedOpacity(
-                                  opacity: _cakeLoaded ? 0.0 : 1.0,
-                                  duration: const Duration(milliseconds: 240),
-                                  child: const Icon(
-                                    Icons.cake,
-                                    size: 88,
-                                    color: Color(0xFFFFD36B),
-                                  ),
-                                ),
-                                RepaintBoundary(
-                                  child: Lottie.asset(
-                                    'assets/lottie/anniversary_cake.json',
-                                    controller: _lottieController,
-                                    repeat: false,
-                                    animate: false,
-                                    fit: BoxFit.contain,
-                                    onLoaded: _handleLottieLoaded,
-                                  ),
-                                ),
-                              ],
+                            width: 200,
+                            height: 200,
+                            child: SvgPicture.asset(
+                              'assets/svg/anniversary_cake.svg',
+                              fit: BoxFit.contain,
+                              placeholderBuilder: (context) => const Icon(
+                                Icons.cake,
+                                size: 88,
+                                color: Color(0xFFFFD36B),
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 20),
+                          const SizedBox(height: 16),
                           Text(
                             l10n.anniversaryTitle,
                             textAlign: TextAlign.center,
@@ -289,7 +282,7 @@ class _AnniversaryAnimationOverlayState
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               fontSize: 15,
-                              color: Colors.white.withValues(alpha: 0.85),
+                              color: Colors.white.withValues(alpha: 0.88),
                               shadows: const [
                                 Shadow(
                                   color: Colors.black26,
@@ -303,21 +296,22 @@ class _AnniversaryAnimationOverlayState
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 12,
-                              vertical: 6,
+                              vertical: 5,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.09),
+                              color: Colors.white.withValues(alpha: 0.10),
                               borderRadius: BorderRadius.circular(999),
                               border: Border.all(
-                                color: const Color(0xFFFFD700)
-                                    .withValues(alpha: 0.45),
+                                color: const Color(0xFFB48EE0).withValues(
+                                  alpha: 0.55,
+                                ),
                               ),
                             ),
                             child: const Text(
                               'ThoughtEcho · 1st Anniversary',
                               style: TextStyle(
-                                fontSize: 13,
-                                color: Color(0xFFFFD700),
+                                fontSize: 12,
+                                color: Color(0xFFD4AAFF),
                                 letterSpacing: 1.2,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -328,7 +322,7 @@ class _AnniversaryAnimationOverlayState
                             duration: const Duration(milliseconds: 600),
                             child: Column(
                               children: [
-                                const SizedBox(height: 24),
+                                const SizedBox(height: 20),
                                 FilledButton.icon(
                                   onPressed:
                                       _showButton ? widget.onDismiss : null,
@@ -370,14 +364,14 @@ class _AnniversaryAnimationOverlayState
     );
   }
 
-  Widget _buildFireworksLayer() {
+  Widget _buildCannonLayer() {
     return AnimatedBuilder(
-      animation: _fireworksController,
+      animation: _cannonController,
       builder: (context, child) {
         return CustomPaint(
-          painter: _FireworksPainter(
-            progress: _fireworksController.value,
-            bursts: _fireworkBursts,
+          painter: _CannonPainter(
+            progress: _cannonController.value,
+            bursts: _cannonBursts,
           ),
           child: const SizedBox.expand(),
         );
@@ -391,14 +385,14 @@ class _AnniversaryAnimationOverlayState
       builder: (context, child) {
         final cycleProgress =
             (_confettiController.value + piece.startDelay) % 1.0;
-        final progress = math.min(1.0, cycleProgress * (5 / piece.duration));
-        double yPos = (progress * (screenSize.height + 100)) - 50;
-        double xOffset = math.sin(progress * math.pi * 4) * piece.sway;
-        double rotation = progress * math.pi * 6;
-        final opacity = progress < 0.12
-            ? progress / 0.12
-            : progress > 0.82
-                ? (1 - progress) / 0.18
+        final progress = math.min(1.0, cycleProgress * (6 / piece.duration));
+        final yPos = (progress * (screenSize.height + 100)) - 50;
+        final xOffset = math.sin(progress * math.pi * 4) * piece.sway;
+        final rotation = progress * math.pi * 6;
+        final opacity = progress < 0.1
+            ? progress / 0.1
+            : progress > 0.85
+                ? (1 - progress) / 0.15
                 : 1.0;
 
         return Positioned(
@@ -410,10 +404,12 @@ class _AnniversaryAnimationOverlayState
               opacity: opacity.clamp(0.0, 1.0),
               child: Container(
                 width: piece.size,
-                height: piece.size,
+                height: piece.isCircle ? piece.size : piece.size * 0.45,
                 decoration: BoxDecoration(
                   color: piece.color,
                   shape: piece.isCircle ? BoxShape.circle : BoxShape.rectangle,
+                  borderRadius:
+                      piece.isCircle ? null : BorderRadius.circular(1.5),
                 ),
               ),
             ),
@@ -444,76 +440,114 @@ class _ConfettiPiece {
   });
 }
 
-class _FireworkBurst {
-  final double xPercent;
-  final double yPercent;
-  final double radius;
-  final double startDelay;
+/// 礼花炮爆发数据
+class _CannonBurst {
+  final double originXPercent; // 炮口 x 位置（屏幕比例）
+  final double originYPercent; // 炮口 y 位置（屏幕比例）
+  final double spreadAngle; // 喷射中心角（弧度，0=向右，-pi/2=向上）
   final Color color;
   final int particleCount;
+  final double startDelay; // 0.0-1.0，相对于炮管周期的延迟
 
-  _FireworkBurst({
-    required this.xPercent,
-    required this.yPercent,
-    required this.radius,
-    required this.startDelay,
+  const _CannonBurst({
+    required this.originXPercent,
+    required this.originYPercent,
+    required this.spreadAngle,
     required this.color,
     required this.particleCount,
+    required this.startDelay,
   });
 }
 
-class _FireworksPainter extends CustomPainter {
+/// 礼花炮绘制器：每个 burst 向扇形方向喷出粒子流，粒子受重力下落
+class _CannonPainter extends CustomPainter {
   final double progress;
-  final List<_FireworkBurst> bursts;
+  final List<_CannonBurst> bursts;
 
-  const _FireworksPainter({required this.progress, required this.bursts});
+  const _CannonPainter({required this.progress, required this.bursts});
+
+  static const double _spreadHalfAngle = math.pi / 5.5; // 喷射扇角半宽
+  static const double _gravity = 0.35; // 模拟重力（px/unit²）
 
   @override
   void paint(Canvas canvas, Size size) {
+    final random = math.Random(42); // 固定 seed，保证粒子路径一致
+
     for (final burst in bursts) {
       final localProgress = (progress + burst.startDelay) % 1.0;
-      final wave = Curves.easeOut.transform(localProgress);
-      final center = Offset(
-        size.width * burst.xPercent,
-        size.height * burst.yPercent,
-      );
-      final alpha = localProgress < 0.78
-          ? (1 - (localProgress / 0.78)).clamp(0.0, 1.0)
-          : 0.0;
-      if (alpha <= 0) {
-        continue;
-      }
+      // 每波持续约 0.5 个周期，超出后隐藏
+      if (localProgress > 0.52) continue;
 
-      final glowPaint = Paint()
-        ..style = PaintingStyle.fill
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16)
-        ..color = burst.color.withValues(alpha: alpha * 0.22);
-      canvas.drawCircle(center, burst.radius * (0.24 + wave * 0.72), glowPaint);
+      final t = localProgress / 0.52; // 0→1 内的进度
+      final fadeOut = t > 0.72 ? (1 - t) / 0.28 : 1.0; // 最后 28% 淡出
+      if (fadeOut <= 0) continue;
+
+      final originX = size.width * burst.originXPercent;
+      final originY = size.height * burst.originYPercent;
 
       for (int i = 0; i < burst.particleCount; i++) {
-        final angle = (math.pi * 2 * i) / burst.particleCount;
-        final distance = burst.radius * (0.18 + wave * 0.82);
-        final end = Offset(
-          center.dx + math.cos(angle) * distance,
-          center.dy + math.sin(angle) * distance,
-        );
-        final strokePaint = Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeCap = StrokeCap.round
-          ..strokeWidth = 2.2
-          ..color = burst.color.withValues(alpha: alpha * 0.92);
-        canvas.drawLine(center, end, strokePaint);
+        // 每颗粒子有随机偏角和速度
+        final seedOffset = i * 7919; // 大质数散列
+        final rng = math.Random(random.nextInt(0xFFFFFF) + seedOffset);
+        final angleOffset = (rng.nextDouble() - 0.5) * 2 * _spreadHalfAngle;
+        final angle = burst.spreadAngle + angleOffset;
+        final speed = 220 + rng.nextDouble() * 160; // 像素速度
 
-        final sparkPaint = Paint()
-          ..style = PaintingStyle.fill
-          ..color = Colors.white.withValues(alpha: alpha * 0.95);
-        canvas.drawCircle(end, 2.2, sparkPaint);
+        // 位置 = origin + v * t + 0.5 * g * t²（y 轴向下为正）
+        final vx = math.cos(angle) * speed;
+        final vy = math.sin(angle) * speed;
+        final px = originX + vx * t;
+        final py = originY + vy * t + 0.5 * _gravity * size.height * t * t;
+
+        // 跳过飞出屏幕的粒子
+        if (px < -10 || px > size.width + 10 || py > size.height + 10) {
+          continue;
+        }
+
+        final alpha = (fadeOut * 0.95).clamp(0.0, 1.0);
+        final particleSize = 5.5 + rng.nextDouble() * 3.5;
+        final rotation = t * math.pi * 8 + i * 0.43;
+
+        final paint = Paint()
+          ..color = burst.color.withValues(alpha: alpha)
+          ..style = PaintingStyle.fill;
+
+        canvas.save();
+        canvas.translate(px, py);
+        canvas.rotate(rotation);
+
+        // 礼花纸片：细长矩形或圆形混合
+        if (i % 3 == 0) {
+          // 圆形小球
+          canvas.drawCircle(Offset.zero, particleSize * 0.45, paint);
+        } else {
+          // 彩带纸片
+          canvas.drawRect(
+            Rect.fromCenter(
+              center: Offset.zero,
+              width: particleSize,
+              height: particleSize * 0.38,
+            ),
+            paint,
+          );
+        }
+
+        // 为每颗粒子叠加一个白色小高光
+        final highlightPaint = Paint()
+          ..color = Colors.white.withValues(alpha: alpha * 0.45)
+          ..style = PaintingStyle.fill;
+        canvas.drawCircle(
+          Offset(-particleSize * 0.15, -particleSize * 0.15),
+          particleSize * 0.18,
+          highlightPaint,
+        );
+
+        canvas.restore();
       }
     }
   }
 
   @override
-  bool shouldRepaint(covariant _FireworksPainter oldDelegate) {
-    return oldDelegate.progress != progress || oldDelegate.bursts != bursts;
-  }
+  bool shouldRepaint(covariant _CannonPainter old) =>
+      old.progress != progress || old.bursts != bursts;
 }
