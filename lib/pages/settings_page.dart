@@ -1859,7 +1859,11 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
             padding: const EdgeInsets.all(16),
             decoration: const BoxDecoration(
               gradient: LinearGradient(
-                colors: [Color(0xFFFF6B6B), Color(0xFFFFD700)],
+                colors: [
+                  Color(0xFF1565C0),
+                  Color(0xFF1E88E5),
+                  Color(0xFF64B5F6),
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
