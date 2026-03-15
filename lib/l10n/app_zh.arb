@@ -3446,6 +3446,8 @@
   "saveDefaultValue": "保存",
   "defaultValueSaved": "默认值已保存",
   "defaultValueCleared": "默认值已清除",
+  "excerptIntentEnabled": "摘录到心迹",
+  "excerptIntentEnabledDesc": "允许从浏览器或其他应用选中文本后直接跳转到心迹，并打开非全屏编辑器",
 
   "citySelectedWeatherUpdated": "已选择城市：{cityName}，天气已更新",
   "@citySelectedWeatherUpdated": {

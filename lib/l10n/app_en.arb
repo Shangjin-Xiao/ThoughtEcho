@@ -3419,6 +3419,8 @@
   "saveDefaultValue": "Save",
   "defaultValueSaved": "Default value saved",
   "defaultValueCleared": "Default value cleared",
+  "excerptIntentEnabled": "Clip to ThoughtEcho",
+  "excerptIntentEnabledDesc": "Allow selected text from browsers or other apps to open ThoughtEcho directly in the non-fullscreen editor",
   "citySelectedWeatherUpdated": "Selected city: {cityName}, weather updated",
   "@citySelectedWeatherUpdated": {
     "placeholders": {

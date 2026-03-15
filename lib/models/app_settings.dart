@@ -17,6 +17,7 @@ class AppSettings {
   final bool enableFirstOpenScrollPerfMonitor; // 新增：首次打开后首次滑动性能监测
   final bool autoAttachLocation; // 新增：添加笔记时自动勾选位置
   final bool autoAttachWeather; // 新增：添加笔记时自动勾选天气
+  final bool excerptIntentEnabled; // 新增：允许从外部文本摘录到应用
   final String? defaultAuthor; // 新增：默认作者（自动填充）
   final String? defaultSource; // 新增：默认出处（自动填充）
   final List<String> defaultTagIds; // 新增：默认标签 ID 列表（自动填充）
@@ -42,6 +43,7 @@ class AppSettings {
     this.enableFirstOpenScrollPerfMonitor = false, // 默认关闭首次滑动性能监测
     this.autoAttachLocation = false, // 默认不自动勾选位置
     this.autoAttachWeather = false, // 默认不自动勾选天气
+    this.excerptIntentEnabled = true, // 默认启用外部摘录入口
     this.defaultAuthor, // 默认无自动填充作者
     this.defaultSource, // 默认无自动填充出处
     this.defaultTagIds = const [], // 默认无自动填充标签
@@ -69,6 +71,7 @@ class AppSettings {
       'enableFirstOpenScrollPerfMonitor': enableFirstOpenScrollPerfMonitor,
       'autoAttachLocation': autoAttachLocation,
       'autoAttachWeather': autoAttachWeather,
+      'excerptIntentEnabled': excerptIntentEnabled,
       'defaultAuthor': defaultAuthor,
       'defaultSource': defaultSource,
       'defaultTagIds': defaultTagIds,
@@ -99,6 +102,7 @@ class AppSettings {
           map['enableFirstOpenScrollPerfMonitor'] ?? false,
       autoAttachLocation: map['autoAttachLocation'] ?? false,
       autoAttachWeather: map['autoAttachWeather'] ?? false,
+      excerptIntentEnabled: map['excerptIntentEnabled'] ?? true,
       defaultAuthor: map['defaultAuthor'] as String?,
       defaultSource: map['defaultSource'] as String?,
       defaultTagIds:
@@ -127,6 +131,7 @@ class AppSettings {
         enableFirstOpenScrollPerfMonitor: false,
         autoAttachLocation: false, // 默认不自动勾选位置
         autoAttachWeather: false, // 默认不自动勾选天气
+        excerptIntentEnabled: true,
         defaultAuthor: null,
         defaultSource: null,
         defaultTagIds: const [],
@@ -155,6 +160,7 @@ class AppSettings {
     bool? enableFirstOpenScrollPerfMonitor,
     bool? autoAttachLocation,
     bool? autoAttachWeather,
+    bool? excerptIntentEnabled,
     String? defaultAuthor,
     bool clearDefaultAuthor = false,
     String? defaultSource,
@@ -188,6 +194,7 @@ class AppSettings {
           this.enableFirstOpenScrollPerfMonitor,
       autoAttachLocation: autoAttachLocation ?? this.autoAttachLocation,
       autoAttachWeather: autoAttachWeather ?? this.autoAttachWeather,
+      excerptIntentEnabled: excerptIntentEnabled ?? this.excerptIntentEnabled,
       defaultAuthor:
           clearDefaultAuthor ? null : (defaultAuthor ?? this.defaultAuthor),
       defaultSource:

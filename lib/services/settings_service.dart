@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/ai_settings.dart';
@@ -9,8 +10,11 @@ import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/services/api_key_manager.dart';
 
 import '../services/mmkv_service.dart';
+import 'excerpt_intent_service.dart';
 
 class SettingsService extends ChangeNotifier {
+  static const ExcerptIntentService _excerptIntentService =
+      ExcerptIntentService();
   static const String _aiSettingsKey = 'ai_settings';
   static const String _multiAiSettingsKey = 'multi_ai_settings'; // 新增
   static const String _localAiSettingsKey = 'local_ai_settings'; // 新增本地AI设置
@@ -157,6 +161,15 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 是否启用从外部文本摘录到应用
+  bool get excerptIntentEnabled => _appSettings.excerptIntentEnabled;
+  Future<void> setExcerptIntentEnabled(bool enabled) async {
+    _appSettings = _appSettings.copyWith(excerptIntentEnabled: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    await _syncExcerptIntentEntryPoint();
+    notifyListeners();
+  }
+
   // 默认作者（自动填充）
   String? get defaultAuthor => _appSettings.defaultAuthor;
   Future<void> setDefaultAuthor(String? author) async {
@@ -286,8 +299,19 @@ class SettingsService extends ChangeNotifier {
     _loadThemeMode();
 
     await _secureLegacyApiKey();
+    await _syncExcerptIntentEntryPoint();
 
     notifyListeners();
+  }
+
+  Future<void> _syncExcerptIntentEntryPoint() async {
+    if (kIsWeb) {
+      return;
+    }
+
+    await _excerptIntentService.syncEntryPointEnabled(
+      _appSettings.excerptIntentEnabled,
+    );
   }
 
   // 加载AI设置（简化版，主要用于向后兼容）

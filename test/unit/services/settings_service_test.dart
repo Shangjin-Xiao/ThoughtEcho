@@ -3,6 +3,7 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import '../../test_setup.dart';
 
@@ -30,6 +31,20 @@ void main() {
       expect(settingsService.appSettings, isNotNull);
       expect(settingsService.appSettings, isA<Object>());
       expect(settingsService.themeMode, isA<ThemeMode>());
+    });
+
+    test('AppSettings should default excerpt intake to enabled', () {
+      expect(AppSettings.defaultSettings().excerptIntentEnabled, isTrue);
+      expect(AppSettings.fromJson(const {}).excerptIntentEnabled, isTrue);
+    });
+
+    test('should persist excerpt intake toggle changes', () async {
+      expect(settingsService.excerptIntentEnabled, isTrue);
+
+      await settingsService.setExcerptIntentEnabled(false);
+
+      expect(settingsService.excerptIntentEnabled, isFalse);
+      expect(settingsService.appSettings.excerptIntentEnabled, isFalse);
     });
   });
 }
