@@ -179,12 +179,12 @@ extension SmartPushExecution on SmartPushService {
         }
 
         // SOTA: 疲劳预防检查
-        // 使用 'randomMemory'（成本 3.0）作为预检类型，这是智能推送中
-        // 最高成本的内容类型，确保预算检查保守一致。
+        // 使用 'monthAgoToday'（成本 2.5）作为预检类型，这是智能推送中
+        // 较高成本的内容类型，确保预算检查保守一致。
         // 实际内容类型在内容选择后确定，用于 consumeBudget。
         final preCheckType = _settings.pushMode == PushMode.dailyQuote
             ? 'dailyQuote'
-            : 'randomMemory';
+            : 'monthAgoToday';
         final smartSkipReason = await _analytics.getSkipReason(preCheckType);
         if (smartSkipReason != null) {
           AppLogger.w('智能推送被跳过: $smartSkipReason');
@@ -200,7 +200,7 @@ extension SmartPushExecution on SmartPushService {
       Quote? noteToShow;
       String title = '💭 心迹';
       bool isDailyQuote = false;
-      String contentType = 'randomMemory';
+      String contentType = 'dailyQuote';
 
       AppLogger.w('执行智能推送，模式: ${_settings.pushMode.name}');
 
@@ -248,7 +248,7 @@ extension SmartPushExecution on SmartPushService {
             noteToShow = _selectUnpushedNote(candidates);
             if (noteToShow != null) {
               title = _generateTitle(noteToShow);
-              contentType = 'randomMemory';
+              contentType = 'pastNote';
             }
           }
           if (noteToShow == null) {
@@ -319,6 +319,11 @@ extension SmartPushExecution on SmartPushService {
         AppLogger.w('智能推送：没有内容可推送 (模式: ${_settings.pushMode.name})');
       }
 
+      // 7天无新笔记额外触发一次每日一言（与每日一言独立开关无关）
+      if (!isTest) {
+        await _checkAndPushInactivityQuote();
+      }
+
       // 重新调度下一次推送
       if (!isBackground && !isTest) {
         await scheduleNextPush();
@@ -326,6 +331,40 @@ extension SmartPushExecution on SmartPushService {
     } catch (e, stack) {
       AppLogger.e('智能推送失败', error: e, stackTrace: stack);
       if (isTest) rethrow; // 测试模式抛出异常以便 UI 显示错误
+    }
+  }
+
+  /// 检查是否满足「7天无新笔记」条件，满足则额外推送一次每日一言。
+  ///
+  /// 使用 [_inactivityQuoteDateKey] MMKV 键记录当天是否已因此触发，
+  /// 避免同一天重复推送。
+  Future<void> _checkAndPushInactivityQuote() async {
+    try {
+      final today = DateTime.now().toIso8601String().substring(0, 10);
+      final lastTriggered =
+          _mmkv.getString(SmartPushService._inactivityQuoteDateKey);
+      if (lastTriggered == today) {
+        // 今天已经因无新笔记触发过一言，跳过
+        return;
+      }
+
+      // 查询最近一条笔记的创建时间
+      final recentNotes =
+          await _databaseService.getQuotesForSmartPush(limit: 1);
+      if (recentNotes.isEmpty) return;
+      final recentNote = recentNotes.first;
+
+      final noteDate = DateTime.tryParse(recentNote.date);
+      if (noteDate == null) return;
+
+      final daysSinceLastNote = DateTime.now().difference(noteDate).inDays;
+      if (daysSinceLastNote < 7) return;
+
+      AppLogger.i('7天无新笔记（最近笔记: ${recentNote.date}），额外推送每日一言');
+      _mmkv.setString(SmartPushService._inactivityQuoteDateKey, today);
+      await _performDailyQuotePush();
+    } catch (e) {
+      AppLogger.w('_checkAndPushInactivityQuote 失败', error: e);
     }
   }
 }

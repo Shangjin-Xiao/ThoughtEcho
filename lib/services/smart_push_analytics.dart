@@ -39,7 +39,7 @@ class SmartPushAnalytics extends ChangeNotifier {
     'sameLocation': 2.0,
     'sameWeather': 2.0,
     'monthAgoToday': 2.5,
-    'randomMemory': 3.0,
+    'weekAgoToday': 2.0,
     'dailyQuote': 1.5,
   };
 
@@ -350,7 +350,7 @@ class SmartPushAnalytics extends ChangeNotifier {
   ///
   /// 实现 ε-Greedy 策略的探索-利用平衡
   Future<String> selectContentType(List<String> availableTypes) async {
-    if (availableTypes.isEmpty) return 'randomMemory';
+    if (availableTypes.isEmpty) return 'dailyQuote';
     if (availableTypes.length == 1) return availableTypes.first;
 
     // ε-Greedy: 10% 概率探索（随机选择）

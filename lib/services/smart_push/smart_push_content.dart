@@ -69,8 +69,7 @@ extension SmartPushContentSelection on SmartPushService {
       'sameLocation=${sameLocationNotes.length}, '
       'sameWeather=${sameWeatherNotes.length}, '
       'monthAgo=${filterResult.monthAgoQuotes.length}, '
-      'weekAgo=${filterResult.weekAgoQuotes.length}, '
-      'random7d=${filterResult.randomQuotes.length}',
+      'weekAgo=${filterResult.weekAgoQuotes.length}',
     );
 
     // SOTA: 收集所有可用的内容类型及其候选笔记
@@ -83,7 +82,7 @@ extension SmartPushContentSelection on SmartPushService {
       final years = noteDate != null ? now.year - noteDate.year : 1;
       availableContent['yearAgoToday'] = _ContentCandidate(
         note: note,
-        title: '📅 $years年前的今天',
+        title: pickYearAgoTodayTitle(_random, years),
         priority: 100, // 最高优先级
       );
     }
@@ -92,36 +91,28 @@ extension SmartPushContentSelection on SmartPushService {
     if (filterResult.selectedSameTime != null) {
       availableContent['sameTimeOfDay'] = _ContentCandidate(
         note: filterResult.selectedSameTime!,
-        title: '⏰ 此刻的回忆',
-        priority: 80,
+        title: '⏰ 此刻，你曾写下',
+        priority: 85,
       );
     }
 
-    // 3. 相同地点的笔记
+    // 3. 相同地点的笔记（动态 priority）
     if (sameLocationNotes.isNotEmpty) {
       final note = _selectUnpushedNote(sameLocationNotes);
       if (note != null) {
+        final locationPriority = calcLocationPriority(
+          sameLocationNotes.length,
+          allNotes.length,
+        );
         availableContent['sameLocation'] = _ContentCandidate(
           note: note,
-          title: '📍 熟悉的地方',
-          priority: 70,
+          title: pickSameLocationTitle(_random),
+          priority: locationPriority,
         );
       }
     }
 
-    // 4. 相同天气的笔记
-    if (sameWeatherNotes.isNotEmpty) {
-      final note = _selectUnpushedNote(sameWeatherNotes);
-      if (note != null) {
-        availableContent['sameWeather'] = _ContentCandidate(
-          note: note,
-          title: '🌤️ 此情此景',
-          priority: 60,
-        );
-      }
-    }
-
-    // 5. 往月今日
+    // 4. 往月今日
     if (filterResult.selectedMonthAgo != null) {
       final note = filterResult.selectedMonthAgo!;
       final noteDate = DateTime.tryParse(note.date);
@@ -136,26 +127,29 @@ extension SmartPushContentSelection on SmartPushService {
       availableContent['monthAgoToday'] = _ContentCandidate(
         note: note,
         title: title,
-        priority: 50,
+        priority: 70,
       );
     }
 
-    // 6. 上周今日
+    // 5. 上周今日
     if (filterResult.selectedWeekAgo != null) {
       availableContent['weekAgoToday'] = _ContentCandidate(
         note: filterResult.selectedWeekAgo!,
-        title: '📅 一周前的今天',
-        priority: 45,
+        title: pickWeekAgoTodayTitle(_random),
+        priority: 55,
       );
     }
 
-    // 7. 随机回忆（7天前的笔记）
-    if (filterResult.selectedRandom != null) {
-      availableContent['randomMemory'] = _ContentCandidate(
-        note: filterResult.selectedRandom!,
-        title: '💭 往日回忆',
-        priority: 30,
-      );
+    // 6. 相同天气的笔记
+    if (sameWeatherNotes.isNotEmpty) {
+      final note = _selectUnpushedNote(sameWeatherNotes);
+      if (note != null) {
+        availableContent['sameWeather'] = _ContentCandidate(
+          note: note,
+          title: '🌤️ 同样的天气',
+          priority: 40,
+        );
+      }
     }
 
     // SOTA: 使用 Thompson Sampling 选择内容类型
@@ -195,40 +189,10 @@ extension SmartPushContentSelection on SmartPushService {
       }
     }
 
-    // 8. 所有特定筛选器均未命中，宽泛兜底：从历史笔记中随机选取
-    //    笔记优先 — 只要有历史笔记就推送笔记，不回退到每日一言
-    final historyNotes = allNotes.where((note) {
-      try {
-        final noteDate = DateTime.parse(note.date);
-        return !(noteDate.year == now.year &&
-            noteDate.month == now.month &&
-            noteDate.day == now.day);
-      } catch (e) {
-        return false;
-      }
-    }).toList();
-
-    if (historyNotes.isNotEmpty) {
-      final note = _selectUnpushedNote(historyNotes);
-      if (note != null) {
-        AppLogger.w(
-          '智能选择：特定筛选器未命中，兜底随机选择历史笔记 '
-          '(总笔记数: ${allNotes.length}, 历史笔记: ${historyNotes.length})',
-        );
-        return _SmartSelectResult(
-          note: note,
-          title: '💭 往日回忆',
-          isDailyQuote: false,
-          contentType: 'randomMemory',
-        );
-      }
-    }
-
-    // 9. 所有笔记都是今天创建的 — 完全无历史笔记，回退到每日一言
+    // 所有特定筛选器均未命中，回退到每日一言
     AppLogger.w(
-      '智能选择：无历史笔记可推送 '
-      '(总笔记数: ${allNotes.length}, 历史笔记: ${historyNotes.length})，'
-      '回退到每日一言',
+      '智能选择：特定筛选器均未命中 '
+      '(总笔记数: ${allNotes.length})，回退到每日一言',
     );
     final dailyQuote = await _fetchDailyQuote();
     if (dailyQuote != null) {
@@ -263,7 +227,7 @@ extension SmartPushContentSelection on SmartPushService {
           noteDate.day == now.day &&
           noteDate.year < now.year) {
         final years = now.year - noteDate.year;
-        return '📅 $years年前的今天';
+        return pickYearAgoTodayTitle(_random, years);
       }
 
       // 往月今日
@@ -279,21 +243,21 @@ extension SmartPushContentSelection on SmartPushService {
       if (noteDate.year == weekAgo.year &&
           noteDate.month == weekAgo.month &&
           noteDate.day == weekAgo.day) {
-        return '📅 一周前的今天';
+        return pickWeekAgoTodayTitle(_random);
       }
     }
 
     // 同地点
     if (note.location != null && note.location!.isNotEmpty) {
-      return '📍 熟悉的地方';
+      return pickSameLocationTitle(_random);
     }
 
     // 同天气
     if (note.weather != null && note.weather!.isNotEmpty) {
-      return '🌤️ 此情此景';
+      return '🌤️ 同样的天气';
     }
 
-    return '💭 回忆时刻';
+    return '⏰ 此刻，你曾写下';
   }
 
   /// 截断内容

@@ -317,7 +317,7 @@ extension SmartPushPlatform on SmartPushService {
       } else if (content?.noteId != null) {
         payload = SmartPushService.buildNotificationPayload(
           noteId: content!.noteId,
-          contentType: content.contentType ?? 'randomMemory',
+          contentType: content.contentType ?? 'dailyQuote',
         );
       }
 

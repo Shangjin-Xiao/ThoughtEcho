@@ -22,6 +22,7 @@ import 'weather_service.dart';
 import 'network_service.dart';
 import '../utils/app_logger.dart';
 import '../utils/platform_helper.dart';
+import '../utils/string_utils.dart';
 import 'background_push_handler.dart';
 import 'smart_push_analytics.dart';
 import 'smart_push_computation.dart';
@@ -71,6 +72,8 @@ class SmartPushService extends ChangeNotifier {
       'smart_push_pending_home_daily_quote';
   static const String _dailyQuotePushedDateKey =
       'smart_push_daily_quote_pushed_date';
+  static const String _inactivityQuoteDateKey =
+      'smart_push_inactivity_quote_date';
 
   SmartPushSettings _settings = SmartPushSettings.defaultSettings();
   SmartPushSettings get settings => _settings;
@@ -461,7 +464,7 @@ class _SmartSelectResult {
     required this.note,
     required this.title,
     required this.isDailyQuote,
-    this.contentType = 'randomMemory',
+    this.contentType = 'dailyQuote',
   });
 
   factory _SmartSelectResult.empty() => _SmartSelectResult(
