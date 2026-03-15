@@ -13,7 +13,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 
 import '../models/smart_push_settings.dart';
 import '../models/quote_model.dart';
-import '../pages/note_full_editor_page.dart';
+import '../pages/home_page.dart';
 import '../main.dart' show navigatorKey;
 import 'database_service.dart';
 import 'mmkv_service.dart';
@@ -208,13 +208,21 @@ class SmartPushService extends ChangeNotifier {
   static String? buildNotificationPayload({
     String? noteId,
     required String contentType,
+    String? routeTarget,
   }) {
     if (contentType.isEmpty) return null;
+    final parts = <String>['contentType:$contentType'];
     if (noteId != null && noteId.isNotEmpty) {
-      return 'contentType:$contentType|noteId:$noteId';
+      parts.add('noteId:$noteId');
     }
-    return 'contentType:$contentType';
+    if (routeTarget != null && routeTarget.isNotEmpty) {
+      parts.add('routeTarget:$routeTarget');
+    }
+    return parts.join('|');
   }
+
+  @visibleForTesting
+  static String? notificationSummaryForTest(Quote note) => null;
 
   static DateTime nextScheduledDate({
     required DateTime now,

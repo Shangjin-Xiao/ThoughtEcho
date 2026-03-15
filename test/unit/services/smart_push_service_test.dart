@@ -1,6 +1,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/smart_push_service.dart';
 
 void main() {
@@ -27,6 +28,33 @@ void main() {
       });
 
       expect(normalized, isNull);
+    });
+  });
+
+  group('SmartPushService notification helpers', () {
+    test('buildNotificationPayload includes route target for note list', () {
+      final payload = SmartPushService.buildNotificationPayload(
+        noteId: '12345678-1234-1234-1234-1234567890ab',
+        contentType: 'monthAgoToday',
+        routeTarget: 'noteList',
+      );
+
+      expect(
+        payload,
+        equals(
+          'contentType:monthAgoToday|noteId:12345678-1234-1234-1234-1234567890ab|routeTarget:noteList',
+        ),
+      );
+    });
+
+    test('notification summary is removed even for historical notes', () {
+      final note = Quote(
+        id: '12345678-1234-1234-1234-1234567890ab',
+        content: '春天会再来。',
+        date: DateTime(2025, 10, 15, 9, 0).toIso8601String(),
+      );
+
+      expect(SmartPushService.notificationSummaryForTest(note), isNull);
     });
   });
 }

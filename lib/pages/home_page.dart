@@ -46,8 +46,13 @@ import '../utils/anniversary_display_utils.dart';
 
 class HomePage extends StatefulWidget {
   final int initialPage; // 添加初始页面参数
+  final String? initialHighlightedNoteId;
 
-  const HomePage({super.key, this.initialPage = 0});
+  const HomePage({
+    super.key,
+    this.initialPage = 0,
+    this.initialHighlightedNoteId,
+  });
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -90,6 +95,7 @@ class _HomePageState extends State<HomePage>
   bool _settingsGuidePending = false;
   String? _lastConsumedExcerptText;
   bool _isHandlingExcerptIntent = false;
+  bool _hasConsumedInitialHighlightedNote = false;
 
   // AI卡片生成服务
   AICardGenerationService? _aiCardService;
@@ -419,6 +425,7 @@ class _HomePageState extends State<HomePage>
       if (widget.initialPage == 1) {
         // 记录页启动时，先加载标签（高优先级）
         await _loadTags();
+        _consumeInitialHighlightedNote();
       } else {
         // 其他页面启动时，使用预加载方式
         _preloadTags();
@@ -742,6 +749,7 @@ class _HomePageState extends State<HomePage>
     // 当切换到笔记列表页时，重新加载标签
     if (_currentIndex == 1) {
       _refreshTags();
+      _consumeInitialHighlightedNote();
     }
 
     _triggerGuideForCurrentIndex();
@@ -925,7 +933,33 @@ class _HomePageState extends State<HomePage>
       return;
     }
 
+    _consumeInitialHighlightedNote();
     _scheduleNoteGuideIfNeeded(delay: const Duration(milliseconds: 150));
+  }
+
+  void _consumeInitialHighlightedNote() {
+    if (!mounted || _hasConsumedInitialHighlightedNote || _currentIndex != 1) {
+      return;
+    }
+
+    final noteId = widget.initialHighlightedNoteId;
+    if (noteId == null || noteId.isEmpty) {
+      return;
+    }
+
+    context.read<NoteSearchController>().clearSearch();
+
+    final noteListState = _noteListViewKey.currentState;
+    if (noteListState == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _consumeInitialHighlightedNote();
+      });
+      return;
+    }
+
+    _hasConsumedInitialHighlightedNote = true;
+    noteListState.scrollToQuoteById(noteId);
   }
 
   void _scheduleSettingsGuideIfNeeded() {
