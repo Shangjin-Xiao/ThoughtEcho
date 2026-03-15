@@ -428,6 +428,44 @@ class NoteListViewState extends State<NoteListView> {
     _loadMore();
   }
 
+  Future<void> scrollToQuoteById(String quoteId) async {
+    if (!mounted || quoteId.isEmpty) return;
+
+    const maxAttempts = 8;
+    for (var attempt = 0; attempt < maxAttempts; attempt++) {
+      final index = _quotes.indexWhere((quote) => quote.id == quoteId);
+      if (index >= 0) {
+        final notifier = _obtainExpansionNotifier(quoteId);
+        if (!notifier.value) {
+          notifier.value = true;
+          _expandedItems[quoteId] = true;
+        }
+
+        await Future.delayed(const Duration(milliseconds: 80));
+        if (!mounted) return;
+
+        _autoScrollEnabled = true;
+        _isInitializing = false;
+        _isUserScrolling = false;
+        _lastUserScrollTime = null;
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          _scrollToItem(quoteId, index);
+        });
+        return;
+      }
+
+      if (!_hasMore || _isLoading) {
+        await Future.delayed(const Duration(milliseconds: 200));
+      } else {
+        await _loadMore();
+      }
+    }
+
+    logDebug('未能在列表中定位笔记: $quoteId', source: 'NoteListView');
+  }
+
   ValueNotifier<bool> _obtainExpansionNotifier(String quoteId) {
     return _expansionNotifiers.putIfAbsent(
       quoteId,

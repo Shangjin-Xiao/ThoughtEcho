@@ -318,6 +318,7 @@ extension SmartPushPlatform on SmartPushService {
         payload = SmartPushService.buildNotificationPayload(
           noteId: content!.noteId,
           contentType: content.contentType ?? 'dailyQuote',
+          routeTarget: 'noteList',
         );
       }
 

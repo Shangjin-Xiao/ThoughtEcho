@@ -70,6 +70,7 @@ extension SmartPushNotification on SmartPushService {
 
     String? noteId;
     String? contentType;
+    String? routeTarget;
     // SOTA: 记录用户点击交互（正向反馈）
     // payload 格式: "contentType:xxx|noteId:yyy" 或 "dailyQuote"
     try {
@@ -87,6 +88,8 @@ extension SmartPushNotification on SmartPushService {
               if (RegExp(r'^[0-9a-fA-F-]{32,36}$').hasMatch(id)) {
                 noteId = id;
               }
+            } else if (part.startsWith('routeTarget:')) {
+              routeTarget = part.substring('routeTarget:'.length);
             }
           }
         } else if (payload == 'dailyQuote') {
@@ -110,7 +113,7 @@ extension SmartPushNotification on SmartPushService {
 
     // 处理打开特定笔记的逻辑
     if (noteId != null && noteId.isNotEmpty) {
-      _navigateToNote(noteId).catchError((e) {
+      _navigateToNoteList(noteId, routeTarget: routeTarget).catchError((e) {
         AppLogger.e('通知导航失败', error: e);
       });
     } else if (contentType == 'dailyQuote') {
@@ -121,18 +124,17 @@ extension SmartPushNotification on SmartPushService {
     }
   }
 
-  /// 导航到特定笔记
-  Future<void> _navigateToNote(String noteId) async {
+  /// 导航到记录页并定位到特定笔记
+  Future<void> _navigateToNoteList(
+    String noteId, {
+    String? routeTarget,
+  }) async {
     try {
-      // 获取笔记详情
       final note = await _databaseService.getQuoteById(noteId);
       if (note == null) {
         AppLogger.d('通知导航已取消：数据库中未找到笔记 $noteId');
         return;
       }
-
-      // 获取所有标签，供编辑器使用
-      final categories = await _databaseService.getCategories();
 
       // 重试机制：等待 navigatorKey.currentState 就绪 (例如冷启动场景)
       int retryCount = 0;
@@ -144,16 +146,18 @@ extension SmartPushNotification on SmartPushService {
       }
 
       if (navigatorKey.currentState != null) {
-        navigatorKey.currentState!.push(
-          MaterialPageRoute(
-            builder: (context) => NoteFullEditorPage(
-              initialContent: note.content,
-              initialQuote: note,
-              allTags: categories,
-            ),
+        final route = MaterialPageRoute(
+          builder: (context) => HomePage(
+            initialPage: 1,
+            initialHighlightedNoteId: noteId,
           ),
         );
-        AppLogger.i('已成功触发导航至笔记: $noteId');
+        if (navigatorKey.currentState!.canPop()) {
+          navigatorKey.currentState!.pushReplacement(route);
+        } else {
+          navigatorKey.currentState!.push(route);
+        }
+        AppLogger.i('已成功触发导航至记录页笔记定位: $noteId ($routeTarget)');
       } else {
         AppLogger.w('通知导航失败：navigatorKey.currentState 在多次重试后仍为空');
       }
@@ -367,10 +371,12 @@ extension SmartPushNotification on SmartPushService {
 
     String payload = '';
     if (contentType.isNotEmpty) {
-      payload = 'contentType:$contentType';
-      if (note.id != null) {
-        payload += '|noteId:${note.id}';
-      }
+      payload = SmartPushService.buildNotificationPayload(
+            noteId: note.id,
+            contentType: contentType,
+            routeTarget: 'noteList',
+          ) ??
+          '';
     } else {
       payload = note.id ?? '';
     }
@@ -410,56 +416,7 @@ extension SmartPushNotification on SmartPushService {
     return content;
   }
 
-  /// 获取通知摘要文本，附加笔记创建时的季节或时段
-  ///
-  /// 格式示例：「3年前 · 深夜」「2个月前 · 春天」「昨天 · 傍晚」
   String? _getNotificationSummary(Quote note) {
-    final noteDate = DateTime.tryParse(note.date);
-    if (noteDate != null) {
-      final now = DateTime.now();
-      final diff = now.difference(noteDate);
-
-      String timeAgo;
-      if (diff.inDays == 0) {
-        timeAgo = '今天';
-      } else if (diff.inDays == 1) {
-        timeAgo = '昨天';
-      } else if (diff.inDays < 7) {
-        timeAgo = '${diff.inDays}天前';
-      } else if (diff.inDays < 30) {
-        timeAgo = '${(diff.inDays / 7).floor()}周前';
-      } else if (diff.inDays < 365) {
-        timeAgo = '${(diff.inDays / 30).floor()}个月前';
-      } else {
-        timeAgo = '${(diff.inDays / 365).floor()}年前';
-      }
-
-      // 附加情境修饰词：优先时段（今天/昨天/近期），久远则用季节
-      final context = diff.inDays < 30
-          ? _timeOfDayLabel(noteDate.hour)
-          : _seasonLabel(noteDate.month);
-
-      return '$timeAgo · $context';
-    }
     return null;
-  }
-
-  /// 根据小时返回时段描述
-  String _timeOfDayLabel(int hour) {
-    if (hour >= 5 && hour < 9) return '清晨';
-    if (hour >= 9 && hour < 12) return '上午';
-    if (hour >= 12 && hour < 14) return '午间';
-    if (hour >= 14 && hour < 17) return '下午';
-    if (hour >= 17 && hour < 19) return '傍晚';
-    if (hour >= 19 && hour < 22) return '夜晚';
-    return '深夜';
-  }
-
-  /// 根据月份返回季节描述
-  String _seasonLabel(int month) {
-    if (month >= 3 && month <= 5) return '春天';
-    if (month >= 6 && month <= 8) return '夏天';
-    if (month >= 9 && month <= 11) return '秋天';
-    return '冬天';
   }
 }
