@@ -479,14 +479,14 @@ String pickSameLocationTitle(Random random) {
 
 /// 根据相同地点笔记占比，动态计算 priority（25 ~ 75）。
 ///
-/// 当该地点笔记占比低于 P25（占比 < 0.10）时，判断为故地重游，priority 趋向 75；
-/// 当占比高于 P75（占比 > 0.40）时，判断为常驻地点，priority 趋向 25；
+/// 当该地点笔记占比低于低占比阈值（< 0.10）时，判断为故地重游，priority 趋向 75；
+/// 当占比高于高占比阈值（> 0.40）时，判断为常驻地点，priority 趋向 25；
 /// 中间区间线性插值。阈值基于百分比，不写死绝对数字。
 int calcLocationPriority(int locationCount, int totalCount) {
   if (totalCount == 0 || locationCount == 0) return 50;
   final ratio = locationCount / totalCount;
-  const lowThreshold = 0.10; // P25：稀少地点
-  const highThreshold = 0.40; // P75：常驻地点
+  const lowThreshold = 0.10; // 低占比阈值：稀少地点（故地重游）
+  const highThreshold = 0.40; // 高占比阈值：常驻地点
   if (ratio <= lowThreshold) return 75;
   if (ratio >= highThreshold) return 25;
   // 线性插值：ratio 从 0.10 → 0.40 对应 priority 75 → 25

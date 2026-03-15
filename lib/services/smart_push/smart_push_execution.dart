@@ -321,7 +321,7 @@ extension SmartPushExecution on SmartPushService {
 
       // 7天无新笔记额外触发一次每日一言（与每日一言独立开关无关）
       if (!isTest) {
-        await _checkAndPushInactivityQuote();
+        await _checkAndPushInactivityQuote(isBackground: isBackground);
       }
 
       // 重新调度下一次推送
@@ -338,7 +338,10 @@ extension SmartPushExecution on SmartPushService {
   ///
   /// 使用 [_inactivityQuoteDateKey] MMKV 键记录当天是否已因此触发，
   /// 避免同一天重复推送。
-  Future<void> _checkAndPushInactivityQuote() async {
+  /// [isBackground] 透传给 _performDailyQuotePush，防止产生额外的 scheduleNextPush。
+  Future<void> _checkAndPushInactivityQuote({
+    bool isBackground = false,
+  }) async {
     try {
       final today = DateTime.now().toIso8601String().substring(0, 10);
       final lastTriggered =
@@ -362,7 +365,7 @@ extension SmartPushExecution on SmartPushService {
 
       AppLogger.i('7天无新笔记（最近笔记: ${recentNote.date}），额外推送每日一言');
       _mmkv.setString(SmartPushService._inactivityQuoteDateKey, today);
-      await _performDailyQuotePush();
+      await _performDailyQuotePush(isBackground: isBackground);
     } catch (e) {
       AppLogger.w('_checkAndPushInactivityQuote 失败', error: e);
     }
