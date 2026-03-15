@@ -395,7 +395,8 @@ extension SmartPushNotification on SmartPushService {
 
   /// 构建通知正文
   String _buildNotificationBody(Quote note) {
-    final content = _truncateContent(note.content);
+    final rawContent = StringUtils.removeObjectReplacementChar(note.content);
+    final content = _truncateContent(rawContent);
 
     // 如果有来源信息，添加引用格式
     if (note.sourceAuthor != null && note.sourceAuthor!.isNotEmpty) {
@@ -409,27 +410,56 @@ extension SmartPushNotification on SmartPushService {
     return content;
   }
 
-  /// 获取通知摘要文本
+  /// 获取通知摘要文本，附加笔记创建时的季节或时段
+  ///
+  /// 格式示例：「3年前 · 深夜」「2个月前 · 春天」「昨天 · 傍晚」
   String? _getNotificationSummary(Quote note) {
     final noteDate = DateTime.tryParse(note.date);
     if (noteDate != null) {
       final now = DateTime.now();
       final diff = now.difference(noteDate);
 
+      String timeAgo;
       if (diff.inDays == 0) {
-        return '今天';
+        timeAgo = '今天';
       } else if (diff.inDays == 1) {
-        return '昨天';
+        timeAgo = '昨天';
       } else if (diff.inDays < 7) {
-        return '${diff.inDays}天前';
+        timeAgo = '${diff.inDays}天前';
       } else if (diff.inDays < 30) {
-        return '${(diff.inDays / 7).floor()}周前';
+        timeAgo = '${(diff.inDays / 7).floor()}周前';
       } else if (diff.inDays < 365) {
-        return '${(diff.inDays / 30).floor()}个月前';
+        timeAgo = '${(diff.inDays / 30).floor()}个月前';
       } else {
-        return '${(diff.inDays / 365).floor()}年前';
+        timeAgo = '${(diff.inDays / 365).floor()}年前';
       }
+
+      // 附加情境修饰词：优先时段（今天/昨天/近期），久远则用季节
+      final context = diff.inDays < 30
+          ? _timeOfDayLabel(noteDate.hour)
+          : _seasonLabel(noteDate.month);
+
+      return '$timeAgo · $context';
     }
     return null;
+  }
+
+  /// 根据小时返回时段描述
+  String _timeOfDayLabel(int hour) {
+    if (hour >= 5 && hour < 9) return '清晨';
+    if (hour >= 9 && hour < 12) return '上午';
+    if (hour >= 12 && hour < 14) return '午间';
+    if (hour >= 14 && hour < 17) return '下午';
+    if (hour >= 17 && hour < 19) return '傍晚';
+    if (hour >= 19 && hour < 22) return '夜晚';
+    return '深夜';
+  }
+
+  /// 根据月份返回季节描述
+  String _seasonLabel(int month) {
+    if (month >= 3 && month <= 5) return '春天';
+    if (month >= 6 && month <= 8) return '夏天';
+    if (month >= 9 && month <= 11) return '秋天';
+    return '冬天';
   }
 }

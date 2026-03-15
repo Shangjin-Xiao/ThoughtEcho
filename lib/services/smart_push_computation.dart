@@ -65,14 +65,13 @@ SmartPushFilterResult runSmartPushFilters(SmartPushFilterInput input) {
   final sameTimeQuotes = filterSameTimeOfDay(input.candidates, input.now);
   final monthAgoQuotes = filterMonthAgoToday(input.candidates, input.now);
   final weekAgoQuotes = filterWeekAgoToday(input.candidates, input.now);
-  final randomQuotes = filterRandomMemory(input.candidates, input.now, random);
 
   return SmartPushFilterResult(
     yearAgoQuotes: yearAgoQuotes,
     sameTimeQuotes: sameTimeQuotes,
     monthAgoQuotes: monthAgoQuotes,
     weekAgoQuotes: weekAgoQuotes,
-    randomQuotes: randomQuotes,
+    randomQuotes: const [],
     selectedYearAgo: selectUnpushedNote(
       yearAgoQuotes,
       input.recentlyPushedIds,
@@ -93,11 +92,7 @@ SmartPushFilterResult runSmartPushFilters(SmartPushFilterInput input) {
       input.recentlyPushedIds,
       random,
     ),
-    selectedRandom: selectUnpushedNote(
-      randomQuotes,
-      input.recentlyPushedIds,
-      random,
-    ),
+    selectedRandom: null,
   );
 }
 
@@ -275,7 +270,7 @@ List<TypedSmartPushCandidate> buildTypedCandidates({
             : (now.year - noteDate.year) * 12 + (now.month - noteDate.month);
         return monthsDiff > 0 ? '📅 $monthsDiff个月前的今天' : '📅 往月今日';
       },
-      50,
+      70, // 上调：月度回忆有仪式感
     );
   }
 
@@ -283,26 +278,21 @@ List<TypedSmartPushCandidate> buildTypedCandidates({
     addCandidate(
       'weekAgoToday',
       filterWeekAgoToday(notes, now),
-      (_) => '📅 一周前的今天',
-      45,
-    );
-  }
-
-  if (enabledPastNoteTypes.contains(PastNoteType.randomMemory)) {
-    addCandidate(
-      'randomMemory',
-      filterRandomMemory(notes, now, random),
-      (_) => '💭 往日回忆',
-      30,
+      (_) => pickWeekAgoTodayTitle(random),
+      55, // 上调
     );
   }
 
   if (enabledPastNoteTypes.contains(PastNoteType.sameLocation)) {
+    final locationNotes = filterSameLocationNotes(notes, now, currentLocation);
+    // 动态评分：该地点笔记占比越低（故地重游），priority 越高
+    final locationPriority =
+        calcLocationPriority(locationNotes.length, notes.length);
     addCandidate(
       'sameLocation',
-      filterSameLocationNotes(notes, now, currentLocation),
-      (_) => '📍 熟悉的地方',
-      70,
+      locationNotes,
+      (_) => pickSameLocationTitle(random),
+      locationPriority,
     );
   }
 
@@ -315,8 +305,8 @@ List<TypedSmartPushCandidate> buildTypedCandidates({
         currentWeather: currentWeather,
         weatherFilters: weatherFilters,
       ),
-      (_) => '🌤️ 此情此景',
-      60,
+      (_) => '🌤️ 同样的天气',
+      40, // 下调：触发率高但情境相关性弱
     );
   }
 
@@ -457,4 +447,49 @@ bool _isHistoricalNote(Quote note, DateTime now) {
   } catch (_) {
     return false;
   }
+}
+
+/// yearAgoToday 标题候选池（随机轮换）
+String pickYearAgoTodayTitle(Random random, int years) {
+  final pool = [
+    '那年今日 · $years年前',
+    '时光信笺，$years年前的你',
+  ];
+  return pool[random.nextInt(pool.length)];
+}
+
+/// weekAgoToday 标题候选池（随机轮换）
+String pickWeekAgoTodayTitle(Random random) {
+  final pool = [
+    '七日前，你说…',
+    '📅 一周前的今天',
+  ];
+  return pool[random.nextInt(pool.length)];
+}
+
+/// sameLocation 标题候选池（随机轮换）
+String pickSameLocationTitle(Random random) {
+  final pool = [
+    '故地重游，旧事如新',
+    '📍 你在这里写过',
+    '这里，你曾留下文字',
+  ];
+  return pool[random.nextInt(pool.length)];
+}
+
+/// 根据相同地点笔记占比，动态计算 priority（25 ~ 75）。
+///
+/// 当该地点笔记占比低于 P25（占比 < 0.10）时，判断为故地重游，priority 趋向 75；
+/// 当占比高于 P75（占比 > 0.40）时，判断为常驻地点，priority 趋向 25；
+/// 中间区间线性插值。阈值基于百分比，不写死绝对数字。
+int calcLocationPriority(int locationCount, int totalCount) {
+  if (totalCount == 0 || locationCount == 0) return 50;
+  final ratio = locationCount / totalCount;
+  const lowThreshold = 0.10; // P25：稀少地点
+  const highThreshold = 0.40; // P75：常驻地点
+  if (ratio <= lowThreshold) return 75;
+  if (ratio >= highThreshold) return 25;
+  // 线性插值：ratio 从 0.10 → 0.40 对应 priority 75 → 25
+  final t = (ratio - lowThreshold) / (highThreshold - lowThreshold);
+  return (75 - t * 50).round().clamp(25, 75);
 }
