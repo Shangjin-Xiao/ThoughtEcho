@@ -3322,6 +3322,7 @@
   "smartPushContentType": "Push Mode",
   "smartPushDailyQuote": "Daily Quote",
   "smartPushDailyQuoteDesc": "Push curated quotes",
+  "smartPushDailyQuoteIndependentNote": "Daily Quote runs independently from Smart Push — each can be enabled or disabled separately.",
   "smartPushPastNotes": "Past Notes",
   "smartPushPastNotesDesc": "Push historical note reviews",
   "smartPushModeSmart": "Smart Push",

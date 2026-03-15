@@ -236,11 +236,6 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
           // 主开关卡片
           _buildMainSwitchCard(l10n, theme, colorScheme),
 
-          const SizedBox(height: 16),
-
-          // 每日一言独立推送
-          _buildDailyQuoteCard(l10n, theme, colorScheme),
-
           if (_settings.enabled || _settings.dailyQuotePushEnabled) ...[
             const SizedBox(height: 16),
 
@@ -289,6 +284,11 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
             // 说明卡片
             _buildNoticeCard(l10n, theme, colorScheme),
           ],
+
+          const SizedBox(height: 16),
+
+          // 每日一言独立推送（始终显示，独立于智能推送开关）
+          _buildDailyQuoteCard(l10n, theme, colorScheme),
 
           const SizedBox(height: 32),
         ],
@@ -1302,6 +1302,13 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                 ),
               ),
             ],
+            const SizedBox(height: 12),
+            Text(
+              l10n.smartPushDailyQuoteIndependentNote,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ),
           ],
         ),
       ),
