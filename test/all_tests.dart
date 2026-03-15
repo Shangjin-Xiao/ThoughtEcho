@@ -10,6 +10,8 @@ import 'unit/models/note_category_test.dart' as note_category_test;
 
 // Import service tests
 import 'unit/services/database_service_test.dart' as database_service_test;
+import 'unit/services/excerpt_intent_service_test.dart'
+    as excerpt_intent_service_test;
 import 'unit/services/settings_service_test.dart' as settings_service_test;
 import 'unit/services/weather_service_test.dart' as weather_service_test;
 import 'unit/services/location_service_test.dart' as location_service_test;
@@ -41,6 +43,7 @@ void main() {
 
     group('Service Tests', () {
       database_service_test.main();
+      excerpt_intent_service_test.main();
       settings_service_test.main();
       weather_service_test.main();
       location_service_test.main();
@@ -60,6 +63,7 @@ void main() {
     });
 
     group('Widget Tests', () {
+      // excerpt_preferences_page_test 未并入全量入口，避免增加现有测试套件内存压力
       home_page_test.main();
     });
   });
