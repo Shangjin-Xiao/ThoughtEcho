@@ -11,6 +11,7 @@ import '../services/weather_service.dart';
 import '../services/ai_service.dart';
 import '../services/clipboard_service.dart';
 import '../services/connectivity_service.dart';
+import '../services/excerpt_intent_service.dart';
 import '../controllers/search_controller.dart'; // 导入搜索控制器
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
@@ -87,6 +88,8 @@ class _HomePageState extends State<HomePage>
   bool _homeGuidePending = false;
   bool _noteGuidePending = false;
   bool _settingsGuidePending = false;
+  String? _lastConsumedExcerptText;
+  bool _isHandlingExcerptIntent = false;
 
   // AI卡片生成服务
   AICardGenerationService? _aiCardService;
@@ -427,6 +430,7 @@ class _HomePageState extends State<HomePage>
       // 2. 如果没有恢复草稿，再检查剪贴板
       if (!draftRecovered) {
         _checkClipboard();
+        _consumePendingExcerptIntent();
       }
 
       // 如果不是记录页启动，确保标签也被加载
@@ -496,8 +500,41 @@ class _HomePageState extends State<HomePage>
       Future.delayed(const Duration(milliseconds: 500), () {
         if (mounted) {
           _checkClipboard();
+          _consumePendingExcerptIntent();
         }
       });
+    }
+  }
+
+  Future<void> _consumePendingExcerptIntent() async {
+    if (!mounted || _isHandlingExcerptIntent) {
+      return;
+    }
+
+    final settingsService = context.read<SettingsService>();
+    if (!settingsService.excerptIntentEnabled) {
+      return;
+    }
+
+    _isHandlingExcerptIntent = true;
+    try {
+      const excerptIntentService = ExcerptIntentService();
+      final excerptText =
+          await excerptIntentService.consumePendingExcerptText();
+      if (!mounted || excerptText == null) {
+        return;
+      }
+
+      if (_lastConsumedExcerptText == excerptText) {
+        return;
+      }
+
+      _lastConsumedExcerptText = excerptText;
+      _showAddQuoteDialog(prefilledContent: excerptText);
+    } catch (e) {
+      logError('消费外部摘录失败', error: e, source: 'HomePage');
+    } finally {
+      _isHandlingExcerptIntent = false;
     }
   }
 

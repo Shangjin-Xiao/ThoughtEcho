@@ -202,6 +202,15 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                   value: settings.autoAttachWeather,
                   onChanged: (v) => settings.setAutoAttachWeather(v),
                 ),
+                _buildDivider(),
+                _buildSwitchTile(
+                  context: context,
+                  title: l10n.excerptIntentEnabled,
+                  subtitle: l10n.excerptIntentEnabledDesc,
+                  icon: Icons.short_text_rounded,
+                  value: settings.excerptIntentEnabled,
+                  onChanged: (v) => settings.setExcerptIntentEnabled(v),
+                ),
               ],
             ),
 
