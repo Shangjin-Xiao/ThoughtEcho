@@ -3456,4 +3456,7 @@
   "containsHtmlTagsLabel": "Contient des balises HTML : {status}",
   "viewNoteInfo": "Afficher les informations sur les notes",
   "first100CharsLabel": "100 premiers caractères :"
+  ,"insertImage": "Insert Image",
+  "insertVideo": "Insert Video",
+  "insertAudio": "Insert Audio"
 }
