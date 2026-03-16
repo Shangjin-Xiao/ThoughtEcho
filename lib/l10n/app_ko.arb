@@ -3463,4 +3463,7 @@
   "containsHtmlTagsLabel": "HTML 태그 포함: {status}",
   "viewNoteInfo": "메모 정보 보기",
   "first100CharsLabel": "처음 100자:"
+  ,"insertImage": "Insert Image",
+  "insertVideo": "Insert Video",
+  "insertAudio": "Insert Audio"
 }

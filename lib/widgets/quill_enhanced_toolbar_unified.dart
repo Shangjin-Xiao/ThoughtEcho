@@ -165,17 +165,17 @@ class _UnifiedQuillToolbarState extends State<UnifiedQuillToolbar> {
             // 第十组：媒体插入 - 使用统一的媒体导入
             _buildMediaButton(
               icon: Icons.image,
-              tooltip: '插入图片',
+              tooltip: AppLocalizations.of(context).insertImage,
               onPressed: () => _showUnifiedMediaDialog('image'),
             ),
             _buildMediaButton(
               icon: Icons.videocam,
-              tooltip: '插入视频',
+              tooltip: AppLocalizations.of(context).insertVideo,
               onPressed: () => _showUnifiedMediaDialog('video'),
             ),
             _buildMediaButton(
               icon: Icons.audiotrack,
-              tooltip: '插入音频',
+              tooltip: AppLocalizations.of(context).insertAudio,
               onPressed: () => _showUnifiedMediaDialog('audio'),
             ),
             _buildDivider(),
