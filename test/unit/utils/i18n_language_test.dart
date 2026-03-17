@@ -53,17 +53,21 @@ void main() {
       test('should use provided locale if valid', () {
         expect(I18nLanguage.appLanguageOrSystem('zh_CN'), 'zh');
         expect(I18nLanguage.appLanguageOrSystem('fr_FR'), 'fr');
-        expect(I18nLanguage.appLanguageOrSystem('es_ES'), 'en'); // unsupported fallback
+        expect(I18nLanguage.appLanguageOrSystem('es_ES'),
+            'en'); // unsupported fallback
       });
 
       test('should fallback to system locale if input is null or empty', () {
         // Platform.localeName behavior might vary in test environments,
         // but it should resolve to either a supported language or 'en'.
         final result = I18nLanguage.appLanguageOrSystem(null);
-        expect(I18nLanguage.supported.contains(result) || result == 'en', isTrue);
+        expect(
+            I18nLanguage.supported.contains(result) || result == 'en', isTrue);
 
         final resultEmpty = I18nLanguage.appLanguageOrSystem('  ');
-        expect(I18nLanguage.supported.contains(resultEmpty) || resultEmpty == 'en', isTrue);
+        expect(
+            I18nLanguage.supported.contains(resultEmpty) || resultEmpty == 'en',
+            isTrue);
       });
     });
 
@@ -73,10 +77,14 @@ void main() {
       });
 
       test('should build correct header for specific mapped languages', () {
-        expect(I18nLanguage.buildAcceptLanguage('zh'), 'zh-CN,zh;q=0.9,en;q=0.8');
-        expect(I18nLanguage.buildAcceptLanguage('ja'), 'ja-JP,ja;q=0.9,en;q=0.8');
-        expect(I18nLanguage.buildAcceptLanguage('ko'), 'ko-KR,ko;q=0.9,en;q=0.8');
-        expect(I18nLanguage.buildAcceptLanguage('fr'), 'fr-FR,fr;q=0.9,en;q=0.8');
+        expect(
+            I18nLanguage.buildAcceptLanguage('zh'), 'zh-CN,zh;q=0.9,en;q=0.8');
+        expect(
+            I18nLanguage.buildAcceptLanguage('ja'), 'ja-JP,ja;q=0.9,en;q=0.8');
+        expect(
+            I18nLanguage.buildAcceptLanguage('ko'), 'ko-KR,ko;q=0.9,en;q=0.8');
+        expect(
+            I18nLanguage.buildAcceptLanguage('fr'), 'fr-FR,fr;q=0.9,en;q=0.8');
       });
 
       test('should handle language without specific mapping', () {
