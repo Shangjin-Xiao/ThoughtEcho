@@ -178,7 +178,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/lottie/
-    - assets/svg/
+
     - assets/icon.png
     - docs/
     - LICENSE
