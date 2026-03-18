@@ -325,7 +325,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
             await syncService.stopServer();
           }
         } catch (e) {
-          AppLogger.e('通过context停止同步服务失败: $e', source: 'NoteSyncPage', error: e);
+          AppLogger.e('通过context停止同步服务失败: $e',
+              source: 'NoteSyncPage', error: e);
         }
       }
       debugPrint('同步服务已停止');
@@ -353,7 +354,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
       try {
         syncService = context.read<NoteSyncService>();
       } catch (e) {
-        AppLogger.e('获取NoteSyncService失败: $e', source: 'NoteSyncPage', error: e);
+        AppLogger.e('获取NoteSyncService失败: $e',
+            source: 'NoteSyncPage', error: e);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -1357,7 +1359,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         );
       }
     } catch (e) {
-      AppLogger.e('clipboard copy failed: $e', source: 'NoteSyncPage', error: e);
+      AppLogger.e('clipboard copy failed: $e',
+          source: 'NoteSyncPage', error: e);
     }
   }
 
