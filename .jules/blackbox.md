@@ -4,3 +4,7 @@
 ## 2025-05-18 - 🗃️ 黑匣: [完善 ApiKeyManager 模块的结构化日志]
 **异常:** [APIKeyManager 中获取和验证 API 密钥失败时，仅使用了 logDebug 进行了粗糙的打印，丢失了关键的错误堆栈信息 (stackTrace) 以及错误来源模块 (source) 等上下文，不利于排查安全存储获取失败的根因。]
 **拦截:** [已将 getProviderApiKey 和 hasValidProviderApiKey 方法中的错误捕获升级为结构化的 AppLogger.e 调用，注入了明确的错误对象、堆栈轨迹以及模块标识 'APIKeyManager'。同时确认了日志内容未包含任何用户密钥等敏感隐私数据，仅记录了 providerId。]
+
+## 2026-03-18 - [完善 NoteSyncPage 模块的结构化日志]
+**异常:** [在 `lib/pages/note_sync_page.dart` 中发现了多处使用粗糙的 `debugPrint` 打印捕获的异常信息，丢失了错误栈和上下文。]
+**拦截:** [将 `debugPrint('...: $e')` 替换为规范的 `AppLogger.e('...: $e', source: 'NoteSyncPage', error: e)` 调用，注入了模块名和错误对象，以便于追踪。]
