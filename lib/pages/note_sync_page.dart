@@ -208,8 +208,9 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           }
         });
       }
-    } catch (e) {
-      AppLogger.e('启动同步服务失败: $e', source: 'NoteSyncPage', error: e);
+    } catch (e, stackTrace) {
+      AppLogger.e('启动同步服务失败: $e',
+          source: 'NoteSyncPage', error: e, stackTrace: stackTrace);
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         setState(() {
@@ -324,14 +325,15 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
             debugPrint('使用context获取的引用停止同步服务...');
             await syncService.stopServer();
           }
-        } catch (e) {
+        } catch (e, stackTrace) {
           AppLogger.e('通过context停止同步服务失败: $e',
-              source: 'NoteSyncPage', error: e);
+              source: 'NoteSyncPage', error: e, stackTrace: stackTrace);
         }
       }
       debugPrint('同步服务已停止');
-    } catch (e) {
-      AppLogger.e('停止同步服务失败: $e', source: 'NoteSyncPage', error: e);
+    } catch (e, stackTrace) {
+      AppLogger.e('停止同步服务失败: $e',
+          source: 'NoteSyncPage', error: e, stackTrace: stackTrace);
     } finally {
       _syncService = null; // 清理引用
     }
@@ -353,9 +355,9 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
       NoteSyncService? syncService;
       try {
         syncService = context.read<NoteSyncService>();
-      } catch (e) {
+      } catch (e, stackTrace) {
         AppLogger.e('获取NoteSyncService失败: $e',
-            source: 'NoteSyncPage', error: e);
+            source: 'NoteSyncPage', error: e, stackTrace: stackTrace);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -445,8 +447,9 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           }
         });
       });
-    } catch (e) {
-      AppLogger.e('设备发现失败: $e', source: 'NoteSyncPage', error: e);
+    } catch (e, stackTrace) {
+      AppLogger.e('设备发现失败: $e',
+          source: 'NoteSyncPage', error: e, stackTrace: stackTrace);
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -572,8 +575,9 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           duration: const Duration(seconds: 3),
         ),
       );
-    } catch (e) {
-      AppLogger.e('发送笔记失败: $e', source: 'NoteSyncPage', error: e);
+    } catch (e, stackTrace) {
+      AppLogger.e('发送笔记失败: $e',
+          source: 'NoteSyncPage', error: e, stackTrace: stackTrace);
       if (mounted) {
         messenger.showSnackBar(
           SnackBar(
@@ -1358,9 +1362,9 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           ),
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       AppLogger.e('clipboard copy failed: $e',
-          source: 'NoteSyncPage', error: e);
+          source: 'NoteSyncPage', error: e, stackTrace: stackTrace);
     }
   }
 
