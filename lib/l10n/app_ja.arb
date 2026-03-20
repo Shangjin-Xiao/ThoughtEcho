@@ -3463,7 +3463,7 @@
   "containsHtmlTagsLabel": "HTMLタグを含む：{status}",
   "viewNoteInfo": "ノート情報を表示",
   "first100CharsLabel": "最初の100文字："
-  ,"insertImage": "Insert Image",
-  "insertVideo": "Insert Video",
-  "insertAudio": "Insert Audio"
+  ,"insertImage": "画像を挿入",
+  "insertVideo": "動画を挿入",
+  "insertAudio": "音声を挿入"
 }
