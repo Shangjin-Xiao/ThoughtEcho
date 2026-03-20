@@ -15,6 +15,7 @@ import 'package:thoughtecho/utils/app_logger.dart';
 /// 专门用于管理AI分析结果，使用单独的数据库文件存储
 class AIAnalysisDatabaseService extends ChangeNotifier {
   static Database? _database;
+  static Completer<Database>? _initCompleter; // 修复：添加 Completer 防止竞态条件
   final _uuid = const Uuid();
 
   // 内存存储，用于 Web 平台或调试存储
@@ -45,33 +46,50 @@ class AIAnalysisDatabaseService extends ChangeNotifier {
   }
 
   /// 修复：初始化数据库，确保数据库工厂已正确初始化
+  /// 使用 Completer 防止并发初始化导致的竞态条件
   Future<Database> get database async {
+    // 快速路径：已初始化
     if (_database != null) return _database!;
 
-    // 修复：确保数据库工厂已初始化
-    // 扩展支持所有需要FFI的非Web平台，不仅仅是Windows
-    if (!kIsWeb &&
-        (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
-      // 使用一个更可靠的检查方式来确定是否已初始化
-      // databaseFactoryFfi是FFI工厂的实例，我们可以直接检查是否相等
-      if (databaseFactory != databaseFactoryFfi) {
-        AppLogger.w('数据库工厂未初始化，正在初始化...', source: 'AIAnalysisDB');
-        sqfliteFfiInit();
-        databaseFactory = databaseFactoryFfi;
-        AppLogger.i('数据库工厂初始化完成', source: 'AIAnalysisDB');
-      }
+    // 修复：如果正在初始化中，等待初始化完成
+    if (_initCompleter != null) {
+      return _initCompleter!.future;
     }
 
-    _database = await databaseFactory.openDatabase(
-      await _getDatabasePath(),
-      options: OpenDatabaseOptions(
-        version: 1,
-        onCreate: _createDatabase,
-        onUpgrade: _onUpgradeDatabase,
-      ),
-    );
+    // 开始初始化
+    _initCompleter = Completer<Database>();
 
-    return _database!;
+    try {
+      // 修复：确保数据库工厂已初始化
+      // 扩展支持所有需要FFI的非Web平台，不仅仅是Windows
+      if (!kIsWeb &&
+          (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+        // 使用一个更可靠的检查方式来确定是否已初始化
+        // databaseFactoryFfi是FFI工厂的实例，我们可以直接检查是否相等
+        if (databaseFactory != databaseFactoryFfi) {
+          AppLogger.w('数据库工厂未初始化，正在初始化...', source: 'AIAnalysisDB');
+          sqfliteFfiInit();
+          databaseFactory = databaseFactoryFfi;
+          AppLogger.i('数据库工厂初始化完成', source: 'AIAnalysisDB');
+        }
+      }
+
+      _database = await databaseFactory.openDatabase(
+        await _getDatabasePath(),
+        options: OpenDatabaseOptions(
+          version: 1,
+          onCreate: _createDatabase,
+          onUpgrade: _onUpgradeDatabase,
+        ),
+      );
+
+      _initCompleter!.complete(_database!);
+      return _database!;
+    } catch (e) {
+      _initCompleter!.completeError(e);
+      _initCompleter = null; // 重置以允许重试
+      rethrow;
+    }
   }
 
   /// 获取数据库文件路径

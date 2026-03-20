@@ -13,14 +13,21 @@ class EnhancedProgressManager {
 
   // 活动操作跟踪
   final Map<String, OperationProgress> _activeOperations = {};
-  final StreamController<ProgressEvent> _progressController =
-      StreamController<ProgressEvent>.broadcast();
+  StreamController<ProgressEvent>? _progressController;
 
   // 全局取消控制
   final Map<String, CancellationController> _cancellationControllers = {};
 
+  /// 获取或创建 StreamController（延迟初始化）
+  StreamController<ProgressEvent> get _controller {
+    if (_progressController == null || _progressController!.isClosed) {
+      _progressController = StreamController<ProgressEvent>.broadcast();
+    }
+    return _progressController!;
+  }
+
   /// 获取进度事件流
-  Stream<ProgressEvent> get progressStream => _progressController.stream;
+  Stream<ProgressEvent> get progressStream => _controller.stream;
 
   /// 开始新的操作
   String startOperation({
@@ -271,7 +278,16 @@ class EnhancedProgressManager {
 
   /// 发出进度事件
   void _emitProgressEvent(ProgressEvent event) {
-    _progressController.add(event);
+    _controller.add(event);
+  }
+
+  /// 关闭 StreamController（用于清理资源）
+  Future<void> dispose() async {
+    await _progressController?.close();
+    _progressController = null;
+    _activeOperations.clear();
+    _cancellationControllers.clear();
+    logDebug('EnhancedProgressManager 已释放资源');
   }
 
   /// 清理操作
