@@ -87,6 +87,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
         } catch (e) {
           logError('等待数据库初始化失败: $e', error: e, source: 'watchQuotes');
           tempController.addError(e);
+          await tempController.close(); // 修复：异常路径也关闭 controller
         }
       });
 

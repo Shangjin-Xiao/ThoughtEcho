@@ -8,6 +8,7 @@ import '../main.dart' show getAndClearDeferredErrors;
 class GlobalExceptionHandler {
   static bool _isInitialized = false;
   static final List<Map<String, dynamic>> _deferredErrors = [];
+  static const int _maxDeferredErrors = 100; // 修复：设置最大容量防止无限增长
   static RawReceivePort? _isolateErrorPort;
 
   /// 初始化全局异常处理
@@ -28,6 +29,10 @@ class GlobalExceptionHandler {
   }
 
   static void _storeDeferredError(Map<String, dynamic> error) {
+    // 修复：如果超过最大容量，移除最早的错误
+    if (_deferredErrors.length >= _maxDeferredErrors) {
+      _deferredErrors.removeAt(0);
+    }
     _deferredErrors.add(error);
   }
 

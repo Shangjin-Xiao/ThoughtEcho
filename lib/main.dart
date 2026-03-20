@@ -123,6 +123,15 @@ bool _isEmergencyMode = false;
 
 // 缓存早期捕获但无法立即记录的错误
 final List<Map<String, dynamic>> _deferredErrors = [];
+const int _maxDeferredErrors = 100; // 修复：设置最大容量防止无限增长
+
+/// 安全添加延迟错误（带容量限制）
+void _addDeferredError(Map<String, dynamic> error) {
+  if (_deferredErrors.length >= _maxDeferredErrors) {
+    _deferredErrors.removeAt(0);
+  }
+  _deferredErrors.add(error);
+}
 
 Future<void> main() async {
   // 立即设置日志级别为INFO，避免早期verbose日志输出
@@ -175,7 +184,7 @@ Future<void> main() async {
           );
           logError('堆栈: $stack', source: 'PlatformDispatcher');
         } // 捕获到错误后再记录到日志系统
-        _deferredErrors.add({
+        _addDeferredError({
           'message': '平台分发器错误',
           'error': error,
           'stackTrace':
@@ -216,7 +225,7 @@ Future<void> main() async {
             );
           } else {
             // 无法通过context获取LogService时，先保存到全局缓存
-            _deferredErrors.add({
+            _addDeferredError({
               'message': 'Flutter异常: ${details.exceptionAsString()}',
               'error': details.exception,
               'stackTrace': details.stack,
@@ -630,7 +639,7 @@ Future<void> main() async {
             // 记录错误，不使用 BuildContext
             try {
               // 将错误信息添加到延迟处理队列
-              _deferredErrors.add({
+              _addDeferredError({
                 'message': '后台服务初始化失败',
                 'error': e,
                 'stackTrace': stackTrace,
@@ -674,7 +683,7 @@ Future<void> main() async {
       // 使用非 context 相关访问方式记录错误，避免 use_build_context_synchronously 警告
       try {
         // 将错误信息添加到延迟处理队列
-        _deferredErrors.add({
+        _addDeferredError({
           'message': '未捕获异常: $error',
           'error': error,
           'stackTrace': stackTrace,
