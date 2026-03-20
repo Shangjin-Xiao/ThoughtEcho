@@ -3507,4 +3507,7 @@
   "developerAnniversaryResetDone": "Reset done, animation will play on next launch",
   "developerAnniversaryPreview": "Preview Animation Now",
   "developerAnniversaryPreviewDesc": "Tap to play the anniversary animation immediately"
+  ,"insertImage": "Insert Image",
+  "insertVideo": "Insert Video",
+  "insertAudio": "Insert Audio"
 }
