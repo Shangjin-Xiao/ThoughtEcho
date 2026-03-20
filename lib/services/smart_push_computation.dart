@@ -467,6 +467,47 @@ String pickWeekAgoTodayTitle(Random random) {
   return pool[random.nextInt(pool.length)];
 }
 
+/// sameTimeOfDay 标题生成（显示具体时间关联）
+///
+/// 根据笔记日期计算时间跨度，生成如 "2年前的此刻" 或 "183天前的此刻" 的标题。
+String pickSameTimeOfDayTitle(Random random, DateTime noteDate, DateTime now) {
+  final daysDiff = now.difference(noteDate).inDays;
+  final yearsDiff = now.year - noteDate.year;
+  final monthsDiff =
+      (now.year - noteDate.year) * 12 + now.month - noteDate.month;
+
+  // 优先显示年份（如果超过1年）
+  if (yearsDiff >= 1 && monthsDiff >= 12) {
+    final pool = [
+      '⏰ $yearsDiff年前的此刻',
+      '时光倒流$yearsDiff年，此刻你写下',
+      '$yearsDiff年前的这个时候',
+    ];
+    return pool[random.nextInt(pool.length)];
+  }
+
+  // 其次显示月份（如果超过1个月）
+  if (monthsDiff >= 1) {
+    final pool = [
+      '⏰ $monthsDiff个月前的此刻',
+      '$monthsDiff个月前的这个时候',
+    ];
+    return pool[random.nextInt(pool.length)];
+  }
+
+  // 显示天数（7天以上）
+  if (daysDiff >= 7) {
+    final pool = [
+      '⏰ $daysDiff天前的此刻',
+      '$daysDiff天前的这个时候',
+    ];
+    return pool[random.nextInt(pool.length)];
+  }
+
+  // 不到7天的情况（理论上不应命中，因为筛选器排除了当天）
+  return '⏰ 此刻的回忆';
+}
+
 /// sameLocation 标题候选池（随机轮换）
 String pickSameLocationTitle(Random random) {
   final pool = [

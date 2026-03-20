@@ -89,9 +89,14 @@ extension SmartPushContentSelection on SmartPushService {
 
     // 2. 同一时刻创建的笔记（±30分钟）
     if (filterResult.selectedSameTime != null) {
+      final note = filterResult.selectedSameTime!;
+      final noteDate = DateTime.tryParse(note.date);
+      final title = noteDate != null
+          ? pickSameTimeOfDayTitle(_random, noteDate, now)
+          : '⏰ 此刻的回忆';
       availableContent['sameTimeOfDay'] = _ContentCandidate(
-        note: filterResult.selectedSameTime!,
-        title: '⏰ 此刻，你曾写下',
+        note: note,
+        title: title,
         priority: 85,
       );
     }
