@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+    <defs>
+        <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="8" result="blur" />
+            <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
+        <filter id="drop-shadow" x="-10%" y="-10%" width="120%" height="130%">
+            <feDropShadow dx="0" dy="12" stdDeviation="10" flood-color="#000000" flood-opacity="0.08"/>
+        </filter>
+        <linearGradient id="candleGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stop-color="#E5E7EB"/>
+            <stop offset="30%" stop-color="#FFFFFF"/>
+            <stop offset="70%" stop-color="#FFFFFF"/>
+            <stop offset="100%" stop-color="#D1D5DB"/>
+        </linearGradient>
+        <linearGradient id="spongeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#FFD633"/>
+            <stop offset="100%" stop-color="#F59E0B"/>
+        </linearGradient>
+        <linearGradient id="icingGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#FFFFFF"/>
+            <stop offset="100%" stop-color="#F3F4F6"/>
+        </linearGradient>
+        <clipPath id="candleClip">
+            <rect x="190" y="80" width="20" height="85" rx="6"/>
+        </clipPath>
+        <g id="sprinkle-pink"><rect width="8" height="3.5" rx="1.75" fill="#FF69B4"/></g>
+        <g id="sprinkle-blue"><rect width="8" height="3.5" rx="1.75" fill="#42A5F5"/></g>
+        <g id="sprinkle-green"><rect width="8" height="3.5" rx="1.75" fill="#66BB6A"/></g>
+        <g id="sprinkle-yellow"><rect width="8" height="3.5" rx="1.75" fill="#FFEE58"/></g>
+        <g id="sprinkle-purple"><rect width="8" height="3.5" rx="1.75" fill="#AB47BC"/></g>
+    </defs>
+    <g filter="url(#drop-shadow)">
+        <ellipse cx="200" cy="305" rx="165" ry="48" fill="#D1D5DB"/>
+        <ellipse cx="200" cy="295" rx="175" ry="50" fill="#E5E7EB"/>
+        <ellipse cx="200" cy="295" rx="165" ry="46" fill="#F9FAFB"/>
+        <ellipse cx="200" cy="295" rx="155" ry="43" fill="#FFFFFF"/>
+        <ellipse cx="200" cy="295" rx="145" ry="42" fill="#D1D5DB" opacity="0.6"/>
+        <path d="M 60 250 v 45 a 140 40 0 0 0 280 0 v -45 Z" fill="url(#spongeGrad)"/>
+        <path d="M 60 295 a 140 40 0 0 0 280 0 v -10 a 140 40 0 0 1 -280 0 Z" fill="#D97706" opacity="0.6"/>
+        <path d="M 60 250 a 140 40 0 0 0 280 0 v 8 a 140 40 0 0 1 -280 0 Z" fill="#FFE4A0" opacity="0.8"/>
+        <path d="M 60 230 v 20 a 140 40 0 0 0 280 0 v -20 Z" fill="#FFFFFF"/>
+        <path d="M 60 250 a 140 40 0 0 0 280 0 v -6 a 140 40 0 0 1 -280 0 Z" fill="#D1D5DB" opacity="0.6"/>
+        <path d="M 60 190 v 40 a 140 40 0 0 0 280 0 v -40 Z" fill="url(#spongeGrad)"/>
+        <ellipse cx="200" cy="190" rx="140" ry="40" fill="#FCD34D"/>
+        <path d="M 60 230 a 140 40 0 0 0 280 0 v -8 a 140 40 0 0 1 -280 0 Z" fill="#D97706" opacity="0.6"/>
+        <path d="M 57 190
+                 C 57 215, 70 225, 80 225
+                 C 92 225, 95 198, 105 198
+                 C 117 198, 120 245, 135 245
+                 C 152 245, 160 208, 170 208
+                 C 182 208, 185 260, 200 260
+                 C 217 260, 225 218, 235 218
+                 C 247 218, 255 250, 270 250
+                 C 287 250, 290 202, 305 202
+                 C 322 202, 325 230, 335 230
+                 C 345 230, 343 190, 343 190 Z"
+              fill="#D1D5DB" transform="translate(0, 6)"/>
+        <path d="M 57 190
+                 C 57 215, 70 225, 80 225
+                 C 92 225, 95 198, 105 198
+                 C 117 198, 120 245, 135 245
+                 C 152 245, 160 208, 170 208
+                 C 182 208, 185 260, 200 260
+                 C 217 260, 225 218, 235 218
+                 C 247 218, 255 250, 270 250
+                 C 287 250, 290 202, 305 202
+                 C 322 202, 325 230, 335 230
+                 C 345 230, 343 190, 343 190 Z"
+              fill="url(#icingGrad)"/>
+        <path d="M 125 215 Q 130 240 135 242 Q 138 240 140 215" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.8"/>
+        <path d="M 190 230 Q 195 255 200 257 Q 203 255 205 230" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.8"/>
+        <path d="M 260 225 Q 265 245 270 247 Q 273 245 275 225" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.8"/>
+        <ellipse cx="200" cy="190" rx="143" ry="43" fill="url(#icingGrad)"/>
+        <ellipse cx="200" cy="185" rx="110" ry="30" fill="#FFFFFF" opacity="0.5"/>
+        <use href="#sprinkle-pink" x="110" y="190" transform="rotate(25 110 190)"/>
+        <use href="#sprinkle-blue" x="170" y="210" transform="rotate(-40 170 210)"/>
+        <use href="#sprinkle-green" x="230" y="215" transform="rotate(70 230 215)"/>
+        <use href="#sprinkle-yellow" x="290" y="195" transform="rotate(-15 290 195)"/>
+        <use href="#sprinkle-purple" x="180" y="170" transform="rotate(45 180 170)"/>
+        <use href="#sprinkle-pink" x="220" y="175" transform="rotate(-80 220 175)"/>
+        <use href="#sprinkle-blue" x="150" y="160" transform="rotate(10 150 160)"/>
+        <use href="#sprinkle-green" x="260" y="165" transform="rotate(55 260 165)"/>
+        <use href="#sprinkle-yellow" x="135" y="200" transform="rotate(80 135 200)"/>
+        <use href="#sprinkle-purple" x="260" y="200" transform="rotate(-20 260 200)"/>
+        <ellipse cx="200" cy="168" rx="14" ry="5" fill="#CBD5E1"/>
+        <rect x="188" y="80" width="24" height="85" rx="6" fill="url(#candleGrad)"/>
+        <g clip-path="url(#candleClip)">
+            <polygon points="178,100 222,80 222,95 178,115" fill="#E63946"/>
+            <polygon points="178,130 222,110 222,125 178,145" fill="#E63946"/>
+            <polygon points="178,160 222,140 222,155 178,175" fill="#E63946"/>
+            <rect x="188" y="80" width="4" height="85" fill="#000000" opacity="0.1"/>
+            <rect x="208" y="80" width="4" height="85" fill="#000000" opacity="0.15"/>
+        </g>
+        <path d="M 200 80 Q 198 72 201 65" stroke="#4B5563" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+    </g>
+    <g transform="translate(201, 62)">
+        <circle cx="0" cy="-22" r="35" fill="rgba(255, 170, 0, 0.2)" filter="url(#glow)">
+            <animate attributeName="opacity" values="0.2; 0.5; 0.2" dur="1.5s" repeatCount="indefinite" />
+            <animate attributeName="r" values="30; 38; 30" dur="1.5s" repeatCount="indefinite" />
+        </circle>
+        <g>
+            <animateTransform attributeName="transform" type="rotate" values="-4; 4; -2; 3; -4" dur="2.5s" repeatCount="indefinite" additive="sum" />
+            <animateTransform attributeName="transform" type="scale" values="0.95 0.95; 1.05 1.1; 0.95 0.95" dur="1.2s" repeatCount="indefinite" additive="sum" />
+            <path d="M 0 0 C 20 -5, 15 -28, 0 -40 C -15 -28, -20 -5, 0 0 Z" fill="#FF8C00" filter="url(#glow)"/>
+            <path d="M 0 -2 C 10 -8, 8 -22, 0 -28 C -8 -22, -10 -8, 0 -2 Z" fill="#FFD700"/>
+            <path d="M 0 -5 C 4 -8, 3 -15, 0 -18 C -3 -15, -4 -8, 0 -5 Z" fill="#FFFFFF"/>
+            <ellipse cx="0" cy="-2" rx="4" ry="2" fill="#4FC3F7" opacity="0.8"/>
+        </g>
+    </g>
+</svg>
