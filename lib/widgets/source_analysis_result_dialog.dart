@@ -22,7 +22,7 @@ class SourceAnalysisResultDialog {
     TextEditingController? workController,
     Function(String)? onError,
   }) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context);
 
     try {
       // 清理 AI 返回的 markdown 代码块包裹

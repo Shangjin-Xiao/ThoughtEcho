@@ -140,6 +140,7 @@ class AiDialogHelper {
   Future<void> analyzeContent(
     Quote quote, {
     required Function(String) onFinish,
+    List<String>? tagNames,
   }) async {
     if (quote.content.isEmpty) {
       _showSnackBar(l10n.pleaseEnterContent);
@@ -153,7 +154,8 @@ class AiDialogHelper {
         builder: (dialogContext) {
           return StreamingTextDialog(
             title: l10n.noteAnalysis,
-            textStream: aiService.streamSummarizeNote(quote),
+            textStream:
+                aiService.streamSummarizeNote(quote, tagNames: tagNames),
             applyButtonText: l10n.applyToNote,
             onApply: onFinish,
             onCancel: () {

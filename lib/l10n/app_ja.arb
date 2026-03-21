@@ -2811,6 +2811,8 @@
   "mindMapAnalysis": "マインドマップ",
   "growthAnalysis": "成長分析",
   "aiAnalysis": "AI分析",
+  "aiGenerating": "AI 生成中...",
+  "complete": "完了",
   "selectReportTypePrompt": "レポートタイプ：",
   "aiSmartReport": "AIレポート",
   "aiSmartReportDesc": "AI生成のHTMLレポート",

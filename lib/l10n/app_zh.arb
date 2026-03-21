@@ -2834,6 +2834,8 @@
   "deleteAiAnalysisConfirm": "确定要删除此笔记的AI分析结果吗？此操作可在保存笔记前撤销。",
   "aiAnalysisDeleted": "AI分析已删除",
   "aiAnalysisSaved": "AI分析已保存",
+  "aiGenerating": "AI 正在生成...",
+  "complete": "完成",
   "viewFull": "查看全文",
   "copy": "复制",
   "copiedToClipboard": "已复制到剪贴板",

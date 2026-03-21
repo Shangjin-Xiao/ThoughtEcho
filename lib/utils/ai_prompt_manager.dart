@@ -609,6 +609,7 @@ HTML设计要求：
     String? weather,
     String? temperature,
     String? dayPeriod,
+    List<String>? tagNames,
   }) {
     final buffer = StringBuffer();
     buffer.writeln('请分析以下笔记内容：');
@@ -620,7 +621,8 @@ HTML设计要求：
         (sourceWork?.isNotEmpty ?? false) ||
         (location?.isNotEmpty ?? false) ||
         (weather?.isNotEmpty ?? false) ||
-        (dayPeriod?.isNotEmpty ?? false);
+        (dayPeriod?.isNotEmpty ?? false) ||
+        (tagNames?.isNotEmpty ?? false);
 
     if (hasMetadata) {
       buffer.writeln();
@@ -630,6 +632,9 @@ HTML设计要求：
       }
       if (sourceWork?.isNotEmpty ?? false) {
         buffer.writeln('- 出处：$sourceWork');
+      }
+      if (tagNames?.isNotEmpty ?? false) {
+        buffer.writeln('- 标签：${tagNames!.join('、')}');
       }
       if (location?.isNotEmpty ?? false) {
         buffer.writeln('- 位置：$location');

@@ -2815,6 +2815,8 @@
   "deleteAiAnalysisConfirm": "Are you sure you want to delete the AI analysis result for this note? This can be undone before saving the note.",
   "aiAnalysisDeleted": "AI analysis deleted",
   "aiAnalysisSaved": "AI analysis saved",
+  "aiGenerating": "AI is generating...",
+  "complete": "Complete",
   "viewFull": "View Full",
   "copy": "Copy",
   "copiedToClipboard": "Copied to clipboard",

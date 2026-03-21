@@ -15,6 +15,7 @@ class AddNoteAIMenu extends StatefulWidget {
   final TextEditingController authorController;
   final TextEditingController workController;
   final Function(String) onAiAnalysisCompleted;
+  final List<String>? tagNames; // 标签名称列表（用于 AI 分析）
 
   const AddNoteAIMenu({
     super.key,
@@ -22,6 +23,7 @@ class AddNoteAIMenu extends StatefulWidget {
     required this.authorController,
     required this.workController,
     required this.onAiAnalysisCompleted,
+    this.tagNames,
   });
 
   @override
@@ -258,7 +260,10 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
           );
           return StreamingTextDialog(
             title: l10n.noteAnalysis,
-            textStream: aiService.streamSummarizeNote(quote),
+            textStream: aiService.streamSummarizeNote(
+              quote,
+              tagNames: widget.tagNames,
+            ),
             applyButtonText: l10n.applyToNote,
             onApply: (analysisResult) {
               widget.onAiAnalysisCompleted(analysisResult);
@@ -321,21 +326,6 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (context) => NoteQAChatPage(quote: tempQuote)),
     );
-  }
-
-  /// 清理 AI 返回的 JSON 响应，去除 markdown 代码块包裹
-  String _cleanJsonResponse(String response) {
-    String cleaned = response.trim();
-    // 去除 ```json ... ``` 或 ``` ... ``` 包裹
-    final codeBlockRegex = RegExp(
-      r'^```(?:json)?\s*\n?(.*?)\n?\s*```$',
-      dotAll: true,
-    );
-    final match = codeBlockRegex.firstMatch(cleaned);
-    if (match != null) {
-      cleaned = match.group(1)!.trim();
-    }
-    return cleaned;
   }
 
   /// 在 BottomSheet 上下文中用 AlertDialog 显示错误（避免 SnackBar 被遮挡）

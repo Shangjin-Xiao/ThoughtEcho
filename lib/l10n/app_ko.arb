@@ -2811,6 +2811,8 @@
   "mindMapAnalysis": "마인드맵",
   "growthAnalysis": "성장 분석",
   "aiAnalysis": "AI 분석",
+  "aiGenerating": "AI 생성 중...",
+  "complete": "완료",
   "selectReportTypePrompt": "생성할 연간 보고서 유형을 선택하십시오:",
   "aiSmartReport": "AI 스마트 리포트",
   "aiSmartReportDesc": "심층적인 통찰력과 시각적 차트를 포함하여 AI 분석을 기반으로 생성된 아름다운 HTML 보고서",
