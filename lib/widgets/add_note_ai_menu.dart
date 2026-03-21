@@ -153,8 +153,11 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
             applyButtonText: l10n.applyChanges,
             onApply: (polishedText) {
               widget.contentController.text = polishedText;
+              Navigator.of(dialogContext).pop();
             },
-            onCancel: () {},
+            onCancel: () {
+              Navigator.of(dialogContext).pop();
+            },
             isMarkdown: false,
           );
         },
@@ -207,8 +210,11 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
             applyButtonText: l10n.appendToNote,
             onApply: (continuedText) {
               widget.contentController.text += continuedText;
+              Navigator.of(dialogContext).pop();
             },
-            onCancel: () {},
+            onCancel: () {
+              Navigator.of(dialogContext).pop();
+            },
             isMarkdown: false,
           );
         },
@@ -267,8 +273,11 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
             applyButtonText: l10n.applyToNote,
             onApply: (analysisResult) {
               widget.onAiAnalysisCompleted(analysisResult);
+              Navigator.of(dialogContext).pop();
             },
-            onCancel: () {},
+            onCancel: () {
+              Navigator.of(dialogContext).pop();
+            },
             isMarkdown: true, // 分析结果通常是Markdown格式
           );
         },

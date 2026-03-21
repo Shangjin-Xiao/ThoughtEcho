@@ -223,9 +223,9 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
               color: colorScheme.onSurfaceVariant,
               size: 20,
             ),
+            // 注意：不在此处调用 Navigator.pop()，由 onCancel 回调负责关闭对话框
             onPressed: () {
               widget.onCancel();
-              Navigator.of(context).pop();
             },
             tooltip: l10n.close,
           ),
@@ -449,20 +449,21 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
             ),
           const Spacer(),
           // 取消按钮
+          // 注意：不在此处调用 Navigator.pop()，由 onCancel 回调负责关闭对话框
           TextButton(
             onPressed: () {
               widget.onCancel();
-              Navigator.of(context).pop();
             },
             child: Text(l10n.cancelLabel),
           ),
           const SizedBox(width: 8),
           // 应用按钮
+          // 注意：不在此处调用 Navigator.pop()，由 onApply 回调负责关闭对话框
+          // 这样调用者可以通过 Navigator.of(dialogContext).pop(result) 返回结果
           FilledButton.icon(
             onPressed: canApply
                 ? () {
                     widget.onApply(_currentText);
-                    Navigator.of(context).pop(_currentText);  // 返回文本结果
                   }
                 : null,
             icon: Icon(
