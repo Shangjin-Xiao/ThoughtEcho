@@ -545,7 +545,7 @@ class _HomePageState extends State<HomePage>
     }
   }
 
-  // 检查是否应该显示一周年庆典动画
+  // 检查是否应该显示一周年庆典动画（整个周期内只播放一次）
   Future<void> _checkAndShowAnniversaryAnimation() async {
     if (!mounted) return;
     final settingsService = context.read<SettingsService>();
