@@ -64,7 +64,7 @@
     </tr>
     <tr>
       <td align="center"><b>⚡ 快速捕获</b><br>剪贴板检测、一言与每日灵感随手收集</td>
-      <td align="center" colspan="2"><b>📱 全平台支持</b><br>Windows、Android、iOS、Web 全覆盖</td>
+      <td align="center" colspan="2"><b>📱 全平台支持</b><br>Windows、Android、iOS 全覆盖</td>
     </tr>
   </table>
 </div>
@@ -131,7 +131,7 @@
     </tr>
     <tr>
       <td align="center"><b>平台适配</b></td>
-      <td>Windows、Android、iOS、Web全平台支持</td>
+      <td>Windows、Android、iOS全平台支持</td>
     </tr>
   </table>
 </div>
@@ -308,7 +308,7 @@ ThoughtEcho is more than just a note-taking app—it's your **personal AI-powere
     </tr>
     <tr>
       <td align="center"><b>⚡ Quick Capture</b><br>Clipboard watcher, Hitokoto quotes, daily prompts on tap</td>
-      <td align="center" colspan="2"><b>📱 All Platforms</b><br>Windows, Android, iOS, Web full coverage</td>
+      <td align="center" colspan="2"><b>📱 All Platforms</b><br>Windows, Android, iOS full coverage</td>
     </tr>
   </table>
 </div>
@@ -375,7 +375,7 @@ ThoughtEcho is more than just a note-taking app—it's your **personal AI-powere
     </tr>
     <tr>
       <td align="center"><b>Platform Support</b></td>
-      <td>Windows, Android, iOS, Web full platform support</td>
+      <td>Windows, Android, iOS full platform support</td>
     </tr>
   </table>
 </div>
