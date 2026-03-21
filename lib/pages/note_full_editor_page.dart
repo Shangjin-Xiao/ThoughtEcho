@@ -124,6 +124,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   late double? _initialLongitude;
   late String? _initialWeather;
   late String? _initialTemperature;
+  late String? _initialAiAnalysis;
 
   // 完整笔记数据（从数据库重新获取，确保字段完整）
   Quote? _fullInitialQuote;
@@ -268,6 +269,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     _initialLongitude = widget.initialQuote?.longitude;
     _initialWeather = widget.initialQuote?.weather;
     _initialTemperature = widget.initialQuote?.temperature;
+    _initialAiAnalysis = widget.initialQuote?.aiAnalysis;
 
     // 性能优化：延迟显示功能引导，避免与编辑器初始化竞争
     WidgetsBinding.instance.addPostFrameCallback((_) {
