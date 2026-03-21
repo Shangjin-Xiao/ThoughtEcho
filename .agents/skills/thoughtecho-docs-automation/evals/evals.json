@@ -1,0 +1,95 @@
+{
+  "skill_name": "thoughtecho-docs-automation",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "我刚加了 Gemini 作为新的 AI provider，帮我更新一下文档",
+      "should_trigger": true,
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "update docs based on recent changes",
+      "should_trigger": true,
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "帮我把文档同步一下，最近改了不少东西",
+      "should_trigger": true,
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "根据最新的代码改动更新用户手册",
+      "should_trigger": true,
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "文档需要更新了",
+      "should_trigger": true,
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "我加了笔记导出为 Markdown 的功能，更新一下说明文档",
+      "should_trigger": true,
+      "files": []
+    },
+    {
+      "id": 7,
+      "prompt": "sync the docs with the latest code",
+      "should_trigger": true,
+      "files": []
+    },
+    {
+      "id": 8,
+      "prompt": "我刚修了个 bug，笔记列表排序不对，帮我看看",
+      "should_trigger": false,
+      "files": []
+    },
+    {
+      "id": 9,
+      "prompt": "帮我看看这个 Provider 的逻辑对不对",
+      "should_trigger": false,
+      "files": []
+    },
+    {
+      "id": 10,
+      "prompt": "这个数据库查询太慢了，帮我优化一下",
+      "should_trigger": false,
+      "files": []
+    },
+    {
+      "id": 11,
+      "prompt": "加了一个新的 AI provider，OpenRouter，帮我写一下配置逻辑",
+      "should_trigger": false,
+      "files": []
+    },
+    {
+      "id": 12,
+      "prompt": "帮我写个新功能：笔记可以导出为 PDF",
+      "should_trigger": false,
+      "files": []
+    },
+    {
+      "id": 13,
+      "prompt": "文档在哪里？",
+      "should_trigger": false,
+      "files": []
+    },
+    {
+      "id": 14,
+      "prompt": "看一下 AGENTS.md 里关于数据库的说明",
+      "should_trigger": false,
+      "files": []
+    },
+    {
+      "id": 15,
+      "prompt": "这个 bug 是因为 notifyListeners() 没调用导致的，改一下",
+      "should_trigger": false,
+      "files": []
+    }
+  ]
+}
