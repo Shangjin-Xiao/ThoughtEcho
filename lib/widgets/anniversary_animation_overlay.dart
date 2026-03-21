@@ -269,7 +269,7 @@ class _AnniversaryAnimationOverlayState
                               l10n.anniversaryBannerSubtitle,
                               style: const TextStyle(
                                 fontSize: 11,
-                                color: Color(0xFFA0C4FF),
+                                color: Colors.white,
                                 letterSpacing: 1.0,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -288,21 +288,25 @@ class _AnniversaryAnimationOverlayState
                                       : null,
                                   icon: const Icon(
                                     Icons.arrow_forward_rounded,
-                                    color: Colors.white,
                                     size: 20,
                                   ),
                                   label: Text(
                                     l10n.anniversaryEnterApp,
                                     style: const TextStyle(
-                                      color: Colors.white,
                                       fontWeight: FontWeight.w600,
                                       letterSpacing: 0.3,
                                     ),
                                   ),
                                   style: FilledButton.styleFrom(
-                                    backgroundColor: const Color(0xFF0061FF),
+                                    backgroundColor:
+                                        Colors.white.withValues(alpha: 0.2),
+                                    foregroundColor: Colors.white,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(20),
+                                      side: BorderSide(
+                                        color: Colors.white
+                                            .withValues(alpha: 0.4),
+                                      ),
                                     ),
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 32,
