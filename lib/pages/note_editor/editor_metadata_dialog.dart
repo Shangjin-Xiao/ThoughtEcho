@@ -205,6 +205,15 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                             setState,
                           ),
                           const SizedBox(height: 24),
+                          // AI 分析结果（如有）
+                          _buildMetadataAiAnalysisSection(
+                            theme,
+                            l10n,
+                            setState,
+                          ),
+                          if (_currentAiAnalysis != null &&
+                              _currentAiAnalysis!.isNotEmpty)
+                            const SizedBox(height: 24),
                           // 标签选择
                           Row(
                             children: [

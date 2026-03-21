@@ -310,7 +310,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       id: baseQuote?.id ?? const Uuid().v4(),
       content: plainTextContent,
       date: baseQuote?.date ?? now,
-      aiAnalysis: baseQuote?.aiAnalysis,
+      aiAnalysis: _currentAiAnalysis ?? baseQuote?.aiAnalysis,
       source: _formatSource(_authorController.text, _workController.text),
       sourceAuthor: _authorController.text,
       sourceWork: _workController.text,

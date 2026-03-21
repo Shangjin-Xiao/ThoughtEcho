@@ -503,14 +503,56 @@ HTML设计要求：
     return '$messagePrefix\n$content';
   }
 
-  /// 构建问答用户消息
-  String buildQAUserMessage(String noteContent, String question) {
-    return '''笔记内容：
+  /// 构建问答用户消息（支持完整元数据）
+  String buildQAUserMessage(
+    String noteContent,
+    String question, {
+    String? sourceAuthor,
+    String? sourceWork,
+    String? location,
+    String? weather,
+    String? temperature,
+    String? dayPeriod,
+  }) {
+    final buffer = StringBuffer();
+    buffer.writeln('笔记内容：');
+    buffer.writeln();
+    buffer.writeln(noteContent);
+    buffer.writeln();
 
-$noteContent
+    // 添加元数据上下文（如果有）
+    final hasMetadata = (sourceAuthor?.isNotEmpty ?? false) ||
+        (sourceWork?.isNotEmpty ?? false) ||
+        (location?.isNotEmpty ?? false) ||
+        (weather?.isNotEmpty ?? false);
 
-我的问题：
-$question''';
+    if (hasMetadata) {
+      buffer.writeln('笔记元数据：');
+      if (sourceAuthor?.isNotEmpty ?? false) {
+        buffer.writeln('- 作者：$sourceAuthor');
+      }
+      if (sourceWork?.isNotEmpty ?? false) {
+        buffer.writeln('- 出处：$sourceWork');
+      }
+      if (location?.isNotEmpty ?? false) {
+        buffer.writeln('- 位置：$location');
+      }
+      if (weather?.isNotEmpty ?? false) {
+        final weatherInfo = temperature?.isNotEmpty ?? false
+            ? '$weather $temperature'
+            : weather;
+        buffer.writeln('- 天气：$weatherInfo');
+      }
+      if (dayPeriod?.isNotEmpty ?? false) {
+        buffer.writeln('- 时间段：$dayPeriod');
+      }
+      buffer.writeln();
+    }
+
+    buffer.writeln('我的问题：');
+    buffer.writeln(question);
+
+    return buffer.toString();
   }
 
   /// 文本润色助手提示词
@@ -529,9 +571,79 @@ $question''';
     return '请续写以下文本：\n\n$content';
   }
 
-  /// 构建来源分析用户消息
-  String buildSourceAnalysisUserMessage(String content) {
-    return '请分析以下文本的可能来源：\n\n$content';
+  /// 构建来源分析用户消息（支持已填写的作者/出处）
+  String buildSourceAnalysisUserMessage(
+    String content, {
+    String? existingAuthor,
+    String? existingWork,
+  }) {
+    final buffer = StringBuffer();
+    buffer.writeln('请分析以下文本的可能来源：');
+    buffer.writeln();
+    buffer.writeln(content);
+
+    // 如果用户已填写作者或出处，提示 AI 验证
+    if ((existingAuthor?.isNotEmpty ?? false) ||
+        (existingWork?.isNotEmpty ?? false)) {
+      buffer.writeln();
+      buffer.writeln('【参考信息】用户已填写：');
+      if (existingAuthor?.isNotEmpty ?? false) {
+        buffer.writeln('- 作者：$existingAuthor');
+      }
+      if (existingWork?.isNotEmpty ?? false) {
+        buffer.writeln('- 出处：$existingWork');
+      }
+      buffer.writeln('请验证这些信息是否正确，如果正确请在 explanation 中说明"用户填写的信息正确"。');
+    }
+
+    return buffer.toString();
+  }
+
+  /// 构建深度分析用户消息（支持完整元数据）
+  String buildAnalysisUserMessage(
+    String content, {
+    String? sourceAuthor,
+    String? sourceWork,
+    String? location,
+    String? weather,
+    String? temperature,
+    String? dayPeriod,
+  }) {
+    final buffer = StringBuffer();
+    buffer.writeln('请分析以下笔记内容：');
+    buffer.writeln();
+    buffer.writeln(content);
+
+    // 添加元数据上下文（如果有）
+    final hasMetadata = (sourceAuthor?.isNotEmpty ?? false) ||
+        (sourceWork?.isNotEmpty ?? false) ||
+        (location?.isNotEmpty ?? false) ||
+        (weather?.isNotEmpty ?? false);
+
+    if (hasMetadata) {
+      buffer.writeln();
+      buffer.writeln('笔记元数据：');
+      if (sourceAuthor?.isNotEmpty ?? false) {
+        buffer.writeln('- 作者：$sourceAuthor');
+      }
+      if (sourceWork?.isNotEmpty ?? false) {
+        buffer.writeln('- 出处：$sourceWork');
+      }
+      if (location?.isNotEmpty ?? false) {
+        buffer.writeln('- 位置：$location');
+      }
+      if (weather?.isNotEmpty ?? false) {
+        final weatherInfo = temperature?.isNotEmpty ?? false
+            ? '$weather $temperature'
+            : weather;
+        buffer.writeln('- 天气：$weatherInfo');
+      }
+      if (dayPeriod?.isNotEmpty ?? false) {
+        buffer.writeln('- 时间段：$dayPeriod');
+      }
+    }
+
+    return buffer.toString();
   }
 
   /// 构建润色用户消息
