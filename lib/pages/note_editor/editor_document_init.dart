@@ -13,6 +13,8 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
       if (fullQuote != null && mounted) {
         _updateState(() {
           _fullInitialQuote = fullQuote;
+          // 初始化 AI 分析结果
+          _currentAiAnalysis ??= fullQuote.aiAnalysis;
         });
         logDebug('已获取完整笔记数据，ID: ${fullQuote.id}');
       }

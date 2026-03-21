@@ -4,104 +4,14 @@ part of '../note_full_editor_page.dart';
 /// continuation, deep analysis, and note Q&A.
 extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
   void _showAIOptions(BuildContext context) {
-    final theme = Theme.of(context);
-
-    showModalBottomSheet(
+    AiOptionsMenu.show(
       context: context,
-      backgroundColor: theme.colorScheme.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(12), // 使用圆角
-        ),
-      ),
-      builder: (BuildContext context) {
-        return SafeArea(
-          child: SingleChildScrollView(
-            child: IntrinsicHeight(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.auto_awesome,
-                          size: 20,
-                          color: theme.colorScheme.primary,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'AI助手',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Divider(height: 1, color: theme.colorScheme.outline),
-                  ListTile(
-                    leading: const Icon(Icons.text_fields),
-                    title: Text(
-                      AppLocalizations.of(context).smartAnalyzeSource,
-                    ),
-                    subtitle: Text(
-                      AppLocalizations.of(context).smartAnalyzeSourceDesc,
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _analyzeSource();
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.brush),
-                    title: Text(AppLocalizations.of(context).polishText),
-                    subtitle: Text(AppLocalizations.of(context).polishTextDesc),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _polishText();
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.add_circle_outline),
-                    title: Text(AppLocalizations.of(context).continueWriting),
-                    subtitle: Text(
-                      AppLocalizations.of(context).continueWritingDesc,
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _continueText();
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.analytics),
-                    title: Text(AppLocalizations.of(context).deepAnalysis),
-                    subtitle: Text(
-                      AppLocalizations.of(context).deepAnalysisDesc,
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _analyzeContent();
-                    },
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.chat),
-                    title: Text(AppLocalizations.of(context).askNote),
-                    subtitle: Text(AppLocalizations.of(context).askNoteDesc),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _askNoteQuestion();
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
+      showAskNote: true,
+      onAnalyzeSource: _analyzeSource,
+      onPolishText: _polishText,
+      onContinueText: _continueText,
+      onAnalyzeContent: _analyzeContent,
+      onAskNote: _askNoteQuestion,
     );
   }
 
@@ -141,8 +51,14 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
         },
       );
 
-      // 调用AI分析来源
-      final result = await aiService.analyzeSource(plainText);
+      // 调用AI分析来源（传递已有的作者/出处供 AI 验证）
+      final existingAuthor = _authorController.text.trim();
+      final existingWork = _workController.text.trim();
+      final result = await aiService.analyzeSource(
+        plainText,
+        existingAuthor: existingAuthor.isNotEmpty ? existingAuthor : null,
+        existingWork: existingWork.isNotEmpty ? existingWork : null,
+      );
 
       // 确保组件仍然挂载在widget树上
       if (!mounted) return;
@@ -150,93 +66,23 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
       // 关闭加载对话框
       Navigator.of(context).pop();
 
-      // 解析JSON结果
-      try {
-        final Map<String, dynamic> sourceData = json.decode(result);
-
-        String? author = sourceData['author'] as String?;
-        String? work = sourceData['work'] as String?;
-        String confidence = sourceData['confidence'] as String? ?? '低';
-        String explanation = sourceData['explanation'] as String? ?? '';
-
-        // 显示结果对话框
-        if (mounted) {
-          final l10n = AppLocalizations.of(context);
-          showDialog(
-            context: context,
-            builder: (dialogContext) {
-              return AlertDialog(
-                title: Text(l10n.analysisResultWithConfidence(confidence)),
-                content: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (author != null && author.isNotEmpty) ...[
-                      Text(
-                        l10n.possibleAuthor,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      Text(author),
-                      const SizedBox(height: 8),
-                    ],
-                    if (work != null && work.isNotEmpty) ...[
-                      Text(
-                        l10n.possibleWork,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      Text(work),
-                      const SizedBox(height: 8),
-                    ],
-                    if (explanation.isNotEmpty) ...[
-                      Text(
-                        l10n.analysisExplanation,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      Text(explanation, style: const TextStyle(fontSize: 13)),
-                    ],
-                    if ((author == null || author.isEmpty) &&
-                        (work == null || work.isEmpty))
-                      Text(l10n.noAuthorWorkIdentified),
-                  ],
-                ),
-                actions: [
-                  if ((author != null && author.isNotEmpty) ||
-                      (work != null && work.isNotEmpty))
-                    TextButton(
-                      child: Text(l10n.applyAnalysisResult),
-                      onPressed: () {
-                        _updateState(() {
-                          if (author != null && author.isNotEmpty) {
-                            _authorController.text = author;
-                          }
-                          if (work != null && work.isNotEmpty) {
-                            _workController.text = work;
-                          }
-                        });
-                        Navigator.of(dialogContext).pop();
-                      },
-                    ),
-                  TextButton(
-                    child: Text(l10n.close),
-                    onPressed: () {
-                      Navigator.of(dialogContext).pop();
-                    },
-                  ),
-                ],
-              );
-            },
-          );
-        }
-      } catch (e) {
-        if (mounted) {
-          final l10n = AppLocalizations.of(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n.parseResultFailedWithError(e.toString())),
-              duration: AppConstants.snackBarDurationError,
-            ),
-          );
-        }
+      // 显示来源分析结果对话框
+      if (mounted) {
+        SourceAnalysisResultDialog.show(
+          context,
+          result,
+          authorController: _authorController,
+          workController: _workController,
+          onError: (error) {
+            final l10n = AppLocalizations.of(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(l10n.parseResultFailedWithError(error)),
+                duration: AppConstants.snackBarDurationError,
+              ),
+            );
+          },
+        );
       }
     } catch (e) {
       // 确保组件仍然挂载在widget树上
@@ -371,7 +217,7 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
     }
   }
 
-  // 深度分析内容 (使用流式传输)
+  // 深度分析内容 (使用流式传输，保存结果到 _currentAiAnalysis)
   Future<void> _analyzeContent() async {
     final plainText = StringUtils.removeObjectReplacementChar(
       _controller.document.toPlainText(),
@@ -391,52 +237,60 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
 
     final aiService = Provider.of<AIService>(context, listen: false);
 
+    // 创建临时Quote对象进行分析，包含完整元数据
+    final quote = Quote(
+      id: widget.initialQuote?.id ?? const Uuid().v4(),
+      content: plainText,
+      date: widget.initialQuote?.date ?? DateTime.now().toIso8601String(),
+      sourceAuthor: _authorController.text.trim().isNotEmpty
+          ? _authorController.text.trim()
+          : null,
+      sourceWork: _workController.text.trim().isNotEmpty
+          ? _workController.text.trim()
+          : null,
+      location: _showLocation ? _location : null,
+      weather: _showWeather ? _weather : null,
+      temperature: _showWeather ? _temperature : null,
+    );
+
     // 显示流式文本对话框
-    // 对于分析功能，我们只关心对话框的显示，不需要await返回值来更新编辑器
     final l10n = AppLocalizations.of(context);
-    await showDialog<void>(
+    final String? analysisResult = await showDialog<String?>(
       context: context,
       barrierDismissible: false, // 不允许点击外部关闭
       builder: (dialogContext) {
-        // 创建临时Quote对象进行分析
-        final quote = Quote(
-          id: widget.initialQuote?.id ?? const Uuid().v4(),
-          content: plainText,
-          date: widget.initialQuote?.date ?? DateTime.now().toIso8601String(),
-          location: _showLocation ? _location : null,
-          weather: _showWeather ? _weather : null,
-          temperature: _showWeather ? _temperature : null,
-        );
-
         return StreamingTextDialog(
           title: l10n.analyzingNote,
-          textStream: aiService.streamSummarizeNote(quote), // 调用流式方法，使用正确的参数名
-          applyButtonText: l10n.copyResult, // 分析结果的应用按钮可以是复制
+          textStream: aiService.streamSummarizeNote(quote),
+          applyButtonText: l10n.applyToNote, // 应用到笔记
           onApply: (fullText) {
-            // 用户点击"复制结果"时调用
-            Clipboard.setData(ClipboardData(text: fullText)).then((_) {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(l10n.analysisResultCopied),
-                    duration: AppConstants.snackBarDurationImportant,
-                  ),
-                );
-              }
-            });
-            Navigator.of(dialogContext).pop(); // 关闭对话框
+            // 返回分析结果
+            Navigator.of(dialogContext).pop(fullText);
           },
           onCancel: () {
-            // 用户点击"关闭"时调用
-            Navigator.of(dialogContext).pop();
+            Navigator.of(dialogContext).pop(null);
           },
-          isMarkdown: true, // 分析结果通常是Markdown格式
-          // StreamingTextDialog 内部处理 onError 和 onComplete
+          isMarkdown: true,
         );
       },
     );
-    // showDialog 返回后，如果用户点击了应用按钮，复制逻辑已经在onApply中处理了
-    // 如果用户点击了取消或关闭对话框，这里不需要做额外处理
+
+    // 如果用户点击了"应用到笔记"，保存分析结果
+    if (analysisResult != null && mounted) {
+      _updateState(() {
+        _currentAiAnalysis = analysisResult;
+      });
+
+      // 显示提示
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.aiAnalysisSaved),
+            duration: AppConstants.snackBarDurationImportant,
+          ),
+        );
+      }
+    }
   }
 
   // 问笔记功能

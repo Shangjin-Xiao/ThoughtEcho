@@ -20,6 +20,7 @@ import '../utils/icon_utils.dart';
 import '../utils/color_utils.dart'; // Import color_utils
 import 'dart:math' show min; // 添加math包导入
 import '../widgets/streaming_text_dialog.dart'; // 导入 StreamingTextDialog
+import '../widgets/source_analysis_result_dialog.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
 import '../utils/app_logger.dart';
@@ -28,6 +29,7 @@ import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
 import 'package:flutter/foundation.dart' show kIsWeb, compute;
 import '../utils/device_memory_manager.dart';
 import '../widgets/quill_enhanced_toolbar_unified.dart';
+import '../widgets/ai_options_menu.dart';
 import '../utils/quill_editor_extensions.dart'; // 导入自定义embedBuilders
 import '../services/temporary_media_service.dart';
 import '../widgets/media_player_widget.dart';
@@ -46,6 +48,7 @@ part 'note_editor/editor_build.dart';
 part 'note_editor/editor_color_and_media.dart';
 part 'note_editor/editor_metadata_dialog.dart';
 part 'note_editor/editor_metadata_location_section.dart';
+part 'note_editor/editor_metadata_ai_section.dart';
 part 'note_editor/editor_ai_features.dart';
 
 class NoteFullEditorPage extends StatefulWidget {
@@ -126,6 +129,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   Quote? _fullInitialQuote;
   bool _isLoadingFullQuote = false;
 
+  // AI 分析结果（可在元数据抽屉中查看/编辑）
+  String? _currentAiAnalysis;
+
   // 草稿自动保存
   Timer? _draftSaveTimer;
   String? _draftStorageKey;
@@ -186,6 +192,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     _longitude = widget.initialQuote?.longitude;
     _weather = widget.initialQuote?.weather;
     _temperature = widget.initialQuote?.temperature;
+
+    // AI 分析结果
+    _currentAiAnalysis = widget.initialQuote?.aiAnalysis;
 
     // 保存原始的位置和天气信息（用于编辑模式判断）
     _originalLocation = widget.initialQuote?.location;
