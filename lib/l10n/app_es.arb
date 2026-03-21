@@ -10,7 +10,9 @@
   "languageSpanish": "Español",
   "languageFrench": "Français",
   "languageGerman": "Deutsch"
-  ,"insertImage": "Insert Image",
+  ,  "insertImage": "Insert Image",
   "insertVideo": "Insert Video",
-  "insertAudio": "Insert Audio"
+  "insertAudio": "Insert Audio",
+  "aiGenerating": "IA generando...",
+  "complete": "Completado"
 }

@@ -1896,6 +1896,16 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                       _aiSummary = result;
                     });
                   },
+                  tagNames: _selectedTagIds.isNotEmpty
+                      ? _selectedTagIds
+                          .map((id) => _availableTags
+                              .where((t) => t.id == id)
+                              .map((t) => t.name)
+                              .firstOrNull)
+                          .where((name) => name != null)
+                          .cast<String>()
+                          .toList()
+                      : null,
                 ),
                 const Spacer(),
                 FilledButton.tonal(

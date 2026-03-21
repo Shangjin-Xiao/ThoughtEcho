@@ -254,6 +254,17 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
       dayPeriod: widget.initialQuote?.dayPeriod,
     );
 
+    // 获取选中标签的名称列表
+    final List<String> tagNames = [];
+    if (_selectedTagIds.isNotEmpty && widget.allTags != null) {
+      for (final tagId in _selectedTagIds) {
+        final tag = widget.allTags!.where((t) => t.id == tagId).firstOrNull;
+        if (tag != null) {
+          tagNames.add(tag.name);
+        }
+      }
+    }
+
     // 显示流式文本对话框
     final l10n = AppLocalizations.of(context);
     final String? analysisResult = await showDialog<String?>(
@@ -262,7 +273,10 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
       builder: (dialogContext) {
         return StreamingTextDialog(
           title: l10n.analyzingNote,
-          textStream: aiService.streamSummarizeNote(quote),
+          textStream: aiService.streamSummarizeNote(
+            quote,
+            tagNames: tagNames.isNotEmpty ? tagNames : null,
+          ),
           applyButtonText: l10n.applyToNote, // 应用到笔记
           onApply: (fullText) {
             // 返回分析结果

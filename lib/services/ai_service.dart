@@ -230,7 +230,7 @@ class AIService extends ChangeNotifier {
     );
   } // 流式笔记分析（支持完整元数据）
 
-  Stream<String> streamSummarizeNote(Quote quote) {
+  Stream<String> streamSummarizeNote(Quote quote, {List<String>? tagNames}) {
     return _requestHelper.executeStreamOperation(
       operation: (controller) async {
         // 在异步操作中验证API Key
@@ -252,7 +252,7 @@ class AIService extends ChangeNotifier {
           return;
         }
 
-        // 传递完整的笔记元数据给 AI
+        // 传递完整的笔记元数据给 AI（包括标签）
         final userMessage = _promptManager.buildAnalysisUserMessage(
           content,
           sourceAuthor: quote.sourceAuthor,
@@ -261,6 +261,7 @@ class AIService extends ChangeNotifier {
           weather: quote.weather,
           temperature: quote.temperature,
           dayPeriod: quote.dayPeriod,
+          tagNames: tagNames,
         );
         await _requestHelper.makeStreamRequestWithProvider(
           url: currentProvider.apiUrl,
