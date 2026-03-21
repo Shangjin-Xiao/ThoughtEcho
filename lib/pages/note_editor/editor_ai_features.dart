@@ -151,8 +151,11 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
     // 如果showDialog返回了结果 (用户点击了应用)，更新编辑器内容
     if (finalResult != null && mounted) {
       _updateState(() {
+        // 确保文本以换行符结尾，这是 Quill 文档的要求
+        final textWithNewline =
+            finalResult.endsWith('\n') ? finalResult : '$finalResult\n';
         _controller.document = quill.Document.fromJson([
-          {"insert": finalResult},
+          {"insert": textWithNewline},
         ]);
       });
     }
@@ -206,12 +209,15 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
 
     // 如果showDialog返回了结果 (用户点击了应用)，附加到编辑器内容
     if (finalResult != null && mounted) {
-      final int length = _controller.document.length;
-      // 在文档末尾插入续写内容，确保在最后一行
-      _controller.document.insert(length, '\n\n$finalResult');
+      // Quill 文档的 length 包含末尾换行符，所以需要在 length - 1 位置插入
+      // 这样可以在原文末尾（换行符之前）插入续写内容
+      final int insertPosition = _controller.document.length - 1;
+      if (insertPosition >= 0) {
+        _controller.document.insert(insertPosition, '\n\n$finalResult');
+      }
       // 移动光标到文档末尾
       _controller.updateSelection(
-        TextSelection.collapsed(offset: _controller.document.length),
+        TextSelection.collapsed(offset: _controller.document.length - 1),
         quill.ChangeSource.local,
       );
     }

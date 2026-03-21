@@ -94,6 +94,7 @@ class AiDialogHelper {
             applyButtonText: l10n.applyChanges,
             onApply: (polishedText) {
               contentController.text = polishedText;
+              Navigator.of(dialogContext).pop();
             },
             onCancel: () {
               Navigator.of(dialogContext).pop();
@@ -124,6 +125,7 @@ class AiDialogHelper {
             applyButtonText: l10n.appendToNote,
             onApply: (continuedText) {
               contentController.text += continuedText;
+              Navigator.of(dialogContext).pop();
             },
             onCancel: () {
               Navigator.of(dialogContext).pop();
@@ -157,7 +159,10 @@ class AiDialogHelper {
             textStream:
                 aiService.streamSummarizeNote(quote, tagNames: tagNames),
             applyButtonText: l10n.applyToNote,
-            onApply: onFinish,
+            onApply: (result) {
+              onFinish(result);
+              Navigator.of(dialogContext).pop();
+            },
             onCancel: () {
               Navigator.of(dialogContext).pop();
             },
