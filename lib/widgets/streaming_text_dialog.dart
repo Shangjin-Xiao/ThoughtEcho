@@ -462,7 +462,7 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
             onPressed: canApply
                 ? () {
                     widget.onApply(_currentText);
-                    Navigator.of(context).pop();
+                    Navigator.of(context).pop(_currentText);  // 返回文本结果
                   }
                 : null,
             icon: Icon(

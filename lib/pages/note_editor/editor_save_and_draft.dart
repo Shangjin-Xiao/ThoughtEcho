@@ -120,6 +120,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         'longitude': (_showLocation || _showWeather) ? _longitude : null,
         'weather': _showWeather ? _weather : null,
         'temperature': _showWeather ? _temperature : null,
+        'aiAnalysis': _currentAiAnalysis,
         'timestamp': DateTime.now().toIso8601String(),
       };
       // 使用 DraftService 保存草稿
@@ -193,6 +194,11 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       return true;
     }
     if (_temperature != _initialTemperature) {
+      return true;
+    }
+
+    // 检查 AI 分析
+    if (_currentAiAnalysis != _initialAiAnalysis) {
       return true;
     }
 
