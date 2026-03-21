@@ -1836,117 +1836,116 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
 
   // --- 一周年庆典横幅 ---
   Widget _buildAnniversaryBanner(BuildContext context) {
-   final now = DateTime.now();
-   final settingsService = context.read<SettingsService>();
-   final shouldShow = AnniversaryDisplayUtils.shouldShowSettingsBanner(
-     now: now,
-     developerMode: settingsService.appSettings.developerMode,
-   );
-   if (!shouldShow) {
-     return const SizedBox.shrink();
-   }
+    final now = DateTime.now();
+    final settingsService = context.read<SettingsService>();
+    final shouldShow = AnniversaryDisplayUtils.shouldShowSettingsBanner(
+      now: now,
+      developerMode: settingsService.appSettings.developerMode,
+    );
+    if (!shouldShow) {
+      return const SizedBox.shrink();
+    }
 
-   final l10n = AppLocalizations.of(context);
+    final l10n = AppLocalizations.of(context);
 
-   return Card(
-     margin: const EdgeInsets.symmetric(horizontal: 16),
-     shape: RoundedRectangleBorder(
-       borderRadius: BorderRadius.circular(24),
-       side: const BorderSide(color: Color(0xFFE0E7FF)),
-     ),
-     elevation: 0,
-     color: Colors.transparent,
-     child: ClipRRect(
-       borderRadius: BorderRadius.circular(24),
-       child: Container(
-         width: double.infinity,
-         padding: const EdgeInsets.symmetric(
-           vertical: 32,
-           horizontal: 20,
-         ),
-         decoration: const BoxDecoration(
-           gradient: LinearGradient(
-             colors: [Color(0xFFF5F8FF), Color(0xFFFFFFFF)],
-             begin: Alignment.topCenter,
-             end: Alignment.bottomCenter,
-           ),
-         ),
-         child: Column(
-           crossAxisAlignment: CrossAxisAlignment.center,
-           children: [
-             // --- 顶部笔记本图标 ---
-             Container(
-               width: 60,
-               height: 80,
-               decoration: BoxDecoration(
-                 color: const Color(0xFFE8F0FE),
-                 borderRadius: BorderRadius.circular(8),
-                 border: Border.all(
-                   color: const Color(0xFF0061FF),
-                   width: 1.5,
-                 ),
-               ),
-               child: const Center(
-                 child: Text(
-                   '1',
-                   style: TextStyle(
-                     fontSize: 32,
-                     fontWeight: FontWeight.w800,
-                     color: Color(0xFF0061FF),
-                     height: 1,
-                   ),
-                 ),
-               ),
-             ),
-             const SizedBox(height: 16),
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: const BorderSide(color: Color(0xFFE0E7FF)),
+      ),
+      elevation: 0,
+      color: Colors.transparent,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(
+            vertical: 32,
+            horizontal: 20,
+          ),
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFFF5F8FF), Color(0xFFFFFFFF)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // --- 顶部笔记本图标 ---
+              Container(
+                width: 60,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE8F0FE),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: const Color(0xFF0061FF),
+                    width: 1.5,
+                  ),
+                ),
+                child: const Center(
+                  child: Text(
+                    '1',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0061FF),
+                      height: 1,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
 
-             // --- 主标题 ---
-             Text(
-               l10n.anniversaryBannerTitle,
-               textAlign: TextAlign.center,
-               style: const TextStyle(
-                 fontSize: 18,
-                 fontWeight: FontWeight.bold,
-                 color: Color(0xFF1A1A1A),
-               ),
-             ),
-             const SizedBox(height: 4),
+              // --- 主标题 ---
+              Text(
+                l10n.anniversaryBannerTitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1A1A1A),
+                ),
+              ),
+              const SizedBox(height: 4),
 
-             // --- 副标题 ---
-             Text(
-               l10n.anniversaryBannerSubtitle,
-               textAlign: TextAlign.center,
-               style: const TextStyle(
-                 fontSize: 13,
-                 fontWeight: FontWeight.w500,
-                 color: Color(0xFF666666),
-               ),
-             ),
-             const SizedBox(height: 20),
+              // --- 副标题 ---
+              Text(
+                l10n.anniversaryBannerSubtitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: Color(0xFF666666),
+                ),
+              ),
+              const SizedBox(height: 20),
 
-             // --- 重播按钮 ---
-             TextButton.icon(
-               onPressed: () =>
-                   _showAnniversaryAnimationInSettings(context),
-               style: TextButton.styleFrom(
-                 foregroundColor: const Color(0xFF0061FF),
-                 backgroundColor: const Color(0xFFF0F4FF),
-                 padding: const EdgeInsets.symmetric(
-                   horizontal: 20,
-                   vertical: 10,
-                 ),
-                 shape: RoundedRectangleBorder(
-                   borderRadius: BorderRadius.circular(20),
-                 ),
-               ),
-               icon: const Icon(Icons.replay, size: 16),
-               label: Text(l10n.anniversaryBannerTap),
-             ),
-           ],
-         ),
-       ),
-     ),
-   );
+              // --- 重播按钮 ---
+              TextButton.icon(
+                onPressed: () => _showAnniversaryAnimationInSettings(context),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF0061FF),
+                  backgroundColor: const Color(0xFFF0F4FF),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+                icon: const Icon(Icons.replay, size: 16),
+                label: Text(l10n.anniversaryBannerTap),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   void _showAnniversaryAnimationInSettings(BuildContext context) {

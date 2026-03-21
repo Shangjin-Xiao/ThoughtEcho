@@ -283,35 +283,35 @@ class _AnniversaryAnimationOverlayState
                               child: AnimatedBuilder(
                                 animation: _buttonController,
                                 builder: (context, child) => FilledButton.icon(
-                                onPressed: _buttonController.isCompleted
-                                    ? widget.onDismiss
-                                    : null,
-                                icon: const Icon(
-                                  Icons.arrow_forward_rounded,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
-                                label: Text(
-                                  l10n.anniversaryEnterApp,
-                                  style: const TextStyle(
+                                  onPressed: _buttonController.isCompleted
+                                      ? widget.onDismiss
+                                      : null,
+                                  icon: const Icon(
+                                    Icons.arrow_forward_rounded,
                                     color: Colors.white,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 0.3,
+                                    size: 20,
                                   ),
-                                ),
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: const Color(0xFF0061FF),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20),
+                                  label: Text(
+                                    l10n.anniversaryEnterApp,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                      letterSpacing: 0.3,
+                                    ),
                                   ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 32,
-                                    vertical: 14,
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: const Color(0xFF0061FF),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 32,
+                                      vertical: 14,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
                           ),
                         ],
                       ),
@@ -342,11 +342,9 @@ class _AnniversaryAnimationOverlayState
                 ? (1 - progress) / 0.15
                 : 1.0;
         // 3D 翻转效果：用 scaleX 模拟纸片正反面翻转
-        final flipScaleX =
-            math.cos(progress * math.pi * piece.flipSpeed).abs();
+        final flipScaleX = math.cos(progress * math.pi * piece.flipSpeed).abs();
         // 轻微纵向拉伸，模拟空气阻力下的飘动
-        final stretchY =
-            1.0 + math.sin(progress * math.pi * 3) * 0.15;
+        final stretchY = 1.0 + math.sin(progress * math.pi * 3) * 0.15;
 
         return Positioned(
           top: yPos,
@@ -469,5 +467,3 @@ class _StarPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _StarPainter old) => old.color != color;
 }
-
-
