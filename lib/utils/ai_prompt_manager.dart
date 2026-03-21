@@ -524,7 +524,8 @@ HTML设计要求：
     final hasMetadata = (sourceAuthor?.isNotEmpty ?? false) ||
         (sourceWork?.isNotEmpty ?? false) ||
         (location?.isNotEmpty ?? false) ||
-        (weather?.isNotEmpty ?? false);
+        (weather?.isNotEmpty ?? false) ||
+        (dayPeriod?.isNotEmpty ?? false);
 
     if (hasMetadata) {
       buffer.writeln('笔记元数据：');
@@ -618,7 +619,8 @@ HTML设计要求：
     final hasMetadata = (sourceAuthor?.isNotEmpty ?? false) ||
         (sourceWork?.isNotEmpty ?? false) ||
         (location?.isNotEmpty ?? false) ||
-        (weather?.isNotEmpty ?? false);
+        (weather?.isNotEmpty ?? false) ||
+        (dayPeriod?.isNotEmpty ?? false);
 
     if (hasMetadata) {
       buffer.writeln();

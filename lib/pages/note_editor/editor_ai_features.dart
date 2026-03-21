@@ -251,6 +251,7 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
       location: _showLocation ? _location : null,
       weather: _showWeather ? _weather : null,
       temperature: _showWeather ? _temperature : null,
+      dayPeriod: widget.initialQuote?.dayPeriod,
     );
 
     // 显示流式文本对话框
@@ -314,6 +315,7 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
       id: widget.initialQuote?.id ?? '',
       content: plainText,
       date: DateTime.now().toIso8601String(),
+      dayPeriod: widget.initialQuote?.dayPeriod,
     );
 
     // 导航到聊天页面
