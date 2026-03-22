@@ -151,12 +151,10 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
     // 如果showDialog返回了结果 (用户点击了应用)，更新编辑器内容
     if (finalResult != null && mounted) {
       _updateState(() {
-        // 确保文本以换行符结尾，这是 Quill 文档的要求
-        final textWithNewline =
-            finalResult.endsWith('\n') ? finalResult : '$finalResult\n';
-        _controller.document = quill.Document.fromJson([
-          {"insert": textWithNewline},
-        ]);
+        _controller.document = QuillAiApplyUtils.applyPolishedText(
+          originalDocument: _controller.document,
+          polishedText: finalResult,
+        );
       });
     }
   }
