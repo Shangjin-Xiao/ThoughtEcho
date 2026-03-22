@@ -26,7 +26,7 @@
 - 引用卡片新增精致的模糊背景效果
 
 #### 📝 编辑与记录体验升级
-- **系统级文本摘录 (Android)**：支持在其他应用中选中文本后直接分享至心迹进行摘录，并自动补充来源信息
+- **系统级文本摘录 (Android)**：支持在其他应用中选中文本后直接分享至心迹进行摘录，并自动预填充作者、来源和标签信息
 - **默认模板**：新增笔记默认填充功能，新建笔记时可自动带入预设格式
 
 #### 🔔 更智能的推送通知
@@ -114,7 +114,7 @@
 - Added a refined blurred background effect to quote items.
 
 #### 📝 Editing & Capture Experience
-- **System-wide Text Extraction (Android):** Select text in any app and share directly to ThoughtEcho, automatically appending the source app info.
+- **System-wide Text Extraction (Android):** Select text in any app and share directly to ThoughtEcho, automatically pre-populating author, source, and tag information.
 - **Default Note Templates:** Added functionality to automatically populate new notes with default pre-configured text.
 
 #### 🔔 Smarter Push Notifications
