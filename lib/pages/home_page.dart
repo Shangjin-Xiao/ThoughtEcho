@@ -43,6 +43,7 @@ import '../utils/feature_guide_helper.dart';
 import '../services/draft_service.dart';
 import '../widgets/anniversary_animation_overlay.dart';
 import '../utils/anniversary_display_utils.dart';
+import '../utils/draft_restore_utils.dart';
 
 class HomePage extends StatefulWidget {
   final int initialPage; // 添加初始页面参数
@@ -631,8 +632,6 @@ class _HomePageState extends State<HomePage>
       if (shouldRestore == true && mounted) {
         final draftId = draftData['id'] as String;
         final isNew = draftId.startsWith('new_');
-        final plainText = draftData['plainText'] as String? ?? '';
-        final deltaContent = draftData['deltaContent'] as String?;
 
         Quote? initialQuote;
         Quote? original;
@@ -643,21 +642,9 @@ class _HomePageState extends State<HomePage>
             final db = context.read<DatabaseService>();
             original = await db.getQuoteById(draftId);
             if (original != null) {
-              // 使用草稿内容覆盖原始笔记内容
-              initialQuote = original.copyWith(
-                content: plainText,
-                deltaContent: deltaContent,
-                sourceAuthor: draftData['author'] as String?,
-                sourceWork: draftData['work'] as String?,
-                tagIds: (draftData['tagIds'] as List?)
-                    ?.map((e) => e.toString())
-                    .toList(),
-                colorHex: draftData['colorHex'] as String?,
-                location: draftData['location'] as String?,
-                latitude: (draftData['latitude'] as num?)?.toDouble(),
-                longitude: (draftData['longitude'] as num?)?.toDouble(),
-                weather: draftData['weather'] as String?,
-                temperature: draftData['temperature'] as String?,
+              initialQuote = buildRestoredDraftQuote(
+                draftData: draftData,
+                original: original,
               );
             } else {
               logDebug('恢复草稿时发现原始笔记已删除，将作为新笔记处理');
@@ -667,24 +654,9 @@ class _HomePageState extends State<HomePage>
           }
         }
 
-        initialQuote ??= Quote(
-          id: (isNew || original == null) ? null : draftId,
-          content: plainText,
-          deltaContent: deltaContent,
-          date: DateTime.now().toIso8601String(),
-          sourceAuthor: draftData['author'] as String?,
-          sourceWork: draftData['work'] as String?,
-          tagIds: (draftData['tagIds'] as List?)
-                  ?.map((e) => e.toString())
-                  .toList() ??
-              [],
-          colorHex: draftData['colorHex'] as String?,
-          location: draftData['location'] as String?,
-          latitude: (draftData['latitude'] as num?)?.toDouble(),
-          longitude: (draftData['longitude'] as num?)?.toDouble(),
-          weather: draftData['weather'] as String?,
-          temperature: draftData['temperature'] as String?,
-          editSource: 'fullscreen',
+        initialQuote ??= buildRestoredDraftQuote(
+          draftData: draftData,
+          original: original,
         );
 
         // 导航到全屏编辑器
