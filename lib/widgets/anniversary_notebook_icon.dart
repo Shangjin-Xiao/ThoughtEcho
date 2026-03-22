@@ -16,4 +16,3 @@ class AnniversaryNotebookIcon extends StatelessWidget {
     );
   }
 }
-
