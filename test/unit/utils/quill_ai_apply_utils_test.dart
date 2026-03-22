@@ -94,5 +94,22 @@ void main() {
         'Polished opening refined middle tightened ending complete.',
       );
     });
+
+    test('strips media markers from preview text', () {
+      const rawText =
+          'Polished opening [[TE_MEDIA_1]] refined middle \n[[TE_MEDIA_2]]\n tightened ending [[TE_MEDIA_3]] complete.\n';
+
+      final displayText = QuillAiApplyUtils.stripMediaMarkersForDisplay(
+        rawText,
+      );
+
+      expect(displayText, isNot(contains('[[TE_MEDIA_1]]')));
+      expect(displayText, isNot(contains('[[TE_MEDIA_2]]')));
+      expect(displayText, isNot(contains('[[TE_MEDIA_3]]')));
+      expect(
+        displayText.replaceAll(RegExp(r'\s+'), ' ').trim(),
+        'Polished opening refined middle tightened ending complete.',
+      );
+    });
   });
 }

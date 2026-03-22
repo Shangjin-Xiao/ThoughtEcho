@@ -20,6 +20,7 @@ class StreamingTextDialog extends StatefulWidget {
   final Function(String) onApply;
   final VoidCallback onCancel;
   final bool isMarkdown;
+  final String Function(String)? displayTextTransformer;
 
   const StreamingTextDialog({
     super.key,
@@ -29,6 +30,7 @@ class StreamingTextDialog extends StatefulWidget {
     required this.onApply,
     required this.onCancel,
     this.isMarkdown = false,
+    this.displayTextTransformer,
   });
 
   @override
@@ -45,6 +47,9 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
   final ScrollController _scrollController = ScrollController();
+
+  String get _displayText =>
+      widget.displayTextTransformer?.call(_currentText) ?? _currentText;
 
   @override
   void initState() {
@@ -276,7 +281,7 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
             children: [
               widget.isMarkdown
                   ? MarkdownBody(
-                      data: _currentText,
+                      data: _displayText,
                       selectable: true,
                       styleSheet: MarkdownStyleSheet(
                         p: theme.textTheme.bodyMedium?.copyWith(
@@ -332,7 +337,7 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
                       ),
                     )
                   : SelectableText(
-                      _currentText,
+                      _displayText,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: colorScheme.onSurface,
                         height: 1.6,

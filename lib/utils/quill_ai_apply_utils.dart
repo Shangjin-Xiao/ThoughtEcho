@@ -99,6 +99,14 @@ class QuillAiApplyUtils {
     return text.endsWith('\n') ? text : '$text\n';
   }
 
+  static String stripMediaMarkersForDisplay(String text) {
+    final withoutMarkers = text.replaceAll(_mediaMarkerPattern, '');
+    return withoutMarkers
+        .replaceAll(RegExp(r'[ \t]+\n'), '\n')
+        .replaceAll(RegExp(r'\n{3,}'), '\n\n')
+        .replaceAll(RegExp(r' {2,}'), ' ');
+  }
+
   static String _markerForIndex(int index) => '[[TE_MEDIA_$index]]';
 
   static quill.Document? _tryApplyWithMarkers({
