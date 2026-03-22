@@ -160,7 +160,6 @@ extension _NoteListItemsExtension on NoteListViewState {
                                         selectedWeathers,
                                         selectedDayPeriods,
                                       );
-                                      _updateStreamSubscription();
                                     },
                                   ),
                                 );

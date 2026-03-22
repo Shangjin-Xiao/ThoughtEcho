@@ -323,7 +323,7 @@ class NoteListViewState extends State<NoteListView> {
     // 优化：只有在筛选条件真正改变时才更新订阅
     final bool shouldUpdate = _shouldUpdateSubscription(oldWidget);
 
-    if (shouldUpdate && _initialDataLoaded && !_isInitializing) {
+    if (shouldUpdate && _initialDataLoaded) {
       // 如果是首次加载期间（初始数据还未加载完成），避免重置滚动位置
       if (!_initialDataLoaded) {
         logDebug('跳过更新订阅：首次数据加载中', source: 'NoteListView');
@@ -345,7 +345,7 @@ class NoteListViewState extends State<NoteListView> {
       // 更新流订阅，传入是否仅为排序变化
       _updateStreamSubscription(preserveScrollPosition: isOnlySortChange);
     } else if (shouldUpdate) {
-      logDebug('跳过更新：初始化中或数据未加载', source: 'NoteListView');
+      logDebug('跳过更新：数据尚未完成首次加载', source: 'NoteListView');
     }
   }
 

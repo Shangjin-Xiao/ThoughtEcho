@@ -102,7 +102,6 @@ extension NoteListFiltersExtension on NoteListViewState {
                 final newWeathers = List<String>.from(widget.selectedWeathers)
                   ..removeWhere((w) => keysToRemove.contains(w));
                 widget.onFilterChanged(newWeathers, widget.selectedDayPeriods);
-                _updateStreamSubscription();
               },
             ),
           );
@@ -140,7 +139,6 @@ extension NoteListFiltersExtension on NoteListViewState {
                 final newWeathers = List<String>.from(widget.selectedWeathers)
                   ..remove(k);
                 widget.onFilterChanged(newWeathers, widget.selectedDayPeriods);
-                _updateStreamSubscription();
               },
             ),
           ),
@@ -181,7 +179,6 @@ extension NoteListFiltersExtension on NoteListViewState {
                   widget.selectedDayPeriods,
                 )..remove(periodKey);
                 widget.onFilterChanged(widget.selectedWeathers, newDayPeriods);
-                _updateStreamSubscription();
               },
             ),
           );
@@ -206,7 +203,6 @@ extension NoteListFiltersExtension on NoteListViewState {
           onTap: () {
             widget.onTagSelectionChanged([]);
             widget.onFilterChanged([], []);
-            _updateStreamSubscription();
           },
           borderRadius: BorderRadius.circular(10),
           child: Container(
