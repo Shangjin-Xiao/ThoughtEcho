@@ -1,7 +1,9 @@
 import 'dart:math';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:uuid/uuid.dart';
 
 void main() {
@@ -47,7 +49,7 @@ void main() {
     }
     await quoteBatch.commit(noResult: true);
 
-    print('Seeded 2000 quotes and 100 categories.');
+    debugPrint('Seeded 2000 quotes and 100 categories.');
 
     // --- Benchmark Slow (N+1) ---
     final stopwatchSlow = Stopwatch()..start();
@@ -97,12 +99,12 @@ void main() {
       }
     });
     stopwatchSlow.stop();
-    print('Slow migration took: ${stopwatchSlow.elapsedMilliseconds}ms');
+    debugPrint('Slow migration took: ${stopwatchSlow.elapsedMilliseconds}ms');
 
     // Verify count
     final countSlow = Sqflite.firstIntValue(
         await db.rawQuery('SELECT COUNT(*) FROM quote_tags'));
-    print('Slow migration inserted $countSlow records.');
+    debugPrint('Slow migration inserted $countSlow records.');
 
     // --- Cleanup for Fast Benchmark ---
     await db.delete('quote_tags');
@@ -156,12 +158,12 @@ void main() {
       await batch.commit(noResult: true);
     });
     stopwatchFast.stop();
-    print('Fast migration took: ${stopwatchFast.elapsedMilliseconds}ms');
+    debugPrint('Fast migration took: ${stopwatchFast.elapsedMilliseconds}ms');
 
     // Verify count (Fast)
     final countFast = Sqflite.firstIntValue(
         await db.rawQuery('SELECT COUNT(*) FROM quote_tags'));
-    print('Fast migration inserted $countFast records.');
+    debugPrint('Fast migration inserted $countFast records.');
 
     // Ensure both strategies produce the same result.
     expect(countFast, countSlow);
@@ -170,7 +172,9 @@ void main() {
             stopwatchFast.elapsedMilliseconds) /
         stopwatchSlow.elapsedMilliseconds *
         100;
-    print('Performance Improvement: ${improvement.toStringAsFixed(2)}%');
+    debugPrint(
+      'Performance Improvement: ${improvement.toStringAsFixed(2)}%',
+    );
 
     await db.close();
   });

@@ -3,6 +3,7 @@ part of '../database_service.dart';
 /// Mixin providing query helper operations for DatabaseService.
 mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
   /// 修复：直接查询数据库，不进行初始化状态检查，用于内部调用
+  @override
   Future<List<Quote>> _directGetQuotes({
     List<String>? tagIds,
     String? categoryId,
@@ -159,11 +160,13 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
 
   /// 检查并修复数据库结构，确保所有必要的列都存在
   /// 修复：检查并修复数据库结构，包括字段和索引
+  @override
   Future<void> _checkAndFixDatabaseStructure() async {
     await _schemaManager.checkAndFixDatabaseStructure(database);
   }
 
   /// 智能推送专用轻量查询
+  @override
   Future<List<Quote>> getQuotesForSmartPush({
     String? whereSql,
     List<Object?>? whereArgs,
@@ -243,6 +246,7 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
 
   /// 获取笔记总数，用于分页
   /// [excludeHiddenNotes] 是否排除隐藏笔记，默认为 true
+  @override
   Future<int> getQuotesCount({
     List<String>? tagIds,
     String? categoryId,
