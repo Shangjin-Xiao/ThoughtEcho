@@ -21,7 +21,7 @@
 - 流式文本对话框 UI 焕新，全面支持 Markdown 渲染，元数据栏新增专属 AI 星星图标
 
 #### 📸 丰富的媒体与浏览体验
-- **支持在笔记中直接查看和播放实况照片 (Live Photos)**，采用 Google Motion Photo 格式，与 [FrameEcho (帧迹)](https://github.com/Shangjin-Xiao/FrameEcho) 联合为您呈现
+- **支持在笔记中直接查看和播放实况照片 (Live Photos)**：心迹现已深度适配您的视频转实况工具 [FrameEcho (帧迹)](https://github.com/Shangjin-Xiao/FrameEcho)，支持 Google Motion Photo 格式，让捕捉到的精彩瞬间在笔记中鲜活呈现
 - 引入图片延迟加载机制，大幅优化长列表滚动性能，浏览前所未有的丝滑
 - 引用卡片新增精致的模糊背景效果
 
@@ -107,7 +107,7 @@
 - Streaming Text Dialog completely revamped with Markdown rendering and a new AI star icon in the metadata bar.
 
 #### 📸 Media & Browsing Experience
-- **Live Photos support:** View and play Live Photos right inside your notes. Powered by Google Motion Photo format in collaboration with [FrameEcho (帧迹)](https://github.com/Shangjin-Xiao/FrameEcho).
+- **Live Photos support:** View and play Google Motion Photos directly in your notes. Perfectly integrated with [FrameEcho](https://github.com/Shangjin-Xiao/FrameEcho) to bring your captured moments to life.
 - Introduced deferred image loading and drastic scrolling optimizations for a perfectly smooth browsing experience.
 - Added a refined blurred background effect to quote items.
 
