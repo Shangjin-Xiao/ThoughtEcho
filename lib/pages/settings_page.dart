@@ -1847,132 +1847,332 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
     }
 
     final l10n = AppLocalizations.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Card(
+    return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      shape: RoundedRectangleBorder(
+      decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-        side: const BorderSide(color: Color(0xFFE0E7FF)),
+        gradient: LinearGradient(
+          colors: isDark
+              ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
+              : [const Color(0xFFF8FAFC), const Color(0xFFEEF2FF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isDark
+                ? Colors.black.withOpacity(0.4)
+                : const Color(0xFF6366F1).withOpacity(0.08),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          ),
+        ],
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withOpacity(0.05)
+              : Colors.white,
+          width: 1.5,
+        ),
       ),
-      elevation: 0,
-      color: Colors.transparent,
-      child: ClipRRect(
+      child: Material(
+        color: Colors.transparent,
         borderRadius: BorderRadius.circular(24),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(
-            vertical: 32,
-            horizontal: 20,
-          ),
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFFF5F8FF), Color(0xFFFFFFFF)],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => _showAnniversaryAnimationInSettings(context),
+          child: Stack(
             children: [
-              // --- 顶部笔记本图标 ---
-              SizedBox(
-                width: 60,
-                height: 80,
-                child: Stack(
-                  children: [
-                    // 书脊
-                    Positioned(
-                      left: 0,
-                      top: 4,
-                      bottom: 4,
-                      width: 6,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF004BD6),
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
+              // 背景装饰 - 柔和的光晕
+              Positioned(
+                right: -30,
+                top: -30,
+                child: Container(
+                  width: 150,
+                  height: 150,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        const Color(0xFF818CF8).withOpacity(isDark ? 0.2 : 0.15),
+                        Colors.transparent,
+                      ],
                     ),
-                    // 封面
-                    Positioned(
-                      left: 5,
-                      top: 0,
-                      right: 0,
-                      bottom: 0,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE8F0FE),
-                          borderRadius: const BorderRadius.only(
-                            topRight: Radius.circular(6),
-                            bottomRight: Radius.circular(6),
-                          ),
-                          border: Border.all(
-                            color: const Color(0xFF0061FF),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: const Center(
-                          child: Text(
-                            '1',
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 20,
+                bottom: -40,
+                child: Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: RadialGradient(
+                      colors: [
+                        const Color(0xFF60A5FA).withOpacity(isDark ? 0.15 : 0.1),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              // 主内容区
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    // 左侧：精致的笔记本图标
+                    _buildModernNotebookIcon(),
+                    const SizedBox(width: 20),
+                    // 右侧：文本和指示器
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            l10n.anniversaryBannerTitle,
                             style: TextStyle(
-                              fontSize: 32,
+                              fontSize: 17,
                               fontWeight: FontWeight.w800,
-                              color: Color(0xFF0061FF),
-                              height: 1,
+                              letterSpacing: 0.3,
+                              color: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A),
                             ),
                           ),
-                        ),
+                          const SizedBox(height: 6),
+                          Text(
+                            l10n.anniversaryBannerSubtitle,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+                              height: 1.4,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Text(
+                                l10n.anniversaryBannerTap,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark ? const Color(0xFF818CF8) : const Color(0xFF4F46E5),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(
+                                Icons.arrow_forward_rounded,
+                                size: 14,
+                                color: isDark ? const Color(0xFF818CF8) : const Color(0xFF4F46E5),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 16),
-
-              // --- 主标题 ---
-              Text(
-                l10n.anniversaryBannerTitle,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1A1A1A),
-                ),
-              ),
-              const SizedBox(height: 4),
-
-              // --- 副标题 ---
-              Text(
-                l10n.anniversaryBannerSubtitle,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF666666),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // --- 重播按钮 ---
-              TextButton.icon(
-                onPressed: () => _showAnniversaryAnimationInSettings(context),
-                style: TextButton.styleFrom(
-                  foregroundColor: const Color(0xFF0061FF),
-                  backgroundColor: const Color(0xFFF0F4FF),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 10,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
-                icon: const Icon(Icons.replay, size: 16),
-                label: Text(l10n.anniversaryBannerTap),
-              ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  // --- 现代 3D 风格笔记本图标 ---
+  Widget _buildModernNotebookIcon() {
+    return SizedBox(
+      width: 64,
+      height: 72,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // 阴影
+          Positioned(
+            bottom: 0,
+            right: 2,
+            child: Container(
+              width: 48,
+              height: 56,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.12),
+                    blurRadius: 10,
+                    offset: const Offset(4, 6),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // 纸张层叠效应 (底部)
+          Positioned(
+            left: 10,
+            right: 4,
+            top: 10,
+            bottom: 6,
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFE2E8F0),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: const Color(0xFFCBD5E1), width: 0.5),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 10,
+            right: 6,
+            top: 8,
+            bottom: 8,
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: const Color(0xFFE2E8F0), width: 0.5),
+              ),
+            ),
+          ),
+          // 封面
+          Positioned(
+            left: 12,
+            right: 8,
+            top: 4,
+            bottom: 10,
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF60A5FA), Color(0xFF2563EB)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.only(
+                  topRight: Radius.circular(6),
+                  bottomRight: Radius.circular(6),
+                  topLeft: Radius.circular(2),
+                  bottomLeft: Radius.circular(2),
+                ),
+              ),
+            ),
+          ),
+          // 封面内发光边框 (提升质感)
+          Positioned(
+            left: 12,
+            right: 8,
+            top: 4,
+            bottom: 10,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: const BorderRadius.only(
+                  topRight: Radius.circular(6),
+                  bottomRight: Radius.circular(6),
+                  topLeft: Radius.circular(2),
+                  bottomLeft: Radius.circular(2),
+                ),
+                border: Border.all(color: Colors.white.withOpacity(0.35), width: 1),
+              ),
+            ),
+          ),
+          // 封面绑带
+          Positioned(
+            right: 18,
+            top: 4,
+            bottom: 10,
+            width: 4,
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF1E3A8A).withOpacity(0.6),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.15),
+                    blurRadius: 2,
+                    offset: const Offset(-1, 0),
+                  )
+                ],
+              ),
+            ),
+          ),
+          // 笔记本中央的 "1"
+          const Positioned(
+            left: 16,
+            right: 14,
+            top: 10,
+            bottom: 10,
+            child: Center(
+              child: Text(
+                '1',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                  letterSpacing: -1,
+                  shadows: [
+                    Shadow(
+                      color: Color(0x66000000),
+                      blurRadius: 6,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // 书脊
+          Positioned(
+            left: 6,
+            top: 2,
+            bottom: 8,
+            width: 8,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+                borderRadius: BorderRadius.circular(4),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 3,
+                    offset: const Offset(2, 0),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // 书签带
+          Positioned(
+            left: 28,
+            bottom: 2,
+            child: Container(
+              width: 6,
+              height: 14,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(2),
+                  bottomRight: Radius.circular(2),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0x40000000),
+                    blurRadius: 2,
+                    offset: Offset(1, 1),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
