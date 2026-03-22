@@ -21,6 +21,8 @@ class _AnniversaryAnimationOverlayState
   late final AnimationController _entryController;
   late final AnimationController _confettiController;
   late final AnimationController _buttonController;
+  late final Animation<double> _cardOpacity;
+  late final Animation<double> _cardScale;
   late final Animation<Offset> _buttonSlide;
   final List<_ConfettiPiece> _confettiPieces = [];
 
@@ -39,6 +41,16 @@ class _AnniversaryAnimationOverlayState
     _entryController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 400),
+    );
+    _cardOpacity = CurvedAnimation(
+      parent: _entryController,
+      curve: Curves.easeOutCubic,
+    );
+    _cardScale = Tween<double>(
+      begin: 0.94,
+      end: 1.0,
+    ).animate(
+      CurvedAnimation(parent: _entryController, curve: Curves.easeOutBack),
     );
 
     _confettiController = AnimationController(
@@ -133,193 +145,198 @@ class _AnniversaryAnimationOverlayState
     final glassCardWidth = math.min(size.width * 0.85, 380.0);
     final cakeSize = (size.height * 0.22).clamp(100.0, 200.0);
 
-    return FadeTransition(
-      opacity: _entryController,
-      child: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: _immersiveOverlayStyle,
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          body: Stack(
-            children: [
-              // 背景层：毛玻璃模糊 + 轻度深色遮罩，保留程序内容可见
-              Positioned.fill(
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                  child: Container(
-                    color: Colors.black.withValues(alpha: 0.38),
-                  ),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: _immersiveOverlayStyle,
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Stack(
+          children: [
+            // 背景层：毛玻璃模糊 + 轻度深色遮罩，保留程序内容可见
+            Positioned.fill(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                child: Container(
+                  color: Colors.black.withValues(alpha: 0.38),
                 ),
               ),
-              // 顶部微弱光晕
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: RadialGradient(
-                        center: const Alignment(0, -0.6),
-                        radius: 0.9,
-                        colors: [
-                          const Color(0xFF0061FF).withValues(alpha: 0.15),
-                          Colors.transparent,
-                        ],
-                      ),
+            ),
+            // 顶部微弱光晕
+            Positioned.fill(
+              child: IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: const Alignment(0, -0.6),
+                      radius: 0.9,
+                      colors: [
+                        const Color(0xFF0061FF).withValues(alpha: 0.15),
+                        Colors.transparent,
+                      ],
                     ),
                   ),
                 ),
               ),
-              // 彩带层
-              ..._confettiPieces.map((p) => _buildConfettiWidget(p, size)),
-              // 中央毛玻璃卡片
-              Center(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(28),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
-                    child: Container(
-                      width: glassCardWidth,
-                      padding: const EdgeInsets.fromLTRB(28, 24, 28, 28),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.16),
-                        borderRadius: BorderRadius.circular(28),
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.28),
-                          width: 1.2,
+            ),
+            // 彩带层
+            ..._confettiPieces.map((p) => _buildConfettiWidget(p, size)),
+            // 中央庆典卡片单独做进入动画，避免整屏首帧透明导致闪屏
+            Center(
+              child: FadeTransition(
+                opacity: _cardOpacity,
+                child: ScaleTransition(
+                  scale: _cardScale,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(28),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 22, sigmaY: 22),
+                      child: Container(
+                        width: glassCardWidth,
+                        padding: const EdgeInsets.fromLTRB(28, 24, 28, 28),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.16),
+                          borderRadius: BorderRadius.circular(28),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.28),
+                            width: 1.2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.20),
+                              blurRadius: 30,
+                              offset: const Offset(0, 14),
+                            ),
+                          ],
                         ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.20),
-                            blurRadius: 30,
-                            offset: const Offset(0, 14),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // SVG 蛋糕
-                          SizedBox(
-                            width: cakeSize,
-                            height: cakeSize,
-                            child: SvgPicture.asset(
-                              'assets/svg/anniversary_cake.svg',
-                              fit: BoxFit.contain,
-                              placeholderBuilder: (context) => const Icon(
-                                Icons.cake,
-                                size: 88,
-                                color: Color(0xFFFFD36B),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            l10n.anniversaryTitle,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
-                              fontSize: 26,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                              letterSpacing: 0.3,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.black54,
-                                  offset: Offset(0, 2),
-                                  blurRadius: 4,
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            l10n.anniversarySubtitle,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 15,
-                              letterSpacing: 0.5,
-                              color: Colors.white.withValues(alpha: 0.88),
-                              shadows: const [
-                                Shadow(
-                                  color: Colors.black26,
-                                  offset: Offset(0, 1),
-                                  blurRadius: 2,
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.10),
-                              borderRadius: BorderRadius.circular(999),
-                              border: Border.all(
-                                color: const Color(0xFF0061FF).withValues(
-                                  alpha: 0.50,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // SVG 蛋糕
+                            SizedBox(
+                              width: cakeSize,
+                              height: cakeSize,
+                              child: SvgPicture.asset(
+                                'assets/svg/anniversary_cake.svg',
+                                fit: BoxFit.contain,
+                                placeholderBuilder: (context) => const Icon(
+                                  Icons.cake,
+                                  size: 88,
+                                  color: Color(0xFFFFD36B),
                                 ),
                               ),
                             ),
-                            child: Text(
-                              l10n.anniversaryBannerSubtitle,
+                            const SizedBox(height: 16),
+                            Text(
+                              l10n.anniversaryTitle,
+                              textAlign: TextAlign.center,
                               style: const TextStyle(
-                                fontSize: 11,
+                                fontSize: 26,
+                                fontWeight: FontWeight.w800,
                                 color: Colors.white,
-                                letterSpacing: 1.0,
-                                fontWeight: FontWeight.w600,
+                                letterSpacing: 0.3,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black54,
+                                    offset: Offset(0, 2),
+                                    blurRadius: 4,
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
-                          const SizedBox(height: 20),
-                          SlideTransition(
-                            position: _buttonSlide,
-                            child: FadeTransition(
-                              opacity: _buttonController,
-                              child: AnimatedBuilder(
-                                animation: _buttonController,
-                                builder: (context, child) => FilledButton.icon(
-                                  onPressed: _buttonController.isCompleted
-                                      ? widget.onDismiss
-                                      : null,
-                                  icon: const Icon(
-                                    Icons.arrow_forward_rounded,
-                                    size: 20,
+                            const SizedBox(height: 8),
+                            Text(
+                              l10n.anniversarySubtitle,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 15,
+                                letterSpacing: 0.5,
+                                color: Colors.white.withValues(alpha: 0.88),
+                                shadows: const [
+                                  Shadow(
+                                    color: Colors.black26,
+                                    offset: Offset(0, 1),
+                                    blurRadius: 2,
                                   ),
-                                  label: Text(
-                                    l10n.anniversaryEnterApp,
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      letterSpacing: 0.3,
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.10),
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(
+                                  color: const Color(0xFF0061FF).withValues(
+                                    alpha: 0.50,
+                                  ),
+                                ),
+                              ),
+                              child: Text(
+                                l10n.anniversaryBannerSubtitle,
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.white,
+                                  letterSpacing: 1.0,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            SlideTransition(
+                              position: _buttonSlide,
+                              child: FadeTransition(
+                                opacity: _buttonController,
+                                child: AnimatedBuilder(
+                                  animation: _buttonController,
+                                  builder: (context, child) =>
+                                      FilledButton.icon(
+                                    onPressed: _buttonController.isCompleted
+                                        ? widget.onDismiss
+                                        : null,
+                                    icon: const Icon(
+                                      Icons.arrow_forward_rounded,
+                                      size: 20,
                                     ),
-                                  ),
-                                  style: FilledButton.styleFrom(
-                                    backgroundColor:
-                                        Colors.white.withValues(alpha: 0.2),
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(20),
-                                      side: BorderSide(
-                                        color:
-                                            Colors.white.withValues(alpha: 0.4),
+                                    label: Text(
+                                      l10n.anniversaryEnterApp,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        letterSpacing: 0.3,
                                       ),
                                     ),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 32,
-                                      vertical: 14,
+                                    style: FilledButton.styleFrom(
+                                      backgroundColor:
+                                          Colors.white.withValues(alpha: 0.2),
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(20),
+                                        side: BorderSide(
+                                          color: Colors.white.withValues(
+                                            alpha: 0.4,
+                                          ),
+                                        ),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 32,
+                                        vertical: 14,
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
