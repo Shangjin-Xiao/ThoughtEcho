@@ -31,6 +31,8 @@ import 'unit/utils/motion_photo_utils_test.dart' as motion_photo_utils_test;
 import 'unit/utils/quill_ai_apply_utils_test.dart' as quill_ai_apply_utils_test;
 import 'unit/widgets/anniversary_animation_overlay_test.dart'
     as anniversary_animation_overlay_test;
+import 'unit/widgets/anniversary_notebook_icon_test.dart'
+    as anniversary_notebook_icon_test;
 import 'unit/widgets/motion_photo_preview_page_test.dart'
     as motion_photo_preview_page_test;
 
@@ -64,6 +66,7 @@ void main() {
       motion_photo_utils_test.main();
       quill_ai_apply_utils_test.main();
       anniversary_animation_overlay_test.main();
+      anniversary_notebook_icon_test.main();
       motion_photo_preview_page_test.main();
     });
 
