@@ -109,7 +109,9 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                   if (_selectedTagIds.isNotEmpty ||
                       _selectedColorHex != null ||
                       _showLocation ||
-                      _showWeather)
+                      _showWeather ||
+                      (_currentAiAnalysis != null &&
+                          _currentAiAnalysis!.isNotEmpty))
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
@@ -186,6 +188,16 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                               padding: const EdgeInsets.only(right: 12),
                               child: Icon(
                                 _getWeatherIcon(_weather!),
+                                size: 16,
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
+                          if (_currentAiAnalysis != null &&
+                              _currentAiAnalysis!.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(right: 12),
+                              child: Icon(
+                                Icons.auto_awesome,
                                 size: 16,
                                 color: theme.colorScheme.primary,
                               ),

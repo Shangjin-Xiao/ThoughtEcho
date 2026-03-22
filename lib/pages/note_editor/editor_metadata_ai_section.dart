@@ -119,59 +119,178 @@ extension _NoteEditorMetadataAiSection on _NoteFullEditorPageState {
     );
   }
 
-  /// 显示完整的 AI 分析内容对话框
+  /// 显示完整的 AI 分析内容对话框（Markdown 渲染）
   void _showFullAiAnalysisDialog(
     BuildContext context,
     ThemeData theme,
     AppLocalizations l10n,
   ) {
+    final colorScheme = theme.colorScheme;
     showDialog(
       context: context,
       builder: (dialogContext) {
-        return AlertDialog(
-          title: Row(
-            children: [
-              Icon(
-                Icons.auto_awesome,
-                color: theme.colorScheme.primary,
-              ),
-              const SizedBox(width: 8),
-              Text(l10n.aiAnalysis),
-            ],
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
           ),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: SingleChildScrollView(
-              child: SelectableText(
-                _currentAiAnalysis!,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: theme.colorScheme.onSurface,
-                ),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton.icon(
-              icon: const Icon(Icons.copy_outlined),
-              label: Text(l10n.copy),
-              onPressed: () {
-                Clipboard.setData(
-                  ClipboardData(text: _currentAiAnalysis!),
-                );
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(l10n.copiedToClipboard),
-                    duration: AppConstants.snackBarDurationNormal,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 标题栏
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 8, 0),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: colorScheme.primaryContainer,
+                        ),
+                        child: Icon(
+                          Icons.auto_awesome,
+                          size: 20,
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          l10n.aiAnalysis,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.close,
+                          color: colorScheme.onSurfaceVariant,
+                          size: 20,
+                        ),
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                        tooltip: l10n.close,
+                      ),
+                    ],
                   ),
-                );
-              },
+                ),
+                const SizedBox(height: 8),
+                // Markdown 内容区域
+                Flexible(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerLowest,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: colorScheme.outlineVariant.applyOpacity(0.3),
+                      ),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(16),
+                        child: MarkdownBody(
+                          data: _currentAiAnalysis!,
+                          selectable: true,
+                          styleSheet: MarkdownStyleSheet(
+                            p: theme.textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.onSurface,
+                              height: 1.6,
+                            ),
+                            h1: theme.textTheme.headlineSmall?.copyWith(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            h2: theme.textTheme.titleLarge?.copyWith(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            h3: theme.textTheme.titleMedium?.copyWith(
+                              color: colorScheme.onSurface,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            listBullet: theme.textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.primary,
+                            ),
+                            blockquote: theme.textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                              fontStyle: FontStyle.italic,
+                            ),
+                            blockquoteDecoration: BoxDecoration(
+                              border: Border(
+                                left: BorderSide(
+                                  color:
+                                      colorScheme.primary.applyOpacity(0.5),
+                                  width: 3,
+                                ),
+                              ),
+                            ),
+                            blockquotePadding: const EdgeInsets.only(
+                              left: 16,
+                              top: 8,
+                              bottom: 8,
+                            ),
+                            code: theme.textTheme.bodySmall?.copyWith(
+                              fontFamily: 'monospace',
+                              backgroundColor:
+                                  colorScheme.surfaceContainerHighest,
+                              color: colorScheme.onSurface,
+                            ),
+                            codeblockDecoration: BoxDecoration(
+                              color: colorScheme.surfaceContainerHighest,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            horizontalRuleDecoration: BoxDecoration(
+                              border: Border(
+                                top: BorderSide(
+                                  color: colorScheme.outlineVariant,
+                                  width: 1,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                // 操作按钮
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      TextButton.icon(
+                        icon: const Icon(Icons.copy_outlined, size: 18),
+                        label: Text(l10n.copy),
+                        onPressed: () {
+                          Clipboard.setData(
+                            ClipboardData(text: _currentAiAnalysis!),
+                          );
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(l10n.copiedToClipboard),
+                              duration: AppConstants.snackBarDurationNormal,
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton.tonal(
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                        child: Text(l10n.close),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            TextButton(
-              child: Text(l10n.close),
-              onPressed: () => Navigator.of(dialogContext).pop(),
-            ),
-          ],
+          ),
         );
       },
     );
