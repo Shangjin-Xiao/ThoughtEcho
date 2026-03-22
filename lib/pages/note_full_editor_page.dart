@@ -32,6 +32,7 @@ import '../utils/device_memory_manager.dart';
 import '../widgets/quill_enhanced_toolbar_unified.dart';
 import '../widgets/ai_options_menu.dart';
 import '../utils/quill_editor_extensions.dart'; // 导入自定义embedBuilders
+import '../utils/quill_ai_apply_utils.dart';
 import '../services/temporary_media_service.dart';
 import '../widgets/media_player_widget.dart';
 import '../constants/app_constants.dart';
