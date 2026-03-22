@@ -27,6 +27,8 @@ import 'unit/time_utils_test.dart' as time_utils_test;
 import 'unit/utils/time_utils_test.dart' as time_utils_utils_test;
 import 'unit/utils/anniversary_display_utils_test.dart'
     as anniversary_display_utils_test;
+import 'unit/utils/anniversary_banner_text_utils_test.dart'
+    as anniversary_banner_text_utils_test;
 import 'unit/utils/motion_photo_utils_test.dart' as motion_photo_utils_test;
 import 'unit/utils/quill_ai_apply_utils_test.dart' as quill_ai_apply_utils_test;
 import 'unit/widgets/anniversary_animation_overlay_test.dart'
@@ -62,6 +64,7 @@ void main() {
     group('Utility Tests', () {
       time_utils_test.main();
       time_utils_utils_test.main();
+      anniversary_banner_text_utils_test.main();
       anniversary_display_utils_test.main();
       motion_photo_utils_test.main();
       quill_ai_apply_utils_test.main();
