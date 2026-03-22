@@ -22,7 +22,6 @@ class _AnniversaryAnimationOverlayState
   late final AnimationController _confettiController;
   late final AnimationController _buttonController;
   late final Animation<Offset> _buttonSlide;
-  bool _isVisible = false;
   final List<_ConfettiPiece> _confettiPieces = [];
 
   static const _immersiveOverlayStyle = SystemUiOverlayStyle(
@@ -65,9 +64,6 @@ class _AnniversaryAnimationOverlayState
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      setState(() {
-        _isVisible = true;
-      });
       _entryController.forward();
 
       // 蛋糕直接显示（SVG无需加载回调），1.5s后出现按钮
@@ -137,9 +133,8 @@ class _AnniversaryAnimationOverlayState
     final glassCardWidth = math.min(size.width * 0.85, 380.0);
     final cakeSize = (size.height * 0.22).clamp(100.0, 200.0);
 
-    return AnimatedOpacity(
-      opacity: _isVisible ? 1.0 : 0.0,
-      duration: const Duration(milliseconds: 400),
+    return FadeTransition(
+      opacity: _entryController,
       child: AnnotatedRegion<SystemUiOverlayStyle>(
         value: _immersiveOverlayStyle,
         child: Scaffold(
