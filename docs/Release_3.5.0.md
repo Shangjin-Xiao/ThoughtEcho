@@ -26,7 +26,7 @@
 - 引用卡片新增精致的模糊背景效果
 
 #### 📝 编辑与记录体验升级
-- **系统级文本摘录 (Android)**：支持在其他应用中选中文本后直接分享至心迹进行摘录，并自动预填充作者、来源和标签信息
+- **系统级文本摘录 (Android 专属)**：支持在其他应用中选中文本后直接分享至心迹进行摘录，并自动预填充作者、来源和标签信息
 - **默认模板**：新增笔记默认填充功能，新建笔记时可自动带入预设格式
 
 #### 🔔 更智能的推送通知
@@ -38,15 +38,12 @@
 - 新增**法语、日语和韩语**的全面本地化翻译
 - 改进位置和天气信息的显示格式，特别优化日本等地区的地址层级显示
 
-#### 🔒 数据安全与可靠性
-- 全新引入**数据库备份、恢复与健康检查服务**，保障数据万无一失
-- 显著优化的应用启动速度和数据库加载性能
-
 ---
 
 ### 开发者篇
 
 #### 性能优化
+- **数据库架构升级**：全新引入数据库备份、恢复与健康检查服务，显著优化应用启动速度和数据库加载性能
 - 数据库查询优化：消除标签迁移中的 N+1 查询问题，优化循环中的连续 I/O 操作
 - 缓存机制：剪贴板服务缓存 `RegExp` 对象，防止频繁重新编译
 - 列表渲染：引入 `OptimizedImageLoaderBase`，通过 `NotificationListener` 延迟高负载 UI 操作至滚动结束，消除卡顿
@@ -79,10 +76,11 @@
 **Features**:
 - 1st Anniversary Celebration (In-app Animations)
 - Live Photos playback support (powered by FrameEcho)
+- System-wide Text Excerpt (Android Only)
 - Redesigned Smart Push & independent Daily Quotes
-- Database backup, recovery, and health check services
 
 **Improvements**:
+- Database architecture upgrade with backup/restore services
 - Major scroll and image loading performance leap
 - Streaming Text Dialog Markdown support
 - Significant architecture refactoring (DatabaseService split, UI decoupling)
@@ -114,7 +112,7 @@
 - Added a refined blurred background effect to quote items.
 
 #### 📝 Editing & Capture Experience
-- **System-wide Text Extraction (Android):** Select text in any app and share directly to ThoughtEcho, automatically pre-populating author, source, and tag information.
+- **System-wide Text Extraction (Android Only):** Select text in any app and share directly to ThoughtEcho, automatically pre-populating author, source, and tag information.
 - **Default Note Templates:** Added functionality to automatically populate new notes with default pre-configured text.
 
 #### 🔔 Smarter Push Notifications
@@ -126,15 +124,12 @@
 - Completed comprehensive translations for **French, Japanese, and Korean**.
 - Improved location and weather formatting, specifically optimizing for regions like Japan.
 
-#### 🔒 Data Security & Reliability
-- New **database backup, recovery, and health check services** introduced to keep your precious data secure.
-- Enjoy faster app startup times and significantly optimized database loading speeds.
-
 ---
 
 ### For Developers
 
 #### Performance
+- **Database Architecture Upgrade:** New database backup, recovery, and health check services introduced to keep your precious data secure. Enjoy faster app startup times and significantly optimized database loading speeds.
 - Database optimization: Eliminated N+1 queries in tag migration and optimized sequential I/O loops.
 - Regex Caching: Cached `RegExp` objects in `ClipboardService` to prevent recompilation jank.
 - Rendering & Scrolling: Introduced `OptimizedImageLoaderBase` and deferred heavy UI operations until scrolling ends via `NotificationListener` to eliminate lag.
