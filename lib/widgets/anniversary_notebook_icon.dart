@@ -153,8 +153,8 @@ class AnniversaryNotebookIcon extends StatelessWidget {
               ),
             ),
             const Positioned(
-              left: 16,
-              right: 14,
+              left: 14,
+              right: 22,
               top: 10,
               bottom: 10,
               child: Center(
