@@ -5,28 +5,59 @@ import 'package:thoughtecho/utils/string_utils.dart';
 
 void main() {
   group('QuillAiApplyUtils', () {
-    test('preserves media embeds when applying polished text', () {
+    test('builds stable media markers for AI polishing', () {
       final originalDocument = quill.Document.fromJson([
-        {'insert': 'Before image\n'},
+        {'insert': 'Before image '},
         {
           'insert': {'image': '/tmp/image.png'},
         },
-        {'insert': '\nBetween media\n'},
+        {'insert': ' after image '},
         {
           'insert': {'video': '/tmp/video.mp4'},
         },
-        {'insert': '\nAfter media\n'},
+        {'insert': ' after video '},
         {
           'insert': {
             'custom': {'audio': '/tmp/audio.m4a'},
           },
         },
-        {'insert': '\n'},
+        {'insert': ' done.\n'},
+      ]);
+
+      final polishInput = QuillAiApplyUtils.buildPolishInputText(
+        originalDocument,
+      );
+
+      expect(
+        polishInput,
+        'Before image [[TE_MEDIA_1]] after image \n[[TE_MEDIA_2]]\n after video [[TE_MEDIA_3]] done.\n',
+      );
+    });
+
+    test('restores media at exact marker positions when applying polished text',
+        () {
+      final originalDocument = quill.Document.fromJson([
+        {'insert': 'Before image '},
+        {
+          'insert': {'image': '/tmp/image.png'},
+        },
+        {'insert': ' after image '},
+        {
+          'insert': {'video': '/tmp/video.mp4'},
+        },
+        {'insert': ' after video '},
+        {
+          'insert': {
+            'custom': {'audio': '/tmp/audio.m4a'},
+          },
+        },
+        {'insert': ' done.\n'},
       ]);
 
       final mergedDocument = QuillAiApplyUtils.applyPolishedText(
         originalDocument: originalDocument,
-        polishedText: 'Polished content with media still attached.',
+        polishedText:
+            'Polished opening [[TE_MEDIA_1]] refined middle [[TE_MEDIA_2]] tightened ending [[TE_MEDIA_3]] complete.',
       );
 
       final mergedOps = mergedDocument.toDelta().toJson();
@@ -53,10 +84,14 @@ void main() {
         hasLength(1),
       );
       expect(
+        QuillAiApplyUtils.buildPolishInputText(mergedDocument),
+        'Polished opening [[TE_MEDIA_1]] refined middle \n[[TE_MEDIA_2]]\n tightened ending [[TE_MEDIA_3]] complete.\n',
+      );
+      expect(
         StringUtils.removeObjectReplacementChar(
           mergedDocument.toPlainText(),
-        ).replaceAll(RegExp(r'\s+'), ''),
-        'Polishedcontentwithmediastillattached.',
+        ).replaceAll(RegExp(r'\s+'), ' ').trim(),
+        'Polished opening refined middle tightened ending complete.',
       );
     });
   });
