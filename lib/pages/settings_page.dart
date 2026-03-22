@@ -1863,16 +1863,14 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
         boxShadow: [
           BoxShadow(
             color: isDark
-                ? Colors.black.withOpacity(0.4)
-                : const Color(0xFF6366F1).withOpacity(0.08),
+                ? Colors.black.withValues(alpha: 0.4)
+                : const Color(0xFF6366F1).withValues(alpha: 0.08),
             blurRadius: 24,
             offset: const Offset(0, 8),
           ),
         ],
         border: Border.all(
-          color: isDark
-              ? Colors.white.withOpacity(0.05)
-              : Colors.white,
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
           width: 1.5,
         ),
       ),
@@ -1895,7 +1893,9 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        const Color(0xFF818CF8).withOpacity(isDark ? 0.2 : 0.15),
+                        const Color(
+                          0xFF818CF8,
+                        ).withValues(alpha: isDark ? 0.2 : 0.15),
                         Colors.transparent,
                       ],
                     ),
@@ -1912,7 +1912,9 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        const Color(0xFF60A5FA).withOpacity(isDark ? 0.15 : 0.1),
+                        const Color(
+                          0xFF60A5FA,
+                        ).withValues(alpha: isDark ? 0.15 : 0.1),
                         Colors.transparent,
                       ],
                     ),
@@ -1938,7 +1940,9 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
                               fontSize: 17,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 0.3,
-                              color: isDark ? const Color(0xFFF8FAFC) : const Color(0xFF0F172A),
+                              color: isDark
+                                  ? const Color(0xFFF8FAFC)
+                                  : const Color(0xFF0F172A),
                             ),
                           ),
                           const SizedBox(height: 6),
@@ -1947,7 +1951,9 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
-                              color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF475569),
+                              color: isDark
+                                  ? const Color(0xFF94A3B8)
+                                  : const Color(0xFF475569),
                               height: 1.4,
                             ),
                           ),
@@ -1959,14 +1965,18 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
-                                  color: isDark ? const Color(0xFF818CF8) : const Color(0xFF4F46E5),
+                                  color: isDark
+                                      ? const Color(0xFF818CF8)
+                                      : const Color(0xFF4F46E5),
                                 ),
                               ),
                               const SizedBox(width: 4),
                               Icon(
                                 Icons.arrow_forward_rounded,
                                 size: 14,
-                                color: isDark ? const Color(0xFF818CF8) : const Color(0xFF4F46E5),
+                                color: isDark
+                                    ? const Color(0xFF818CF8)
+                                    : const Color(0xFF4F46E5),
                               ),
                             ],
                           ),
@@ -2002,7 +2012,7 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
                 borderRadius: BorderRadius.circular(8),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.12),
+                    color: Colors.black.withValues(alpha: 0.12),
                     blurRadius: 10,
                     offset: const Offset(4, 6),
                   ),
@@ -2073,7 +2083,10 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
                   topLeft: Radius.circular(2),
                   bottomLeft: Radius.circular(2),
                 ),
-                border: Border.all(color: Colors.white.withOpacity(0.35), width: 1),
+                border: Border.all(
+                  color: Colors.white.withValues(alpha: 0.35),
+                  width: 1,
+                ),
               ),
             ),
           ),
@@ -2085,10 +2098,10 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
             width: 4,
             child: Container(
               decoration: BoxDecoration(
-                color: const Color(0xFF1E3A8A).withOpacity(0.6),
+                color: const Color(0xFF1E3A8A).withValues(alpha: 0.6),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.15),
+                    color: Colors.black.withValues(alpha: 0.15),
                     blurRadius: 2,
                     offset: const Offset(-1, 0),
                   )
@@ -2137,7 +2150,7 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
                 borderRadius: BorderRadius.circular(4),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
+                    color: Colors.black.withValues(alpha: 0.3),
                     blurRadius: 3,
                     offset: const Offset(2, 0),
                   ),

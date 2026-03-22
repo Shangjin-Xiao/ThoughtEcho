@@ -3,6 +3,7 @@ part of '../database_service.dart';
 /// Mixin providing core query operations for DatabaseService.
 mixin _DatabaseQueryMixin on _DatabaseServiceBase {
   /// 获取笔记列表，支持标签、分类、搜索、天气和时间段筛选
+  @override
   Future<List<Quote>> getUserQuotes({
     List<String>? tagIds,
     String? categoryId,

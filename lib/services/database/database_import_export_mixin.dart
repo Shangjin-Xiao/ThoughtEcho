@@ -75,6 +75,7 @@ mixin _DatabaseImportExportMixin on _DatabaseServiceBase {
   /// [data] - 远程数据Map
   /// [sourceDevice] - 源设备标识符（可选）
   /// 返回 [MergeReport] 包含合并统计信息
+  @override
   Future<MergeReport> importDataWithLWWMerge(
     Map<String, dynamic> data, {
     String? sourceDevice,
