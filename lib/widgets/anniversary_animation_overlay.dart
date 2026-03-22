@@ -6,6 +6,21 @@ import 'package:flutter/services.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 
+Future<void> showAnniversaryAnimationOverlay(BuildContext context) {
+  return showGeneralDialog<void>(
+    context: context,
+    barrierDismissible: false,
+    barrierLabel: 'anniversary_animation_overlay',
+    barrierColor: Colors.transparent,
+    transitionDuration: Duration.zero,
+    pageBuilder: (dialogContext, animation, secondaryAnimation) {
+      return AnniversaryAnimationOverlay(
+        onDismiss: () => Navigator.of(dialogContext).pop(),
+      );
+    },
+  );
+}
+
 class AnniversaryAnimationOverlay extends StatefulWidget {
   final VoidCallback onDismiss;
 
@@ -71,9 +86,6 @@ class _AnniversaryAnimationOverlayState
     ));
 
     _setupConfetti();
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-    SystemChrome.setSystemUIOverlayStyle(_immersiveOverlayStyle);
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       _entryController.forward();
@@ -134,7 +146,6 @@ class _AnniversaryAnimationOverlayState
     _entryController.dispose();
     _confettiController.dispose();
     _buttonController.dispose();
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
   }
 

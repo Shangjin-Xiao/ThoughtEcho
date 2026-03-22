@@ -569,28 +569,12 @@ class _HomePageState extends State<HomePage>
     if (!mounted) return;
 
     // 显示全屏覆盖动画
-    await showDialog<void>(
-      context: context,
-      useSafeArea: false,
-      barrierDismissible: false,
-      barrierColor: Colors.transparent,
-      builder: (ctx) => AnniversaryAnimationOverlay(
-        onDismiss: () => Navigator.of(ctx).pop(),
-      ),
-    );
+    await showAnniversaryAnimationOverlay(context);
   }
 
   /// 开发者模式预览一周年动画
   void _showAnniversaryPreview(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      useSafeArea: false,
-      barrierDismissible: false,
-      barrierColor: Colors.transparent,
-      builder: (ctx) => AnniversaryAnimationOverlay(
-        onDismiss: () => Navigator.of(ctx).pop(),
-      ),
-    );
+    showAnniversaryAnimationOverlay(context);
   }
 
   // 检查是否有未保存的草稿
