@@ -46,11 +46,12 @@ void main() {
       );
     });
 
-    test('shouldAutoShowAnimation only returns true in date window and enabled',
+    test('shouldAutoShowAnimation allows developer preview outside date window',
         () {
       expect(
         AnniversaryDisplayUtils.shouldAutoShowAnimation(
           now: DateTime(2026, 3, 25),
+          developerMode: false,
           anniversaryShown: false,
           anniversaryAnimationEnabled: true,
         ),
@@ -59,6 +60,7 @@ void main() {
       expect(
         AnniversaryDisplayUtils.shouldAutoShowAnimation(
           now: DateTime(2026, 3, 25),
+          developerMode: false,
           anniversaryShown: true,
           anniversaryAnimationEnabled: true,
         ),
@@ -67,6 +69,7 @@ void main() {
       expect(
         AnniversaryDisplayUtils.shouldAutoShowAnimation(
           now: DateTime(2026, 3, 25),
+          developerMode: false,
           anniversaryShown: false,
           anniversaryAnimationEnabled: false,
         ),
@@ -75,7 +78,26 @@ void main() {
       expect(
         AnniversaryDisplayUtils.shouldAutoShowAnimation(
           now: DateTime(2026, 3, 1),
+          developerMode: false,
           anniversaryShown: false,
+          anniversaryAnimationEnabled: true,
+        ),
+        isFalse,
+      );
+      expect(
+        AnniversaryDisplayUtils.shouldAutoShowAnimation(
+          now: DateTime(2026, 3, 1),
+          developerMode: true,
+          anniversaryShown: false,
+          anniversaryAnimationEnabled: true,
+        ),
+        isTrue,
+      );
+      expect(
+        AnniversaryDisplayUtils.shouldAutoShowAnimation(
+          now: DateTime(2026, 3, 1),
+          developerMode: true,
+          anniversaryShown: true,
           anniversaryAnimationEnabled: true,
         ),
         isFalse,

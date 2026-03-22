@@ -15,10 +15,11 @@ class AnniversaryDisplayUtils {
 
   static bool shouldAutoShowAnimation({
     required DateTime now,
+    required bool developerMode,
     required bool anniversaryShown,
     required bool anniversaryAnimationEnabled,
   }) {
-    return isAnniversarySeason(now) &&
+    return (developerMode || isAnniversarySeason(now)) &&
         !anniversaryShown &&
         anniversaryAnimationEnabled;
   }

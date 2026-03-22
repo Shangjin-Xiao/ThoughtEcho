@@ -555,6 +555,7 @@ class _HomePageState extends State<HomePage>
     final now = DateTime.now();
     final shouldShow = AnniversaryDisplayUtils.shouldAutoShowAnimation(
       now: now,
+      developerMode: settings.developerMode,
       anniversaryShown: settings.anniversaryShown,
       anniversaryAnimationEnabled: settings.anniversaryAnimationEnabled,
     );
