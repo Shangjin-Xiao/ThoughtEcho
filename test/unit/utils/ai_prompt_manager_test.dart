@@ -133,6 +133,15 @@ void main() {
         expect(message, contains(content));
       });
 
+      test('buildPolishUserMessage preserves media markers', () {
+        const contentWithMarkers =
+            'Before [[TE_MEDIA_1]] after [[TE_MEDIA_2]] end.';
+        final message = manager.buildPolishUserMessage(contentWithMarkers);
+        expect(message, contains('[[TE_MEDIA_1]]'));
+        expect(message, contains('必须原样保留'));
+        expect(message, contains('不要删除、改写、拆分、合并或调整这些占位符的顺序'));
+      });
+
       test('buildDailyPromptUserMessage', () {
         final message = manager.buildDailyPromptUserMessage();
         expect(message, '请根据当前环境信息生成一个个性化的思考提示。');

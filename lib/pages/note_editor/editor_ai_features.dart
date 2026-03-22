@@ -122,6 +122,9 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
     }
 
     final aiService = Provider.of<AIService>(context, listen: false);
+    final polishInput = QuillAiApplyUtils.buildPolishInputText(
+      _controller.document,
+    );
 
     // 显示流式文本对话框
     // 注意：这里await showDialog会等待对话框关闭并返回结果
@@ -132,7 +135,9 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
       builder: (dialogContext) {
         return StreamingTextDialog(
           title: l10n.polishingText,
-          textStream: aiService.streamPolishText(plainText), // 调用流式方法，使用正确的参数名
+          textStream: aiService.streamPolishText(
+            polishInput,
+          ), // 调用流式方法，使用正确的参数名
           applyButtonText: '应用更改', // 应用按钮文本
           onApply: (fullText) {
             // 用户点击"应用更改"时调用

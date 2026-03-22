@@ -655,6 +655,17 @@ HTML设计要求：
 
   /// 构建润色用户消息
   String buildPolishUserMessage(String content) {
+    if (content.contains('[[TE_MEDIA_')) {
+      return '''请润色以下文本。
+
+特别要求：
+1. 所有形如 [[TE_MEDIA_1]] 的媒体占位符都必须原样保留
+2. 不要删除、改写、拆分、合并或调整这些占位符的顺序
+3. 只润色占位符之外的自然语言文本
+
+$content''';
+    }
+
     return '请润色以下文本：\n\n$content';
   }
 
