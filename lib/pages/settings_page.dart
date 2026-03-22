@@ -34,6 +34,7 @@ import 'storage_management_page.dart';
 import 'local_ai_settings_page.dart'; // 导入本地 AI 设置页面
 import 'smart_push_settings_page.dart'; // 导入智能推送设置页面
 import '../widgets/anniversary_animation_overlay.dart'; // 导入一周年动画覆盖层
+import '../widgets/anniversary_notebook_icon.dart';
 import '../utils/anniversary_display_utils.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -1927,7 +1928,7 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
                 child: Row(
                   children: [
                     // 左侧：精致的笔记本图标
-                    _buildModernNotebookIcon(),
+                    const AnniversaryNotebookIcon(),
                     const SizedBox(width: 20),
                     // 右侧：文本和指示器
                     Expanded(
@@ -1989,203 +1990,6 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  // --- 现代 3D 风格笔记本图标 ---
-  Widget _buildModernNotebookIcon() {
-    return SizedBox(
-      width: 64,
-      height: 72,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          // 阴影
-          Positioned(
-            bottom: 0,
-            right: 2,
-            child: Container(
-              width: 48,
-              height: 56,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.12),
-                    blurRadius: 10,
-                    offset: const Offset(4, 6),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // 纸张层叠效应 (底部)
-          Positioned(
-            left: 10,
-            right: 4,
-            top: 10,
-            bottom: 6,
-            child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFE2E8F0),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: const Color(0xFFCBD5E1), width: 0.5),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 10,
-            right: 6,
-            top: 8,
-            bottom: 8,
-            child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(6),
-                border: Border.all(color: const Color(0xFFE2E8F0), width: 0.5),
-              ),
-            ),
-          ),
-          // 封面
-          Positioned(
-            left: 12,
-            right: 8,
-            top: 4,
-            bottom: 10,
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF60A5FA), Color(0xFF2563EB)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                borderRadius: BorderRadius.only(
-                  topRight: Radius.circular(6),
-                  bottomRight: Radius.circular(6),
-                  topLeft: Radius.circular(2),
-                  bottomLeft: Radius.circular(2),
-                ),
-              ),
-            ),
-          ),
-          // 封面内发光边框 (提升质感)
-          Positioned(
-            left: 12,
-            right: 8,
-            top: 4,
-            bottom: 10,
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.only(
-                  topRight: Radius.circular(6),
-                  bottomRight: Radius.circular(6),
-                  topLeft: Radius.circular(2),
-                  bottomLeft: Radius.circular(2),
-                ),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.35),
-                  width: 1,
-                ),
-              ),
-            ),
-          ),
-          // 封面绑带
-          Positioned(
-            right: 18,
-            top: 4,
-            bottom: 10,
-            width: 4,
-            child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFF1E3A8A).withValues(alpha: 0.6),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    blurRadius: 2,
-                    offset: const Offset(-1, 0),
-                  )
-                ],
-              ),
-            ),
-          ),
-          // 笔记本中央的 "1"
-          const Positioned(
-            left: 16,
-            right: 14,
-            top: 10,
-            bottom: 10,
-            child: Center(
-              child: Text(
-                '1',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                  letterSpacing: -1,
-                  shadows: [
-                    Shadow(
-                      color: Color(0x66000000),
-                      blurRadius: 6,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // 书脊
-          Positioned(
-            left: 6,
-            top: 2,
-            bottom: 8,
-            width: 8,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF1E3A8A), Color(0xFF3B82F6)],
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                ),
-                borderRadius: BorderRadius.circular(4),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    blurRadius: 3,
-                    offset: const Offset(2, 0),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          // 书签带
-          Positioned(
-            left: 28,
-            bottom: 2,
-            child: Container(
-              width: 6,
-              height: 14,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(2),
-                  bottomRight: Radius.circular(2),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Color(0x40000000),
-                    blurRadius: 2,
-                    offset: Offset(1, 1),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
