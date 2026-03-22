@@ -152,11 +152,10 @@ extension SmartPushNotification on SmartPushService {
             initialHighlightedNoteId: noteId,
           ),
         );
-        if (navigatorKey.currentState!.canPop()) {
-          navigatorKey.currentState!.pushReplacement(route);
-        } else {
-          navigatorKey.currentState!.push(route);
-        }
+        SmartPushService.replaceAppStackForNotification(
+          navigator: navigatorKey.currentState!,
+          route: route,
+        );
         AppLogger.i('已成功触发导航至记录页笔记定位: $noteId ($routeTarget)');
       } else {
         AppLogger.w('通知导航失败：navigatorKey.currentState 在多次重试后仍为空');

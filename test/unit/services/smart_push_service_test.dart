@@ -1,5 +1,6 @@
 library;
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/services/smart_push_service.dart';
@@ -56,5 +57,61 @@ void main() {
 
       expect(SmartPushService.notificationSummaryForTest(note), isNull);
     });
+
+    testWidgets('replaces the full navigation stack for notification routes', (
+      WidgetTester tester,
+    ) async {
+      final navigatorKey = GlobalKey<NavigatorState>();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          navigatorKey: navigatorKey,
+          home: const _TestPage(title: 'root'),
+        ),
+      );
+
+      navigatorKey.currentState!.push(
+        MaterialPageRoute<void>(
+          builder: (_) => const _TestPage(title: 'middle'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      navigatorKey.currentState!.push(
+        MaterialPageRoute<void>(
+          builder: (_) => const _TestPage(title: 'top'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      SmartPushService.replaceAppStackForNotification(
+        navigator: navigatorKey.currentState!,
+        route: MaterialPageRoute<void>(
+          builder: (_) => const _TestPage(title: 'target'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('target'), findsOneWidget);
+      expect(find.text('root'), findsNothing);
+      expect(find.text('middle'), findsNothing);
+      expect(find.text('top'), findsNothing);
+      expect(navigatorKey.currentState!.canPop(), isFalse);
+    });
   });
+}
+
+class _TestPage extends StatelessWidget {
+  final String title;
+
+  const _TestPage({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: Text(title),
+      ),
+    );
+  }
 }

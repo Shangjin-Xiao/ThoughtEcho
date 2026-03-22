@@ -224,6 +224,13 @@ class SmartPushService extends ChangeNotifier {
   @visibleForTesting
   static String? notificationSummaryForTest(Quote note) => null;
 
+  static void replaceAppStackForNotification<T extends Object?>({
+    required NavigatorState navigator,
+    required Route<T> route,
+  }) {
+    navigator.pushAndRemoveUntil(route, (existingRoute) => false);
+  }
+
   static DateTime nextScheduledDate({
     required DateTime now,
     required int hour,
