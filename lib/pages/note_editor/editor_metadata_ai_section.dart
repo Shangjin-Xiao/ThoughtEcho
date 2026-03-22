@@ -224,8 +224,7 @@ extension _NoteEditorMetadataAiSection on _NoteFullEditorPageState {
                             blockquoteDecoration: BoxDecoration(
                               border: Border(
                                 left: BorderSide(
-                                  color:
-                                      colorScheme.primary.applyOpacity(0.5),
+                                  color: colorScheme.primary.applyOpacity(0.5),
                                   width: 3,
                                 ),
                               ),

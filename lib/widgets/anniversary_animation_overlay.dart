@@ -299,8 +299,8 @@ class _AnniversaryAnimationOverlayState
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(20),
                                       side: BorderSide(
-                                        color: Colors.white
-                                            .withValues(alpha: 0.4),
+                                        color:
+                                            Colors.white.withValues(alpha: 0.4),
                                       ),
                                     ),
                                     padding: const EdgeInsets.symmetric(
