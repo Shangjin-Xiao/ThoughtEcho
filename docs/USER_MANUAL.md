@@ -129,7 +129,7 @@
 - **列表** - 有序列表、无序列表、缩进控制
 - **引用和代码** - 添加引用块或代码格式
 - **链接** - 插入或编辑链接
-- **媒体** - 插入图片、视频、音频
+- **媒体** - 插入图片、视频、音频。**特别说明**：心迹支持直接插入、查看和播放采用 Google Motion Photo 格式的**实况照片 (Live Photos)**（由 [FrameEcho (帧迹)](https://github.com/Shangjin-Xiao/FrameEcho) 技术支持呈现）。
 - **清除格式** - 移除所有格式
 - **搜索** - 在文档中搜索内容
 
@@ -171,12 +171,24 @@
 - 在编辑模式下可以手动修改位置
 - 如果是记录过去的事情，可以手动选择当时的天气
 
-### 自动保存
+### 快速捕获与系统级摘录 (Android)
 
-- **草稿自动保存**：每 2 秒自动保存草稿到本地存储
-- **草稿恢复**：重新打开编辑器时可恢复上次草稿
-- **手动保存**：点击顶部工具栏的 💾 按钮
-- **保存进度**：显示实时保存状态和进度条
+心迹提供了多种快速记录灵感的方式：
+
+- **剪贴板检测**：开启后，当您复制了文本回到心迹，会提示您快速保存为笔记。
+- **系统级文本摘录 (Android 专属)**：
+  - 在任何其他应用（如浏览器、阅读器等）中选中文本。
+  - 在弹出的系统菜单中选择「分享」或「在心迹中摘录」。
+  - 心迹将自动新建笔记并填入您选中的文本。
+  - **更智能的是**：心迹会尝试自动预填充该内容的**来源应用**信息以及相关的**标签**，让您的知识管理更加无缝。
+
+### 自动保存与默认模板
+
+- **草稿自动保存**：每 2 秒自动保存草稿到本地存储。
+- **草稿恢复**：重新打开编辑器时可恢复上次草稿。
+- **笔记默认模板**：您可以在设置中开启此功能，每次新建笔记时将自动带入预设的文本格式（如每日回顾的固定结构）。
+- **手动保存**：点击顶部工具栏的 💾 按钮。
+- **保存进度**：显示实时保存状态和进度条。
 
 ---
 
@@ -739,7 +751,7 @@ The editor provides rich text formatting tools:
 - **Lists** - Ordered lists, unordered lists, indent control
 - **Quotes and Code** - Add blockquote or code formatting
 - **Links** - Insert or edit links
-- **Media** - Insert images, videos, audio
+- **Media** - Insert images, videos, audio. **Note**: ThoughtEcho supports direct insertion, viewing, and playing of **Live Photos** (Google Motion Photo format), powered by [FrameEcho](https://github.com/Shangjin-Xiao/FrameEcho).
 - **Clear Formatting** - Remove all formatting
 - **Search** - Search within document
 
@@ -781,11 +793,24 @@ Click ✏️ button or "Edit Extra Information" to edit note information:
 - Can manually modify location in edit mode
 - Manual weather selection for past events
 
-### Auto-Save
+### Quick Capture & System-wide Excerpt (Android)
 
-- **Draft Auto-Save**: Automatically saves draft every 2 seconds
-- **Draft Recovery**: Restore last draft when reopening editor
-- **Manual Save**: Click 💾 button in toolbar
+ThoughtEcho provides several ways to capture inspiration quickly:
+
+- **Clipboard Detection**: Auto-detects clipboard content and prompts to save as a note.
+- **System-wide Text Extraction (Android Only)**:
+  - Select text in any other app (e.g., browser, reader).
+  - Select "Share" or "Excerpt to ThoughtEcho" from the system menu.
+  - ThoughtEcho will create a new note with the selected text.
+  - **Smart Feature**: It automatically pre-populates the **Source App**, **Author** (if detectable), and relevant **Tags** for a seamless experience.
+
+### Auto-Save & Default Templates
+
+- **Draft Auto-Save**: Automatically saves draft every 2 seconds.
+- **Draft Recovery**: Restore last draft when reopening editor.
+- **Default Note Templates**: Enable this in settings to automatically populate new notes with a pre-defined text structure (e.g., for daily reflections).
+- **Manual Save**: Click 💾 button in toolbar.
+- **Save Progress**: Displays real-time save status and progress bar.
 - **Save Progress**: Shows real-time save status and progress
 
 ---
