@@ -3541,5 +3541,7 @@
   "developerAnniversaryPreviewDesc": "点击立即播放一周年庆典动画"
   ,"insertImage": "插入图片",
   "insertVideo": "插入视频",
-  "insertAudio": "插入音频"
+  "insertAudio": "插入音频",
+  "clipboardFoundHint": "发现剪贴板内容，点击添加为笔记",
+  "operationFailed": "操作失败"
 }

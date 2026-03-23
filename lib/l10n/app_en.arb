@@ -3519,5 +3519,7 @@
   "developerAnniversaryPreviewDesc": "Tap to play the anniversary animation immediately"
   ,"insertImage": "Insert Image",
   "insertVideo": "Insert Video",
-  "insertAudio": "Insert Audio"
+  "insertAudio": "Insert Audio",
+  "clipboardFoundHint": "Clipboard content found, tap to add as note",
+  "operationFailed": "Operation failed"
 }
