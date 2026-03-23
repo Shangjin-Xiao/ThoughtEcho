@@ -3467,5 +3467,7 @@
   "first100CharsLabel": "처음 100자:"
   ,"insertImage": "이미지 삽입",
   "insertVideo": "동영상 삽입",
-  "insertAudio": "오디오 삽입"
+  "insertAudio": "오디오 삽입",
+  "clipboardFoundHint": "클립보드 내용 발견, 탭하여 노트로 추가",
+  "operationFailed": "작업 실패"
 }
