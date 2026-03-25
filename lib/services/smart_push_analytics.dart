@@ -67,7 +67,8 @@ class SmartPushAnalytics extends ChangeNotifier {
       await _saveAppOpenRecords(records);
       AppLogger.d('记录 App 打开时间: ${now.hour}:${now.minute}');
     } catch (e, stack) {
-      AppLogger.e('记录 App 打开时间失败', error: e, stackTrace: stack, source: 'SmartPushAnalytics');
+      AppLogger.e('记录 App 打开时间失败',
+          error: e, stackTrace: stack, source: 'SmartPushAnalytics');
     }
   }
 
@@ -99,7 +100,8 @@ class SmartPushAnalytics extends ChangeNotifier {
         final dt = DateTime.parse(record);
         hourCounts[dt.hour] = (hourCounts[dt.hour] ?? 0) + 1;
       } catch (e, stack) {
-        AppLogger.e('解析应用打开记录失败', error: e, stackTrace: stack, source: 'SmartPushAnalytics');
+        AppLogger.e('解析应用打开记录失败',
+            error: e, stackTrace: stack, source: 'SmartPushAnalytics');
       }
     }
 
@@ -207,7 +209,8 @@ class SmartPushAnalytics extends ChangeNotifier {
           recentCounts[dt.hour] = (recentCounts[dt.hour] ?? 0) + 1;
         }
       } catch (e, stack) {
-        AppLogger.e('解析应用打开记录(时间衰减)失败', error: e, stackTrace: stack, source: 'SmartPushAnalytics');
+        AppLogger.e('解析应用打开记录(时间衰减)失败',
+            error: e, stackTrace: stack, source: 'SmartPushAnalytics');
       }
     }
 
@@ -229,7 +232,8 @@ class SmartPushAnalytics extends ChangeNotifier {
           List<dynamic>.from((jsonStr.split(',').where((s) => s.isNotEmpty)));
       return list.cast<String>();
     } catch (e, stack) {
-      AppLogger.e('获取应用打开记录异常', error: e, stackTrace: stack, source: 'SmartPushAnalytics');
+      AppLogger.e('获取应用打开记录异常',
+          error: e, stackTrace: stack, source: 'SmartPushAnalytics');
       return [];
     }
   }
@@ -309,7 +313,8 @@ class SmartPushAnalytics extends ChangeNotifier {
 
       return DateTime.now().isBefore(cooldownEnd);
     } catch (e, stack) {
-      AppLogger.e('解析忽略时间记录失败', error: e, stackTrace: stack, source: 'SmartPushAnalytics');
+      AppLogger.e('解析忽略时间记录失败',
+          error: e, stackTrace: stack, source: 'SmartPushAnalytics');
       return false;
     }
   }
@@ -335,7 +340,8 @@ class SmartPushAnalytics extends ChangeNotifier {
 
       return budget;
     } catch (e, stack) {
-      AppLogger.e('解析每日疲劳预算失败', error: e, stackTrace: stack, source: 'SmartPushAnalytics');
+      AppLogger.e('解析每日疲劳预算失败',
+          error: e, stackTrace: stack, source: 'SmartPushAnalytics');
       return dailyFatigueBudget;
     }
   }
@@ -425,7 +431,8 @@ class SmartPushAnalytics extends ChangeNotifier {
       }
       return scores;
     } catch (e, stack) {
-      AppLogger.e('解析内容得分配置失败', error: e, stackTrace: stack, source: 'SmartPushAnalytics');
+      AppLogger.e('解析内容得分配置失败',
+          error: e, stackTrace: stack, source: 'SmartPushAnalytics');
       return {};
     }
   }
@@ -449,7 +456,8 @@ class SmartPushAnalytics extends ChangeNotifier {
       }
       return metrics;
     } catch (e, stack) {
-      AppLogger.e('解析推送统计指标失败', error: e, stackTrace: stack, source: 'SmartPushAnalytics');
+      AppLogger.e('解析推送统计指标失败',
+          error: e, stackTrace: stack, source: 'SmartPushAnalytics');
       return {};
     }
   }
