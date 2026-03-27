@@ -52,12 +52,6 @@ class DatabaseHealthService {
     return report;
   }
 
-  /// 安全验证：检查标识符（表名、列名、索引名）是否合法，防止 SQL 注入
-  bool _isValidIdentifier(String identifier) {
-    final regex = RegExp(r'^[a-zA-Z_][a-zA-Z0-9_]*$');
-    return regex.hasMatch(identifier);
-  }
-
   /// 修复：安全地创建索引，检查列是否存在
   Future<void> createIndexSafely(
     Database db,
@@ -65,12 +59,6 @@ class DatabaseHealthService {
     String columnName,
     String indexName,
   ) async {
-    if (!_isValidIdentifier(tableName) ||
-        !_isValidIdentifier(columnName) ||
-        !_isValidIdentifier(indexName)) {
-      logDebug('发现不合法的标识符，跳过索引创建: $tableName, $columnName, $indexName');
-      return;
-    }
     try {
       // 检查列是否存在
       final columnExists = await checkColumnExists(db, tableName, columnName);
@@ -95,10 +83,6 @@ class DatabaseHealthService {
     String tableName,
     String columnName,
   ) async {
-    if (!_isValidIdentifier(tableName) || !_isValidIdentifier(columnName)) {
-      logDebug('发现不合法的标识符，跳过列检查: $tableName, $columnName');
-      return false;
-    }
     try {
       final result = await db.rawQuery("PRAGMA table_info($tableName)");
       for (final row in result) {
