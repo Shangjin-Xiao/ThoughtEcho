@@ -20,9 +20,8 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       try {
         final db = await safeDatabase;
         final newQuoteId = quote.id ?? _uuid.v4();
-        final quoteWithId = quote.id == null
-            ? quote.copyWith(id: newQuoteId)
-            : quote;
+        final quoteWithId =
+            quote.id == null ? quote.copyWith(id: newQuoteId) : quote;
 
         await db.transaction((txn) async {
           final quoteMap = quoteWithId.toJson();
@@ -70,10 +69,13 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
             // ⚡ Bolt: 使用 batch 优化批量插入标签，解决 N+1 性能问题
             final batch = txn.batch();
             for (final tagId in quote.tagIds) {
-              batch.insert('quote_tags', {
-                'quote_id': newQuoteId,
-                'tag_id': tagId,
-              }, conflictAlgorithm: ConflictAlgorithm.ignore);
+              batch.insert(
+                  'quote_tags',
+                  {
+                    'quote_id': newQuoteId,
+                    'tag_id': tagId,
+                  },
+                  conflictAlgorithm: ConflictAlgorithm.ignore);
             }
             await batch.commit(noResult: true);
           }
@@ -152,8 +154,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
 
       // 修复：使用 LEFT JOIN 获取笔记及其关联的标签
       // 这样可以正确获取每个笔记的 tagIds
-      final String query =
-          '''
+      final String query = '''
         SELECT q.*, GROUP_CONCAT(qt.tag_id) as tag_ids
         FROM quotes q
         LEFT JOIN quote_tags qt ON q.id = qt.quote_id
@@ -222,8 +223,8 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
           final quoteFromDb = Quote.fromJson(quoteRow);
           final extracted =
               await MediaReferenceService.extractMediaPathsFromQuote(
-                quoteFromDb,
-              );
+            quoteFromDb,
+          );
           mediaPathsToCheck.addAll(extracted);
         } catch (e) {
           logDebug('从笔记内容提取媒体路径失败，继续使用引用表: $e');
@@ -257,8 +258,8 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
             // 使用轻量级检查（仅查引用表计数）
             final deleted =
                 await MediaReferenceService.quickCheckAndDeleteIfOrphan(
-                  absolutePath,
-                );
+              absolutePath,
+            );
             if (deleted) {
               logDebug('已清理孤儿媒体文件: $absolutePath (原始记录: $storedPath)');
             }
@@ -388,10 +389,13 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
             // ⚡ Bolt: 使用 batch 优化批量插入标签，解决 N+1 性能问题
             final batch = txn.batch();
             for (final tagId in quote.tagIds) {
-              batch.insert('quote_tags', {
-                'quote_id': quote.id!,
-                'tag_id': tagId,
-              }, conflictAlgorithm: ConflictAlgorithm.ignore);
+              batch.insert(
+                  'quote_tags',
+                  {
+                    'quote_id': quote.id!,
+                    'tag_id': tagId,
+                  },
+                  conflictAlgorithm: ConflictAlgorithm.ignore);
             }
             await batch.commit(noResult: true);
           }
@@ -417,8 +421,8 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
             // 使用增强版的 quickCheckAndDeleteIfOrphan（包含内容二次校验）
             final deleted =
                 await MediaReferenceService.quickCheckAndDeleteIfOrphan(
-                  absolutePath,
-                );
+              absolutePath,
+            );
             if (deleted) {
               logDebug('已清理无引用媒体文件: $absolutePath');
             }
