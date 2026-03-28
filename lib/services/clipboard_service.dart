@@ -118,7 +118,8 @@ class ClipboardService extends ChangeNotifier {
       String? matchedSubstring = extractedInfo['matched_substring']; // 获取匹配到的子串
 
       logDebug(
-          '从剪贴板提取信息 - 作者: $author, 出处: $source, 匹配子串长度: ${matchedSubstring?.length}');
+        '从剪贴板提取信息 - 作者: $author, 出处: $source, 匹配子串长度: ${matchedSubstring?.length}',
+      );
 
       // 如果提取到了元数据，从原始内容中移除匹配的子串
       final displayContent = (matchedSubstring != null)
@@ -138,18 +139,23 @@ class ClipboardService extends ChangeNotifier {
   }
 
   // Cache regexes for performance
-  static final RegExp _pattern1 =
-      RegExp(r'[-—–]+\s*([^《（\(]+?)?\s*[《（\(]([^》）\)]+?)[》）\)]\s*$');
-  static final RegExp _pattern2 =
-      RegExp(r'[《（\(]([^》）\)]+?)[》）\)]\s*[-—–]+\s*([^，。,、\.\n]+)\s*$');
-  static final RegExp _pattern3 =
-      RegExp(r'["""](.+?)["""]\s*[-—–]+\s*([^，。,、\.\n]+)\s*$');
-  static final RegExp _pattern4 =
-      RegExp(r'[-—–]+\s*([^，。,、\.\n《（\(]{2,20})\s*$');
+  static final RegExp _pattern1 = RegExp(
+    r'[-—–]+\s*([^《（\(]+?)?\s*[《（\(]([^》）\)]+?)[》）\)]\s*$',
+  );
+  static final RegExp _pattern2 = RegExp(
+    r'[《（\(]([^》）\)]+?)[》）\)]\s*[-—–]+\s*([^，。,、\.\n]+)\s*$',
+  );
+  static final RegExp _pattern3 = RegExp(
+    r'["""](.+?)["""]\s*[-—–]+\s*([^，。,、\.\n]+)\s*$',
+  );
+  static final RegExp _pattern4 = RegExp(
+    r'[-—–]+\s*([^，。,、\.\n《（\(]{2,20})\s*$',
+  );
   static final RegExp _pattern4Source = RegExp(r'[《（\(]([^》）\)]+?)[》）\)]\s*$');
   static final RegExp _pattern5 = RegExp(r'[《（\(]([^》）\)]+?)[》）\)]\s*$');
-  static final RegExp _pattern5Author =
-      RegExp(r'[-—–]+\s*([^，。,、\.\n《（\(]{2,20})\s*$');
+  static final RegExp _pattern5Author = RegExp(
+    r'[-—–]+\s*([^，。,、\.\n《（\(]{2,20})\s*$',
+  );
   static final RegExp _cleanPattern = RegExp(r'^[—–\-—\s]+|[—–\-—\s]+$');
 
   // 从文本中提取作者和出处信息（类似一言格式）
@@ -211,8 +217,9 @@ class ClipboardService extends ChangeNotifier {
       author = clean(m4.group(1));
       matchedSubstring = m4.group(0);
       // 尝试在此基础上再提取出处
-      final remainingText =
-          text.substring(0, text.length - matchedSubstring!.length).trim();
+      final remainingText = text
+          .substring(0, text.length - matchedSubstring!.length)
+          .trim();
       final m4Source = _pattern4Source.firstMatch(remainingText);
       if (m4Source != null) {
         source = clean(m4Source.group(1));
@@ -234,8 +241,9 @@ class ClipboardService extends ChangeNotifier {
       source = clean(m5.group(1));
       matchedSubstring = m5.group(0);
       // 尝试在此基础上再提取作者
-      final remainingText =
-          text.substring(0, text.length - matchedSubstring!.length).trim();
+      final remainingText = text
+          .substring(0, text.length - matchedSubstring!.length)
+          .trim();
       final m5Author = _pattern5Author.firstMatch(remainingText);
       if (m5Author != null) {
         author = clean(m5Author.group(1));
