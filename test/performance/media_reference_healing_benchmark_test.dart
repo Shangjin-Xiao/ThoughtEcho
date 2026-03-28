@@ -54,7 +54,7 @@ void main() {
       id: 'test_quote_1',
       content: 'Test content',
       deltaContent: jsonEncode(ops),
-      createdAt: DateTime.now(),
+      date: DateTime.now().toIso8601String(),
     );
 
     final stopwatch = Stopwatch()..start();
@@ -65,12 +65,6 @@ void main() {
     });
 
     stopwatch.stop();
-
-    print('-----------------------------------------');
-    print('Media count: $mediaCount');
-    print('Execution time: ${stopwatch.elapsedMilliseconds} ms');
-    print('getApplicationDocumentsPath calls: ${mockPathProvider.callCount}');
-    print('-----------------------------------------');
 
     // ⚡ Bolt: After optimization, it should be exactly 1 call
     expect(mockPathProvider.callCount, equals(1));
