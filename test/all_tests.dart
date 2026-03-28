@@ -10,6 +10,8 @@ import 'unit/models/note_category_test.dart' as note_category_test;
 
 // Import service tests
 import 'unit/services/database_service_test.dart' as database_service_test;
+import 'unit/services/database_health_service_test.dart'
+    as database_health_service_test;
 import 'unit/services/excerpt_intent_service_test.dart'
     as excerpt_intent_service_test;
 import 'unit/services/settings_service_test.dart' as settings_service_test;
@@ -50,6 +52,7 @@ void main() {
 
     group('Service Tests', () {
       database_service_test.main();
+      database_health_service_test.main();
       excerpt_intent_service_test.main();
       settings_service_test.main();
       weather_service_test.main();
