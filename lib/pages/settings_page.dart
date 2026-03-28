@@ -79,8 +79,8 @@ class SettingsPageState extends State<SettingsPage> {
 
     final allShown =
         FeatureGuideHelper.hasShown(context, 'settings_preferences') &&
-            FeatureGuideHelper.hasShown(context, 'settings_startup') &&
-            FeatureGuideHelper.hasShown(context, 'settings_theme');
+        FeatureGuideHelper.hasShown(context, 'settings_startup') &&
+        FeatureGuideHelper.hasShown(context, 'settings_theme');
 
     if (allShown) {
       _guidesTriggered = true;
@@ -231,8 +231,8 @@ class SettingsPageState extends State<SettingsPage> {
                 // 刷新设置页面的状态
                 if (mounted) {
                   setState(() {
-                    _locationController.text =
-                        locationService.getFormattedLocation();
+                    _locationController.text = locationService
+                        .getFormattedLocation();
                   });
                 }
               },
@@ -330,23 +330,25 @@ class SettingsPageState extends State<SettingsPage> {
                   subtitle: Text(
                     locationService.hasLocationPermission
                         ? (locationService.isLocationServiceEnabled
-                            ? l10n.settingsLocationEnabled
-                            : l10n.settingsLocationPermissionOnly)
+                              ? l10n.settingsLocationEnabled
+                              : l10n.settingsLocationPermissionOnly)
                         : l10n.settingsLocationNoPermission,
                     style: TextStyle(
                       fontSize: 12,
-                      color: locationService.hasLocationPermission &&
+                      color:
+                          locationService.hasLocationPermission &&
                               locationService.isLocationServiceEnabled
                           ? theme.colorScheme.primary
                           : theme.colorScheme.error,
                     ),
                   ),
-                  value: locationService.hasLocationPermission &&
+                  value:
+                      locationService.hasLocationPermission &&
                       locationService.isLocationServiceEnabled,
                   onChanged: (value) async {
                     if (value) {
-                      bool permissionGranted =
-                          await locationService.requestLocationPermission();
+                      bool permissionGranted = await locationService
+                          .requestLocationPermission();
                       if (!permissionGranted) {
                         if (mounted && context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -403,8 +405,8 @@ class SettingsPageState extends State<SettingsPage> {
                           ),
                         );
                       }
-                      final position =
-                          await locationService.getCurrentLocation();
+                      final position = await locationService
+                          .getCurrentLocation();
                       if (!mounted) return; // Add this check
                       if (position != null) {
                         if (context.mounted) {
@@ -420,8 +422,8 @@ class SettingsPageState extends State<SettingsPage> {
                           );
                         }
                         setState(() {
-                          _locationController.text =
-                              locationService.getFormattedLocation();
+                          _locationController.text = locationService
+                              .getFormattedLocation();
                         });
                       } else {
                         if (!mounted) return;
@@ -586,14 +588,19 @@ class SettingsPageState extends State<SettingsPage> {
                           const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.tertiary
-                                  .withValues(alpha: 0.2),
+                              color: theme.colorScheme.tertiary.withValues(
+                                alpha: 0.2,
+                              ),
                               borderRadius: BorderRadius.circular(4),
                               border: Border.all(
-                                  color: theme.colorScheme.tertiary
-                                      .withValues(alpha: 0.5)),
+                                color: theme.colorScheme.tertiary.withValues(
+                                  alpha: 0.5,
+                                ),
+                              ),
                             ),
                             child: Text(
                               'Preview',
@@ -1025,10 +1032,9 @@ class SettingsPageState extends State<SettingsPage> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: Divider(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .outline
-                            .withAlpha((0.2 * 255).round()),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.outline.withAlpha((0.2 * 255).round()),
                       ),
                     ),
                     // 启用/禁用周年动画开关
@@ -1052,8 +1058,9 @@ class SettingsPageState extends State<SettingsPage> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text(
-                              AppLocalizations.of(context)
-                                  .developerAnniversaryResetDone,
+                              AppLocalizations.of(
+                                context,
+                              ).developerAnniversaryResetDone,
                             ),
                             duration: const Duration(seconds: 2),
                           ),
@@ -1072,8 +1079,8 @@ class SettingsPageState extends State<SettingsPage> {
               );
             },
           ),
-          // --- 一周年开发者调试 Card 结束 ---
 
+          // --- 一周年开发者调试 Card 结束 ---
           const SizedBox(height: 20), // 底部增加一些间距
         ],
       ),
@@ -1158,8 +1165,10 @@ class SettingsPageState extends State<SettingsPage> {
   // 构建语言设置项
   Widget _buildLanguageItem(BuildContext context) {
     final settingsService = Provider.of<SettingsService>(context);
-    final locationService =
-        Provider.of<LocationService>(context, listen: false);
+    final locationService = Provider.of<LocationService>(
+      context,
+      listen: false,
+    );
     final currentLocale = settingsService.localeCode;
     final l10n = AppLocalizations.of(context);
 
@@ -1394,8 +1403,9 @@ class SettingsPageState extends State<SettingsPage> {
             0,
             (sum, quote) => sum + quote.content.length,
           );
-          final averageWordsPerNote =
-              totalNotes > 0 ? (totalWords / totalNotes).round() : 0;
+          final averageWordsPerNote = totalNotes > 0
+              ? (totalWords / totalNotes).round()
+              : 0;
 
           // 获取标签统计
           final Map<String, int> tagCounts = {};
@@ -1487,7 +1497,8 @@ class SettingsPageState extends State<SettingsPage> {
               .toSet()
               .length;
 
-          final prompt = '''基于以下用户笔记数据，生成一份完整的HTML年度报告。
+          final prompt =
+              '''基于以下用户笔记数据，生成一份完整的HTML年度报告。
 
 用户数据统计：
 - 年份：$currentYear
@@ -1533,7 +1544,7 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
             // 检查返回内容的格式
             final isHtml =
                 result.trim().toLowerCase().startsWith('<!doctype') ||
-                    result.trim().toLowerCase().startsWith('<html');
+                result.trim().toLowerCase().startsWith('<html');
             final isJson =
                 result.trim().startsWith('{') || result.trim().startsWith('[');
 
@@ -1557,8 +1568,9 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content:
-                      Text(AppLocalizations.of(context).aiReturnedEmptyContent),
+                  content: Text(
+                    AppLocalizations.of(context).aiReturnedEmptyContent,
+                  ),
                   duration: AppConstants.snackBarDurationError,
                 ),
               );
@@ -1687,10 +1699,12 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
         if (mounted && result.isNotEmpty) {
           // 详细检查返回内容
           final trimmed = result.trim();
-          final isHtml = trimmed.toLowerCase().startsWith('<!doctype') ||
+          final isHtml =
+              trimmed.toLowerCase().startsWith('<!doctype') ||
               trimmed.toLowerCase().startsWith('<html');
           final isJson = trimmed.startsWith('{') || trimmed.startsWith('[');
-          final containsHtmlTags = trimmed.contains('<html') ||
+          final containsHtmlTags =
+              trimmed.contains('<html') ||
               trimmed.contains('<body') ||
               trimmed.contains('<div');
 
@@ -1716,7 +1730,8 @@ ${positiveQuotes.isNotEmpty ? positiveQuotes : '用户的记录充满了思考�
                   Text(l10n.htmlFormatLabel(isHtml ? '✅' : '❌')),
                   Text(l10n.jsonFormatLabel(isJson ? '⚠️' : '✅')),
                   Text(
-                      l10n.containsHtmlTagsLabel(containsHtmlTags ? '✅' : '❌')),
+                    l10n.containsHtmlTagsLabel(containsHtmlTags ? '✅' : '❌'),
+                  ),
                   const SizedBox(height: 10),
                   Text(l10n.first100CharsLabel),
                   Container(
