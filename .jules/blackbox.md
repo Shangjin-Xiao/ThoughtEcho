@@ -4,3 +4,6 @@
 ## 2025-05-18 - 🗃️ 黑匣: [完善 ApiKeyManager 模块的结构化日志]
 **异常:** [APIKeyManager 中获取和验证 API 密钥失败时，仅使用了 logDebug 进行了粗糙的打印，丢失了关键的错误堆栈信息 (stackTrace) 以及错误来源模块 (source) 等上下文，不利于排查安全存储获取失败的根因。]
 **拦截:** [已将 getProviderApiKey 和 hasValidProviderApiKey 方法中的错误捕获升级为结构化的 AppLogger.e 调用，注入了明确的错误对象、堆栈轨迹以及模块标识 'APIKeyManager'。同时确认了日志内容未包含任何用户密钥等敏感隐私数据，仅记录了 providerId。]
+## 2025-05-18 - 🗃️ 黑匣: [完善 smart_push_analytics 模块的结构化日志]
+**异常:** [SmartPushAnalytics 模块在解析应用打开记录、分析内容得分、处理通知指标、计算冷却时间与疲劳预算时，遇到解析失败或取值异常等隐蔽错误仅使用 `catch (e)` 进行了返回默认值或粗糙的 `debugPrint`，丢失了错误来源、异常堆栈等关键上下文。这可能导致推送策略效果恶化而无法被排查。]
+**拦截:** [已将上述流程中的 `catch (e)` 替换为结构化的 `AppLogger.e`，注入了具体的报错信息、`error` 对象、`stackTrace` 以及 `source: 'SmartPushAnalytics'` 的模块标识。确认所有记录皆针对解析配置和统计信息失败，不包含任何推送正文或用户隐私等敏感数据。]
