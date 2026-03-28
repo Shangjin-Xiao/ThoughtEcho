@@ -240,6 +240,10 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
 
         // 使用轻量级检查机制清理孤儿媒体文件（合并来源：引用表 + 内容提取）
         // 注：removeAllReferencesForQuote 已经清理了引用表，这里只需查引用计数
+        // ⚡ Bolt: Fetch appPath once to avoid N+1 platform channel calls in the loop below
+        final appDir = await getApplicationDocumentsDirectory();
+        final appPath = normalize(appDir.path);
+
         for (final storedPath in mediaPathsToCheck) {
           try {
             // storedPath 可能是相对路径（相对于应用文档目录）
@@ -248,8 +252,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
               // 使用 path.isAbsolute 来判断是否为绝对路径，兼容 Windows/Linux/macOS
               if (!isAbsolute(absolutePath)) {
                 // 简单判断相对路径
-                final appDir = await getApplicationDocumentsDirectory();
-                absolutePath = join(appDir.path, storedPath);
+                absolutePath = join(appPath, storedPath);
               }
             } catch (e) {
               logDebug('[DatabaseService] path resolution failed: $e');
@@ -259,6 +262,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
             final deleted =
                 await MediaReferenceService.quickCheckAndDeleteIfOrphan(
               absolutePath,
+              cachedAppPath: appPath,
             );
             if (deleted) {
               logDebug('已清理孤儿媒体文件: $absolutePath (原始记录: $storedPath)');
@@ -410,18 +414,22 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         logDebug('笔记已成功更新，ID: ${quote.id}');
 
         // 使用轻量级检查机制清理因内容变更而不再被引用的媒体文件
+        // ⚡ Bolt: Fetch appPath once to avoid N+1 platform channel calls in the loop below
+        final appDir = await getApplicationDocumentsDirectory();
+        final appPath = normalize(appDir.path);
+
         for (final storedPath in oldReferencedFiles) {
           try {
             String absolutePath = storedPath;
             if (!absolutePath.startsWith('/') && !absolutePath.contains(':')) {
-              final appDir = await getApplicationDocumentsDirectory();
-              absolutePath = join(appDir.path, storedPath);
+              absolutePath = join(appPath, storedPath);
             }
 
             // 使用增强版的 quickCheckAndDeleteIfOrphan（包含内容二次校验）
             final deleted =
                 await MediaReferenceService.quickCheckAndDeleteIfOrphan(
               absolutePath,
+              cachedAppPath: appPath,
             );
             if (deleted) {
               logDebug('已清理无引用媒体文件: $absolutePath');
