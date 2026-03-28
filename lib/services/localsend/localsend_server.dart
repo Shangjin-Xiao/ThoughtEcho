@@ -134,7 +134,24 @@ class LocalSendServer {
         source: 'LocalSend',
       );
 
+      // Keep browser-based clients working with standard CORS preflight.
+      request.response.headers.add('Access-Control-Allow-Origin', '*');
+      request.response.headers.add(
+        'Access-Control-Allow-Methods',
+        'GET, POST, PUT, DELETE, OPTIONS',
+      );
+      request.response.headers.add(
+        'Access-Control-Allow-Headers',
+        'Content-Type, Authorization',
+      );
       request.response.headers.add('Connection', 'keep-alive');
+
+      if (request.method == 'OPTIONS') {
+        request.response.statusCode = HttpStatus.ok;
+        await request.response.close();
+        logDebug('req_options', source: 'LocalSend');
+        return;
+      }
 
       final path = request.uri.path;
       final query = request.uri.queryParameters;

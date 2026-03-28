@@ -638,7 +638,11 @@ class MediaReferenceService {
         // 自动修复逻辑：重建引用记录
         for (final quote in quotesWithFile) {
           if (quote.id != null) {
-            await addReference(normalizedPath, quote.id!);
+            await addReference(
+              normalizedPath,
+              quote.id!,
+              cachedAppPath: appPath,
+            );
           }
         }
         return false;
@@ -693,7 +697,11 @@ class MediaReferenceService {
           for (final entry in variants.entries) {
             final variantPath = entry.key;
             for (final quoteId in entry.value) {
-              await addReference(variantPath, quoteId);
+              await addReference(
+                variantPath,
+                quoteId,
+                cachedAppPath: appPath,
+              );
             }
           }
           logDebug('已修复文件 $filePath 的引用记录');
