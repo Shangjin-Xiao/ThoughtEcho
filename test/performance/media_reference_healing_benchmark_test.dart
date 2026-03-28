@@ -6,7 +6,8 @@ import 'package:thoughtecho/services/media_reference_service.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
-class MockPathProvider extends PathProviderPlatform with MockPlatformInterfaceMixin {
+class MockPathProvider extends PathProviderPlatform
+    with MockPlatformInterfaceMixin {
   int callCount = 0;
   @override
   Future<String?> getApplicationDocumentsPath() async {
@@ -38,15 +39,14 @@ void main() {
     await db.close();
   });
 
-  test('Benchmark: syncQuoteMediaReferencesWithTransaction N+1 issue', () async {
+  test('Benchmark: syncQuoteMediaReferencesWithTransaction N+1 issue',
+      () async {
     final mediaCount = 10; // 减少数量以确保快速运行
     final ops = <Map<String, dynamic>>[];
 
     for (var i = 0; i < mediaCount; i++) {
       ops.add({
-        'insert': {
-          'image': '/tmp/test_app_docs/media/image_$i.png'
-        }
+        'insert': {'image': '/tmp/test_app_docs/media/image_$i.png'}
       });
     }
 
@@ -60,7 +60,8 @@ void main() {
     final stopwatch = Stopwatch()..start();
 
     await db.transaction((txn) async {
-      await MediaReferenceService.syncQuoteMediaReferencesWithTransaction(txn, quote);
+      await MediaReferenceService.syncQuoteMediaReferencesWithTransaction(
+          txn, quote);
     });
 
     stopwatch.stop();
