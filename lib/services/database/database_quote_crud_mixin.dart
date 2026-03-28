@@ -66,8 +66,10 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
 
           // 修复：插入标签关联，避免事务嵌套
           if (quote.tagIds.isNotEmpty) {
+            // ⚡ Bolt: 使用 batch 优化批量插入标签，解决 N+1 性能问题
+            final batch = txn.batch();
             for (final tagId in quote.tagIds) {
-              await txn.insert(
+              batch.insert(
                   'quote_tags',
                   {
                     'quote_id': newQuoteId,
@@ -75,6 +77,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
                   },
                   conflictAlgorithm: ConflictAlgorithm.ignore);
             }
+            await batch.commit(noResult: true);
           }
         });
 
@@ -383,8 +386,10 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
 
           /// 修复：插入新的标签关联，避免事务嵌套
           if (quote.tagIds.isNotEmpty) {
+            // ⚡ Bolt: 使用 batch 优化批量插入标签，解决 N+1 性能问题
+            final batch = txn.batch();
             for (final tagId in quote.tagIds) {
-              await txn.insert(
+              batch.insert(
                   'quote_tags',
                   {
                     'quote_id': quote.id!,
@@ -392,6 +397,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
                   },
                   conflictAlgorithm: ConflictAlgorithm.ignore);
             }
+            await batch.commit(noResult: true);
           }
 
           // 3. 同步媒体引用，确保与内容更新保持原子性

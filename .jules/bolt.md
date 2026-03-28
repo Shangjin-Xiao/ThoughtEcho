@@ -9,3 +9,7 @@
 ## 2024-05-24 - [Isolate Refactoring Pattern]
 **Learning:** When moving logic to an Isolate via `compute`, avoid dependencies on singletons like `AppLogger`.
 **Action:** Refactor logic into pure static methods that accept a `List<String> logBuffer` and return it in a result object, then replay logs on the main thread.
+
+## 2025-03-27 - [N+1 DB Insert Optimization]
+**Learning:** In Dart/Flutter SQLite (`sqflite`), using a `for` loop to execute `await txn.insert()` causes a significant Platform Channel communication overhead per iteration. This is particularly problematic when saving objects with multiple relationships (like tags).
+**Action:** Always use `txn.batch()` to enqueue commands and execute them together via `await batch.commit(noResult: true)` when inserting or updating multiple related rows in SQLite. This eliminates the N+1 execution overhead.
