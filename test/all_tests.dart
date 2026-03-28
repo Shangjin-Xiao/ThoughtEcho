@@ -18,6 +18,8 @@ import 'unit/services/location_service_test.dart' as location_service_test;
 import 'unit/services/clipboard_service_test.dart' as clipboard_service_test;
 import 'unit/services/ai_analysis_database_service_test.dart'
     as ai_analysis_service_test;
+import 'unit/services/database_health_security_test.dart'
+    as database_health_security_test;
 import 'unit/services/location_format_test.dart' as location_format_test;
 import 'storage_management_test.dart' as storage_management_test;
 import 'performance/day_period_patch_test.dart' as day_period_patch_test;
@@ -57,6 +59,7 @@ void main() {
       location_format_test.main();
       clipboard_service_test.main();
       ai_analysis_service_test.main();
+      database_health_security_test.main();
       storage_management_test.main();
       day_period_patch_test.main();
     });
