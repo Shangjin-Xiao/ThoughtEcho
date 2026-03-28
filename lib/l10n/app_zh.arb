@@ -3538,7 +3538,47 @@
   "developerAnniversaryResetDesc": "重置后下次进入应用将再次播放动画",
   "developerAnniversaryResetDone": "已重置，下次进入应用将播放动画",
   "developerAnniversaryPreview": "立即预览动画",
-  "developerAnniversaryPreviewDesc": "点击立即播放一周年庆典动画"
+  "developerAnniversaryPreviewDesc": "点击立即播放一周年庆典动画",
+  "trash": "回收站",
+  "trashEmpty": "回收站为空",
+  "trashEmptyHint": "删除的笔记会出现在这里",
+  "trashRetentionHint": "已删除的笔记将在当前保留期后自动清除",
+  "trashRemainingDays": "剩余 {days} 天",
+  "@trashRemainingDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "restoreNote": "恢复",
+  "permanentlyDelete": "永久删除",
+  "permanentlyDeleteConfirmation": "此操作无法撤销，笔记将被永久删除。",
+  "emptyTrash": "清空回收站",
+  "emptyTrashConfirmation": "确定要永久删除回收站中的所有笔记吗？此操作无法撤销。",
+  "noteMovedToTrash": "笔记已移至回收站，可在回收站恢复",
+  "noteRestored": "笔记已恢复",
+  "trashEmptied": "回收站已清空",
+  "deletedAt": "删除于 {date}",
+  "@deletedAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "trashCount": "回收站 ({count})",
+  "@trashCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trashRetentionPeriod": "回收站保留时间",
+  "trashRetentionOption7Days": "7 天",
+  "trashRetentionOption30Days": "30 天",
+  "trashRetentionOption90Days": "90 天"
   ,"insertImage": "插入图片",
   "insertVideo": "插入视频",
   "insertAudio": "插入音频",

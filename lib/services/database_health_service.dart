@@ -132,10 +132,17 @@ class DatabaseHealthService {
       final dbVersion = await db.getVersion();
 
       // 3. 获取基本统计
-      final quoteCountResult = await db.rawQuery(
-        'SELECT COUNT(*) as count FROM quotes',
-      );
-      final quoteCount = quoteCountResult.first['count'] as int;
+      final quoteCountResult = await db.rawQuery('''
+        SELECT
+          COUNT(*) as total,
+          SUM(CASE WHEN is_deleted = 0 OR is_deleted IS NULL THEN 1 ELSE 0 END) as active,
+          SUM(CASE WHEN is_deleted = 1 THEN 1 ELSE 0 END) as deleted
+        FROM quotes
+      ''');
+      final quoteCount = (quoteCountResult.first['total'] as int?) ?? 0;
+      final activeQuoteCount = (quoteCountResult.first['active'] as int?) ?? 0;
+      final deletedQuoteCount =
+          (quoteCountResult.first['deleted'] as int?) ?? 0;
 
       final categoryCountResult = await db.rawQuery(
         'SELECT COUNT(*) as count FROM categories',
@@ -154,7 +161,7 @@ class DatabaseHealthService {
 ========================================
 版本: v$dbVersion
 外键约束: ${foreignKeysEnabled ? '✅ 已启用' : '⚠️ 未启用'}
-笔记数量: $quoteCount
+笔记数量: $quoteCount (活跃 $activeQuoteCount / 回收站 $deletedQuoteCount)
 分类数量: $categoryCount
 标签关联: $tagRelationCount
 ========================================
@@ -316,7 +323,9 @@ class DatabaseHealthService {
           SELECT DISTINCT q.* FROM quotes q
           INNER JOIN quote_tags qt ON q.id = qt.quote_id
           INNER JOIN categories c ON qt.tag_id = c.id
-          WHERE c.id = ? AND length(q.content) <= 100
+          WHERE c.id = ?
+            AND length(q.content) <= 100
+            AND (q.is_deleted = 0 OR q.is_deleted IS NULL)
           ORDER BY RANDOM()
           LIMIT 1
         ''',
@@ -328,7 +337,9 @@ class DatabaseHealthService {
       if (results.isEmpty) {
         results = await db.rawQuery('''
           SELECT * FROM quotes
-          WHERE length(content) <= 80 AND content NOT LIKE '%\n%'
+          WHERE length(content) <= 80
+            AND content NOT LIKE '%\n%'
+            AND (is_deleted = 0 OR is_deleted IS NULL)
           ORDER BY RANDOM()
           LIMIT 1
         ''');
@@ -459,10 +470,17 @@ class DatabaseHealthService {
       }
 
       // 获取记录数量
-      final quoteCountResult = await db.rawQuery(
-        'SELECT COUNT(*) as count FROM quotes',
-      );
-      final quoteCount = quoteCountResult.first['count'] as int;
+      final quoteCountResult = await db.rawQuery('''
+        SELECT
+          COUNT(*) as total,
+          SUM(CASE WHEN is_deleted = 0 OR is_deleted IS NULL THEN 1 ELSE 0 END) as active,
+          SUM(CASE WHEN is_deleted = 1 THEN 1 ELSE 0 END) as deleted
+        FROM quotes
+      ''');
+      final quoteCount = (quoteCountResult.first['total'] as int?) ?? 0;
+      final activeQuoteCount = (quoteCountResult.first['active'] as int?) ?? 0;
+      final deletedQuoteCount =
+          (quoteCountResult.first['deleted'] as int?) ?? 0;
 
       final categoryCountResult = await db.rawQuery(
         'SELECT COUNT(*) as count FROM categories',
@@ -486,6 +504,8 @@ class DatabaseHealthService {
         'platform': Platform.operatingSystem,
         'db_size_mb': dbSizeMb,
         'quote_count': quoteCount,
+        'active_quote_count': activeQuoteCount,
+        'deleted_quote_count': deletedQuoteCount,
         'category_count': categoryCount,
         'tag_relation_count': tagRelationCount,
         'foreign_keys_enabled': foreignKeysEnabled,
@@ -509,6 +529,7 @@ class DatabaseHealthService {
       var candidates = memoryStore
           .where(
             (quote) =>
+                !quote.isDeleted &&
                 quote.tagIds.any(
                   (tagId) => categoryStore.any(
                     (cat) => cat.id == tagId && cat.name == '每日一言',
@@ -523,7 +544,9 @@ class DatabaseHealthService {
         candidates = memoryStore
             .where(
               (quote) =>
-                  quote.content.length <= 80 && !quote.content.contains('\n'),
+                  !quote.isDeleted &&
+                  quote.content.length <= 80 &&
+                  !quote.content.contains('\n'),
             )
             .toList();
       }

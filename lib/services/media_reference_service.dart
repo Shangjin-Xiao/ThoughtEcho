@@ -447,8 +447,10 @@ class MediaReferenceService {
       _collectQuoteReferenceIndex() async {
     final databaseService = DatabaseService();
     // 媒体引用索引需要包含所有笔记（包括隐藏笔记）
-    final quotes =
-        await databaseService.getAllQuotes(excludeHiddenNotes: false);
+    final quotes = await databaseService.getAllQuotes(
+      excludeHiddenNotes: false,
+      includeDeleted: true,
+    );
 
     final index = <String, Map<String, Set<String>>>{};
 
@@ -497,6 +499,7 @@ class MediaReferenceService {
         offset: offset,
         limit: pageSize,
         excludeHiddenNotes: false,
+        includeDeleted: true,
       );
       if (quotes.isEmpty) break;
 
@@ -1009,6 +1012,7 @@ class MediaReferenceService {
           offset: offset,
           limit: pageSize,
           excludeHiddenNotes: false,
+          includeDeleted: true,
         );
         if (quotes.isEmpty) break;
 

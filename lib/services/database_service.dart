@@ -1,5 +1,6 @@
 // ignore_for_file: unused_element, unused_field
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
@@ -9,11 +10,13 @@ import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
+import '../models/app_settings.dart';
 import 'package:uuid/uuid.dart';
 import '../utils/app_logger.dart';
 import '../utils/database_platform_init.dart';
 import 'large_file_manager.dart';
 import 'media_reference_service.dart';
+import 'mmkv_service.dart';
 import '../models/merge_report.dart';
 import '../widgets/quote_content_widget.dart'; // 用于缓存清理
 import 'database_schema_manager.dart';
@@ -28,6 +31,7 @@ part 'database/database_favorite_mixin.dart';
 part 'database/database_category_mixin.dart';
 part 'database/database_category_init_mixin.dart';
 part 'database/database_hidden_tag_mixin.dart';
+part 'database/database_trash_mixin.dart';
 part 'database/database_pagination_mixin.dart';
 part 'database/database_import_export_mixin.dart';
 part 'database/database_migration_mixin.dart';
@@ -58,10 +62,16 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   static const String hiddenTagIconName = '🔒';
 
   Future<void> addQuote(Quote quote);
-  Future<Quote?> getQuoteById(String id);
-  Future<List<Quote>> getAllQuotes({bool excludeHiddenNotes = true});
+  Future<Quote?> getQuoteById(String id, {bool includeDeleted = false});
+  Future<List<Quote>> getAllQuotes({
+    bool excludeHiddenNotes = true,
+    bool includeDeleted = false,
+  });
   Future<void> deleteQuote(String id);
-  Future<List<Quote>> searchQuotesByContent(String query);
+  Future<List<Quote>> searchQuotesByContent(
+    String query, {
+    bool includeDeleted = true,
+  });
   Future<void> updateQuote(Quote quote);
 
   Future<List<Quote>> getUserQuotes({
@@ -74,12 +84,14 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
     bool excludeHiddenNotes = true,
+    bool includeDeleted = false,
   });
   Future<List<Quote>> getQuotesForSmartPush({
     String? whereSql,
     List<Object?>? whereArgs,
     int limit = 200,
     String orderBy = 'q.date DESC',
+    bool includeDeleted = false,
   });
   Future<int> getQuotesCount({
     List<String>? tagIds,
@@ -88,7 +100,20 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
     bool excludeHiddenNotes = true,
+    bool includeDeleted = false,
   });
+
+  Future<List<Quote>> getDeletedQuotes({
+    int offset = 0,
+    int limit = 20,
+    String orderBy = 'deleted_at DESC',
+  });
+  Future<int> getDeletedQuotesCount();
+  Future<List<Map<String, dynamic>>> getTombstonesForBackup();
+  Future<void> restoreQuote(String id);
+  Future<void> permanentlyDeleteQuote(String id);
+  Future<void> emptyTrash();
+  Future<int> autoCleanupExpiredTrash({required int retentionDays});
 
   Future<void> incrementFavoriteCount(String quoteId);
   Future<void> resetFavoriteCount(String quoteId);
@@ -119,6 +144,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     String? searchQuery,
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
+    bool includeDeleted = false,
   });
   Future<void> loadMoreQuotes({
     List<String>? tagIds,
@@ -126,6 +152,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     String? searchQuery,
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
+    bool? includeDeleted,
   });
 
   Future<Map<String, dynamic>> exportDataAsMap();
@@ -164,6 +191,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     String? searchQuery,
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
+    bool includeDeleted = false,
   });
 
   /// 修复：验证排序参数，防止 SQL 注入
@@ -182,7 +210,8 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       'weather',
       'day_period',
       'last_modified',
-      'color_hex'
+      'color_hex',
+      'deleted_at',
     ];
 
     final validTerms = <String>[];
@@ -296,6 +325,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
 
   // 添加存储时间段筛选条件的变量
   List<String>? _watchSelectedDayPeriods;
+  bool _watchIncludeDeleted = false;
 
   // 添加初始化状态标志
   bool _isInitialized = false;
@@ -578,6 +608,30 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       // 新增：执行数据库健康检查
       await _performStartupHealthCheck();
 
+      Future<void>.microtask(() async {
+        if (_isDisposed) {
+          return;
+        }
+        try {
+          final retentionDays = await _resolveTrashRetentionDays();
+          final cleanedCount =
+              await autoCleanupExpiredTrash(retentionDays: retentionDays);
+          if (cleanedCount > 0) {
+            logInfo(
+              '回收站自动清理完成: 删除 $cleanedCount 条过期笔记 (保留 $retentionDays 天)',
+              source: 'DatabaseService',
+            );
+          }
+        } catch (e, stackTrace) {
+          logError(
+            '回收站自动清理失败: $e',
+            error: e,
+            stackTrace: stackTrace,
+            source: 'DatabaseService',
+          );
+        }
+      });
+
       // 延迟通知监听者，让UI知道数据库已准备好
       SchedulerBinding.instance.addPostFrameCallback((_) {
         if (!_isDisposed) notifyListeners();
@@ -605,7 +659,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   Future<Database> _initDatabase(String path) async {
     return await openDatabase(
       path,
-      version: 19, // 版本号升级至19，添加latitude/longitude字段支持离线位置存储
+      version: 20,
       onCreate: (db, version) async {
         await _schemaManager.createTables(db);
       },
@@ -717,6 +771,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
         searchQuery: null,
         selectedWeathers: null,
         selectedDayPeriods: null,
+        includeDeleted: false,
       );
 
       _currentQuotes = quotes;
@@ -862,6 +917,22 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       rethrow;
     }
   }
+
+  Future<int> _resolveTrashRetentionDays() async {
+    try {
+      final mmkv = MMKVService();
+      await mmkv.init();
+      final appSettingsJson = mmkv.getString('app_settings');
+      if (appSettingsJson == null || appSettingsJson.isEmpty) {
+        return 30;
+      }
+
+      final map = json.decode(appSettingsJson) as Map<String, dynamic>;
+      return AppSettings.fromJson(map).trashRetentionDays;
+    } catch (_) {
+      return 30;
+    }
+  }
 }
 
 class DatabaseService extends _DatabaseServiceBase
@@ -874,6 +945,7 @@ class DatabaseService extends _DatabaseServiceBase
         _DatabaseCategoryMixin,
         _DatabaseCategoryInitMixin,
         _DatabaseHiddenTagMixin,
+        _DatabaseTrashMixin,
         _DatabasePaginationMixin,
         _DatabaseImportExportMixin,
         _DatabaseMigrationMixin {

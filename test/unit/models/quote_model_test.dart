@@ -45,6 +45,8 @@ void main() {
         date: '2024-01-01T00:00:00.000Z',
         categoryId: 'test-category',
         tagIds: ['tag1'],
+        isDeleted: true,
+        deletedAt: '2024-01-02T00:00:00.000Z',
       );
 
       final json = quote.toJson();
@@ -52,6 +54,8 @@ void main() {
       expect(json['content'], equals('测试内容'));
       expect(json['date'], equals('2024-01-01T00:00:00.000Z'));
       expect(json['category_id'], equals('test-category'));
+      expect(json['is_deleted'], equals(1));
+      expect(json['deleted_at'], equals('2024-01-02T00:00:00.000Z'));
       // tag_ids字段在toJson中被移除，因为使用关联表管理
       expect(json.containsKey('tag_ids'), isFalse);
     });
@@ -63,6 +67,8 @@ void main() {
         'date': '2024-01-01T00:00:00.000Z',
         'category_id': 'test-category',
         'tag_ids': 'tag1,tag2',
+        'is_deleted': 1,
+        'deleted_at': '2024-01-02T00:00:00.000Z',
       };
 
       final quote = Quote.fromJson(json);
@@ -71,6 +77,36 @@ void main() {
       expect(quote.date, equals('2024-01-01T00:00:00.000Z'));
       expect(quote.categoryId, equals('test-category'));
       expect(quote.tagIds, equals(['tag1', 'tag2']));
+      expect(quote.isDeleted, isTrue);
+      expect(quote.deletedAt, equals('2024-01-02T00:00:00.000Z'));
+    });
+
+    test('should default soft delete fields when absent', () {
+      final json = {
+        'id': 'test-id',
+        'content': '测试内容',
+        'date': '2024-01-01T00:00:00.000Z',
+      };
+
+      final quote = Quote.fromJson(json);
+      expect(quote.isDeleted, isFalse);
+      expect(quote.deletedAt, isNull);
+    });
+
+    test('copyWith should update soft delete fields', () {
+      final base = Quote(
+        id: 'test-id',
+        content: '测试内容',
+        date: '2024-01-01T00:00:00.000Z',
+      );
+
+      final updated = base.copyWith(
+        isDeleted: true,
+        deletedAt: '2024-01-02T00:00:00.000Z',
+      );
+
+      expect(updated.isDeleted, isTrue);
+      expect(updated.deletedAt, equals('2024-01-02T00:00:00.000Z'));
     });
 
     test('should validate data correctly', () {

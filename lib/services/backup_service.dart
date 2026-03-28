@@ -241,6 +241,7 @@ class BackupService {
       // 先获取总数用于进度计算
       final allQuotesCount = await _databaseService.getQuotesCount(
         excludeHiddenNotes: false,
+        includeDeleted: true,
       );
 
       while (true) {
@@ -250,6 +251,7 @@ class BackupService {
           offset: offset,
           limit: pageSize,
           excludeHiddenNotes: false, // 备份包含隐藏笔记
+          includeDeleted: true,
         );
 
         if (quotes.isEmpty) break;
@@ -305,7 +307,16 @@ class BackupService {
         await Future.delayed(const Duration(milliseconds: 1));
       }
 
-      sink.write(']},'); // 关闭 quotes 数组和 notes 对象
+      final tombstones = await _databaseService.getTombstonesForBackup();
+      sink.write('],');
+      sink.write('"tombstones":${jsonEncode(tombstones)}');
+
+      final trashSettings = {
+        'retention_days': _settingsService.trashRetentionDays,
+        'last_modified': _settingsService.trashRetentionLastModified,
+      };
+      sink.write(',"trash_settings":${jsonEncode(trashSettings)}}');
+      sink.write(',');
 
       cancelToken?.throwIfCancelled();
       onProgress?.call(0.85);
@@ -961,6 +972,13 @@ class BackupService {
           final notesData = Map<String, dynamic>.from(backupData['notes']);
           backupData['notes'] = await _convertMediaPathsInNotesForRestore(
             notesData,
+          );
+        }
+
+        final notesData = backupData['notes'];
+        if (notesData is Map<String, dynamic>) {
+          await _settingsService.applyIncomingTrashSettings(
+            notesData['trash_settings'] as Map<String, dynamic>?,
           );
         }
       }

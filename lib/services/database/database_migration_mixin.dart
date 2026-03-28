@@ -54,6 +54,9 @@ mixin _DatabaseMigrationMixin on _DatabaseServiceBase {
 
       if (kIsWeb) {
         for (final note in _memoryStore) {
+          if (note.isDeleted) {
+            continue;
+          }
           final d = DateTime.tryParse(note.date);
           if (d != null) distribution[d.hour]++;
         }
@@ -64,6 +67,7 @@ mixin _DatabaseMigrationMixin on _DatabaseServiceBase {
       final maps = await db.rawQuery('''
         SELECT CAST(substr(date, 12, 2) AS INTEGER) AS h, COUNT(*) AS c
         FROM quotes
+        WHERE is_deleted = 0 OR is_deleted IS NULL
         GROUP BY h
       ''');
       for (final row in maps) {

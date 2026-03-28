@@ -21,6 +21,7 @@ import '../widgets/update_dialog.dart';
 import '../constants/app_constants.dart';
 import 'backup_restore_page.dart';
 import 'note_sync_page.dart';
+import 'trash_page.dart';
 import '../widgets/city_search_widget.dart';
 import '../controllers/weather_search_controller.dart';
 import 'category_settings_page.dart';
@@ -841,6 +842,41 @@ class SettingsPageState extends State<SettingsPage> {
                   },
                 ),
                 ListTile(
+                  title: Text(l10n.trash),
+                  subtitle: Consumer<SettingsService>(
+                    builder: (context, settingsService, _) => Text(
+                      _retentionLabel(
+                        l10n,
+                        settingsService.trashRetentionDays,
+                      ),
+                    ),
+                  ),
+                  leading: const Icon(Icons.delete_outline),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const TrashPage(),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  title: Text(l10n.trashRetentionPeriod),
+                  subtitle: Consumer<SettingsService>(
+                    builder: (context, settingsService, _) => Text(
+                      _retentionLabel(
+                        l10n,
+                        settingsService.trashRetentionDays,
+                      ),
+                    ),
+                  ),
+                  leading: const Icon(Icons.schedule_outlined),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _showTrashRetentionSelector(),
+                ),
+                ListTile(
                   title: Text(l10n.settingsSync),
                   subtitle: Text(l10n.settingsSyncDesc),
                   leading: const Icon(Icons.sync),
@@ -1083,6 +1119,62 @@ class SettingsPageState extends State<SettingsPage> {
         ],
       ),
     );
+  }
+
+  Future<void> _showTrashRetentionSelector() async {
+    final l10n = AppLocalizations.of(context);
+    final settingsService = context.read<SettingsService>();
+    final current = settingsService.trashRetentionDays;
+    final selected = await showModalBottomSheet<int>(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text(l10n.trashRetentionOption7Days),
+              trailing: current == 7 ? const Icon(Icons.check) : null,
+              onTap: () => Navigator.of(context).pop(7),
+            ),
+            ListTile(
+              title: Text(l10n.trashRetentionOption30Days),
+              trailing: current == 30 ? const Icon(Icons.check) : null,
+              onTap: () => Navigator.of(context).pop(30),
+            ),
+            ListTile(
+              title: Text(l10n.trashRetentionOption90Days),
+              trailing: current == 90 ? const Icon(Icons.check) : null,
+              onTap: () => Navigator.of(context).pop(90),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (selected == null || selected == current) {
+      return;
+    }
+    await settingsService.setTrashRetentionDays(selected);
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(l10n.success),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  String _retentionLabel(AppLocalizations l10n, int days) {
+    switch (days) {
+      case 7:
+        return l10n.trashRetentionOption7Days;
+      case 90:
+        return l10n.trashRetentionOption90Days;
+      case 30:
+      default:
+        return l10n.trashRetentionOption30Days;
+    }
   }
 
   // --- 处理 Logo 三击激活开发者模式 ---

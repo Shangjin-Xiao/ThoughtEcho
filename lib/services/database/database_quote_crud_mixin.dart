@@ -101,10 +101,15 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
 
   /// 根据ID获取单个笔记的完整信息
   @override
-  Future<Quote?> getQuoteById(String id) async {
+  Future<Quote?> getQuoteById(
+    String id, {
+    bool includeDeleted = false,
+  }) async {
     if (kIsWeb) {
       try {
-        return _memoryStore.firstWhere((q) => q.id == id);
+        return _memoryStore.firstWhere(
+          (q) => q.id == id && (includeDeleted || !q.isDeleted),
+        );
       } catch (e) {
         return null;
       }
@@ -120,6 +125,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         FROM quotes q
         LEFT JOIN quote_tags qt ON q.id = qt.quote_id
         WHERE q.id = ?
+          ${includeDeleted ? '' : 'AND (q.is_deleted = 0 OR q.is_deleted IS NULL)'}
         GROUP BY q.id
       ''',
         [id],
@@ -138,9 +144,15 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
 
   /// 获取所有笔记
   @override
-  Future<List<Quote>> getAllQuotes({bool excludeHiddenNotes = true}) async {
+  Future<List<Quote>> getAllQuotes({
+    bool excludeHiddenNotes = true,
+    bool includeDeleted = false,
+  }) async {
     if (kIsWeb) {
       var result = List<Quote>.from(_memoryStore);
+      if (!includeDeleted) {
+        result = result.where((q) => !q.isDeleted).toList();
+      }
       if (excludeHiddenNotes) {
         result = result
             .where((q) => !q.tagIds.contains(_DatabaseServiceBase.hiddenTagId))
@@ -152,25 +164,39 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
     try {
       final db = await safeDatabase;
 
+      final conditions = <String>[];
+      final args = <Object?>[];
+
+      if (excludeHiddenNotes) {
+        conditions.add('''
+          NOT EXISTS (
+            SELECT 1 FROM quote_tags qt_hidden
+            WHERE qt_hidden.quote_id = q.id
+            AND qt_hidden.tag_id = ?
+          )
+        ''');
+        args.add(_DatabaseServiceBase.hiddenTagId);
+      }
+
+      if (!includeDeleted) {
+        conditions.add('(q.is_deleted = 0 OR q.is_deleted IS NULL)');
+      }
+
+      final whereClause =
+          conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
+
       // 修复：使用 LEFT JOIN 获取笔记及其关联的标签
       // 这样可以正确获取每个笔记的 tagIds
       final String query = '''
         SELECT q.*, GROUP_CONCAT(qt.tag_id) as tag_ids
         FROM quotes q
         LEFT JOIN quote_tags qt ON q.id = qt.quote_id
-        ${excludeHiddenNotes ? '''
-        WHERE NOT EXISTS (
-          SELECT 1 FROM quote_tags qt_hidden
-          WHERE qt_hidden.quote_id = q.id
-          AND qt_hidden.tag_id = ?
-        )
-        ''' : ''}
+        $whereClause
         GROUP BY q.id
       ''';
 
-      final List<Map<String, dynamic>> maps = excludeHiddenNotes
-          ? await db.rawQuery(query, [_DatabaseServiceBase.hiddenTagId])
-          : await db.rawQuery(query);
+      final List<Map<String, dynamic>> maps =
+          await db.rawQuery(query, args.whereType<Object>().toList());
 
       return maps.map((m) => Quote.fromJson(m)).toList();
     } catch (e) {
@@ -188,9 +214,19 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
     }
 
     if (kIsWeb) {
-      _memoryStore.removeWhere((quote) => quote.id == id);
-      notifyListeners();
+      final index = _memoryStore.indexWhere((quote) => quote.id == id);
+      if (index != -1 && !_memoryStore[index].isDeleted) {
+        final now = DateTime.now().toUtc().toIso8601String();
+        _memoryStore[index] = _memoryStore[index].copyWith(
+          isDeleted: true,
+          deletedAt: now,
+          lastModified: now,
+        );
+      }
+      clearAllCacheForParts();
+      QuoteContent.removeCacheForQuote(id);
       refreshQuotesStreamForParts();
+      notifyListeners();
       return;
     }
 
@@ -198,78 +234,16 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       try {
         final db = await safeDatabase;
 
-        // 先检查笔记是否存在
-        final existingQuote = await db.query(
-          'quotes',
-          where: 'id = ?',
-          whereArgs: [id],
-          limit: 1,
+        final now = DateTime.now().toUtc().toIso8601String();
+        final updatedCount = await db.rawUpdate(
+          'UPDATE quotes SET is_deleted = 1, deleted_at = ?, last_modified = ? '
+          'WHERE id = ? AND (is_deleted = 0 OR is_deleted IS NULL)',
+          [now, now, id],
         );
 
-        if (existingQuote.isEmpty) {
-          logDebug('要删除的笔记不存在: $id');
-          return; // 笔记不存在，直接返回
-        }
-
-        // 先获取笔记引用的媒体文件列表（来自引用表）
-        final referencedFiles = await MediaReferenceService.getReferencedFiles(
-          id,
-        );
-
-        // 同时从笔记内容本身提取媒体路径，避免引用表不同步导致遗漏
-        final Set<String> mediaPathsToCheck = {...referencedFiles};
-        try {
-          final quoteRow = existingQuote.first;
-          final quoteFromDb = Quote.fromJson(quoteRow);
-          final extracted =
-              await MediaReferenceService.extractMediaPathsFromQuote(
-            quoteFromDb,
-          );
-          mediaPathsToCheck.addAll(extracted);
-        } catch (e) {
-          logDebug('从笔记内容提取媒体路径失败，继续使用引用表: $e');
-        }
-
-        await db.transaction((txn) async {
-          // 由于设置了 ON DELETE CASCADE，quote_tags 表中的相关条目会自动删除
-          await txn.delete('quotes', where: 'id = ?', whereArgs: [id]);
-        });
-
-        // 移除媒体文件引用（CASCADE会自动删除，但为了确保一致性）
-        await MediaReferenceService.removeAllReferencesForQuote(id);
-
-        // 使用轻量级检查机制清理孤儿媒体文件（合并来源：引用表 + 内容提取）
-        // 注：removeAllReferencesForQuote 已经清理了引用表，这里只需查引用计数
-        // ⚡ Bolt: Fetch appPath once to avoid N+1 platform channel calls in the loop below
-        final appDir = await getApplicationDocumentsDirectory();
-        final appPath = normalize(appDir.path);
-
-        for (final storedPath in mediaPathsToCheck) {
-          try {
-            // storedPath 可能是相对路径（相对于应用文档目录）
-            String absolutePath = storedPath;
-            try {
-              // 使用 path.isAbsolute 来判断是否为绝对路径，兼容 Windows/Linux/macOS
-              if (!isAbsolute(absolutePath)) {
-                // 简单判断相对路径
-                absolutePath = join(appPath, storedPath);
-              }
-            } catch (e) {
-              logDebug('[DatabaseService] path resolution failed: $e');
-            }
-
-            // 使用轻量级检查（仅查引用表计数）
-            final deleted =
-                await MediaReferenceService.quickCheckAndDeleteIfOrphan(
-              absolutePath,
-              cachedAppPath: appPath,
-            );
-            if (deleted) {
-              logDebug('已清理孤儿媒体文件: $absolutePath (原始记录: $storedPath)');
-            }
-          } catch (e) {
-            logDebug('清理孤儿媒体文件失败: $storedPath, 错误: $e');
-          }
+        if (updatedCount == 0) {
+          logDebug('要删除的笔记不存在或已在回收站: $id');
+          return;
         }
 
         // 清理缓存
@@ -278,14 +252,10 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         // 修复问题1：清理富文本控制器缓存
         QuoteContent.removeCacheForQuote(id);
 
-        // 直接从内存中移除并通知
-        _currentQuotes.removeWhere((quote) => quote.id == id);
-        if (_quotesController != null && !_quotesController!.isClosed) {
-          _quotesController!.add(List.from(_currentQuotes));
-        }
+        refreshQuotesStreamForParts();
         notifyListeners();
 
-        logDebug('笔记删除完成，ID: $id');
+        logDebug('笔记已移入回收站，ID: $id');
       } catch (e) {
         logDebug('删除笔记时出错: $e');
         rethrow;
@@ -295,21 +265,32 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
 
   /// 根据内容搜索笔记（用于媒体引用校验等内部逻辑）
   @override
-  Future<List<Quote>> searchQuotesByContent(String query) async {
+  Future<List<Quote>> searchQuotesByContent(
+    String query, {
+    bool includeDeleted = true,
+  }) async {
     if (kIsWeb) {
-      return _memoryStore
+      var result = _memoryStore
           .where(
             (q) =>
                 (q.content.contains(query)) ||
                 (q.deltaContent != null && q.deltaContent!.contains(query)),
           )
           .toList();
+      if (!includeDeleted) {
+        result = result.where((q) => !q.isDeleted).toList();
+      }
+      return result;
     }
 
     final db = await safeDatabase;
+    final where = includeDeleted
+        ? 'content LIKE ? OR delta_content LIKE ?'
+        : '(content LIKE ? OR delta_content LIKE ?) '
+            'AND (is_deleted = 0 OR is_deleted IS NULL)';
     final List<Map<String, dynamic>> results = await db.query(
       'quotes',
-      where: 'content LIKE ? OR delta_content LIKE ?',
+      where: where,
       whereArgs: ['%$query%', '%$query%'],
     );
 
@@ -331,6 +312,9 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
     if (kIsWeb) {
       final index = _memoryStore.indexWhere((q) => q.id == quote.id);
       if (index != -1) {
+        if (_memoryStore[index].isDeleted) {
+          throw StateError('已删除的笔记不能编辑');
+        }
         _memoryStore[index] = quote;
         notifyListeners();
       }
@@ -340,6 +324,27 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
     return _executeWithLock('updateQuote_${quote.id}', () async {
       try {
         final db = await safeDatabase;
+
+        final existingQuoteRows = await db.query(
+          'quotes',
+          columns: ['id', 'is_deleted'],
+          where: 'id = ?',
+          whereArgs: [quote.id],
+          limit: 1,
+        );
+
+        if (existingQuoteRows.isEmpty) {
+          throw StateError('笔记不存在，无法更新');
+        }
+
+        final isDeletedValue = existingQuoteRows.first['is_deleted'];
+        final isDeleted =
+            (isDeletedValue is num && isDeletedValue.toInt() == 1) ||
+                (isDeletedValue is bool && isDeletedValue);
+        if (isDeleted) {
+          throw StateError('已删除的笔记不能编辑');
+        }
+
         // 在更新前记录旧的媒体引用，用于更新后判断是否需要清理文件
         final List<String> oldReferencedFiles =
             await MediaReferenceService.getReferencedFiles(quote.id!);

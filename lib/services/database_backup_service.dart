@@ -33,6 +33,7 @@ class DatabaseBackupService {
       ''');
 
       // 构建与旧版exportAllData兼容的JSON结构
+      final tombstones = await db.query('quote_tombstones');
       return {
         'metadata': {
           'app': '心迹',
@@ -41,6 +42,7 @@ class DatabaseBackupService {
         },
         'categories': categories,
         'quotes': quotesWithTags,
+        'tombstones': tombstones,
       };
     } catch (e) {
       logDebug('数据导出为Map时失败: $e');
@@ -99,6 +101,7 @@ class DatabaseBackupService {
         if (clearExisting) {
           logDebug('清空现有数据并导入新数据');
           await txn.delete('quote_tags'); // 先删除关联表
+          await txn.delete('quote_tombstones');
           await txn.delete('categories');
           await txn.delete('quotes');
         }
@@ -212,6 +215,8 @@ class DatabaseBackupService {
             'dayPeriod': 'day_period',
             'favoriteCount': 'favorite_count',
             'lastModified': 'last_modified',
+            'isDeleted': 'is_deleted',
+            'deletedAt': 'deleted_at',
           };
 
           // 应用字段名映射
@@ -226,6 +231,8 @@ class DatabaseBackupService {
           quoteData['id'] ??= _uuid.v4();
           quoteData['content'] ??= '';
           quoteData['date'] ??= DateTime.now().toIso8601String();
+          quoteData['is_deleted'] = _parseDeletedFlag(quoteData['is_deleted']);
+          quoteData['deleted_at'] = quoteData['deleted_at']?.toString();
 
           // 收集标签信息（稍后批量插入）
           if (tagIdsString != null && tagIdsString.isNotEmpty) {
@@ -276,6 +283,10 @@ class DatabaseBackupService {
               'editSource': 'edit_source',
               'deltaContent': 'delta_content',
               'dayPeriod': 'day_period',
+              'favoriteCount': 'favorite_count',
+              'lastModified': 'last_modified',
+              'isDeleted': 'is_deleted',
+              'deletedAt': 'deleted_at',
             };
 
             for (final mapping in fieldMappings.entries) {
@@ -288,6 +299,9 @@ class DatabaseBackupService {
             quoteData['id'] ??= _uuid.v4();
             quoteData['content'] ??= '';
             quoteData['date'] ??= DateTime.now().toIso8601String();
+            quoteData['is_deleted'] =
+                _parseDeletedFlag(quoteData['is_deleted']);
+            quoteData['deleted_at'] = quoteData['deleted_at']?.toString();
 
             try {
               await txn.insert(
@@ -350,6 +364,31 @@ class DatabaseBackupService {
               }
             }
           }
+        }
+
+        final tombstones = data['tombstones'];
+        if (tombstones is List) {
+          final tombstoneBatch = txn.batch();
+          for (final row in tombstones) {
+            if (row is! Map<String, dynamic>) {
+              continue;
+            }
+            final quoteId = row['quote_id']?.toString();
+            final deletedAt = row['deleted_at']?.toString();
+            if (quoteId == null || quoteId.isEmpty || deletedAt == null) {
+              continue;
+            }
+            tombstoneBatch.insert(
+              'quote_tombstones',
+              {
+                'quote_id': quoteId,
+                'deleted_at': deletedAt,
+                'device_id': row['device_id']?.toString(),
+              },
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+          }
+          await tombstoneBatch.commit(noResult: true);
         }
       });
     } catch (e) {
@@ -496,6 +535,11 @@ class DatabaseBackupService {
           reportBuilder,
           categoryIdRemap,
         );
+
+        final tombstones = data['tombstones'];
+        if (tombstones is List) {
+          await _applyTombstones(txn, tombstones, reportBuilder);
+        }
       });
 
       logInfo('LWW合并完成: ${reportBuilder.build().summary}');
@@ -707,6 +751,28 @@ class DatabaseBackupService {
         quoteData['date'] ??= DateTime.now().toIso8601String();
         quoteData['last_modified'] ??=
             (quoteData['date'] as String? ?? DateTime.now().toIso8601String());
+        quoteData['is_deleted'] = _parseDeletedFlag(quoteData['is_deleted']);
+        quoteData['deleted_at'] = quoteData['deleted_at']?.toString();
+
+        final localTombstone = await txn.query(
+          'quote_tombstones',
+          where: 'quote_id = ?',
+          whereArgs: [quoteId],
+          limit: 1,
+        );
+        if (localTombstone.isNotEmpty) {
+          final tombstoneAt = localTombstone.first['deleted_at']?.toString();
+          final quoteLastModified = quoteData['last_modified']?.toString();
+          if (_compareIsoTime(quoteLastModified, tombstoneAt) <= 0) {
+            reportBuilder.addSkippedQuote();
+            continue;
+          }
+          await txn.delete(
+            'quote_tombstones',
+            where: 'quote_id = ?',
+            whereArgs: [quoteId],
+          );
+        }
 
         // 查询本地是否存在该笔记
         final existingRows = await txn.query(
@@ -770,5 +836,101 @@ class DatabaseBackupService {
         reportBuilder.addError('处理笔记失败: $e');
       }
     }
+  }
+
+  Future<void> _applyTombstones(
+    Transaction txn,
+    List tombstones,
+    MergeReportBuilder reportBuilder,
+  ) async {
+    for (final item in tombstones) {
+      try {
+        if (item is! Map<String, dynamic>) {
+          continue;
+        }
+
+        final quoteId = item['quote_id']?.toString();
+        final incomingDeletedAt = item['deleted_at']?.toString();
+        if (quoteId == null || quoteId.isEmpty || incomingDeletedAt == null) {
+          continue;
+        }
+
+        final normalizedIncoming =
+            LWWUtils.normalizeTimestamp(incomingDeletedAt);
+
+        final localTombstones = await txn.query(
+          'quote_tombstones',
+          where: 'quote_id = ?',
+          whereArgs: [quoteId],
+          limit: 1,
+        );
+        if (localTombstones.isNotEmpty) {
+          final localDeletedAt =
+              localTombstones.first['deleted_at']?.toString();
+          if (_compareIsoTime(localDeletedAt, normalizedIncoming) >= 0) {
+            continue;
+          }
+        }
+
+        final quoteRows = await txn.query(
+          'quotes',
+          columns: ['last_modified'],
+          where: 'id = ?',
+          whereArgs: [quoteId],
+          limit: 1,
+        );
+
+        if (quoteRows.isNotEmpty) {
+          final quoteLastModified =
+              quoteRows.first['last_modified']?.toString();
+          if (_compareIsoTime(normalizedIncoming, quoteLastModified) >= 0) {
+            await txn.delete(
+              'quotes',
+              where: 'id = ?',
+              whereArgs: [quoteId],
+            );
+            reportBuilder.addUpdatedQuote();
+          } else {
+            continue;
+          }
+        }
+
+        await txn.insert(
+          'quote_tombstones',
+          {
+            'quote_id': quoteId,
+            'deleted_at': normalizedIncoming,
+            'device_id': item['device_id']?.toString(),
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      } catch (e) {
+        reportBuilder.addError('处理 tombstone 失败: $e');
+      }
+    }
+  }
+
+  int _parseDeletedFlag(dynamic value) {
+    if (value == null) {
+      return 0;
+    }
+    if (value is bool) {
+      return value ? 1 : 0;
+    }
+    if (value is num) {
+      return value.toInt() == 0 ? 0 : 1;
+    }
+    final parsed = int.tryParse(value.toString());
+    if (parsed != null) {
+      return parsed == 0 ? 0 : 1;
+    }
+    final text = value.toString().trim().toLowerCase();
+    return text == 'true' ? 1 : 0;
+  }
+
+  int _compareIsoTime(String? left, String? right) {
+    final leftTs = LWWUtils.normalizeTimestamp(left);
+    final rightTs = LWWUtils.normalizeTimestamp(right);
+    return DateTime.parse(leftTs).compareTo(DateTime.parse(rightTs));
   }
 }

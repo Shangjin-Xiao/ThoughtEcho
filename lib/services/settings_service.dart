@@ -8,6 +8,7 @@ import '../models/multi_ai_settings.dart'; // 新增 MultiAISettings 导入
 import '../models/local_ai_settings.dart'; // 新增 LocalAISettings 导入
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/services/api_key_manager.dart';
+import '../utils/lww_utils.dart';
 
 import '../services/mmkv_service.dart';
 import 'excerpt_intent_service.dart';
@@ -68,6 +69,65 @@ class SettingsService extends ChangeNotifier {
     _appSettings = _appSettings.copyWith(todayThoughtsUseAI: enabled);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
     notifyListeners();
+  }
+
+  int get trashRetentionDays => _appSettings.trashRetentionDays;
+  String? get trashRetentionLastModified =>
+      _appSettings.trashRetentionLastModified;
+
+  Future<void> setTrashRetentionDays(
+    int days, {
+    DateTime? modifiedAt,
+  }) async {
+    final normalizedDays = AppSettings.normalizeTrashRetentionDays(days);
+    final modified = (modifiedAt ?? DateTime.now().toUtc()).toIso8601String();
+    _appSettings = _appSettings.copyWith(
+      trashRetentionDays: normalizedDays,
+      trashRetentionLastModified: modified,
+    );
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  Future<bool> applyIncomingTrashSettings(
+    Map<String, dynamic>? incoming,
+  ) async {
+    if (incoming == null) {
+      return false;
+    }
+
+    final dynamic rawDays = incoming['retention_days'];
+    int? parsedDays;
+    if (rawDays is int) {
+      parsedDays = rawDays;
+    } else if (rawDays is num) {
+      parsedDays = rawDays.toInt();
+    } else if (rawDays is String) {
+      parsedDays = int.tryParse(rawDays);
+    }
+
+    final incomingDays = AppSettings.normalizeTrashRetentionDays(parsedDays);
+    final incomingLastModified =
+        incoming['last_modified']?.toString() ?? LWWUtils.generateTimestamp();
+    final normalizedIncomingTimestamp =
+        LWWUtils.normalizeTimestamp(incomingLastModified);
+
+    final decision = LWWDecisionMaker.makeDecision(
+      localTimestamp: _appSettings.trashRetentionLastModified,
+      remoteTimestamp: normalizedIncomingTimestamp,
+    );
+
+    if (!decision.shouldUseRemote) {
+      return false;
+    }
+
+    _appSettings = _appSettings.copyWith(
+      trashRetentionDays: incomingDays,
+      trashRetentionLastModified: normalizedIncomingTimestamp,
+    );
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+    return true;
   }
 
   // 折叠时优先显示加粗内容

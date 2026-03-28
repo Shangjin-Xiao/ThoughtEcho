@@ -54,6 +54,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
     String? searchQuery,
     List<String>? selectedWeathers, // 天气筛选
     List<String>? selectedDayPeriods, // 时间段筛选
+    bool includeDeleted = false,
   }) {
     // 修复：如果数据库未初始化，先返回空流并等待初始化
     if (!_isInitialized) {
@@ -206,6 +207,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
     _watchSearchQuery = normalizedSearchQuery;
     _watchSelectedWeathers = selectedWeathers; // 保存天气筛选条件
     _watchSelectedDayPeriods = selectedDayPeriods; // 保存时间段筛选条件
+    _watchIncludeDeleted = includeDeleted;
 
     // 修复：筛选条件变化时重置_watchHasMore状态
     if (hasFilterChanged || isFirstCall) {
@@ -249,6 +251,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
             searchQuery: searchQuery,
             selectedWeathers: selectedWeathers,
             selectedDayPeriods: selectedDayPeriods,
+            includeDeleted: includeDeleted,
           );
         } catch (e) {
           logError('数据初始化或加载失败: $e', error: e, source: 'DatabaseService');
@@ -280,6 +283,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
     String? searchQuery,
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
+    bool? includeDeleted,
   }) async {
     // 使用当前观察的参数作为默认值
     tagIds ??= _watchTagIds;
@@ -287,6 +291,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
     searchQuery ??= _watchSearchQuery;
     selectedWeathers ??= _watchSelectedWeathers;
     selectedDayPeriods ??= _watchSelectedDayPeriods;
+    includeDeleted ??= _watchIncludeDeleted;
 
     // 修复：防止重复加载和检查是否还有更多数据
     if (_isLoading || !_watchHasMore) {
@@ -309,6 +314,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
         searchQuery: searchQuery,
         selectedWeathers: selectedWeathers,
         selectedDayPeriods: selectedDayPeriods,
+        includeDeleted: includeDeleted,
       ).timeout(
         const Duration(seconds: 5), // 缩短超时时间
         onTimeout: () {

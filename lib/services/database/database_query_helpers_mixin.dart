@@ -13,10 +13,14 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
     String? searchQuery,
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
+    bool includeDeleted = false,
   }) async {
     if (kIsWeb) {
       // Web平台的完整筛选逻辑
       var filtered = _memoryStore;
+      if (!includeDeleted) {
+        filtered = filtered.where((q) => !q.isDeleted).toList();
+      }
       if (tagIds != null && tagIds.isNotEmpty) {
         filtered = filtered
             .where((q) => q.tagIds.any((tag) => tagIds.contains(tag)))
@@ -67,6 +71,10 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
     // 构建查询条件
     final conditions = <String>[];
     final args = <dynamic>[];
+
+    if (!includeDeleted) {
+      conditions.add('(q.is_deleted = 0 OR q.is_deleted IS NULL)');
+    }
 
     // 标签筛选
     if (tagIds != null && tagIds.isNotEmpty) {
@@ -172,6 +180,7 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
     List<Object?>? whereArgs,
     int limit = 200,
     String orderBy = 'q.date DESC',
+    bool includeDeleted = false,
   }) async {
     try {
       if (!_isInitialized) {
@@ -184,7 +193,9 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
 
       if (kIsWeb) {
         // Web 平台降级：使用内存存储
-        var filtered = _memoryStore;
+        var filtered = includeDeleted
+            ? List<Quote>.from(_memoryStore)
+            : _memoryStore.where((q) => !q.isDeleted).toList();
         filtered.sort((a, b) {
           final dateA = DateTime.tryParse(a.date) ?? DateTime.now();
           final dateB = DateTime.tryParse(b.date) ?? DateTime.now();
@@ -213,6 +224,10 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
         if (whereArgs != null) {
           args.addAll(whereArgs);
         }
+      }
+
+      if (!includeDeleted) {
+        conditions.add('(q.is_deleted = 0 OR q.is_deleted IS NULL)');
       }
 
       final where =
@@ -254,6 +269,7 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
     bool excludeHiddenNotes = true,
+    bool includeDeleted = false,
   }) async {
     // 判断是否正在查询隐藏标签
     final isQueryingHiddenTag =
@@ -270,6 +286,10 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
         filtered = filtered
             .where((q) => !q.tagIds.contains(_DatabaseServiceBase.hiddenTagId))
             .toList();
+      }
+
+      if (!includeDeleted) {
+        filtered = filtered.where((q) => !q.isDeleted).toList();
       }
 
       if (tagIds != null && tagIds.isNotEmpty) {
@@ -329,6 +349,10 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
           )
         ''');
         args.add(_DatabaseServiceBase.hiddenTagId);
+      }
+
+      if (!includeDeleted) {
+        conditions.add('(q.is_deleted = 0 OR q.is_deleted IS NULL)');
       }
 
       // 分类筛选

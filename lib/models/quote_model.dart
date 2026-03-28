@@ -22,6 +22,8 @@ class Quote {
   final String? dayPeriod; // 新增：时间段标识(晨曦、午后、黄昏、夜晚等)
   final String? lastModified;
   final int favoriteCount; // 新增：心形点击次数
+  final bool isDeleted; // 回收站标记
+  final String? deletedAt; // 删除时间（ISO 8601）
 
   const Quote({
     this.id,
@@ -47,6 +49,8 @@ class Quote {
     this.dayPeriod, // 新增：时间段
     this.lastModified,
     this.favoriteCount = 0, // 新增：心形点击次数，默认为0
+    this.isDeleted = false,
+    this.deletedAt,
   }) : _source = source;
 
   /// 获取来源信息 (兼容性 getter)
@@ -109,6 +113,8 @@ class Quote {
     String? deltaContent,
     String? dayPeriod,
     int favoriteCount = 0, // 新增：心形点击次数，默认为0
+    bool isDeleted = false,
+    String? deletedAt,
   }) {
     // 验证必填字段
     if (!isValidContent(content)) {
@@ -151,6 +157,8 @@ class Quote {
       deltaContent: deltaContent,
       dayPeriod: dayPeriod,
       favoriteCount: favoriteCount, // 新增：心形点击次数
+      isDeleted: isDeleted,
+      deletedAt: deletedAt,
     );
   }
 
@@ -248,6 +256,8 @@ class Quote {
         lastModified: json['last_modified']?.toString(),
         favoriteCount:
             (json['favorite_count'] as num?)?.toInt() ?? 0, // 新增：心形点击次数
+        isDeleted: _parseDeletedFlag(json['is_deleted']),
+        deletedAt: json['deleted_at']?.toString(),
       );
     } on ArgumentError {
       rethrow;
@@ -282,6 +292,8 @@ class Quote {
       'day_period': dayPeriod, // 新增：时间段
       'last_modified': lastModified,
       'favorite_count': favoriteCount, // 新增：心形点击次数
+      'is_deleted': isDeleted ? 1 : 0,
+      'deleted_at': deletedAt,
     };
     // 移除tag_ids字段，因为它不再直接存储在quotes表中
     json.remove('tag_ids');
@@ -313,6 +325,8 @@ class Quote {
     String? dayPeriod, // 新增：时间段
     String? lastModified,
     int? favoriteCount, // 新增：心形点击次数
+    bool? isDeleted,
+    String? deletedAt,
   }) {
     return Quote(
       id: id ?? this.id,
@@ -338,7 +352,17 @@ class Quote {
       dayPeriod: dayPeriod ?? this.dayPeriod, // 新增：时间段
       lastModified: lastModified ?? this.lastModified,
       favoriteCount: favoriteCount ?? this.favoriteCount, // 新增：心形点击次数
+      isDeleted: isDeleted ?? this.isDeleted,
+      deletedAt: deletedAt ?? this.deletedAt,
     );
+  }
+
+  static bool _parseDeletedFlag(dynamic raw) {
+    if (raw == null) return false;
+    if (raw is bool) return raw;
+    if (raw is num) return raw != 0;
+    final text = raw.toString().trim().toLowerCase();
+    return text == '1' || text == 'true';
   }
 
   // 静态key-label映射

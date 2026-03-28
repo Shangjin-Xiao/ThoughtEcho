@@ -23,6 +23,7 @@ import '../widgets/local_ai/ocr_result_sheet.dart';
 import '../widgets/local_ai/voice_input_overlay.dart';
 import 'ai_features_page.dart';
 import 'settings_page.dart';
+import 'trash_page.dart';
 import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
 import '../theme/app_theme.dart';
 import 'note_full_editor_page.dart'; // 添加全屏编辑页面导入
@@ -1312,7 +1313,9 @@ class _HomePageState extends State<HomePage>
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(AppLocalizations.of(context).noteDeleted),
+                  content: Text(
+                    AppLocalizations.of(context).noteMovedToTrash,
+                  ),
                   duration: const Duration(seconds: 1),
                   behavior: SnackBarBehavior.floating,
                 ),
@@ -1899,6 +1902,18 @@ class _HomePageState extends State<HomePage>
                             icon: const Icon(Icons.cake_outlined),
                             tooltip: l10n.developerAnniversaryPreview,
                             onPressed: () => _showAnniversaryPreview(context),
+                          );
+                        },
+                      ),
+
+                      IconButton(
+                        tooltip: l10n.trash,
+                        icon: const Icon(Icons.delete_outline),
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const TrashPage(),
+                            ),
                           );
                         },
                       ),

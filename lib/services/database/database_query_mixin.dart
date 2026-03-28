@@ -14,6 +14,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     List<String>? selectedWeathers, // 天气筛选
     List<String>? selectedDayPeriods, // 时间段筛选
     bool excludeHiddenNotes = true, // 默认排除隐藏笔记
+    bool includeDeleted = false,
   }) async {
     try {
       // 修复：确保数据库已完全初始化
@@ -45,6 +46,10 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
               .where(
                   (q) => !q.tagIds.contains(_DatabaseServiceBase.hiddenTagId))
               .toList();
+        }
+
+        if (!includeDeleted) {
+          filtered = filtered.where((q) => !q.isDeleted).toList();
         }
 
         if (tagIds != null && tagIds.isNotEmpty) {
@@ -137,6 +142,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
           limit: limit,
           offset: offset,
           excludeHiddenNotes: shouldExcludeHidden,
+          includeDeleted: includeDeleted,
         );
       });
     } catch (e) {
@@ -240,6 +246,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     required int limit,
     required int offset,
     bool excludeHiddenNotes = true,
+    bool includeDeleted = false,
   }) async {
     // 修复：添加数据库连接状态检查
     if (!db.isOpen) {
@@ -263,6 +270,10 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
         )
       ''');
       args.add(_DatabaseServiceBase.hiddenTagId);
+    }
+
+    if (!includeDeleted) {
+      conditions.add('(q.is_deleted = 0 OR q.is_deleted IS NULL)');
     }
 
     // 分类筛选

@@ -3464,7 +3464,47 @@
   "jsonFormatLabel": "JSON 형식: {status}",
   "containsHtmlTagsLabel": "HTML 태그 포함: {status}",
   "viewNoteInfo": "메모 정보 보기",
-  "first100CharsLabel": "처음 100자:"
+  "first100CharsLabel": "처음 100자:",
+  "trash": "휴지통",
+  "trashEmpty": "휴지통이 비어 있습니다",
+  "trashEmptyHint": "삭제된 노트가 여기에 표시됩니다",
+  "trashRetentionHint": "삭제된 노트는 선택한 보관 기간 후 자동으로 삭제됩니다",
+  "trashRemainingDays": "{days}일 남음",
+  "@trashRemainingDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "restoreNote": "복원",
+  "permanentlyDelete": "영구 삭제",
+  "permanentlyDeleteConfirmation": "이 작업은 되돌릴 수 없습니다. 노트가 영구적으로 삭제됩니다.",
+  "emptyTrash": "휴지통 비우기",
+  "emptyTrashConfirmation": "휴지통의 모든 노트를 영구 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+  "noteMovedToTrash": "노트가 휴지통으로 이동되었습니다. 휴지통에서 복원할 수 있습니다",
+  "noteRestored": "노트가 복원되었습니다",
+  "trashEmptied": "휴지통을 비웠습니다",
+  "deletedAt": "삭제됨: {date}",
+  "@deletedAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "trashCount": "휴지통 ({count})",
+  "@trashCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trashRetentionPeriod": "휴지통 보관 기간",
+  "trashRetentionOption7Days": "7일",
+  "trashRetentionOption30Days": "30일",
+  "trashRetentionOption90Days": "90일"
   ,"insertImage": "이미지 삽입",
   "insertVideo": "동영상 삽입",
   "insertAudio": "오디오 삽입",

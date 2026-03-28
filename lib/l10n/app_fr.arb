@@ -3457,7 +3457,47 @@
   "jsonFormatLabel": "Format JSON : {status}",
   "containsHtmlTagsLabel": "Contient des balises HTML : {status}",
   "viewNoteInfo": "Afficher les informations sur les notes",
-  "first100CharsLabel": "100 premiers caractères :"
+  "first100CharsLabel": "100 premiers caractères :",
+  "trash": "Corbeille",
+  "trashEmpty": "La corbeille est vide",
+  "trashEmptyHint": "Les notes supprimées apparaîtront ici",
+  "trashRetentionHint": "Les notes supprimées seront automatiquement supprimées après la période de rétention sélectionnée",
+  "trashRemainingDays": "{days} jours restants",
+  "@trashRemainingDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "restoreNote": "Restaurer",
+  "permanentlyDelete": "Supprimer définitivement",
+  "permanentlyDeleteConfirmation": "Cette action est irréversible. La note sera supprimée définitivement.",
+  "emptyTrash": "Vider la corbeille",
+  "emptyTrashConfirmation": "Supprimer définitivement toutes les notes de la corbeille ? Cette action est irréversible.",
+  "noteMovedToTrash": "Note déplacée dans la corbeille. Vous pouvez la restaurer depuis la corbeille",
+  "noteRestored": "Note restaurée",
+  "trashEmptied": "Corbeille vidée",
+  "deletedAt": "Supprimée le {date}",
+  "@deletedAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "trashCount": "Corbeille ({count})",
+  "@trashCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trashRetentionPeriod": "Période de rétention de la corbeille",
+  "trashRetentionOption7Days": "7 jours",
+  "trashRetentionOption30Days": "30 jours",
+  "trashRetentionOption90Days": "90 jours"
   ,"insertImage": "Insert Image",
   "insertVideo": "Insert Video",
   "insertAudio": "Insert Audio",

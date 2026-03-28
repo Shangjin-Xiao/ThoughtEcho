@@ -1,4 +1,6 @@
 class AppSettings {
+  static const Set<int> allowedTrashRetentionDays = {7, 30, 90};
+
   final String hitokotoType;
   final bool clipboardMonitoringEnabled; // 添加剪贴板监控设置
   final int defaultStartPage; // 添加默认启动页面设置，0=首页，1=记录页
@@ -23,6 +25,8 @@ class AppSettings {
   final List<String> defaultTagIds; // 新增：默认标签 ID 列表（自动填充）
   final bool anniversaryShown; // 一周年庆典动画是否已显示过
   final bool anniversaryAnimationEnabled; // 一周年庆典动画是否启用（开发者模式控制）
+  final int trashRetentionDays; // 回收站保留天数（7/30/90）
+  final String? trashRetentionLastModified; // 回收站保留设置更新时间（UTC ISO）
 
   AppSettings({
     this.hitokotoType = 'a,b,c,d,e,f,g,h,i,j,k', // 默认全选所有类型
@@ -49,7 +53,16 @@ class AppSettings {
     this.defaultTagIds = const [], // 默认无自动填充标签
     this.anniversaryShown = false, // 默认未显示过
     this.anniversaryAnimationEnabled = true, // 默认启用庆典动画
+    this.trashRetentionDays = 30,
+    this.trashRetentionLastModified,
   });
+
+  static int normalizeTrashRetentionDays(int? days) {
+    if (days == null) {
+      return 30;
+    }
+    return allowedTrashRetentionDays.contains(days) ? days : 30;
+  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -77,10 +90,22 @@ class AppSettings {
       'defaultTagIds': defaultTagIds,
       'anniversaryShown': anniversaryShown,
       'anniversaryAnimationEnabled': anniversaryAnimationEnabled,
+      'trashRetentionDays': trashRetentionDays,
+      'trashRetentionLastModified': trashRetentionLastModified,
     };
   }
 
   factory AppSettings.fromJson(Map<String, dynamic> map) {
+    final dynamic rawRetentionDays = map['trashRetentionDays'];
+    int? parsedRetentionDays;
+    if (rawRetentionDays is int) {
+      parsedRetentionDays = rawRetentionDays;
+    } else if (rawRetentionDays is num) {
+      parsedRetentionDays = rawRetentionDays.toInt();
+    } else if (rawRetentionDays is String) {
+      parsedRetentionDays = int.tryParse(rawRetentionDays);
+    }
+
     return AppSettings(
       hitokotoType: map['hitokotoType'] ?? 'a,b,c,d,e,f,g,h,i,j,k',
       clipboardMonitoringEnabled: map['clipboardMonitoringEnabled'] ?? false,
@@ -109,6 +134,8 @@ class AppSettings {
           (map['defaultTagIds'] as List<dynamic>?)?.cast<String>() ?? const [],
       anniversaryShown: map['anniversaryShown'] ?? false,
       anniversaryAnimationEnabled: map['anniversaryAnimationEnabled'] ?? true,
+      trashRetentionDays: normalizeTrashRetentionDays(parsedRetentionDays),
+      trashRetentionLastModified: map['trashRetentionLastModified'] as String?,
     );
   }
 
@@ -137,6 +164,8 @@ class AppSettings {
         defaultTagIds: const [],
         anniversaryShown: false,
         anniversaryAnimationEnabled: true,
+        trashRetentionDays: 30,
+        trashRetentionLastModified: null,
       );
 
   /// 使用特殊标记来区分"未指定"和"设置为null（跟随系统）"
@@ -168,6 +197,9 @@ class AppSettings {
     List<String>? defaultTagIds,
     bool? anniversaryShown,
     bool? anniversaryAnimationEnabled,
+    int? trashRetentionDays,
+    String? trashRetentionLastModified,
+    bool clearTrashRetentionLastModified = false,
   }) {
     return AppSettings(
       hitokotoType: hitokotoType ?? this.hitokotoType,
@@ -203,6 +235,11 @@ class AppSettings {
       anniversaryShown: anniversaryShown ?? this.anniversaryShown,
       anniversaryAnimationEnabled:
           anniversaryAnimationEnabled ?? this.anniversaryAnimationEnabled,
+      trashRetentionDays:
+          normalizeTrashRetentionDays(trashRetentionDays ?? this.trashRetentionDays),
+      trashRetentionLastModified: clearTrashRetentionLastModified
+          ? null
+          : (trashRetentionLastModified ?? this.trashRetentionLastModified),
     );
   }
 }
