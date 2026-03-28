@@ -3460,5 +3460,7 @@
   "first100CharsLabel": "100 premiers caractères :"
   ,"insertImage": "Insert Image",
   "insertVideo": "Insert Video",
-  "insertAudio": "Insert Audio"
+  "insertAudio": "Insert Audio",
+  "clipboardFoundHint": "Contenu du presse-papiers trouvé, appuyez pour ajouter comme note",
+  "operationFailedSimple": "L'opération a échoué"
 }

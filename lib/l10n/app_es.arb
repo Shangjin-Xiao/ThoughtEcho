@@ -14,5 +14,7 @@
   "insertVideo": "Insert Video",
   "insertAudio": "Insert Audio",
   "aiGenerating": "IA generando...",
-  "complete": "Completado"
+  "complete": "Completado",
+  "clipboardFoundHint": "Contenido del portapapeles encontrado, toca para añadir como nota",
+  "operationFailed": "Operación fallida"
 }

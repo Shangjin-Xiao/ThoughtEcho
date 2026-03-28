@@ -11,6 +11,7 @@ import 'package:provider/provider.dart';
 import '../utils/mmkv_ffi_fix.dart'; // 导入安全包装类
 import '../theme/app_theme.dart';
 import '../utils/app_logger.dart';
+import '../gen_l10n/app_localizations.dart';
 
 class ClipboardService extends ChangeNotifier {
   static const String _keyEnableClipboardMonitoring =
@@ -314,10 +315,10 @@ class ClipboardService extends ChangeNotifier {
                       size: 20,
                     ),
                     const SizedBox(width: 10),
-                    const Flexible(
+                    Flexible(
                       child: Text(
-                        '发现剪贴板内容，点击添加为笔记',
-                        style: TextStyle(
+                        AppLocalizations.of(context).clipboardFoundHint,
+                        style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                         ),
@@ -379,8 +380,8 @@ class ClipboardService extends ChangeNotifier {
             // 可以在这里添加保存后的回调
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('笔记已保存'),
+                SnackBar(
+                  content: Text(AppLocalizations.of(context).noteSaved),
                   duration: AppConstants.snackBarDurationImportant,
                 ),
               );
@@ -393,7 +394,7 @@ class ClipboardService extends ChangeNotifier {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('操作失败: $e'),
+                Text('${AppLocalizations.of(context).operationFailed}: $e'),
             duration: AppConstants.snackBarDurationError,
           ),
         );
