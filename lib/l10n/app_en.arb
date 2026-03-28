@@ -3521,5 +3521,5 @@
   "insertVideo": "Insert Video",
   "insertAudio": "Insert Audio",
   "clipboardFoundHint": "Clipboard content found, tap to add as note",
-  "operationFailed": "Operation failed"
+  "operationFailedSimple": "Operation failed"
 }
