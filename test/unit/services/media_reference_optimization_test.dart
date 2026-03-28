@@ -54,16 +54,13 @@ void main() {
       id: 'test_quote_1',
       content: 'Test content',
       deltaContent: jsonEncode(ops),
-      createdAt: DateTime.now(),
+      date: DateTime.now().toIso8601String(),
     );
 
     await db.transaction((txn) async {
       await MediaReferenceService.syncQuoteMediaReferencesWithTransaction(
           txn, quote);
     });
-
-    print(
-        'getApplicationDocumentsPath calls after optimization: ${mockPathProvider.callCount}');
 
     // Optimization: Should only be 1 call now for the whole transaction
     expect(mockPathProvider.callCount, equals(1));
