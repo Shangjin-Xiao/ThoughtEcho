@@ -14,5 +14,7 @@
   "insertVideo": "Insert Video",
   "insertAudio": "Insert Audio",
   "aiGenerating": "KI generiert...",
-  "complete": "Fertig"
+  "complete": "Fertig",
+  "clipboardFoundHint": "Zwischenablage gefunden, tippen um als Notiz hinzuzufügen",
+  "operationFailed": "Vorgang fehlgeschlagen"
 }
