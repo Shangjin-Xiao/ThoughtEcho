@@ -402,7 +402,7 @@ class ClipboardService extends ChangeNotifier {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-                Text('${AppLocalizations.of(context).operationFailed}: $e'),
+            content: Text('${AppLocalizations.of(context).operationFailed}: $e'),
             duration: AppConstants.snackBarDurationError,
           ),
         );
