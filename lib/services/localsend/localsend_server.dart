@@ -16,9 +16,9 @@ class LocalSendServer {
   int _port = defaultPort;
   final Set<String> _preApprovedFingerprints = {}; // 预先批准一次性
   Function(String sessionId, int totalBytes, String senderAlias)?
-      _onReceiveSessionCreated;
+  _onReceiveSessionCreated;
   Future<bool> Function(String sessionId, int totalBytes, String senderAlias)?
-      _onApprovalNeeded;
+  _onApprovalNeeded;
 
   bool get isRunning => _isRunning;
   int get port => _port;
@@ -29,9 +29,9 @@ class LocalSendServer {
     Function(String filePath)? onFileReceived,
     Function(int received, int total)? onReceiveProgress,
     Function(String sessionId, int totalBytes, String senderAlias)?
-        onReceiveSessionCreated,
+    onReceiveSessionCreated,
     Future<bool> Function(String sessionId, int totalBytes, String senderAlias)?
-        onApprovalNeeded,
+    onApprovalNeeded,
   }) async {
     if (_isRunning) return;
 
@@ -134,25 +134,7 @@ class LocalSendServer {
         source: 'LocalSend',
       );
 
-      // Add CORS headers
-      request.response.headers.add('Access-Control-Allow-Origin', '*');
-      request.response.headers.add(
-        'Access-Control-Allow-Methods',
-        'GET, POST, PUT, DELETE, OPTIONS',
-      );
-      request.response.headers.add(
-        'Access-Control-Allow-Headers',
-        'Content-Type, Authorization',
-      );
       request.response.headers.add('Connection', 'keep-alive');
-
-      // Handle preflight requests
-      if (request.method == 'OPTIONS') {
-        request.response.statusCode = 200;
-        await request.response.close();
-        logDebug('req_options', source: 'LocalSend');
-        return;
-      }
 
       final path = request.uri.path;
       final query = request.uri.queryParameters;
@@ -224,13 +206,15 @@ class LocalSendServer {
               _onReceiveSessionCreated!(tempId, 0, senderAlias);
             } catch (e) {
               logDebug(
-                  '[LocalSendServer] onReceiveSessionCreated callback failed: $e');
+                '[LocalSendServer] onReceiveSessionCreated callback failed: $e',
+              );
             }
             try {
               approved = await _onApprovalNeeded!(tempId, 0, senderAlias);
             } catch (e) {
               logDebug(
-                  '[LocalSendServer] onApprovalNeeded callback failed: $e');
+                '[LocalSendServer] onApprovalNeeded callback failed: $e',
+              );
               approved = false;
             }
           }
