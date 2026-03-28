@@ -1,7 +1,7 @@
 /// 合并报告 - LWW 同步结果统计（扩展版）
 ///
 /// 新增字段：
-/// - insertedQuotes / updatedQuotes 区分新增与更新
+/// - insertedQuotes / updatedQuotes / deletedQuotes 区分新增、更新与删除
 /// - insertedCategories / updatedCategories 区分类别新增与更新
 /// - sameTimestampDiffQuotes 统计时间戳相同但内容不同（冲突保留本地）的条目
 ///
@@ -15,6 +15,7 @@ class MergeReport {
   // 新增：细分统计
   final int insertedQuotes; // 新增的笔记
   final int updatedQuotes; // 覆盖/更新的笔记
+  final int deletedQuotes; // 因 tombstone 等原因被删除的笔记
   final int skippedQuotes; // 因本地较新而跳过的笔记
   final int sameTimestampDiffQuotes; // 时间戳相同但内容不同，被认定冲突且保留本地
 
@@ -37,6 +38,7 @@ class MergeReport {
     this.appliedCategories = 0,
     this.insertedQuotes = 0,
     this.updatedQuotes = 0,
+    this.deletedQuotes = 0,
     this.skippedQuotes = 0,
     this.sameTimestampDiffQuotes = 0,
     this.insertedCategories = 0,
@@ -70,6 +72,14 @@ class MergeReport {
   MergeReport addUpdatedQuote() {
     return copyWith(
       updatedQuotes: updatedQuotes + 1,
+      appliedQuotes: appliedQuotes + 1,
+    );
+  }
+
+  /// 添加：删除笔记
+  MergeReport addDeletedQuote() {
+    return copyWith(
+      deletedQuotes: deletedQuotes + 1,
       appliedQuotes: appliedQuotes + 1,
     );
   }
@@ -115,6 +125,7 @@ class MergeReport {
     int? appliedQuotes,
     int? insertedQuotes,
     int? updatedQuotes,
+    int? deletedQuotes,
     int? skippedQuotes,
     int? sameTimestampDiffQuotes,
     int? appliedCategories,
@@ -130,6 +141,7 @@ class MergeReport {
       appliedQuotes: appliedQuotes ?? this.appliedQuotes,
       insertedQuotes: insertedQuotes ?? this.insertedQuotes,
       updatedQuotes: updatedQuotes ?? this.updatedQuotes,
+      deletedQuotes: deletedQuotes ?? this.deletedQuotes,
       skippedQuotes: skippedQuotes ?? this.skippedQuotes,
       sameTimestampDiffQuotes:
           sameTimestampDiffQuotes ?? this.sameTimestampDiffQuotes,
@@ -172,6 +184,7 @@ class MergeReport {
 
     if (insertedQuotes > 0) parts.add('新增 $insertedQuotes');
     if (updatedQuotes > 0) parts.add('更新 $updatedQuotes');
+    if (deletedQuotes > 0) parts.add('删除 $deletedQuotes');
     if (skippedQuotes > 0) {
       parts.add('跳过 $skippedQuotes 条笔记');
     }
@@ -209,6 +222,7 @@ class MergeReport {
     buffer.writeln('笔记统计:');
     buffer.writeln('  新增: $insertedQuotes');
     buffer.writeln('  更新: $updatedQuotes');
+    buffer.writeln('  删除: $deletedQuotes');
     buffer.writeln('  跳过: $skippedQuotes');
     buffer.writeln('  冲突(同时间不同内容保留本地): $sameTimestampDiffQuotes');
     buffer.writeln('');
@@ -240,6 +254,7 @@ class MergeReport {
       'appliedQuotes': appliedQuotes,
       'insertedQuotes': insertedQuotes,
       'updatedQuotes': updatedQuotes,
+      'deletedQuotes': deletedQuotes,
       'skippedQuotes': skippedQuotes,
       'sameTimestampDiffQuotes': sameTimestampDiffQuotes,
       'appliedCategories': appliedCategories,
@@ -260,6 +275,7 @@ class MergeReportBuilder {
   int _appliedQuotes = 0; // 兼容旧逻辑
   int _insertedQuotes = 0;
   int _updatedQuotes = 0;
+  int _deletedQuotes = 0;
   int _sameTimestampDiffQuotes = 0;
   int _skippedQuotes = 0;
 
@@ -284,6 +300,11 @@ class MergeReportBuilder {
 
   void addUpdatedQuote() {
     _updatedQuotes++;
+    _appliedQuotes++;
+  }
+
+  void addDeletedQuote() {
+    _deletedQuotes++;
     _appliedQuotes++;
   }
 
@@ -314,6 +335,7 @@ class MergeReportBuilder {
       appliedQuotes: _appliedQuotes,
       insertedQuotes: _insertedQuotes,
       updatedQuotes: _updatedQuotes,
+      deletedQuotes: _deletedQuotes,
       skippedQuotes: _skippedQuotes,
       sameTimestampDiffQuotes: _sameTimestampDiffQuotes,
       appliedCategories: _appliedCategories,

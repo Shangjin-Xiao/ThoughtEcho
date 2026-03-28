@@ -240,16 +240,16 @@ mixin _DatabaseFavoriteMixin on _DatabaseServiceBase {
       final weekStart = now.subtract(Duration(days: now.weekday - 1));
       final weekStartString = weekStart.toIso8601String().substring(0, 10);
 
-      return _memoryStore
+      final filtered = _memoryStore
           .where(
             (q) =>
                 q.date.compareTo(weekStartString) >= 0 &&
                 q.favoriteCount > 0 &&
                 !q.isDeleted,
           )
-          .toList()
-        ..sort((a, b) => b.favoriteCount.compareTo(a.favoriteCount))
-        ..take(limit).toList();
+          .toList();
+      filtered.sort((a, b) => b.favoriteCount.compareTo(a.favoriteCount));
+      return filtered.take(limit).toList();
     }
 
     try {

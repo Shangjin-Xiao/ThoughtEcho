@@ -109,6 +109,24 @@ void main() {
       expect(updated.deletedAt, equals('2024-01-02T00:00:00.000Z'));
     });
 
+    test('copyWith should allow clearing deletedAt explicitly', () {
+      final base = Quote(
+        id: 'test-id',
+        content: '测试内容',
+        date: '2024-01-01T00:00:00.000Z',
+        isDeleted: true,
+        deletedAt: '2024-01-02T00:00:00.000Z',
+      );
+
+      final restored = base.copyWith(
+        isDeleted: false,
+        deletedAt: null,
+      );
+
+      expect(restored.isDeleted, isFalse);
+      expect(restored.deletedAt, isNull);
+    });
+
     test('should validate data correctly', () {
       // 测试有效数据
       expect(Quote.isValidContent('有效内容'), isTrue);

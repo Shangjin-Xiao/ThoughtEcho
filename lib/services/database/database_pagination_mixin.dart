@@ -145,6 +145,11 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
       logDebug('排序变更: $_watchOrderBy -> $orderBy');
     }
 
+    if (_watchIncludeDeleted != includeDeleted) {
+      hasFilterChanged = true;
+      logDebug('已删除筛选变更: $_watchIncludeDeleted -> $includeDeleted');
+    }
+
     // 检查搜索条件是否变更
     final normalizedSearchQuery =
         (searchQuery != null && searchQuery.isNotEmpty) ? searchQuery : null;

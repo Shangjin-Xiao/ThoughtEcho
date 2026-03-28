@@ -235,8 +235,9 @@ class AppSettings {
       anniversaryShown: anniversaryShown ?? this.anniversaryShown,
       anniversaryAnimationEnabled:
           anniversaryAnimationEnabled ?? this.anniversaryAnimationEnabled,
-      trashRetentionDays:
-          normalizeTrashRetentionDays(trashRetentionDays ?? this.trashRetentionDays),
+      trashRetentionDays: normalizeTrashRetentionDays(
+        trashRetentionDays ?? this.trashRetentionDays,
+      ),
       trashRetentionLastModified: clearTrashRetentionLastModified
           ? null
           : (trashRetentionLastModified ?? this.trashRetentionLastModified),

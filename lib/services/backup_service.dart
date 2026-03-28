@@ -974,20 +974,20 @@ class BackupService {
             notesData,
           );
         }
-
-        final notesData = backupData['notes'];
-        if (notesData is Map<String, dynamic>) {
-          await _settingsService.applyIncomingTrashSettings(
-            notesData['trash_settings'] as Map<String, dynamic>?,
-          );
-        }
       }
 
+      final notesData = backupData['notes'];
+      final incomingTrashSettings = notesData is Map<String, dynamic>
+          ? notesData['trash_settings'] as Map<String, dynamic>?
+          : null;
+
       // 使用LWW策略合并数据
-      return await _databaseService.importDataWithLWWMerge(
+      final report = await _databaseService.importDataWithLWWMerge(
         backupData.containsKey('notes') ? backupData['notes'] : backupData,
         sourceDevice: sourceDevice,
       );
+      await _settingsService.applyIncomingTrashSettings(incomingTrashSettings);
+      return report;
     } catch (e) {
       logError('LWW导入过程出错: $e', error: e, source: 'BackupService');
       final report = MergeReport.start(sourceDevice: sourceDevice);

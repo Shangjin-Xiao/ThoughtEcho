@@ -1,4 +1,6 @@
 class Quote {
+  static const Object _noValue = Object();
+
   final String? id;
   final String content;
   final String date;
@@ -325,8 +327,8 @@ class Quote {
     String? dayPeriod, // 新增：时间段
     String? lastModified,
     int? favoriteCount, // 新增：心形点击次数
-    bool? isDeleted,
-    String? deletedAt,
+    Object? isDeleted = _noValue,
+    Object? deletedAt = _noValue,
   }) {
     return Quote(
       id: id ?? this.id,
@@ -352,8 +354,11 @@ class Quote {
       dayPeriod: dayPeriod ?? this.dayPeriod, // 新增：时间段
       lastModified: lastModified ?? this.lastModified,
       favoriteCount: favoriteCount ?? this.favoriteCount, // 新增：心形点击次数
-      isDeleted: isDeleted ?? this.isDeleted,
-      deletedAt: deletedAt ?? this.deletedAt,
+      isDeleted:
+          identical(isDeleted, _noValue) ? this.isDeleted : isDeleted as bool,
+      deletedAt: identical(deletedAt, _noValue)
+          ? this.deletedAt
+          : deletedAt as String?,
     );
   }
 

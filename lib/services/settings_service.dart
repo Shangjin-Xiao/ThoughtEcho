@@ -107,10 +107,21 @@ class SettingsService extends ChangeNotifier {
     }
 
     final incomingDays = AppSettings.normalizeTrashRetentionDays(parsedDays);
-    final incomingLastModified =
-        incoming['last_modified']?.toString() ?? LWWUtils.generateTimestamp();
-    final normalizedIncomingTimestamp =
-        LWWUtils.normalizeTimestamp(incomingLastModified);
+    final incomingLastModified = incoming['last_modified']?.toString();
+    String? normalizedIncomingTimestamp;
+    if (incomingLastModified != null && incomingLastModified.isNotEmpty) {
+      normalizedIncomingTimestamp =
+          LWWUtils.normalizeTimestamp(incomingLastModified);
+    } else {
+      final localLastModified = _appSettings.trashRetentionLastModified;
+      final hasLocalTimestamp =
+          localLastModified != null && localLastModified.isNotEmpty;
+      if (hasLocalTimestamp) {
+        return false;
+      }
+      normalizedIncomingTimestamp =
+          LWWUtils.normalizeTimestamp(LWWUtils.generateTimestamp());
+    }
 
     final decision = LWWDecisionMaker.makeDecision(
       localTimestamp: _appSettings.trashRetentionLastModified,

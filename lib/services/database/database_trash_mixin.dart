@@ -204,7 +204,9 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
     }
 
     if (kIsWeb) {
-      _memoryStore.removeWhere((quote) => uniqueIds.contains(quote.id));
+      _memoryStore.removeWhere(
+        (quote) => uniqueIds.contains(quote.id) && quote.isDeleted,
+      );
       for (final id in uniqueIds) {
         QuoteContent.removeCacheForQuote(id);
       }
@@ -249,7 +251,7 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
 
         final placeholders = List.filled(uniqueIds.length, '?').join(',');
         await txn.rawDelete(
-          'DELETE FROM quotes WHERE id IN ($placeholders)',
+          'DELETE FROM quotes WHERE is_deleted = 1 AND id IN ($placeholders)',
           uniqueIds,
         );
       });

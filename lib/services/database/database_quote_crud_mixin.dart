@@ -325,26 +325,6 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       try {
         final db = await safeDatabase;
 
-        final existingQuoteRows = await db.query(
-          'quotes',
-          columns: ['id', 'is_deleted'],
-          where: 'id = ?',
-          whereArgs: [quote.id],
-          limit: 1,
-        );
-
-        if (existingQuoteRows.isEmpty) {
-          throw StateError('笔记不存在，无法更新');
-        }
-
-        final isDeletedValue = existingQuoteRows.first['is_deleted'];
-        final isDeleted =
-            (isDeletedValue is num && isDeletedValue.toInt() == 1) ||
-                (isDeletedValue is bool && isDeletedValue);
-        if (isDeleted) {
-          throw StateError('已删除的笔记不能编辑');
-        }
-
         // 在更新前记录旧的媒体引用，用于更新后判断是否需要清理文件
         final List<String> oldReferencedFiles =
             await MediaReferenceService.getReferencedFiles(quote.id!);
@@ -379,12 +359,25 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
           }
 
           // 1. 更新笔记本身
-          await txn.update(
+          final updatedRows = await txn.update(
             'quotes',
             quoteMap,
-            where: 'id = ?',
+            where: 'id = ? AND (is_deleted = 0 OR is_deleted IS NULL)',
             whereArgs: [quote.id],
           );
+          if (updatedRows == 0) {
+            final existingRows = await txn.query(
+              'quotes',
+              columns: ['id'],
+              where: 'id = ?',
+              whereArgs: [quote.id],
+              limit: 1,
+            );
+            if (existingRows.isEmpty) {
+              throw StateError('笔记不存在，无法更新');
+            }
+            throw StateError('已删除的笔记不能编辑');
+          }
 
           // 2. 删除旧的标签关联
           await txn.delete(

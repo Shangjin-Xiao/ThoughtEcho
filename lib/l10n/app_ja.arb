@@ -3469,6 +3469,15 @@
   "trashEmpty": "ゴミ箱は空です",
   "trashEmptyHint": "削除したノートはここに表示されます",
   "trashRetentionHint": "削除したノートは設定した保持期間後に自動削除されます",
+  "moveNoteToTrashTitle": "ゴミ箱に移動",
+  "moveNoteToTrashConfirmation": "このノートをゴミ箱に移動しますか？{days}日以内なら復元できます。",
+  "@moveNoteToTrashConfirmation": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "trashRemainingDays": "残り {days} 日",
   "@trashRemainingDays": {
     "placeholders": {

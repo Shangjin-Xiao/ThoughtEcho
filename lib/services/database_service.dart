@@ -614,6 +614,13 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
         }
         try {
           final retentionDays = await _resolveTrashRetentionDays();
+          if (retentionDays == null) {
+            logWarning(
+              '读取回收站保留期失败，跳过启动自动清理',
+              source: 'DatabaseService',
+            );
+            return;
+          }
           final cleanedCount =
               await autoCleanupExpiredTrash(retentionDays: retentionDays);
           if (cleanedCount > 0) {
@@ -918,7 +925,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     }
   }
 
-  Future<int> _resolveTrashRetentionDays() async {
+  Future<int?> _resolveTrashRetentionDays() async {
     try {
       final mmkv = MMKVService();
       await mmkv.init();
@@ -929,8 +936,14 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
 
       final map = json.decode(appSettingsJson) as Map<String, dynamic>;
       return AppSettings.fromJson(map).trashRetentionDays;
-    } catch (_) {
-      return 30;
+    } catch (e, stackTrace) {
+      logError(
+        '读取回收站保留期失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'DatabaseService',
+      );
+      return null;
     }
   }
 }

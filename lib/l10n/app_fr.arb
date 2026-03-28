@@ -3462,7 +3462,16 @@
   "trashEmpty": "La corbeille est vide",
   "trashEmptyHint": "Les notes supprimées apparaîtront ici",
   "trashRetentionHint": "Les notes supprimées seront automatiquement supprimées après la période de rétention sélectionnée",
-  "trashRemainingDays": "{days} jours restants",
+  "moveNoteToTrashTitle": "Déplacer vers la corbeille",
+  "moveNoteToTrashConfirmation": "Déplacer cette note dans la corbeille ? Vous pourrez la restaurer pendant {days} jours.",
+  "@moveNoteToTrashConfirmation": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "trashRemainingDays": "{days, plural, =0 {Aucun jour restant} one {1 jour restant} other {{days} jours restants}}",
   "@trashRemainingDays": {
     "placeholders": {
       "days": {

@@ -17,7 +17,7 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
   }) async {
     if (kIsWeb) {
       // Web平台的完整筛选逻辑
-      var filtered = _memoryStore;
+      var filtered = List<Quote>.from(_memoryStore);
       if (!includeDeleted) {
         filtered = filtered.where((q) => !q.isDeleted).toList();
       }
@@ -279,7 +279,7 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
 
     if (kIsWeb) {
       // 优化：Web平台直接在内存中应用筛选逻辑计算数量，避免加载大量数据
-      var filtered = _memoryStore;
+      var filtered = List<Quote>.from(_memoryStore);
 
       // 排除隐藏笔记
       if (shouldExcludeHidden) {

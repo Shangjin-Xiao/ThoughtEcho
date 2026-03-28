@@ -46,5 +46,26 @@ void main() {
       expect(settingsService.excerptIntentEnabled, isFalse);
       expect(settingsService.appSettings.excerptIntentEnabled, isFalse);
     });
+
+    test(
+      'applyIncomingTrashSettings should ignore missing timestamp when local is newer',
+      () async {
+        await settingsService.setTrashRetentionDays(
+          90,
+          modifiedAt: DateTime.utc(2026, 3, 28, 10),
+        );
+
+        final applied = await settingsService.applyIncomingTrashSettings({
+          'retention_days': 7,
+        });
+
+        expect(applied, isFalse);
+        expect(settingsService.trashRetentionDays, equals(90));
+        expect(
+          settingsService.trashRetentionLastModified,
+          equals('2026-03-28T10:00:00.000Z'),
+        );
+      },
+    );
   });
 }

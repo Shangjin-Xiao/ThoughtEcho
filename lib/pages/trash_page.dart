@@ -5,7 +5,10 @@ import '../gen_l10n/app_localizations.dart';
 import '../models/quote_model.dart';
 import '../services/database_service.dart';
 import '../services/settings_service.dart';
+import '../utils/app_logger.dart';
 import '../utils/time_utils.dart';
+
+enum _TrashAction { restore, permanentlyDelete }
 
 class TrashPage extends StatefulWidget {
   const TrashPage({super.key});
@@ -15,29 +18,98 @@ class TrashPage extends StatefulWidget {
 }
 
 class _TrashPageState extends State<TrashPage> {
+  static const int _pageSize = 50;
+
   bool _isLoading = true;
+  bool _isLoadingMore = false;
+  bool _hasMore = true;
   bool _isRunningAction = false;
   List<Quote> _trashQuotes = const [];
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_handleScroll);
     _loadTrashQuotes();
   }
 
-  Future<void> _loadTrashQuotes() async {
-    setState(() {
-      _isLoading = true;
-    });
-    final db = context.read<DatabaseService>();
-    final quotes = await db.getDeletedQuotes(limit: 1000);
-    if (!mounted) {
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _handleScroll() {
+    if (!_scrollController.hasClients ||
+        _isLoading ||
+        _isLoadingMore ||
+        !_hasMore) {
       return;
     }
-    setState(() {
-      _trashQuotes = quotes;
-      _isLoading = false;
-    });
+    final position = _scrollController.position;
+    if (position.pixels >= position.maxScrollExtent - 200) {
+      _loadMoreTrashQuotes();
+    }
+  }
+
+  Future<void> _loadTrashQuotes({bool reset = true}) async {
+    final db = context.read<DatabaseService>();
+    if (reset) {
+      setState(() {
+        _isLoading = true;
+        _hasMore = true;
+      });
+    } else {
+      setState(() {
+        _isLoadingMore = true;
+      });
+    }
+
+    try {
+      final quotes = await db.getDeletedQuotes(
+        offset: reset ? 0 : _trashQuotes.length,
+        limit: _pageSize,
+      );
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _trashQuotes = reset ? quotes : [..._trashQuotes, ...quotes];
+        _hasMore = quotes.length == _pageSize;
+      });
+    } catch (e, stackTrace) {
+      logError(
+        '加载回收站失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'TrashPage',
+      );
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content:
+              Text(AppLocalizations.of(context).refreshFailed(e.toString())),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _isLoadingMore = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadMoreTrashQuotes() async {
+    if (_isLoading || _isLoadingMore || !_hasMore) {
+      return;
+    }
+    await _loadTrashQuotes(reset: false);
   }
 
   String _deletedAtText(BuildContext context, Quote quote) {
@@ -88,6 +160,22 @@ class _TrashPageState extends State<TrashPage> {
         ),
       );
       await _loadTrashQuotes();
+    } catch (e, stackTrace) {
+      logError(
+        '恢复回收站笔记失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'TrashPage',
+      );
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context).restoreFailed),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -102,36 +190,52 @@ class _TrashPageState extends State<TrashPage> {
       return;
     }
     final l10n = AppLocalizations.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.permanentlyDelete),
-        content: Text(l10n.permanentlyDeleteConfirmation),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(l10n.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(l10n.permanentlyDelete),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) {
-      return;
-    }
-
-    setState(() {
-      _isRunningAction = true;
-    });
     try {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(l10n.permanentlyDelete),
+          content: Text(l10n.permanentlyDeleteConfirmation),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(l10n.permanentlyDelete),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) {
+        return;
+      }
+
+      setState(() {
+        _isRunningAction = true;
+      });
       await context.read<DatabaseService>().permanentlyDeleteQuote(id);
       if (!mounted) {
         return;
       }
       await _loadTrashQuotes();
+    } catch (e, stackTrace) {
+      logError(
+        '永久删除回收站笔记失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'TrashPage',
+      );
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.deleteFailed(e.toString())),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -146,31 +250,31 @@ class _TrashPageState extends State<TrashPage> {
       return;
     }
     final l10n = AppLocalizations.of(context);
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.emptyTrash),
-        content: Text(l10n.emptyTrashConfirmation),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: Text(l10n.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: Text(l10n.emptyTrash),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true || !mounted) {
-      return;
-    }
-
-    setState(() {
-      _isRunningAction = true;
-    });
     try {
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(l10n.emptyTrash),
+          content: Text(l10n.emptyTrashConfirmation),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: Text(l10n.emptyTrash),
+            ),
+          ],
+        ),
+      );
+      if (confirmed != true || !mounted) {
+        return;
+      }
+
+      setState(() {
+        _isRunningAction = true;
+      });
       await context.read<DatabaseService>().emptyTrash();
       if (!mounted) {
         return;
@@ -182,6 +286,22 @@ class _TrashPageState extends State<TrashPage> {
         ),
       );
       await _loadTrashQuotes();
+    } catch (e, stackTrace) {
+      logError(
+        '清空回收站失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'TrashPage',
+      );
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.deleteFailed(e.toString())),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -234,10 +354,20 @@ class _TrashPageState extends State<TrashPage> {
                     ),
                     Expanded(
                       child: ListView.separated(
-                        itemCount: _trashQuotes.length,
+                        controller: _scrollController,
+                        itemCount:
+                            _trashQuotes.length + (_isLoadingMore ? 1 : 0),
                         separatorBuilder: (_, __) =>
                             const Divider(height: 1, thickness: 0.5),
                         itemBuilder: (context, index) {
+                          if (index >= _trashQuotes.length) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            );
+                          }
                           final quote = _trashQuotes[index];
                           final id = quote.id;
                           return ListTile(
@@ -256,19 +386,22 @@ class _TrashPageState extends State<TrashPage> {
                             isThreeLine: true,
                             trailing: id == null
                                 ? null
-                                : Wrap(
-                                    spacing: 4,
-                                    children: [
-                                      TextButton(
-                                        onPressed: _isRunningAction
-                                            ? null
-                                            : () => _restoreQuote(id),
+                                : PopupMenuButton<_TrashAction>(
+                                    enabled: !_isRunningAction,
+                                    onSelected: (action) {
+                                      if (action == _TrashAction.restore) {
+                                        _restoreQuote(id);
+                                        return;
+                                      }
+                                      _permanentlyDelete(id);
+                                    },
+                                    itemBuilder: (context) => [
+                                      PopupMenuItem<_TrashAction>(
+                                        value: _TrashAction.restore,
                                         child: Text(l10n.restoreNote),
                                       ),
-                                      TextButton(
-                                        onPressed: _isRunningAction
-                                            ? null
-                                            : () => _permanentlyDelete(id),
+                                      PopupMenuItem<_TrashAction>(
+                                        value: _TrashAction.permanentlyDelete,
                                         child: Text(l10n.permanentlyDelete),
                                       ),
                                     ],

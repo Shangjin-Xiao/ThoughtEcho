@@ -2,8 +2,13 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/app_settings.dart';
+import '../../test_setup.dart';
 
 void main() {
+  setUpAll(() async {
+    await setupTestEnvironment();
+  });
+
   group('AppSettings Tests', () {
     test('should default trash retention to 30 days', () {
       final settings = AppSettings.defaultSettings();

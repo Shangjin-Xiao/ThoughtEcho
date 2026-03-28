@@ -889,7 +889,7 @@ class DatabaseBackupService {
               where: 'id = ?',
               whereArgs: [quoteId],
             );
-            reportBuilder.addUpdatedQuote();
+            reportBuilder.addDeletedQuote();
           } else {
             continue;
           }

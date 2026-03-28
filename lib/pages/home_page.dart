@@ -1295,33 +1295,56 @@ class _HomePageState extends State<HomePage>
 
   // 显示删除确认对话框
   void _showDeleteConfirmDialog(Quote quote) {
+    final l10n = AppLocalizations.of(context);
+    final retentionDays = context.read<SettingsService>().trashRetentionDays;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(AppLocalizations.of(context).deleteNote),
-        content: Text(AppLocalizations.of(context).deleteNoteConfirmation),
+        title: Text(l10n.moveNoteToTrashTitle),
+        content: Text(l10n.moveNoteToTrashConfirmation(retentionDays)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(AppLocalizations.of(context).cancel),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            onPressed: () {
+            onPressed: () async {
               final db = Provider.of<DatabaseService>(context, listen: false);
-              db.deleteQuote(quote.id!);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    AppLocalizations.of(context).noteMovedToTrash,
+              try {
+                await db.deleteQuote(quote.id!);
+                if (!context.mounted) {
+                  return;
+                }
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(l10n.noteMovedToTrash),
+                    duration: const Duration(seconds: 1),
+                    behavior: SnackBarBehavior.floating,
                   ),
-                  duration: const Duration(seconds: 1),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
+                );
+              } catch (e, stackTrace) {
+                logError(
+                  '移动笔记到回收站失败: $e',
+                  error: e,
+                  stackTrace: stackTrace,
+                  source: 'HomePage',
+                );
+                if (!context.mounted) {
+                  return;
+                }
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(l10n.deleteFailed(e.toString())),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
             },
-            child: Text(AppLocalizations.of(context).delete),
+            child: Text(l10n.delete),
           ),
         ],
       ),

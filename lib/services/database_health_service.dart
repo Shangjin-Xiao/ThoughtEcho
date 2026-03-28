@@ -113,6 +113,35 @@ class DatabaseHealthService {
     }
   }
 
+  int _readCount(Map<String, Object?> row, String key) {
+    return (row[key] as num?)?.toInt() ?? 0;
+  }
+
+  Future<({int total, int active, int deleted})> _getQuoteCounts(
+    Database db,
+  ) async {
+    final hasDeletedColumn =
+        await checkColumnExists(db, 'quotes', 'is_deleted');
+    if (!hasDeletedColumn) {
+      final result = await db.rawQuery('SELECT COUNT(*) as total FROM quotes');
+      final total = _readCount(result.first, 'total');
+      return (total: total, active: total, deleted: 0);
+    }
+
+    final result = await db.rawQuery('''
+      SELECT
+        COUNT(*) as total,
+        SUM(CASE WHEN is_deleted = 0 OR is_deleted IS NULL THEN 1 ELSE 0 END) as active,
+        SUM(CASE WHEN is_deleted = 1 THEN 1 ELSE 0 END) as deleted
+      FROM quotes
+    ''');
+    return (
+      total: _readCount(result.first, 'total'),
+      active: _readCount(result.first, 'active'),
+      deleted: _readCount(result.first, 'deleted'),
+    );
+  }
+
   /// 启动时执行数据库健康检查
   Future<void> performStartupHealthCheck(Database db) async {
     if (kIsWeb) {
@@ -132,17 +161,10 @@ class DatabaseHealthService {
       final dbVersion = await db.getVersion();
 
       // 3. 获取基本统计
-      final quoteCountResult = await db.rawQuery('''
-        SELECT
-          COUNT(*) as total,
-          SUM(CASE WHEN is_deleted = 0 OR is_deleted IS NULL THEN 1 ELSE 0 END) as active,
-          SUM(CASE WHEN is_deleted = 1 THEN 1 ELSE 0 END) as deleted
-        FROM quotes
-      ''');
-      final quoteCount = (quoteCountResult.first['total'] as int?) ?? 0;
-      final activeQuoteCount = (quoteCountResult.first['active'] as int?) ?? 0;
-      final deletedQuoteCount =
-          (quoteCountResult.first['deleted'] as int?) ?? 0;
+      final quoteCounts = await _getQuoteCounts(db);
+      final quoteCount = quoteCounts.total;
+      final activeQuoteCount = quoteCounts.active;
+      final deletedQuoteCount = quoteCounts.deleted;
 
       final categoryCountResult = await db.rawQuery(
         'SELECT COUNT(*) as count FROM categories',
@@ -453,7 +475,14 @@ class DatabaseHealthService {
         'platform': 'web',
         'db_size_mb': 0.0,
         'quote_count': webQuoteCount,
+        'active_quote_count': webQuoteCount,
+        'deleted_quote_count': 0,
         'category_count': webCategoryCount,
+        'tag_relation_count': 0,
+        'foreign_keys_enabled': false,
+        'journal_mode': 'memory',
+        'cache_hit_rate': _totalQueries > 0 ? _cacheHits / _totalQueries : 0.0,
+        'total_queries': _totalQueries,
       };
     }
 
@@ -470,17 +499,10 @@ class DatabaseHealthService {
       }
 
       // 获取记录数量
-      final quoteCountResult = await db.rawQuery('''
-        SELECT
-          COUNT(*) as total,
-          SUM(CASE WHEN is_deleted = 0 OR is_deleted IS NULL THEN 1 ELSE 0 END) as active,
-          SUM(CASE WHEN is_deleted = 1 THEN 1 ELSE 0 END) as deleted
-        FROM quotes
-      ''');
-      final quoteCount = (quoteCountResult.first['total'] as int?) ?? 0;
-      final activeQuoteCount = (quoteCountResult.first['active'] as int?) ?? 0;
-      final deletedQuoteCount =
-          (quoteCountResult.first['deleted'] as int?) ?? 0;
+      final quoteCounts = await _getQuoteCounts(db);
+      final quoteCount = quoteCounts.total;
+      final activeQuoteCount = quoteCounts.active;
+      final deletedQuoteCount = quoteCounts.deleted;
 
       final categoryCountResult = await db.rawQuery(
         'SELECT COUNT(*) as count FROM categories',

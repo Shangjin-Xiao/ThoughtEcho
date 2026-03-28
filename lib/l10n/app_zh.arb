@@ -3543,6 +3543,15 @@
   "trashEmpty": "回收站为空",
   "trashEmptyHint": "删除的笔记会出现在这里",
   "trashRetentionHint": "已删除的笔记将在当前保留期后自动清除",
+  "moveNoteToTrashTitle": "移至回收站",
+  "moveNoteToTrashConfirmation": "确定要将这条笔记移至回收站吗？你可在 {days} 天内恢复。",
+  "@moveNoteToTrashConfirmation": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "trashRemainingDays": "剩余 {days} 天",
   "@trashRemainingDays": {
     "placeholders": {

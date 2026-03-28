@@ -3521,6 +3521,15 @@
   "trashEmpty": "Trash is empty",
   "trashEmptyHint": "Deleted notes will appear here",
   "trashRetentionHint": "Deleted notes will be automatically removed after the selected retention period",
+  "moveNoteToTrashTitle": "Move Note to Trash",
+  "moveNoteToTrashConfirmation": "Move this note to Trash? You can restore it within {days} days.",
+  "@moveNoteToTrashConfirmation": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
   "trashRemainingDays": "{days} days remaining",
   "@trashRemainingDays": {
     "placeholders": {
