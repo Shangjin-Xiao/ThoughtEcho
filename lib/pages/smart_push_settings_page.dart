@@ -281,14 +281,22 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
 
             const SizedBox(height: 16),
 
+            // 每日一言独立推送（始终显示，独立于智能推送开关）
+            _buildDailyQuoteCard(l10n, theme, colorScheme),
+
+            const SizedBox(height: 16),
+
             // 说明卡片
             _buildNoticeCard(l10n, theme, colorScheme),
           ],
 
-          const SizedBox(height: 16),
+          // 当智能推送未启用时，每日一言卡片单独显示
+          if (!_settings.enabled) ...[
+            const SizedBox(height: 16),
 
-          // 每日一言独立推送（始终显示，独立于智能推送开关）
-          _buildDailyQuoteCard(l10n, theme, colorScheme),
+            // 每日一言独立推送（始终显示，独立于智能推送开关）
+            _buildDailyQuoteCard(l10n, theme, colorScheme),
+          ],
 
           const SizedBox(height: 32),
         ],

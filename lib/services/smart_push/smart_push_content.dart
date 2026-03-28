@@ -157,7 +157,8 @@ extension SmartPushContentSelection on SmartPushService {
       }
     }
 
-    // SOTA: 使用 Thompson Sampling 选择内容类型
+    // SOTA: 按优先级排序并选择最高价值内容
+    // 核心原则：一个推送只推一条，选择价值最高的
     if (availableContent.isNotEmpty) {
       final availableTypes = availableContent.keys.toList();
 
@@ -165,33 +166,30 @@ extension SmartPushContentSelection on SmartPushService {
         '智能选择：可用内容类型 $availableTypes',
       );
 
-      // 那年今日始终优先（高纪念价值）
-      if (availableContent.containsKey('yearAgoToday')) {
-        final candidate = availableContent['yearAgoToday']!;
-        AppLogger.w('智能选择：命中那年今日，优先推送');
-        return _SmartSelectResult(
-          note: candidate.note,
-          title: candidate.title,
-          isDailyQuote: false,
-          contentType: 'yearAgoToday',
-        );
-      }
+      // 按优先级排序所有候选内容
+      final sortedCandidates = availableContent.entries.toList()
+        ..sort((a, b) => b.value.priority.compareTo(a.value.priority));
 
-      // 其他类型使用 Thompson Sampling 选择
-      final selectedType = await _analytics.selectContentType(availableTypes);
-      final candidate = availableContent[selectedType];
+      // 选择优先级最高的内容
+      final bestEntry = sortedCandidates.first;
+      final bestType = bestEntry.key;
+      final bestCandidate = bestEntry.value;
 
-      if (candidate != null) {
+      // 特殊处理：那年今日有纪念意义，始终优先日志提示
+      if (bestType == 'yearAgoToday') {
+        AppLogger.w('智能选择：命中那年今日（优先级最高），优先推送');
+      } else {
         AppLogger.w(
-          '智能选择：Thompson Sampling 选中 $selectedType',
-        );
-        return _SmartSelectResult(
-          note: candidate.note,
-          title: candidate.title,
-          isDailyQuote: false,
-          contentType: selectedType,
+          '智能选择：选中 $bestType（优先级 ${bestCandidate.priority}）',
         );
       }
+
+      return _SmartSelectResult(
+        note: bestCandidate.note,
+        title: bestCandidate.title,
+        isDailyQuote: false,
+        contentType: bestType,
+      );
     }
 
     // 所有特定筛选器均未命中，回退到每日一言

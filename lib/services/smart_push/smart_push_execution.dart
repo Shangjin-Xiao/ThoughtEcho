@@ -34,11 +34,13 @@ extension SmartPushExecution on SmartPushService {
       '后台推送触发 (triggerKind: $triggerKind, time: ${now.hour}:${now.minute})',
     );
 
-    // 防重复：距上次推送不足 3 分钟则跳过
-    if (_settings.lastPushTime != null) {
+    // 智能模式防重复：距上次推送不足 30 分钟则跳过（同一时间段只推一条）
+    // 自定义模式不做此限制，用户自己控制推送时间间隔
+    if (_settings.pushMode == PushMode.smart &&
+        _settings.lastPushTime != null) {
       final sinceLastPush = now.difference(_settings.lastPushTime!);
-      if (sinceLastPush.inMinutes < 3) {
-        AppLogger.i('跳过推送：距上次推送仅 ${sinceLastPush.inSeconds} 秒');
+      if (sinceLastPush.inMinutes < 30) {
+        AppLogger.i('智能推送跳过：距上次推送仅 ${sinceLastPush.inMinutes} 分钟（需间隔 30 分钟）');
         return;
       }
     }

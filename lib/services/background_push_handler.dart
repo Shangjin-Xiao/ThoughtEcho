@@ -228,18 +228,24 @@ Future<void> backgroundPeriodicCheck() async {
     // 检查常规推送时间（使用持久化的实际调度时间，兼容智能模式）
     bool pushedRegular = false;
     if (settings.enabled && settings.shouldPushToday()) {
-      final scheduledSlots = pushService.getScheduledTimesForToday();
-      final slotsToCheck = scheduledSlots.isNotEmpty
-          ? scheduledSlots
-          : settings.pushTimeSlots.where((s) => s.enabled).toList();
+      // 防重复：距上次推送不足 30 分钟则跳过
+      final lastPush = settings.lastPushTime;
+      if (lastPush != null && now.difference(lastPush).inMinutes < 30) {
+        AppLogger.d('周期性检查：距上次推送仅 ${now.difference(lastPush).inMinutes} 分钟，跳过');
+      } else {
+        final scheduledSlots = pushService.getScheduledTimesForToday();
+        final slotsToCheck = scheduledSlots.isNotEmpty
+            ? scheduledSlots
+            : settings.pushTimeSlots.where((s) => s.enabled).toList();
 
-      for (final slot in slotsToCheck) {
-        if (SmartPushService.isWithinPushWindow(now, slot)) {
-          AppLogger.i('周期性检查：匹配到推送时间 ${slot.hour}:${slot.minute}，触发推送');
-          await pushService.checkAndPush(
-              isBackground: true, triggerKind: 'smartPush');
-          pushedRegular = true;
-          break;
+        for (final slot in slotsToCheck) {
+          if (SmartPushService.isWithinPushWindow(now, slot)) {
+            AppLogger.i('周期性检查：匹配到推送时间 ${slot.hour}:${slot.minute}，触发推送');
+            await pushService.checkAndPush(
+                isBackground: true, triggerKind: 'smartPush');
+            pushedRegular = true;
+            break;
+          }
         }
       }
     }
