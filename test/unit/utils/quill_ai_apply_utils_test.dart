@@ -89,7 +89,7 @@ void main() {
       );
       expect(
         StringUtils.removeObjectReplacementChar(
-          mergedDocument.toPlainText(),
+          mergedDocument.toPlainText().trim(),
         ).replaceAll(RegExp(r'\s+'), ' ').trim(),
         'Polished opening refined middle tightened ending complete.',
       );
