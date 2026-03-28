@@ -35,11 +35,14 @@ extension SmartPushScheduling on SmartPushService {
       if (_settings.pushMode == PushMode.smart) {
         // 智能模式：使用智能算法计算最佳推送时间
         slotsToSchedule = await _calculateSmartPushTimes();
+        // 智能模式下合并相近的时间槽（间隔小于 30 分钟的只保留第一个）
+        // 这是防止同一时间段推送多条的核心机制
+        slotsToSchedule = _mergeCloseTimeSlots(slotsToSchedule);
         AppLogger.i(
           '智能推送时间: ${slotsToSchedule.map((s) => s.formattedTime).join(", ")}',
         );
       } else {
-        // 自定义模式：使用用户设置的时间
+        // 自定义模式：使用用户设置的时间，不做合并
         slotsToSchedule =
             _settings.pushTimeSlots.where((s) => s.enabled).toList();
       }
@@ -285,6 +288,50 @@ extension SmartPushScheduling on SmartPushService {
     if (hour >= 14 && hour < 18) return '下午时光';
     if (hour >= 18 && hour < 21) return '傍晚时光';
     return '晚间回顾';
+  }
+
+  /// 合并相近的时间槽（间隔小于 30 分钟的只保留第一个）
+  ///
+  /// 这是防止同一时间段推送多条笔记的核心机制。
+  /// 例如用户设置了 8:00, 8:15, 8:30 三个时间，合并后只保留 8:00。
+  List<PushTimeSlot> _mergeCloseTimeSlots(List<PushTimeSlot> slots) {
+    if (slots.length <= 1) return slots;
+
+    // 按时间排序
+    final sorted = List<PushTimeSlot>.from(slots)
+      ..sort((a, b) {
+        final aMinutes = a.hour * 60 + a.minute;
+        final bMinutes = b.hour * 60 + b.minute;
+        return aMinutes.compareTo(bMinutes);
+      });
+
+    final merged = <PushTimeSlot>[sorted.first];
+
+    for (int i = 1; i < sorted.length; i++) {
+      final current = sorted[i];
+      final last = merged.last;
+
+      final lastMinutes = last.hour * 60 + last.minute;
+      final currentMinutes = current.hour * 60 + current.minute;
+      final gap = currentMinutes - lastMinutes;
+
+      // 间隔大于等于 30 分钟才保留
+      if (gap >= 30) {
+        merged.add(current);
+      } else {
+        AppLogger.d(
+          '合并时间槽：${current.formattedTime} 与 ${last.formattedTime} 间隔仅 $gap 分钟，跳过',
+        );
+      }
+    }
+
+    if (merged.length < slots.length) {
+      AppLogger.i(
+        '时间槽合并：${slots.length} → ${merged.length} 个（间隔 <30 分钟的已合并）',
+      );
+    }
+
+    return merged;
   }
 
   /// 持久化今日实际调度的推送时间（供后台周期性检查使用）
