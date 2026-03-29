@@ -431,7 +431,17 @@ class NoteListViewState extends State<NoteListView> {
   Future<void> scrollToQuoteById(String quoteId) async {
     if (!mounted || quoteId.isEmpty) return;
 
-    const maxAttempts = 8;
+    // 等待首次数据加载完成（最多 5 秒）
+    for (var wait = 0; wait < 50 && !_initialDataLoaded; wait++) {
+      await Future.delayed(const Duration(milliseconds: 100));
+      if (!mounted) return;
+    }
+    if (!_initialDataLoaded) {
+      logDebug('scrollToQuoteById 放弃：首次数据加载超时', source: 'NoteListView');
+      return;
+    }
+
+    const maxAttempts = 20;
     for (var attempt = 0; attempt < maxAttempts; attempt++) {
       final index = _quotes.indexWhere((quote) => quote.id == quoteId);
       if (index >= 0) {
@@ -449,6 +459,30 @@ class NoteListViewState extends State<NoteListView> {
         _isUserScrolling = false;
         _lastUserScrollTime = null;
 
+        // 如果目标笔记在视口外未被 build，先估算跳转使其进入视口
+        if (_scrollController.hasClients) {
+          final key = _itemKeys[quoteId];
+          if (key == null || key.currentContext == null) {
+            const estimatedItemHeight = 120.0;
+            final estimatedOffset = index * estimatedItemHeight;
+            final maxOffset = _scrollController.position.maxScrollExtent;
+            _scrollController.jumpTo(estimatedOffset.clamp(0.0, maxOffset));
+          }
+        }
+
+        // 等待 widget build 完成，确保 _itemKeys 中的 GlobalKey 有 context
+        for (var renderWait = 0; renderWait < 8; renderWait++) {
+          await Future.delayed(const Duration(milliseconds: 60));
+          if (!mounted) return;
+          await Future(() {}); // yield to let framework build
+          final key = _itemKeys[quoteId];
+          if (key != null && key.currentContext != null) {
+            _scrollToItem(quoteId, index);
+            return;
+          }
+        }
+
+        // 最终兜底尝试
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
           _scrollToItem(quoteId, index);
