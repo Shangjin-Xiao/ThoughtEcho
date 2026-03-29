@@ -1,5 +1,7 @@
 <div align="center">
-  <img src="res/icon.png" alt="心迹 Logo / ThoughtEcho Logo" width="120">
+  <a href="https://github.com/Shangjin-Xiao/ThoughtEcho">
+    <img src="res/bento-banner.png" alt="ThoughtEcho 心迹 - AI-Powered Inspiration Notebook" width="100%">
+  </a>
   
   # 心迹 (ThoughtEcho)
   
@@ -33,8 +35,6 @@
     <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases"><img src="https://img.shields.io/badge/GitHub_Releases-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Releases"></a>
   </p>
 
-  <!-- TODO: 这里需要你提供一张名为 hero_banner.png 的图片放在 res/screenshot/ 下 -->
-
   <p>
     <b>⚠️ 友情提示：</b>这是一个与 AI 协作完成的项目，我会持续打磨体验，如遇潜在的小 bug 敬请包涵，也欢迎随时反馈。
   </p>
@@ -50,6 +50,22 @@
 ---
 
 <div id="-中文版本">
+
+## 🌟 为什么选择 ThoughtEcho？
+
+<div align="center">
+  <img src="res/readme-banner.png" alt="Your Personal AI-Powered Inspiration Notebook" width="100%">
+</div>
+
+ThoughtEcho 不仅仅是一个记事本，它是你的**私人 AI 灵感助理**。无论你是捕捉转瞬即逝灵感的创作者、整理笔记的学生，还是记录行业洞察的专业人士，ThoughtEcho 都能帮你：
+
+- 📝 **随时随地捕获**：富文本、多媒体，甚至一句话的灵感碎片
+- 🤖 **深度理解笔记**：通过 AI 问答与润色，让笔记产生更多价值
+- 📊 **发现思维脉络**：智能提取周期洞察与年度报告
+- 🔄 **无缝多端同步**：全平台覆盖，数据永远触手可及
+- 🔒 **保护个人隐私**：本地优先存储，加密备份，你的数据只属于你
+
+<br>
 
 ## ✨ 当前功能
 
@@ -78,6 +94,11 @@
 </div>
 
 ## 📸 应用截图
+
+<div align="center">
+  <img src="res/thoughtecho banner.webp" alt="ThoughtEcho UI Showcase" width="100%">
+</div>
+<br>
 
 ### 核心功能
 | 主页 | 笔记列表 | 添加笔记 |
@@ -287,6 +308,10 @@
 
 ## 🌟 Why ThoughtEcho?
 
+<div align="center">
+  <img src="res/readme-banner.png" alt="Your Personal AI-Powered Inspiration Notebook" width="100%">
+</div>
+
 ThoughtEcho is more than just a note-taking app—it's your **personal AI-powered knowledge companion**. Whether you're a writer capturing fleeting ideas, a student organizing study notes, or a professional tracking insights, ThoughtEcho helps you:
 
 - 📝 **Capture** thoughts instantly with rich text, images, audio, and video
@@ -322,6 +347,11 @@ ThoughtEcho is more than just a note-taking app—it's your **personal AI-powere
 </div>
 
 ## 📸 Application Screenshots
+
+<div align="center">
+  <img src="res/thoughtecho banner.webp" alt="ThoughtEcho UI Showcase" width="100%">
+</div>
+<br>
 
 ### Core Features
 | Homepage | Note List | Add Note |
