@@ -37,6 +37,7 @@
 - **快速捕获按钮（+）**：
   - 短按：快速添加笔记
   - 长按：语音输入
+  - 上滑：进入 OCR 文字识别
 - **剪贴板检测**：切回应用时自动检测剪贴板内容并提示保存
 
 ![主页界面](../res/screenshot/home_page.jpg)
@@ -659,6 +660,7 @@ Welcome to ThoughtEcho, your personal AI-powered inspiration notebook. This manu
 - **Quick Capture Button (+)**:
   - Short press: Quick add note
   - Long press: Voice input
+  - Swipe up: Enter OCR text recognition
 - **Clipboard Detection**: Auto-detects clipboard content when returning to app
 
 ![Home Interface](../res/screenshot/home_page.jpg)
