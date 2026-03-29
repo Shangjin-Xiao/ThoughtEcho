@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=1200, initial-scale=1.0">
+    <title>ThoughtEcho - Bento Design Banner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=Noto+Sans+SC:wght@500;700;900&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', '"Noto Sans SC"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { 
+            margin: 0; 
+            background-color: #f0f2f5; 
+            min-height: 100vh; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            overflow: hidden; 
+        }
+        
+        .bento-container {
+            width: 1200px;
+            height: 600px;
+            padding: 32px;
+            background: #F3F4F6;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 24px;
+            /* To make it look like a standalone image when saved */
+            border-radius: 20px;
+        }
+
+        .bento-card {
+            background: #ffffff;
+            border-radius: 36px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.03), inset 0 0 0 1px rgba(0,0,0,0.02);
+            position: relative;
+            padding: 36px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        /* Abstract subtle background noise for depth */
+        .pattern-noise {
+            background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.8%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E');
+            opacity: 0.03;
+            mix-blend-mode: multiply;
+        }
+    </style>
+</head>
+<body>
+    <!-- 1200x600 完美Bento盒子容器 -->
+    <div class="bento-container relative shadow-[0_20px_80px_rgba(0,0,0,0.1)]">
+        
+        <!-- ============================================== -->
+        <!-- Box 1: 品牌主视觉 (占据前两列的首行, 2x1) -->
+        <!-- ============================================== -->
+        <div class="bento-card col-span-2 row-span-1 flex flex-col justify-between">
+            <!-- 标签 -->
+            <div class="flex items-center gap-2.5 bg-gray-50 text-gray-400 w-max px-4 py-1.5 rounded-full border border-gray-100 shadow-sm">
+                <span class="text-yellow-500 font-bold text-[18px]">✨</span>
+                <span class="font-bold tracking-[0.15em] text-[13px] uppercase">Personal Inspiration Notebook</span>
+            </div>
+            
+            <!-- Logo与文字 -->
+            <div class="flex items-center gap-7 mt-auto mb-2">
+                <img src="icon.png" alt="Icon" class="w-[84px] h-[84px] rounded-[24px] shadow-[4px_10px_20px_rgba(0,0,0,0.08)] border border-gray-100/50">
+                <div class="flex flex-col gap-1.5">
+                    <h1 class="text-[44px] font-black text-gray-900 leading-[1] tracking-tight">ThoughtEcho 心迹</h1>
+                    <p class="text-[17px] text-gray-500 font-bold tracking-wide">
+                        随心记录每一刻灵感，构建你的私人知识宇宙。
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- Box 2: 手机主界面展示 (占据第三列的整整两行，竖长条形, 1x2) -->
+        <!-- 这是Bento网格最标志性的打破横向疲劳的竖向视觉中心 -->
+        <!-- ============================================== -->
+        <div class="bento-card col-span-1 row-span-2 bg-[#F9FAFB] flex flex-col items-center">
+            <!-- 稍微浅一点的黄色渐变提升清新度 -->
+            <div class="absolute inset-0 bg-gradient-to-b from-[#FEF9C3]/40 to-transparent"></div>
+            
+            <div class="relative z-10 text-center mt-0 mb-6 w-full">
+                <h3 class="text-[26px] font-black text-gray-800 mb-1">化繁为简</h3>
+                <p class="text-[14px] text-yellow-600/80 font-bold uppercase tracking-widest">Minimalist UI</p>
+            </div>
+            
+            <!-- 完美的无边框圆角设备模型嵌入 -->
+            <div class="relative z-10 w-full flex-1 rounded-[36px] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.15)] bg-white border-[7px] border-white ring-1 ring-black/5 mt-0 transform rotate-[-1deg] transition-transform hover:rotate-0 hover:scale-105 duration-500">
+                <img src="screenshot/home_page.jpg" class="w-full h-full object-cover rounded-[28px] object-top">
+            </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- Box 3: AI 能力聚合 (占据第四列首行, 正方形, 1x1) -->
+        <!-- ============================================== -->
+        <div class="bento-card col-span-1 row-span-1 bg-gray-900 border-none p-[32px]">
+            <!-- 环境光弥散阴影 -->
+            <div class="absolute top-[-50%] right-[-50%] w-[150%] h-[150%] bg-gradient-to-bl from-purple-500/40 via-blue-500/10 to-transparent blur-[40px] rounded-full pointer-events-none"></div>
+            <div class="absolute inset-0 pattern-noise"></div>
+            
+            <div class="relative z-10 h-full flex flex-col justify-between">
+                <!-- 顶角图标 -->
+                <div class="w-12 h-12 bg-white/10 rounded-[16px] flex items-center justify-center backdrop-blur-xl border border-white/20 shadow-[0_8px_16px_rgba(0,0,0,0.4)]">
+                    <span class="text-2xl drop-shadow-lg">✨</span>
+                </div>
+                
+                <div class="mt-auto">
+                    <h3 class="text-[22px] font-black text-white tracking-wide mb-2 leading-none">AI 深度赋能</h3>
+                    <p class="text-[14px] text-blue-200/70 font-bold leading-[1.6]">
+                        全知问答、内容润色<br>懂你所想，洞察一切。
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- Box 4: 编辑器功能 (占据前两列的第二行, 横向, 2x1) -->
+        <!-- ============================================== -->
+        <div class="bento-card col-span-2 row-span-1 bg-gradient-to-br from-[#F0f9FF] to-[#E0F2FE] p-0 flex">
+            <!-- 内部网格圆点装饰 -->
+            <div class="absolute inset-0 pointer-events-none opacity-[0.4]" style="background-image: radial-gradient(#93c5fd 2px, transparent 2px); background-size: 20px 20px;"></div>
+            
+            <!-- 文字区左侧 -->
+            <div class="relative z-10 w-[45%] h-full flex flex-col justify-center px-9 py-8">
+                <div class="w-11 h-11 bg-blue-500 text-white rounded-[14px] flex items-center justify-center mb-5 shadow-[0_8px_16px_rgba(59,130,246,0.3)]">
+                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                </div>
+                <h3 class="text-[26px] font-black text-gray-900 mb-2 leading-tight">全功能富文本</h3>
+                <p class="text-[14.5px] text-blue-900/60 font-bold leading-relaxed">
+                    支持千万级大文件流式处理，<br>多媒体混排毫无压力的流畅体验。
+                </p>
+            </div>
+            
+            <!-- 图片区右侧突出悬浮 -->
+            <div class="relative z-10 w-[55%] h-full flex items-end justify-end pr-0 pb-0 overflow-hidden">
+                <div class="w-[320px] h-[220px] shadow-[-10px_-10px_30px_rgba(0,0,0,0.08)] bg-white rounded-tl-[24px] overflow-hidden border-t-8 border-l-8 border-white transform translate-x-4 translate-y-4 rotate-[-3deg] hover:rotate-0 hover:translate-x-0 hover:translate-y-0 transition-transform duration-500">
+                    <img src="screenshot/note_full_editor_page.jpg" class="w-full h-full object-cover object-left-top">
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================== -->
+        <!-- Box 5: 多平台与私密同步 (占据第四列的第二行, 正方形, 1x1) -->
+        <!-- ============================================== -->
+        <div class="bento-card col-span-1 row-span-1 bg-white p-[30px]">
+            <div class="h-full flex flex-col justify-between">
+                <div>
+                    <div class="w-11 h-11 bg-orange-50 text-orange-500 rounded-[14px] flex items-center justify-center mb-4 border border-orange-100">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                    </div>
+                    <h3 class="text-[22px] font-black text-gray-900 mb-1">本地安全私有</h3>
+                    <p class="text-[13.5px] text-gray-400 font-bold leading-snug">
+                        无云端强制绑定<br>保护核心数据资产。
+                    </p>
+                </div>
+                
+                <!-- 底部极简平台支持条 -->
+                <div class="bg-gray-50/80 px-4 py-3 rounded-[18px] text-center border border-gray-100 shadow-inner mt-auto">
+                    <div class="text-[10px] font-black text-gray-400 tracking-[0.2em] mb-1 uppercase">Supported ON</div>
+                    <div class="text-[13px] font-bold text-gray-700 tracking-wider">Windows / iOS / Android</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</body>
+</html>
