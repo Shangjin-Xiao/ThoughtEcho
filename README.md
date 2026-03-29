@@ -4,28 +4,37 @@
   # 心迹 (ThoughtEcho)
   
   <p>
+    <b>📝 你的专属灵感摘录本 / Your Personal AI-Powered Inspiration Notebook</b><br>
+    让我们一起随心记录，释放 AI 洞察的力量 ✨
+  </p>
+
+  <p>
+    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest">
+      <img src="https://img.shields.io/github/v/release/Shangjin-Xiao/ThoughtEcho?style=flat-square&color=3cb371" alt="Latest Release">
+    </a>
+    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases">
+      <img src="https://img.shields.io/github/downloads/Shangjin-Xiao/ThoughtEcho/total?style=flat-square&color=0078D7" alt="Total Downloads">
+    </a>
+    <a href="https://www.microsoft.com/store/apps/9NC7GDG6KFMC">
+      <img src="https://img.shields.io/badge/Microsoft-Store-0078D7?style=flat-square&logo=windows&logoColor=white" alt="Microsoft Store">
+    </a>
+    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/stargazers">
+      <img src="https://img.shields.io/github/stars/Shangjin-Xiao/ThoughtEcho?style=flat-square&color=FFD700" alt="Stars">
+    </a>
     <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/blob/main/LICENSE">
       <img src="https://img.shields.io/github/license/Shangjin-Xiao/ThoughtEcho?style=flat-square" alt="License: MIT">
     </a>
-    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest">
-  <img src="https://img.shields.io/github/v/release/Shangjin-Xiao/ThoughtEcho?style=flat-square&label=latest" alt="Latest Release">
-    </a>
-    <!-- TODO: If CI is set up later, uncomment and potentially update the workflow filename -->
-    <!-- <img src="https://img.shields.io/github/workflow/status/Shangjin-Xiao/ThoughtEcho/CI?style=flat-square" alt="Build Status / 构建状态"> -->
-    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/stargazers">
-      <img src="https://img.shields.io/github/stars/Shangjin-Xiao/ThoughtEcho?style=flat-square&color=yellow" alt="Stars">
-    </a>
-    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/network/members">
-      <img src="https://img.shields.io/github/forks/Shangjin-Xiao/ThoughtEcho?style=flat-square&color=blue" alt="Forks">
-    </a>
   </p>
 
-  <h3>🌍 Now with full English and Japanese support!</h3>
-
+  <h3>📥 下载渠道 / Download</h3>
   <p>
-    <b>📝 你的专属灵感摘录本<br>
-    让我们一起随心记录，释放 AI 洞察的力量 ✨</b>
+    <a href="https://www.microsoft.com/store/apps/9NC7GDG6KFMC"><img src="https://get.microsoft.com/images/zh-cn%20dark.svg" width="160" alt="从 Microsoft Store 获取"></a>
+    &nbsp;&nbsp;&nbsp;
+    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases"><img src="https://img.shields.io/badge/GitHub_Releases-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Releases"></a>
   </p>
+
+  <!-- TODO: 这里需要你提供一张名为 hero_banner.png 的图片放在 res/screenshot/ 下 -->
+  <img src="res/screenshot/hero_banner.png" alt="ThoughtEcho App Preview" width="100%">
 
   <p>
     <b>⚠️ 友情提示：</b>这是一个与 AI 协作完成的项目，我会持续打磨体验，如遇潜在的小 bug 敬请包涵，也欢迎随时反馈。
