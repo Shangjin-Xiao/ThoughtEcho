@@ -177,10 +177,13 @@ void main() {
     final settings = _TestSettingsService();
     final clipboard = _TestClipboardService();
 
+    final localizations =
+        await AppLocalizations.delegate.load(const Locale('zh'));
+
     await tester.pumpWidget(buildApp(settings, clipboard));
     await tester.pumpAndSettle();
 
-    final titleFinder = find.text('摘录到心迹');
+    final titleFinder = find.text(localizations.excerptIntentEnabled);
     await tester.scrollUntilVisible(
       titleFinder,
       200,
@@ -201,10 +204,13 @@ void main() {
     final settings = _TestSettingsService();
     final clipboard = _TestClipboardService();
 
+    final localizations =
+        await AppLocalizations.delegate.load(const Locale('zh'));
+
     await tester.pumpWidget(buildApp(settings, clipboard));
     await tester.pumpAndSettle();
 
-    final titleFinder = find.text('直接进入全屏编辑器');
+    final titleFinder = find.text(localizations.skipNonFullscreenEditor);
     await tester.scrollUntilVisible(
       titleFinder,
       200,

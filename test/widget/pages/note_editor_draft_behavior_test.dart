@@ -1,13 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_quill/flutter_quill.dart';
+import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/pages/note_full_editor_page.dart';
 import 'package:thoughtecho/services/draft_service.dart';
 import 'package:thoughtecho/services/mmkv_service.dart';
+import 'package:thoughtecho/services/settings_service.dart';
 
 import '../../test_setup.dart';
+
+class _TestSettingsService extends ChangeNotifier implements SettingsService {
+  @override
+  bool get autoAttachLocation => false;
+
+  @override
+  bool get autoAttachWeather => false;
+
+  @override
+  String? get defaultAuthor => null;
+
+  @override
+  String? get defaultSource => null;
+
+  @override
+  List<String> get defaultTagIds => const [];
+
+  @override
+  noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -30,11 +54,17 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(
-        localizationsDelegates: const [
-          ...AppLocalizations.localizationsDelegates,
-          FlutterQuillLocalizations.delegate,
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(
+            value: _TestSettingsService(),
+          ),
         ],
+        child: MaterialApp(
+          localizationsDelegates: const [
+            ...AppLocalizations.localizationsDelegates,
+            FlutterQuillLocalizations.delegate,
+          ],
         supportedLocales: AppLocalizations.supportedLocales,
         home: const NoteFullEditorPage(
           initialContent: '',
@@ -45,7 +75,7 @@ void main() {
           skipDefaultMetadataAutofill: true,
         ),
       ),
-    );
+    ));
     await tester.pumpAndSettle();
 
     final editor = find.byType(QuillEditor);
