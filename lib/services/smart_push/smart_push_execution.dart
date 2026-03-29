@@ -288,8 +288,15 @@ extension SmartPushExecution on SmartPushService {
 
         // ==== 向树莓派 Pico 发送蓝牙广播 ====
         try {
-          // 这里使用 unawaited 或由于不依赖结果，直接发，不要因为连不上硬件而阻塞代码
-          PicoBleService.instance.sendQuoteToPico(noteToShow);
+          // 不阻塞推送主流程，火忘式发送
+          unawaited(
+            PicoBleService.instance.sendQuoteToPico(noteToShow).catchError(
+              (e) {
+                AppLogger.w('蓝牙发送到水墨屏异步失败', error: e);
+                return false;
+              },
+            ),
+          );
         } catch (bleErr) {
           AppLogger.w('蓝牙发送到水墨屏失败', error: bleErr);
         }
