@@ -93,7 +93,9 @@ class NoteListViewState extends State<NoteListView> {
   final Map<String, bool> _expandedItems = {};
   final Map<String, GlobalKey> _itemKeys = {}; // 保存每个笔记的GlobalKey
   final Map<String, ValueNotifier<bool>> _expansionNotifiers = {};
-  // 移除AnimatedList相关的Key，改用ListView.builder
+
+  /// 事件驱动：首批数据加载完成信号，替代忙等轮询
+  Completer<void>? _initialDataCompleter = Completer<void>();
 
   // AI搜索模式标志
   bool _isAISearchMode = false;
@@ -419,6 +421,11 @@ class NoteListViewState extends State<NoteListView> {
 
     // 清理初始化状态
     _isInitializing = false;
+    // 安全释放 Completer，避免 scrollToQuoteById 永久挂起
+    if (_initialDataCompleter != null && !_initialDataCompleter!.isCompleted) {
+      _initialDataCompleter!.complete();
+    }
+    _initialDataCompleter = null;
     super.dispose();
   }
 
@@ -431,20 +438,31 @@ class NoteListViewState extends State<NoteListView> {
   Future<void> scrollToQuoteById(String quoteId) async {
     if (!mounted || quoteId.isEmpty) return;
 
-    // 等待首次数据加载完成（最多 5 秒）
-    for (var wait = 0; wait < 50 && !_initialDataLoaded; wait++) {
-      await Future.delayed(const Duration(milliseconds: 100));
-      if (!mounted) return;
-    }
+    // ── 阶段 1: 事件驱动等待首批数据（取代忙等轮询）──
     if (!_initialDataLoaded) {
-      logDebug('scrollToQuoteById 放弃：首次数据加载超时', source: 'NoteListView');
-      return;
+      final completer = _initialDataCompleter;
+      if (completer != null && !completer.isCompleted) {
+        try {
+          await completer.future.timeout(
+            const Duration(seconds: 5),
+          );
+        } on TimeoutException {
+          logDebug(
+            'scrollToQuoteById 放弃：首次数据加载超时',
+            source: 'NoteListView',
+          );
+          return;
+        }
+      }
+      if (!mounted || !_initialDataLoaded) return;
     }
 
+    // ── 阶段 2: 在分页数据中查找目标笔记 ──
     const maxAttempts = 20;
     for (var attempt = 0; attempt < maxAttempts; attempt++) {
       final index = _quotes.indexWhere((quote) => quote.id == quoteId);
       if (index >= 0) {
+        // 展开目标笔记
         final notifier = _obtainExpansionNotifier(quoteId);
         if (!notifier.value) {
           notifier.value = true;
@@ -459,27 +477,33 @@ class NoteListViewState extends State<NoteListView> {
         _isUserScrolling = false;
         _lastUserScrollTime = null;
 
-        // 如果目标笔记在视口外未被 build，先估算跳转使其进入视口
+        // ── 阶段 3: 动态估算偏移量触发 ListView 构建 ──
         if (_scrollController.hasClients) {
           final key = _itemKeys[quoteId];
           if (key == null || key.currentContext == null) {
-            const estimatedItemHeight = 120.0;
-            final estimatedOffset = index * estimatedItemHeight;
+            final estimatedHeight = _estimateItemHeight();
+            final estimatedOffset = index * estimatedHeight;
             final maxOffset = _scrollController.position.maxScrollExtent;
             _scrollController.jumpTo(estimatedOffset.clamp(0.0, maxOffset));
           }
         }
 
-        // 等待 widget build 完成，确保 _itemKeys 中的 GlobalKey 有 context
-        for (var renderWait = 0; renderWait < 8; renderWait++) {
-          await Future.delayed(const Duration(milliseconds: 60));
+        // ── 阶段 4: 指数退避等待 widget build + context 就绪 ──
+        const maxRenderWait = 8;
+        var renderDelay = 30; // ms, 指数增长
+        for (var renderWait = 0; renderWait < maxRenderWait; renderWait++) {
+          await Future.delayed(
+            Duration(milliseconds: renderDelay),
+          );
           if (!mounted) return;
-          await Future(() {}); // yield to let framework build
+          // 让出一帧给框架完成 layout
+          await WidgetsBinding.instance.endOfFrame;
           final key = _itemKeys[quoteId];
           if (key != null && key.currentContext != null) {
             _scrollToItem(quoteId, index);
             return;
           }
+          renderDelay = (renderDelay * 1.5).toInt().clamp(30, 200);
         }
 
         // 最终兜底尝试
@@ -490,6 +514,7 @@ class NoteListViewState extends State<NoteListView> {
         return;
       }
 
+      // 目标不在已加载范围内，等待或加载更多
       if (!_hasMore || _isLoading) {
         await Future.delayed(const Duration(milliseconds: 200));
       } else {
@@ -498,6 +523,27 @@ class NoteListViewState extends State<NoteListView> {
     }
 
     logDebug('未能在列表中定位笔记: $quoteId', source: 'NoteListView');
+  }
+
+  /// 动态估算列表项高度：从已渲染的 item 中采样。
+  /// 比硬编码 120.0 精确得多，分页/长内容场景偏差更小。
+  double _estimateItemHeight() {
+    const fallback = 120.0;
+    if (_itemKeys.isEmpty) return fallback;
+
+    double totalHeight = 0;
+    int measured = 0;
+    for (final key in _itemKeys.values) {
+      final ctx = key.currentContext;
+      if (ctx == null) continue;
+      final rb = ctx.findRenderObject();
+      if (rb is RenderBox && rb.hasSize) {
+        totalHeight += rb.size.height;
+        measured++;
+        if (measured >= 10) break; // 最多采样 10 个，够用了
+      }
+    }
+    return measured > 0 ? totalHeight / measured : fallback;
   }
 
   ValueNotifier<bool> _obtainExpansionNotifier(String quoteId) {
