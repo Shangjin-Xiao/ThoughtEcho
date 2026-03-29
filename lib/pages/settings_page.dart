@@ -24,7 +24,7 @@ import 'note_sync_page.dart';
 import '../widgets/city_search_widget.dart';
 import '../controllers/weather_search_controller.dart';
 import 'category_settings_page.dart';
-import 'annual_report_page.dart';
+import 'ai_periodic_report_page.dart';
 import 'ai_annual_report_webview.dart';
 import 'license_page.dart' as license;
 import 'preferences_detail_page.dart';
@@ -1323,26 +1323,10 @@ class SettingsPageState extends State<SettingsPage> {
   // ignore: unused_element
   Future<void> _showNativeAnnualReport() async {
     try {
-      final databaseService = Provider.of<DatabaseService>(
-        context,
-        listen: false,
-      );
-      final quotes = await databaseService.getUserQuotes();
-      final currentYear = DateTime.now().year;
-
-      final thisYearQuotes = quotes.where((quote) {
-        final quoteDate = DateTime.parse(quote.date);
-        return quoteDate.year == currentYear;
-      }).toList();
-
       if (mounted) {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) =>
-                // ignore: deprecated_member_use_from_same_package
-                AnnualReportPage(year: currentYear, quotes: thisYearQuotes),
-          ),
+          MaterialPageRoute(builder: (context) => const AIPeriodicReportPage()),
         );
       }
     } catch (e) {
