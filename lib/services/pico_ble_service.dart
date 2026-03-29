@@ -12,11 +12,12 @@ class PicoBleService {
   PicoBleService._init();
 
   // 约定好 Pico 端将广播的设备名称
-  static const String targetDeviceName = 'Pico_ThoughtEcho'; 
-  
+  static const String targetDeviceName = 'Pico_ThoughtEcho';
+
   // 约定好的 BLE Service 和 Characteristic UUID
   static const String picoServiceUuid = '0000ffe0-0000-1000-8000-00805f9b34fb';
-  static const String picoCharacteristicUuid = '0000ffe1-0000-1000-8000-00805f9b34fb';
+  static const String picoCharacteristicUuid =
+      '0000ffe1-0000-1000-8000-00805f9b34fb';
 
   BluetoothDevice? _connectedDevice;
   BluetoothCharacteristic? _targetCharacteristic;
@@ -27,7 +28,7 @@ class PicoBleService {
     // BLE 发送主要侧重移动端（Android/iOS）
     if (kIsWeb || (Platform.isWindows || Platform.isLinux)) {
       AppLogger.w('当前平台默认不开启或不支持 BLE 发送功能');
-      return false; 
+      return false;
     }
 
     try {
@@ -64,11 +65,12 @@ class PicoBleService {
         'author': quote.sourceAuthor ?? 'ThoughtEcho',
         'weather': quote.weather,
         'loc': quote.location,
-        'date': quote.date.split('T').first, 
+        'date': quote.date.split('T').first,
       };
 
       // 剔除空值减轻传输负担
-      payload.removeWhere((key, value) => value == null || value.toString().isEmpty);
+      payload.removeWhere(
+          (key, value) => value == null || value.toString().isEmpty);
 
       final jsonStr = jsonEncode(payload);
       final bytes = utf8.encode(jsonStr); // 必须是 UTF-8 编码避免水墨屏中文乱码
@@ -89,7 +91,6 @@ class PicoBleService {
       await _targetCharacteristic!.write(bytes, withoutResponse: true);
       AppLogger.i('✅ BLE 传向水墨屏：发送成功!');
       return true;
-
     } catch (e) {
       AppLogger.e('BLE 发送笔记到 Pico 失败', error: e);
       return false;
@@ -110,7 +111,7 @@ class PicoBleService {
 
     try {
       AppLogger.i('开始扫描寻找 Pico ($targetDeviceName)...');
-      
+
       // 执行带名字过滤的扫描，超时 4 秒
       await FlutterBluePlus.startScan(
         withNames: [targetDeviceName],
@@ -119,17 +120,20 @@ class PicoBleService {
 
       // 等待并找寻结果中匹配的设备
       final results = await FlutterBluePlus.scanResults.firstWhere(
-        (results) => results.isNotEmpty && results.any((r) => r.device.platformName == targetDeviceName),
+        (results) =>
+            results.isNotEmpty &&
+            results.any((r) => r.device.platformName == targetDeviceName),
         orElse: () => [],
       );
-      
+
       if (results.isEmpty) {
         AppLogger.w('蓝牙扫描结束，未找到 Pico');
         _isConnecting = false;
         return false;
       }
 
-      final targetResult = results.firstWhere((r) => r.device.platformName == targetDeviceName);
+      final targetResult =
+          results.firstWhere((r) => r.device.platformName == targetDeviceName);
       _connectedDevice = targetResult.device;
 
       AppLogger.i('找到 Pico! 准备建立 BLE 连接...');
@@ -155,7 +159,6 @@ class PicoBleService {
       _connectedDevice = null;
       _isConnecting = false;
       return false;
-
     } catch (e) {
       AppLogger.e('Pico 蓝牙连接意外中断 或 扫描失败', error: e);
       _isConnecting = false;
