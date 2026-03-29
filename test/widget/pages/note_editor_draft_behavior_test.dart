@@ -31,8 +31,6 @@ class _TestSettingsService extends ChangeNotifier implements SettingsService {
   noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-
-
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -53,18 +51,17 @@ void main() {
   testWidgets('clearing the editor body removes the recoverable draft', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      MultiProvider(
-        providers: [
-          ChangeNotifierProvider<SettingsService>.value(
-            value: _TestSettingsService(),
-          ),
+    await tester.pumpWidget(MultiProvider(
+      providers: [
+        ChangeNotifierProvider<SettingsService>.value(
+          value: _TestSettingsService(),
+        ),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: const [
+          ...AppLocalizations.localizationsDelegates,
+          FlutterQuillLocalizations.delegate,
         ],
-        child: MaterialApp(
-          localizationsDelegates: const [
-            ...AppLocalizations.localizationsDelegates,
-            FlutterQuillLocalizations.delegate,
-          ],
         supportedLocales: AppLocalizations.supportedLocales,
         home: const NoteFullEditorPage(
           initialContent: '',
