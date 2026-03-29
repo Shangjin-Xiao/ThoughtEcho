@@ -93,8 +93,8 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
     }
     return _analyses.where((analysis) {
       return analysis.content.toLowerCase().contains(
-            _searchQuery.toLowerCase(),
-          ) ||
+                _searchQuery.toLowerCase(),
+              ) ||
           analysis.title.toLowerCase().contains(_searchQuery.toLowerCase());
     }).toList();
   }
@@ -274,7 +274,9 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                       children: [
                         Text(
                           AppLocalizations.of(context).aiAnalysisDetails,
-                          style: Theme.of(context).textTheme.headlineSmall
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineSmall
                               ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 4),
@@ -291,7 +293,9 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                             Text(
                               analysis
                                   .createdAt, // Consider formatting date nicer
-                              style: Theme.of(context).textTheme.bodySmall
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
                                   ?.copyWith(
                                     color: Theme.of(
                                       context,
@@ -334,55 +338,57 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
                     MarkdownBody(
                       data: analysis.content,
                       selectable: true,
-                      styleSheet:
-                          MarkdownStyleSheet.fromTheme(
-                            Theme.of(context),
-                          ).copyWith(
-                            p: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      styleSheet: MarkdownStyleSheet.fromTheme(
+                        Theme.of(context),
+                      ).copyWith(
+                        p: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               height: 1.6,
                               fontSize: 16,
                             ),
-                            h1: Theme.of(context).textTheme.headlineMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: Theme.of(context).colorScheme.primary,
-                                ),
-                            h2: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(fontWeight: FontWeight.bold),
-                            blockquote: Theme.of(context).textTheme.bodyMedium
-                                ?.copyWith(
+                        h1: Theme.of(context)
+                            .textTheme
+                            .headlineMedium
+                            ?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                        h2: Theme.of(context)
+                            .textTheme
+                            .titleLarge
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                        blockquote:
+                            Theme.of(context).textTheme.bodyMedium?.copyWith(
                                   fontStyle: FontStyle.italic,
                                   color: Theme.of(
                                     context,
                                   ).colorScheme.onSurfaceVariant,
                                 ),
-                            blockquoteDecoration: BoxDecoration(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .surfaceContainerHighest
-                                  .withValues(alpha: 0.5),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border(
-                                left: BorderSide(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  width: 4,
-                                ),
-                              ),
-                            ),
-                            code: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  fontFamily: 'monospace',
-                                  backgroundColor: Theme.of(
-                                    context,
-                                  ).colorScheme.surfaceContainerHighest,
-                                ),
-                            codeblockDecoration: BoxDecoration(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(8),
+                        blockquoteDecoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest
+                              .withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border(
+                            left: BorderSide(
+                              color: Theme.of(context).colorScheme.primary,
+                              width: 4,
                             ),
                           ),
+                        ),
+                        code: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontFamily: 'monospace',
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainerHighest,
+                            ),
+                        codeblockDecoration: BoxDecoration(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 32), // Spacing at bottom
                   ],
@@ -407,9 +413,9 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
         Text(
           title,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.primary,
-          ),
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary,
+              ),
         ),
       ],
     );
@@ -665,9 +671,8 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
         0,
         (sum, quote) => sum + quote.content.split('').length,
       );
-      final averageWordsPerNote = totalNotes > 0
-          ? (totalWords / totalNotes).round()
-          : 0;
+      final averageWordsPerNote =
+          totalNotes > 0 ? (totalWords / totalNotes).round() : 0;
 
       // 计算活跃天数
       final uniqueDates = quotes.map((quote) {
@@ -761,8 +766,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
       // 尝试AI生成，如果失败则使用备用方案
       String result;
       try {
-        final prompt =
-            '''
+        final prompt = '''
 请基于以下数据生成一个完整的HTML年度报告。
 
 数据统计：
@@ -916,25 +920,19 @@ $positiveQuotesText
     }).join('\n');
 
     // 生成分类标签云HTML
-    final tagCloud = categoryCounts.entries
-        .take(10)
-        .map((entry) {
-          final isPopular = entry.value > (totalNotes * 0.1);
-          return '<span class="tag${isPopular ? ' popular' : ''}">${entry.key}</span>';
-        })
-        .join('');
+    final tagCloud = categoryCounts.entries.take(10).map((entry) {
+      final isPopular = entry.value > (totalNotes * 0.1);
+      return '<span class="tag${isPopular ? ' popular' : ''}">${entry.key}</span>';
+    }).join('');
 
     // 生成精选笔记HTML
-    final featuredQuotes = positiveQuotes
-        .take(3)
-        .map((quote) {
-          final content = quote.content.length > 150
-              ? '${quote.content.substring(0, 150)}...'
-              : quote.content;
-          final date = DateTime.parse(quote.date).toString().substring(0, 10);
-          return '<div class="quote-card"><div class="quote-content">$content</div><div class="quote-date">$date</div></div>';
-        })
-        .join('\n');
+    final featuredQuotes = positiveQuotes.take(3).map((quote) {
+      final content = quote.content.length > 150
+          ? '${quote.content.substring(0, 150)}...'
+          : quote.content;
+      final date = DateTime.parse(quote.date).toString().substring(0, 10);
+      return '<div class="quote-card"><div class="quote-content">$content</div><div class="quote-date">$date</div></div>';
+    }).join('\n');
 
     // 生成成就HTML
     final achievements = [
@@ -1076,165 +1074,167 @@ $positiveQuotesText
             child: _isLoading
                 ? const AppLoadingView()
                 : filteredAnalyses.isEmpty
-                ? AppEmptyView(
-                    svgAsset: 'assets/empty/empty_state.svg',
-                    text: _analyses.isEmpty
-                        ? '暂无AI分析记录\n在笔记页面点击AI分析按钮，开始你的第一次AI分析吧！'
-                        : '未找到匹配的记录\n尝试使用其他关键词搜索',
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: filteredAnalyses.length,
-                    itemBuilder: (context, index) {
-                      final analysis = filteredAnalyses[index];
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        elevation: 2,
-                        shadowColor: Theme.of(
-                          context,
-                        ).colorScheme.shadow.withValues(alpha: 0.1),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(
-                            AppTheme.cardRadius,
-                          ),
-                          side: BorderSide(
-                            color: Theme.of(
+                    ? AppEmptyView(
+                        svgAsset: 'assets/empty/empty_state.svg',
+                        text: _analyses.isEmpty
+                            ? '暂无AI分析记录\n在笔记页面点击AI分析按钮，开始你的第一次AI分析吧！'
+                            : '未找到匹配的记录\n尝试使用其他关键词搜索',
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: filteredAnalyses.length,
+                        itemBuilder: (context, index) {
+                          final analysis = filteredAnalyses[index];
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            elevation: 2,
+                            shadowColor: Theme.of(
                               context,
-                            ).colorScheme.outline.withValues(alpha: 0.1),
-                          ),
-                        ),
-                        child: InkWell(
-                          onTap: () => _viewAnalysisDetails(analysis),
-                          borderRadius: BorderRadius.circular(
-                            AppTheme.cardRadius,
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
+                            ).colorScheme.shadow.withValues(alpha: 0.1),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                AppTheme.cardRadius,
+                              ),
+                              side: BorderSide(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.outline.withValues(alpha: 0.1),
+                              ),
+                            ),
+                            child: InkWell(
+                              onTap: () => _viewAnalysisDetails(analysis),
+                              borderRadius: BorderRadius.circular(
+                                AppTheme.cardRadius,
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primaryContainer
-                                            .withValues(alpha: 0.3),
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Icon(
-                                        _getAnalysisTypeIcon(
-                                          analysis.analysisType,
-                                        ),
-                                        size: 20,
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.primary,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            _getAnalysisTypeName(
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primaryContainer
+                                                .withValues(alpha: 0.3),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                          ),
+                                          child: Icon(
+                                            _getAnalysisTypeIcon(
                                               analysis.analysisType,
                                             ),
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .titleMedium
-                                                ?.copyWith(
-                                                  fontWeight: FontWeight.bold,
-                                                ),
+                                            size: 20,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
                                           ),
-                                          Text(
-                                            analysis.createdAt,
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodySmall
-                                                ?.copyWith(
-                                                  color: Theme.of(context)
-                                                      .colorScheme
-                                                      .onSurfaceVariant,
-                                                ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    PopupMenuButton<String>(
-                                      icon: Icon(
-                                        Icons.more_vert,
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.onSurfaceVariant,
-                                      ),
-                                      onSelected: (value) {
-                                        if (value == 'delete') {
-                                          _deleteAnalysis(analysis);
-                                        }
-                                      },
-                                      itemBuilder: (context) => [
-                                        PopupMenuItem(
-                                          value: 'delete',
-                                          child: Row(
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
-                                              Icon(
-                                                Icons.delete_outline,
-                                                size: 20,
-                                                color: Theme.of(
-                                                  context,
-                                                ).colorScheme.error,
-                                              ),
-                                              const SizedBox(width: 8),
                                               Text(
-                                                AppLocalizations.of(
-                                                  context,
-                                                ).delete,
-                                                style: TextStyle(
-                                                  color: Theme.of(
-                                                    context,
-                                                  ).colorScheme.error,
+                                                _getAnalysisTypeName(
+                                                  analysis.analysisType,
                                                 ),
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .titleMedium
+                                                    ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                              ),
+                                              Text(
+                                                analysis.createdAt,
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodySmall
+                                                    ?.copyWith(
+                                                      color: Theme.of(context)
+                                                          .colorScheme
+                                                          .onSurfaceVariant,
+                                                    ),
                                               ),
                                             ],
                                           ),
                                         ),
+                                        PopupMenuButton<String>(
+                                          icon: Icon(
+                                            Icons.more_vert,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onSurfaceVariant,
+                                          ),
+                                          onSelected: (value) {
+                                            if (value == 'delete') {
+                                              _deleteAnalysis(analysis);
+                                            }
+                                          },
+                                          itemBuilder: (context) => [
+                                            PopupMenuItem(
+                                              value: 'delete',
+                                              child: Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.delete_outline,
+                                                    size: 20,
+                                                    color: Theme.of(
+                                                      context,
+                                                    ).colorScheme.error,
+                                                  ),
+                                                  const SizedBox(width: 8),
+                                                  Text(
+                                                    AppLocalizations.of(
+                                                      context,
+                                                    ).delete,
+                                                    style: TextStyle(
+                                                      color: Theme.of(
+                                                        context,
+                                                      ).colorScheme.error,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
                                       ],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Container(
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .surfaceContainerHighest
+                                            .withValues(alpha: 0.3),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        analysis.content,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(height: 1.5),
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 16),
-                                Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(12),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .surfaceContainerHighest
-                                        .withValues(alpha: 0.3),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Text(
-                                    analysis.content,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyMedium
-                                        ?.copyWith(height: 1.5),
-                                    maxLines: 3,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                          );
+                        },
+                      ),
           ),
         ],
       ),
