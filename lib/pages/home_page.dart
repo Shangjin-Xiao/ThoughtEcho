@@ -1115,6 +1115,21 @@ class _HomePageState extends State<HomePage>
       }
     }
 
+    if (!mounted) return;
+
+    // 检查是否启用跳过非全屏编辑器
+    final settingsService = context.read<SettingsService>();
+    if (settingsService.skipNonFullscreenEditor) {
+      logDebug('跳过非全屏编辑器，直接打开全屏编辑器');
+      await _openFullscreenEditorDirectly(
+        prefilledContent: prefilledContent,
+        prefilledAuthor: prefilledAuthor,
+        prefilledWork: prefilledWork,
+        hitokotoData: hitokotoData,
+      );
+      return;
+    }
+
     logDebug('显示添加笔记对话框，可用标签数: ${_tags.length}');
 
     // 使用延迟显示，确保动画流畅
@@ -1142,6 +1157,82 @@ class _HomePageState extends State<HomePage>
         );
       }
     });
+  }
+
+  /// 直接打开全屏编辑器（跳过非全屏编辑器）
+  Future<void> _openFullscreenEditorDirectly({
+    String? prefilledContent,
+    String? prefilledAuthor,
+    String? prefilledWork,
+    dynamic hitokotoData,
+  }) async {
+    try {
+      final settingsService = context.read<SettingsService>();
+      String content = prefilledContent ?? '';
+      String? author = prefilledAuthor;
+      String? work = prefilledWork;
+
+      // 处理一言数据
+      final isHitokotoQuickAdd = hitokotoData is Map<String, dynamic>;
+      if (isHitokotoQuickAdd) {
+        content = hitokotoData['hitokoto'] ?? content;
+        author = hitokotoData['from_who'] ?? author;
+        work = hitokotoData['from'] ?? work;
+      }
+
+      // 如果没有指定作者/出处，使用默认值
+      final hasAuthorOrWork = author != null || work != null;
+      if (author == null &&
+          settingsService.defaultAuthor != null &&
+          settingsService.defaultAuthor!.isNotEmpty) {
+        author = settingsService.defaultAuthor;
+      }
+      if (work == null &&
+          settingsService.defaultSource != null &&
+          settingsService.defaultSource!.isNotEmpty) {
+        work = settingsService.defaultSource;
+      }
+
+      if (!mounted) return;
+
+      // 导航到全屏编辑器
+      // 全屏编辑器会处理自动位置/天气
+      // 如果我们传递了作者/出处，跳过编辑器内的默认元数据自动填充
+      final saved = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (context) => NoteFullEditorPage(
+            initialContent: content,
+            initialQuote: null, // 新建笔记
+            allTags: _tags,
+            initialAuthor: author,
+            initialWork: work,
+            skipDefaultMetadataAutofill: hasAuthorOrWork,
+          ),
+        ),
+      );
+
+      // 如果保存成功，刷新列表
+      if (saved == true && mounted) {
+        logDebug('全屏编辑器保存成功返回，触发列表刷新');
+        _loadTags();
+        if (_noteListViewKey.currentState != null) {
+          _noteListViewKey.currentState!.resetAndLoad();
+        }
+      }
+    } catch (e) {
+      logError('打开全屏编辑器失败', error: e, source: 'HomePage');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content:
+                Text(AppLocalizations.of(context).openFullEditorFailedSimple),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
   }
 
   // FAB 短按处理

@@ -38,6 +38,12 @@ void main() {
       expect(AppSettings.fromJson(const {}).excerptIntentEnabled, isTrue);
     });
 
+    test('AppSettings should default direct fullscreen editor toggle to false',
+        () {
+      expect(AppSettings.defaultSettings().skipNonFullscreenEditor, isFalse);
+      expect(AppSettings.fromJson(const {}).skipNonFullscreenEditor, isFalse);
+    });
+
     test('should persist excerpt intake toggle changes', () async {
       expect(settingsService.excerptIntentEnabled, isTrue);
 
@@ -45,6 +51,15 @@ void main() {
 
       expect(settingsService.excerptIntentEnabled, isFalse);
       expect(settingsService.appSettings.excerptIntentEnabled, isFalse);
+    });
+
+    test('should persist direct fullscreen editor toggle changes', () async {
+      expect(settingsService.skipNonFullscreenEditor, isFalse);
+
+      await settingsService.setSkipNonFullscreenEditor(true);
+
+      expect(settingsService.skipNonFullscreenEditor, isTrue);
+      expect(settingsService.appSettings.skipNonFullscreenEditor, isTrue);
     });
   });
 }

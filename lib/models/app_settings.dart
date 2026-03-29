@@ -23,6 +23,7 @@ class AppSettings {
   final List<String> defaultTagIds; // 新增：默认标签 ID 列表（自动填充）
   final bool anniversaryShown; // 一周年庆典动画是否已显示过
   final bool anniversaryAnimationEnabled; // 一周年庆典动画是否启用（开发者模式控制）
+  final bool skipNonFullscreenEditor; // 新增：跳过非全屏编辑器，直接进入全屏编辑器
 
   AppSettings({
     this.hitokotoType = 'a,b,c,d,e,f,g,h,i,j,k', // 默认全选所有类型
@@ -49,6 +50,7 @@ class AppSettings {
     this.defaultTagIds = const [], // 默认无自动填充标签
     this.anniversaryShown = false, // 默认未显示过
     this.anniversaryAnimationEnabled = true, // 默认启用庆典动画
+    this.skipNonFullscreenEditor = false, // 默认不跳过非全屏编辑器
   });
 
   Map<String, dynamic> toJson() {
@@ -77,6 +79,7 @@ class AppSettings {
       'defaultTagIds': defaultTagIds,
       'anniversaryShown': anniversaryShown,
       'anniversaryAnimationEnabled': anniversaryAnimationEnabled,
+      'skipNonFullscreenEditor': skipNonFullscreenEditor,
     };
   }
 
@@ -109,6 +112,7 @@ class AppSettings {
           (map['defaultTagIds'] as List<dynamic>?)?.cast<String>() ?? const [],
       anniversaryShown: map['anniversaryShown'] ?? false,
       anniversaryAnimationEnabled: map['anniversaryAnimationEnabled'] ?? true,
+      skipNonFullscreenEditor: map['skipNonFullscreenEditor'] ?? false,
     );
   }
 
@@ -137,6 +141,7 @@ class AppSettings {
         defaultTagIds: const [],
         anniversaryShown: false,
         anniversaryAnimationEnabled: true,
+        skipNonFullscreenEditor: false, // 默认不跳过非全屏编辑器
       );
 
   /// 使用特殊标记来区分"未指定"和"设置为null（跟随系统）"
@@ -168,6 +173,7 @@ class AppSettings {
     List<String>? defaultTagIds,
     bool? anniversaryShown,
     bool? anniversaryAnimationEnabled,
+    bool? skipNonFullscreenEditor,
   }) {
     return AppSettings(
       hitokotoType: hitokotoType ?? this.hitokotoType,
@@ -203,6 +209,8 @@ class AppSettings {
       anniversaryShown: anniversaryShown ?? this.anniversaryShown,
       anniversaryAnimationEnabled:
           anniversaryAnimationEnabled ?? this.anniversaryAnimationEnabled,
+      skipNonFullscreenEditor:
+          skipNonFullscreenEditor ?? this.skipNonFullscreenEditor,
     );
   }
 }

@@ -57,6 +57,9 @@ class NoteFullEditorPage extends StatefulWidget {
   final String initialContent;
   final Quote? initialQuote;
   final List<NoteCategory>? allTags;
+  final String? initialAuthor;
+  final String? initialWork;
+  final bool skipDefaultMetadataAutofill;
   final bool isRestoredDraft; // 新增：标记是否为恢复的草稿
   final String? restoredDraftId; // 新增：恢复草稿的原始ID
 
@@ -65,6 +68,9 @@ class NoteFullEditorPage extends StatefulWidget {
     required this.initialContent,
     this.initialQuote,
     this.allTags,
+    this.initialAuthor,
+    this.initialWork,
+    this.skipDefaultMetadataAutofill = false,
     this.isRestoredDraft = false, // 默认为 false
     this.restoredDraftId, // 恢复草稿的原始ID
   });
@@ -181,10 +187,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
     // 作者/作品
     _authorController = TextEditingController(
-      text: widget.initialQuote?.sourceAuthor ?? '',
+      text: widget.initialQuote?.sourceAuthor ?? widget.initialAuthor ?? '',
     );
     _workController = TextEditingController(
-      text: widget.initialQuote?.sourceWork ?? '',
+      text: widget.initialQuote?.sourceWork ?? widget.initialWork ?? '',
     );
     _selectedTagIds = widget.initialQuote?.tagIds ?? [];
     // 颜色
@@ -212,7 +218,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     _showWeather = _weather != null;
 
     // 新建笔记时，自动填充默认作者、出处和标签
-    if (widget.initialQuote == null) {
+    if (widget.initialQuote == null && !widget.skipDefaultMetadataAutofill) {
       try {
         final settingsService =
             Provider.of<SettingsService>(context, listen: false);
@@ -262,9 +268,9 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     // 初始化用于检测未保存内容的初始状态
     _initialPlainText = widget.initialContent;
     _initialDeltaContent = widget.initialQuote?.deltaContent ?? '';
-    _initialAuthor = widget.initialQuote?.sourceAuthor ?? '';
-    _initialWork = widget.initialQuote?.sourceWork ?? '';
-    _initialTagIds = List.from(widget.initialQuote?.tagIds ?? []);
+    _initialAuthor = _authorController.text;
+    _initialWork = _workController.text;
+    _initialTagIds = List.from(_selectedTagIds);
     _initialColorHex = widget.initialQuote?.colorHex;
     _initialLocation = widget.initialQuote?.location;
     _initialLatitude = widget.initialQuote?.latitude;
