@@ -134,6 +134,12 @@
     <!-- 通知权限 (Android 13+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     
+    <!-- 蓝牙权限 (BLE 与树莓派 Pico 通信) -->
+    <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
+    <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+    
     <!-- 前台服务权限 (用于可靠的后台推送) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC"
@@ -146,4 +152,6 @@
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
     <uses-feature android:name="android.software.leanback" android:required="false" />
+    <!-- 蓝牙硬件特性 (required=false: 没蓝牙的设备仍能安装) -->
+    <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
 </manifest>
