@@ -107,6 +107,15 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       final key = _draftStorageKey;
       if (key == null || key.isEmpty) return;
       final plainText = _controller.document.toPlainText().trim();
+
+      // 只有用户实际编写了正文内容才保存草稿
+      // 自动添加的天气、位置、标签等不应该触发草稿保存
+      if (plainText.isEmpty) {
+        // 如果正文为空，删除已存在的草稿
+        await _clearDraft();
+        return;
+      }
+
       final deltaJson = await _getDocumentContentSafely();
       final payload = {
         'deltaContent': deltaJson,
