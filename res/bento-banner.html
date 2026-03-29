@@ -64,24 +64,27 @@
         
         <!-- Box 1: Brand & Slogan (2x1) -->
         <div class="bento-card col-span-2 row-span-1 flex flex-col justify-between p-8">
-            <div class="flex items-center gap-2.5 bg-gray-50 text-gray-400 w-max px-4 py-1.5 rounded-full border border-gray-100 shadow-sm">
-                <span class="text-yellow-500 font-bold text-[18px]">🤖</span>
-                <span class="font-bold tracking-[0.1em] text-[13px] uppercase">AI-Powered Inspiration Notebook</span>
+            <div class="flex items-start w-full gap-4">
+                <div class="flex items-center gap-2.5 bg-gray-50 text-gray-400 w-max px-4 py-1.5 rounded-full border border-gray-100 shadow-sm">
+                    <span class="font-bold tracking-[0.1em] text-[13px] uppercase">AI-Powered Inspiration Notebook</span>
+                </div>
             </div>
             
             <div class="flex items-center gap-6 mt-auto mb-2 relative">
                 <img src="icon.png" alt="Icon" class="w-[84px] h-[84px] rounded-[24px] shadow-[4px_10px_20px_rgba(0,0,0,0.08)] border border-gray-100/50 relative z-10">
                 <div class="flex flex-col gap-2 relative z-10">
                     <h1 class="text-[44px] font-black text-gray-900 leading-[1] tracking-tight">ThoughtEcho 心迹</h1>
-                    <p class="text-[17px] text-gray-500 font-bold tracking-wide">
-                        让我们一起随心记录，释放 AI 洞察的力量 ✨
-                    </p>
+                    <div class="flex flex-col gap-1 mt-1 max-w-[360px]">
+                        <p class="text-[18px] font-black text-gray-700 tracking-[0.01em] leading-none">
+                            你的专属灵感摘录本
+                        </p>
+                    </div>
+                    <div class="flex gap-2 items-center shrink-0 mt-2">
+                        <div class="text-[12px] font-bold text-gray-500 bg-gray-100 px-3 py-1 leading-none rounded-full border border-gray-200">Windows</div>
+                        <div class="text-[12px] font-bold text-gray-500 bg-gray-100 px-3 py-1 leading-none rounded-full border border-gray-200">Android</div>
+                        <div class="text-[12px] font-bold text-gray-500 bg-gray-100 px-3 py-1 leading-none rounded-full border border-gray-200">iOS</div>
+                    </div>
                 </div>
-            </div>
-            <div class="absolute bottom-6 right-8 flex gap-2">
-                <div class="text-[12px] font-bold text-gray-400 bg-gray-100 px-3 py-1 rounded-full border border-gray-200">Windows</div>
-                <div class="text-[12px] font-bold text-gray-400 bg-gray-100 px-3 py-1 rounded-full border border-gray-200">Android</div>
-                <div class="text-[12px] font-bold text-gray-400 bg-gray-100 px-3 py-1 rounded-full border border-gray-200">iOS</div>
             </div>
         </div>
 
@@ -94,8 +97,8 @@
                 <p class="text-[14px] text-blue-500/80 font-bold uppercase tracking-widest">Quick Capture</p>
             </div>
             
-            <div class="relative z-10 w-full flex-1 rounded-t-[36px] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.15)] bg-white border-[7px] border-b-0 border-white ring-1 ring-black/5 transform rotate-[-2deg] origin-bottom transition-transform duration-500 mt-2">
-                <img src="screenshot/home_page.jpg" class="w-full h-full object-cover object-top">
+            <div class="relative z-10 w-full flex-1 rounded-t-[36px] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.15)] bg-[#EEF4FF] border-[7px] border-b-0 border-white ring-1 ring-black/5 transform rotate-[-2deg] origin-bottom transition-transform duration-500 mt-2 flex items-start justify-center">
+                <img src="screenshot/home_page.jpg" class="w-auto h-full object-contain object-top">
             </div>
         </div>
 
@@ -112,7 +115,7 @@
             </div>
             
             <div class="relative z-10 flex-1 mt-4 ml-[10px] rounded-tl-[16px] overflow-hidden shadow-2xl border-t-[4px] border-l-[4px] border-gray-700/50 transform rotate-[-4deg] translate-y-2">
-                <img src="screenshot/note_qa_chat_page.jpg" class="w-full h-full object-cover object-top opacity-95">
+                <img src="screenshot/note_qa_chat_page.jpg" class="w-full h-[calc(100%+250px)] object-cover object-top opacity-95 -mt-[250px]">
             </div>
         </div>
 
@@ -122,17 +125,17 @@
             
             <div class="relative z-10 w-[50%] h-full flex flex-col justify-center px-8">
                 <div class="w-11 h-11 bg-blue-500 text-white rounded-[14px] flex items-center justify-center mb-4 shadow-[0_8px_16px_rgba(59,130,246,0.3)]">
-                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                    <svg class="w-5 h-5 transform -translate-x-[1px] translate-y-[1px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
                 </div>
                 <h3 class="text-[24px] font-black text-gray-900 mb-1 leading-tight">全功能富文本</h3>
                 <p class="text-[14px] text-blue-900/60 font-bold leading-relaxed">
-                    千万级长文流畅加载，<br>多媒体混排与多格式存储。
+                    多媒体插入和<br>天气位置情景支持。
                 </p>
             </div>
             
             <div class="relative z-10 w-[50%] h-full flex items-end justify-end overflow-visible">
                 <div class="w-[340px] h-[200px] shadow-[-10px_-10px_30px_rgba(0,0,0,0.1)] bg-white rounded-tl-[24px] overflow-hidden border-t-8 border-l-8 border-white transform translate-x-4 translate-y-6 rotate-[-4deg] transition-transform duration-500">
-                    <img src="screenshot/note_full_editor_page.jpg" class="w-full h-full object-cover object-left-top">
+                    <img src="screenshot/note_full_editor_page.jpg" class="w-full h-full object-cover object-top">
                 </div>
             </div>
         </div>
@@ -146,7 +149,7 @@
                 </p>
             </div>
             <div class="relative z-10 flex-1 mt-3 ml-[20px] rounded-tl-[16px] overflow-hidden shadow-xl border-t-[5px] border-l-[5px] border-white transform rotate-[-3deg] translate-y-1">
-                <img src="screenshot/period_report.jpg" class="w-full h-full object-cover object-top">
+                <img src="screenshot/period_report.jpg" class="w-full h-full object-cover object-center">
             </div>
         </div>
 
