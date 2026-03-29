@@ -226,6 +226,14 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 跳过非全屏编辑器，直接进入全屏编辑器
+  bool get skipNonFullscreenEditor => _appSettings.skipNonFullscreenEditor;
+  Future<void> setSkipNonFullscreenEditor(bool enabled) async {
+    _appSettings = _appSettings.copyWith(skipNonFullscreenEditor: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
   SettingsService(this._prefs);
 
   /// 创建SettingsService实例的静态工厂方法

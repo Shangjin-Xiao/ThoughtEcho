@@ -211,6 +211,15 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                   value: settings.excerptIntentEnabled,
                   onChanged: (v) => settings.setExcerptIntentEnabled(v),
                 ),
+                _buildDivider(),
+                _buildSwitchTile(
+                  context: context,
+                  title: l10n.skipNonFullscreenEditor,
+                  subtitle: l10n.skipNonFullscreenEditorDesc,
+                  icon: Icons.fullscreen_outlined,
+                  value: settings.skipNonFullscreenEditor,
+                  onChanged: (v) => settings.setSkipNonFullscreenEditor(v),
+                ),
               ],
             ),
 
