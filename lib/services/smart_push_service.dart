@@ -26,6 +26,7 @@ import '../utils/string_utils.dart';
 import 'background_push_handler.dart';
 import 'smart_push_analytics.dart';
 import 'smart_push_computation.dart';
+import 'pico_ble_service.dart'; // 引入以支持自动推送到硬件
 
 part 'smart_push/smart_push_scheduling.dart';
 part 'smart_push/smart_push_platform.dart';

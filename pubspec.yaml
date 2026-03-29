@@ -83,11 +83,12 @@ dependencies:
   android_alarm_manager_plus: ^4.0.0
   timezone: ^0.10.0
   workmanager: ^0.9.0+3
+  flutter_blue_plus: ^1.32.0 # BLE 蓝牙通信，用于向树莓派 Pico 发送数据
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0
+  flutter_lints: '>=5.0.0 <7.0.0'
   flutter_launcher_icons: ^0.14.4
   # Testing framework dependencies
   integration_test:
