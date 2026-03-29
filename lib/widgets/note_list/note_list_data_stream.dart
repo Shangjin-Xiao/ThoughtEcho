@@ -120,6 +120,11 @@ extension _NoteListDataStreamExtension on NoteListViewState {
 
           if (isFirstLoad) {
             _initialDataLoaded = true;
+            // 通知 Completer：首批数据已就绪（scrollToQuoteById 事件驱动等待）
+            if (_initialDataCompleter != null &&
+                !_initialDataCompleter!.isCompleted) {
+              _initialDataCompleter!.complete();
+            }
             // 延迟启用自动滚动，避免冷启动时的滚动冲突
             Future.delayed(const Duration(milliseconds: 1500), () {
               if (mounted) {
