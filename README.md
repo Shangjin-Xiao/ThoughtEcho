@@ -34,7 +34,6 @@
   </p>
 
   <!-- TODO: 这里需要你提供一张名为 hero_banner.png 的图片放在 res/screenshot/ 下 -->
-  <img src="res/screenshot/hero_banner.png" alt="ThoughtEcho App Preview" width="100%">
 
   <p>
     <b>⚠️ 友情提示：</b>这是一个与 AI 协作完成的项目，我会持续打磨体验，如遇潜在的小 bug 敬请包涵，也欢迎随时反馈。
