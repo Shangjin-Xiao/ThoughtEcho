@@ -178,8 +178,8 @@ class NetworkService {
       );
 
       return response;
-    } catch (e) {
-      logDebug('AI请求失败: $e');
+    } catch (e, stack) {
+      AppLogger.e('AI请求失败', error: e, stackTrace: stack, source: 'NetworkService');
       rethrow;
     }
   }
@@ -219,8 +219,8 @@ class NetworkService {
         onComplete,
         onError,
       );
-    } catch (e) {
-      logDebug('AI流式请求失败: $e');
+    } catch (e, stack) {
+      AppLogger.e('AI流式请求失败', error: e, stackTrace: stack, source: 'NetworkService');
       onError(Exception('AI流式请求失败: $e'));
     }
   }
@@ -376,8 +376,8 @@ class NetworkService {
                 onData(anthropicContent);
                 continue;
               }
-            } catch (e) {
-              logDebug('解析流式响应JSON错误: $e');
+            } catch (e, stack) {
+              AppLogger.e('解析流式响应JSON错误', error: e, stackTrace: stack, source: 'NetworkService');
             }
           }
         }
