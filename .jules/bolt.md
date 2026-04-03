@@ -13,3 +13,7 @@
 ## 2025-03-27 - [N+1 DB Insert Optimization]
 **Learning:** In Dart/Flutter SQLite (`sqflite`), using a `for` loop to execute `await txn.insert()` causes a significant Platform Channel communication overhead per iteration. This is particularly problematic when saving objects with multiple relationships (like tags).
 **Action:** Always use `txn.batch()` to enqueue commands and execute them together via `await batch.commit(noResult: true)` when inserting or updating multiple related rows in SQLite. This eliminates the N+1 execution overhead.
+
+## 2025-04-03 - [LEFT JOIN + GROUP BY vs Scalar Subquery in SQLite]
+**Learning:** In SQLite queries containing `LIMIT`/`OFFSET` (e.g., pagination), fetching aggregated related data (like tags) using a `LEFT JOIN` and `GROUP BY` forces SQLite to perform a full table aggregation before applying the limit. This leads to a massive degradation in performance when the table size grows.
+**Action:** Replace `LEFT JOIN` + `GROUP BY` with a scalar subquery in the `SELECT` clause, such as `(SELECT GROUP_CONCAT(tag_id) FROM quote_tags WHERE quote_id = q.id)`. This ensures that the aggregation is only executed on the already filtered/limited result set, transforming an $O(N \times M)$ operation into an $O(L)$ operation, where $L$ is the limit.
