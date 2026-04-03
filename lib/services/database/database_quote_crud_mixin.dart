@@ -113,14 +113,12 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
     try {
       final db = await safeDatabase;
 
-      // 使用 GROUP_CONCAT 获取关联标签
+      // ⚡ Bolt: 使用标量子查询优化标签聚合查询，解决因 LEFT JOIN + GROUP BY 导致的性能问题
       final List<Map<String, dynamic>> maps = await db.rawQuery(
         '''
-        SELECT q.*, GROUP_CONCAT(qt.tag_id) as tag_ids
+        SELECT q.*, (SELECT GROUP_CONCAT(tag_id) FROM quote_tags WHERE quote_id = q.id) as tag_ids
         FROM quotes q
-        LEFT JOIN quote_tags qt ON q.id = qt.quote_id
         WHERE q.id = ?
-        GROUP BY q.id
       ''',
         [id],
       );
@@ -152,12 +150,10 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
     try {
       final db = await safeDatabase;
 
-      // 修复：使用 LEFT JOIN 获取笔记及其关联的标签
-      // 这样可以正确获取每个笔记的 tagIds
+      // ⚡ Bolt: 使用标量子查询优化获取笔记及其关联的标签
       final String query = '''
-        SELECT q.*, GROUP_CONCAT(qt.tag_id) as tag_ids
+        SELECT q.*, (SELECT GROUP_CONCAT(tag_id) FROM quote_tags WHERE quote_id = q.id) as tag_ids
         FROM quotes q
-        LEFT JOIN quote_tags qt ON q.id = qt.quote_id
         ${excludeHiddenNotes ? '''
         WHERE NOT EXISTS (
           SELECT 1 FROM quote_tags qt_hidden
@@ -165,7 +161,6 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
           AND qt_hidden.tag_id = ?
         )
         ''' : ''}
-        GROUP BY q.id
       ''';
 
       final List<Map<String, dynamic>> maps = excludeHiddenNotes
