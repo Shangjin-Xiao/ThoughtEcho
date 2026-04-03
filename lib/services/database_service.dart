@@ -76,8 +76,6 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     bool excludeHiddenNotes = true,
   });
   Future<List<Quote>> getQuotesForSmartPush({
-    String? whereSql,
-    List<Object?>? whereArgs,
     int limit = 200,
     String orderBy = 'q.date DESC',
   });
