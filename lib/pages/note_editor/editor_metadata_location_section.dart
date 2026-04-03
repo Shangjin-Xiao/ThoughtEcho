@@ -235,8 +235,8 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                                     _location,
                                   )
                                 : ((_latitude != null && _longitude != null)
-                                      ? '📍 ${LocationService.formatCoordinates(_latitude, _longitude)}'
-                                      : l10n.gettingLocationHint),
+                                    ? '📍 ${LocationService.formatCoordinates(_latitude, _longitude)}'
+                                    : l10n.gettingLocationHint),
                             style: TextStyle(
                               fontSize: 14,
                               color: theme.colorScheme.onSurfaceVariant,
