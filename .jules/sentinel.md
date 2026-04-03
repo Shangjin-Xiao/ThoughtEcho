@@ -26,3 +26,7 @@
 **Vulnerability:** The `getQuotesForSmartPush` method in `DatabaseService` accepted a raw `whereSql` string, which was directly interpolated into a SQL query. This could allow an attacker to bypass filters (like the hidden tag filter) or execute arbitrary SQL.
 **Learning:** Even internal-only parameters (like those originating from Isolate logic) should be handled securely or removed if they provide an unnecessary injection vector.
 **Prevention:** Avoid methods that accept raw SQL fragments. Use structured parameters and let the service layer build the query using parameterized placeholders.
+## 2026-03-29 - [Fix SQL injection in table info query]
+**Vulnerability:** String interpolation in `PRAGMA table_info($tableName)` opens up a potential SQL injection vulnerability, even if the input is currently validated.
+**Learning:** SQLite's `PRAGMA` statements do not natively support query parameters in all contexts, but equivalent table-valued functions like `pragma_table_info(?)` do, allowing for secure parameterized queries.
+**Prevention:** Always use parameterized queries or table-valued functions instead of string interpolation for SQL queries, even for schema inspection commands.
