@@ -43,7 +43,8 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
         if (shouldExcludeHidden) {
           filtered = filtered
               .where(
-                  (q) => !q.tagIds.contains(_DatabaseServiceBase.hiddenTagId))
+                (q) => !q.tagIds.contains(_DatabaseServiceBase.hiddenTagId),
+              )
               .toList();
         }
 
@@ -272,14 +273,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     }
 
     // 优化：搜索查询使用FTS（全文搜索）如果可用，否则使用优化的LIKE查询
-    if (searchQuery != null && searchQuery.isNotEmpty) {
-      // 使用更高效的搜索策略：优先匹配内容，然后匹配其他字段
-      conditions.add(
-        '(q.content LIKE ? OR (q.source LIKE ? OR q.source_author LIKE ? OR q.source_work LIKE ?))',
-      );
-      final searchParam = '%$searchQuery%';
-      args.addAll([searchParam, searchParam, searchParam, searchParam]);
-    }
+    _applySearchQuery(searchQuery, conditions, args);
 
     // 天气筛选
     if (selectedWeathers != null && selectedWeathers.isNotEmpty) {
