@@ -501,6 +501,7 @@
   "customColor": "Couleur personnalisée",
   "select": "Sélectionner",
   "editMetadata": "Modifier les métadonnées",
+  "noLocationWeatherRecorded": "Aucun lieu ou météo enregistré lors de la première sauvegarde",
   "done": "Terminé",
   "selectTags": "Sélectionner les étiquettes",
   "noMatchingTags": "Aucune étiquette correspondante trouvée",

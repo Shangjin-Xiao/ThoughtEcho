@@ -501,6 +501,7 @@
   "customColor": "自定义颜色",
   "select": "选择",
   "editMetadata": "编辑元数据",
+  "noLocationWeatherRecorded": "此笔记首次保存时未记录位置和天气信息",
   "done": "完成",
   "selectTags": "选择标签",
   "noMatchingTags": "没有找到匹配的标签",
