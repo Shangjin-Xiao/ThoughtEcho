@@ -112,16 +112,14 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
     final whereClause =
         conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
 
-    // 优化：使用JOIN一次性获取所有数据，避免N+1查询问题
+    // ⚡ Bolt: 使用标量子查询优化带有 LIMIT/OFFSET 的标签聚合查询，解决因 LEFT JOIN + GROUP BY 导致的整表聚合性能问题
     final sanitizedOrderBy = sanitizeOrderBy(orderBy, prefix: 'q');
     final query = '''
       SELECT 
         q.*,
-        GROUP_CONCAT(qt.tag_id) as tag_ids_joined
+        (SELECT GROUP_CONCAT(tag_id) FROM quote_tags WHERE quote_id = q.id) as tag_ids_joined
       FROM quotes q
-      LEFT JOIN quote_tags qt ON q.id = qt.quote_id
       $whereClause
-      GROUP BY q.id
       ORDER BY $sanitizedOrderBy
       LIMIT ? OFFSET ?
     ''';
