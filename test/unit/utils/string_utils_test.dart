@@ -134,5 +134,24 @@ void main() {
         expect(StringUtils.needsExpansion('a' * 101), isTrue);
       });
     });
+
+    group('removeObjectReplacementChar', () {
+      test('should remove U+FFFC characters from string', () {
+        expect(StringUtils.removeObjectReplacementChar('Hello\u{FFFC}World'),
+            'HelloWorld');
+        expect(
+            StringUtils.removeObjectReplacementChar('\u{FFFC}Start'), 'Start');
+        expect(StringUtils.removeObjectReplacementChar('End\u{FFFC}'), 'End');
+        expect(
+            StringUtils.removeObjectReplacementChar('\u{FFFC}\u{FFFC}\u{FFFC}'),
+            '');
+      });
+
+      test('should return same string if no U+FFFC is present', () {
+        expect(StringUtils.removeObjectReplacementChar('Normal String'),
+            'Normal String');
+        expect(StringUtils.removeObjectReplacementChar(''), '');
+      });
+    });
   });
 }
