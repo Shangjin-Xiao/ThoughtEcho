@@ -276,8 +276,8 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                                       value: _saveProgress >= 0.99
                                           ? 1.0
                                           : (_saveProgress <= 0
-                                                ? null
-                                                : _saveProgress),
+                                              ? null
+                                              : _saveProgress),
                                       strokeWidth: 3,
                                     ),
                                   ),

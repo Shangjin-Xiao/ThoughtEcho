@@ -340,7 +340,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       colorHex: _selectedColorHex,
       location: _showLocation
           ? (_location ??
-                (_latitude != null ? LocationService.kAddressPending : null))
+              (_latitude != null ? LocationService.kAddressPending : null))
           : null,
       latitude: _showLocation ? _latitude : null,
       longitude: _showLocation ? _longitude : null,
