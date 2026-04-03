@@ -434,7 +434,7 @@ class LocalSendProvider {
         logWarning('Handshake warning: /info status ${resp.statusCode}', source: 'LocalSend');
       }
     } catch (e) {
-      logError('Handshake failed: $e', source: 'LocalSend');
+      logWarning('Handshake failed: $e', source: 'LocalSend');
       // Do not throw; allow prepare step to try as well but keep logs
     } finally {
       client.close();
