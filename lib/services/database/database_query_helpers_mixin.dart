@@ -84,15 +84,7 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
     }
 
     // 搜索查询
-    // TODO(low): 该 LIKE 搜索模式在第 696、1992、2430 行重复了 3 次，
-    // 可提取为共享方法。当前量级（个人笔记）性能足够，暂不需要 FTS5。
-    if (searchQuery != null && searchQuery.isNotEmpty) {
-      conditions.add(
-        '(q.content LIKE ? OR (q.source LIKE ? OR q.source_author LIKE ? OR q.source_work LIKE ?))',
-      );
-      final searchParam = '%$searchQuery%';
-      args.addAll([searchParam, searchParam, searchParam, searchParam]);
-    }
+    _applySearchQuery(searchQuery, conditions, args);
 
     // 天气筛选
     if (selectedWeathers != null && selectedWeathers.isNotEmpty) {
@@ -112,16 +104,18 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
     final whereClause =
         conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
 
-    // 优化：使用JOIN一次性获取所有数据，避免N+1查询问题
+<<<<<<< bolt/sqlite-scalar-subquery-optimization-12317187905385071383
+    // ⚡ Bolt: 使用标量子查询优化带有 LIMIT/OFFSET 的标签聚合查询，解决因 LEFT JOIN + GROUP BY 导致的整表聚合性能问题
+=======
+    // ⚡ Bolt: 使用标量子查询替代 LEFT JOIN 和 GROUP BY，避免在 LIMIT 分页前全表聚合的性能瓶颈
+>>>>>>> main
     final sanitizedOrderBy = sanitizeOrderBy(orderBy, prefix: 'q');
     final query = '''
       SELECT 
         q.*,
-        GROUP_CONCAT(qt.tag_id) as tag_ids_joined
+        (SELECT GROUP_CONCAT(tag_id) FROM quote_tags WHERE quote_id = q.id) as tag_ids_joined
       FROM quotes q
-      LEFT JOIN quote_tags qt ON q.id = qt.quote_id
       $whereClause
-      GROUP BY q.id
       ORDER BY $sanitizedOrderBy
       LIMIT ? OFFSET ?
     ''';
@@ -329,13 +323,7 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
       }
 
       // 搜索查询
-      if (searchQuery != null && searchQuery.isNotEmpty) {
-        conditions.add(
-          '(q.content LIKE ? OR q.source LIKE ? OR q.source_author LIKE ? OR q.source_work LIKE ?)',
-        );
-        final searchParam = '%$searchQuery%';
-        args.addAll([searchParam, searchParam, searchParam, searchParam]);
-      }
+      _applySearchQuery(searchQuery, conditions, args);
 
       // 天气筛选
       if (selectedWeathers != null && selectedWeathers.isNotEmpty) {

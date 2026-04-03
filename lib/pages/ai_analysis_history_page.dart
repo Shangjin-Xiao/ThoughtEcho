@@ -164,6 +164,7 @@ class _AIAnalysisHistoryPageState extends State<AIAnalysisHistoryPage> {
             ),
             trailing: IconButton(
               icon: const Icon(Icons.delete),
+              tooltip: AppLocalizations.of(context).delete,
               onPressed: () => _showDeleteDialog(analysis),
             ),
             onTap: () => _showAnalysisDetail(analysis),
