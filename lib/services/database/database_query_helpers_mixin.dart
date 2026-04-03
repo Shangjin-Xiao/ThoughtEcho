@@ -162,8 +162,6 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
   /// 智能推送专用轻量查询
   @override
   Future<List<Quote>> getQuotesForSmartPush({
-    String? whereSql,
-    List<Object?>? whereArgs,
     int limit = 200,
     String orderBy = 'q.date DESC',
   }) async {
@@ -201,13 +199,6 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
         )
       ''');
       args.add(_DatabaseServiceBase.hiddenTagId);
-
-      if (whereSql != null && whereSql.isNotEmpty) {
-        conditions.add(whereSql);
-        if (whereArgs != null) {
-          args.addAll(whereArgs);
-        }
-      }
 
       final where =
           conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
