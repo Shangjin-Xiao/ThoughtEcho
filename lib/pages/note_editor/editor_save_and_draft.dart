@@ -60,7 +60,10 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
             logDebug('插入内容失败: $insertError');
             // 最后的兜底：创建一个包含错误信息的文档
             try {
-              _controller.document.insert(0, '文档加载失败，请重新打开编辑器');
+              final errorMessage = AppLocalizations.of(
+                context,
+              ).documentLoadFailed;
+              _controller.document.insert(0, errorMessage);
             } catch (_) {
               // 完全失败，保持空文档
             }
@@ -403,17 +406,19 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     } catch (e) {
       // 数据库保存失败，回滚本次移动到永久目录的媒体文件，避免产生孤儿
       try {
-        await Future.wait(movedToPermanentForThisSave.map((p) async {
-          try {
-            final f = File(p);
-            if (await f.exists()) {
-              await f.delete();
-              logDebug('因保存失败，回滚删除永久媒体文件: $p');
+        await Future.wait(
+          movedToPermanentForThisSave.map((p) async {
+            try {
+              final f = File(p);
+              if (await f.exists()) {
+                await f.delete();
+                logDebug('因保存失败，回滚删除永久媒体文件: $p');
+              }
+            } catch (itemErr) {
+              logDebug('单个媒体文件回滚删除失败: $p, $itemErr');
             }
-          } catch (itemErr) {
-            logDebug('单个媒体文件回滚删除失败: $p, $itemErr');
-          }
-        }));
+          }),
+        );
       } catch (rollbackErr) {
         logDebug('保存失败后的媒体回滚删除出错: $rollbackErr');
       }

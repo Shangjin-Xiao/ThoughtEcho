@@ -501,6 +501,7 @@
   "customColor": "사용자 지정 색상",
   "select": "선택",
   "editMetadata": "메타데이터 편집",
+  "noLocationWeatherRecorded": "이 노트를 처음 저장할 때 위치와 날씨 정보가 기록되지 않았습니다",
   "done": "완료",
   "selectTags": "태그 선택",
   "noMatchingTags": "일치하는 태그 없음",

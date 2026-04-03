@@ -501,6 +501,7 @@
   "customColor": "Custom Color",
   "select": "Select",
   "editMetadata": "Edit Metadata",
+  "noLocationWeatherRecorded": "Location and weather were not recorded when this note was first saved",
   "done": "Done",
   "selectTags": "Select Tags",
   "noMatchingTags": "No matching tags found",
