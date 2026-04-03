@@ -231,6 +231,7 @@ class _CitySearchWidgetState extends State<CitySearchWidget> {
                             Icons.clear,
                             color: theme.colorScheme.primary,
                           ),
+                          tooltip: l10n.clear,
                           onPressed: () {
                             setState(() {
                               _searchController.clear();
