@@ -501,6 +501,7 @@
   "customColor": "カスタムカラー",
   "select": "選択",
   "editMetadata": "メタデータを編集",
+  "noLocationWeatherRecorded": "このノートを最初に保存した際、位置情報と天候は記録されていません",
   "done": "完了",
   "selectTags": "タグを選択",
   "noMatchingTags": "一致するタグがありません",
