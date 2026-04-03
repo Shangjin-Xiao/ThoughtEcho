@@ -21,3 +21,8 @@
  **Vulnerability:** The `checkColumnExists` and `createIndexSafely` methods in `DatabaseHealthService` directly interpolated dynamic variables (`tableName`, `columnName`, `indexName`) into SQLite commands (e.g., `PRAGMA table_info($tableName)`). 
  **Learning:** Database schema operations (like `PRAGMA` or `CREATE INDEX`) often cannot use parameterized queries (i.e. `?` arguments), so standard parameterization defenses fail. When variables must be interpolated into schema commands, strict regex validation is necessary. 
  **Prevention:** All schema identifiers must be validated against a strict allowlist or regex (e.g., `r'^[a-zA-Z_][a-zA-Z0-9_]*$'`) before being used in raw SQL queries.
+
+## 2026-04-03 - Fix SQL Injection in getQuotesForSmartPush
+**Vulnerability:** The `getQuotesForSmartPush` method in `DatabaseService` accepted a raw `whereSql` string, which was directly interpolated into a SQL query. This could allow an attacker to bypass filters (like the hidden tag filter) or execute arbitrary SQL.
+**Learning:** Even internal-only parameters (like those originating from Isolate logic) should be handled securely or removed if they provide an unnecessary injection vector.
+**Prevention:** Avoid methods that accept raw SQL fragments. Use structured parameters and let the service layer build the query using parameterized placeholders.
