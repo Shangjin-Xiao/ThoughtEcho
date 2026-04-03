@@ -13,3 +13,7 @@
 ## 2025-03-27 - [N+1 DB Insert Optimization]
 **Learning:** In Dart/Flutter SQLite (`sqflite`), using a `for` loop to execute `await txn.insert()` causes a significant Platform Channel communication overhead per iteration. This is particularly problematic when saving objects with multiple relationships (like tags).
 **Action:** Always use `txn.batch()` to enqueue commands and execute them together via `await batch.commit(noResult: true)` when inserting or updating multiple related rows in SQLite. This eliminates the N+1 execution overhead.
+
+## 2024-06-05 - [N+1 DB Query Optimization for Category Names]
+**Learning:** In the `_generateAIAnnualReport` method, fetching category names individually for each quote via `databaseService.getCategoryById(id)` inside a loop created a classic N+1 query problem, causing significant I/O overhead as the number of quotes grows.
+**Action:** // ⚡ Bolt: Fetch all categories once using `databaseService.getCategories()` before the loop and store them in an in-memory `Map<String, String>` (ID to Name). Use this map for O(1) lookups inside the loop to eliminate repetitive database queries.
