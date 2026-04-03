@@ -100,13 +100,12 @@ class DatabaseHealthService {
       return false;
     }
     try {
-      final result = await db.rawQuery("PRAGMA table_info($tableName)");
-      for (final row in result) {
-        if (row['name'] == columnName) {
-          return true;
-        }
-      }
-      return false;
+      // Use SQLite table-valued function for PRAGMA table_info to safely bind the table name
+      final result = await db.rawQuery(
+        'SELECT name FROM pragma_table_info(?) WHERE name = ? LIMIT 1',
+        [tableName, columnName],
+      );
+      return result.isNotEmpty;
     } catch (e) {
       logDebug('检查列 $columnName 是否存在失败: $e');
       return false;

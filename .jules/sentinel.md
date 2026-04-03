@@ -21,3 +21,7 @@
  **Vulnerability:** The `checkColumnExists` and `createIndexSafely` methods in `DatabaseHealthService` directly interpolated dynamic variables (`tableName`, `columnName`, `indexName`) into SQLite commands (e.g., `PRAGMA table_info($tableName)`). 
  **Learning:** Database schema operations (like `PRAGMA` or `CREATE INDEX`) often cannot use parameterized queries (i.e. `?` arguments), so standard parameterization defenses fail. When variables must be interpolated into schema commands, strict regex validation is necessary. 
  **Prevention:** All schema identifiers must be validated against a strict allowlist or regex (e.g., `r'^[a-zA-Z_][a-zA-Z0-9_]*$'`) before being used in raw SQL queries.
+## 2025-05-18 - Parameterized Table-Valued Functions for SQLite PRAGMA
+**Vulnerability:** SQL Injection in `DatabaseHealthService.checkColumnExists` via string interpolation (`PRAGMA table_info($tableName)`). While some protection was attempted with `_isValidIdentifier`, passing unsanitized table names into PRAGMA statements is fundamentally unsafe.
+**Learning:** Standard PRAGMA statements do not accept bound parameters (`?`). However, SQLite provides table-valued functions (e.g., `pragma_table_info(?)`) which *do* support parameterization. Using the table-valued function allows for safe binding of the table name without string concatenation.
+**Prevention:** Always use SQLite's table-valued functions (e.g., `SELECT * FROM pragma_table_info(?)`) with parameterized queries instead of string interpolation for schema operations where applicable.
