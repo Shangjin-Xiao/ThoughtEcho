@@ -19,10 +19,7 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
           children: [
             Text(
               l10n.locationAndWeather,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const Spacer(),
             // 编辑模式提示
@@ -44,9 +41,7 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainerLow,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: theme.colorScheme.outlineVariant,
-            ),
+            border: Border.all(color: theme.colorScheme.outlineVariant),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -92,13 +87,14 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                                 });
                                 setDialogState(() {});
                                 await _fetchLocationForNewNoteWithFailCallback(
-                                    () {
-                                  // 失败回调：取消选中
-                                  _updateState(() {
-                                    _showLocation = false;
-                                  });
-                                  setDialogState(() {});
-                                });
+                                  () {
+                                    // 失败回调：取消选中
+                                    _updateState(() {
+                                      _showLocation = false;
+                                    });
+                                    setDialogState(() {});
+                                  },
+                                );
                               } else {
                                 _updateState(() {
                                   _showLocation = value;
@@ -199,10 +195,7 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                     // 刷新按钮 - 仅新建模式显示（未保存的笔记）
                     if (widget.initialQuote?.id == null)
                       IconButton(
-                        icon: const Icon(
-                          Icons.refresh,
-                          size: 20,
-                        ),
+                        icon: const Icon(Icons.refresh, size: 20),
                         tooltip: l10n.refreshLocationWeather,
                         onPressed: () {
                           _fetchLocationWeather();
@@ -242,8 +235,8 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                                     _location,
                                   )
                                 : ((_latitude != null && _longitude != null)
-                                    ? '📍 ${LocationService.formatCoordinates(_latitude, _longitude)}'
-                                    : l10n.gettingLocationHint),
+                                      ? '📍 ${LocationService.formatCoordinates(_latitude, _longitude)}'
+                                      : l10n.gettingLocationHint),
                             style: TextStyle(
                               fontSize: 14,
                               color: theme.colorScheme.onSurfaceVariant,
@@ -292,7 +285,7 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                   _originalWeather == null) ...[
                 const SizedBox(height: 8),
                 Text(
-                  '此笔记首次保存时未记录位置和天气信息',
+                  l10n.noLocationWeatherRecorded,
                   style: TextStyle(
                     fontSize: 12,
                     color: theme.colorScheme.onSurfaceVariant,
