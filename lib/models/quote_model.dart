@@ -15,6 +15,7 @@ class Quote {
   final String? location;
   final double? latitude; // 位置纬度，支持离线存储
   final double? longitude; // 位置经度，支持离线存储
+  final String? poiName; // 用户选择的精确地点名称（如"故宫博物院"）
   final String? weather;
   final String? temperature;
   final String? editSource; // "fullscreen" 或 null
@@ -40,6 +41,7 @@ class Quote {
     this.location,
     this.latitude,
     this.longitude,
+    this.poiName,
     this.weather,
     this.temperature,
     this.editSource,
@@ -103,6 +105,7 @@ class Quote {
     String? location,
     double? latitude,
     double? longitude,
+    String? poiName,
     String? weather,
     String? temperature,
     String? editSource,
@@ -145,6 +148,7 @@ class Quote {
       location: location?.trim(),
       latitude: latitude,
       longitude: longitude,
+      poiName: poiName?.trim(),
       weather: weather?.trim(),
       temperature: temperature?.trim(),
       editSource: editSource,
@@ -240,6 +244,7 @@ class Quote {
         location: json['location']?.toString(),
         latitude: (json['latitude'] as num?)?.toDouble(),
         longitude: (json['longitude'] as num?)?.toDouble(),
+        poiName: json['poi_name']?.toString(),
         weather: json['weather']?.toString(),
         temperature: json['temperature']?.toString(),
         editSource: json['edit_source']?.toString(),
@@ -275,6 +280,7 @@ class Quote {
       'location': location,
       'latitude': latitude,
       'longitude': longitude,
+      'poi_name': poiName,
       'weather': weather,
       'temperature': temperature,
       'edit_source': editSource,
@@ -306,6 +312,7 @@ class Quote {
     String? location,
     double? latitude,
     double? longitude,
+    String? poiName,
     String? weather,
     String? temperature,
     String? editSource,
@@ -331,6 +338,7 @@ class Quote {
       location: location ?? this.location,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      poiName: poiName ?? this.poiName,
       weather: weather ?? this.weather,
       temperature: temperature ?? this.temperature,
       editSource: editSource ?? this.editSource,
@@ -355,8 +363,11 @@ class Quote {
   };
 
   /// 修复：添加工具方法
+  bool get hasPoiName => poiName != null && poiName!.isNotEmpty;
   bool get hasLocation =>
       (location != null && location!.isNotEmpty) || hasCoordinates;
+  bool get hasDisplayLocation =>
+      hasPoiName || (location != null && location!.isNotEmpty);
   bool get hasCoordinates => latitude != null && longitude != null;
   bool get hasWeather => weather != null && weather!.isNotEmpty;
   bool get hasAiAnalysis => aiAnalysis != null && aiAnalysis!.isNotEmpty;

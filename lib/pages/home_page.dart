@@ -21,7 +21,7 @@ import '../widgets/add_note_dialog.dart';
 import '../widgets/local_ai/ocr_capture_page.dart';
 import '../widgets/local_ai/ocr_result_sheet.dart';
 import '../widgets/local_ai/voice_input_overlay.dart';
-import 'ai_features_page.dart';
+import 'explore_page.dart';
 import 'settings_page.dart';
 import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
 import '../theme/app_theme.dart';
@@ -2267,8 +2267,8 @@ class _HomePageState extends State<HomePage>
                 );
               },
             ),
-            // AI页
-            const AIFeaturesPage(),
+            // 探索页
+            const ExplorePage(),
             // 设置页
             SettingsPage(key: _settingsPageKey),
           ],
@@ -2336,12 +2336,12 @@ class _HomePageState extends State<HomePage>
                     label: AppLocalizations.of(context).navNotes,
                   ),
                   NavigationDestination(
-                    icon: const Icon(Icons.auto_awesome_outlined),
+                    icon: const Icon(Icons.explore),
                     selectedIcon: Icon(
-                      Icons.auto_awesome,
+                      Icons.explore,
                       color: theme.colorScheme.primary,
                     ),
-                    label: AppLocalizations.of(context).navInsights,
+                    label: l10n.explore,
                   ),
                   NavigationDestination(
                     icon: const Icon(Icons.settings_outlined),

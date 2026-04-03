@@ -7,6 +7,7 @@ import '../models/ai_provider_settings.dart';
 import '../models/quote_model.dart';
 import '../utils/ai_network_manager.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import '../models/chat_message.dart';
 
 /// AI请求辅助工具
 ///
@@ -29,6 +30,49 @@ class AIRequestHelper {
       {'role': 'system', 'content': systemPrompt},
       {'role': 'user', 'content': userMessage},
     ];
+  }
+
+  /// 构建带历史上下文的消息列表（token 预算截断）
+  ///
+  /// 返回 [system prompt, ...selected history]。
+  /// **不追加当前轮 userMessage**——调用方自行追加。
+  List<Map<String, dynamic>> createMessagesWithHistory({
+    required String systemPrompt,
+    required List<ChatMessage> history,
+    int currentUserMessageLength = 0,
+    int maxChars = 6000,
+    int singleMessageCap = 1200,
+  }) {
+    final messages = <Map<String, dynamic>>[
+      {'role': 'system', 'content': systemPrompt},
+    ];
+
+    // 只保留 includedInContext && 非 loading 的 user/assistant 消息
+    final contextMessages = history
+        .where((m) =>
+            m.includedInContext &&
+            !m.isLoading &&
+            (m.role == 'user' || m.role == 'assistant'))
+        .toList();
+
+    if (contextMessages.isEmpty) return messages;
+
+    int usedChars = 0;
+    final budget = maxChars - currentUserMessageLength;
+    final selected = <Map<String, dynamic>>[];
+
+    for (int i = contextMessages.length - 1; i >= 0; i--) {
+      String content = contextMessages[i].content;
+      if (content.length > singleMessageCap) {
+        content = '${content.substring(0, singleMessageCap)}...';
+      }
+      if (usedChars + content.length > budget && selected.isNotEmpty) break;
+      usedChars += content.length;
+      selected.insert(0, {'role': contextMessages[i].role, 'content': content});
+    }
+
+    messages.addAll(selected);
+    return messages;
   }
 
   /// 创建标准请求体

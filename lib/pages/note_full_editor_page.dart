@@ -41,6 +41,7 @@ import '../services/media_reference_service.dart';
 import '../services/draft_service.dart'; // 导入草稿服务
 import '../utils/feature_guide_helper.dart';
 import '../services/settings_service.dart';
+import 'map_location_picker_page.dart';
 
 part 'note_editor/editor_document_init.dart';
 part 'note_editor/editor_save_and_draft.dart';
@@ -86,6 +87,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   late List<String> _selectedTagIds; // 选中标签ID列表
   String? _selectedColorHex;
   String? _location;
+  String? _poiName;
   double? _latitude; // 位置纬度
   double? _longitude; // 位置经度
   String? _weather;
@@ -95,6 +97,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
   // 保存原始笔记的位置和天气信息（用于编辑模式判断）
   String? _originalLocation;
+  String? _originalPoiName;
   double? _originalLatitude;
   double? _originalLongitude;
   String? _originalWeather;
@@ -128,6 +131,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
   late List<String> _initialTagIds;
   late String? _initialColorHex;
   late String? _initialLocation;
+  late String? _initialPoiName;
   late double? _initialLatitude;
   late double? _initialLongitude;
   late String? _initialWeather;
@@ -197,6 +201,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     _selectedColorHex = widget.initialQuote?.colorHex;
     // 位置/天气 - 分别设置状态
     _location = widget.initialQuote?.location;
+    _poiName = widget.initialQuote?.poiName;
     _latitude = widget.initialQuote?.latitude;
     _longitude = widget.initialQuote?.longitude;
     _weather = widget.initialQuote?.weather;
@@ -207,6 +212,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
 
     // 保存原始的位置和天气信息（用于编辑模式判断）
     _originalLocation = widget.initialQuote?.location;
+    _originalPoiName = widget.initialQuote?.poiName;
     _originalLatitude = widget.initialQuote?.latitude;
     _originalLongitude = widget.initialQuote?.longitude;
     _originalWeather = widget.initialQuote?.weather;
@@ -273,6 +279,7 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     _initialTagIds = List.from(_selectedTagIds);
     _initialColorHex = widget.initialQuote?.colorHex;
     _initialLocation = widget.initialQuote?.location;
+    _initialPoiName = widget.initialQuote?.poiName;
     _initialLatitude = widget.initialQuote?.latitude;
     _initialLongitude = widget.initialQuote?.longitude;
     _initialWeather = widget.initialQuote?.weather;

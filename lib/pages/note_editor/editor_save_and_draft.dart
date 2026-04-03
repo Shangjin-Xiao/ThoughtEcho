@@ -125,6 +125,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         'tagIds': _selectedTagIds,
         'colorHex': _selectedColorHex,
         'location': _showLocation ? _location : null,
+        'poiName': _showLocation ? _poiName : null,
         'latitude': (_showLocation || _showWeather) ? _latitude : null,
         'longitude': (_showLocation || _showWeather) ? _longitude : null,
         'weather': _showWeather ? _weather : null,
@@ -189,6 +190,12 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
 
     // 检查位置
     if (_location != _initialLocation) {
+      return true;
+    }
+    if (_poiName != _originalPoiName) {
+      return true;
+    }
+    if (_poiName != _initialPoiName) {
       return true;
     }
     if (_latitude != _initialLatitude) {
@@ -339,6 +346,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
           ? (_location ??
               (_latitude != null ? LocationService.kAddressPending : null))
           : null,
+      poiName: _showLocation ? _poiName : null,
       latitude: _showLocation ? _latitude : null,
       longitude: _showLocation ? _longitude : null,
       weather: _showWeather ? _weather : null,

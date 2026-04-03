@@ -84,6 +84,10 @@ dependencies:
   timezone: ^0.10.0
   workmanager: ^0.9.0+3
   flutter_blue_plus: ^1.32.0 # BLE 蓝牙通信，用于向树莓派 Pico 发送数据
+  flutter_map: ^7.0.2 # OpenStreetMap 地图组件
+  latlong2: ^0.9.1 # 经纬度坐标库（flutter_map 依赖）
+  flutter_map_marker_cluster: ^1.4.0 # 地图 marker 聚合
+  gpt_markdown: ^1.1.5 # Markdown 渲染（AI 回复）
 
 dev_dependencies:
   flutter_test:

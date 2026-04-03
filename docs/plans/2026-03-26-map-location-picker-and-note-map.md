@@ -351,11 +351,17 @@ git commit -m "feat: add map location picker page with POI search"
 - 在 `initState` 中从 `widget.initialQuote?.poiName` 初始化
 - 在保存逻辑中传递 `poiName` 到 `Quote` 构造
 
+**交互变更（2026-03-31 确认）：**
+- **不新增按钮**，复用编辑器现有位置按钮
+- **单击**：保持现有行为（开启/关闭 GPS 定位 toggle）
+- **长按**：打开 `MapLocationPickerPage`；无论是否已有坐标，只要定位服务可用就打开地图；无坐标时先自动 GPS 定位再以当前位置为地图中心
+- 选完 POI 后位置区域主行显示 POI 名称，小字显示城市·区县
+- 清除 POI 在编辑位置对话框中操作
+
 **Step 2: 修改位置 section UI**
 
 在 `editor_metadata_location_section.dart` 中：
-- 在位置信息显示区域添加"选择精确位置"按钮（`TextButton.icon` with `Icons.map`）
-- 点击后使用 `Navigator.push` 打开 `MapLocationPickerPage`
+- 位置按钮包裹 `GestureDetector`，`onLongPress` 打开 `MapLocationPickerPage`
 - 返回 `MapPickerResult` 后更新 `_poiName`, `_latitude`, `_longitude`, `_location`
 - 位置显示优先使用 `_poiName`（如果有），格式："POI名称"
 - 已有 POI 时显示 POI 名称 + 小字显示城市·区县

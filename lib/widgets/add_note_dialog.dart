@@ -80,6 +80,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
   // 新建笔记时的实时位置信息
   String? _newLocation;
+  String? _newPoiName;
   double? _newLatitude;
   double? _newLongitude;
   // 颜色选择
@@ -287,6 +288,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
       // 保存原始的位置和天气信息
       _originalLocation = widget.initialQuote!.location;
+      _newPoiName = widget.initialQuote!.poiName;
       _originalLatitude = widget.initialQuote!.latitude;
       _originalLongitude = widget.initialQuote!.longitude;
       _originalWeather = widget.initialQuote!.weather;
@@ -1486,6 +1488,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                   tagIds: _selectedTagIds,
                                   colorHex: _selectedColorHex,
                                   location: currentLocation,
+                                  poiName: _newPoiName,
                                   latitude:
                                       _includeLocation ? currentLat : null,
                                   longitude:
@@ -1976,6 +1979,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                           return loc;
                                         }())
                                   : null,
+                              poiName: _includeLocation ? _newPoiName : null,
                               latitude: (_includeLocation || _includeWeather)
                                   ? (isEditing
                                       ? _originalLatitude

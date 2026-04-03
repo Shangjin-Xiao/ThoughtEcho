@@ -1,24 +1,30 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_chat_ui/flutter_chat_ui.dart';
 import 'package:flutter_chat_core/flutter_chat_core.dart';
 import 'package:flutter_chat_types/flutter_chat_types.dart' show PartialText;
+import 'package:flutter_chat_ui/flutter_chat_ui.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
 import '../gen_l10n/app_localizations.dart';
+import '../models/chat_message.dart' as app_chat;
 import '../models/quote_model.dart';
 import '../services/ai_service.dart';
+import '../services/chat_session_service.dart';
 import '../utils/app_logger.dart';
 import '../utils/string_utils.dart';
+import '../widgets/session_history_sheet.dart';
 
-/// 现代化的问笔记聊天界面页面
+/// 问笔记聊天界面 — 支持多轮对话持久化
 class NoteQAChatPage extends StatefulWidget {
   final Quote quote;
   final String? initialQuestion;
-
-  const NoteQAChatPage({super.key, required this.quote, this.initialQuestion});
+  const NoteQAChatPage({
+    super.key,
+    required this.quote,
+    this.initialQuestion,
+  });
 
   @override
   State<NoteQAChatPage> createState() => _NoteQAChatPageState();
@@ -30,14 +36,20 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
   late final User _user;
   late final User _assistant;
   late AIService _aiService;
+  late ChatSessionService _chatSessionService;
   StreamSubscription<String>? _streamSubscription;
   bool _isResponding = false;
   String? _currentLoadingId;
+  String? _currentSessionId;
+  List<app_chat.ChatMessage> _chatHistory = [];
+  bool _canPersist = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _aiService = Provider.of<AIService>(context, listen: false);
+    _chatSessionService =
+        Provider.of<ChatSessionService>(context, listen: false);
     _user = User(id: 'user', name: l10n.meUser);
     _assistant = User(id: 'assistant', name: l10n.aiAssistantUser);
   }
@@ -46,23 +58,7 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
   void initState() {
     super.initState();
     _chatController = InMemoryChatController();
-    // 添加欢迎消息
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _chatController.insertMessage(
-        TextMessage(
-          authorId: _assistant.id,
-          createdAt: DateTime.now(),
-          id: const Uuid().v4(),
-          text: l10n.aiAssistantWelcome(_getQuotePreview()),
-        ),
-      );
-
-      // 如果有初始问题，自动发送
-      if (widget.initialQuestion != null &&
-          widget.initialQuestion!.isNotEmpty) {
-        _handleSendPressed(PartialText(text: widget.initialQuestion!));
-      }
-    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadOrCreateSession());
   }
 
   @override
@@ -72,163 +68,239 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
     super.dispose();
   }
 
-  String _getQuotePreview() {
-    final content =
-        StringUtils.removeObjectReplacementChar(widget.quote.content);
-    if (content.length <= 100) {
-      return content;
+  Future<void> _loadOrCreateSession() async {
+    final noteId = widget.quote.id;
+    _canPersist = noteId != null && noteId.isNotEmpty;
+    if (_canPersist) {
+      try {
+        final session =
+            await _chatSessionService.getLatestSessionForNote(noteId!);
+        if (session != null) {
+          await _loadSession(session.id);
+        } else {
+          await _createNewSession();
+        }
+      } catch (e) {
+        AppLogger.e('加载会话失败', error: e);
+        _canPersist = false;
+      }
     }
-    return '${content.substring(0, 100)}...';
+    _addWelcomeMessage();
+    if (widget.initialQuestion?.isNotEmpty == true) {
+      _handleSendPressed(PartialText(text: widget.initialQuestion!));
+    }
+  }
+
+  Future<void> _createNewSession() async {
+    final noteId = widget.quote.id;
+    if (noteId == null || noteId.isEmpty) return;
+    final session = await _chatSessionService.createSession(
+      sessionType: 'note',
+      noteId: noteId,
+      title: _getQuotePreview(),
+    );
+    _currentSessionId = session.id;
+  }
+
+  Future<void> _loadSession(String sessionId) async {
+    _currentSessionId = sessionId;
+    final messages = await _chatSessionService.getMessages(sessionId);
+    _chatHistory = messages.where((m) => m.includedInContext).toList();
+    for (final msg in messages) {
+      _chatController.insertMessage(TextMessage(
+        authorId: msg.role == 'user' ? _user.id : _assistant.id,
+        createdAt: msg.timestamp,
+        id: msg.id,
+        text: msg.content,
+      ));
+    }
+  }
+
+  void _addWelcomeMessage() {
+    final welcomeMsg = app_chat.ChatMessage(
+      id: const Uuid().v4(),
+      content: l10n.aiAssistantWelcome(_getQuotePreview()),
+      isUser: false,
+      role: 'system',
+      timestamp: DateTime.now(),
+      includedInContext: false,
+    );
+    _chatController.insertMessage(TextMessage(
+      authorId: _assistant.id,
+      createdAt: welcomeMsg.timestamp,
+      id: welcomeMsg.id,
+      text: welcomeMsg.content,
+    ));
+    if (_canPersist && _currentSessionId != null) {
+      _chatSessionService.addMessage(_currentSessionId!, welcomeMsg);
+    }
   }
 
   void _handleSendPressed(PartialText message) {
     if (_isResponding) return;
-    final textMessage = TextMessage(
+    final now = DateTime.now();
+    final msgId = const Uuid().v4();
+    _chatController.insertMessage(TextMessage(
       authorId: _user.id,
-      createdAt: DateTime.now(),
-      id: const Uuid().v4(),
+      createdAt: now,
+      id: msgId,
       text: message.text,
+    ));
+    final chatMsg = app_chat.ChatMessage(
+      id: msgId,
+      content: message.text,
+      isUser: true,
+      role: 'user',
+      timestamp: now,
     );
-    _chatController.insertMessage(textMessage);
+    _chatHistory.add(chatMsg);
+    if (_canPersist && _currentSessionId != null) {
+      _chatSessionService.addMessage(_currentSessionId!, chatMsg);
+    }
     _askAI(message.text);
   }
 
-  // 已弃用，直接用 _chatController.insertMessage
-
   Future<void> _askAI(String question) async {
     if (question.trim().isEmpty) return;
-
-    setState(() {
-      _isResponding = true;
-    });
-    // 创建一个临时的加载消息，使用唯一 ID
+    setState(() => _isResponding = true);
     _currentLoadingId = const Uuid().v4();
-    final loadingMessage = TextMessage(
+    _chatController.insertMessage(TextMessage(
       authorId: _assistant.id,
       createdAt: DateTime.now(),
       id: _currentLoadingId!,
       text: l10n.thinkingInProgress,
-    );
-    _chatController.insertMessage(loadingMessage);
-
+    ));
     try {
       String fullResponse = '';
-      final stream = _aiService.streamAskQuestion(widget.quote, question);
-
+      final stream = _aiService.streamAskQuestion(
+        widget.quote,
+        question,
+        history: _chatHistory,
+      );
       _streamSubscription = stream.listen(
         (chunk) {
           fullResponse += chunk;
-
-          // 更新正在回复的消息内容
-          setState(() {
-            // 替换 loading 消息内容
-            final messages = _chatController.messages;
-            final index =
-                messages.indexWhere((msg) => msg.id == _currentLoadingId);
-            if (index != -1) {
-              final loadingMsg = messages[index];
-              final updatedMsg = TextMessage(
-                authorId: _assistant.id,
-                createdAt: DateTime.now(),
-                id: _currentLoadingId!,
-                text: fullResponse,
-              );
-              _chatController.updateMessage(loadingMsg, updatedMsg);
-            }
-          });
+          _updateLoadingMessage(fullResponse);
         },
-        onDone: () {
-          // 完成回复，生成最终消息
-          setState(() {
-            final messages = _chatController.messages;
-            final index =
-                messages.indexWhere((msg) => msg.id == _currentLoadingId);
-            if (index != -1) {
-              final loadingMsg = messages[index];
-              final finalMsg = TextMessage(
-                authorId: _assistant.id,
-                createdAt: DateTime.now(),
-                id: const Uuid().v4(),
-                text: fullResponse.isNotEmpty
-                    ? fullResponse
-                    : l10n.aiMisunderstoodQuestion,
-              );
-              _chatController.updateMessage(loadingMsg, finalMsg);
-            }
-            _isResponding = false;
-          });
-        },
+        onDone: () => _finalizeAssistantMessage(
+          fullResponse.isNotEmpty ? fullResponse : l10n.aiMisunderstoodQuestion,
+        ),
         onError: (error) {
           AppLogger.e('AI回答失败', error: error);
-          setState(() {
-            final messages = _chatController.messages;
-            final index =
-                messages.indexWhere((msg) => msg.id == _currentLoadingId);
-            if (index != -1) {
-              final loadingMsg = messages[index];
-              final errorMsg = TextMessage(
-                authorId: _assistant.id,
-                createdAt: DateTime.now(),
-                id: const Uuid().v4(),
-                text: l10n.aiResponseError(error.toString()),
-              );
-              _chatController.updateMessage(loadingMsg, errorMsg);
-            }
-            _isResponding = false;
-          });
+          _finalizeAssistantMessage(
+            l10n.aiResponseError(error.toString()),
+          );
         },
       );
     } catch (e) {
       AppLogger.e('发送问题失败', error: e);
-      setState(() {
-        final messages = _chatController.messages;
-        final index = messages.indexWhere((msg) => msg.id == _currentLoadingId);
-        if (index != -1) {
-          final loadingMsg = messages[index];
-          final errorMsg = TextMessage(
-            authorId: _assistant.id,
-            createdAt: DateTime.now(),
-            id: const Uuid().v4(),
-            text: l10n.aiResponseError(e.toString()),
-          );
-          _chatController.updateMessage(loadingMsg, errorMsg);
-        }
-        _isResponding = false;
-      });
+      _finalizeAssistantMessage(l10n.aiResponseError(e.toString()));
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.askNoteTitle),
-        backgroundColor: theme.colorScheme.surface,
-        elevation: 0,
-        scrolledUnderElevation: 1,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.info_outline),
-            onPressed: _showNoteInfo,
-            tooltip: l10n.viewNoteInfo,
+  void _updateLoadingMessage(String text) {
+    setState(() {
+      final msgs = _chatController.messages;
+      final idx = msgs.indexWhere((m) => m.id == _currentLoadingId);
+      if (idx != -1) {
+        _chatController.updateMessage(
+          msgs[idx],
+          TextMessage(
+            authorId: _assistant.id,
+            createdAt: DateTime.now(),
+            id: _currentLoadingId!,
+            text: text,
           ),
-        ],
-      ),
-      body: Chat(
-        chatController: _chatController,
-        currentUserId: _user.id,
-        onMessageSend: (text) {
-          _handleSendPressed(PartialText(text: text));
+        );
+      }
+    });
+  }
+
+  void _finalizeAssistantMessage(String text) {
+    final now = DateTime.now();
+    final finalId = const Uuid().v4();
+    setState(() {
+      final msgs = _chatController.messages;
+      final idx = msgs.indexWhere((m) => m.id == _currentLoadingId);
+      if (idx != -1) {
+        _chatController.updateMessage(
+          msgs[idx],
+          TextMessage(
+            authorId: _assistant.id,
+            createdAt: now,
+            id: finalId,
+            text: text,
+          ),
+        );
+      }
+      _isResponding = false;
+    });
+    final chatMsg = app_chat.ChatMessage(
+      id: finalId,
+      content: text,
+      isUser: false,
+      role: 'assistant',
+      timestamp: now,
+    );
+    _chatHistory.add(chatMsg);
+    if (_canPersist && _currentSessionId != null) {
+      _chatSessionService.addMessage(_currentSessionId!, chatMsg);
+    }
+  }
+
+  Future<void> _switchToSession(String sessionId) async {
+    for (final msg in List.of(_chatController.messages)) {
+      _chatController.removeMessage(msg);
+    }
+    _chatHistory.clear();
+    await _loadSession(sessionId);
+    _addWelcomeMessage();
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _startNewChat() async {
+    for (final msg in List.of(_chatController.messages)) {
+      _chatController.removeMessage(msg);
+    }
+    _chatHistory.clear();
+    _currentSessionId = null;
+    if (_canPersist) await _createNewSession();
+    _addWelcomeMessage();
+    if (mounted) setState(() {});
+  }
+
+  void _showSessionHistory() {
+    final noteId = widget.quote.id;
+    if (noteId == null || noteId.isEmpty) return;
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SessionHistorySheet(
+        noteId: noteId,
+        currentSessionId: _currentSessionId,
+        chatSessionService: _chatSessionService,
+        onSelect: (id) {
+          Navigator.of(ctx).pop();
+          _switchToSession(id);
         },
-        resolveUser: (id) async {
-          if (id == _user.id) return _user;
-          if (id == _assistant.id) return _assistant;
-          return User(id: id, name: l10n.unknown);
+        onDelete: (id) async {
+          await _chatSessionService.deleteSession(id);
+          if (id == _currentSessionId) {
+            Navigator.of(ctx).pop();
+            _startNewChat();
+          }
+        },
+        onNewChat: () {
+          Navigator.of(ctx).pop();
+          _startNewChat();
         },
       ),
     );
+  }
+
+  String _getQuotePreview() {
+    final content =
+        StringUtils.removeObjectReplacementChar(widget.quote.content);
+    return content.length <= 100 ? content : '${content.substring(0, 100)}...';
   }
 
   void _showNoteInfo() {
@@ -257,7 +329,9 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
                   style: Theme.of(context).textTheme.labelMedium),
               const SizedBox(height: 4),
               Text(
-                StringUtils.removeObjectReplacementChar(widget.quote.content),
+                StringUtils.removeObjectReplacementChar(
+                  widget.quote.content,
+                ),
                 maxLines: 10,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -270,6 +344,44 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
             child: Text(l10n.close),
           ),
         ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(l10n.askNoteTitle),
+        backgroundColor: theme.colorScheme.surface,
+        elevation: 0,
+        scrolledUnderElevation: 1,
+        actions: [
+          if (_canPersist)
+            IconButton(
+              icon: const Icon(Icons.history),
+              onPressed: _showSessionHistory,
+              tooltip: l10n.chatHistory,
+            ),
+          IconButton(
+            icon: const Icon(Icons.info_outline),
+            onPressed: _showNoteInfo,
+            tooltip: l10n.viewNoteInfo,
+          ),
+        ],
+      ),
+      body: Chat(
+        chatController: _chatController,
+        currentUserId: _user.id,
+        onMessageSend: (text) {
+          _handleSendPressed(PartialText(text: text));
+        },
+        resolveUser: (id) async {
+          if (id == _user.id) return _user;
+          if (id == _assistant.id) return _assistant;
+          return User(id: id, name: l10n.unknown);
+        },
       ),
     );
   }

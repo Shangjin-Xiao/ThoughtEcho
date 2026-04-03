@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../models/quote_model.dart';
+import '../models/chat_message.dart';
 import '../models/ai_provider_settings.dart';
 import '../services/settings_service.dart' show SettingsService;
 import '../services/api_key_manager.dart';
@@ -1176,7 +1177,11 @@ class AIService extends ChangeNotifier {
   }
 
   // 流式问答（支持完整笔记元数据）
-  Stream<String> streamAskQuestion(Quote quote, String question) {
+  Stream<String> streamAskQuestion(
+    Quote quote,
+    String question, {
+    List<ChatMessage>? history,
+  }) {
     return _requestHelper.executeStreamOperation(
       operation: (controller) async {
         // 在异步操作中验证API Key
@@ -1208,10 +1213,34 @@ class AIService extends ChangeNotifier {
           temperature: quote.temperature,
           dayPeriod: quote.dayPeriod,
         );
-        await _requestHelper.makeStreamRequestWithProvider(
+        // 构建消息列表：system prompt + 历史 + 当前问题
+        final List<Map<String, dynamic>> messages;
+        if (history != null && history.isNotEmpty) {
+          messages = _requestHelper.createMessagesWithHistory(
+            systemPrompt: AIPromptManager.noteQAAssistantPrompt,
+            history: history,
+            currentUserMessageLength: userMessage.length,
+          );
+        } else {
+          messages = [
+            {
+              'role': 'system',
+              'content': AIPromptManager.noteQAAssistantPrompt,
+            },
+          ];
+        }
+        // 追加当前轮用户消息（含笔记全文 + 元数据 + 问题）
+        messages.add({'role': 'user', 'content': userMessage});
+
+        final body = _requestHelper.createRequestBody(
+          messages: messages,
+          temperature: 0.5,
+          maxTokens: 1000,
+        );
+
+        await AINetworkManager.makeStreamRequest(
           url: currentProvider.apiUrl,
-          systemPrompt: AIPromptManager.noteQAAssistantPrompt,
-          userMessage: userMessage,
+          data: body,
           provider: currentProvider,
           onData: (text) => _requestHelper.handleStreamResponse(
             controller: controller,
@@ -1226,8 +1255,6 @@ class AIService extends ChangeNotifier {
             error: error,
             context: '流式问答',
           ),
-          temperature: 0.5,
-          maxTokens: 1000,
         );
       },
       context: '流式问答',
