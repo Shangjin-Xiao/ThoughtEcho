@@ -214,6 +214,7 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
       logDebug('开始分段加载超大富文本内容，大小: ${deltaContent.length} 字符');
 
       // 首先创建一个简单的占位符文档
+      if (!mounted) return;
       final loadingMessage = AppLocalizations.of(context).loadingLargeDocument;
       final placeholderDocument = quill.Document()..insert(0, loadingMessage);
 
