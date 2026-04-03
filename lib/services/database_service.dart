@@ -182,7 +182,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       'weather',
       'day_period',
       'last_modified',
-      'color_hex'
+      'color_hex',
     ];
 
     final validTerms = <String>[];
@@ -231,6 +231,25 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     }
 
     return validTerms.join(', ');
+  }
+
+  /// 提取共享的 LIKE 搜索逻辑
+  /// [conditions] SQL 条件列表
+  /// [args] SQL 参数列表
+  /// [searchQuery] 搜索关键词
+  @protected
+  void _applySearchQuery(
+    List<String> conditions,
+    List<dynamic> args,
+    String? searchQuery,
+  ) {
+    if (searchQuery != null && searchQuery.isNotEmpty) {
+      conditions.add(
+        '(q.content LIKE ? OR (q.source LIKE ? OR q.source_author LIKE ? OR q.source_work LIKE ?))',
+      );
+      final searchParam = '%$searchQuery%';
+      args.addAll([searchParam, searchParam, searchParam, searchParam]);
+    }
   }
 
   Future<void> _checkAndFixDatabaseStructure();

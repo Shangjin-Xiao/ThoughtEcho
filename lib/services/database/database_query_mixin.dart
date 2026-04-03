@@ -43,7 +43,8 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
         if (shouldExcludeHidden) {
           filtered = filtered
               .where(
-                  (q) => !q.tagIds.contains(_DatabaseServiceBase.hiddenTagId))
+                (q) => !q.tagIds.contains(_DatabaseServiceBase.hiddenTagId),
+              )
               .toList();
         }
 
@@ -171,22 +172,24 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
         });
 
         // 异步执行查询
-        query().then((result) {
-          timeoutTimer?.cancel();
-          if (!completer.isCompleted) {
-            completer.complete(result);
-          }
-        }).catchError((error) {
-          timeoutTimer?.cancel();
-          if (!completer.isCompleted) {
-            logError(
-              '数据库查询失败: $error',
-              error: error,
-              source: 'DatabaseService',
-            );
-            completer.completeError(error);
-          }
-        });
+        query()
+            .then((result) {
+              timeoutTimer?.cancel();
+              if (!completer.isCompleted) {
+                completer.complete(result);
+              }
+            })
+            .catchError((error) {
+              timeoutTimer?.cancel();
+              if (!completer.isCompleted) {
+                logError(
+                  '数据库查询失败: $error',
+                  error: error,
+                  source: 'DatabaseService',
+                );
+                completer.completeError(error);
+              }
+            });
 
         final result = await completer.future;
         timeoutTimer.cancel();
@@ -272,14 +275,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     }
 
     // 优化：搜索查询使用FTS（全文搜索）如果可用，否则使用优化的LIKE查询
-    if (searchQuery != null && searchQuery.isNotEmpty) {
-      // 使用更高效的搜索策略：优先匹配内容，然后匹配其他字段
-      conditions.add(
-        '(q.content LIKE ? OR (q.source LIKE ? OR q.source_author LIKE ? OR q.source_work LIKE ?))',
-      );
-      final searchParam = '%$searchQuery%';
-      args.addAll([searchParam, searchParam, searchParam, searchParam]);
-    }
+    _applySearchQuery(conditions, args, searchQuery);
 
     // 天气筛选
     if (selectedWeathers != null && selectedWeathers.isNotEmpty) {
@@ -290,8 +286,9 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
 
     // 时间段筛选
     if (selectedDayPeriods != null && selectedDayPeriods.isNotEmpty) {
-      final dayPeriodPlaceholders =
-          selectedDayPeriods.map((_) => '?').join(',');
+      final dayPeriodPlaceholders = selectedDayPeriods
+          .map((_) => '?')
+          .join(',');
       conditions.add('q.day_period IN ($dayPeriodPlaceholders)');
       args.addAll(selectedDayPeriods);
     }
@@ -331,8 +328,9 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     joinClause = '';
     groupByClause = '';
 
-    final where =
-        conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
+    final where = conditions.isNotEmpty
+        ? 'WHERE ${conditions.join(' AND ')}'
+        : '';
 
     final correctedOrderBy = sanitizeOrderBy(orderBy, prefix: 'q');
 
@@ -340,7 +338,8 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     // 优化：指定查询列，排除大文本字段(ai_analysis, summary等)以提升列表加载性能
     // 注意：delta_content 必须保留！列表卡片通过 QuoteContent 组件渲染富文本（加粗、图片等）
     // 性能提升：(SELECT GROUP_CONCAT(tag_id) ...) 仅对 LIMIT 返回的数据执行
-    final query = '''
+    final query =
+        '''
       SELECT
         q.id, q.content, q.date, q.source, q.source_author, q.source_work,
         q.category_id, q.color_hex, q.location, q.latitude, q.longitude,
@@ -377,8 +376,8 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
       final level = queryTime > 1000
           ? '🔴 严重慢查询'
           : queryTime > 500
-              ? '⚠️ 慢查询警告'
-              : 'ℹ️ 性能提示';
+          ? '⚠️ 慢查询警告'
+          : 'ℹ️ 性能提示';
       logDebug('$level: 查询耗时 ${queryTime}ms');
 
       if (queryTime > 500) {
