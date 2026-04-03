@@ -8,7 +8,7 @@ import '../models/note_category.dart';
 import '../models/quote_model.dart';
 import '../utils/app_logger.dart';
 
-class DatabaseHealthService extends ChangeNotifier {
+class DatabaseHealthService {
   /// 修复：添加查询性能统计
   final Map<String, int> _queryStats = {}; // 查询次数统计
   final Map<String, int> _queryTotalTime = {}; // 查询总耗时统计
@@ -107,7 +107,7 @@ class DatabaseHealthService extends ChangeNotifier {
       );
       return result.isNotEmpty;
     } catch (e) {
-      logError('检查列 $columnName 是否存在失败', error: e, source: 'DatabaseHealthService');
+      logDebug('检查列 $columnName 是否存在失败: $e');
       return false;
     }
   }

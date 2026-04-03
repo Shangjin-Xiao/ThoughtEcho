@@ -291,7 +291,6 @@ Future<void> main() async {
         // 不再这里强制设置级别，让UnifiedLogService从用户配置中加载
 
         final appTheme = AppTheme();
-        final databaseHealthService = DatabaseHealthService();
 
         // 初始化主题 - 这是UI显示必须的
         await appTheme.initialize();
@@ -305,7 +304,6 @@ Future<void> main() async {
               ChangeNotifierProvider(create: (_) => settingsService),
               // 兼容性说明：DatabaseService现在有dispose方法，但Provider会自动处理
               ChangeNotifierProvider(create: (_) => databaseService),
-              ChangeNotifierProvider(create: (_) => databaseHealthService),
               ChangeNotifierProvider(create: (_) => locationService),
               ChangeNotifierProvider(create: (_) => weatherService),
               ChangeNotifierProvider(create: (_) => clipboardService),
