@@ -101,8 +101,7 @@ class DatabaseHealthService {
     }
     try {
       final result = await db.rawQuery(
-        'SELECT name FROM pragma_table_info(?)',
-        [tableName],
+        'SELECT name FROM pragma_table_info(\'$tableName\')',
       );
       for (final row in result) {
         if (row['name'] == columnName) {
