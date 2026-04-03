@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 
 import 'api_route_builder.dart';
 import 'models/device.dart';
@@ -102,7 +101,7 @@ class LocalSendProvider {
             target.https,
             '1.0',
           );
-          debugPrint('v2路由返回404，尝试v1路由: $fallbackUrl');
+          logInfo('v2 route 404, trying v1 route: $fallbackUrl', source: 'LocalSend');
           response = await client
               .post(
                 Uri.parse(fallbackUrl),
@@ -116,13 +115,9 @@ class LocalSendProvider {
         }
 
         logDebug(
-          'prepare_resp status=${response.statusCode}',
+          'prepare_resp status=${response.statusCode} body=${_summarizeBody(response.body, maxLength: 50)}',
           source: 'LocalSend',
         );
-        final previewLen =
-            response.body.length < 50 ? response.body.length : 50;
-        // P2 Fix: 脱敏日志，不打印完整响应内容
-        debugPrint('响应摘要: ${response.body.substring(0, previewLen)}...');
 
         if (response.statusCode == 200) {
           final responseDto = PrepareUploadResponseDto.fromJson(
@@ -142,7 +137,7 @@ class LocalSendProvider {
           return sessionId;
         } else {
           throw Exception(
-            'Failed to prepare upload: ${response.statusCode} - ${response.body}',
+            'Failed to prepare upload: ${response.statusCode} - ${_summarizeBody(response.body)}',
           );
         }
       } finally {
@@ -180,7 +175,7 @@ class LocalSendProvider {
         final token = session.fileTokens?[fileId];
 
         if (token == null) {
-          debugPrint('跳过文件 $fileId: 没有令牌');
+          logWarning('Skipping file $fileId: no token', source: 'LocalSend');
           continue;
         }
 
@@ -191,7 +186,7 @@ class LocalSendProvider {
 
         final fileSize = await file.length();
         final fileName = file.path.split('/').last;
-        debugPrint('准备上传文件: $fileName (大小: $fileSize 字节)');
+        logInfo('Preparing to upload file: $fileName ($fileSize bytes)', source: 'LocalSend');
 
         // Upload file with retry mechanism
         await _uploadSingleFile(
@@ -211,9 +206,9 @@ class LocalSendProvider {
 
       // Mark as completed
       _sessions[sessionId] = session.copyWith(status: SessionStatus.finished);
-      debugPrint('所有文件上传完成: $sessionId');
+      logInfo('All files uploaded for session: $sessionId', source: 'LocalSend');
     } catch (e) {
-      debugPrint('文件上传失败: $e');
+      logError('File upload failed: $e', source: 'LocalSend');
       _sessions[sessionId] = session.copyWith(
         status: SessionStatus.finishedWithErrors,
         errorMessage: e.toString(),
@@ -245,8 +240,9 @@ class LocalSendProvider {
             'token': token,
           },
         );
-        debugPrint(
-          '上传文件到: $url (文件: ${file.path.split('/').last}, 尝试: ${attempt + 1}/$maxRetries)',
+        logInfo(
+          'Uploading file to: $url (file: ${file.path.split('/').last}, attempt: ${attempt + 1}/$maxRetries)',
+          source: 'LocalSend',
         );
 
         final request = http.MultipartRequest('POST', Uri.parse(url));
@@ -283,7 +279,7 @@ class LocalSendProvider {
           // Try legacy v1 route if needed
           url =
               '${ApiRoute.upload.targetRaw(session.target.ip ?? '127.0.0.1', session.target.port, session.target.https, '1.0')}?sessionId=${Uri.encodeQueryComponent(session.remoteSessionId!)}&fileId=$fileId&token=$token';
-          debugPrint('v2上传返回404，尝试v1路由: $url');
+          logInfo('v2 upload 404, trying v1 route: $url', source: 'LocalSend');
           final legacyReq = http.MultipartRequest('POST', Uri.parse(url));
           legacyReq.headers['User-Agent'] = 'ThoughtEcho/1.0';
           final legacyStream = file.openRead().transform<List<int>>(
@@ -306,12 +302,12 @@ class LocalSendProvider {
                 const Duration(minutes: 5),
               );
           if (legacyResp.statusCode == 200) {
-            debugPrint('文件上传成功(v1): $fileId');
+            logInfo('File upload success (v1): $fileId', source: 'LocalSend');
             return;
           } else {
             final respBody = await legacyResp.stream.bytesToString();
             throw Exception(
-              'Legacy upload failed with status ${legacyResp.statusCode}: $respBody',
+              'Legacy upload failed with status ${legacyResp.statusCode}: ${_summarizeBody(respBody)}',
             );
           }
         }
@@ -326,10 +322,11 @@ class LocalSendProvider {
         final responseBody = await response.stream.bytesToString();
         final status = response.statusCode;
         final retriable = status >= 500 || status == 408 || status == 429;
+        final summarizedBody = _summarizeBody(responseBody);
         if (!retriable) {
-          throw Exception('Non-retriable status $status: $responseBody');
+          throw Exception('Non-retriable status $status: $summarizedBody');
         }
-        throw Exception('Retriable status $status: $responseBody');
+        throw Exception('Retriable status $status: $summarizedBody');
       } catch (e) {
         attempt++;
         logWarning(
@@ -404,12 +401,18 @@ class LocalSendProvider {
     _sessions.clear();
   }
 
+  /// Truncate long response bodies for logging
+  String _summarizeBody(String body, {int maxLength = 100}) {
+    if (body.length <= maxLength) return body;
+    return '${body.substring(0, maxLength)}...';
+  }
+
   /// Query target /info once to validate connectivity and possibly adapt route
   Future<void> _handshakeWithTarget(Device target) async {
     final client = http.Client();
     try {
       final infoUrl = ApiRoute.info.target(target);
-      debugPrint('握手检查: $infoUrl');
+      logDebug('Handshake check: $infoUrl', source: 'LocalSend');
       var resp = await client
           .get(Uri.parse(infoUrl))
           .timeout(const Duration(seconds: 5));
@@ -420,18 +423,18 @@ class LocalSendProvider {
           target.https,
           '1.0',
         );
-        debugPrint('v2 /info 404，尝试 v1: $v1Url');
+        logInfo('v2 /info 404, trying v1: $v1Url', source: 'LocalSend');
         resp = await client
             .get(Uri.parse(v1Url))
             .timeout(const Duration(seconds: 5));
       }
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
-        debugPrint('握手成功: /info 响应 ${resp.statusCode}');
+        logDebug('Handshake success: /info status ${resp.statusCode}', source: 'LocalSend');
       } else {
-        debugPrint('握手警告: /info 响应 ${resp.statusCode}');
+        logWarning('Handshake warning: /info status ${resp.statusCode}', source: 'LocalSend');
       }
     } catch (e) {
-      debugPrint('握手失败: $e');
+      logWarning('Handshake failed: $e', source: 'LocalSend');
       // Do not throw; allow prepare step to try as well but keep logs
     } finally {
       client.close();
