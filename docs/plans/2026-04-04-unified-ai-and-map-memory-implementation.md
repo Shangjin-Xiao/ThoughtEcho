@@ -10,7 +10,7 @@
 > 5. **Copilot Delegation Instructions:** When you dispatch tasks to Copilot, be mindful to balance task sizes—group them reasonably without making them too small (e.g., just one code block) or overwhelmingly large. Additionally, instruct Copilot to:
 >    - Spawn its own subagents if necessary.
 >    - Perform a **Code Review using a subagent** immediately after finishing its own implementation tasks.
-> 6. **Context Limit Warning for the Flutter App:** When implementing the `AgentService` and the AI features of the Flutter app, make sure the codebase does **NOT** attempt to send all user notes to the LLM API's context window. The code must rely on Agent tools (e.g., `SearchNotesTool`) to query notes incrementally.
+> 6. **Context Limit Warning & Search Logic:** When implementing `AgentService` and tools like `SearchNotesTool`, do **NOT** send all user notes to the LLM context. However, **do NOT hardcode arbitrary limits** (like returning exactly 5 results or strict character cutoffs). Instead, the executing agent should research how open-source CLI tools (like `geminicli` or `opencode`) elegantly handle file reading and searching without blowing up the context, and apply those best practices to design the optimal incremental query logic.
 > 7. After completing the overall implementation, perform a **Final Code Review** using the Gemini CLI built-in subagent first, followed by Codex 5.3.
 
 **Goal:** 根据最终产品设计，将当前零散的AI页面重构为大一统对话框 (`AIAssistantPage`)，引入原生的AI Skills系统驱动Agent Loop，并实现全屏相册式的地图画廊 (`MapMemoryPage`)。
@@ -57,7 +57,7 @@
 **Dispatcher Action:** Dispatch to Backend Copilot (`Claude 4.5 Opus` or others) to:
 1. Refactor `lib/services/agent_service.dart`.
 2. Remove XML parsing. Implement a `while(true)` loop using `openai_dart` to handle native tool calling.
-3. Ensure the context does **NOT** load all notes at once; rely on specific search tools (e.g. `SearchNotesTool`) to query selectively.
+3. Implement `SearchNotesTool` logic dynamically: Do NOT load all notes at once to avoid context overload, but also do NOT hardcode arbitrary limits (like fixed result counts or cutoffs). Research and adapt best practices from tools like `geminicli` or `opencode` for searching/reading large contexts.
 4. Add robust error handling and duplicate tool call prevention.
 5. Review own code via subagent, then commit.
 
