@@ -463,7 +463,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
     final normalizedProgress =
         ((current / safeTotal) * 100).clamp(0, 100).toDouble();
     final progressPercent = normalizedProgress.round();
-    final stageKey = _resolveBackupStageKey(progressPercent);
+    final stageKey = resolveBackupStageKey(progressPercent);
 
     if (!_backupProgressUpdateGate.shouldUpdate(
       progressPercent: progressPercent,
@@ -478,23 +478,15 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
     });
   }
 
-  String _resolveBackupStageKey(int progressPercent) {
-    if (progressPercent < 15) return 'collect';
-    if (progressPercent < 30) return 'note';
-    if (progressPercent < 60) return 'media';
-    if (progressPercent < 95) return 'zip';
-    return 'verify';
-  }
-
   String _backupStageText(String stageKey) {
     switch (stageKey) {
-      case 'collect':
+      case BackupProgressStages.collect:
         return l10n.collectingData;
-      case 'note':
+      case BackupProgressStages.note:
         return l10n.processingNoteData;
-      case 'media':
+      case BackupProgressStages.media:
         return l10n.processingMediaFiles;
-      case 'zip':
+      case BackupProgressStages.zip:
         return l10n.creatingBackupFile;
       default:
         return l10n.verifyingBackupFile;
