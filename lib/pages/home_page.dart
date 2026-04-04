@@ -23,7 +23,7 @@ import '../widgets/local_ai/ocr_result_sheet.dart';
 import '../widgets/local_ai/voice_input_overlay.dart';
 import 'explore_page.dart';
 import 'settings_page.dart';
-import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
+import 'ai_assistant_page.dart'; // 添加问笔记聊天页面导入
 import '../theme/app_theme.dart';
 import 'note_full_editor_page.dart'; // 添加全屏编辑页面导入
 import '../services/settings_service.dart'; // Import SettingsService
@@ -1542,7 +1542,7 @@ class _HomePageState extends State<HomePage>
   // 显示AI问答聊天界面
   void _showAIQuestionDialog(Quote quote) {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => NoteQAChatPage(quote: quote)),
+      MaterialPageRoute(builder: (context) => AIAssistantPage(quote: quote)),
     );
   }
 

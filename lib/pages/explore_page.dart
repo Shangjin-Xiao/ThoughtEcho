@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../gen_l10n/app_localizations.dart';
 import '../services/database_service.dart';
-import 'agent_chat_page.dart';
+import 'ai_assistant_page.dart';
 import 'map_location_picker_page.dart';
 
 /// 探索页面 — 数据概览 + AI/地图入口 + 收藏笔记
@@ -93,7 +93,7 @@ class _ExplorePageState extends State<ExplorePage> {
                           onTap: () => Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => const AgentChatPage(),
+                              builder: (_) => const AIAssistantPage(),
                             ),
                           ),
                         ),

@@ -26,7 +26,7 @@ import 'package:flutter/services.dart';
 import 'dart:async';
 import '../utils/app_logger.dart';
 import '../utils/string_utils.dart';
-import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
+import 'ai_assistant_page.dart'; // 添加问笔记聊天页面导入
 import 'package:flutter/foundation.dart' show kIsWeb, compute;
 import '../utils/device_memory_manager.dart';
 import '../widgets/quill_enhanced_toolbar_unified.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/quote_model.dart';
-import '../pages/note_qa_chat_page.dart';
+import '../pages/ai_assistant_page.dart';
 
 /// 快速问笔记按钮组件
 class QuickAskNoteButton extends StatelessWidget {
@@ -27,7 +27,7 @@ class QuickAskNoteButton extends StatelessWidget {
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) =>
-                NoteQAChatPage(quote: quote, initialQuestion: initialQuestion),
+                AIAssistantPage(quote: quote, initialQuestion: initialQuestion),
           ),
         );
       },
@@ -53,7 +53,7 @@ class AskNoteFloatingButton extends StatelessWidget {
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) =>
-                NoteQAChatPage(quote: quote, initialQuestion: initialQuestion),
+                AIAssistantPage(quote: quote, initialQuestion: initialQuestion),
           ),
         );
       },
@@ -86,7 +86,7 @@ class AskNoteListTile extends StatelessWidget {
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (context) =>
-                NoteQAChatPage(quote: quote, initialQuestion: initialQuestion),
+                AIAssistantPage(quote: quote, initialQuestion: initialQuestion),
           ),
         );
       },
