@@ -191,7 +191,88 @@ extension _NoteListScrollExtension on NoteListViewState {
   /// 滚动到指定笔记的顶部 - 使用 ensureVisible 确保多展开笔记时定位准确
   /// 注意：目前未被使用，因为折叠时的自动滚动被禁用以改善用户体验
   /// 如果将来需要重新启用，可以取消注释相关调用代码
-  void _scrollToItem(String quoteId, int index) {
+  double? _calculateDesiredOffset(RenderObject renderObject) {
+    if (!_scrollController.hasClients) {
+      return null;
+    }
+
+    final viewport = RenderAbstractViewport.of(renderObject);
+    final reveal = viewport.getOffsetToReveal(renderObject, 0.0);
+    final position = _scrollController.position;
+
+    return (reveal.offset - 12.0)
+        .clamp(position.minScrollExtent, position.maxScrollExtent)
+        .toDouble();
+  }
+
+  Future<void> _performPreciseItemScroll(
+    String quoteId,
+    int index, {
+    required double desiredOffset,
+    required bool forceAlignToTop,
+  }) async {
+    try {
+      logDebug(
+        '滚动到笔记: $quoteId (index: $index), target=${desiredOffset.toStringAsFixed(1)}${forceAlignToTop ? ', exact=true' : ''}',
+        source: 'NoteListView',
+      );
+
+      await _scrollController.animateTo(
+        desiredOffset,
+        duration: QuoteItemWidget.expandCollapseDuration,
+        curve: Curves.easeOutCubic,
+      );
+
+      if (!forceAlignToTop) {
+        logDebug('滚动完成', source: 'NoteListView');
+        return;
+      }
+
+      for (var attempt = 0; attempt < 2; attempt++) {
+        if (!mounted || !_scrollController.hasClients) {
+          return;
+        }
+
+        await WidgetsBinding.instance.endOfFrame;
+
+        final key = _itemKeys[quoteId];
+        final renderObject = key?.currentContext?.findRenderObject();
+        if (renderObject == null) {
+          return;
+        }
+
+        final correctedOffset = _calculateDesiredOffset(renderObject);
+        if (correctedOffset == null ||
+            (_scrollController.offset - correctedOffset).abs() <= 2.0) {
+          logDebug('滚动完成（精确对齐）', source: 'NoteListView');
+          return;
+        }
+
+        logDebug(
+          '执行深跳滚动校准: $quoteId, attempt=${attempt + 1}, target=${correctedOffset.toStringAsFixed(1)}',
+          source: 'NoteListView',
+        );
+
+        await _scrollController.animateTo(
+          correctedOffset,
+          duration: const Duration(milliseconds: 110),
+          curve: Curves.easeOutCubic,
+        );
+      }
+
+      logDebug('滚动完成（达到最大校准次数）', source: 'NoteListView');
+    } catch (e, st) {
+      logDebug('滚动失败: $e\n$st', source: 'NoteListView');
+    } finally {
+      _isAutoScrolling = false;
+    }
+  }
+
+  void _scrollToItem(
+    String quoteId,
+    int index, {
+    bool forceAlignToTop = false,
+  }) {
     if (!mounted || !_scrollController.hasClients) return;
     // 多重保护条件
     if (_isInitializing) {
@@ -236,28 +317,31 @@ extension _NoteListScrollExtension on NoteListViewState {
         return;
       }
 
-      final viewport = RenderAbstractViewport.of(renderObject);
-
-      final reveal = viewport.getOffsetToReveal(renderObject, 0.0);
-      final targetOffset = reveal.offset;
       final position = _scrollController.position;
       final viewportExtent = position.viewportDimension;
       final currentOffset = position.pixels;
+      final targetOffset = RenderAbstractViewport.of(renderObject)
+          .getOffsetToReveal(
+            renderObject,
+            0.0,
+          )
+          .offset;
 
-      if (viewportExtent > 0) {
-        final topVisible = targetOffset >= currentOffset &&
-            targetOffset < currentOffset + viewportExtent;
-        if (topVisible) {
-          logDebug('笔记顶部已在视口内，跳过自动滚动', source: 'NoteListView');
-          return;
-        }
+      if (shouldSkipVisibleTargetAlignment(
+        targetOffset: targetOffset,
+        currentOffset: currentOffset,
+        viewportExtent: viewportExtent,
+        forceAlignToTop: forceAlignToTop,
+      )) {
+        logDebug('笔记顶部已在视口内，跳过自动滚动', source: 'NoteListView');
+        return;
       }
 
-      final minExtent = position.minScrollExtent;
-      final maxExtent = position.maxScrollExtent;
-
-      double desiredOffset =
-          (targetOffset - 12.0).clamp(minExtent, maxExtent).toDouble();
+      final desiredOffset = _calculateDesiredOffset(renderObject);
+      if (desiredOffset == null) {
+        logDebug('无法计算目标偏移量，跳过自动滚动', source: 'NoteListView');
+        return;
+      }
 
       if ((currentOffset - desiredOffset).abs() <= 4) {
         logDebug('目标偏移量变化较小，跳过自动滚动', source: 'NoteListView');
@@ -265,24 +349,14 @@ extension _NoteListScrollExtension on NoteListViewState {
       }
 
       _isAutoScrolling = true;
-      logDebug(
-        '滚动到笔记: $quoteId (index: $index), target=${desiredOffset.toStringAsFixed(1)}',
-        source: 'NoteListView',
+      unawaited(
+        _performPreciseItemScroll(
+          quoteId,
+          index,
+          desiredOffset: desiredOffset,
+          forceAlignToTop: forceAlignToTop,
+        ),
       );
-
-      _scrollController
-          .animateTo(
-        desiredOffset,
-        duration: QuoteItemWidget.expandCollapseDuration,
-        curve: Curves.easeOutCubic,
-      )
-          .then((_) {
-        logDebug('滚动完成', source: 'NoteListView');
-      }).catchError((e) {
-        logDebug('滚动失败: $e', source: 'NoteListView');
-      }).whenComplete(() {
-        _isAutoScrolling = false;
-      });
     } catch (e, st) {
       logDebug('滚动失败: $e\n$st', source: 'NoteListView');
       _isAutoScrolling = false;

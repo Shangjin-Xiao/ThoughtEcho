@@ -24,6 +24,7 @@ import '../controllers/search_controller.dart';
 import '../constants/app_constants.dart'; // 导入应用常量
 import '../utils/quill_editor_extensions.dart' show isListScrolling;
 import '../services/settings_service.dart'; // 导入设置服务
+import 'note_list/scroll_alignment.dart';
 
 part 'note_list/note_list_scroll.dart';
 part 'note_list/note_list_data_stream.dart';
@@ -500,7 +501,7 @@ class NoteListViewState extends State<NoteListView> {
           await WidgetsBinding.instance.endOfFrame;
           final key = _itemKeys[quoteId];
           if (key != null && key.currentContext != null) {
-            _scrollToItem(quoteId, index);
+            _scrollToItem(quoteId, index, forceAlignToTop: true);
             return;
           }
           renderDelay = (renderDelay * 1.5).toInt().clamp(30, 200);
@@ -509,7 +510,7 @@ class NoteListViewState extends State<NoteListView> {
         // 最终兜底尝试
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
-          _scrollToItem(quoteId, index);
+          _scrollToItem(quoteId, index, forceAlignToTop: true);
         });
         return;
       }
