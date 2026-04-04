@@ -1180,9 +1180,9 @@ class _HomePageState extends State<HomePage>
         work = hitokotoData['from'] ?? work;
       }
 
-      // TODO: 这里的 hasAuthorOrWork 判断是在填充默认值前进行的，这会导致 skipDefaultMetadataAutofill 语义不够精准。虽然目前全屏编辑器内部会再次通过 text.isEmpty 进行保护，功能上没有问题，但建议后续重构时提取出 hasExplicitAuthorOrWork 变量来明确区分明确传值和默认值填充。
+      final hasExplicitAuthorOrWork = author != null || work != null;
+
       // 如果没有指定作者/出处，使用默认值
-      final hasAuthorOrWork = author != null || work != null;
       if (author == null &&
           settingsService.defaultAuthor != null &&
           settingsService.defaultAuthor!.isNotEmpty) {
@@ -1208,7 +1208,7 @@ class _HomePageState extends State<HomePage>
             allTags: _tags,
             initialAuthor: author,
             initialWork: work,
-            skipDefaultMetadataAutofill: hasAuthorOrWork,
+            skipDefaultMetadataAutofill: hasExplicitAuthorOrWork,
           ),
         ),
       );
