@@ -7,12 +7,15 @@ void main() {
       // Despite the method comment "通过中文描述反查天气key", the actual _keyToDescription
       // values are English keys mapped to themselves (e.g. 'clear': 'clear').
       expect(WeatherCodeMapper.getKeyByDescription('clear'), 'clear');
-      expect(WeatherCodeMapper.getKeyByDescription('partly_cloudy'), 'partly_cloudy');
-      expect(WeatherCodeMapper.getKeyByDescription('thunderstorm_heavy'), 'thunderstorm_heavy');
+      expect(WeatherCodeMapper.getKeyByDescription('partly_cloudy'),
+          'partly_cloudy');
+      expect(WeatherCodeMapper.getKeyByDescription('thunderstorm_heavy'),
+          'thunderstorm_heavy');
     });
 
     test('returns null for unknown description', () {
-      expect(WeatherCodeMapper.getKeyByDescription('unknown_description'), isNull);
+      expect(
+          WeatherCodeMapper.getKeyByDescription('unknown_description'), isNull);
       expect(WeatherCodeMapper.getKeyByDescription(''), isNull);
     });
   });
