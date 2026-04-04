@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'dio_network_utils.dart';
 import 'http_response.dart';
 import 'package:thoughtecho/utils/app_logger.dart';
+import 'package:flutter/foundation.dart';
 
 class HttpUtils {
   // 单例Dio实例
@@ -47,6 +48,10 @@ class HttpUtils {
       ),
     );
   } // 兼容旧的http.Response格式
+
+  @visibleForTesting
+  static HttpResponse convertDioResponseToHttpResponse(Response dioResponse) =>
+      _convertDioResponseToHttpResponse(dioResponse);
 
   static HttpResponse _convertDioResponseToHttpResponse(Response dioResponse) {
     Map<String, String> convertedHeaders = {};
