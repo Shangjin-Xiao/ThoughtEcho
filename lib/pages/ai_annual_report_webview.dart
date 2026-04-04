@@ -1023,7 +1023,8 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
 
         // Note: _sanitizedHtmlContent already has CSP (sanitized in initState)
         // 保存文件
-        await LargeFileManager.writeStringToFile(reportFile, _sanitizedHtmlContent);
+        await LargeFileManager.writeStringToFile(
+            reportFile, _sanitizedHtmlContent);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
