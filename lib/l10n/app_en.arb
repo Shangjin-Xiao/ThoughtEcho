@@ -3184,6 +3184,7 @@
   "unsavedChangesDesc": "You have unsaved edits. Do you want to discard these changes?",
   "continueEditing": "Continue Editing",
   "discardChanges": "Discard Changes",
+  "saveAndExit": "Save and Exit",
   "actionFavorite": "Favorite",
   "actionUnfavorite": "Unfavorite",
   "clearFavoriteTitle": "Clear Favorite",

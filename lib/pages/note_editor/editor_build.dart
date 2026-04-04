@@ -22,14 +22,15 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
           return;
         }
 
-        final shouldDiscard = await showDialog<bool>(
+        // 返回值: null=继续编辑, true=放弃更改, 'save'=保存并退出
+        final dialogResult = await showDialog<dynamic>(
           context: context,
           builder: (ctx) => AlertDialog(
             title: Text(l10n.unsavedChangesTitle),
             content: Text(l10n.unsavedChangesDesc),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
+                onPressed: () => Navigator.pop(ctx, null),
                 child: Text(l10n.continueEditing),
               ),
               TextButton(
@@ -39,17 +40,25 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                   style: TextStyle(color: Colors.red.shade400),
                 ),
               ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, 'save'),
+                child: Text(l10n.saveAndExit),
+              ),
             ],
           ),
         );
 
-        if (shouldDiscard ?? false) {
+        if (dialogResult == true) {
           if (context.mounted) {
             // 用户选择放弃更改，清理草稿
             _clearDraft();
             Navigator.pop(context);
           }
+        } else if (dialogResult == 'save') {
+          // 用户选择保存并退出
+          await _saveContent();
         }
+        // dialogResult == null: 继续编辑，不做任何操作
       },
       child: Scaffold(
         backgroundColor: theme.colorScheme.surface,

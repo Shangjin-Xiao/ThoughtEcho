@@ -3170,6 +3170,7 @@
   "unsavedChangesDesc": "Vous avez des modifications non enregistrées. Voulez-vous annuler ces modifications ?",
   "continueEditing": "Continuer la modification",
   "discardChanges": "Ignorer les modifications",
+  "saveAndExit": "Enregistrer et quitter",
   "actionFavorite": "Préféré",
   "actionUnfavorite": "Supprimer des favoris",
   "clearFavoriteTitle": "Effacer le favori",

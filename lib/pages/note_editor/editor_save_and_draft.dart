@@ -119,6 +119,9 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         return;
       }
 
+      // 检查是否有用户实际输入的内容（非自动填充）
+      final hasUserContent = _hasActualUserContent();
+
       final deltaJson = await _getDocumentContentSafely();
       final payload = {
         'deltaContent': deltaJson,
@@ -134,12 +137,30 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         'temperature': _showWeather ? _temperature : null,
         'aiAnalysis': _currentAiAnalysis,
         'timestamp': DateTime.now().toIso8601String(),
+        'hasUserContent': hasUserContent,
       };
       // 使用 DraftService 保存草稿
       await DraftService().saveDraft(key, payload);
     } catch (e) {
       logDebug('保存草稿失败: $e');
     }
+  }
+
+  /// 检查是否有用户实际输入的内容（非自动填充的内容）
+  bool _hasActualUserContent() {
+    // 检查正文内容是否有变化
+    final currentPlainText = _controller.document.toPlainText().trim();
+    if (currentPlainText != _initialPlainText.trim() &&
+        currentPlainText.isNotEmpty) {
+      return true;
+    }
+
+    // 如果是恢复的草稿，视为有用户内容
+    if (_isRestoredFromDraft) {
+      return true;
+    }
+
+    return false;
   }
 
   Future<void> _clearDraft() async {
