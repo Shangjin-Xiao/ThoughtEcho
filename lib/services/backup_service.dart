@@ -34,6 +34,10 @@ class BackupService {
 
   static const String _backupDataFile = 'backup_data.json';
   static const String _backupVersion = '1.2.0'; // 版本更新，因为数据结构变化
+  static const int stageCollectEnd = 15;
+  static const int stageNoteEnd = 35;
+  static const int stageMediaEnd = 60;
+  static const int stageZipEnd = 95;
 
   /// 导出所有应用数据（增强版，支持大文件安全处理）
   ///
@@ -109,7 +113,7 @@ class BackupService {
       );
 
       cancelToken?.throwIfCancelled();
-      onProgress?.call(35, 100); // 更新进度
+      onProgress?.call(stageNoteEnd, 100); // 更新进度
 
       // 2. 准备ZIP文件列表
       final filesToZip = <String, String>{};
@@ -124,7 +128,7 @@ class BackupService {
         onProgress: (current, total) {
           // 媒体文件收集进度占总进度的25% (35% - 60%)
           final mediaProgress = (current / 100 * 25).round();
-          onProgress?.call(35 + mediaProgress, 100);
+          onProgress?.call(stageNoteEnd + mediaProgress, 100);
         },
         onStatusUpdate: (status) {
           logDebug('媒体处理状态: $status');
@@ -140,7 +144,7 @@ class BackupService {
       );
 
       cancelToken?.throwIfCancelled();
-      onProgress?.call(60, 100); // 更新进度
+      onProgress?.call(stageMediaEnd, 100); // 更新进度
 
       // 4. 使用流式ZIP创建
       logDebug('开始创建ZIP文件，包含 ${filesToZip.length} 个文件...');
@@ -154,12 +158,12 @@ class BackupService {
         onProgress: (current, total) {
           // ZIP创建进度占总进度的35%
           final zipProgress = (current / total * 35).round();
-          onProgress?.call(60 + zipProgress, 100);
+          onProgress?.call(stageMediaEnd + zipProgress, 100);
         },
         cancelToken: cancelToken,
       );
 
-      onProgress?.call(95, 100); // 更新进度
+      onProgress?.call(stageZipEnd, 100); // 更新进度
       logDebug('数据导出成功，路径: $archivePath');
 
       // 让UI有机会更新
