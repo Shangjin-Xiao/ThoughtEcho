@@ -30,3 +30,8 @@
 **Vulnerability:** String interpolation in `PRAGMA table_info($tableName)` opens up a potential SQL injection vulnerability, even if the input is currently validated.
 **Learning:** SQLite's `PRAGMA` statements do not natively support query parameters in all contexts, but equivalent table-valued functions like `pragma_table_info(?)` do, allowing for secure parameterized queries.
 **Prevention:** Always use parameterized queries or table-valued functions instead of string interpolation for SQL queries, even for schema inspection commands.
+
+## 2024-05-24 - [High] Fix XSS vulnerability in AIAnnualReportWebView
+**Vulnerability:** Cross-Site Scripting (XSS) vulnerability due to rendering raw `widget.htmlContent` (potentially containing AI-generated or user-provided malicious scripts) in `AIAnnualReportWebView`. Furthermore, `ContentSanitizer.injectCsp` could be bypassed by an attacker providing their own permissive CSP meta tag.
+**Learning:** Raw HTML content must always be properly sanitized *before* initial use, rather than only at export/share time. Regex-based stripping of scripts should be combined with strict Content-Security-Policy injection for defense-in-depth against XSS.
+**Prevention:** Ensured `_sanitizedHtmlContent` is instantiated securely in `initState` and propagated to all file read/write/share and rendering contexts. Updated `ContentSanitizer` to aggressively strip existing CSP meta tags and `<script>` blocks before applying the safe, default CSP.
