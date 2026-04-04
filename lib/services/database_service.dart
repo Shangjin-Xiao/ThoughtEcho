@@ -88,8 +88,6 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     bool includeDeleted = false,
   });
   Future<List<Quote>> getQuotesForSmartPush({
-    String? whereSql,
-    List<Object?>? whereArgs,
     int limit = 200,
     String orderBy = 'q.date DESC',
     bool includeDeleted = false,
@@ -269,6 +267,21 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   void _safeNotifyQuotesStream();
   void _refreshQuotesStream();
   Future<void> _updateCategoriesStream();
+
+  /// 应用搜索查询条件
+  void _applySearchQuery(
+    String? searchQuery,
+    List<String> conditions,
+    List<dynamic> args,
+  ) {
+    if (searchQuery != null && searchQuery.isNotEmpty) {
+      conditions.add(
+        '(q.content LIKE ? OR (q.source LIKE ? OR q.source_author LIKE ? OR q.source_work LIKE ?))',
+      );
+      final searchParam = '%$searchQuery%';
+      args.addAll([searchParam, searchParam, searchParam, searchParam]);
+    }
+  }
 
   static void setTestDatabase(Database testDb) {
     _database = testDb;

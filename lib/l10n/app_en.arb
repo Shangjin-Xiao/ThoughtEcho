@@ -501,6 +501,7 @@
   "customColor": "Custom Color",
   "select": "Select",
   "editMetadata": "Edit Metadata",
+  "noLocationWeatherRecorded": "Location and weather were not recorded when this note was first saved",
   "done": "Done",
   "selectTags": "Select Tags",
   "noMatchingTags": "No matching tags found",
@@ -3183,6 +3184,7 @@
   "unsavedChangesDesc": "You have unsaved edits. Do you want to discard these changes?",
   "continueEditing": "Continue Editing",
   "discardChanges": "Discard Changes",
+  "saveAndExit": "Save and Exit",
   "actionFavorite": "Favorite",
   "actionUnfavorite": "Unfavorite",
   "clearFavoriteTitle": "Clear Favorite",
@@ -3570,5 +3572,7 @@
   "insertVideo": "Insert Video",
   "insertAudio": "Insert Audio",
   "clipboardFoundHint": "Clipboard content found, tap to add as note",
-  "operationFailedSimple": "Operation failed"
+  "operationFailedSimple": "Operation failed",
+  "skipNonFullscreenEditor": "Open fullscreen editor directly",
+  "skipNonFullscreenEditorDesc": "Skip quick edit and open fullscreen rich text editor when adding notes"
 }

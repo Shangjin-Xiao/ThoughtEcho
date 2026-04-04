@@ -60,7 +60,10 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
             logDebug('插入内容失败: $insertError');
             // 最后的兜底：创建一个包含错误信息的文档
             try {
-              _controller.document.insert(0, '文档加载失败，请重新打开编辑器');
+              final errorMessage = AppLocalizations.of(
+                context,
+              ).documentLoadFailed;
+              _controller.document.insert(0, errorMessage);
             } catch (_) {
               // 完全失败，保持空文档
             }
@@ -107,6 +110,18 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       final key = _draftStorageKey;
       if (key == null || key.isEmpty) return;
       final plainText = _controller.document.toPlainText().trim();
+
+      // 只有用户实际编写了正文内容才保存草稿
+      // 自动添加的天气、位置、标签等不应该触发草稿保存
+      if (plainText.isEmpty) {
+        // 如果正文为空，删除已存在的草稿
+        await _clearDraft();
+        return;
+      }
+
+      // 检查是否有用户实际输入的内容（非自动填充）
+      final hasUserContent = _hasActualUserContent();
+
       final deltaJson = await _getDocumentContentSafely();
       final payload = {
         'deltaContent': deltaJson,
@@ -122,12 +137,30 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         'temperature': _showWeather ? _temperature : null,
         'aiAnalysis': _currentAiAnalysis,
         'timestamp': DateTime.now().toIso8601String(),
+        'hasUserContent': hasUserContent,
       };
       // 使用 DraftService 保存草稿
       await DraftService().saveDraft(key, payload);
     } catch (e) {
       logDebug('保存草稿失败: $e');
     }
+  }
+
+  /// 检查是否有用户实际输入的内容（非自动填充的内容）
+  bool _hasActualUserContent() {
+    // 检查正文内容是否有变化
+    final currentPlainText = _controller.document.toPlainText().trim();
+    if (currentPlainText != _initialPlainText.trim() &&
+        currentPlainText.isNotEmpty) {
+      return true;
+    }
+
+    // 如果是恢复的草稿，视为有用户内容
+    if (_isRestoredFromDraft) {
+      return true;
+    }
+
+    return false;
   }
 
   Future<void> _clearDraft() async {
@@ -178,23 +211,27 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       return true;
     }
 
-    // 检查位置
-    if (_location != _initialLocation) {
-      return true;
-    }
-    if (_latitude != _initialLatitude) {
-      return true;
-    }
-    if (_longitude != _initialLongitude) {
-      return true;
-    }
+    // 对于编辑已有笔记的情况，检查位置和天气变化
+    // 对于新建笔记，位置和天气是自动获取的，不视为用户修改
+    if (widget.initialQuote != null) {
+      // 检查位置
+      if (_location != _initialLocation) {
+        return true;
+      }
+      if (_latitude != _initialLatitude) {
+        return true;
+      }
+      if (_longitude != _initialLongitude) {
+        return true;
+      }
 
-    // 检查天气
-    if (_weather != _initialWeather) {
-      return true;
-    }
-    if (_temperature != _initialTemperature) {
-      return true;
+      // 检查天气
+      if (_weather != _initialWeather) {
+        return true;
+      }
+      if (_temperature != _initialTemperature) {
+        return true;
+      }
     }
 
     // 检查 AI 分析
@@ -394,17 +431,19 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     } catch (e) {
       // 数据库保存失败，回滚本次移动到永久目录的媒体文件，避免产生孤儿
       try {
-        await Future.wait(movedToPermanentForThisSave.map((p) async {
-          try {
-            final f = File(p);
-            if (await f.exists()) {
-              await f.delete();
-              logDebug('因保存失败，回滚删除永久媒体文件: $p');
+        await Future.wait(
+          movedToPermanentForThisSave.map((p) async {
+            try {
+              final f = File(p);
+              if (await f.exists()) {
+                await f.delete();
+                logDebug('因保存失败，回滚删除永久媒体文件: $p');
+              }
+            } catch (itemErr) {
+              logDebug('单个媒体文件回滚删除失败: $p, $itemErr');
             }
-          } catch (itemErr) {
-            logDebug('单个媒体文件回滚删除失败: $p, $itemErr');
-          }
-        }));
+          }),
+        );
       } catch (rollbackErr) {
         logDebug('保存失败后的媒体回滚删除出错: $rollbackErr');
       }

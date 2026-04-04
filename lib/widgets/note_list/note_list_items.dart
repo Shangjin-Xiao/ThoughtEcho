@@ -241,14 +241,11 @@ extension _NoteListItemsExtension on NoteListViewState {
       '${widget.selectedTagIds.join(',')}_${widget.selectedWeathers.join(',')}_${widget.selectedDayPeriods.join(',')}_${widget.searchQuery}',
     );
 
-    // 修复：检查标签是否已加载（外部标签或本地缓存任一不为空即可）
-    final bool tagsLoaded =
-        widget.tags.isNotEmpty || _localTagsCache.isNotEmpty;
-
-    // 修复：等待服务初始化或标签未加载时显示加载动画，避免闪现"无笔记"或"未知标签"
-    if (_waitingForServices ||
-        (_isLoading && _quotes.isEmpty) ||
-        (!tagsLoaded && _quotes.isNotEmpty)) {
+    // 仅在服务初始化或首批笔记尚未返回时显示 loading。
+    // 标签映射允许延后到达；QuoteItemWidget 会对缺失标签做兜底，
+    // 因此不能让标签加载状态阻塞整个笔记列表，否则在新建 HomePage
+    // 的并发初始化场景下会出现“笔记已收到但页面永久 loading”。
+    if (_waitingForServices || (_isLoading && _quotes.isEmpty)) {
       // 搜索时用专属动画
       if (widget.searchQuery.isNotEmpty) {
         return LayoutBuilder(

@@ -38,6 +38,12 @@ void main() {
       expect(AppSettings.fromJson(const {}).excerptIntentEnabled, isTrue);
     });
 
+    test('AppSettings should default direct fullscreen editor toggle to false',
+        () {
+      expect(AppSettings.defaultSettings().skipNonFullscreenEditor, isFalse);
+      expect(AppSettings.fromJson(const {}).skipNonFullscreenEditor, isFalse);
+    });
+
     test('should persist excerpt intake toggle changes', () async {
       expect(settingsService.excerptIntentEnabled, isTrue);
 
@@ -67,5 +73,49 @@ void main() {
         );
       },
     );
+
+    test(
+      'applyIncomingTrashSettings should ignore payload without retention_days',
+      () async {
+        await settingsService.setTrashRetentionDays(
+          90,
+          modifiedAt: DateTime.utc(2026, 3, 28, 10),
+        );
+
+        final applied = await settingsService.applyIncomingTrashSettings({
+          'last_modified': '2026-03-29T10:00:00.000Z',
+        });
+
+        expect(applied, isFalse);
+        expect(settingsService.trashRetentionDays, equals(90));
+      },
+    );
+
+    test(
+      'applyIncomingTrashSettings should ignore unparseable retention_days',
+      () async {
+        await settingsService.setTrashRetentionDays(
+          30,
+          modifiedAt: DateTime.utc(2026, 3, 28, 10),
+        );
+
+        final applied = await settingsService.applyIncomingTrashSettings({
+          'retention_days': 'invalid',
+          'last_modified': '2026-03-29T10:00:00.000Z',
+        });
+
+        expect(applied, isFalse);
+        expect(settingsService.trashRetentionDays, equals(30));
+      },
+    );
+
+    test('should persist direct fullscreen editor toggle changes', () async {
+      expect(settingsService.skipNonFullscreenEditor, isFalse);
+
+      await settingsService.setSkipNonFullscreenEditor(true);
+
+      expect(settingsService.skipNonFullscreenEditor, isTrue);
+      expect(settingsService.appSettings.skipNonFullscreenEditor, isTrue);
+    });
   });
 }

@@ -27,6 +27,7 @@ class AppSettings {
   final bool anniversaryAnimationEnabled; // 一周年庆典动画是否启用（开发者模式控制）
   final int trashRetentionDays; // 回收站保留天数（7/30/90）
   final String? trashRetentionLastModified; // 回收站保留设置更新时间（UTC ISO）
+  final bool skipNonFullscreenEditor; // 新增：跳过非全屏编辑器，直接进入全屏编辑器
 
   AppSettings({
     this.hitokotoType = 'a,b,c,d,e,f,g,h,i,j,k', // 默认全选所有类型
@@ -55,6 +56,7 @@ class AppSettings {
     this.anniversaryAnimationEnabled = true, // 默认启用庆典动画
     this.trashRetentionDays = 30,
     this.trashRetentionLastModified,
+    this.skipNonFullscreenEditor = false, // 默认不跳过非全屏编辑器
   });
 
   static int normalizeTrashRetentionDays(int? days) {
@@ -92,6 +94,7 @@ class AppSettings {
       'anniversaryAnimationEnabled': anniversaryAnimationEnabled,
       'trashRetentionDays': trashRetentionDays,
       'trashRetentionLastModified': trashRetentionLastModified,
+      'skipNonFullscreenEditor': skipNonFullscreenEditor,
     };
   }
 
@@ -136,6 +139,7 @@ class AppSettings {
       anniversaryAnimationEnabled: map['anniversaryAnimationEnabled'] ?? true,
       trashRetentionDays: normalizeTrashRetentionDays(parsedRetentionDays),
       trashRetentionLastModified: map['trashRetentionLastModified'] as String?,
+      skipNonFullscreenEditor: map['skipNonFullscreenEditor'] ?? false,
     );
   }
 
@@ -166,6 +170,7 @@ class AppSettings {
         anniversaryAnimationEnabled: true,
         trashRetentionDays: 30,
         trashRetentionLastModified: null,
+        skipNonFullscreenEditor: false, // 默认不跳过非全屏编辑器
       );
 
   /// 使用特殊标记来区分"未指定"和"设置为null（跟随系统）"
@@ -200,6 +205,7 @@ class AppSettings {
     int? trashRetentionDays,
     String? trashRetentionLastModified,
     bool clearTrashRetentionLastModified = false,
+    bool? skipNonFullscreenEditor,
   }) {
     return AppSettings(
       hitokotoType: hitokotoType ?? this.hitokotoType,
@@ -241,6 +247,8 @@ class AppSettings {
       trashRetentionLastModified: clearTrashRetentionLastModified
           ? null
           : (trashRetentionLastModified ?? this.trashRetentionLastModified),
+      skipNonFullscreenEditor:
+          skipNonFullscreenEditor ?? this.skipNonFullscreenEditor,
     );
   }
 }

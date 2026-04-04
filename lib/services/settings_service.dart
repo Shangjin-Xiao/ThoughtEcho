@@ -96,6 +96,10 @@ class SettingsService extends ChangeNotifier {
       return false;
     }
 
+    if (!incoming.containsKey('retention_days')) {
+      return false;
+    }
+
     final dynamic rawDays = incoming['retention_days'];
     int? parsedDays;
     if (rawDays is int) {
@@ -104,6 +108,10 @@ class SettingsService extends ChangeNotifier {
       parsedDays = rawDays.toInt();
     } else if (rawDays is String) {
       parsedDays = int.tryParse(rawDays);
+    }
+
+    if (parsedDays == null) {
+      return false;
     }
 
     final incomingDays = AppSettings.normalizeTrashRetentionDays(parsedDays);
@@ -293,6 +301,14 @@ class SettingsService extends ChangeNotifier {
   /// 重置一周年动画已显示标记（开发者模式使用）
   Future<void> resetAnniversaryShown() async {
     _appSettings = _appSettings.copyWith(anniversaryShown: false);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  // 跳过非全屏编辑器，直接进入全屏编辑器
+  bool get skipNonFullscreenEditor => _appSettings.skipNonFullscreenEditor;
+  Future<void> setSkipNonFullscreenEditor(bool enabled) async {
+    _appSettings = _appSettings.copyWith(skipNonFullscreenEditor: enabled);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
     notifyListeners();
   }

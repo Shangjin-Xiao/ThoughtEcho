@@ -100,6 +100,19 @@ class DraftService {
             data = Map<String, dynamic>.from(stored);
           }
 
+          // 只有包含正文内容的草稿才考虑恢复
+          // 自动添加的天气、位置、标签等不应该触发草稿恢复
+          final plainText = data['plainText'] as String?;
+          if (plainText == null || plainText.trim().isEmpty) {
+            continue;
+          }
+
+          // 检查是否只有自动填充的内容（无实际用户输入）
+          final hasUserContent = data['hasUserContent'] as bool? ?? true;
+          if (!hasUserContent) {
+            continue;
+          }
+
           if (data.containsKey('timestamp')) {
             final tsStr = data['timestamp'] as String;
             final ts = DateTime.tryParse(tsStr);

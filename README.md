@@ -1,30 +1,38 @@
 <div align="center">
-  <img src="res/icon.png" alt="心迹 Logo / ThoughtEcho Logo" width="120">
+  <a href="https://github.com/Shangjin-Xiao/ThoughtEcho">
+    <img src="res/bento-banner.png" alt="ThoughtEcho 心迹 - AI-Powered Inspiration Notebook" width="100%">
+  </a>
   
   # 心迹 (ThoughtEcho)
   
   <p>
+    <b>📝 你的专属灵感摘录本 / Your Personal AI-Powered Inspiration Notebook</b><br>
+    让我们一起随心记录，释放 AI 洞察的力量 ✨
+  </p>
+
+  <p>
+    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest">
+      <img src="https://img.shields.io/github/v/release/Shangjin-Xiao/ThoughtEcho?style=flat-square&color=3cb371" alt="Latest Release">
+    </a>
+    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases">
+      <img src="https://img.shields.io/github/downloads/Shangjin-Xiao/ThoughtEcho/total?style=flat-square&color=0078D7" alt="Total Downloads">
+    </a>
+    <a href="https://www.microsoft.com/store/apps/9NC7GDG6KFMC">
+      <img src="https://img.shields.io/badge/Microsoft-Store-0078D7?style=flat-square&logo=windows&logoColor=white" alt="Microsoft Store">
+    </a>
+    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/stargazers">
+      <img src="https://img.shields.io/github/stars/Shangjin-Xiao/ThoughtEcho?style=flat-square&color=FFD700" alt="Stars">
+    </a>
     <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/blob/main/LICENSE">
       <img src="https://img.shields.io/github/license/Shangjin-Xiao/ThoughtEcho?style=flat-square" alt="License: MIT">
     </a>
-    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases/latest">
-  <img src="https://img.shields.io/github/v/release/Shangjin-Xiao/ThoughtEcho?style=flat-square&label=latest" alt="Latest Release">
-    </a>
-    <!-- TODO: If CI is set up later, uncomment and potentially update the workflow filename -->
-    <!-- <img src="https://img.shields.io/github/workflow/status/Shangjin-Xiao/ThoughtEcho/CI?style=flat-square" alt="Build Status / 构建状态"> -->
-    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/stargazers">
-      <img src="https://img.shields.io/github/stars/Shangjin-Xiao/ThoughtEcho?style=flat-square&color=yellow" alt="Stars">
-    </a>
-    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/network/members">
-      <img src="https://img.shields.io/github/forks/Shangjin-Xiao/ThoughtEcho?style=flat-square&color=blue" alt="Forks">
-    </a>
   </p>
 
-  <h3>🌍 Now with full English and Japanese support!</h3>
-
+  <h3>📥 下载渠道 / Download</h3>
   <p>
-    <b>📝 你的专属灵感摘录本<br>
-    让我们一起随心记录，释放 AI 洞察的力量 ✨</b>
+    <a href="https://www.microsoft.com/store/apps/9NC7GDG6KFMC"><img src="https://get.microsoft.com/images/zh-cn%20dark.svg" width="160" alt="从 Microsoft Store 获取"></a>
+    &nbsp;&nbsp;&nbsp;
+    <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases"><img src="https://img.shields.io/badge/GitHub_Releases-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Releases"></a>
   </p>
 
   <p>
@@ -42,6 +50,22 @@
 ---
 
 <div id="-中文版本">
+
+## 🌟 为什么选择 ThoughtEcho？
+
+<div align="center">
+  <img src="res/readme-banner.png" alt="Your Personal AI-Powered Inspiration Notebook" width="100%">
+</div>
+
+ThoughtEcho 不仅仅是一个记事本，它是你的**私人 AI 灵感助理**。无论你是捕捉转瞬即逝灵感的创作者、整理笔记的学生，还是记录行业洞察的专业人士，ThoughtEcho 都能帮你：
+
+- 📝 **随时随地捕获**：富文本、多媒体，甚至一句话的灵感碎片
+- 🤖 **深度理解笔记**：通过 AI 问答与润色，让笔记产生更多价值
+- 📊 **发现思维脉络**：智能提取周期洞察与年度报告
+- 🔄 **无缝多端同步**：全平台覆盖，数据永远触手可及
+- 🔒 **保护个人隐私**：本地优先存储，加密备份，你的数据只属于你
+
+<br>
 
 ## ✨ 当前功能
 
@@ -70,6 +94,11 @@
 </div>
 
 ## 📸 应用截图
+
+<div align="center">
+  <img src="res/thoughtecho banner.webp" alt="ThoughtEcho UI Showcase" width="100%">
+</div>
+<br>
 
 ### 核心功能
 | 主页 | 笔记列表 | 添加笔记 |
@@ -279,6 +308,10 @@
 
 ## 🌟 Why ThoughtEcho?
 
+<div align="center">
+  <img src="res/readme-banner.png" alt="Your Personal AI-Powered Inspiration Notebook" width="100%">
+</div>
+
 ThoughtEcho is more than just a note-taking app—it's your **personal AI-powered knowledge companion**. Whether you're a writer capturing fleeting ideas, a student organizing study notes, or a professional tracking insights, ThoughtEcho helps you:
 
 - 📝 **Capture** thoughts instantly with rich text, images, audio, and video
@@ -314,6 +347,11 @@ ThoughtEcho is more than just a note-taking app—it's your **personal AI-powere
 </div>
 
 ## 📸 Application Screenshots
+
+<div align="center">
+  <img src="res/thoughtecho banner.webp" alt="ThoughtEcho UI Showcase" width="100%">
+</div>
+<br>
 
 ### Core Features
 | Homepage | Note List | Add Note |

@@ -9,9 +9,13 @@ import 'package:thoughtecho/services/settings_service.dart';
 
 class _TestSettingsService extends ChangeNotifier implements SettingsService {
   bool _excerptIntentEnabled;
+  bool _skipNonFullscreenEditor;
 
-  _TestSettingsService({bool excerptIntentEnabled = true})
-      : _excerptIntentEnabled = excerptIntentEnabled;
+  _TestSettingsService({
+    bool excerptIntentEnabled = true,
+    bool skipNonFullscreenEditor = false,
+  })  : _excerptIntentEnabled = excerptIntentEnabled,
+        _skipNonFullscreenEditor = skipNonFullscreenEditor;
 
   @override
   bool get excerptIntentEnabled => _excerptIntentEnabled;
@@ -19,6 +23,15 @@ class _TestSettingsService extends ChangeNotifier implements SettingsService {
   @override
   Future<void> setExcerptIntentEnabled(bool enabled) async {
     _excerptIntentEnabled = enabled;
+    notifyListeners();
+  }
+
+  @override
+  bool get skipNonFullscreenEditor => _skipNonFullscreenEditor;
+
+  @override
+  Future<void> setSkipNonFullscreenEditor(bool enabled) async {
+    _skipNonFullscreenEditor = enabled;
     notifyListeners();
   }
 
@@ -164,10 +177,13 @@ void main() {
     final settings = _TestSettingsService();
     final clipboard = _TestClipboardService();
 
+    final localizations =
+        await AppLocalizations.delegate.load(const Locale('zh'));
+
     await tester.pumpWidget(buildApp(settings, clipboard));
     await tester.pumpAndSettle();
 
-    final titleFinder = find.text('摘录到心迹');
+    final titleFinder = find.text(localizations.excerptIntentEnabled);
     await tester.scrollUntilVisible(
       titleFinder,
       200,
@@ -182,5 +198,32 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(settings.excerptIntentEnabled, isFalse);
+  });
+
+  testWidgets('偏好设置页显示直接进入全屏编辑器开关并可切换', (tester) async {
+    final settings = _TestSettingsService();
+    final clipboard = _TestClipboardService();
+
+    final localizations =
+        await AppLocalizations.delegate.load(const Locale('zh'));
+
+    await tester.pumpWidget(buildApp(settings, clipboard));
+    await tester.pumpAndSettle();
+
+    final titleFinder = find.text(localizations.skipNonFullscreenEditor);
+    await tester.scrollUntilVisible(
+      titleFinder,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(titleFinder, findsOneWidget);
+    expect(settings.skipNonFullscreenEditor, isFalse);
+
+    await tester.tap(titleFinder);
+    await tester.pumpAndSettle();
+
+    expect(settings.skipNonFullscreenEditor, isTrue);
   });
 }

@@ -157,7 +157,7 @@ class MergeReport {
 
   /// 总处理笔记（不含分类）
   int get totalProcessedQuotes =>
-      appliedQuotes + skippedQuotes + sameTimestampDiffQuotes;
+      appliedQuotes + deletedQuotes + skippedQuotes + sameTimestampDiffQuotes;
 
   /// 总处理分类
   int get totalProcessedCategories => appliedCategories + skippedCategories;

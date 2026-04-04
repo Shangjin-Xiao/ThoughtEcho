@@ -23,12 +23,10 @@ class DatabaseBackupService {
       // 查询所有分类数据
       final categories = await db.query('categories');
 
-      // 查询笔记数据并重建tag_ids字段以保持向后兼容
+      // ⚡ Bolt: 使用标量子查询优化标签聚合查询，避免 LEFT JOIN + GROUP BY 的整表聚合性能开销
       final quotesWithTags = await db.rawQuery('''
-        SELECT q.*, GROUP_CONCAT(qt.tag_id) as tag_ids
+        SELECT q.*, (SELECT GROUP_CONCAT(tag_id) FROM quote_tags WHERE quote_id = q.id) as tag_ids
         FROM quotes q
-        LEFT JOIN quote_tags qt ON q.id = qt.quote_id
-        GROUP BY q.id
         ORDER BY q.date DESC
       ''');
 

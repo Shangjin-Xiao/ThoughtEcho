@@ -51,27 +51,60 @@ void main() {
         await tester.pump(const Duration(seconds: 2));
       },
     );
+
+    testWidgets(
+      'shows notes even when tag list is still empty',
+      (tester) async {
+        final databaseService = _FakeDatabaseService()
+          ..quotesToEmit = [
+            Quote(
+              id: 'quote-1',
+              content: '通过通知进入后的笔记',
+              date: DateTime(2026, 3, 29).toIso8601String(),
+            ),
+          ];
+        final settingsService = _FakeSettingsService();
+
+        await tester.pumpWidget(
+          _TestApp(
+            databaseService: databaseService,
+            settingsService: settingsService,
+            tags: const [],
+          ),
+        );
+
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(find.text('通过通知进入后的笔记'), findsOneWidget);
+        expect(find.byType(CircularProgressIndicator), findsNothing);
+
+        await tester.pump(const Duration(seconds: 2));
+      },
+    );
   });
 }
 
 class _TestApp extends StatefulWidget {
   final _FakeDatabaseService databaseService;
   final _FakeSettingsService settingsService;
+  final List<NoteCategory> tags;
 
-  const _TestApp({
+  _TestApp({
     required this.databaseService,
     required this.settingsService,
-  });
+    List<NoteCategory>? tags,
+  }) : tags = tags ?? _defaultTags;
+
+  static final List<NoteCategory> _defaultTags = [
+    NoteCategory(id: 'tag-1', name: '标签一', iconName: '🏷️'),
+  ];
 
   @override
   State<_TestApp> createState() => _TestAppState();
 }
 
 class _TestAppState extends State<_TestApp> {
-  final List<NoteCategory> _tags = [
-    NoteCategory(id: 'tag-1', name: '标签一', iconName: '🏷️'),
-  ];
-
   List<String> _selectedTagIds = const ['tag-1'];
   List<String> _selectedWeathers = const ['sunny'];
   List<String> _selectedDayPeriods = const ['morning'];
@@ -94,7 +127,7 @@ class _TestAppState extends State<_TestApp> {
         locale: const Locale('zh'),
         home: Material(
           child: NoteListView(
-            tags: _tags,
+            tags: widget.tags,
             selectedTagIds: _selectedTagIds,
             onTagSelectionChanged: (tagIds) {
               setState(() {
@@ -141,6 +174,12 @@ class _FakeSettingsService extends ChangeNotifier implements SettingsService {
   bool get enableFirstOpenScrollPerfMonitor => false;
 
   @override
+  bool get showExactTime => false;
+
+  @override
+  bool get prioritizeBoldContentInCollapse => false;
+
+  @override
   noSuchMethod(Invocation invocation) =>
       throw UnimplementedError('SettingsService.${invocation.memberName} 未实现');
 }
@@ -159,6 +198,8 @@ class _WatchQuotesCall {
 
 class _FakeDatabaseService extends DatabaseService {
   final List<_WatchQuotesCall> watchCalls = [];
+  List<Quote> quotesToEmit = const [];
+  List<NoteCategory> categoriesToReturn = const [];
 
   _FakeDatabaseService() : super.forTesting();
 
@@ -189,7 +230,7 @@ class _FakeDatabaseService extends DatabaseService {
             : List<String>.from(selectedDayPeriods),
       ),
     );
-    return Stream<List<Quote>>.value(const []);
+    return Stream<List<Quote>>.value(quotesToEmit);
   }
 
   @override
@@ -200,4 +241,7 @@ class _FakeDatabaseService extends DatabaseService {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
   }) async {}
+
+  @override
+  Future<List<NoteCategory>> getCategories() async => categoriesToReturn;
 }

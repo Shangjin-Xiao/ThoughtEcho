@@ -190,6 +190,41 @@ class MediaReferenceService {
     }
   }
 
+  /// 批量获取多个笔记引用的媒体文件
+  static Future<Map<String, List<String>>> getReferencedFilesBatch(
+    Iterable<String> quoteIds,
+  ) async {
+    final uniqueIds = quoteIds.where((id) => id.isNotEmpty).toSet().toList();
+    if (uniqueIds.isEmpty) {
+      return {};
+    }
+
+    try {
+      final db = await database;
+      final placeholders = List.filled(uniqueIds.length, '?').join(',');
+      final result = await db.query(
+        _tableName,
+        columns: ['quote_id', 'file_path'],
+        where: 'quote_id IN ($placeholders)',
+        whereArgs: uniqueIds,
+      );
+
+      final grouped = <String, List<String>>{};
+      for (final row in result) {
+        final quoteId = row['quote_id'] as String?;
+        final filePath = row['file_path'] as String?;
+        if (quoteId == null || filePath == null) {
+          continue;
+        }
+        grouped.putIfAbsent(quoteId, () => <String>[]).add(filePath);
+      }
+      return grouped;
+    } catch (e) {
+      logDebug('批量获取笔记引用的媒体文件失败: $e');
+      return {};
+    }
+  }
+
   /// 检测孤儿文件（没有被任何笔记引用的文件）
   static Future<List<String>> detectOrphanFiles() async {
     try {

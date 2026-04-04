@@ -100,7 +100,14 @@ class DatabaseHealthService {
       return false;
     }
     try {
-      final result = await db.rawQuery("PRAGMA table_info($tableName)");
+      // Use the parameterised pragma_table_info() table-valued function.
+      // It requires SQLite 3.16+ (Android 8 / API 26), which is guaranteed
+      // because our minSdkVersion is 28 (Android 9, ships with SQLite 3.22+).
+      // Using a bound parameter avoids any risk of identifier injection.
+      final result = await db.rawQuery(
+        'SELECT name FROM pragma_table_info(?)',
+        [tableName],
+      );
       for (final row in result) {
         if (row['name'] == columnName) {
           return true;

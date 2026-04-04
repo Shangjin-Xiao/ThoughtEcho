@@ -3,7 +3,7 @@ part of '../database_service.dart';
 /// Mixin providing recycle-bin operations for DatabaseService.
 mixin _DatabaseTrashMixin on _DatabaseServiceBase {
   // Web平台墓碑记录（内存缓存 + SharedPreferences持久化）
-  static Set<String>? _webTombstones;
+  static Map<String, String>? _webTombstones;
   static const String _webTombstonesKey = 'web_quote_tombstones';
 
   /// 初始化Web平台墓碑记录
@@ -15,14 +15,49 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       final prefs = await SharedPreferences.getInstance();
       final json = prefs.getString(_webTombstonesKey);
       if (json != null && json.isNotEmpty) {
-        final List<dynamic> list = jsonDecode(json);
-        _webTombstones = Set<String>.from(list);
+        final decoded = jsonDecode(json);
+        final normalized = <String, String>{};
+        var needResave = false;
+        final fallbackDeletedAt = DateTime.now().toUtc().toIso8601String();
+
+        if (decoded is List) {
+          for (final item in decoded) {
+            if (item is String) {
+              if (item.isNotEmpty) {
+                normalized[item] = fallbackDeletedAt;
+                needResave = true;
+              }
+              continue;
+            }
+            if (item is Map) {
+              final quoteId = item['quote_id']?.toString();
+              if (quoteId == null || quoteId.isEmpty) {
+                continue;
+              }
+              final rawDeletedAt = item['deleted_at']?.toString();
+              final parsedDeletedAt = rawDeletedAt == null
+                  ? null
+                  : DateTime.tryParse(rawDeletedAt)?.toUtc().toIso8601String();
+              normalized[quoteId] = parsedDeletedAt ?? fallbackDeletedAt;
+              if (parsedDeletedAt == null) {
+                needResave = true;
+              }
+            }
+          }
+        } else {
+          needResave = true;
+        }
+
+        _webTombstones = normalized;
+        if (needResave && normalized.isNotEmpty) {
+          await _saveWebTombstones();
+        }
       } else {
-        _webTombstones = <String>{};
+        _webTombstones = <String, String>{};
       }
     } catch (e) {
       logDebug('初始化Web墓碑记录失败: $e');
-      _webTombstones = <String>{};
+      _webTombstones = <String, String>{};
     }
   }
 
@@ -32,7 +67,16 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      final json = jsonEncode(_webTombstones!.toList());
+      final json = jsonEncode(
+        _webTombstones!.entries
+            .map(
+              (entry) => {
+                'quote_id': entry.key,
+                'deleted_at': entry.value,
+              },
+            )
+            .toList(),
+      );
       await prefs.setString(_webTombstonesKey, json);
     } catch (e) {
       logDebug('保存Web墓碑记录失败: $e');
@@ -93,12 +137,15 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
   Future<List<Map<String, dynamic>>> getTombstonesForBackup() async {
     if (kIsWeb) {
       await _initWebTombstones();
-      // 将Set转换为Map列表格式用于备份
-      return _webTombstones!.map((id) => {
-        'quote_id': id,
-        'deleted_at': DateTime.now().toUtc().toIso8601String(),
-        'device_id': null,
-      }).toList();
+      return _webTombstones!.entries
+          .map(
+            (entry) => {
+              'quote_id': entry.key,
+              'deleted_at': entry.value,
+              'device_id': null,
+            },
+          )
+          .toList();
     }
     final db = await safeDatabase;
     return db.query('quote_tombstones');
@@ -114,7 +161,7 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       await _initWebTombstones();
 
       // 修复：检查Web墓碑记录
-      if (_webTombstones!.contains(id)) {
+      if (_webTombstones!.containsKey(id)) {
         throw StateError('笔记已被永久删除，无法恢复');
       }
 
@@ -283,7 +330,10 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       await _initWebTombstones();
 
       // 修复：添加Web墓碑记录
-      _webTombstones!.addAll(uniqueIds);
+      final deletedAt = DateTime.now().toUtc().toIso8601String();
+      for (final id in uniqueIds) {
+        _webTombstones!.putIfAbsent(id, () => deletedAt);
+      }
       await _saveWebTombstones();
 
       _memoryStore.removeWhere(
@@ -299,17 +349,32 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
     }
 
     final mediaCandidates = <String>{};
-    for (final id in uniqueIds) {
-      final quote = await getQuoteById(id, includeDeleted: true);
-      if (quote != null) {
+    final db = await safeDatabase;
+    final placeholders = List.filled(uniqueIds.length, '?').join(',');
+
+    final quoteRows = await db.rawQuery(
+      'SELECT * FROM quotes WHERE is_deleted = 1 AND id IN ($placeholders)',
+      uniqueIds,
+    );
+    for (final row in quoteRows) {
+      try {
+        final quote = Quote.fromJson(row);
         final extracted =
             await MediaReferenceService.extractMediaPathsFromQuote(
           quote,
         );
         mediaCandidates.addAll(extracted);
+      } catch (e) {
+        logDebug('提取已删除笔记媒体路径失败: $e');
       }
-      final referenced = await MediaReferenceService.getReferencedFiles(id);
-      mediaCandidates.addAll(referenced);
+    }
+
+    final referencedByQuote =
+        await MediaReferenceService.getReferencedFilesBatch(
+      uniqueIds,
+    );
+    for (final files in referencedByQuote.values) {
+      mediaCandidates.addAll(files);
     }
 
     await _executeWithLock('hardDeleteQuotes', () async {
