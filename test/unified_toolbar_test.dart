@@ -126,7 +126,7 @@ void main() {
 
       // 插入文本
       controller.document.insert(0, 'Test text');
-      // Fix: trim the text to remove any trailing newlines
+      // trim the text to remove any trailing newlines
       final text = StringUtils.removeObjectReplacementChar(
         controller.document.toPlainText(),
       ).trim();
