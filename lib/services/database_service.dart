@@ -292,9 +292,9 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   /// 修复：优化查询缓存，实现更好的LRU机制
   final LruCache<String, List<Quote>> _filterCache =
       LruCache<String, List<Quote>>(
-        maxSize: 50,
-        expiration: const Duration(minutes: 5),
-      );
+    maxSize: 50,
+    expiration: const Duration(minutes: 5),
+  );
 
   // 优化：查询结果缓存
   final LruCache<String, int> _countCache = LruCache<String, int>(
