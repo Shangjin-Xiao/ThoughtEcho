@@ -88,6 +88,7 @@ dependencies:
   latlong2: ^0.9.1 # 经纬度坐标库（flutter_map 依赖）
   flutter_map_marker_cluster: ^1.4.0 # 地图 marker 聚合
   gpt_markdown: ^1.1.5 # Markdown 渲染（AI 回复）
+  openai_dart: ^4.0.1
 
 dev_dependencies:
   flutter_test:
