@@ -100,10 +100,11 @@ class DatabaseHealthService {
       return false;
     }
     try {
-      final result = await db.rawQuery(
-        'SELECT name FROM pragma_table_info(?)',
-        [tableName],
-      );
+      // Use classic PRAGMA syntax (compatible with SQLite 3.8+ / Android 5+).
+      // pragma_table_info() as a table-valued function requires SQLite 3.16+
+      // (Android 8+), but our minSdkVersion is 21 (Android 5). The identifier
+      // is already validated by _isValidIdentifier above, so interpolation is safe.
+      final result = await db.rawQuery('PRAGMA table_info($tableName)');
       for (final row in result) {
         if (row['name'] == columnName) {
           return true;
