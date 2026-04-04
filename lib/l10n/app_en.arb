@@ -3530,7 +3530,7 @@
       }
     }
   },
-  "trashRemainingDays": "{days} days remaining",
+  "trashRemainingDays": "{days, plural, =0{0 days remaining} one{1 day remaining} other{{days} days remaining}}",
   "@trashRemainingDays": {
     "placeholders": {
       "days": {

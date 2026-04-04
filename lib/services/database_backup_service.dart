@@ -763,15 +763,37 @@ class DatabaseBackupService {
         if (localTombstone.isNotEmpty) {
           final tombstoneAt = localTombstone.first['deleted_at']?.toString();
           final quoteLastModified = quoteData['last_modified']?.toString();
-          if (_compareIsoTime(quoteLastModified, tombstoneAt) <= 0) {
+
+          // Only compare timestamps if both are present and non-empty
+          if (tombstoneAt != null && tombstoneAt.isNotEmpty &&
+              quoteLastModified != null && quoteLastModified.isNotEmpty) {
+            if (_compareIsoTime(quoteLastModified, tombstoneAt) <= 0) {
+              reportBuilder.addSkippedQuote();
+              continue;
+            }
+          } else if (tombstoneAt == null || tombstoneAt.isEmpty) {
+            // Invalid tombstone without timestamp - remove it
+            await txn.delete(
+              'quote_tombstones',
+              where: 'quote_id = ?',
+              whereArgs: [quoteId],
+            );
+          } else if (quoteLastModified == null || quoteLastModified.isEmpty) {
+            // Quote has no timestamp but tombstone does - skip the quote
             reportBuilder.addSkippedQuote();
             continue;
           }
-          await txn.delete(
-            'quote_tombstones',
-            where: 'quote_id = ?',
-            whereArgs: [quoteId],
-          );
+
+          // If tombstone is older or invalid, delete it
+          if (tombstoneAt != null && tombstoneAt.isNotEmpty &&
+              quoteLastModified != null && quoteLastModified.isNotEmpty &&
+              _compareIsoTime(quoteLastModified, tombstoneAt) > 0) {
+            await txn.delete(
+              'quote_tombstones',
+              where: 'quote_id = ?',
+              whereArgs: [quoteId],
+            );
+          }
         }
 
         // 查询本地是否存在该笔记

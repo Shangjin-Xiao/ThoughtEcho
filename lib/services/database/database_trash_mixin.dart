@@ -260,8 +260,23 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
         QuoteContent.removeCacheForQuote(id);
       }
 
+      // Convert relative media paths to absolute paths before cleanup
+      final appDir = await getApplicationDocumentsDirectory();
+      final appPath = normalize(appDir.path);
+
       for (final mediaPath in mediaCandidates) {
-        await MediaReferenceService.quickCheckAndDeleteIfOrphan(mediaPath);
+        try {
+          String absolutePath = mediaPath;
+          if (!isAbsolute(absolutePath)) {
+            absolutePath = join(appPath, mediaPath);
+          }
+          await MediaReferenceService.quickCheckAndDeleteIfOrphan(
+            absolutePath,
+            cachedAppPath: appPath,
+          );
+        } catch (e) {
+          logDebug('清理孤儿媒体文件失败: $mediaPath, 错误: $e');
+        }
       }
 
       clearAllCacheForParts();

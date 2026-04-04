@@ -80,7 +80,6 @@ class MergeReport {
   MergeReport addDeletedQuote() {
     return copyWith(
       deletedQuotes: deletedQuotes + 1,
-      appliedQuotes: appliedQuotes + 1,
     );
   }
 
@@ -305,7 +304,6 @@ class MergeReportBuilder {
 
   void addDeletedQuote() {
     _deletedQuotes++;
-    _appliedQuotes++;
   }
 
   void addSameTimestampDiffQuote() {
