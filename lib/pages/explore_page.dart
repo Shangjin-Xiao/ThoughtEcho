@@ -5,7 +5,7 @@ import 'package:provider/provider.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../services/database_service.dart';
 import 'ai_assistant_page.dart';
-import 'map_location_picker_page.dart';
+import 'map_memory_page.dart';
 
 /// 探索页面 — 数据概览 + AI/地图入口 + 收藏笔记
 class ExplorePage extends StatefulWidget {
@@ -82,35 +82,33 @@ class _ExplorePageState extends State<ExplorePage> {
                   const SizedBox(height: 24),
 
                   // ─── 快捷入口 ───
-                  Row(
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Expanded(
-                        child: _EntryCard(
-                          icon: Icons.smart_toy_outlined,
-                          title: l10n.aiChat,
-                          color: theme.colorScheme.primaryContainer,
-                          iconColor: theme.colorScheme.onPrimaryContainer,
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const AIAssistantPage(),
-                            ),
+                      _EntryCard(
+                        icon: Icons.smart_toy_outlined,
+                        title: l10n.aiChat,
+                        subtitle: '与 AI 助手进行对话',
+                        color: theme.colorScheme.primaryContainer,
+                        iconColor: theme.colorScheme.onPrimaryContainer,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const AIAssistantPage(),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _EntryCard(
-                          icon: Icons.map_outlined,
-                          title: l10n.exploreMapMemory,
-                          subtitle: l10n.exploreMapMemoryDesc,
-                          color: theme.colorScheme.secondaryContainer,
-                          iconColor: theme.colorScheme.onSecondaryContainer,
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const MapLocationPickerPage(),
-                            ),
+                      const SizedBox(height: 12),
+                      _EntryCard(
+                        icon: Icons.map_outlined,
+                        title: l10n.exploreMapMemory,
+                        subtitle: l10n.exploreMapMemoryDesc,
+                        color: theme.colorScheme.secondaryContainer,
+                        iconColor: theme.colorScheme.onSecondaryContainer,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const MapMemoryPage(),
                           ),
                         ),
                       ),
