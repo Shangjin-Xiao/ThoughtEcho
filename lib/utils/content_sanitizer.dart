@@ -23,30 +23,44 @@ class ContentSanitizer {
   static String injectCsp(String html) {
     if (html.isEmpty) return html;
 
-    // Check if CSP is already present
-    if (html.contains('http-equiv="Content-Security-Policy"') ||
-        html.contains("http-equiv='Content-Security-Policy'")) {
-      return html;
-    }
-
     final cspTag =
         '<meta http-equiv="Content-Security-Policy" content="$defaultCsp">';
 
+    String sanitized = html;
+
+    // 1. Remove any existing CSP meta tags to prevent attacker bypass
+    sanitized = sanitized.replaceAll(
+        RegExp(
+            r'<meta[^>]*http-equiv=["' "'" r']?Content-Security-Policy["' "'" r']?[^>]*>',
+            caseSensitive: false),
+        '');
+
+    // 2. Strip <script> tags as an additional layer of defense
+    sanitized = sanitized.replaceAll(
+        RegExp(r'<script\b[^>]*>[\s\S]*?</script>', caseSensitive: false), '');
+
     // Try to find <head> tag (case-insensitive), preserving attributes
     final headRegex = RegExp(r'(<head[^>]*>)', caseSensitive: false);
-    if (headRegex.hasMatch(html)) {
-      return html.replaceFirstMapped(
+    if (headRegex.hasMatch(sanitized)) {
+      return sanitized.replaceFirstMapped(
           headRegex, (match) => '${match.group(0)}\n    $cspTag');
     }
 
     // Try to find <html> tag, preserving attributes
     final htmlRegex = RegExp(r'(<html[^>]*>)', caseSensitive: false);
-    if (htmlRegex.hasMatch(html)) {
-      return html.replaceFirstMapped(htmlRegex,
+    if (htmlRegex.hasMatch(sanitized)) {
+      return sanitized.replaceFirstMapped(htmlRegex,
           (match) => '${match.group(0)}\n<head>\n    $cspTag\n</head>');
     }
 
+    // Try to find doctype tag, preserving attributes
+    final doctypeRegex = RegExp(r'(<!doctype[^>]*>)', caseSensitive: false);
+    if (doctypeRegex.hasMatch(sanitized)) {
+      return sanitized.replaceFirstMapped(
+          doctypeRegex, (match) => '${match.group(0)}\n$cspTag');
+    }
+
     // If no structure, just prepend it
-    return '$cspTag\n$html';
+    return '$cspTag\n$sanitized';
   }
 }
