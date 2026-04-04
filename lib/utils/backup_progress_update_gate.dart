@@ -1,3 +1,20 @@
+class BackupProgressStages {
+  static const String collect = 'collect';
+  static const String note = 'note';
+  static const String media = 'media';
+  static const String zip = 'zip';
+  static const String verify = 'verify';
+}
+
+String resolveBackupStageKey(int progressPercent) {
+  final normalizedPercent = progressPercent.clamp(0, 100);
+  if (normalizedPercent < 15) return BackupProgressStages.collect;
+  if (normalizedPercent < 35) return BackupProgressStages.note;
+  if (normalizedPercent < 60) return BackupProgressStages.media;
+  if (normalizedPercent < 95) return BackupProgressStages.zip;
+  return BackupProgressStages.verify;
+}
+
 class BackupProgressUpdateGate {
   BackupProgressUpdateGate({
     this.minUpdateInterval = const Duration(milliseconds: 80),
