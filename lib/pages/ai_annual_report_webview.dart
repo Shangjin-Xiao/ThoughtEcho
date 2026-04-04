@@ -480,8 +480,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
 ''';
       }
 
-      // 注入CSP头部（双重保障：针对AI生成的已有HTML结构的情况）
-      contentToWrite = ContentSanitizer.injectCsp(contentToWrite);
+      // Note: contentToWrite already has CSP - from either the wrapper template above or _sanitizedHtmlContent (which was sanitized in initState)
 
       // 方法1：尝试使用Data URI在浏览器中直接打开
       try {
@@ -952,8 +951,7 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
 ''';
       }
 
-      // 注入CSP头部
-      contentToShare = ContentSanitizer.injectCsp(contentToShare);
+      // Note: contentToShare already has CSP - from either the wrapper template above or _sanitizedHtmlContent (which was sanitized in initState)
 
       await LargeFileManager.writeStringToFile(htmlFile, contentToShare);
 
@@ -1023,11 +1021,9 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
         final fileName = 'annual_report_${widget.year}_$timestamp.html';
         final reportFile = File('${reportsDir.path}/$fileName');
 
-        // 注入CSP头部
-        final secureContent = ContentSanitizer.injectCsp(_sanitizedHtmlContent);
-
+        // Note: _sanitizedHtmlContent already has CSP (sanitized in initState)
         // 保存文件
-        await LargeFileManager.writeStringToFile(reportFile, secureContent);
+        await LargeFileManager.writeStringToFile(reportFile, _sanitizedHtmlContent);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
