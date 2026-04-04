@@ -59,9 +59,27 @@ class _MapMemoryPageState extends State<MapMemoryPage> {
                   tagMap: const {},
                   isExpanded: false,
                   onToggleExpanded: (bool expanded) {},
-                  onEdit: () {},
-                  onDelete: () {},
-                  onAskAI: () {},
+                  onEdit: () {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('请在主页列表中进行编辑操作')),
+                    );
+                  },
+                  onDelete: () {
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('请在主页列表中进行删除操作')),
+                    );
+                  },
+                  onAskAI: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => AIAssistantPage(quote: quote),
+                      ),
+                    );
+                  },
                 ),
               ),
             );
