@@ -763,8 +763,10 @@ class DatabaseBackupService {
           final quoteLastModified = quoteData['last_modified']?.toString();
 
           // Only compare timestamps if both are present and non-empty
-          if (tombstoneAt != null && tombstoneAt.isNotEmpty &&
-              quoteLastModified != null && quoteLastModified.isNotEmpty) {
+          if (tombstoneAt != null &&
+              tombstoneAt.isNotEmpty &&
+              quoteLastModified != null &&
+              quoteLastModified.isNotEmpty) {
             if (_compareIsoTime(quoteLastModified, tombstoneAt) <= 0) {
               reportBuilder.addSkippedQuote();
               continue;
@@ -783,8 +785,10 @@ class DatabaseBackupService {
           }
 
           // If tombstone is older or invalid, delete it
-          if (tombstoneAt != null && tombstoneAt.isNotEmpty &&
-              quoteLastModified != null && quoteLastModified.isNotEmpty &&
+          if (tombstoneAt != null &&
+              tombstoneAt.isNotEmpty &&
+              quoteLastModified != null &&
+              quoteLastModified.isNotEmpty &&
               _compareIsoTime(quoteLastModified, tombstoneAt) > 0) {
             await txn.delete(
               'quote_tombstones',
