@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 // Import model tests
 import 'unit/models/quote_model_test.dart' as quote_model_test;
 import 'unit/models/note_category_test.dart' as note_category_test;
+import 'unit/models/weather_data_test.dart' as weather_data_test;
 
 // Import service tests
 import 'unit/services/database_service_test.dart' as database_service_test;
@@ -23,6 +24,10 @@ import 'unit/services/ai_analysis_database_service_test.dart'
 import 'unit/services/database_health_security_test.dart'
     as database_health_security_test;
 import 'unit/services/location_format_test.dart' as location_format_test;
+import 'unit/services/log_service_adapter_test.dart'
+    as log_service_adapter_test;
+import 'unit/services/smart_push_security_test.dart'
+    as smart_push_security_test;
 import 'storage_management_test.dart' as storage_management_test;
 import 'performance/day_period_patch_test.dart' as day_period_patch_test;
 
@@ -35,6 +40,7 @@ import 'unit/utils/anniversary_banner_text_utils_test.dart'
     as anniversary_banner_text_utils_test;
 import 'unit/utils/motion_photo_utils_test.dart' as motion_photo_utils_test;
 import 'unit/utils/quill_ai_apply_utils_test.dart' as quill_ai_apply_utils_test;
+import 'unit/utils/http_utils_test.dart' as http_utils_test;
 import 'unit/widgets/anniversary_animation_overlay_test.dart'
     as anniversary_animation_overlay_test;
 import 'unit/widgets/anniversary_notebook_icon_test.dart'
@@ -50,6 +56,7 @@ void main() {
     group('Model Tests', () {
       quote_model_test.main();
       note_category_test.main();
+      weather_data_test.main();
     });
 
     group('Service Tests', () {
@@ -63,6 +70,8 @@ void main() {
       clipboard_service_test.main();
       ai_analysis_service_test.main();
       database_health_security_test.main();
+      log_service_adapter_test.main();
+      smart_push_security_test.main();
       storage_management_test.main();
       day_period_patch_test.main();
     });
@@ -74,6 +83,7 @@ void main() {
       anniversary_display_utils_test.main();
       motion_photo_utils_test.main();
       quill_ai_apply_utils_test.main();
+      http_utils_test.main();
       anniversary_animation_overlay_test.main();
       anniversary_notebook_icon_test.main();
       motion_photo_preview_page_test.main();
