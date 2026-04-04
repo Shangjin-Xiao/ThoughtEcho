@@ -19,6 +19,7 @@ import '../widgets/quote_content_widget.dart'; // 用于缓存清理
 import 'database_schema_manager.dart';
 import 'database_backup_service.dart';
 import 'database_health_service.dart';
+import '../utils/lru_cache.dart';
 
 part 'database/database_cache_mixin.dart';
 part 'database/database_query_mixin.dart';
@@ -288,16 +289,18 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   bool _watchHasMore = true;
   String? _watchSearchQuery;
 
-  // TODO(low): 以下 5 个 Map 手动实现 LRU + 过期缓存，可提取为通用 LRU 缓存类简化维护。
   /// 修复：优化查询缓存，实现更好的LRU机制
-  final Map<String, List<Quote>> _filterCache = {};
-  final Map<String, DateTime> _cacheTimestamps = {}; // 缓存时间戳
-  // _cacheAccessTimes and _maxCacheEntries removed: LRU eviction was never wired up
-  final Duration _cacheExpiration = const Duration(minutes: 5); // 调整缓存过期时间
+  final LruCache<String, List<Quote>> _filterCache =
+      LruCache<String, List<Quote>>(
+        maxSize: 50,
+        expiration: const Duration(minutes: 5),
+      );
 
   // 优化：查询结果缓存
-  final Map<String, int> _countCache = {}; // 计数查询缓存
-  final Map<String, DateTime> _countCacheTimestamps = {};
+  final LruCache<String, int> _countCache = LruCache<String, int>(
+    maxSize: 50,
+    expiration: const Duration(minutes: 5),
+  );
 
   /// 修复：添加查询性能统计
 
@@ -806,9 +809,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
 
     // 清理缓存
     _filterCache.clear();
-    _cacheTimestamps.clear();
     _countCache.clear();
-    _countCacheTimestamps.clear();
 
     // 清理内存存储
     _memoryStore.clear();

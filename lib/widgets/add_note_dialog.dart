@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import '../utils/lru_cache.dart';
 import 'package:uuid/uuid.dart';
 import 'dart:async';
 import '../gen_l10n/app_localizations.dart';
@@ -110,7 +111,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   // 预留：后续接入本地 embedding/标签推荐时使用
 
   // 优化：缓存过滤结果，避免重复计算
-  final Map<String, List<NoteCategory>> _filterCache = {};
+  final LruCache<String, List<NoteCategory>> _filterCache =
+      LruCache<String, List<NoteCategory>>(maxSize: 50);
 
   T? _readServiceOrNull<T>(BuildContext context) {
     try {
@@ -441,17 +443,16 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         _filteredTags = _availableTags;
       } else {
         // 优化：使用缓存避免重复计算
-        if (_filterCache.containsKey(query)) {
-          _filteredTags = _filterCache[query]!;
+        final cachedResult = _filterCache.get(query);
+        if (cachedResult != null) {
+          _filteredTags = cachedResult;
         } else {
           _filteredTags = _availableTags.where((tag) {
             return tag.name.toLowerCase().contains(query);
           }).toList();
 
           // 缓存结果，限制缓存大小防止内存泄漏
-          if (_filterCache.length < 50) {
-            _filterCache[query] = _filteredTags;
-          }
+          _filterCache.put(query, _filteredTags);
         }
       }
     });

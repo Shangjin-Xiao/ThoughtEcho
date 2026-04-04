@@ -20,45 +20,15 @@ mixin _DatabaseCacheMixin on _DatabaseServiceBase {
 
   /// 优化：检查并清理过期缓存
   void _cleanExpiredCache() {
-    final now = DateTime.now();
-    final expiredKeys = <String>[];
-    final expiredCountKeys = <String>[];
-
-    // 清理查询缓存
-    for (final entry in _cacheTimestamps.entries) {
-      if (now.difference(entry.value) > _cacheExpiration) {
-        expiredKeys.add(entry.key);
-      }
-    }
-
-    for (final key in expiredKeys) {
-      _filterCache.remove(key);
-      _cacheTimestamps.remove(key);
-    }
-
-    // 清理计数缓存
-    for (final entry in _countCacheTimestamps.entries) {
-      if (now.difference(entry.value) > _cacheExpiration) {
-        expiredCountKeys.add(entry.key);
-      }
-    }
-
-    for (final key in expiredCountKeys) {
-      _countCache.remove(key);
-      _countCacheTimestamps.remove(key);
-    }
-
-    logDebug(
-      '缓存清理完成，移除 ${expiredKeys.length} 个查询缓存和 ${expiredCountKeys.length} 个计数缓存',
-    );
+    _filterCache.cleanExpired();
+    _countCache.cleanExpired();
+    logDebug('缓存清理完成');
   }
 
   /// 优化：清空所有缓存（在数据变更时调用）
   @override
   void _clearAllCache() {
     _filterCache.clear();
-    _cacheTimestamps.clear();
     _countCache.clear();
-    _countCacheTimestamps.clear();
   }
 }
