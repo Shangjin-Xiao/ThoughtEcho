@@ -307,16 +307,22 @@ extension SmartPushExecution on SmartPushService {
           '${noteToShow.content.substring(0, min(50, noteToShow.content.length))}...',
         );
 
+        // 标记今日已推送（用于「此时此刻」兜底判断）
+        if (!isTest) {
+          _markPushedToday();
+        }
+
         // 记录推送历史（避免重复推送，测试模式也不记录）
         if (!isDailyQuote && noteToShow.id != null && !isTest) {
           final updatedSettings = _settings.addPushedNoteId(noteToShow.id!);
           await _saveSettingsQuietly(updatedSettings);
         }
 
-        // 如果推送的是每日一言（来自 PushMode.dailyQuote / PushMode.both 的回退），
-        // 标记内容哈希并更新 lastPushTime
+        // 如果推送的是每日一言（来自 PushMode.dailyQuote / PushMode.both 的回退 / PushMode.smart），
+        // 标记内容哈希并更新 lastPushTime，同时标记今日智能推送已推每日一言
         if (isDailyQuote && !isTest) {
           _markDailyQuoteContentPushed(noteToShow.content);
+          _markDailyQuotePushedTodayInSmartPush();
           final updatedSettings = _settings.copyWith(
             lastPushTime: DateTime.now(),
           );

@@ -77,6 +77,13 @@ class SmartPushService extends ChangeNotifier {
   static const String _inactivityQuoteDateKey =
       'smart_push_inactivity_quote_date';
 
+  /// 今日智能推送是否已执行过（任意内容类型）
+  static const String _todayPushedDateKey = 'smart_push_today_pushed_date';
+
+  /// 今日是否已推送过每日一言（智能推送流程内）
+  static const String _todayDailyQuotePushedKey =
+      'smart_push_today_daily_quote_pushed';
+
   SmartPushSettings _settings = SmartPushSettings.defaultSettings();
   SmartPushSettings get settings => _settings;
 
@@ -152,6 +159,34 @@ class SmartPushService extends ChangeNotifier {
   String _contentHash(String content) {
     final key = content.length > 50 ? content.substring(0, 50) : content;
     return key.hashCode.toRadixString(36);
+  }
+
+  // ================================================================
+  // 今日推送状态追踪（用于优化推送算法）
+  // ================================================================
+
+  /// 检查今日是否已有任何推送
+  bool _hasPushedToday() {
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    return _mmkv.getString(_todayPushedDateKey) == today;
+  }
+
+  /// 标记今日已推送
+  void _markPushedToday() {
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    _mmkv.setString(_todayPushedDateKey, today);
+  }
+
+  /// 检查今日在智能推送流程中是否已推送每日一言
+  bool _hasDailyQuotePushedTodayInSmartPush() {
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    return _mmkv.getString(_todayDailyQuotePushedKey) == today;
+  }
+
+  /// 标记今日智能推送流程中已推送每日一言
+  void _markDailyQuotePushedTodayInSmartPush() {
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    _mmkv.setString(_todayDailyQuotePushedKey, today);
   }
 
   /// 统一每日一言数据格式，确保首页与推送使用同一结构。
@@ -517,11 +552,13 @@ class _ContentCandidate {
   final Quote note;
   final String title;
   final int priority;
+  final bool isDailyQuote;
 
   _ContentCandidate({
     required this.note,
     required this.title,
     required this.priority,
+    this.isDailyQuote = false,
   });
 }
 
