@@ -3469,5 +3469,41 @@
   "insertVideo": "動画を挿入",
   "insertAudio": "音声を挿入",
   "clipboardFoundHint": "クリップボードのコンテンツが見つかりました。タップしてノートとして追加します",
-  "operationFailedSimple": "操作に失敗しました"
+  "operationFailedSimple": "操作に失敗しました",
+  "deleteNoteWithChatsConfirmation": "Are you sure you want to delete this note? This action cannot be undone.\n\n{count} chat conversations linked to this note will also be deleted.",
+  "@deleteNoteWithChatsConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatHistory": "Chat History",
+  "newChat": "New Chat",
+  "deleteChat": "Delete Chat",
+  "deleteChatConfirm": "Delete this conversation? All messages will be removed.",
+  "noChats": "No conversations yet",
+  "mapPickerTitle": "Select Location",
+  "mapPickerCurrentLocation": "Current Location",
+  "mapPickerConfirm": "Confirm Selection",
+  "longPressForMapPicker": "Long press for precise location",
+  "poiNameLabel": "Precise Location",
+  "explore": "Explore",
+  "exploreMapMemory": "Map Memories",
+  "exploreMapMemoryDesc": "Browse your notes on a map",
+  "aiChat": "AI Chat",
+  "aiAgent": "AI Agent",
+  "agentThinking": "Agent is thinking...",
+  "agentToolCall": "Calling tool: {toolName}",
+  "@agentToolCall": {
+    "placeholders": {
+      "toolName": {
+        "type": "String"
+      }
+    }
+  },
+  "agentSearchingNotes": "Searching notes...",
+  "agentAnalyzingData": "Analyzing data...",
+  "agentWebSearching": "Searching the web...",
+  "favoriteNotes": "Favorite Notes"
 }
