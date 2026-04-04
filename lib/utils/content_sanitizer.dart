@@ -31,7 +31,11 @@ class ContentSanitizer {
     // 1. Remove any existing CSP meta tags to prevent attacker bypass
     sanitized = sanitized.replaceAll(
         RegExp(
-            r'<meta[^>]*http-equiv=["' "'" r']?Content-Security-Policy["' "'" r']?[^>]*>',
+            r'<meta[^>]*http-equiv=["'
+            "'"
+            r']?Content-Security-Policy["'
+            "'"
+            r']?[^>]*>',
             caseSensitive: false),
         '');
 
