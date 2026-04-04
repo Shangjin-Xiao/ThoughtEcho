@@ -211,23 +211,27 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       return true;
     }
 
-    // 检查位置
-    if (_location != _initialLocation) {
-      return true;
-    }
-    if (_latitude != _initialLatitude) {
-      return true;
-    }
-    if (_longitude != _initialLongitude) {
-      return true;
-    }
+    // 对于编辑已有笔记的情况，检查位置和天气变化
+    // 对于新建笔记，位置和天气是自动获取的，不视为用户修改
+    if (widget.initialQuote != null) {
+      // 检查位置
+      if (_location != _initialLocation) {
+        return true;
+      }
+      if (_latitude != _initialLatitude) {
+        return true;
+      }
+      if (_longitude != _initialLongitude) {
+        return true;
+      }
 
-    // 检查天气
-    if (_weather != _initialWeather) {
-      return true;
-    }
-    if (_temperature != _initialTemperature) {
-      return true;
+      // 检查天气
+      if (_weather != _initialWeather) {
+        return true;
+      }
+      if (_temperature != _initialTemperature) {
+        return true;
+      }
     }
 
     // 检查 AI 分析
