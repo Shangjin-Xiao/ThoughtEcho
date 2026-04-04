@@ -1450,14 +1450,17 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       deltaContent: widget.initialQuote?.deltaContent,
     );
 
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
     try {
       final db = Provider.of<DatabaseService>(context, listen: false);
-      final l10n = AppLocalizations.of(context);
 
       if (widget.initialQuote != null) {
         await db.updateQuote(quote);
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        if (!mounted) return;
+        messenger.showSnackBar(
           SnackBar(
             content: Text(l10n.noteUpdated),
             duration: AppConstants.snackBarDurationImportant,
@@ -1465,8 +1468,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         );
       } else {
         await db.addQuote(quote);
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        if (!mounted) return;
+        messenger.showSnackBar(
           SnackBar(
             content: Text(l10n.noteSaved),
             duration: AppConstants.snackBarDurationImportant,
@@ -1480,21 +1483,17 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       }
 
       // 关闭对话框
-      if (context.mounted) {
-        Navigator.pop(context);
-      }
+      if (!mounted) return;
+      navigator.pop();
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context).saveFailedWithError(e.toString()),
-            ),
-            duration: AppConstants.snackBarDurationError,
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      if (!mounted) return;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(l10n.saveFailedWithError(e.toString())),
+          duration: AppConstants.snackBarDurationError,
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 

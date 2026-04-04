@@ -218,6 +218,7 @@ class _FakeDatabaseService extends DatabaseService {
     String? searchQuery,
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
+    bool includeDeleted = false,
   }) {
     watchCalls.add(
       _WatchQuotesCall(
@@ -240,6 +241,7 @@ class _FakeDatabaseService extends DatabaseService {
     String? searchQuery,
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
+    bool? includeDeleted,
   }) async {}
 
   @override
