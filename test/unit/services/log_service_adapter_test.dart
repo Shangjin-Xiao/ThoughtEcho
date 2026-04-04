@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:thoughtecho/services/log_service_adapter.dart';
 import 'package:thoughtecho/services/unified_log_service.dart';
@@ -6,6 +5,7 @@ import 'package:thoughtecho/services/log_service.dart' as old_log;
 import 'package:flutter_test/flutter_test.dart';
 
 class ManualMockUnifiedLogService extends ChangeNotifier
+    with WidgetsBindingObserver
     implements UnifiedLogService {
   final List<String> calls = [];
   final Map<String, dynamic> callArguments = {};
@@ -221,10 +221,14 @@ class ManualMockUnifiedLogService extends ChangeNotifier
   void resetPerformanceStats() {}
   @override
   Future<void> exportLogsToFile(dynamic file,
-      {UnifiedLogLevel? minLevel, DateTime? startDate, DateTime? endDate}) async {}
+      {UnifiedLogLevel? minLevel,
+      DateTime? startDate,
+      DateTime? endDate}) async {}
   @override
   String exportLogsAsText(
-          {UnifiedLogLevel? minLevel, DateTime? startDate, DateTime? endDate}) =>
+          {UnifiedLogLevel? minLevel,
+          DateTime? startDate,
+          DateTime? endDate}) =>
       '';
 
   @override
