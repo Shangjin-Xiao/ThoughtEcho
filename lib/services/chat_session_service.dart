@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
@@ -7,10 +9,37 @@ import '../models/chat_session.dart';
 import '../utils/app_logger.dart';
 
 class ChatSessionService extends ChangeNotifier {
+  static const Duration _databaseReadyTimeout = Duration(seconds: 5);
+
   Database? _database;
+  final Completer<void> _databaseReady = Completer<void>();
+  bool _hasLoggedDatabaseWaitTimeout = false;
 
   void setDatabase(Database? db) {
     _database = db;
+    if (db != null && !_databaseReady.isCompleted) {
+      _databaseReady.complete();
+    }
+  }
+
+  Future<Database?> _getDatabase() async {
+    if (kIsWeb) return null;
+    if (_database != null) return _database;
+
+    try {
+      await _databaseReady.future.timeout(_databaseReadyTimeout);
+    } on TimeoutException {
+      if (!_hasLoggedDatabaseWaitTimeout) {
+        _hasLoggedDatabaseWaitTimeout = true;
+        logWarning(
+          'ChatSessionService 等待数据库注入超时，跳过本次持久化操作',
+          source: 'ChatSessionService',
+        );
+      }
+      return null;
+    }
+
+    return _database;
   }
 
   Future<ChatSession> createSession({
@@ -28,8 +57,9 @@ class ChatSessionService extends ChangeNotifier {
       lastActiveAt: now,
     );
     try {
-      if (_database != null && !kIsWeb) {
-        await _database!.insert('chat_sessions', session.toMap());
+      final db = await _getDatabase();
+      if (db != null) {
+        await db.insert('chat_sessions', session.toMap());
       }
     } catch (e) {
       logError(
@@ -43,9 +73,10 @@ class ChatSessionService extends ChangeNotifier {
   }
 
   Future<ChatSession?> getLatestSessionForNote(String noteId) async {
-    if (_database == null || kIsWeb) return null;
+    final db = await _getDatabase();
+    if (db == null) return null;
     try {
-      final rows = await _database!.query(
+      final rows = await db.query(
         'chat_sessions',
         where: 'note_id = ?',
         whereArgs: [noteId],
@@ -65,9 +96,10 @@ class ChatSessionService extends ChangeNotifier {
   }
 
   Future<List<ChatSession>> getSessionsForNote(String noteId) async {
-    if (_database == null || kIsWeb) return [];
+    final db = await _getDatabase();
+    if (db == null) return [];
     try {
-      final rows = await _database!.query(
+      final rows = await db.query(
         'chat_sessions',
         where: 'note_id = ?',
         whereArgs: [noteId],
@@ -85,9 +117,10 @@ class ChatSessionService extends ChangeNotifier {
   }
 
   Future<List<ChatSession>> getAgentSessions() async {
-    if (_database == null || kIsWeb) return [];
+    final db = await _getDatabase();
+    if (db == null) return [];
     try {
-      final rows = await _database!.query(
+      final rows = await db.query(
         'chat_sessions',
         where: 'session_type = ?',
         whereArgs: ['agent'],
@@ -108,9 +141,10 @@ class ChatSessionService extends ChangeNotifier {
     int limit = 50,
     int offset = 0,
   }) async {
-    if (_database == null || kIsWeb) return [];
+    final db = await _getDatabase();
+    if (db == null) return [];
     try {
-      final rows = await _database!.query(
+      final rows = await db.query(
         'chat_sessions',
         orderBy: 'is_pinned DESC, last_active_at DESC',
         limit: limit,
@@ -129,8 +163,9 @@ class ChatSessionService extends ChangeNotifier {
 
   Future<void> deleteSession(String sessionId) async {
     try {
-      if (_database != null && !kIsWeb) {
-        await _database!.delete(
+      final db = await _getDatabase();
+      if (db != null) {
+        await db.delete(
           'chat_sessions',
           where: 'id = ?',
           whereArgs: [sessionId],
@@ -148,8 +183,9 @@ class ChatSessionService extends ChangeNotifier {
 
   Future<void> updateSessionTitle(String sessionId, String title) async {
     try {
-      if (_database != null && !kIsWeb) {
-        await _database!.update(
+      final db = await _getDatabase();
+      if (db != null) {
+        await db.update(
           'chat_sessions',
           {
             'title': title,
@@ -171,15 +207,16 @@ class ChatSessionService extends ChangeNotifier {
 
   Future<void> togglePin(String sessionId) async {
     try {
-      if (_database != null && !kIsWeb) {
-        final rows = await _database!.query(
+      final db = await _getDatabase();
+      if (db != null) {
+        final rows = await db.query(
           'chat_sessions',
           where: 'id = ?',
           whereArgs: [sessionId],
         );
         if (rows.isNotEmpty) {
           final current = (rows.first['is_pinned'] as int? ?? 0) == 1;
-          await _database!.update(
+          await db.update(
             'chat_sessions',
             {'is_pinned': current ? 0 : 1},
             where: 'id = ?',
@@ -199,9 +236,10 @@ class ChatSessionService extends ChangeNotifier {
 
   Future<void> addMessage(String sessionId, ChatMessage message) async {
     try {
-      if (_database != null && !kIsWeb) {
-        await _database!.insert('chat_messages', message.toMap(sessionId));
-        await _database!.update(
+      final db = await _getDatabase();
+      if (db != null) {
+        await db.insert('chat_messages', message.toMap(sessionId));
+        await db.update(
           'chat_sessions',
           {'last_active_at': DateTime.now().toIso8601String()},
           where: 'id = ?',
@@ -219,9 +257,10 @@ class ChatSessionService extends ChangeNotifier {
   }
 
   Future<List<ChatMessage>> getMessages(String sessionId) async {
-    if (_database == null || kIsWeb) return [];
+    final db = await _getDatabase();
+    if (db == null) return [];
     try {
-      final rows = await _database!.query(
+      final rows = await db.query(
         'chat_messages',
         where: 'session_id = ?',
         whereArgs: [sessionId],
@@ -239,9 +278,10 @@ class ChatSessionService extends ChangeNotifier {
   }
 
   Future<int> getMessageCount(String sessionId) async {
-    if (_database == null || kIsWeb) return 0;
+    final db = await _getDatabase();
+    if (db == null) return 0;
     try {
-      final result = await _database!.rawQuery(
+      final result = await db.rawQuery(
         'SELECT COUNT(*) as count FROM chat_messages WHERE session_id = ?',
         [sessionId],
       );
@@ -258,8 +298,9 @@ class ChatSessionService extends ChangeNotifier {
 
   Future<void> deleteMessage(String messageId) async {
     try {
-      if (_database != null && !kIsWeb) {
-        await _database!.delete(
+      final db = await _getDatabase();
+      if (db != null) {
+        await db.delete(
           'chat_messages',
           where: 'id = ?',
           whereArgs: [messageId],
@@ -277,8 +318,9 @@ class ChatSessionService extends ChangeNotifier {
 
   Future<void> clearMessages(String sessionId) async {
     try {
-      if (_database != null && !kIsWeb) {
-        await _database!.delete(
+      final db = await _getDatabase();
+      if (db != null) {
+        await db.delete(
           'chat_messages',
           where: 'session_id = ?',
           whereArgs: [sessionId],
@@ -296,8 +338,9 @@ class ChatSessionService extends ChangeNotifier {
 
   Future<void> deleteSessionsForNote(String noteId) async {
     try {
-      if (_database != null && !kIsWeb) {
-        await _database!.delete(
+      final db = await _getDatabase();
+      if (db != null) {
+        await db.delete(
           'chat_sessions',
           where: 'note_id = ?',
           whereArgs: [noteId],
