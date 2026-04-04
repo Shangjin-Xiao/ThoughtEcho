@@ -6,12 +6,11 @@
 > 2. You are ONLY a **Dispatcher (调度员)**. Do NOT write all code yourself. 
 > 3. For **Frontend/UI/UX tasks**, dispatch them to Gemini CLI's built-in subagents (e.g., `generalist`, `codebase_investigator`).
 > 4. For **Backend/Logic tasks**, dispatch them using Copilot with `GPT-5.3-codex` (must use `exhigh`), `Claude 4.5 Sonnet`, or `Claude 4.5 Opus`.
->    - **CRITICAL LIMIT:** `Claude 4.5 Opus` MUST NOT be called more than 10 times in total. Reserve it ONLY for extremely complex logic tasks.
-> 5. **Copilot Delegation & Batching Instructions:** When you dispatch tasks to Copilot, you MUST explicitly instruct Copilot to:
->    - Complete **larger batches of tasks** at once (do not just modify one code block per call; complete entire functional units).
->    - Spawn its own subagents if necessary (Copilot is allowed to use subagents too).
+>    - **CRITICAL LIMIT:** `Claude 4.5 Opus` MUST NOT be called more than 10 times in total across the entire implementation.
+> 5. **Copilot Delegation Instructions:** When you dispatch tasks to Copilot, be mindful to balance task sizes—group them reasonably without making them too small (e.g., just one code block) or overwhelmingly large. Additionally, instruct Copilot to:
+>    - Spawn its own subagents if necessary.
 >    - Perform a **Code Review using a subagent** immediately after finishing its own implementation tasks.
-> 6. **Context Limit Warning:** Do NOT send all user notes to the LLM context. Always use Agent tools to search/query notes incrementally.
+> 6. **Context Limit Warning for the Flutter App:** When implementing the `AgentService` and the AI features of the Flutter app, make sure the codebase does **NOT** attempt to send all user notes to the LLM API's context window. The code must rely on Agent tools (e.g., `SearchNotesTool`) to query notes incrementally.
 > 7. After completing the overall implementation, perform a **Final Code Review** using the Gemini CLI built-in subagent first, followed by Codex 5.3.
 
 **Goal:** 根据最终产品设计，将当前零散的AI页面重构为大一统对话框 (`AIAssistantPage`)，引入原生的AI Skills系统驱动Agent Loop，并实现全屏相册式的地图画廊 (`MapMemoryPage`)。
@@ -55,7 +54,7 @@
 5. Review own code via subagent, then commit.
 
 ### Task 5: 实现原生 Agent Loop 引擎
-**Dispatcher Action:** Dispatch to Backend Copilot (`Claude 4.5 Opus` for high complexity - note the <10 calls limit!) to:
+**Dispatcher Action:** Dispatch to Backend Copilot (`Claude 4.5 Opus` or others) to:
 1. Refactor `lib/services/agent_service.dart`.
 2. Remove XML parsing. Implement a `while(true)` loop using `openai_dart` to handle native tool calling.
 3. Ensure the context does **NOT** load all notes at once; rely on specific search tools (e.g. `SearchNotesTool`) to query selectively.
