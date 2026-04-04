@@ -262,7 +262,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
   @override
   Future<List<Quote>> searchQuotesByContent(
     String query, {
-    bool includeDeleted = true,
+    bool includeDeleted = false,
   }) async {
     if (kIsWeb) {
       var result = _memoryStore

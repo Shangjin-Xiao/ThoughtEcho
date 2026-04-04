@@ -41,7 +41,9 @@ void main() {
             delta_content TEXT,
             day_period TEXT,
             last_modified TEXT,
-            favorite_count INTEGER DEFAULT 0
+            favorite_count INTEGER DEFAULT 0,
+            is_deleted INTEGER DEFAULT 0,
+            deleted_at TEXT
           )
         ''');
       await db.execute('''
@@ -117,6 +119,69 @@ void main() {
       expect(fetchedQuote, isNotNull);
       expect(fetchedQuote!.content, equals('Test content'));
       expect(fetchedQuote.aiAnalysis, equals('Huge AI Analysis Text'));
+    });
+
+    test('searchQuotesByContent excludes deleted notes by default', () async {
+      final activeId = const Uuid().v4();
+      final deletedId = const Uuid().v4();
+      final now = DateTime.now().toUtc().toIso8601String();
+
+      await service.addQuote(
+        Quote(
+          id: activeId,
+          content: 'shared-search-keyword active',
+          date: now,
+        ),
+      );
+      await service.addQuote(
+        Quote(
+          id: deletedId,
+          content: 'shared-search-keyword deleted',
+          date: now,
+          isDeleted: true,
+          deletedAt: now,
+        ),
+      );
+
+      final defaultResults = await service.searchQuotesByContent(
+        'shared-search-keyword',
+      );
+      final defaultIds = defaultResults.map((quote) => quote.id).toSet();
+      expect(defaultIds.contains(activeId), isTrue);
+      expect(defaultIds.contains(deletedId), isFalse);
+
+      final includeDeletedResults = await service.searchQuotesByContent(
+        'shared-search-keyword',
+        includeDeleted: true,
+      );
+      final includeDeletedIds =
+          includeDeletedResults.map((quote) => quote.id).toSet();
+      expect(includeDeletedIds.contains(activeId), isTrue);
+      expect(includeDeletedIds.contains(deletedId), isTrue);
+    });
+
+    test('getUserQuotes includeDeleted keeps deleted metadata', () async {
+      final deletedId = const Uuid().v4();
+      final deletedAt = DateTime.now().toUtc().toIso8601String();
+
+      await service.addQuote(
+        Quote(
+          id: deletedId,
+          content: 'deleted-quote-for-backup',
+          date: deletedAt,
+          isDeleted: true,
+          deletedAt: deletedAt,
+        ),
+      );
+
+      final withDeleted = await service.getUserQuotes(
+        includeDeleted: true,
+        limit: 100,
+      );
+      final deletedQuote =
+          withDeleted.firstWhere((quote) => quote.id == deletedId);
+      expect(deletedQuote.isDeleted, isTrue);
+      expect(deletedQuote.deletedAt, deletedAt);
     });
   });
 }

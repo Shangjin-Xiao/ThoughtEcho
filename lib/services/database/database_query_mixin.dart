@@ -350,7 +350,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
         q.id, q.content, q.date, q.source, q.source_author, q.source_work,
         q.category_id, q.color_hex, q.location, q.latitude, q.longitude,
         q.weather, q.temperature, q.edit_source, q.delta_content, q.day_period,
-        q.last_modified, q.favorite_count,
+        q.last_modified, q.favorite_count, q.is_deleted, q.deleted_at,
         (SELECT GROUP_CONCAT(tag_id) FROM quote_tags WHERE quote_id = q.id) as tag_ids
       $fromClause
       $joinClause
