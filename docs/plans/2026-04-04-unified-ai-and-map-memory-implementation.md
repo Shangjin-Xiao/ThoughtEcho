@@ -5,9 +5,14 @@
 > 1. You MUST operate strictly in **YOLO mode** (Autonomous execution, do NOT stop to ask the user for permission between tasks).
 > 2. You are ONLY a **Dispatcher (调度员)**. Do NOT write all code yourself. 
 > 3. For **Frontend/UI/UX tasks**, dispatch them to Gemini CLI's built-in subagents (e.g., `generalist`, `codebase_investigator`).
-> 4. For **Backend/Logic tasks**, dispatch them using Copilot with `GPT-5.3-codex` (must use `exhigh`), `Claude 3.5 Sonnet`, or `Claude 3.5 Opus` depending on task complexity.
-> 5. **Context Limit Warning:** Do NOT send all user notes to the LLM context. Always use Agent tools to search/query notes incrementally.
-> 6. After completing the implementation, perform a **Code Review** using the Gemini CLI built-in subagent first, followed by Codex 5.3.
+> 4. For **Backend/Logic tasks**, dispatch them using Copilot with `GPT-5.3-codex` (must use `exhigh`), `Claude 4.5 Sonnet`, or `Claude 4.5 Opus`.
+>    - **CRITICAL LIMIT:** `Claude 4.5 Opus` MUST NOT be called more than 10 times in total. Reserve it ONLY for extremely complex logic tasks.
+> 5. **Copilot Delegation & Batching Instructions:** When you dispatch tasks to Copilot, you MUST explicitly instruct Copilot to:
+>    - Complete **larger batches of tasks** at once (do not just modify one code block per call; complete entire functional units).
+>    - Spawn its own subagents if necessary (Copilot is allowed to use subagents too).
+>    - Perform a **Code Review using a subagent** immediately after finishing its own implementation tasks.
+> 6. **Context Limit Warning:** Do NOT send all user notes to the LLM context. Always use Agent tools to search/query notes incrementally.
+> 7. After completing the overall implementation, perform a **Final Code Review** using the Gemini CLI built-in subagent first, followed by Codex 5.3.
 
 **Goal:** 根据最终产品设计，将当前零散的AI页面重构为大一统对话框 (`AIAssistantPage`)，引入原生的AI Skills系统驱动Agent Loop，并实现全屏相册式的地图画廊 (`MapMemoryPage`)。
 
@@ -42,20 +47,20 @@
 ## Phase 1: AI Skills 核心引擎架构 (Backend)
 
 ### Task 4: 定义 AI Skill 数据模型
-**Dispatcher Action:** Dispatch to Backend Copilot (`GPT-5.3-codex exhigh` or `Claude 3.5 Sonnet`) to:
+**Dispatcher Action:** Dispatch to Backend Copilot (`GPT-5.3-codex exhigh` or `Claude 4.5 Sonnet`) to:
 1. Create `lib/models/ai_skill.dart`.
 2. Define the `AISkill` class with properties: `id`, `name`, `triggerWord`, `systemPrompt`, etc.
 3. Implement `toOpenAITool()` that strictly maps to the OpenAI JSON Schema (`strict: true`).
 4. Write tests in `test/unit/models/ai_skill_test.dart`.
-5. Commit the code.
+5. Review own code via subagent, then commit.
 
 ### Task 5: 实现原生 Agent Loop 引擎
-**Dispatcher Action:** Dispatch to Backend Copilot (`Claude 3.5 Opus` for high complexity) to:
+**Dispatcher Action:** Dispatch to Backend Copilot (`Claude 4.5 Opus` for high complexity - note the <10 calls limit!) to:
 1. Refactor `lib/services/agent_service.dart`.
 2. Remove XML parsing. Implement a `while(true)` loop using `openai_dart` to handle native tool calling.
 3. Ensure the context does **NOT** load all notes at once; rely on specific search tools (e.g. `SearchNotesTool`) to query selectively.
 4. Add robust error handling and duplicate tool call prevention.
-5. Commit the code.
+5. Review own code via subagent, then commit.
 
 ---
 
