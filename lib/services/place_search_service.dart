@@ -42,9 +42,35 @@ class NominatimPlaceSearchService extends ChangeNotifier
     implements PlaceSearchService {
   static const _baseUrl = 'https://nominatim.openstreetmap.org';
   static const _userAgent = 'ThoughtEcho/3.4.0 (thoughtecho@app)';
-  static const _minRequestInterval = Duration(milliseconds: 1100);
+  static const _defaultMinRequestInterval = Duration(milliseconds: 1100);
+  static const _defaultDebounceDuration = Duration(milliseconds: 350);
+  static const _maxBackoffSteps = 3;
+
+  final http.Client _httpClient;
+  final bool _ownsHttpClient;
+  final Future<void> Function(Duration duration) _delay;
+  final DateTime Function() _now;
+  final Duration _minRequestInterval;
+  final Duration _debounceDuration;
+  final int _max429Retries;
+
+  NominatimPlaceSearchService({
+    http.Client? httpClient,
+    Future<void> Function(Duration duration)? delay,
+    DateTime Function()? now,
+    Duration minRequestInterval = _defaultMinRequestInterval,
+    Duration debounceDuration = _defaultDebounceDuration,
+    int max429Retries = _maxBackoffSteps,
+  })  : _httpClient = httpClient ?? http.Client(),
+        _ownsHttpClient = httpClient == null,
+        _delay = delay ?? Future.delayed,
+        _now = now ?? DateTime.now,
+        _minRequestInterval = minRequestInterval,
+        _debounceDuration = debounceDuration,
+        _max429Retries = max429Retries;
 
   DateTime _lastRequestTime = DateTime.fromMillisecondsSinceEpoch(0);
+  int _latestSearchToken = 0;
   bool _isSearching = false;
   bool get isSearching => _isSearching;
 
@@ -52,11 +78,57 @@ class NominatimPlaceSearchService extends ChangeNotifier
   List<PoiInfo> get lastResults => _lastResults;
 
   Future<void> _enforceRateLimit() async {
-    final elapsed = DateTime.now().difference(_lastRequestTime);
+    final elapsed = _now().difference(_lastRequestTime);
     if (elapsed < _minRequestInterval) {
-      await Future.delayed(_minRequestInterval - elapsed);
+      await _delay(_minRequestInterval - elapsed);
     }
-    _lastRequestTime = DateTime.now();
+    _lastRequestTime = _now();
+  }
+
+  Duration _backoffForRetry(int retryIndex) {
+    final exponent = retryIndex <= 0 ? 0 : retryIndex - 1;
+    final millis = 500 * (1 << exponent);
+    return Duration(milliseconds: millis);
+  }
+
+  Future<http.Response?> _getWith429Backoff(
+    Uri uri, {
+    int? searchToken,
+  }) async {
+    var attempt = 0;
+
+    while (true) {
+      final response = await _httpClient.get(
+        uri,
+        headers: {'User-Agent': _userAgent},
+      );
+
+      if (searchToken != null && searchToken != _latestSearchToken) {
+        return null;
+      }
+
+      if (response.statusCode != 429) {
+        return response;
+      }
+
+      if (attempt >= _max429Retries) {
+        logDebug('Nominatim 请求 429，已达到最大重试次数: $_max429Retries');
+        return response;
+      }
+
+      final retryCount = attempt + 1;
+      final backoff = _backoffForRetry(retryCount);
+      logDebug(
+        'Nominatim 请求 429，准备第 $retryCount 次重试，退避 ${backoff.inMilliseconds}ms',
+      );
+      await _delay(backoff);
+
+      if (searchToken != null && searchToken != _latestSearchToken) {
+        return null;
+      }
+
+      attempt++;
+    }
   }
 
   @override
@@ -66,9 +138,12 @@ class NominatimPlaceSearchService extends ChangeNotifier
     String? query,
     int limit = 20,
   }) async {
+    final searchToken = ++_latestSearchToken;
+
     if (query == null || query.trim().isEmpty) {
       // 无搜索词时仅 reverse geocode 当前点
       final poi = await reverseSelectedPoint(lat, lon);
+      if (searchToken != _latestSearchToken) return _lastResults;
       _lastResults = poi != null ? [poi] : [];
       notifyListeners();
       return _lastResults;
@@ -78,7 +153,13 @@ class NominatimPlaceSearchService extends ChangeNotifier
     notifyListeners();
 
     try {
+      if (_debounceDuration > Duration.zero) {
+        await _delay(_debounceDuration);
+      }
+      if (searchToken != _latestSearchToken) return _lastResults;
+
       await _enforceRateLimit();
+      if (searchToken != _latestSearchToken) return _lastResults;
 
       final viewboxDelta = 0.1;
       final params = {
@@ -93,7 +174,13 @@ class NominatimPlaceSearchService extends ChangeNotifier
 
       final uri =
           Uri.parse('$_baseUrl/search').replace(queryParameters: params);
-      final response = await http.get(uri, headers: {'User-Agent': _userAgent});
+      final response = await _getWith429Backoff(
+        uri,
+        searchToken: searchToken,
+      );
+      if (response == null || searchToken != _latestSearchToken) {
+        return _lastResults;
+      }
 
       if (response.statusCode != 200) {
         logDebug('Nominatim search 失败: ${response.statusCode}');
@@ -122,8 +209,10 @@ class NominatimPlaceSearchService extends ChangeNotifier
       logDebug('PlaceSearchService.searchNearby 错误: $e');
       return _lastResults = [];
     } finally {
-      _isSearching = false;
-      notifyListeners();
+      if (searchToken == _latestSearchToken) {
+        _isSearching = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -142,7 +231,8 @@ class NominatimPlaceSearchService extends ChangeNotifier
 
       final uri =
           Uri.parse('$_baseUrl/reverse').replace(queryParameters: params);
-      final response = await http.get(uri, headers: {'User-Agent': _userAgent});
+      final response = await _getWith429Backoff(uri);
+      if (response == null) return null;
 
       if (response.statusCode != 200) {
         logDebug('Nominatim reverse 失败: ${response.statusCode}');
@@ -166,6 +256,14 @@ class NominatimPlaceSearchService extends ChangeNotifier
       logDebug('PlaceSearchService.reverseSelectedPoint 错误: $e');
       return null;
     }
+  }
+
+  @override
+  void dispose() {
+    if (_ownsHttpClient) {
+      _httpClient.close();
+    }
+    super.dispose();
   }
 
   String _extractName(Map<String, dynamic> item) {

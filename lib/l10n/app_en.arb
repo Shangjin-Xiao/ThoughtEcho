@@ -361,6 +361,14 @@
   "noTagsAvailable": "No tags available",
   "deleteNote": "Delete Note",
   "deleteNoteConfirmation": "Are you sure you want to delete this note? This action cannot be undone.",
+  "deleteNoteWithChatsConfirmation": "Are you sure you want to delete this note? This action cannot be undone.\n\n{count} chat conversations linked to this note will also be deleted.",
+  "@deleteNoteWithChatsConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "noteDeleted": "Note deleted",
   "favorited": "Favorited ({count})",
   "@favorited": {

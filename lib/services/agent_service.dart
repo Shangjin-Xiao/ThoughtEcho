@@ -13,11 +13,13 @@ import 'settings_service.dart';
 
 /// Agent 运行时服务 — 管理工具循环和多轮推理
 ///
-/// 通过 <tool_call> XML 协议与 LLM 交互：
+/// 通过 `<tool_call>` XML 协议与 LLM 交互：
 /// - LLM 输出 `<tool_call>{"name":"...","arguments":{...}}</tool_call>` 请求工具
 /// - 工具结果以 system 角色注入，`<tool_result>` 标签包裹
 /// - 内置护栏：最大轮数、重复检测、解析失败 repair retry
 class AgentService extends ChangeNotifier {
+  static const String agentToolCallPrefix = 'agentToolCall:';
+
   final SettingsService _settingsService;
   final APIKeyManager _apiKeyManager = APIKeyManager();
   final AIRequestHelper _requestHelper = AIRequestHelper();
@@ -31,8 +33,8 @@ class AgentService extends ChangeNotifier {
   bool _isRunning = false;
   bool get isRunning => _isRunning;
 
-  String _currentStatus = '';
-  String get currentStatus => _currentStatus;
+  String _currentStatusKey = '';
+  String get currentStatusKey => _currentStatusKey;
 
   AgentService({
     required SettingsService settingsService,
@@ -49,7 +51,7 @@ class AgentService extends ChangeNotifier {
     String? noteContext,
   }) async {
     _isRunning = true;
-    _setStatus('正在思考…');
+    _setStatus('agentThinking');
     notifyListeners();
 
     try {
@@ -78,7 +80,8 @@ class AgentService extends ChangeNotifier {
         }
 
         // ── 重复调用检测 ──
-        final callKey = '${toolCall.name}:${jsonEncode(toolCall.arguments)}';
+        final callKey =
+            '${toolCall.name}:${canonicalJsonForArguments(toolCall.arguments)}';
         if (previousCallKeys.contains(callKey)) {
           logDebug('Agent: 检测到重复工具调用 ${toolCall.name}，终止循环');
           final cleanContent = _stripToolCall(response);
@@ -200,6 +203,26 @@ class AgentService extends ChangeNotifier {
         .trim();
   }
 
+  @visibleForTesting
+  static String canonicalJsonForArguments(Map<String, Object?> input) {
+    Object? canonicalize(Object? value) {
+      if (value is Map) {
+        final sortedEntries = value.entries
+            .map((e) => MapEntry(e.key.toString(), canonicalize(e.value)))
+            .toList()
+          ..sort((a, b) => a.key.compareTo(b.key));
+        return Map<String, Object?>.fromEntries(sortedEntries);
+      }
+      if (value is List) {
+        return value.map(canonicalize).toList();
+      }
+      return value;
+    }
+
+    final canonical = canonicalize(input) as Map<String, Object?>;
+    return jsonEncode(canonical);
+  }
+
   // ─── 消息构建 ──────────────────────────────────────────────
 
   String _buildSystemPrompt({String? noteContext}) {
@@ -265,17 +288,16 @@ $contextSection''';
   }
 
   void _setStatus(String status) {
-    _currentStatus = status;
+    _currentStatusKey = status;
     notifyListeners();
   }
 
   String _toolStatusText(String toolName) {
     return switch (toolName) {
-      'search_notes' => '正在搜索笔记…',
-      'get_note_stats' => '正在分析数据…',
-      'web_search' => '正在搜索网络…',
-      'edit_note' => '正在编辑笔记…',
-      _ => '正在执行 $toolName…',
+      'search_notes' => 'agentSearchingNotes',
+      'get_note_stats' => 'agentAnalyzingData',
+      'web_search' => 'agentWebSearching',
+      _ => '$agentToolCallPrefix$toolName',
     };
   }
 

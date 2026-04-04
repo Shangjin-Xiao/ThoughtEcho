@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -15,6 +16,7 @@ class ExplorePage extends StatefulWidget {
 }
 
 class _ExplorePageState extends State<ExplorePage> {
+  static const _favoritesLimit = 5;
   late Future<_ExploreStats> _statsFuture;
   late Future<List<Map<String, dynamic>>> _favoritesFuture;
 
@@ -25,13 +27,27 @@ class _ExplorePageState extends State<ExplorePage> {
   }
 
   void _loadData() {
-    final db = Provider.of<DatabaseService>(context, listen: false).database;
-    _statsFuture = _ExploreStats.load(db);
-    _favoritesFuture = db.rawQuery(
-      'SELECT id, content, date, favorite_count '
-      'FROM quotes WHERE favorite_count > 0 '
-      'ORDER BY favorite_count DESC LIMIT 5',
+    final dbService = Provider.of<DatabaseService>(context, listen: false);
+    _statsFuture = _ExploreStats.load(dbService);
+    _favoritesFuture = _loadFavorites(dbService);
+  }
+
+  Future<List<Map<String, dynamic>>> _loadFavorites(
+    DatabaseService dbService,
+  ) async {
+    final quotes = await dbService.getMostFavoritedQuotesThisWeek(
+      limit: _favoritesLimit,
     );
+    return quotes
+        .map(
+          (q) => <String, dynamic>{
+            'id': q.id,
+            'content': q.content,
+            'date': q.date,
+            'favorite_count': q.favoriteCount,
+          },
+        )
+        .toList();
   }
 
   @override
@@ -310,8 +326,12 @@ class _ExploreStats {
         activeDays: 0,
       );
 
-  static Future<_ExploreStats> load(dynamic db) async {
+  static Future<_ExploreStats> load(DatabaseService dbService) async {
     try {
+      if (kIsWeb) {
+        return _ExploreStats.empty();
+      }
+      final db = await dbService.safeDatabase;
       final countRow = await db.rawQuery(
         'SELECT COUNT(*) as c, COALESCE(SUM(LENGTH(content)),0) as s '
         'FROM quotes',

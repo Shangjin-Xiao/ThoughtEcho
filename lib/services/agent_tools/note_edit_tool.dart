@@ -1,4 +1,5 @@
 import '../../utils/app_logger.dart';
+import '../../models/quote_model.dart';
 import '../agent_tool.dart';
 import '../database_service.dart';
 
@@ -56,17 +57,8 @@ class NoteEditTool extends AgentTool {
     }
 
     try {
-      final db = _db.database;
-
-      // 读取现有笔记
-      final rows = await db.query(
-        'quotes',
-        where: 'id = ?',
-        whereArgs: [noteId],
-        limit: 1,
-      );
-
-      if (rows.isEmpty) {
+      final existingQuote = await _db.getQuoteById(noteId);
+      if (existingQuote == null) {
         return ToolResult(
           toolCallId: call.id,
           content: '未找到 ID 为 $noteId 的笔记',
@@ -74,21 +66,39 @@ class NoteEditTool extends AgentTool {
         );
       }
 
-      final existing = rows.first['content'] as String? ?? '';
+      final existing = existingQuote.content;
       final finalContent = switch (mode) {
         'append' => '$existing\n\n$newContent',
         _ => newContent,
       };
 
-      await db.update(
-        'quotes',
-        {
-          'content': finalContent,
-          'last_modified': DateTime.now().toIso8601String(),
-        },
-        where: 'id = ?',
-        whereArgs: [noteId],
+      final updatedQuote = Quote(
+        id: existingQuote.id,
+        content: finalContent,
+        date: existingQuote.date,
+        source: existingQuote.source,
+        sourceAuthor: existingQuote.sourceAuthor,
+        sourceWork: existingQuote.sourceWork,
+        tagIds: existingQuote.tagIds,
+        aiAnalysis: existingQuote.aiAnalysis,
+        sentiment: existingQuote.sentiment,
+        keywords: existingQuote.keywords,
+        summary: existingQuote.summary,
+        categoryId: existingQuote.categoryId,
+        colorHex: existingQuote.colorHex,
+        location: existingQuote.location,
+        latitude: existingQuote.latitude,
+        longitude: existingQuote.longitude,
+        poiName: existingQuote.poiName,
+        weather: existingQuote.weather,
+        temperature: existingQuote.temperature,
+        editSource: null,
+        deltaContent: null,
+        dayPeriod: existingQuote.dayPeriod,
+        lastModified: DateTime.now().toIso8601String(),
+        favoriteCount: existingQuote.favoriteCount,
       );
+      await _db.updateQuote(updatedQuote);
 
       final preview = finalContent.length > 100
           ? '${finalContent.substring(0, 100)}…'

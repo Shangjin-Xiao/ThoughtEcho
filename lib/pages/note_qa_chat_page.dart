@@ -106,13 +106,20 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
     _currentSessionId = sessionId;
     final messages = await _chatSessionService.getMessages(sessionId);
     _chatHistory = messages.where((m) => m.includedInContext).toList();
+    var hasSystemWelcome = false;
     for (final msg in messages) {
+      if (msg.role == 'system') {
+        hasSystemWelcome = true;
+      }
       _chatController.insertMessage(TextMessage(
         authorId: msg.role == 'user' ? _user.id : _assistant.id,
         createdAt: msg.timestamp,
         id: msg.id,
         text: msg.content,
       ));
+    }
+    if (!hasSystemWelcome) {
+      _addWelcomeMessage();
     }
   }
 
@@ -254,7 +261,6 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
     }
     _chatHistory.clear();
     await _loadSession(sessionId);
-    _addWelcomeMessage();
     if (mounted) setState(() {});
   }
 
@@ -284,9 +290,10 @@ class _NoteQAChatPageState extends State<NoteQAChatPage> {
         },
         onDelete: (id) async {
           await _chatSessionService.deleteSession(id);
+          if (!mounted || !ctx.mounted) return;
           if (id == _currentSessionId) {
             Navigator.of(ctx).pop();
-            _startNewChat();
+            await _startNewChat();
           }
         },
         onNewChat: () {

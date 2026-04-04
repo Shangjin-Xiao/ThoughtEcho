@@ -76,12 +76,10 @@ class _AgentChatPageState extends State<AgentChatPage> {
     final sessionService = context.read<ChatSessionService>();
     final agentService = context.read<AgentService>();
 
-    if (_currentSession == null) {
-      _currentSession = await sessionService.createSession(
-        sessionType: 'agent',
-        title: text.length > 20 ? '${text.substring(0, 20)}...' : text,
-      );
-    }
+    _currentSession ??= await sessionService.createSession(
+      sessionType: 'agent',
+      title: text.length > 20 ? '${text.substring(0, 20)}...' : text,
+    );
 
     await sessionService.addMessage(_currentSession!.id, userMessage);
 
@@ -118,7 +116,7 @@ class _AgentChatPageState extends State<AgentChatPage> {
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${l10n.loading} $e')),
+          SnackBar(content: Text(l10n.aiResponseError(e.toString()))),
         );
       }
     }
@@ -160,7 +158,7 @@ class _AgentChatPageState extends State<AgentChatPage> {
               },
             ),
           ),
-          if (_isLoading) _buildStatusIndicator(theme),
+          if (_isLoading) _buildStatusIndicator(theme, l10n),
           _buildInputArea(theme, l10n),
         ],
       ),
@@ -231,10 +229,23 @@ class _AgentChatPageState extends State<AgentChatPage> {
     );
   }
 
-  Widget _buildStatusIndicator(ThemeData theme) {
+  Widget _buildStatusIndicator(ThemeData theme, AppLocalizations l10n) {
     return Consumer<AgentService>(
       builder: (context, agentService, child) {
         if (!agentService.isRunning) return const SizedBox.shrink();
+        final statusKey = agentService.currentStatusKey;
+        final statusText = switch (statusKey) {
+          '' => '...',
+          'agentThinking' => l10n.agentThinking,
+          'agentSearchingNotes' => l10n.agentSearchingNotes,
+          'agentAnalyzingData' => l10n.agentAnalyzingData,
+          'agentWebSearching' => l10n.agentWebSearching,
+          _ => statusKey.startsWith(AgentService.agentToolCallPrefix)
+              ? l10n.agentToolCall(
+                  statusKey.substring(AgentService.agentToolCallPrefix.length),
+                )
+              : l10n.agentThinking,
+        };
 
         return Padding(
           padding: const EdgeInsets.all(8.0),
@@ -251,9 +262,7 @@ class _AgentChatPageState extends State<AgentChatPage> {
               ),
               const SizedBox(width: 8),
               Text(
-                agentService.currentStatus.isNotEmpty
-                    ? agentService.currentStatus
-                    : '...',
+                statusText,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -274,7 +283,7 @@ class _AgentChatPageState extends State<AgentChatPage> {
         color: theme.colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             offset: const Offset(0, -1),
             blurRadius: 5,
           ),

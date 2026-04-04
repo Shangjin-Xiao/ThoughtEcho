@@ -4,6 +4,9 @@ import '../database_service.dart';
 
 /// 搜索用户笔记内容
 class NoteSearchTool extends AgentTool {
+  static const int _defaultLimit = 10;
+  static const int _maxLimit = 20;
+
   final DatabaseService _db;
   const NoteSearchTool(this._db);
 
@@ -32,7 +35,9 @@ class NoteSearchTool extends AgentTool {
   @override
   Future<ToolResult> execute(ToolCall call) async {
     final query = call.arguments['query'] as String? ?? '';
-    final limit = (call.arguments['limit'] as num?)?.toInt() ?? 10;
+    final requestedLimit =
+        (call.arguments['limit'] as num?)?.toInt() ?? _defaultLimit;
+    final limit = requestedLimit.clamp(1, _maxLimit).toInt();
 
     if (query.trim().isEmpty) {
       return ToolResult(

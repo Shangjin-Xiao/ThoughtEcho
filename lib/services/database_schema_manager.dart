@@ -8,6 +8,14 @@ import '../utils/time_utils.dart';
 import 'media_reference_service.dart';
 
 class DatabaseSchemaManager {
+  @visibleForTesting
+  static String poiNameSelectExpressionFromTableInfo(
+    List<Map<String, Object?>> tableInfo,
+  ) {
+    final hasPoiNameColumn = tableInfo.any((col) => col['name'] == 'poi_name');
+    return hasPoiNameColumn ? 'poi_name' : 'NULL AS poi_name';
+  }
+
   // 抽取数据库初始化逻辑到单独方法，便于复用
   Future<Database> _initDatabase(String path) async {
     return await openDatabase(
@@ -664,63 +672,59 @@ class DatabaseSchemaManager {
       logDebug(
         '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 poi_name + 聊天表',
       );
-      try {
-        final columns = await txn.rawQuery('PRAGMA table_info(quotes)');
-        final hasPoiName = columns.any((col) => col['name'] == 'poi_name');
-        if (!hasPoiName) {
-          await txn.execute('ALTER TABLE quotes ADD COLUMN poi_name TEXT');
-          logDebug('数据库升级：poi_name 字段添加完成');
-        }
-
-        await txn.execute(
-          'CREATE INDEX IF NOT EXISTS idx_quotes_poi_name ON quotes(poi_name)',
-        );
-
-        await txn.execute('''
-          CREATE TABLE IF NOT EXISTS chat_sessions(
-            id TEXT PRIMARY KEY,
-            session_type TEXT NOT NULL DEFAULT 'note',
-            note_id TEXT,
-            title TEXT NOT NULL DEFAULT '',
-            created_at TEXT NOT NULL,
-            last_active_at TEXT NOT NULL,
-            is_pinned INTEGER NOT NULL DEFAULT 0,
-            FOREIGN KEY (note_id) REFERENCES quotes(id) ON DELETE CASCADE
-          )
-        ''');
-        await txn.execute(
-          'CREATE INDEX IF NOT EXISTS idx_chat_sessions_note_id ON chat_sessions(note_id)',
-        );
-        await txn.execute(
-          'CREATE INDEX IF NOT EXISTS idx_chat_sessions_last_active ON chat_sessions(last_active_at DESC)',
-        );
-        await txn.execute(
-          'CREATE INDEX IF NOT EXISTS idx_chat_sessions_type ON chat_sessions(session_type)',
-        );
-
-        await txn.execute('''
-          CREATE TABLE IF NOT EXISTS chat_messages(
-            id TEXT PRIMARY KEY,
-            session_id TEXT NOT NULL,
-            role TEXT NOT NULL DEFAULT 'user',
-            content TEXT NOT NULL DEFAULT '',
-            created_at TEXT NOT NULL,
-            included_in_context INTEGER NOT NULL DEFAULT 1,
-            meta_json TEXT,
-            FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
-          )
-        ''');
-        await txn.execute(
-          'CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session_id)',
-        );
-        await txn.execute(
-          'CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(session_id, created_at ASC)',
-        );
-
-        logDebug('数据库升级：v20 完成');
-      } catch (e) {
-        logError('v20 升级失败: $e', error: e, source: 'DatabaseUpgrade');
+      final columns = await txn.rawQuery('PRAGMA table_info(quotes)');
+      final hasPoiName = columns.any((col) => col['name'] == 'poi_name');
+      if (!hasPoiName) {
+        await txn.execute('ALTER TABLE quotes ADD COLUMN poi_name TEXT');
+        logDebug('数据库升级：poi_name 字段添加完成');
       }
+
+      await txn.execute(
+        'CREATE INDEX IF NOT EXISTS idx_quotes_poi_name ON quotes(poi_name)',
+      );
+
+      await txn.execute('''
+        CREATE TABLE IF NOT EXISTS chat_sessions(
+          id TEXT PRIMARY KEY,
+          session_type TEXT NOT NULL DEFAULT 'note',
+          note_id TEXT,
+          title TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          last_active_at TEXT NOT NULL,
+          is_pinned INTEGER NOT NULL DEFAULT 0,
+          FOREIGN KEY (note_id) REFERENCES quotes(id) ON DELETE CASCADE
+        )
+      ''');
+      await txn.execute(
+        'CREATE INDEX IF NOT EXISTS idx_chat_sessions_note_id ON chat_sessions(note_id)',
+      );
+      await txn.execute(
+        'CREATE INDEX IF NOT EXISTS idx_chat_sessions_last_active ON chat_sessions(last_active_at DESC)',
+      );
+      await txn.execute(
+        'CREATE INDEX IF NOT EXISTS idx_chat_sessions_type ON chat_sessions(session_type)',
+      );
+
+      await txn.execute('''
+        CREATE TABLE IF NOT EXISTS chat_messages(
+          id TEXT PRIMARY KEY,
+          session_id TEXT NOT NULL,
+          role TEXT NOT NULL DEFAULT 'user',
+          content TEXT NOT NULL DEFAULT '',
+          created_at TEXT NOT NULL,
+          included_in_context INTEGER NOT NULL DEFAULT 1,
+          meta_json TEXT,
+          FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
+        )
+      ''');
+      await txn.execute(
+        'CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session_id)',
+      );
+      await txn.execute(
+        'CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(session_id, created_at ASC)',
+      );
+
+      logDebug('数据库升级：v20 完成');
     }
   }
 
@@ -733,7 +737,13 @@ class DatabaseSchemaManager {
       );
       final tableNames = tables.map((t) => t['name'] as String).toSet();
 
-      final requiredTables = {'quotes', 'categories'};
+      final requiredTables = {
+        'quotes',
+        'categories',
+        'quote_tags',
+        'chat_sessions',
+        'chat_messages',
+      };
       final missingTables = requiredTables.difference(tableNames);
 
       if (missingTables.isNotEmpty) {
@@ -882,6 +892,13 @@ class DatabaseSchemaManager {
         return;
       }
 
+      // 上次异常中断时可能残留临时表，先清理
+      await txn.execute('DROP TABLE IF EXISTS quotes_new');
+
+      final poiNameSelectFragment = poiNameSelectExpressionFromTableInfo(
+        tableInfo.cast<Map<String, Object?>>(),
+      );
+
       logDebug('开始删除tag_ids列...');
 
       // 1. 创建新的quotes表（不包含tag_ids列，但包含favorite_count和latitude/longitude）
@@ -924,7 +941,7 @@ class DatabaseSchemaManager {
         SELECT
           id, content, date, source, source_author, source_work,
           ai_analysis, sentiment, keywords, summary, category_id,
-          color_hex, location, latitude, longitude, poi_name, weather, temperature, edit_source,
+          color_hex, location, latitude, longitude, $poiNameSelectFragment, weather, temperature, edit_source,
           delta_content, day_period, last_modified,
           COALESCE(favorite_count, 0) as favorite_count
         FROM quotes
@@ -974,7 +991,7 @@ class DatabaseSchemaManager {
       logDebug('tag_ids列删除完成，favorite_count字段已保留');
     } catch (e) {
       logError('删除tag_ids列失败: $e', error: e, source: 'DatabaseUpgrade');
-      // 不重新抛出异常，让升级继续
+      rethrow;
     }
   }
 

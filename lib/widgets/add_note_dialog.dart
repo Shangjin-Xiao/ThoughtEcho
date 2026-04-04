@@ -1979,7 +1979,12 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                           return loc;
                                         }())
                                   : null,
-                              poiName: _includeLocation ? _newPoiName : null,
+                              poiName: _includeLocation
+                                  ? (isEditing
+                                      ? _newPoiName ??
+                                          widget.initialQuote?.poiName
+                                      : _newPoiName)
+                                  : null,
                               latitude: (_includeLocation || _includeWeather)
                                   ? (isEditing
                                       ? _originalLatitude

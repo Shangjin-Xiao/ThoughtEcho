@@ -192,9 +192,6 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     if (_location != _initialLocation) {
       return true;
     }
-    if (_poiName != _originalPoiName) {
-      return true;
-    }
     if (_poiName != _initialPoiName) {
       return true;
     }

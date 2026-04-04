@@ -7,6 +7,21 @@ class NoteStatsTool extends AgentTool {
   final DatabaseService _db;
   const NoteStatsTool(this._db);
 
+  static String _normalizeDateLowerBound(String value) {
+    final parsed = DateTime.tryParse(value);
+    if (parsed == null) return value;
+    return DateTime(parsed.year, parsed.month, parsed.day).toIso8601String();
+  }
+
+  static String _normalizeDateUpperBound(String value) {
+    final parsed = DateTime.tryParse(value);
+    if (parsed == null) return value;
+    final hasExplicitTime = value.contains('T');
+    if (hasExplicitTime) return parsed.toIso8601String();
+    return DateTime(parsed.year, parsed.month, parsed.day, 23, 59, 59, 999)
+        .toIso8601String();
+  }
+
   @override
   String get name => 'get_note_stats';
 
@@ -44,11 +59,11 @@ class NoteStatsTool extends AgentTool {
         whereArgs = <Object?>[];
         if (startDate != null) {
           conditions.add('date >= ?');
-          whereArgs.add(startDate);
+          whereArgs.add(_normalizeDateLowerBound(startDate));
         }
         if (endDate != null) {
           conditions.add('date <= ?');
-          whereArgs.add(endDate);
+          whereArgs.add(_normalizeDateUpperBound(endDate));
         }
         where = conditions.join(' AND ');
       }

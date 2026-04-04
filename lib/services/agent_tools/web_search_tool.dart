@@ -5,6 +5,9 @@ import '../agent_tool.dart';
 
 /// 搜索互联网获取实时信息（Bing HTTP 抓取，免费无 Key）
 class WebSearchTool extends AgentTool {
+  static const int _defaultLimit = 5;
+  static const int _maxLimit = 10;
+
   static const _userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
       'AppleWebKit/537.36 (KHTML, like Gecko) '
       'Chrome/120.0.0.0 Safari/537.36';
@@ -36,7 +39,9 @@ class WebSearchTool extends AgentTool {
   @override
   Future<ToolResult> execute(ToolCall call) async {
     final query = call.arguments['query'] as String? ?? '';
-    final limit = (call.arguments['limit'] as num?)?.toInt() ?? 5;
+    final requestedLimit =
+        (call.arguments['limit'] as num?)?.toInt() ?? _defaultLimit;
+    final limit = requestedLimit.clamp(1, _maxLimit).toInt();
 
     if (query.trim().isEmpty) {
       return ToolResult(

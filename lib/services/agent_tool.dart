@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 abstract class AgentTool {
   const AgentTool();
 
@@ -11,11 +13,11 @@ abstract class AgentTool {
 }
 
 class ToolCall {
-  const ToolCall({
+  ToolCall({
     required this.id,
     required this.name,
-    required this.arguments,
-  });
+    required Map<String, Object?> arguments,
+  }) : arguments = _deepFreezeMap(arguments);
 
   final String id;
   final String name;
@@ -46,12 +48,12 @@ class ToolCall {
     return other is ToolCall &&
         other.id == id &&
         other.name == name &&
-        _mapEquals(other.arguments, arguments);
+        _deepEquals(other.arguments, arguments);
   }
 
   @override
   int get hashCode {
-    return Object.hash(id, name, _mapHash(arguments));
+    return Object.hash(id, name, _deepHash(arguments));
   }
 }
 
@@ -101,11 +103,11 @@ class ToolResult {
 }
 
 class AgentResponse {
-  const AgentResponse({
+  AgentResponse({
     required this.content,
-    this.toolCalls = const <ToolCall>[],
+    List<ToolCall> toolCalls = const <ToolCall>[],
     this.reachedMaxRounds = false,
-  });
+  }) : toolCalls = List<ToolCall>.unmodifiable(toolCalls);
 
   final String content;
   final List<ToolCall> toolCalls;
@@ -184,4 +186,59 @@ int _mapHash<K, V>(Map<K, V> map) {
   return Object.hashAll(
     keys.map((key) => Object.hash(key, map[key])),
   );
+}
+
+Map<String, Object?> _deepFreezeMap(Map<String, Object?> map) {
+  final frozen = <String, Object?>{};
+  for (final entry in map.entries) {
+    frozen[entry.key] = _deepFreezeValue(entry.value);
+  }
+  return UnmodifiableMapView<String, Object?>(frozen);
+}
+
+Object? _deepFreezeValue(Object? value) {
+  if (value is Map) {
+    final frozen = <String, Object?>{};
+    for (final entry in value.entries) {
+      frozen[entry.key.toString()] = _deepFreezeValue(entry.value);
+    }
+    return UnmodifiableMapView<String, Object?>(frozen);
+  }
+  if (value is List) {
+    return List<Object?>.unmodifiable(value.map(_deepFreezeValue));
+  }
+  return value;
+}
+
+bool _deepEquals(Object? a, Object? b) {
+  if (identical(a, b)) return true;
+  if (a is Map && b is Map) {
+    if (a.length != b.length) return false;
+    for (final entry in a.entries) {
+      if (!b.containsKey(entry.key)) return false;
+      if (!_deepEquals(entry.value, b[entry.key])) return false;
+    }
+    return true;
+  }
+  if (a is List && b is List) {
+    if (a.length != b.length) return false;
+    for (var i = 0; i < a.length; i++) {
+      if (!_deepEquals(a[i], b[i])) return false;
+    }
+    return true;
+  }
+  return a == b;
+}
+
+int _deepHash(Object? value) {
+  if (value is Map) {
+    final keys = value.keys.map((k) => k.toString()).toList()..sort();
+    return Object.hashAll(
+      keys.map((key) => Object.hash(key, _deepHash(value[key]))),
+    );
+  }
+  if (value is List) {
+    return Object.hashAll(value.map(_deepHash));
+  }
+  return value.hashCode;
 }

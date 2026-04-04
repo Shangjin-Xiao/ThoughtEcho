@@ -28,6 +28,7 @@ import '../theme/app_theme.dart';
 import 'note_full_editor_page.dart'; // 添加全屏编辑页面导入
 import '../services/settings_service.dart'; // Import SettingsService
 import '../services/insight_history_service.dart'; // Import InsightHistoryService
+import '../services/chat_session_service.dart';
 import '../constants/app_constants.dart';
 import '../utils/app_logger.dart';
 import '../utils/color_utils.dart';
@@ -1385,32 +1386,49 @@ class _HomePageState extends State<HomePage>
   }
 
   // 显示删除确认对话框
-  void _showDeleteConfirmDialog(Quote quote) {
+  Future<void> _showDeleteConfirmDialog(Quote quote) async {
+    final noteId = quote.id;
+    if (noteId == null || noteId.isEmpty) return;
+
+    final sessionService = Provider.of<ChatSessionService>(
+      context,
+      listen: false,
+    );
+    final sessions = await sessionService.getSessionsForNote(noteId);
+    if (!mounted) return;
+
+    final l10n = AppLocalizations.of(context);
+    final hasLinkedChats = sessions.isNotEmpty;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text(AppLocalizations.of(context).deleteNote),
-        content: Text(AppLocalizations.of(context).deleteNoteConfirmation),
+        title: Text(l10n.deleteNote),
+        content: Text(
+          hasLinkedChats
+              ? l10n.deleteNoteWithChatsConfirmation(sessions.length)
+              : l10n.deleteNoteConfirmation,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text(AppLocalizations.of(context).cancel),
+            child: Text(l10n.cancel),
           ),
           TextButton(
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             onPressed: () {
               final db = Provider.of<DatabaseService>(context, listen: false);
-              db.deleteQuote(quote.id!);
+              db.deleteQuote(noteId);
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(AppLocalizations.of(context).noteDeleted),
+                  content: Text(l10n.noteDeleted),
                   duration: const Duration(seconds: 1),
                   behavior: SnackBarBehavior.floating,
                 ),
               );
             },
-            child: Text(AppLocalizations.of(context).delete),
+            child: Text(l10n.delete),
           ),
         ],
       ),

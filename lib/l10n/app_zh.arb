@@ -361,6 +361,14 @@
   "noTagsAvailable": "暂无标签数据",
   "deleteNote": "删除笔记",
   "deleteNoteConfirmation": "确定要删除这条笔记吗？此操作无法撤销。",
+  "deleteNoteWithChatsConfirmation": "确定要删除这条笔记吗？此操作无法撤销。\n\n该笔记关联的 {count} 条历史对话也将被一并删除。",
+  "@deleteNoteWithChatsConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "noteDeleted": "笔记已删除",
   "favorited": "已珍藏 ({count})",
   "@favorited": {

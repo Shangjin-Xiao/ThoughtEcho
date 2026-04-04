@@ -14,6 +14,7 @@ class _FakeDatabase implements Database {
   int chatSessionsInsertCount = 0;
   int chatMessagesInsertCount = 0;
   int chatSessionsUpdateCount = 0;
+  final Completer<void> unblockWrites = Completer<void>();
 
   @override
   Future<int> insert(
@@ -22,6 +23,7 @@ class _FakeDatabase implements Database {
     String? nullColumnHack,
     ConflictAlgorithm? conflictAlgorithm,
   }) async {
+    await unblockWrites.future;
     if (table == 'chat_sessions') {
       chatSessionsInsertCount++;
     } else if (table == 'chat_messages') {
@@ -57,6 +59,7 @@ class _FakeDatabase implements Database {
     List<Object?>? whereArgs,
     ConflictAlgorithm? conflictAlgorithm,
   }) async {
+    await unblockWrites.future;
     if (table == 'chat_sessions') {
       chatSessionsUpdateCount++;
     }
@@ -120,6 +123,7 @@ void main() {
     test('createSession waits and persists after database injection', () async {
       final service = ChatSessionService();
       final db = _FakeDatabase();
+      db.unblockWrites.complete();
       final sessionFuture = service.createSession(
         sessionType: 'note',
         noteId: 'note-2',
@@ -141,6 +145,7 @@ void main() {
     test('addMessage waits and persists after database injection', () async {
       final service = ChatSessionService();
       final db = _FakeDatabase();
+      db.unblockWrites.complete();
       final messageFuture = service.addMessage(
         'session-pending',
         ChatMessage(
@@ -160,6 +165,30 @@ void main() {
       service.setDatabase(db);
       await messageFuture;
       await _waitFor(() => messageFinished);
+      expect(db.chatMessagesInsertCount, equals(1));
+      expect(db.chatSessionsUpdateCount, equals(1));
+    });
+
+    test('write operations queue when database wait times out and flush later',
+        () async {
+      final service = ChatSessionService(
+        databaseReadyTimeout: const Duration(milliseconds: 20),
+      );
+      final message = ChatMessage(
+        id: 'queued-msg',
+        content: 'queued',
+        isUser: true,
+        role: 'user',
+        timestamp: DateTime.now(),
+      );
+
+      await service.addMessage('queued-session', message);
+
+      final db = _FakeDatabase();
+      service.setDatabase(db);
+      db.unblockWrites.complete();
+
+      await _waitFor(() => db.chatMessagesInsertCount == 1);
       expect(db.chatMessagesInsertCount, equals(1));
       expect(db.chatSessionsUpdateCount, equals(1));
     });

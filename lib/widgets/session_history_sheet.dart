@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/chat_session.dart';
 import '../services/chat_session_service.dart';
+import '../utils/time_utils.dart';
 
 /// 会话历史底部弹窗
 class SessionHistorySheet extends StatelessWidget {
@@ -76,7 +77,7 @@ class SessionHistorySheet extends StatelessWidget {
                         ),
                         title: Text(s.title,
                             maxLines: 1, overflow: TextOverflow.ellipsis),
-                        subtitle: Text(_fmtDate(s.lastActiveAt),
+                        subtitle: Text(_fmtDate(context, s.lastActiveAt),
                             style: theme.textTheme.bodySmall),
                         selected: isCurrent,
                         onTap: isCurrent ? null : () => onSelect(s.id),
@@ -119,12 +120,7 @@ class SessionHistorySheet extends StatelessWidget {
     );
   }
 
-  String _fmtDate(DateTime d) {
-    final diff = DateTime.now().difference(d);
-    if (diff.inMinutes < 1) return 'just now';
-    if (diff.inHours < 1) return '${diff.inMinutes}m ago';
-    if (diff.inDays < 1) return '${diff.inHours}h ago';
-    return '${d.month}/${d.day} '
-        '${d.hour}:${d.minute.toString().padLeft(2, '0')}';
+  String _fmtDate(BuildContext context, DateTime d) {
+    return TimeUtils.formatElapsedRelativeTimeLocalized(context, d);
   }
 }
