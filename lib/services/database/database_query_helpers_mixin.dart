@@ -104,9 +104,6 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
     final whereClause =
         conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
 
-
-
-
     // ⚡ Bolt: 使用标量子查询替代 LEFT JOIN 和 GROUP BY，避免在 LIMIT 分页前全表聚合的性能瓶颈
 
     final sanitizedOrderBy = sanitizeOrderBy(orderBy, prefix: 'q');
