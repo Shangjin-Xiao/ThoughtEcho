@@ -294,7 +294,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
 
   /// 修复：更新笔记内容，增加数据验证和并发控制
   @override
-  Future<void> updateQuote(Quote quote) async {
+  Future<QuoteUpdateResult> updateQuote(Quote quote) async {
     // 修复：添加数据验证
     if (quote.id == null || quote.id!.isEmpty) {
       throw ArgumentError('更新笔记时ID不能为空');
@@ -306,24 +306,25 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
 
     if (kIsWeb) {
       final index = _memoryStore.indexWhere((q) => q.id == quote.id);
-      if (index != -1) {
-        if (_memoryStore[index].isDeleted) {
-          logWarning(
-            '忽略对已删除笔记的更新请求: ${quote.id}',
-            source: 'DatabaseService',
-          );
-          return;
-        }
-        _memoryStore[index] = quote;
-        notifyListeners();
+      if (index == -1) {
+        return QuoteUpdateResult.notFound;
       }
-      return;
+      if (_memoryStore[index].isDeleted) {
+        logWarning(
+          '忽略对已删除笔记的更新请求: ${quote.id}',
+          source: 'DatabaseService',
+        );
+        return QuoteUpdateResult.skippedDeleted;
+      }
+      _memoryStore[index] = quote;
+      notifyListeners();
+      return QuoteUpdateResult.updated;
     }
 
     return _executeWithLock('updateQuote_${quote.id}', () async {
       try {
         final db = await safeDatabase;
-        var quoteUpdated = false;
+        var updateResult = QuoteUpdateResult.updated;
 
         // 在更新前记录旧的媒体引用，用于更新后判断是否需要清理文件
         final List<String> oldReferencedFiles =
@@ -374,7 +375,8 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
               limit: 1,
             );
             if (existingRows.isEmpty) {
-              throw StateError('笔记不存在，无法更新');
+              updateResult = QuoteUpdateResult.notFound;
+              return;
             }
             final rawDeletedValue = existingRows.first['is_deleted'];
             final isDeleted = rawDeletedValue == true ||
@@ -385,6 +387,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
                 '忽略对已删除笔记的更新请求: ${quote.id}',
                 source: 'DatabaseService',
               );
+              updateResult = QuoteUpdateResult.skippedDeleted;
               return;
             }
             throw StateError('笔记状态异常，无法更新');
@@ -418,11 +421,10 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
             txn,
             quote,
           );
-          quoteUpdated = true;
         });
 
-        if (!quoteUpdated) {
-          return;
+        if (updateResult != QuoteUpdateResult.updated) {
+          return updateResult;
         }
 
         logDebug('笔记已成功更新，ID: ${quote.id}');
@@ -466,6 +468,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
           _quotesController!.add(List.from(_currentQuotes));
         }
         notifyListeners(); // 通知其他监听者
+        return QuoteUpdateResult.updated;
       } catch (e) {
         logDebug('更新笔记时出错: $e');
         rethrow; // 重新抛出异常，让调用者处理

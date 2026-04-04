@@ -670,7 +670,7 @@ class MediaReferenceService {
       final dbService = DatabaseService();
       final quotesWithFile = await dbService.searchQuotesByContent(
         normalizedPath,
-        includeDeleted: false,
+        includeDeleted: true,
       );
 
       if (quotesWithFile.isNotEmpty) {

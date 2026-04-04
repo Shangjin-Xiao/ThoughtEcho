@@ -396,12 +396,8 @@ class _HomePageState extends State<HomePage>
             final updatedQuote = quote.copyWith(
               location: resolvedAddress,
             );
-            await dbService.updateQuote(updatedQuote);
-            final latestQuote = await dbService.getQuoteById(
-              updatedQuote.id!,
-              includeDeleted: true,
-            );
-            if (latestQuote?.isDeleted ?? false) {
+            final updateResult = await dbService.updateQuote(updatedQuote);
+            if (updateResult != QuoteUpdateResult.updated) {
               continue;
             }
             updatedCount++;
@@ -1394,30 +1390,33 @@ class _HomePageState extends State<HomePage>
 
   // 显示删除确认对话框
   void _showDeleteConfirmDialog(Quote quote) {
+    final pageContext = context;
     final l10n = AppLocalizations.of(context);
     final retentionDays = context.read<SettingsService>().trashRetentionDays;
+    final messenger = ScaffoldMessenger.of(pageContext);
 
     showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
+      context: pageContext,
+      builder: (dialogContext) => AlertDialog(
         title: Text(l10n.moveNoteToTrashTitle),
         content: Text(l10n.moveNoteToTrashConfirmation(retentionDays)),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: Text(l10n.cancel),
           ),
           TextButton(
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             onPressed: () async {
-              final db = Provider.of<DatabaseService>(context, listen: false);
+              final db =
+                  Provider.of<DatabaseService>(pageContext, listen: false);
               try {
                 await db.deleteQuote(quote.id!);
-                if (!context.mounted) {
+                if (!dialogContext.mounted || !pageContext.mounted) {
                   return;
                 }
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
+                Navigator.pop(dialogContext);
+                messenger.showSnackBar(
                   SnackBar(
                     content: Text(l10n.noteMovedToTrash),
                     duration: const Duration(seconds: 1),
@@ -1431,11 +1430,11 @@ class _HomePageState extends State<HomePage>
                   stackTrace: stackTrace,
                   source: 'HomePage',
                 );
-                if (!context.mounted) {
+                if (!dialogContext.mounted || !pageContext.mounted) {
                   return;
                 }
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
+                Navigator.pop(dialogContext);
+                messenger.showSnackBar(
                   SnackBar(
                     content: Text(l10n.deleteFailed(e.toString())),
                     behavior: SnackBarBehavior.floating,

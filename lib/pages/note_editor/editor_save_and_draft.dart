@@ -394,12 +394,8 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       if (widget.initialQuote != null && widget.initialQuote?.id != null) {
         // 只有当initialQuote存在且有ID时，才更新现有笔记
         logDebug('更新现有笔记，ID: ${quote.id}');
-        await db.updateQuote(quote);
-        final latestQuote = await db.getQuoteById(
-          quote.id!,
-          includeDeleted: true,
-        );
-        if (latestQuote?.isDeleted ?? false) {
+        final updateResult = await db.updateQuote(quote);
+        if (updateResult != QuoteUpdateResult.updated) {
           await _rollbackMovedPermanentMediaFiles(movedToPermanentForThisSave);
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(

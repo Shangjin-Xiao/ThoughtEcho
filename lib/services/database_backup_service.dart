@@ -695,6 +695,8 @@ class DatabaseBackupService {
           'dayPeriod': 'day_period',
           'favoriteCount': 'favorite_count',
           'lastModified': 'last_modified',
+          'isDeleted': 'is_deleted',
+          'deletedAt': 'deleted_at',
         };
 
         for (final mapping in fieldMappings.entries) {

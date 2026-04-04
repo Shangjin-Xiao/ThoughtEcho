@@ -431,11 +431,14 @@ class MockDatabaseService extends _i1.Mock implements _i12.DatabaseService {
       ) as _i9.Future<void>);
 
   @override
-  _i9.Future<void> updateQuote(_i14.Quote? quote) => (super.noSuchMethod(
+  _i9.Future<_i12.QuoteUpdateResult> updateQuote(_i14.Quote? quote) =>
+      (super.noSuchMethod(
         Invocation.method(#updateQuote, [quote]),
-        returnValue: _i9.Future<void>.value(),
-        returnValueForMissingStub: _i9.Future<void>.value(),
-      ) as _i9.Future<void>);
+        returnValue: _i9.Future<_i12.QuoteUpdateResult>.value(
+            _i12.QuoteUpdateResult.updated),
+        returnValueForMissingStub: _i9.Future<_i12.QuoteUpdateResult>.value(
+            _i12.QuoteUpdateResult.updated),
+      ) as _i9.Future<_i12.QuoteUpdateResult>);
 
   @override
   _i9.Future<void> incrementFavoriteCount(String? quoteId) =>

@@ -88,6 +88,10 @@ void main() {
 
         expect(applied, isFalse);
         expect(settingsService.trashRetentionDays, equals(90));
+        expect(
+          settingsService.trashRetentionLastModified,
+          equals('2026-03-28T10:00:00.000Z'),
+        );
       },
     );
 
@@ -106,6 +110,10 @@ void main() {
 
         expect(applied, isFalse);
         expect(settingsService.trashRetentionDays, equals(30));
+        expect(
+          settingsService.trashRetentionLastModified,
+          equals('2026-03-28T10:00:00.000Z'),
+        );
       },
     );
 

@@ -328,18 +328,31 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
 
     if (kIsWeb) {
       await _initWebTombstones();
+      final targetDeletedIds = _memoryStore
+          .where(
+            (quote) =>
+                quote.id != null &&
+                uniqueIds.contains(quote.id) &&
+                quote.isDeleted,
+          )
+          .map((quote) => quote.id!)
+          .toSet()
+          .toList(growable: false);
+      if (targetDeletedIds.isEmpty) {
+        return;
+      }
 
       // 修复：添加Web墓碑记录
       final deletedAt = DateTime.now().toUtc().toIso8601String();
-      for (final id in uniqueIds) {
+      for (final id in targetDeletedIds) {
         _webTombstones!.putIfAbsent(id, () => deletedAt);
       }
       await _saveWebTombstones();
 
       _memoryStore.removeWhere(
-        (quote) => uniqueIds.contains(quote.id) && quote.isDeleted,
+        (quote) => targetDeletedIds.contains(quote.id) && quote.isDeleted,
       );
-      for (final id in uniqueIds) {
+      for (final id in targetDeletedIds) {
         QuoteContent.removeCacheForQuote(id);
       }
       clearAllCacheForParts();
@@ -356,6 +369,14 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       'SELECT * FROM quotes WHERE is_deleted = 1 AND id IN ($placeholders)',
       uniqueIds,
     );
+    final targetDeletedIds = quoteRows
+        .map((row) => row['id'])
+        .whereType<String>()
+        .toSet()
+        .toList(growable: false);
+    if (targetDeletedIds.isEmpty) {
+      return;
+    }
     for (final row in quoteRows) {
       try {
         final quote = Quote.fromJson(row);
@@ -371,7 +392,7 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
 
     final referencedByQuote =
         await MediaReferenceService.getReferencedFilesBatch(
-      uniqueIds,
+      targetDeletedIds,
     );
     for (final files in referencedByQuote.values) {
       mediaCandidates.addAll(files);
@@ -380,10 +401,24 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
     await _executeWithLock('hardDeleteQuotes', () async {
       final db = await safeDatabase;
       final now = DateTime.now().toUtc().toIso8601String();
+      var deletedIdsInTxn = <String>[];
 
       await db.transaction((txn) async {
+        final currentDeletedRows = await txn.rawQuery(
+          'SELECT id FROM quotes WHERE is_deleted = 1 AND id IN ($placeholders)',
+          uniqueIds,
+        );
+        deletedIdsInTxn = currentDeletedRows
+            .map((row) => row['id'])
+            .whereType<String>()
+            .toSet()
+            .toList(growable: false);
+        if (deletedIdsInTxn.isEmpty) {
+          return;
+        }
+
         final tombstoneBatch = txn.batch();
-        for (final id in uniqueIds) {
+        for (final id in deletedIdsInTxn) {
           tombstoneBatch.insert(
             'quote_tombstones',
             {
@@ -396,14 +431,19 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
         }
         await tombstoneBatch.commit(noResult: true);
 
-        final placeholders = List.filled(uniqueIds.length, '?').join(',');
+        final deletePlaceholders =
+            List.filled(deletedIdsInTxn.length, '?').join(',');
         await txn.rawDelete(
-          'DELETE FROM quotes WHERE is_deleted = 1 AND id IN ($placeholders)',
-          uniqueIds,
+          'DELETE FROM quotes WHERE is_deleted = 1 AND id IN ($deletePlaceholders)',
+          deletedIdsInTxn,
         );
       });
 
-      for (final id in uniqueIds) {
+      if (deletedIdsInTxn.isEmpty) {
+        return;
+      }
+
+      for (final id in deletedIdsInTxn) {
         QuoteContent.removeCacheForQuote(id);
       }
 

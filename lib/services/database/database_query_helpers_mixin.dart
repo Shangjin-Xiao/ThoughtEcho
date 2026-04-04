@@ -220,7 +220,7 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
         SELECT q.id, q.content, q.date, q.source, q.source_author, q.source_work,
                q.category_id, q.color_hex, q.location, q.latitude, q.longitude,
                q.weather, q.temperature, q.edit_source, q.day_period,
-               q.last_modified, q.favorite_count
+               q.last_modified, q.favorite_count, q.is_deleted, q.deleted_at
         FROM quotes q
         $where
         ORDER BY $sanitizedOrderBy

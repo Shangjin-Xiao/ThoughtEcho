@@ -37,6 +37,12 @@ part 'database/database_pagination_mixin.dart';
 part 'database/database_import_export_mixin.dart';
 part 'database/database_migration_mixin.dart';
 
+enum QuoteUpdateResult {
+  updated,
+  skippedDeleted,
+  notFound,
+}
+
 abstract class _DatabaseServiceBase extends ChangeNotifier {
   _DatabaseServiceBase._internal();
 
@@ -73,7 +79,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     String query, {
     bool includeDeleted = false,
   });
-  Future<void> updateQuote(Quote quote);
+  Future<QuoteUpdateResult> updateQuote(Quote quote);
 
   Future<List<Quote>> getUserQuotes({
     List<String>? tagIds,
@@ -492,51 +498,12 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     _initCompleter = Completer<void>();
 
     if (kIsWeb) {
-      // Web平台特定的初始化
-      logDebug('在Web平台初始化内存存储');
-      // 添加足够的示例数据以便Web平台测试分页功能
-      if (_memoryStore.isEmpty) {
-        final now = DateTime.now();
-        for (int i = 0; i < 25; i++) {
-          final quote = Quote(
-            id: _uuid.v4(),
-            content: '这是第${i + 1}条示例笔记 - Web版测试数据',
-            date: now.subtract(Duration(hours: i)).toIso8601String(),
-            source: '示例来源${i + 1}',
-            aiAnalysis: '这是第${i + 1}条Web平台示例笔记的AI分析',
-          );
-          _memoryStore.add(quote);
-          logDebug(
-            '生成示例数据${i + 1}: id=${quote.id?.substring(0, 8)}, content=${quote.content}',
-          );
-        }
-        logDebug('Web平台已生成${_memoryStore.length}条示例数据');
-      }
-
-      if (_categoryStore.isEmpty) {
-        _categoryStore.add(
-          NoteCategory(
-            id: _uuid.v4(),
-            name: '默认分类',
-            isDefault: true,
-            iconName: 'bookmark',
-          ),
-        );
-      }
-
-      // 隐藏标签：系统标签，始终确保存在（Web内存存储）
-      await getOrCreateHiddenTag();
-
-      // 触发更新
-      _categoriesController.add(_categoryStore);
-      _isInitialized = true; // 标记为已初始化
       _isInitializing = false;
-      if (_initCompleter != null && !_initCompleter!.isCompleted) {
-        _initCompleter!.complete();
-      }
+      final error =
+          UnsupportedError('ThoughtEcho does not support the Web platform.');
+      _initCompleter?.completeError(error);
       _initCompleter = null;
-      notifyListeners();
-      return;
+      throw error;
     }
 
     // 修复：更严格的数据库初始化检查

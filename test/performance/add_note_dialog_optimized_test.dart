@@ -163,7 +163,9 @@ class MockDatabaseService extends DatabaseService {
   Future<void> addQuote(quote) async {}
 
   @override
-  Future<void> updateQuote(quote) async {}
+  Future<QuoteUpdateResult> updateQuote(quote) async {
+    return QuoteUpdateResult.updated;
+  }
 }
 
 class MockLocationService extends LocationService {

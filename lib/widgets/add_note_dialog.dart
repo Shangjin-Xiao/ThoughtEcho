@@ -1458,12 +1458,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       final db = Provider.of<DatabaseService>(context, listen: false);
 
       if (widget.initialQuote != null) {
-        await db.updateQuote(quote);
-        final latestQuote = await db.getQuoteById(
-          quote.id!,
-          includeDeleted: true,
-        );
-        if (latestQuote?.isDeleted ?? false) {
+        final updateResult = await db.updateQuote(quote);
+        if (updateResult != QuoteUpdateResult.updated) {
           if (!mounted) return;
           messenger.showSnackBar(
             SnackBar(
@@ -2252,12 +2248,10 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
                                 if (widget.initialQuote != null) {
                                   // 更新已有笔记
-                                  await db.updateQuote(quote);
-                                  final latestQuote = await db.getQuoteById(
-                                    quote.id!,
-                                    includeDeleted: true,
-                                  );
-                                  if (latestQuote?.isDeleted ?? false) {
+                                  final updateResult =
+                                      await db.updateQuote(quote);
+                                  if (updateResult !=
+                                      QuoteUpdateResult.updated) {
                                     if (!context.mounted) return;
                                     messenger.showSnackBar(
                                       SnackBar(

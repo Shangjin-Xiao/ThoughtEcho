@@ -629,9 +629,9 @@ class DatabaseSchemaManager {
 
     if (oldVersion < 20) {
       logDebug('数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加回收站相关字段');
-      try {
-        final columns = await txn.rawQuery('PRAGMA table_info(quotes)');
+      final columns = await txn.rawQuery('PRAGMA table_info(quotes)');
 
+      try {
         final hasIsDeleted = columns.any((col) => col['name'] == 'is_deleted');
         if (!hasIsDeleted) {
           await txn.execute(
@@ -661,7 +661,16 @@ class DatabaseSchemaManager {
         await txn.execute(
           'CREATE INDEX IF NOT EXISTS idx_quote_tombstones_deleted_at ON quote_tombstones(deleted_at)',
         );
+      } catch (e) {
+        logError(
+          '回收站结构升级失败: $e',
+          error: e,
+          source: 'DatabaseUpgrade',
+        );
+        rethrow;
+      }
 
+      try {
         // 修复：补充历史数据的 deleted_at 时间戳
         // 对于 is_deleted=1 但 deleted_at=NULL 的记录，使用 last_modified 作为删除时间
         final fixedCount = await txn.rawUpdate('''
@@ -674,7 +683,7 @@ class DatabaseSchemaManager {
         }
       } catch (e) {
         logError(
-          '回收站字段升级失败: $e',
+          '回收站历史数据回填失败: $e',
           error: e,
           source: 'DatabaseUpgrade',
         );

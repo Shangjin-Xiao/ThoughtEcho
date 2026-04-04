@@ -73,6 +73,13 @@ void main() {
             UNIQUE(file_path, quote_id)
           )
         ''');
+      await db.execute('''
+          CREATE TABLE quote_tombstones (
+            quote_id TEXT PRIMARY KEY,
+            deleted_at TEXT NOT NULL,
+            device_id TEXT
+          )
+        ''');
 
       DatabaseService.setTestDatabase(db);
 
@@ -184,7 +191,7 @@ void main() {
       expect(deletedQuote.deletedAt, deletedAt);
     });
 
-    test('updateQuote on deleted note should not throw', () async {
+    test('updateQuote on deleted note should return skippedDeleted', () async {
       final deletedId = const Uuid().v4();
       final deletedAt = DateTime.now().toUtc().toIso8601String();
 
@@ -198,7 +205,7 @@ void main() {
         ),
       );
 
-      await service.updateQuote(
+      final result = await service.updateQuote(
         Quote(
           id: deletedId,
           content: 'attempted-update-content',
@@ -208,6 +215,7 @@ void main() {
         ),
       );
 
+      expect(result, QuoteUpdateResult.skippedDeleted);
       final deletedQuote = await service.getQuoteById(
         deletedId,
         includeDeleted: true,
@@ -215,6 +223,33 @@ void main() {
       expect(deletedQuote, isNotNull);
       expect(deletedQuote!.isDeleted, isTrue);
       expect(deletedQuote.content, 'deleted-before-update');
+    });
+
+    test('permanentlyDeleteQuote should not create tombstone for active note',
+        () async {
+      final activeId = const Uuid().v4();
+      final now = DateTime.now().toUtc().toIso8601String();
+
+      await service.addQuote(
+        Quote(
+          id: activeId,
+          content: 'active-quote',
+          date: now,
+        ),
+      );
+
+      await service.permanentlyDeleteQuote(activeId);
+
+      final activeQuote = await service.getQuoteById(activeId);
+      expect(activeQuote, isNotNull);
+      expect(activeQuote!.isDeleted, isFalse);
+
+      final tombstones = await db.query(
+        'quote_tombstones',
+        where: 'quote_id = ?',
+        whereArgs: [activeId],
+      );
+      expect(tombstones, isEmpty);
     });
   });
 }
