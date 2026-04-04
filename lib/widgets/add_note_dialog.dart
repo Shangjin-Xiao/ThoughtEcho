@@ -1383,17 +1383,133 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     return false;
   }
 
+  /// 保存笔记并退出
+  Future<void> _saveAndExit() async {
+    // 如果内容为空，直接返回
+    if (_contentController.text.isEmpty) {
+      if (context.mounted) {
+        Navigator.pop(context);
+      }
+      return;
+    }
+
+    // 获取当前时间段
+    final String currentDayPeriodKey = TimeUtils.getCurrentDayPeriodKey();
+
+    // 创建或更新笔记
+    final isEditing = widget.initialQuote != null;
+    final baseQuote = _fullInitialQuote ?? widget.initialQuote;
+
+    final Quote quote = Quote(
+      id: widget.initialQuote?.id ?? const Uuid().v4(),
+      content: _contentController.text,
+      date: widget.initialQuote?.date ?? DateTime.now().toIso8601String(),
+      aiAnalysis: _aiSummary,
+      source: _formatSource(
+        _authorController.text,
+        _workController.text,
+      ),
+      sourceAuthor: _authorController.text,
+      sourceWork: _workController.text,
+      tagIds: _selectedTagIds,
+      sentiment: baseQuote?.sentiment,
+      keywords: baseQuote?.keywords,
+      summary: baseQuote?.summary,
+      categoryId: _selectedCategory?.id ?? widget.initialQuote?.categoryId,
+      colorHex: _selectedColorHex,
+      location: _includeLocation
+          ? (isEditing
+              ? _originalLocation
+              : () {
+                  final loc = _newLocation ??
+                      _cachedLocationService?.getFormattedLocation();
+                  if ((loc == null || loc.isEmpty) && _newLatitude != null) {
+                    return LocationService.kAddressPending;
+                  }
+                  return loc;
+                }())
+          : null,
+      latitude: (_includeLocation || _includeWeather)
+          ? (isEditing ? _originalLatitude : _newLatitude)
+          : null,
+      longitude: (_includeLocation || _includeWeather)
+          ? (isEditing ? _originalLongitude : _newLongitude)
+          : null,
+      weather: _includeWeather
+          ? (isEditing
+              ? _originalWeather
+              : _cachedWeatherService?.currentWeather)
+          : null,
+      temperature: _includeWeather
+          ? (isEditing
+              ? _originalTemperature
+              : _cachedWeatherService?.temperature)
+          : null,
+      dayPeriod: widget.initialQuote?.dayPeriod ?? currentDayPeriodKey,
+      editSource: widget.initialQuote?.editSource,
+      deltaContent: widget.initialQuote?.deltaContent,
+    );
+
+    try {
+      final db = Provider.of<DatabaseService>(context, listen: false);
+      final l10n = AppLocalizations.of(context);
+
+      if (widget.initialQuote != null) {
+        await db.updateQuote(quote);
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.noteUpdated),
+            duration: AppConstants.snackBarDurationImportant,
+          ),
+        );
+      } else {
+        await db.addQuote(quote);
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.noteSaved),
+            duration: AppConstants.snackBarDurationImportant,
+          ),
+        );
+      }
+
+      // 调用保存回调
+      if (widget.onSave != null) {
+        widget.onSave!(quote);
+      }
+
+      // 关闭对话框
+      if (context.mounted) {
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context).saveFailedWithError(e.toString()),
+            ),
+            duration: AppConstants.snackBarDurationError,
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   /// 显示未保存内容的确认对话框
-  Future<bool> _showUnsavedChangesDialog() async {
+  /// 返回值: null=继续编辑, true=放弃更改, 'save'=保存并退出
+  Future<dynamic> _showUnsavedChangesDialog() async {
     final l10n = AppLocalizations.of(context);
-    final result = await showDialog<bool>(
+    final result = await showDialog<dynamic>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.unsavedChangesTitle),
         content: Text(l10n.unsavedChangesDesc),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
+            onPressed: () => Navigator.pop(ctx, null),
             child: Text(l10n.continueEditing),
           ),
           TextButton(
@@ -1403,10 +1519,14 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
               style: TextStyle(color: Colors.red.shade400),
             ),
           ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, 'save'),
+            child: Text(l10n.saveAndExit),
+          ),
         ],
       ),
     );
-    return result ?? false;
+    return result;
   }
 
   @override
@@ -1428,10 +1548,15 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         }
 
         // 显示确认对话框
-        final shouldDiscard = await _showUnsavedChangesDialog();
-        if (shouldDiscard && context.mounted) {
+        final dialogResult = await _showUnsavedChangesDialog();
+        if (dialogResult == true && context.mounted) {
+          // 用户选择放弃更改
           Navigator.pop(context);
+        } else if (dialogResult == 'save') {
+          // 用户选择保存并退出
+          await _saveAndExit();
         }
+        // dialogResult == null: 继续编辑，不做任何操作
       },
       child: Padding(
         padding: EdgeInsets.only(
