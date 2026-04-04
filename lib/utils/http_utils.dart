@@ -50,7 +50,8 @@ class HttpUtils {
   } // 兼容旧的http.Response格式
 
   @visibleForTesting
-  static HttpResponse convertDioResponseToHttpResponse(Response dioResponse) => _convertDioResponseToHttpResponse(dioResponse);
+  static HttpResponse convertDioResponseToHttpResponse(Response dioResponse) =>
+      _convertDioResponseToHttpResponse(dioResponse);
 
   static HttpResponse _convertDioResponseToHttpResponse(Response dioResponse) {
     Map<String, String> convertedHeaders = {};
