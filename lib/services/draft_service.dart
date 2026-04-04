@@ -107,6 +107,12 @@ class DraftService {
             continue;
           }
 
+          // 检查是否只有自动填充的内容（无实际用户输入）
+          final hasUserContent = data['hasUserContent'] as bool? ?? true;
+          if (!hasUserContent) {
+            continue;
+          }
+
           if (data.containsKey('timestamp')) {
             final tsStr = data['timestamp'] as String;
             final ts = DateTime.tryParse(tsStr);

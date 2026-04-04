@@ -3185,6 +3185,7 @@
   "unsavedChangesDesc": "您有未保存的编辑内容，是否要放弃这些更改？",
   "continueEditing": "继续编辑",
   "discardChanges": "放弃更改",
+  "saveAndExit": "保存并退出",
 
   "localAiFeatures": "本地 AI 功能",
   "localAiFeaturesPreview": "预览版",
