@@ -104,7 +104,8 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
     final whereClause =
         conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
 
-    // ⚡ Bolt: 使用标量子查询优化带有 LIMIT/OFFSET 的标签聚合查询，解决因 LEFT JOIN + GROUP BY 导致的整表聚合性能问题
+    // ⚡ Bolt: 使用标量子查询替代 LEFT JOIN 和 GROUP BY，避免在 LIMIT 分页前全表聚合的性能瓶颈
+
     final sanitizedOrderBy = sanitizeOrderBy(orderBy, prefix: 'q');
     final query = '''
       SELECT 
