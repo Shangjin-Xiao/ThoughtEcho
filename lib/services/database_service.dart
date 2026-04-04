@@ -650,6 +650,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
             stackTrace: stackTrace,
             source: 'DatabaseService',
           );
+          await _runBestEffortCleanupFailureHealthCheck();
         }
       });
 
@@ -908,6 +909,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     _quotesCache = [];
     _watchOffset = 0;
     _watchHasMore = true;
+    _watchIncludeDeleted = false;
     _isLoading = false;
 
     logDebug('DatabaseService 单例状态已重置');
@@ -927,6 +929,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       _quotesCache = [];
       _watchOffset = 0;
       _watchHasMore = true;
+      _watchIncludeDeleted = false;
       _isLoading = false;
 
       // 清理缓存
@@ -958,6 +961,19 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
         source: 'DatabaseService',
       );
       return null;
+    }
+  }
+
+  Future<void> _runBestEffortCleanupFailureHealthCheck() async {
+    try {
+      await _performStartupHealthCheck();
+    } catch (e, stackTrace) {
+      logError(
+        '自动清理失败后的健康检查执行失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'DatabaseService',
+      );
     }
   }
 }

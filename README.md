@@ -413,7 +413,7 @@ ThoughtEcho is more than just a note-taking app—it's your **personal AI-powere
     </tr>
     <tr>
       <td align="center"><b>Platform Support</b></td>
-      <td>Windows, Android, iOS full platform support</td>
+      <td>Windows, Android, iOS full platform support (Web not supported)</td>
     </tr>
   </table>
 </div>

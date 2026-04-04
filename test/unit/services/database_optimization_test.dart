@@ -183,5 +183,38 @@ void main() {
       expect(deletedQuote.isDeleted, isTrue);
       expect(deletedQuote.deletedAt, deletedAt);
     });
+
+    test('updateQuote on deleted note should not throw', () async {
+      final deletedId = const Uuid().v4();
+      final deletedAt = DateTime.now().toUtc().toIso8601String();
+
+      await service.addQuote(
+        Quote(
+          id: deletedId,
+          content: 'deleted-before-update',
+          date: deletedAt,
+          isDeleted: true,
+          deletedAt: deletedAt,
+        ),
+      );
+
+      await service.updateQuote(
+        Quote(
+          id: deletedId,
+          content: 'attempted-update-content',
+          date: deletedAt,
+          isDeleted: true,
+          deletedAt: deletedAt,
+        ),
+      );
+
+      final deletedQuote = await service.getQuoteById(
+        deletedId,
+        includeDeleted: true,
+      );
+      expect(deletedQuote, isNotNull);
+      expect(deletedQuote!.isDeleted, isTrue);
+      expect(deletedQuote.content, 'deleted-before-update');
+    });
   });
 }

@@ -1459,6 +1459,21 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
       if (widget.initialQuote != null) {
         await db.updateQuote(quote);
+        final latestQuote = await db.getQuoteById(
+          quote.id!,
+          includeDeleted: true,
+        );
+        if (latestQuote?.isDeleted ?? false) {
+          if (!mounted) return;
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(l10n.noteDeleted),
+              duration: AppConstants.snackBarDurationError,
+              backgroundColor: Colors.orange,
+            ),
+          );
+          return;
+        }
         if (!mounted) return;
         messenger.showSnackBar(
           SnackBar(
@@ -2225,6 +2240,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                 deltaContent:
                                     widget.initialQuote?.deltaContent, // 保证兼容
                               );
+                              final l10n = AppLocalizations.of(context);
+                              final messenger = ScaffoldMessenger.of(context);
+                              final navigator = Navigator.of(context);
 
                               try {
                                 final db = Provider.of<DatabaseService>(
@@ -2235,13 +2253,26 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                 if (widget.initialQuote != null) {
                                   // 更新已有笔记
                                   await db.updateQuote(quote);
-                                  if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        AppLocalizations.of(context)
-                                            .noteUpdated,
+                                  final latestQuote = await db.getQuoteById(
+                                    quote.id!,
+                                    includeDeleted: true,
+                                  );
+                                  if (latestQuote?.isDeleted ?? false) {
+                                    if (!context.mounted) return;
+                                    messenger.showSnackBar(
+                                      SnackBar(
+                                        content: Text(l10n.noteDeleted),
+                                        duration:
+                                            AppConstants.snackBarDurationError,
+                                        backgroundColor: Colors.orange,
                                       ),
+                                    );
+                                    return;
+                                  }
+                                  if (!context.mounted) return;
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                      content: Text(l10n.noteUpdated),
                                       duration: AppConstants
                                           .snackBarDurationImportant,
                                     ),
@@ -2250,11 +2281,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                   // 添加新笔记
                                   await db.addQuote(quote);
                                   if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  messenger.showSnackBar(
                                     SnackBar(
-                                      content: Text(
-                                        AppLocalizations.of(context).noteSaved,
-                                      ),
+                                      content: Text(l10n.noteSaved),
                                       duration: AppConstants
                                           .snackBarDurationImportant,
                                     ),
@@ -2273,16 +2302,14 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
                                 // 关闭对话框
                                 if (this.context.mounted) {
-                                  Navigator.of(context).pop();
+                                  navigator.pop();
                                 }
                               } catch (e) {
                                 if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  messenger.showSnackBar(
                                     SnackBar(
                                       content: Text(
-                                        AppLocalizations.of(
-                                          context,
-                                        ).saveFailedWithError(e.toString()),
+                                        l10n.saveFailedWithError(e.toString()),
                                       ),
                                       duration:
                                           AppConstants.snackBarDurationError,

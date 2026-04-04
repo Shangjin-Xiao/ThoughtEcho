@@ -397,6 +397,13 @@ class _HomePageState extends State<HomePage>
               location: resolvedAddress,
             );
             await dbService.updateQuote(updatedQuote);
+            final latestQuote = await dbService.getQuoteById(
+              updatedQuote.id!,
+              includeDeleted: true,
+            );
+            if (latestQuote?.isDeleted ?? false) {
+              continue;
+            }
             updatedCount++;
           }
         }

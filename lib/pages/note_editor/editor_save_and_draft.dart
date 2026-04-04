@@ -395,6 +395,23 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         // 只有当initialQuote存在且有ID时，才更新现有笔记
         logDebug('更新现有笔记，ID: ${quote.id}');
         await db.updateQuote(quote);
+        final latestQuote = await db.getQuoteById(
+          quote.id!,
+          includeDeleted: true,
+        );
+        if (latestQuote?.isDeleted ?? false) {
+          await _rollbackMovedPermanentMediaFiles(movedToPermanentForThisSave);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(l10n.noteDeleted),
+                backgroundColor: Colors.orange,
+                duration: AppConstants.snackBarDurationError,
+              ),
+            );
+          }
+          return;
+        }
         _draftSaveTimer?.cancel();
         await _clearDraft();
         _didSaveSuccessfully = true; // 标记保存成功，避免会话级清理
@@ -429,24 +446,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         }
       }
     } catch (e) {
-      // 数据库保存失败，回滚本次移动到永久目录的媒体文件，避免产生孤儿
-      try {
-        await Future.wait(
-          movedToPermanentForThisSave.map((p) async {
-            try {
-              final f = File(p);
-              if (await f.exists()) {
-                await f.delete();
-                logDebug('因保存失败，回滚删除永久媒体文件: $p');
-              }
-            } catch (itemErr) {
-              logDebug('单个媒体文件回滚删除失败: $p, $itemErr');
-            }
-          }),
-        );
-      } catch (rollbackErr) {
-        logDebug('保存失败后的媒体回滚删除出错: $rollbackErr');
-      }
+      await _rollbackMovedPermanentMediaFiles(movedToPermanentForThisSave);
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -471,6 +471,30 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
           }
         });
       }
+    }
+  }
+
+  Future<void> _rollbackMovedPermanentMediaFiles(
+      List<String> movedPaths) async {
+    if (movedPaths.isEmpty) {
+      return;
+    }
+    try {
+      await Future.wait(
+        movedPaths.map((p) async {
+          try {
+            final file = File(p);
+            if (await file.exists()) {
+              await file.delete();
+              logDebug('因保存失败，回滚删除永久媒体文件: $p');
+            }
+          } catch (itemErr) {
+            logDebug('单个媒体文件回滚删除失败: $p, $itemErr');
+          }
+        }),
+      );
+    } catch (rollbackErr) {
+      logDebug('保存失败后的媒体回滚删除出错: $rollbackErr');
     }
   }
 

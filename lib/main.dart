@@ -147,6 +147,11 @@ Future<void> main() async {
     () async {
       WidgetsFlutterBinding.ensureInitialized();
 
+      if (kIsWeb) {
+        throw UnsupportedError(
+            'ThoughtEcho does not support the Web platform.');
+      }
+
       // 初始化后台任务组件
       if (!kIsWeb) {
         try {

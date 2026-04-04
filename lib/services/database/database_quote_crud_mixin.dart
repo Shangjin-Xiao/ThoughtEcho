@@ -308,7 +308,11 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
       final index = _memoryStore.indexWhere((q) => q.id == quote.id);
       if (index != -1) {
         if (_memoryStore[index].isDeleted) {
-          throw StateError('已删除的笔记不能编辑');
+          logWarning(
+            '忽略对已删除笔记的更新请求: ${quote.id}',
+            source: 'DatabaseService',
+          );
+          return;
         }
         _memoryStore[index] = quote;
         notifyListeners();
@@ -319,6 +323,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
     return _executeWithLock('updateQuote_${quote.id}', () async {
       try {
         final db = await safeDatabase;
+        var quoteUpdated = false;
 
         // 在更新前记录旧的媒体引用，用于更新后判断是否需要清理文件
         final List<String> oldReferencedFiles =
@@ -363,7 +368,7 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
           if (updatedRows == 0) {
             final existingRows = await txn.query(
               'quotes',
-              columns: ['id'],
+              columns: ['id', 'is_deleted'],
               where: 'id = ?',
               whereArgs: [quote.id],
               limit: 1,
@@ -371,7 +376,18 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
             if (existingRows.isEmpty) {
               throw StateError('笔记不存在，无法更新');
             }
-            throw StateError('已删除的笔记不能编辑');
+            final rawDeletedValue = existingRows.first['is_deleted'];
+            final isDeleted = rawDeletedValue == true ||
+                rawDeletedValue == 1 ||
+                rawDeletedValue == '1';
+            if (isDeleted) {
+              logWarning(
+                '忽略对已删除笔记的更新请求: ${quote.id}',
+                source: 'DatabaseService',
+              );
+              return;
+            }
+            throw StateError('笔记状态异常，无法更新');
           }
 
           // 2. 删除旧的标签关联
@@ -402,7 +418,12 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
             txn,
             quote,
           );
+          quoteUpdated = true;
         });
+
+        if (!quoteUpdated) {
+          return;
+        }
 
         logDebug('笔记已成功更新，ID: ${quote.id}');
 
