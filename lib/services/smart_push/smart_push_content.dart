@@ -73,7 +73,9 @@ extension SmartPushContentSelection on SmartPushService {
     );
 
     // SOTA: 收集所有可用的内容类型及其候选笔记
+    // 分为两类：高价值用户笔记类型 vs 兜底内容
     final availableContent = <String, _ContentCandidate>{};
+    final fallbackContent = <String, _ContentCandidate>{};
 
     // 1. 那年今日（最高优先级 - 有纪念意义）
     if (filterResult.selectedYearAgo != null) {
@@ -87,21 +89,7 @@ extension SmartPushContentSelection on SmartPushService {
       );
     }
 
-    // 2. 同一时刻创建的笔记（±30分钟）
-    if (filterResult.selectedSameTime != null) {
-      final note = filterResult.selectedSameTime!;
-      final noteDate = DateTime.tryParse(note.date);
-      final title = noteDate != null
-          ? pickSameTimeOfDayTitle(_random, noteDate, now)
-          : '⏰ 此刻的回忆';
-      availableContent['sameTimeOfDay'] = _ContentCandidate(
-        note: note,
-        title: title,
-        priority: 85,
-      );
-    }
-
-    // 3. 相同地点的笔记（动态 priority）
+    // 2. 相同地点的笔记（动态 priority）
     if (sameLocationNotes.isNotEmpty) {
       final note = _selectUnpushedNote(sameLocationNotes);
       if (note != null) {
@@ -117,7 +105,7 @@ extension SmartPushContentSelection on SmartPushService {
       }
     }
 
-    // 4. 往月今日
+    // 3. 往月今日
     if (filterResult.selectedMonthAgo != null) {
       final note = filterResult.selectedMonthAgo!;
       final noteDate = DateTime.tryParse(note.date);
@@ -136,7 +124,7 @@ extension SmartPushContentSelection on SmartPushService {
       );
     }
 
-    // 5. 上周今日
+    // 4. 上周今日
     if (filterResult.selectedWeekAgo != null) {
       availableContent['weekAgoToday'] = _ContentCandidate(
         note: filterResult.selectedWeekAgo!,
@@ -145,7 +133,7 @@ extension SmartPushContentSelection on SmartPushService {
       );
     }
 
-    // 6. 相同天气的笔记
+    // 5. 相同天气的笔记
     if (sameWeatherNotes.isNotEmpty) {
       final note = _selectUnpushedNote(sameWeatherNotes);
       if (note != null) {
@@ -155,6 +143,35 @@ extension SmartPushContentSelection on SmartPushService {
           priority: 40,
         );
       }
+    }
+
+    // 6. 每日一言（低优先级可选推送，每天最多1条）
+    // 只有今日尚未在智能推送中推送过每日一言时才加入候选
+    if (!_hasDailyQuotePushedTodayInSmartPush()) {
+      final dailyQuote = await _fetchDailyQuote();
+      if (dailyQuote != null) {
+        availableContent['dailyQuote'] = _ContentCandidate(
+          note: dailyQuote,
+          title: '📖 每日一言',
+          priority: 30, // 低于所有用户笔记类型
+          isDailyQuote: true,
+        );
+      }
+    }
+
+    // 7. 此时此刻（最低优先级兜底 - 仅当今日无推送且7天内无其他笔记可推时）
+    if (filterResult.selectedSameTime != null) {
+      final note = filterResult.selectedSameTime!;
+      final noteDate = DateTime.tryParse(note.date);
+      final title = noteDate != null
+          ? pickSameTimeOfDayTitle(_random, noteDate, now)
+          : '⏰ 此刻的回忆';
+      // 放入兜底池，不直接加入 availableContent
+      fallbackContent['sameTimeOfDay'] = _ContentCandidate(
+        note: note,
+        title: title,
+        priority: 20, // 最低优先级
+      );
     }
 
     // SOTA: 按优先级排序并选择最高价值内容
@@ -187,14 +204,45 @@ extension SmartPushContentSelection on SmartPushService {
       return _SmartSelectResult(
         note: bestCandidate.note,
         title: bestCandidate.title,
-        isDailyQuote: false,
+        isDailyQuote: bestCandidate.isDailyQuote,
         contentType: bestType,
       );
     }
 
-    // 所有特定筛选器均未命中，回退到每日一言
+    // 所有高价值内容均未命中，检查是否可以使用「此时此刻」兜底
+    // 条件：今日尚无任何推送 + 7天内无其他用户笔记可推送
+    if (fallbackContent.containsKey('sameTimeOfDay')) {
+      final hasPushed = _hasPushedToday();
+
+      // 检查 7 天内是否有可推送的用户笔记
+      // 使用已有的筛选结果判断（排除 sameTimeOfDay 本身）
+      final hasRecentNotes = filterResult.yearAgoQuotes.isNotEmpty ||
+          filterResult.monthAgoQuotes.isNotEmpty ||
+          filterResult.weekAgoQuotes.isNotEmpty ||
+          sameLocationNotes.isNotEmpty ||
+          sameWeatherNotes.isNotEmpty;
+
+      if (!hasPushed && !hasRecentNotes) {
+        final sameTimeCandidate = fallbackContent['sameTimeOfDay']!;
+        AppLogger.w(
+          '智能选择：今日无推送且无高价值笔记，使用「此时此刻」兜底',
+        );
+        return _SmartSelectResult(
+          note: sameTimeCandidate.note,
+          title: sameTimeCandidate.title,
+          isDailyQuote: false,
+          contentType: 'sameTimeOfDay',
+        );
+      } else {
+        AppLogger.w(
+          '智能选择：跳过「此时此刻」(今日已推送: $hasPushed, 有其他笔记可推: $hasRecentNotes)',
+        );
+      }
+    }
+
+    // 最终兜底：每日一言
     AppLogger.w(
-      '智能选择：特定筛选器均未命中 '
+      '智能选择：所有筛选器均未命中 '
       '(总笔记数: ${allNotes.length})，回退到每日一言',
     );
     final dailyQuote = await _fetchDailyQuote();

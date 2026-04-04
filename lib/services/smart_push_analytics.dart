@@ -35,13 +35,13 @@ class SmartPushAnalytics extends ChangeNotifier {
   // 内容类型成本
   static const Map<String, double> contentTypeCosts = {
     'yearAgoToday': 1.0, // 纪念日，高价值低成本
-    'sameTimeOfDay': 1.5,
     'sameLocation': 2.0,
-    'sameWeather': 2.0,
     'monthAgoToday': 2.5,
     'weekAgoToday': 2.0,
+    'sameWeather': 2.0,
+    'dailyQuote': 1.5, // 每日一言，低优先级但仍有价值
+    'sameTimeOfDay': 3.0, // 此时此刻，最低优先级兜底，成本较高
     'pastNote': 2.0, // PushMode.both 随机历史笔记
-    'dailyQuote': 1.5,
   };
 
   SmartPushAnalytics({MMKVService? mmkvService})
