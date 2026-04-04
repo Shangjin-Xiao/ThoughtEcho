@@ -186,12 +186,8 @@ class WeatherCodeMapper {
   /// 通过中文描述反查天气key
   /// 返回null表示未找到匹配
   static String? getKeyByDescription(String description) {
-    try {
-      for (final entry in _keyToDescription.entries) {
-        if (entry.value == description) return entry.key;
-      }
-    } catch (e) {
-      debugPrint('[WeatherData.getKeyByDescription] lookup failed: $e');
+    for (final entry in _keyToDescription.entries) {
+      if (entry.value == description) return entry.key;
     }
     return null;
   }
