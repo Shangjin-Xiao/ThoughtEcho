@@ -221,10 +221,14 @@ class ManualMockUnifiedLogService extends ChangeNotifier
   void resetPerformanceStats() {}
   @override
   Future<void> exportLogsToFile(dynamic file,
-      {UnifiedLogLevel? minLevel, DateTime? startDate, DateTime? endDate}) async {}
+      {UnifiedLogLevel? minLevel,
+      DateTime? startDate,
+      DateTime? endDate}) async {}
   @override
   String exportLogsAsText(
-          {UnifiedLogLevel? minLevel, DateTime? startDate, DateTime? endDate}) =>
+          {UnifiedLogLevel? minLevel,
+          DateTime? startDate,
+          DateTime? endDate}) =>
       '';
 
   @override
