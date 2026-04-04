@@ -1,3 +1,5 @@
+import 'package:thoughtecho/services/backup_service.dart';
+
 class BackupProgressStages {
   static const String collect = 'collect';
   static const String note = 'note';
@@ -8,10 +10,18 @@ class BackupProgressStages {
 
 String resolveBackupStageKey(int progressPercent) {
   final normalizedPercent = progressPercent.clamp(0, 100);
-  if (normalizedPercent < 15) return BackupProgressStages.collect;
-  if (normalizedPercent < 35) return BackupProgressStages.note;
-  if (normalizedPercent < 60) return BackupProgressStages.media;
-  if (normalizedPercent < 95) return BackupProgressStages.zip;
+  if (normalizedPercent < BackupService.stageCollectEnd) {
+    return BackupProgressStages.collect;
+  }
+  if (normalizedPercent < BackupService.stageNoteEnd) {
+    return BackupProgressStages.note;
+  }
+  if (normalizedPercent < BackupService.stageMediaEnd) {
+    return BackupProgressStages.media;
+  }
+  if (normalizedPercent < BackupService.stageZipEnd) {
+    return BackupProgressStages.zip;
+  }
   return BackupProgressStages.verify;
 }
 
