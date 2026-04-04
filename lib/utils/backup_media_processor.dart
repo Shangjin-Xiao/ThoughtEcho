@@ -281,6 +281,7 @@ class BackupMediaProcessor {
           ? filePaths.take(maxSampleSize).toList()
           : filePaths;
 
+      int processedCount = 0;
       for (final filePath in filesToAnalyze) {
         try {
           final file = File(filePath);
@@ -301,6 +302,11 @@ class BackupMediaProcessor {
           }
         } catch (e) {
           // 忽略单个文件的错误
+        }
+
+        processedCount++;
+        if (processedCount % 80 == 0) {
+          await Future<void>.delayed(Duration.zero);
         }
       }
 
@@ -412,6 +418,7 @@ class BackupMediaProcessor {
       final appPath = path.normalize(appDir.path);
 
       // 检查每个文件的引用计数
+      int processedCount = 0;
       for (final filePath in allMediaFiles) {
         final normalizedPath =
             await MediaReferenceService.normalizePathForBackup(
@@ -429,6 +436,11 @@ class BackupMediaProcessor {
 
         if (hasStoredRefs || hasQuoteRefs) {
           referencedFiles.add(filePath);
+        }
+
+        processedCount++;
+        if (processedCount % 80 == 0) {
+          await Future<void>.delayed(Duration.zero);
         }
       }
 
