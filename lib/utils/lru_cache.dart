@@ -47,17 +47,7 @@ class LruCache<K, V> {
 
   int get length => _cache.length;
 
-  bool containsKey(K key) {
-    if (!_cache.containsKey(key)) return false;
-    if (expiration != null) {
-      final entry = _cache[key]!;
-      if (DateTime.now().difference(entry.timestamp) > expiration!) {
-        _cache.remove(key);
-        return false;
-      }
-    }
-    return true;
-  }
+  bool containsKey(K key) => _cache.containsKey(key);
 
   Iterable<K> get keys => _cache.keys;
 
