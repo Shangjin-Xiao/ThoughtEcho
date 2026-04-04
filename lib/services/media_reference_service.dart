@@ -631,9 +631,12 @@ class MediaReferenceService {
 
       // 2. 二次确认：即使引用表说没有，也从笔记内容中全文搜索一次（防止引用表损坏/不同步导致的误删）
       // 注意：这步对于数据安全至关重要
+      // 修复：仅搜索未删除的笔记，避免回收站笔记阻止媒体清理
       final dbService = DatabaseService();
-      final quotesWithFile =
-          await dbService.searchQuotesByContent(normalizedPath);
+      final quotesWithFile = await dbService.searchQuotesByContent(
+        normalizedPath,
+        includeDeleted: false,
+      );
 
       if (quotesWithFile.isNotEmpty) {
         logDebug(

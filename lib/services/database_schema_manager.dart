@@ -661,6 +661,17 @@ class DatabaseSchemaManager {
         await txn.execute(
           'CREATE INDEX IF NOT EXISTS idx_quote_tombstones_deleted_at ON quote_tombstones(deleted_at)',
         );
+
+        // 修复：补充历史数据的 deleted_at 时间戳
+        // 对于 is_deleted=1 但 deleted_at=NULL 的记录，使用 last_modified 作为删除时间
+        final fixedCount = await txn.rawUpdate('''
+          UPDATE quotes
+          SET deleted_at = COALESCE(last_modified, date)
+          WHERE is_deleted = 1 AND deleted_at IS NULL
+        ''');
+        if (fixedCount > 0) {
+          logDebug('数据库升级：已修复 $fixedCount 条缺失 deleted_at 的历史删除记录');
+        }
       } catch (e) {
         logError(
           '回收站字段升级失败: $e',
