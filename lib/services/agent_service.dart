@@ -153,12 +153,13 @@ class AgentService extends ChangeNotifier {
           ),
         );
 
-        var executedAnyTool = false;
+        var repliedAnyToolCall = false;
         final seenThisRound = <String>{};
 
         for (final rawToolCall in rawToolCalls) {
           final parsedToolCall = _tryConvertToolCall(rawToolCall);
           if (parsedToolCall == null) {
+            repliedAnyToolCall = true;
             messages.add(
               openai.ChatMessage.tool(
                 toolCallId: rawToolCall.id,
@@ -172,6 +173,7 @@ class AgentService extends ChangeNotifier {
               '${parsedToolCall.name}:${canonicalJsonForArguments(parsedToolCall.arguments)}';
 
           if (!seenThisRound.add(signature)) {
+            repliedAnyToolCall = true;
             messages.add(
               openai.ChatMessage.tool(
                 toolCallId: rawToolCall.id,
@@ -182,16 +184,20 @@ class AgentService extends ChangeNotifier {
           }
 
           if (seenCallSignatures.contains(signature)) {
-            final fallback = assistantContent.isNotEmpty
-                ? assistantContent
-                : '我已经尝试过这个工具调用，没有新的结果。';
-            return AgentResponse(content: fallback, toolCalls: executedCalls);
+            repliedAnyToolCall = true;
+            messages.add(
+              openai.ChatMessage.tool(
+                toolCallId: rawToolCall.id,
+                content: '该调用与历史完全相同，已忽略。请调整参数后再试。',
+              ),
+            );
+            continue;
           }
           seenCallSignatures.add(signature);
 
           final result = await _executeToolSafely(parsedToolCall);
           executedCalls.add(parsedToolCall);
-          executedAnyTool = true;
+          repliedAnyToolCall = true;
 
           messages.add(
             openai.ChatMessage.tool(
@@ -201,7 +207,7 @@ class AgentService extends ChangeNotifier {
           );
         }
 
-        if (!executedAnyTool) {
+        if (!repliedAnyToolCall) {
           final fallback = assistantContent.isNotEmpty
               ? assistantContent
               : '工具调用未能成功执行，已停止本次任务。';

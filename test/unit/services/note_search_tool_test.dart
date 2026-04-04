@@ -164,5 +164,40 @@ void main() {
         firstPayload['next_offset_chars'],
       );
     });
+
+    test('fetch_note positions first chunk around query case-insensitively',
+        () async {
+      final pivot = 'MiXeD-KeyWord';
+      final longContent =
+          '${List<String>.filled(700, 'A').join()} $pivot ${List<String>.filled(900, 'B').join()}';
+      quotes.add(
+        Quote(
+          id: 'around_query_note',
+          content: longContent,
+          date: DateTime(2026, 3, 2, 8, 30).toIso8601String(),
+          location: 'loc',
+          poiName: 'poi',
+        ),
+      );
+
+      final result = await tool.execute(
+        ToolCall(
+          id: 'call_4',
+          name: 'search_notes',
+          arguments: const {
+            'action': 'fetch_note',
+            'note_id': 'around_query_note',
+            'chunk_chars': 500,
+            'around_query': 'mixed-keyword',
+          },
+        ),
+      );
+
+      expect(result.isError, isFalse);
+      final payload = jsonDecode(result.content) as Map<String, dynamic>;
+      final chunkText = payload['chunk_text'] as String;
+      expect(payload['offset_chars'], greaterThan(0));
+      expect(chunkText.toLowerCase(), contains('mixed-keyword'));
+    });
   });
 }

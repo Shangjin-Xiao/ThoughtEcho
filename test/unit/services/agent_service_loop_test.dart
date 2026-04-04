@@ -84,6 +84,37 @@ openai.ChatCompletion _toolCallCompletion({
   );
 }
 
+openai.ToolCall _buildToolCall({
+  required String callId,
+  required String toolName,
+  required Map<String, dynamic> args,
+}) {
+  return openai.ToolCall.functionCall(
+    id: callId,
+    call: openai.FunctionCall.fromMap(
+      name: toolName,
+      arguments: args,
+    ),
+  );
+}
+
+openai.ChatCompletion _multiToolCallCompletion(
+    List<openai.ToolCall> toolCalls) {
+  return openai.ChatCompletion(
+    object: 'chat.completion',
+    model: 'gpt-test',
+    choices: [
+      openai.ChatChoice(
+        message: openai.AssistantMessage(
+          content: null,
+          toolCalls: toolCalls,
+        ),
+        finishReason: openai.FinishReason.toolCalls,
+      ),
+    ],
+  );
+}
+
 openai.ChatCompletion _textCompletion(String content) {
   return openai.ChatCompletion(
     object: 'chat.completion',
@@ -183,6 +214,65 @@ void main() {
       expect(tool.executeCount, 1);
       expect(response.content, '这是最终回答');
       expect(response.toolCalls.length, 1);
+    });
+
+    test('continues when duplicate historical call appears with new call',
+        () async {
+      final provider = const AIProviderSettings(
+        id: 'openai',
+        name: 'OpenAI',
+        apiUrl: 'https://api.openai.com/v1/chat/completions',
+        model: 'gpt-4.1',
+      );
+      final settings = _FakeSettingsService(provider);
+      final tool = _CountingTool(
+        toolName: 'search_notes',
+        resultContent: '{"items": []}',
+      );
+
+      final responses = <openai.ChatCompletion>[
+        _toolCallCompletion(
+          callId: 'call_1',
+          toolName: 'search_notes',
+          args: const {'query': 'loop'},
+        ),
+        _multiToolCallCompletion([
+          _buildToolCall(
+            callId: 'call_2',
+            toolName: 'search_notes',
+            args: const {'query': 'loop'},
+          ),
+          _buildToolCall(
+            callId: 'call_3',
+            toolName: 'search_notes',
+            args: const {'query': 'fresh'},
+          ),
+        ]),
+        _textCompletion('最终回答'),
+      ];
+
+      final service = AgentService(
+        settingsService: settings,
+        tools: [tool],
+        apiKeyResolver: (_) async => 'test-key',
+        completionRequester: ({
+          required provider,
+          required messages,
+          required tools,
+          required temperature,
+          required maxTokens,
+        }) async {
+          return responses.removeAt(0);
+        },
+      );
+
+      final response = await service.runAgent(userMessage: 'test');
+      expect(tool.executeCount, 2);
+      expect(response.content, '最终回答');
+      expect(
+        response.toolCalls.map((call) => call.arguments['query']).toList(),
+        ['loop', 'fresh'],
+      );
     });
   });
 }

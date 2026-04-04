@@ -25,6 +25,7 @@ class NoteSearchTool extends AgentTool {
   static const int _defaultSnippetChars = 220;
   static const int _minSnippetChars = 100;
   static const int _maxSnippetChars = 360;
+  static const int _summaryMaxChars = 80;
 
   final DatabaseService _db;
   const NoteSearchTool(this._db);
@@ -238,7 +239,7 @@ class NoteSearchTool extends AgentTool {
     final totalChars = content.length;
 
     if (offsetChars == 0 && aroundQuery.isNotEmpty) {
-      final idx = content.toLowerCase().indexOf(aroundQuery.toLowerCase());
+      final idx = _indexOfIgnoreCase(content, aroundQuery);
       if (idx >= 0) {
         offsetChars = (idx - chunkChars ~/ 3).clamp(0, totalChars);
       }
@@ -316,11 +317,33 @@ class NoteSearchTool extends AgentTool {
   }
 
   static String _buildSummary(String content) {
-    final compact = content.replaceAll(RegExp(r'\s+'), ' ').trim();
-    if (compact.length <= 80) {
-      return compact;
+    if (content.isEmpty) {
+      return '';
     }
-    return '${compact.substring(0, 80)}…';
+
+    final buffer = StringBuffer();
+    var index = 0;
+    var wroteWhitespace = false;
+
+    while (index < content.length && buffer.length < _summaryMaxChars) {
+      final unit = content.codeUnitAt(index);
+      if (_isWhitespace(unit)) {
+        if (!wroteWhitespace && buffer.isNotEmpty) {
+          buffer.write(' ');
+        }
+        wroteWhitespace = true;
+      } else {
+        buffer.writeCharCode(unit);
+        wroteWhitespace = false;
+      }
+      index++;
+    }
+
+    var summary = buffer.toString().trimRight();
+    if (_hasNonWhitespaceFrom(content, index)) {
+      summary = '$summary…';
+    }
+    return summary;
   }
 
   static String _buildSnippet(String content, String query, int snippetChars) {
@@ -328,9 +351,7 @@ class NoteSearchTool extends AgentTool {
       return '';
     }
 
-    final lowerContent = content.toLowerCase();
-    final lowerQuery = query.toLowerCase();
-    final idx = lowerContent.indexOf(lowerQuery);
+    final idx = _indexOfIgnoreCase(content, query);
 
     if (idx < 0) {
       return content.length <= snippetChars
@@ -344,6 +365,34 @@ class NoteSearchTool extends AgentTool {
     final prefix = start > 0 ? '…' : '';
     final suffix = end < content.length ? '…' : '';
     return '$prefix${content.substring(start, end)}$suffix';
+  }
+
+  static int _indexOfIgnoreCase(String content, String query) {
+    if (query.isEmpty) {
+      return -1;
+    }
+    final match = RegExp(
+      RegExp.escape(query),
+      caseSensitive: false,
+    ).firstMatch(content);
+    return match?.start ?? -1;
+  }
+
+  static bool _isWhitespace(int codeUnit) {
+    return codeUnit == 0x20 ||
+        codeUnit == 0x09 ||
+        codeUnit == 0x0A ||
+        codeUnit == 0x0D ||
+        codeUnit == 0x0C;
+  }
+
+  static bool _hasNonWhitespaceFrom(String content, int start) {
+    for (var i = start; i < content.length; i++) {
+      if (!_isWhitespace(content.codeUnitAt(i))) {
+        return true;
+      }
+    }
+    return false;
   }
 }
 
