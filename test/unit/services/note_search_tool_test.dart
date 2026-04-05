@@ -65,6 +65,7 @@ class _TestDatabaseService extends DatabaseService {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   group('NoteSearchTool', () {
     late NoteSearchTool tool;
     late List<Quote> quotes;

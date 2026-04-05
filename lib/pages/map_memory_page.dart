@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../models/quote_model.dart';
 import '../services/database_service.dart';
 import '../widgets/quote_item_widget.dart';
+import 'ai_assistant_page.dart';
 
 class MapMemoryPage extends StatefulWidget {
   const MapMemoryPage({super.key});

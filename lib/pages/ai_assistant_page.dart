@@ -153,7 +153,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     showModalBottomSheet(
       context: context,
       builder: (ctx) => SessionHistorySheet(
-        noteId: widget.quote?.id,
+        noteId: widget.quote?.id ?? '',
         currentSessionId: _currentSessionId,
         chatSessionService: _chatSessionService,
         onSelect: (id) {

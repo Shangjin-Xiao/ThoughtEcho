@@ -129,6 +129,7 @@ openai.ChatCompletion _textCompletion(String content) {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   group('AgentService native tool loop', () {
     test('stops when same tool call is repeated', () async {
       final provider = const AIProviderSettings(
@@ -151,6 +152,7 @@ void main() {
           toolName: 'search_notes',
           args: const {'query': 'loop'},
         ),
+        _textCompletion('Finished after loop'),
       ];
 
       final service = AgentService(
