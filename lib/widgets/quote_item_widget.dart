@@ -265,12 +265,30 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     final showExactTime = context.select<SettingsService, bool>(
       (s) => s.showExactTime,
     );
+    final showNoteEditTime = context.select<SettingsService, bool>(
+      (s) => s.showNoteEditTime,
+    );
     final String formattedDate = TimeUtils.formatQuoteDateLocalized(
       context,
       quoteDate,
       dayPeriod: quote.dayPeriod,
       showExactTime: showExactTime,
     );
+    final DateTime? lastModified = quote.lastModified != null
+        ? DateTime.tryParse(quote.lastModified!)
+        : null;
+    final bool shouldShowEditedAt = showNoteEditTime &&
+        lastModified != null &&
+        !lastModified.isAtSameMomentAs(quoteDate);
+    final String? formattedEditedAt = shouldShowEditedAt
+        ? l10n.editedAtLabel(
+            TimeUtils.formatQuoteDateLocalized(
+              context,
+              lastModified,
+              showExactTime: showExactTime,
+            ),
+          )
+        : null;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -306,11 +324,31 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
               padding: const EdgeInsets.fromLTRB(4, 0, 4, 8), // 减少左右边距，调整上下边距
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    formattedDate,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: secondaryTextColor,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          formattedDate,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: secondaryTextColor,
+                          ),
+                        ),
+                        if (formattedEditedAt != null) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            formattedEditedAt,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: secondaryTextColor,
+                              fontSize: 11,
+                              height: 1.1,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                   if (quote.hasLocation || quote.weather != null)

@@ -2729,6 +2729,16 @@
   "dayPeriodMidnight": "深夜",
   "showExactTime": "显示精确时间",
   "showExactTimeDesc": "在笔记中显示时间（时:分）",
+  "showNoteEditTime": "显示笔记编辑时间",
+  "showNoteEditTimeDesc": "在笔记中显示最后编辑时间",
+  "editedAtLabel": "编辑于 {dateTime}",
+  "@editedAtLabel": {
+    "placeholders": {
+      "dateTime": {
+        "type": "String"
+      }
+    }
+  },
   "guideHomepageDailyQuoteTitle": "每日一言小技巧",
   "guideHomepageDailyQuoteDesc": "单击可快速复制内容\n双击可快速添加到笔记",
   "guideNotePageFilterTitle": "筛选与排序",

@@ -44,6 +44,11 @@ void main() {
       expect(AppSettings.fromJson(const {}).skipNonFullscreenEditor, isFalse);
     });
 
+    test('AppSettings should default note edit time toggle to false', () {
+      expect(AppSettings.defaultSettings().showNoteEditTime, isFalse);
+      expect(AppSettings.fromJson(const {}).showNoteEditTime, isFalse);
+    });
+
     test('should persist excerpt intake toggle changes', () async {
       expect(settingsService.excerptIntentEnabled, isTrue);
 
@@ -60,6 +65,15 @@ void main() {
 
       expect(settingsService.skipNonFullscreenEditor, isTrue);
       expect(settingsService.appSettings.skipNonFullscreenEditor, isTrue);
+    });
+
+    test('should persist note edit time toggle changes', () async {
+      expect(settingsService.showNoteEditTime, isFalse);
+
+      await settingsService.setShowNoteEditTime(true);
+
+      expect(settingsService.showNoteEditTime, isTrue);
+      expect(settingsService.appSettings.showNoteEditTime, isTrue);
     });
   });
 }

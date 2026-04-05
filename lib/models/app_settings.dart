@@ -11,6 +11,7 @@ class AppSettings {
   final bool useLocalQuotesOnly; // 新增：仅使用本地笔记作为一言，不请求API
   final String? localeCode; // 新增：语言代码，null 表示跟随系统
   final bool showExactTime; // 新增：是否在笔记中显示精确时间（时:分）
+  final bool showNoteEditTime; // 新增：是否显示笔记编辑时间
   final bool enableHiddenNotes; // 新增：是否启用隐藏笔记功能
   final bool requireBiometricForHidden; // 新增：访问隐藏笔记是否需要生物识别验证
   final bool developerMode; // 新增：开发者模式
@@ -41,6 +42,7 @@ class AppSettings {
     this.useLocalQuotesOnly = false, // 默认允许请求一言API
     this.localeCode, // 默认跟随系统
     this.showExactTime = false, // 默认不显示精确时间
+    this.showNoteEditTime = false, // 默认不显示笔记编辑时间
     this.enableHiddenNotes = false, // 默认不启用隐藏笔记功能
     this.requireBiometricForHidden = false, // 默认不需要生物识别验证
     this.developerMode = false, // 默认关闭开发者模式
@@ -73,6 +75,7 @@ class AppSettings {
       'useLocalQuotesOnly': useLocalQuotesOnly,
       'localeCode': localeCode,
       'showExactTime': showExactTime,
+      'showNoteEditTime': showNoteEditTime,
       'enableHiddenNotes': enableHiddenNotes,
       'requireBiometricForHidden': requireBiometricForHidden,
       'developerMode': developerMode,
@@ -107,6 +110,7 @@ class AppSettings {
       useLocalQuotesOnly: map['useLocalQuotesOnly'] ?? false,
       localeCode: map['localeCode'] as String?,
       showExactTime: map['showExactTime'] ?? false,
+      showNoteEditTime: map['showNoteEditTime'] ?? false,
       enableHiddenNotes: map['enableHiddenNotes'] ?? false,
       requireBiometricForHidden: map['requireBiometricForHidden'] ?? false,
       developerMode: map['developerMode'] ?? false,
@@ -141,6 +145,7 @@ class AppSettings {
         useLocalQuotesOnly: false,
         localeCode: null, // 默认跟随系统
         showExactTime: false, // 默认不显示精确时间
+        showNoteEditTime: false, // 默认不显示笔记编辑时间
         enableHiddenNotes: false, // 默认不启用隐藏笔记功能
         requireBiometricForHidden: false, // 默认不需要生物识别验证
         developerMode: false, // 默认关闭开发者模式
@@ -174,6 +179,7 @@ class AppSettings {
     String? localeCode,
     bool clearLocale = false, // 新增：是否清除 localeCode（设置为跟随系统）
     bool? showExactTime,
+    bool? showNoteEditTime,
     bool? enableHiddenNotes,
     bool? requireBiometricForHidden,
     bool? developerMode,
@@ -210,6 +216,7 @@ class AppSettings {
       useLocalQuotesOnly: useLocalQuotesOnly ?? this.useLocalQuotesOnly,
       localeCode: clearLocale ? null : (localeCode ?? this.localeCode),
       showExactTime: showExactTime ?? this.showExactTime,
+      showNoteEditTime: showNoteEditTime ?? this.showNoteEditTime,
       enableHiddenNotes: enableHiddenNotes ?? this.enableHiddenNotes,
       requireBiometricForHidden:
           requireBiometricForHidden ?? this.requireBiometricForHidden,

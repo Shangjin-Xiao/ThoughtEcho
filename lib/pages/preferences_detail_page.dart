@@ -168,6 +168,15 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                 _buildDivider(),
                 _buildSwitchTile(
                   context: context,
+                  title: l10n.showNoteEditTime,
+                  subtitle: l10n.showNoteEditTimeDesc,
+                  icon: Icons.edit_calendar_outlined,
+                  value: settings.showNoteEditTime,
+                  onChanged: (v) => settings.setShowNoteEditTime(v),
+                ),
+                _buildDivider(),
+                _buildSwitchTile(
+                  context: context,
                   title: l10n.prioritizeBoldContent,
                   subtitle: l10n.prioritizeBoldContentDesc,
                   icon: Icons.format_bold,

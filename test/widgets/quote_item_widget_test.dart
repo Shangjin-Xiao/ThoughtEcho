@@ -13,6 +13,7 @@ import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 class _FakeSettingsService extends ChangeNotifier implements SettingsService {
   bool _prioritizeBoldContentInCollapse = false;
   bool _showExactTime = false;
+  bool _showNoteEditTime = false;
 
   @override
   bool get prioritizeBoldContentInCollapse => _prioritizeBoldContentInCollapse;
@@ -34,6 +35,16 @@ class _FakeSettingsService extends ChangeNotifier implements SettingsService {
     }
   }
 
+  @override
+  bool get showNoteEditTime => _showNoteEditTime;
+
+  set showNoteEditTime(bool value) {
+    if (_showNoteEditTime != value) {
+      _showNoteEditTime = value;
+      notifyListeners();
+    }
+  }
+
   // 不需要的方法抛出未实现异常，确保测试中不会被误用。
   @override
   noSuchMethod(Invocation invocation) =>
@@ -41,17 +52,21 @@ class _FakeSettingsService extends ChangeNotifier implements SettingsService {
 }
 
 Quote _buildQuote({
+  String id = 'q1',
   String content = 'This is a test note content.',
   String? deltaContent,
   String editSource = 'fullscreen',
+  String? date,
+  String? lastModified,
 }) {
   return Quote(
-    id: 'q1',
+    id: id,
     content: content,
-    date: DateTime.now().toIso8601String(),
+    date: date ?? DateTime.now().toIso8601String(),
     deltaContent: deltaContent,
     editSource: editSource,
     dayPeriod: 'morning',
+    lastModified: lastModified,
   );
 }
 
@@ -296,6 +311,141 @@ void main() {
 
       expect(find.text('fallback content'), findsNothing);
       expect(find.byType(quill.QuillEditor), findsOneWidget);
+    });
+
+    testWidgets('开启后在创建时间下方显示编辑时间', (tester) async {
+      final settings = _FakeSettingsService()..showNoteEditTime = true;
+      final quote = _buildQuote(
+        date: DateTime(2025, 6, 21, 9, 0).toIso8601String(),
+        lastModified: DateTime(2025, 6, 22, 10, 30).toIso8601String(),
+      );
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<SettingsService>.value(
+          value: settings,
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: Material(
+              child: QuoteItemWidget(
+                quote: quote,
+                tagMap: const {},
+                isExpanded: false,
+                onToggleExpanded: (_) {},
+                onEdit: () {},
+                onDelete: () {},
+                onAskAI: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('编辑于'), findsOneWidget);
+      expect(find.textContaining('2025-06-22'), findsOneWidget);
+    });
+
+    testWidgets('关闭时不显示编辑时间', (tester) async {
+      final settings = _FakeSettingsService()..showNoteEditTime = false;
+      final quote = _buildQuote(
+        date: DateTime(2025, 6, 21, 9, 0).toIso8601String(),
+        lastModified: DateTime(2025, 6, 22, 10, 30).toIso8601String(),
+      );
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<SettingsService>.value(
+          value: settings,
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: Material(
+              child: QuoteItemWidget(
+                quote: quote,
+                tagMap: const {},
+                isExpanded: false,
+                onToggleExpanded: (_) {},
+                onEdit: () {},
+                onDelete: () {},
+                onAskAI: () {},
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('编辑于'), findsNothing);
+    });
+
+    testWidgets('编辑时间与创建时间一致或无效时不显示编辑时间', (tester) async {
+      final settings = _FakeSettingsService()..showNoteEditTime = true;
+      final createdAt = DateTime(2025, 6, 21, 9, 0);
+      final sameTimeQuote = _buildQuote(
+        id: 'q2',
+        date: createdAt.toIso8601String(),
+        lastModified: createdAt.toIso8601String(),
+      );
+      final invalidTimeQuote = _buildQuote(
+        id: 'q3',
+        date: createdAt.toIso8601String(),
+        lastModified: 'invalid-date',
+      );
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<SettingsService>.value(
+          value: settings,
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('zh'),
+            home: Material(
+              child: Column(
+                children: [
+                  QuoteItemWidget(
+                    quote: sameTimeQuote,
+                    tagMap: const {},
+                    isExpanded: false,
+                    onToggleExpanded: (_) {},
+                    onEdit: () {},
+                    onDelete: () {},
+                    onAskAI: () {},
+                  ),
+                  QuoteItemWidget(
+                    quote: invalidTimeQuote,
+                    tagMap: const {},
+                    isExpanded: false,
+                    onToggleExpanded: (_) {},
+                    onEdit: () {},
+                    onDelete: () {},
+                    onAskAI: () {},
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('编辑于'), findsNothing);
     });
   });
 }
