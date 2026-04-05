@@ -670,67 +670,77 @@ class DatabaseSchemaManager {
           error: e,
           source: 'DatabaseUpgrade',
         );
+        rethrow; // 关键迁移失败必须向上传播
       }
     }
 
     // 版本20：添加 poi_name 字段 + 聊天会话/消息表
     if (oldVersion < 20) {
-      logDebug(
-        '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 poi_name + 聊天表',
-      );
-      final columns = await txn.rawQuery('PRAGMA table_info(quotes)');
-      final hasPoiName = columns.any((col) => col['name'] == 'poi_name');
-      if (!hasPoiName) {
-        await txn.execute('ALTER TABLE quotes ADD COLUMN poi_name TEXT');
-        logDebug('数据库升级：poi_name 字段添加完成');
+      try {
+        logDebug(
+          '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 poi_name + 聊天表',
+        );
+        final columns = await txn.rawQuery('PRAGMA table_info(quotes)');
+        final hasPoiName = columns.any((col) => col['name'] == 'poi_name');
+        if (!hasPoiName) {
+          await txn.execute('ALTER TABLE quotes ADD COLUMN poi_name TEXT');
+          logDebug('数据库升级：poi_name 字段添加完成');
+        }
+
+        await txn.execute(
+          'CREATE INDEX IF NOT EXISTS idx_quotes_poi_name ON quotes(poi_name)',
+        );
+
+        await txn.execute('''
+          CREATE TABLE IF NOT EXISTS chat_sessions(
+            id TEXT PRIMARY KEY,
+            session_type TEXT NOT NULL DEFAULT 'note',
+            note_id TEXT,
+            title TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL,
+            last_active_at TEXT NOT NULL,
+            is_pinned INTEGER NOT NULL DEFAULT 0,
+            FOREIGN KEY (note_id) REFERENCES quotes(id) ON DELETE CASCADE
+          )
+        ''');
+        await txn.execute(
+          'CREATE INDEX IF NOT EXISTS idx_chat_sessions_note_id ON chat_sessions(note_id)',
+        );
+        await txn.execute(
+          'CREATE INDEX IF NOT EXISTS idx_chat_sessions_last_active ON chat_sessions(last_active_at DESC)',
+        );
+        await txn.execute(
+          'CREATE INDEX IF NOT EXISTS idx_chat_sessions_type ON chat_sessions(session_type)',
+        );
+
+        await txn.execute('''
+          CREATE TABLE IF NOT EXISTS chat_messages(
+            id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'user',
+            content TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL,
+            included_in_context INTEGER NOT NULL DEFAULT 1,
+            meta_json TEXT,
+            FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
+          )
+        ''');
+        await txn.execute(
+          'CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session_id)',
+        );
+        await txn.execute(
+          'CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(session_id, created_at ASC)',
+        );
+
+        logDebug('数据库升级：v20 完成');
+      } catch (e) {
+        logError(
+          'v20迁移失败 (poi_name + 聊天表): $e',
+          error: e,
+          source: 'DatabaseUpgrade',
+        );
+        rethrow; // 关键迁移失败必须向上传播
       }
-
-      await txn.execute(
-        'CREATE INDEX IF NOT EXISTS idx_quotes_poi_name ON quotes(poi_name)',
-      );
-
-      await txn.execute('''
-        CREATE TABLE IF NOT EXISTS chat_sessions(
-          id TEXT PRIMARY KEY,
-          session_type TEXT NOT NULL DEFAULT 'note',
-          note_id TEXT,
-          title TEXT NOT NULL DEFAULT '',
-          created_at TEXT NOT NULL,
-          last_active_at TEXT NOT NULL,
-          is_pinned INTEGER NOT NULL DEFAULT 0,
-          FOREIGN KEY (note_id) REFERENCES quotes(id) ON DELETE CASCADE
-        )
-      ''');
-      await txn.execute(
-        'CREATE INDEX IF NOT EXISTS idx_chat_sessions_note_id ON chat_sessions(note_id)',
-      );
-      await txn.execute(
-        'CREATE INDEX IF NOT EXISTS idx_chat_sessions_last_active ON chat_sessions(last_active_at DESC)',
-      );
-      await txn.execute(
-        'CREATE INDEX IF NOT EXISTS idx_chat_sessions_type ON chat_sessions(session_type)',
-      );
-
-      await txn.execute('''
-        CREATE TABLE IF NOT EXISTS chat_messages(
-          id TEXT PRIMARY KEY,
-          session_id TEXT NOT NULL,
-          role TEXT NOT NULL DEFAULT 'user',
-          content TEXT NOT NULL DEFAULT '',
-          created_at TEXT NOT NULL,
-          included_in_context INTEGER NOT NULL DEFAULT 1,
-          meta_json TEXT,
-          FOREIGN KEY (session_id) REFERENCES chat_sessions(id) ON DELETE CASCADE
-        )
-      ''');
-      await txn.execute(
-        'CREATE INDEX IF NOT EXISTS idx_chat_messages_session_id ON chat_messages(session_id)',
-      );
-      await txn.execute(
-        'CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON chat_messages(session_id, created_at ASC)',
-      );
-
-      logDebug('数据库升级：v20 完成');
     }
   }
 

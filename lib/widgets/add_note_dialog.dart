@@ -1488,7 +1488,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                   tagIds: _selectedTagIds,
                                   colorHex: _selectedColorHex,
                                   location: currentLocation,
-                                  poiName: _newPoiName,
+                                  poiName: _newPoiName ??
+                                      widget.initialQuote?.poiName,
                                   latitude:
                                       _includeLocation ? currentLat : null,
                                   longitude:
