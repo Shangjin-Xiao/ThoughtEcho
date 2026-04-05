@@ -1378,4 +1378,68 @@ class AIService extends ChangeNotifier {
       rethrow;
     }
   }
+
+  Stream<String> streamGeneralConversation(
+    String question, {
+    List<ChatMessage>? history,
+    String? systemContext,
+  }) {
+    return _requestHelper.executeStreamOperation(
+      operation: (controller) async {
+        if (!await hasValidApiKeyAsync()) {
+          controller.addError(Exception('请先在设置中配置 API Key'));
+          return;
+        }
+
+        await _validateSettings();
+        final currentProvider = await _getCurrentProviderWithApiKey();
+        final buffer = StringBuffer();
+
+        if (systemContext != null && systemContext.trim().isNotEmpty) {
+          buffer.writeln(systemContext.trim());
+          buffer.writeln();
+        }
+
+        if (history != null && history.isNotEmpty) {
+          final contextHistory = history
+              .where((m) => m.includedInContext && !m.isLoading)
+              .take(6)
+              .toList();
+          if (contextHistory.isNotEmpty) {
+            buffer.writeln('【最近对话】');
+            for (final message in contextHistory) {
+              final role = message.isUser ? '用户' : '助手';
+              buffer.writeln('$role：${message.content}');
+            }
+            buffer.writeln();
+          }
+        }
+
+        buffer.writeln('【当前问题】');
+        buffer.write(question);
+
+        await _requestHelper.makeStreamRequestWithProvider(
+          url: currentProvider.apiUrl,
+          systemPrompt: AIPromptManager.personalGrowthCoachPrompt,
+          userMessage: buffer.toString(),
+          provider: currentProvider,
+          onData: (text) => _requestHelper.handleStreamResponse(
+            controller: controller,
+            chunk: text,
+          ),
+          onComplete: (fullText) => _requestHelper.handleStreamComplete(
+            controller: controller,
+            fullText: fullText,
+          ),
+          onError: (error) => _requestHelper.handleStreamError(
+            controller: controller,
+            error: error,
+            context: '普通对话',
+          ),
+          maxTokens: 1200,
+        );
+      },
+      context: '普通对话',
+    );
+  }
 }

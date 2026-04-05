@@ -236,6 +236,7 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
     final result = await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => AIAssistantPage(
+          entrySource: AIAssistantEntrySource.note,
           quote: tempQuote,
           initialQuestion: initialQuestion,
         ),

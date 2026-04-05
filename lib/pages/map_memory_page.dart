@@ -4,6 +4,7 @@ import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
+import '../models/ai_assistant_entry.dart';
 import '../models/quote_model.dart';
 import '../services/database_service.dart';
 import '../widgets/quote_item_widget.dart';
@@ -77,7 +78,10 @@ class _MapMemoryPageState extends State<MapMemoryPage> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => AIAssistantPage(quote: quote),
+                        builder: (_) => AIAssistantPage(
+                          entrySource: AIAssistantEntrySource.note,
+                          quote: quote,
+                        ),
                       ),
                     );
                   },

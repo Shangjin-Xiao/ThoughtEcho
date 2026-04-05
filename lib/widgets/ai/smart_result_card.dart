@@ -7,6 +7,8 @@ class SmartResultCard extends StatelessWidget {
   final String content;
   final VoidCallback onReplace;
   final VoidCallback onAppend;
+  final String? replaceButtonText;
+  final String? appendButtonText;
 
   const SmartResultCard({
     super.key,
@@ -14,6 +16,8 @@ class SmartResultCard extends StatelessWidget {
     required this.content,
     required this.onReplace,
     required this.onAppend,
+    this.replaceButtonText,
+    this.appendButtonText,
   });
 
   @override
@@ -78,13 +82,13 @@ class SmartResultCard extends StatelessWidget {
                 TextButton.icon(
                   onPressed: onAppend,
                   icon: const Icon(Icons.add_circle_outline, size: 18),
-                  label: Text(l10n.appendToNote),
+                  label: Text(appendButtonText ?? l10n.appendToNote),
                 ),
                 const SizedBox(width: 8),
                 FilledButton.icon(
                   onPressed: onReplace,
                   icon: const Icon(Icons.find_replace, size: 18),
-                  label: Text(l10n.applyChanges),
+                  label: Text(replaceButtonText ?? l10n.applyChanges),
                 ),
               ],
             ),

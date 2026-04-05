@@ -13,6 +13,7 @@ import '../services/clipboard_service.dart';
 import '../services/connectivity_service.dart';
 import '../services/excerpt_intent_service.dart';
 import '../controllers/search_controller.dart'; // 导入搜索控制器
+import '../models/ai_assistant_entry.dart';
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
 import '../widgets/daily_quote_view.dart';
@@ -1560,7 +1561,12 @@ class _HomePageState extends State<HomePage>
   // 显示AI问答聊天界面
   void _showAIQuestionDialog(Quote quote) {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => AIAssistantPage(quote: quote)),
+      MaterialPageRoute(
+        builder: (context) => AIAssistantPage(
+          entrySource: AIAssistantEntrySource.note,
+          quote: quote,
+        ),
+      ),
     );
   }
 

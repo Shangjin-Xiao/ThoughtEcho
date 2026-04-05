@@ -3591,6 +3591,21 @@
   "commandDeepAnalysis": "Deep Analysis",
   "commandPolish": "Polish",
   "commandContinue": "Continue Writing",
+  "aiModeChat": "Chat",
+  "aiModeAgent": "Agent",
+  "aiAssistantInputHint": "Type / to view features, or chat directly",
+  "aiAssistantExploreWelcome": "Starting from your Explore summary:\n{summary}",
+  "@aiAssistantExploreWelcome": {
+    "placeholders": {
+      "summary": {}
+    }
+  },
+  "aiWorkflowNeedsBoundNote": "Please bind a specific note first, or switch to Agent mode and explain which note should be handled.",
+  "workflowUnavailable": "Workflow unavailable in current mode",
+  "replaceOriginalNote": "Replace Original Note",
+  "appendToEnd": "Append to End",
+  "currentNoteContext": "Current note context",
+  "confidenceLabel": "Confidence:",
   "favoriteNotes": "Favorite Notes",
   "offlineQuoteSourceTitle": "Offline/Local Quote Source",
   "offlineQuoteSourceDesc": "Content displayed on homepage when offline or local-only",

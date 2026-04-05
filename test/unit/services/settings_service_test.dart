@@ -4,6 +4,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/app_settings.dart';
+import 'package:thoughtecho/models/ai_assistant_entry.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import '../../test_setup.dart';
 
@@ -60,6 +61,33 @@ void main() {
 
       expect(settingsService.skipNonFullscreenEditor, isTrue);
       expect(settingsService.appSettings.skipNonFullscreenEditor, isTrue);
+    });
+
+    test('should persist split AI assistant mode preferences', () async {
+      expect(
+        settingsService.exploreAiAssistantMode,
+        AIAssistantPageMode.chat,
+      );
+      expect(
+        settingsService.noteAiAssistantMode,
+        AIAssistantPageMode.noteChat,
+      );
+
+      await settingsService.setExploreAiAssistantMode(
+        AIAssistantPageMode.agent,
+      );
+      await settingsService.setNoteAiAssistantMode(
+        AIAssistantPageMode.agent,
+      );
+
+      expect(
+        settingsService.exploreAiAssistantMode,
+        AIAssistantPageMode.agent,
+      );
+      expect(
+        settingsService.noteAiAssistantMode,
+        AIAssistantPageMode.agent,
+      );
     });
   });
 }

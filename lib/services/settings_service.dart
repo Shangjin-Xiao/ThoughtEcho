@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/ai_settings.dart';
+import '../models/ai_assistant_entry.dart';
 import '../models/app_settings.dart';
 import '../models/multi_ai_settings.dart'; // 新增 MultiAISettings 导入
 import '../models/local_ai_settings.dart'; // 新增 LocalAISettings 导入
@@ -45,6 +46,9 @@ class SettingsService extends ChangeNotifier {
   static const String _syncSkipConfirmKey = 'sync_skip_confirm';
   static const String _syncDefaultIncludeMediaKey =
       'sync_default_include_media';
+  static const String _exploreAiAssistantModeKey =
+      'explore_ai_assistant_mode_v1';
+  static const String _noteAiAssistantModeKey = 'note_ai_assistant_mode_v1';
   AISettings get aiSettings => _aiSettings;
   AppSettings get appSettings => _appSettings;
   ThemeMode get themeMode => _themeMode;
@@ -53,6 +57,16 @@ class SettingsService extends ChangeNotifier {
   bool get syncSkipConfirm => _mmkv.getBool(_syncSkipConfirmKey) ?? false;
   bool get syncDefaultIncludeMedia =>
       _mmkv.getBool(_syncDefaultIncludeMediaKey) ?? true;
+  AIAssistantPageMode get exploreAiAssistantMode =>
+      AIAssistantPageModeStorage.fromStorage(
+        _mmkv.getString(_exploreAiAssistantModeKey),
+      ) ??
+      AIAssistantPageMode.chat;
+  AIAssistantPageMode get noteAiAssistantMode =>
+      AIAssistantPageModeStorage.fromStorage(
+        _mmkv.getString(_noteAiAssistantModeKey),
+      ) ??
+      AIAssistantPageMode.noteChat;
 
   // 周期报告洞察是否使用AI（流式）
   bool get reportInsightsUseAI => _appSettings.reportInsightsUseAI;
@@ -67,6 +81,16 @@ class SettingsService extends ChangeNotifier {
   Future<void> setTodayThoughtsUseAI(bool enabled) async {
     _appSettings = _appSettings.copyWith(todayThoughtsUseAI: enabled);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  Future<void> setExploreAiAssistantMode(AIAssistantPageMode mode) async {
+    await _mmkv.setString(_exploreAiAssistantModeKey, mode.storageValue);
+    notifyListeners();
+  }
+
+  Future<void> setNoteAiAssistantMode(AIAssistantPageMode mode) async {
+    await _mmkv.setString(_noteAiAssistantModeKey, mode.storageValue);
     notifyListeners();
   }
 

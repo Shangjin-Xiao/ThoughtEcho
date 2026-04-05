@@ -8,6 +8,19 @@ import '../gen_l10n/app_localizations.dart';
 /// 用于展示 AI 来源分析的结果（作者、作品、置信度、解释），
 /// 并提供应用结果到文本控制器的功能。
 class SourceAnalysisResultDialog {
+  static Map<String, dynamic> parseResult(String result) {
+    String cleanedResult = result.trim();
+    final codeBlockRegex = RegExp(
+      r'^```(?:json)?\s*\n?(.*?)\n?\s*```$',
+      dotAll: true,
+    );
+    final codeBlockMatch = codeBlockRegex.firstMatch(cleanedResult);
+    if (codeBlockMatch != null) {
+      cleanedResult = codeBlockMatch.group(1)!.trim();
+    }
+    return json.decode(cleanedResult) as Map<String, dynamic>;
+  }
+
   /// 显示来源分析结果对话框
   ///
   /// [context] - 上下文
@@ -25,18 +38,7 @@ class SourceAnalysisResultDialog {
     final l10n = AppLocalizations.of(context);
 
     try {
-      // 清理 AI 返回的 markdown 代码块包裹
-      String cleanedResult = result.trim();
-      final codeBlockRegex = RegExp(
-        r'^```(?:json)?\s*\n?(.*?)\n?\s*```$',
-        dotAll: true,
-      );
-      final codeBlockMatch = codeBlockRegex.firstMatch(cleanedResult);
-      if (codeBlockMatch != null) {
-        cleanedResult = codeBlockMatch.group(1)!.trim();
-      }
-
-      final Map<String, dynamic> sourceData = json.decode(cleanedResult);
+      final sourceData = parseResult(result);
       final String? author = sourceData['author'] as String?;
       final String? work = sourceData['work'] as String?;
       final String confidence =

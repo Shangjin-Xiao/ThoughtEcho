@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../gen_l10n/app_localizations.dart';
+import '../models/ai_assistant_entry.dart';
 import '../models/quote_model.dart';
 import '../pages/ai_assistant_page.dart';
 
@@ -26,8 +27,11 @@ class QuickAskNoteButton extends StatelessWidget {
       onPressed: () {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (context) =>
-                AIAssistantPage(quote: quote, initialQuestion: initialQuestion),
+            builder: (context) => AIAssistantPage(
+              entrySource: AIAssistantEntrySource.note,
+              quote: quote,
+              initialQuestion: initialQuestion,
+            ),
           ),
         );
       },
@@ -52,8 +56,11 @@ class AskNoteFloatingButton extends StatelessWidget {
       onPressed: () {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (context) =>
-                AIAssistantPage(quote: quote, initialQuestion: initialQuestion),
+            builder: (context) => AIAssistantPage(
+              entrySource: AIAssistantEntrySource.note,
+              quote: quote,
+              initialQuestion: initialQuestion,
+            ),
           ),
         );
       },
@@ -85,8 +92,11 @@ class AskNoteListTile extends StatelessWidget {
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (context) =>
-                AIAssistantPage(quote: quote, initialQuestion: initialQuestion),
+            builder: (context) => AIAssistantPage(
+              entrySource: AIAssistantEntrySource.note,
+              quote: quote,
+              initialQuestion: initialQuestion,
+            ),
           ),
         );
       },

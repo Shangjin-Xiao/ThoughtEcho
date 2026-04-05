@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../gen_l10n/app_localizations.dart';
+import '../models/ai_assistant_entry.dart';
 import '../services/database_service.dart';
 import 'ai_assistant_page.dart';
 import 'map_memory_page.dart';
@@ -50,6 +51,56 @@ class _ExplorePageState extends State<ExplorePage> {
         .toList();
   }
 
+  Future<void> _openAIAssistant() async {
+    final l10n = AppLocalizations.of(context);
+    final stats = await _statsFuture;
+    final favorites = await _favoritesFuture;
+    if (!mounted) return;
+
+    final summary = _buildAssistantGuideSummary(
+      l10n: l10n,
+      stats: stats,
+      favorites: favorites,
+    );
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AIAssistantPage(
+          entrySource: AIAssistantEntrySource.explore,
+          exploreGuideSummary: summary,
+        ),
+      ),
+    );
+  }
+
+  String _buildAssistantGuideSummary({
+    required AppLocalizations l10n,
+    required _ExploreStats stats,
+    required List<Map<String, dynamic>> favorites,
+  }) {
+    final buffer = StringBuffer()
+      ..writeln('${l10n.noteCount}: ${stats.noteCount}')
+      ..writeln('${l10n.totalWordCount}: ${stats.totalWords}')
+      ..writeln('${l10n.activeDays}: ${stats.activeDays}')
+      ..writeln('${l10n.commonPeriod}: ${stats.topPeriod ?? l10n.noDataYet}')
+      ..writeln('${l10n.commonWeather}: ${stats.topWeather ?? l10n.noDataYet}')
+      ..writeln('${l10n.commonTag}: ${stats.topTag ?? l10n.noDataYet}');
+
+    if (favorites.isNotEmpty) {
+      final favoriteContent =
+          (favorites.first['content'] as String? ?? '').trim();
+      if (favoriteContent.isNotEmpty) {
+        final preview = favoriteContent.length > 60
+            ? '${favoriteContent.substring(0, 60)}...'
+            : favoriteContent;
+        buffer.writeln('${l10n.favoriteNotes}: $preview');
+      }
+    }
+
+    return buffer.toString().trim();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -88,15 +139,10 @@ class _ExplorePageState extends State<ExplorePage> {
                       _EntryCard(
                         icon: Icons.smart_toy_outlined,
                         title: l10n.aiChat,
-                        subtitle: '与 AI 助手进行对话',
+                        subtitle: l10n.chatWithAiAssistant,
                         color: theme.colorScheme.primaryContainer,
                         iconColor: theme.colorScheme.onPrimaryContainer,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const AIAssistantPage(),
-                          ),
-                        ),
+                        onTap: _openAIAssistant,
                       ),
                       const SizedBox(height: 12),
                       _EntryCard(

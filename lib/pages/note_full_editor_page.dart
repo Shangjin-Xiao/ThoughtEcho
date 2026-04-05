@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../gen_l10n/app_localizations.dart';
 import 'package:uuid/uuid.dart';
 import '../services/database_service.dart';
+import '../models/ai_assistant_entry.dart';
 import '../models/quote_model.dart';
 import '../models/note_category.dart';
 import '../services/location_service.dart';

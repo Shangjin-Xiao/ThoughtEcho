@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/ai_assistant_entry.dart';
 import '../services/ai_service.dart';
 import '../models/quote_model.dart';
 import '../widgets/streaming_text_dialog.dart';
@@ -333,7 +334,12 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
 
     // 导航到聊天页面
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => AIAssistantPage(quote: tempQuote)),
+      MaterialPageRoute(
+        builder: (context) => AIAssistantPage(
+          entrySource: AIAssistantEntrySource.note,
+          quote: tempQuote,
+        ),
+      ),
     );
   }
 

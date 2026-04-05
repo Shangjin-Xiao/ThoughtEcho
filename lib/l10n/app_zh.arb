@@ -3603,6 +3603,21 @@
   "commandDeepAnalysis": "深度分析",
   "commandPolish": "润色",
   "commandContinue": "续写",
+  "aiModeChat": "对话",
+  "aiModeAgent": "Agent",
+  "aiAssistantInputHint": "输入 / 查看功能，或直接对话",
+  "aiAssistantExploreWelcome": "从你的探索概览开始：\n{summary}",
+  "@aiAssistantExploreWelcome": {
+    "placeholders": {
+      "summary": {}
+    }
+  },
+  "aiWorkflowNeedsBoundNote": "请先关联一条具体笔记，或切换到 Agent 模式后说明要处理哪一条笔记。",
+  "workflowUnavailable": "当前模式暂不可直接执行",
+  "replaceOriginalNote": "替换原笔记",
+  "appendToEnd": "追加到末尾",
+  "currentNoteContext": "当前笔记上下文",
+  "confidenceLabel": "置信度:",
   "favoriteNotes": "收藏的笔记",
   "offlineQuoteSourceTitle": "离线回退/本地一言数据源",
   "offlineQuoteSourceDesc": "无网络或仅使用本地时，首页一言展示的内容",
