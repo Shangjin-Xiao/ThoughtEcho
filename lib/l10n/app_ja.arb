@@ -3466,10 +3466,14 @@
   "jsonFormatLabel": "JSON形式：{status}",
   "containsHtmlTagsLabel": "HTMLタグを含む：{status}",
   "viewNoteInfo": "ノート情報を表示",
-  "first100CharsLabel": "最初の100文字："
-  ,"insertImage": "画像を挿入",
+  "first100CharsLabel": "最初の100文字：",
+  "insertImage": "画像を挿入",
   "insertVideo": "動画を挿入",
   "insertAudio": "音声を挿入",
   "clipboardFoundHint": "クリップボードのコンテンツが見つかりました。タップしてノートとして追加します",
-  "operationFailedSimple": "操作に失敗しました"
+  "operationFailedSimple": "操作に失敗しました",
+  "offlineQuoteSourceTitle": "オフライン/ローカルの一言ソース",
+  "offlineQuoteSourceDesc": "オフライン時やローカルのみ使用時にホーム画面に表示する内容",
+  "offlineQuoteSourceTagOnly": "「今日の一言」タグのノートのみ表示",
+  "offlineQuoteSourceAll": "すべてのノートをランダムに表示"
 }

@@ -112,6 +112,7 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
 
       final hitokotoType = settingsService.appSettings.hitokotoType;
       final useLocalOnly = settingsService.appSettings.useLocalQuotesOnly;
+      final offlineQuoteSource = settingsService.offlineQuoteSource;
       final isConnected = connectivityService.isConnected;
 
       setState(() {
@@ -165,6 +166,7 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
         l10n,
         hitokotoType,
         useLocalOnly: useLocalOnly,
+        offlineQuoteSource: offlineQuoteSource,
         databaseService: databaseService,
       );
 
