@@ -331,6 +331,7 @@ class DatabaseHealthService {
   /// 优先选择带有"每日一言"标签的笔记，然后选择较短的笔记
   Future<Map<String, dynamic>?> getLocalDailyQuote(
     Database db, {
+    String offlineQuoteSource = 'tagOnly',
     List<Quote>? memoryStore,
     List<NoteCategory>? categoryStore,
   }) async {
@@ -339,14 +340,14 @@ class DatabaseHealthService {
         if (memoryStore == null || categoryStore == null) {
           return null;
         }
-        return _getLocalQuoteFromMemory(memoryStore, categoryStore);
+        return _getLocalQuoteFromMemory(
+            memoryStore, categoryStore, offlineQuoteSource);
       }
 
-      // 首先尝试获取带有"每日一言"标签的笔记
-      final dailyQuoteCategory = await _getDailyQuoteCategoryId(db);
       List<Map<String, dynamic>> results = [];
 
-      if (dailyQuoteCategory != null) {
+      if (offlineQuoteSource == 'tagOnly') {
+        // 使用底层固定ID查询，避免多语言切换导致的问题
         results = await db.rawQuery(
           '''
           SELECT DISTINCT q.* FROM quotes q
@@ -358,15 +359,13 @@ class DatabaseHealthService {
           ORDER BY RANDOM()
           LIMIT 1
         ''',
-          [dailyQuoteCategory],
+          ['default_hitokoto'],
         );
-      }
-
-      // 如果没有找到带"每日一言"标签的笔记，选择较短的其他笔记
-      if (results.isEmpty) {
+      } else {
+        // allNotes 模式：全局随机抽取
         results = await db.rawQuery('''
           SELECT * FROM quotes
-          WHERE length(content) <= 80
+          WHERE length(content) <= 150
             AND content NOT LIKE '%\n%'
             AND (is_deleted = 0 OR is_deleted IS NULL)
           ORDER BY RANDOM()
@@ -552,38 +551,34 @@ class DatabaseHealthService {
   Map<String, dynamic>? _getLocalQuoteFromMemory(
     List<Quote> memoryStore,
     List<NoteCategory> categoryStore,
+    String offlineQuoteSource,
   ) {
     try {
-      // 首先尝试获取带有"每日一言"标签的笔记
-      var candidates = memoryStore
-          .where(
-            (quote) =>
-                !quote.isDeleted &&
-                quote.tagIds.any(
-                  (tagId) => categoryStore.any(
-                    (cat) => cat.id == tagId && cat.name == '每日一言',
-                  ),
-                ) &&
-                quote.content.length <= 100,
-          )
-          .toList();
+      List<Quote> candidates = [];
 
-      // 如果没有找到，选择较短的其他笔记
-      if (candidates.isEmpty) {
+      if (offlineQuoteSource == 'tagOnly') {
         candidates = memoryStore
             .where(
               (quote) =>
                   !quote.isDeleted &&
-                  quote.content.length <= 80 &&
-                  !quote.content.contains('\n'),
+                  quote.tagIds.contains('default_hitokoto') &&
+                  quote.content.length <= 100,
+            )
+            .toList();
+      } else {
+        candidates = memoryStore
+            .where(
+              (q) =>
+                  !q.isDeleted &&
+                  q.content.length <= 150 &&
+                  !q.content.contains('\n'),
             )
             .toList();
       }
 
       if (candidates.isNotEmpty) {
-        final random =
-            DateTime.now().millisecondsSinceEpoch % candidates.length;
-        final quote = candidates[random];
+        candidates.shuffle();
+        final quote = candidates.first;
         return {
           'content': quote.content,
           'source': quote.sourceWork ?? '',
@@ -597,23 +592,6 @@ class DatabaseHealthService {
       return null;
     } catch (e) {
       logDebug('从内存获取本地每日一言失败: $e');
-      return null;
-    }
-  }
-
-  /// 获取"每日一言"分类的ID
-  Future<String?> _getDailyQuoteCategoryId(Database db) async {
-    try {
-      final results = await db.query(
-        'categories',
-        where: 'name = ?',
-        whereArgs: ['每日一言'],
-        limit: 1,
-      );
-
-      return results.isNotEmpty ? results.first['id'] as String : null;
-    } catch (e) {
-      logDebug('获取每日一言分类ID失败: $e');
       return null;
     }
   }

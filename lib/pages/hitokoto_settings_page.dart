@@ -289,6 +289,74 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
 
               const SizedBox(height: 24),
 
+              // 离线/本地回退设置卡片
+              Consumer<SettingsService>(
+                builder: (context, settings, _) {
+                  return Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                      border: Border.all(
+                        color: colorScheme.outline.withAlpha(50),
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.offlineQuoteSourceTitle,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          l10n.offlineQuoteSourceDesc,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurface.withAlpha(150),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        RadioListTile<String>(
+                          title: Text(
+                            l10n.offlineQuoteSourceTagOnly,
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                          value: 'tagOnly',
+                          groupValue: settings.offlineQuoteSource,
+                          onChanged: (value) {
+                            if (value != null) {
+                              settings.setOfflineQuoteSource(value);
+                            }
+                          },
+                          contentPadding: EdgeInsets.zero,
+                          activeColor: colorScheme.primary,
+                        ),
+                        RadioListTile<String>(
+                          title: Text(
+                            l10n.offlineQuoteSourceAll,
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                          value: 'allNotes',
+                          groupValue: settings.offlineQuoteSource,
+                          onChanged: (value) {
+                            if (value != null) {
+                              settings.setOfflineQuoteSource(value);
+                            }
+                          },
+                          contentPadding: EdgeInsets.zero,
+                          activeColor: colorScheme.primary,
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+
               // 帮助信息卡片
               Container(
                 width: double.infinity,

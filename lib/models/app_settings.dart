@@ -27,7 +27,8 @@ class AppSettings {
   final bool anniversaryAnimationEnabled; // 一周年庆典动画是否启用（开发者模式控制）
   final int trashRetentionDays; // 回收站保留天数（7/30/90）
   final String? trashRetentionLastModified; // 回收站保留设置更新时间（UTC ISO）
-  final bool skipNonFullscreenEditor; // 新增：跳过非全屏编辑器，直接进入全屏编辑器
+  final bool skipNonFullscreenEditor;
+  final String offlineQuoteSource;
 
   AppSettings({
     this.hitokotoType = 'a,b,c,d,e,f,g,h,i,j,k', // 默认全选所有类型
@@ -56,7 +57,8 @@ class AppSettings {
     this.anniversaryAnimationEnabled = true, // 默认启用庆典动画
     this.trashRetentionDays = 30,
     this.trashRetentionLastModified,
-    this.skipNonFullscreenEditor = false, // 默认不跳过非全屏编辑器
+    this.skipNonFullscreenEditor = false,
+    this.offlineQuoteSource = 'tagOnly', // 默认仅展示带每日一言标签的笔记
   });
 
   static int normalizeTrashRetentionDays(int? days) {
@@ -95,6 +97,7 @@ class AppSettings {
       'trashRetentionDays': trashRetentionDays,
       'trashRetentionLastModified': trashRetentionLastModified,
       'skipNonFullscreenEditor': skipNonFullscreenEditor,
+      'offlineQuoteSource': offlineQuoteSource,
     };
   }
 
@@ -140,6 +143,7 @@ class AppSettings {
       trashRetentionDays: normalizeTrashRetentionDays(parsedRetentionDays),
       trashRetentionLastModified: map['trashRetentionLastModified'] as String?,
       skipNonFullscreenEditor: map['skipNonFullscreenEditor'] ?? false,
+      offlineQuoteSource: map['offlineQuoteSource'] ?? 'tagOnly',
     );
   }
 
@@ -170,7 +174,8 @@ class AppSettings {
         anniversaryAnimationEnabled: true,
         trashRetentionDays: 30,
         trashRetentionLastModified: null,
-        skipNonFullscreenEditor: false, // 默认不跳过非全屏编辑器
+        skipNonFullscreenEditor: false,
+        offlineQuoteSource: 'tagOnly',
       );
 
   /// 使用特殊标记来区分"未指定"和"设置为null（跟随系统）"
@@ -206,6 +211,7 @@ class AppSettings {
     String? trashRetentionLastModified,
     bool clearTrashRetentionLastModified = false,
     bool? skipNonFullscreenEditor,
+    String? offlineQuoteSource,
   }) {
     return AppSettings(
       hitokotoType: hitokotoType ?? this.hitokotoType,
@@ -249,6 +255,7 @@ class AppSettings {
           : (trashRetentionLastModified ?? this.trashRetentionLastModified),
       skipNonFullscreenEditor:
           skipNonFullscreenEditor ?? this.skipNonFullscreenEditor,
+      offlineQuoteSource: offlineQuoteSource ?? this.offlineQuoteSource,
     );
   }
 }

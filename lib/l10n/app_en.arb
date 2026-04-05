@@ -3138,9 +3138,9 @@
       }
     }
   },
-  "copyMessage": "Copy message",
-  "shareMessage": "Share message",
-  "shareFeatureInDevelopment": "Share feature in development",
+  "copyMessage": "Copy Message",
+  "shareMessage": "Share Message",
+  "shareFeatureInDevelopment": "Share feature is under development",
   "cancelImport": "Cancel import",
   "enterMediaUrl": "Enter {mediaType} URL",
   "@enterMediaUrl": {
@@ -3483,29 +3483,8 @@
   "manualApiTest": "Manual API Test",
   "testApiKey": "Test API Key",
   "aiReturnedEmptyContent": "AI returned empty content, please try again",
-  "askNote": "Ask Note",
   "chatWithAiAssistant": "Chat with AI assistant to explore note content",
-  "codeCopiedToClipboard": "Code copied to clipboard",
-  "locationPermissionDenied": "Location permission denied, cannot enable location service",
-  "copyMessage": "Copy Message",
   "messageCopied": "Message copied to clipboard",
-  "shareMessage": "Share Message",
-  "shareFeatureInDevelopment": "Share feature is under development",
-  "insertMediaFailed": "Failed to insert {mediaType}: {error}",
-  "@insertMediaFailed": {
-    "placeholders": {
-      "mediaType": {
-        "type": "String"
-      },
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "mediaTypeImage": "Image",
-  "mediaTypeVideo": "Video",
-  "mediaTypeAudio": "Audio",
-  "mediaTypeMedia": "Media",
   "anniversaryTitle": "ThoughtEcho · 心迹",
   "anniversarySubtitle": "Thank you for being with us",
   "anniversaryEnterApp": "Enter App",
@@ -3569,12 +3548,16 @@
   "trashRetentionPeriod": "Trash retention period",
   "trashRetentionOption7Days": "7 days",
   "trashRetentionOption30Days": "30 days",
-  "trashRetentionOption90Days": "90 days"
-  ,"insertImage": "Insert Image",
+  "trashRetentionOption90Days": "90 days",
+  "insertImage": "Insert Image",
   "insertVideo": "Insert Video",
   "insertAudio": "Insert Audio",
   "clipboardFoundHint": "Clipboard content found, tap to add as note",
   "operationFailedSimple": "Operation failed",
   "skipNonFullscreenEditor": "Open fullscreen editor directly",
-  "skipNonFullscreenEditorDesc": "Skip quick edit and open fullscreen rich text editor when adding notes"
+  "skipNonFullscreenEditorDesc": "Skip quick edit and open fullscreen rich text editor when adding notes",
+  "offlineQuoteSourceTitle": "Offline/Local Quote Source",
+  "offlineQuoteSourceDesc": "Content displayed on homepage when offline or local-only",
+  "offlineQuoteSourceTagOnly": "Only show notes with \"#Daily Quote\" tag",
+  "offlineQuoteSourceAll": "Randomly show all local notes"
 }

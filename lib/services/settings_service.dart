@@ -183,6 +183,14 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 无网/离线时的一言回退数据源
+  String get offlineQuoteSource => _appSettings.offlineQuoteSource;
+  Future<void> setOfflineQuoteSource(String source) async {
+    _appSettings = _appSettings.copyWith(offlineQuoteSource: source);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
   // 是否显示精确时间（时:分）
   bool get showExactTime => _appSettings.showExactTime;
   Future<void> setShowExactTime(bool enabled) async {

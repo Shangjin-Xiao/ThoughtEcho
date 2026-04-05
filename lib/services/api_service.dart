@@ -52,12 +52,17 @@ class ApiService {
     AppLocalizations l10n,
     String type, {
     bool useLocalOnly = false,
+    String offlineQuoteSource = 'tagOnly',
     DatabaseService? databaseService,
   }) async {
     try {
       // 如果设置了仅使用本地笔记，直接返回本地一言
       if (useLocalOnly) {
-        return await _getLocalQuoteOrDefault(l10n, databaseService);
+        if (offlineQuoteSource == 'allNotes') {
+          return await _getAnyLocalQuote(l10n, databaseService);
+        }
+        return await _getLocalQuoteOrDefault(l10n, databaseService,
+            offlineQuoteSource: offlineQuoteSource);
       }
 
       // 检查网络连接状态
@@ -66,9 +71,13 @@ class ApiService {
 
       if (!isConnected) {
         logDebug('网络未连接，使用本地笔记');
+        if (offlineQuoteSource == 'allNotes') {
+          return await _getAnyLocalQuote(l10n, databaseService);
+        }
         return await _getLocalQuoteOrDefault(
           l10n,
           databaseService,
+          offlineQuoteSource: offlineQuoteSource,
           isOffline: true,
         );
       }
@@ -111,21 +120,37 @@ class ApiService {
             };
           } else {
             logDebug('一言API返回数据格式错误: $data');
-            return await _getLocalQuoteOrDefault(l10n, databaseService);
+            return await _getLocalQuoteOrDefault(
+              l10n,
+              databaseService,
+              offlineQuoteSource: offlineQuoteSource,
+            );
           }
         } catch (e) {
           logDebug(
               '一言API JSON解析失败: $e, 响应体: ${response.body.length > 50 ? '${response.body.substring(0, 50)}...' : response.body}');
-          return await _getLocalQuoteOrDefault(l10n, databaseService);
+          return await _getLocalQuoteOrDefault(
+            l10n,
+            databaseService,
+            offlineQuoteSource: offlineQuoteSource,
+          );
         }
       } else {
         logDebug(
             '一言API请求失败: ${response.statusCode}, 响应体: ${response.body.length > 50 ? '${response.body.substring(0, 50)}...' : response.body}');
-        return await _getLocalQuoteOrDefault(l10n, databaseService);
+        return await _getLocalQuoteOrDefault(
+          l10n,
+          databaseService,
+          offlineQuoteSource: offlineQuoteSource,
+        );
       }
     } catch (e) {
       logDebug('获取一言异常: $e');
-      return await _getLocalQuoteOrDefault(l10n, databaseService);
+      return await _getLocalQuoteOrDefault(
+        l10n,
+        databaseService,
+        offlineQuoteSource: offlineQuoteSource,
+      );
     }
   }
 
@@ -133,6 +158,7 @@ class ApiService {
   static Future<Map<String, dynamic>> _getLocalQuoteOrDefault(
     AppLocalizations l10n,
     DatabaseService? databaseService, {
+    String offlineQuoteSource = 'tagOnly',
     bool isOffline = false,
   }) async {
     try {
@@ -161,6 +187,25 @@ class ApiService {
 
     // 如果不是离线状态但本地笔记获取失败，使用默认一言
     logDebug('使用默认一言');
+    return _getDefaultQuote(l10n);
+  }
+
+  static Future<Map<String, dynamic>> _getAnyLocalQuote(
+    AppLocalizations l10n,
+    DatabaseService? databaseService,
+  ) async {
+    try {
+      if (databaseService != null) {
+        final localQuote = await databaseService.getLocalDailyQuote();
+        if (localQuote != null) {
+          logDebug('使用全部本地笔记作为一言');
+          return localQuote;
+        }
+      }
+    } catch (e) {
+      logDebug('获取全部本地笔记失败: $e');
+    }
+
     return _getDefaultQuote(l10n);
   }
 

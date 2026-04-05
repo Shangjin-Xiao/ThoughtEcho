@@ -3515,10 +3515,14 @@
   "trashRetentionPeriod": "ゴミ箱の保持期間",
   "trashRetentionOption7Days": "7日",
   "trashRetentionOption30Days": "30日",
-  "trashRetentionOption90Days": "90日"
-  ,"insertImage": "画像を挿入",
+  "trashRetentionOption90Days": "90日",
+  "insertImage": "画像を挿入",
   "insertVideo": "動画を挿入",
   "insertAudio": "音声を挿入",
   "clipboardFoundHint": "クリップボードのコンテンツが見つかりました。タップしてノートとして追加します",
-  "operationFailedSimple": "操作に失敗しました"
+  "operationFailedSimple": "操作に失敗しました",
+  "offlineQuoteSourceTitle": "オフライン/ローカルの一言ソース",
+  "offlineQuoteSourceDesc": "オフライン時やローカルのみ使用時にホーム画面に表示する内容",
+  "offlineQuoteSourceTagOnly": "「今日の一言」タグのノートのみ表示",
+  "offlineQuoteSourceAll": "すべてのノートをランダムに表示"
 }
