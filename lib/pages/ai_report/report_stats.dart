@@ -314,8 +314,33 @@ extension _AIReportStats on _AIPeriodicReportPageState {
   Widget _buildQuotePreview(Quote quote) {
     final l10n = AppLocalizations.of(context);
     final date = DateTime.parse(quote.date);
-    final formattedDate =
-        '${l10n.formattedDate(date.month, date.day)} ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    final showExactTime = context.select<SettingsService, bool>(
+      (s) => s.showExactTime,
+    );
+    final showNoteEditTime = context.select<SettingsService, bool>(
+      (s) => s.showNoteEditTime,
+    );
+    final formattedDate = TimeUtils.formatQuoteDateLocalized(
+      context,
+      date,
+      dayPeriod: quote.dayPeriod,
+      showExactTime: showExactTime,
+    );
+    final DateTime? lastModified = quote.lastModified != null
+        ? DateTime.tryParse(quote.lastModified!)
+        : null;
+    final bool shouldShowEditedAt = showNoteEditTime &&
+        lastModified != null &&
+        !lastModified.isAtSameMomentAs(date);
+    final String? formattedEditedAt = shouldShowEditedAt
+        ? l10n.editedAtLabel(
+            TimeUtils.formatQuoteDateLocalized(
+              context,
+              lastModified,
+              showExactTime: showExactTime,
+            ),
+          )
+        : null;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -356,21 +381,56 @@ extension _AIReportStats on _AIPeriodicReportPageState {
                 ),
                 const SizedBox(height: 12),
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(
-                      Icons.access_time,
-                      size: 14,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      formattedDate,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    Expanded(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.access_time,
+                            size: 14,
                             color:
                                 Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  formattedDate,
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.bodySmall?.copyWith(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
+                                      ),
+                                ),
+                                if (formattedEditedAt != null) ...[
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    formattedEditedAt,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall?.copyWith(
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurfaceVariant,
+                                          fontSize: 11,
+                                          height: 1.1,
+                                        ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                    const Spacer(),
+                    const SizedBox(width: 8),
                     Container(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8,

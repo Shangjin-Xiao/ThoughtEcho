@@ -9,12 +9,15 @@ import 'package:thoughtecho/services/settings_service.dart';
 
 class _TestSettingsService extends ChangeNotifier implements SettingsService {
   bool _excerptIntentEnabled;
+  bool _showNoteEditTime;
   bool _skipNonFullscreenEditor;
 
   _TestSettingsService({
     bool excerptIntentEnabled = true,
+    bool showNoteEditTime = false,
     bool skipNonFullscreenEditor = false,
   })  : _excerptIntentEnabled = excerptIntentEnabled,
+        _showNoteEditTime = showNoteEditTime,
         _skipNonFullscreenEditor = skipNonFullscreenEditor;
 
   @override
@@ -23,6 +26,15 @@ class _TestSettingsService extends ChangeNotifier implements SettingsService {
   @override
   Future<void> setExcerptIntentEnabled(bool enabled) async {
     _excerptIntentEnabled = enabled;
+    notifyListeners();
+  }
+
+  @override
+  bool get showNoteEditTime => _showNoteEditTime;
+
+  @override
+  Future<void> setShowNoteEditTime(bool enabled) async {
+    _showNoteEditTime = enabled;
     notifyListeners();
   }
 
@@ -173,6 +185,14 @@ void main() {
     );
   }
 
+  Finder findSwitchForText(String text) {
+    final textFinder = find.text(text);
+    return find.descendant(
+      of: find.ancestor(of: textFinder, matching: find.byType(ListTile)),
+      matching: find.byType(Switch),
+    );
+  }
+
   testWidgets('偏好设置页显示摘录开关并可切换', (tester) async {
     final settings = _TestSettingsService();
     final clipboard = _TestClipboardService();
@@ -194,10 +214,35 @@ void main() {
     expect(titleFinder, findsOneWidget);
     expect(settings.excerptIntentEnabled, isTrue);
 
-    await tester.tap(find.byType(Switch).at(7));
+    await tester.tap(findSwitchForText(localizations.excerptIntentEnabled));
     await tester.pumpAndSettle();
 
     expect(settings.excerptIntentEnabled, isFalse);
+  });
+
+  testWidgets('偏好设置页显示编辑时间开关并可切换', (tester) async {
+    final settings = _TestSettingsService();
+    final clipboard = _TestClipboardService();
+
+    await tester.pumpWidget(buildApp(settings, clipboard));
+    await tester.pumpAndSettle();
+
+    const titleText = '显示笔记编辑时间';
+    final titleFinder = find.text(titleText);
+    await tester.scrollUntilVisible(
+      titleFinder,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(titleFinder, findsOneWidget);
+    expect(settings.showNoteEditTime, isFalse);
+
+    await tester.tap(findSwitchForText(titleText));
+    await tester.pumpAndSettle();
+
+    expect(settings.showNoteEditTime, isTrue);
   });
 
   testWidgets('偏好设置页显示直接进入全屏编辑器开关并可切换', (tester) async {

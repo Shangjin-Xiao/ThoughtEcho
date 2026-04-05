@@ -177,6 +177,9 @@ class _FakeSettingsService extends ChangeNotifier implements SettingsService {
   bool get showExactTime => false;
 
   @override
+  bool get showNoteEditTime => false;
+
+  @override
   bool get prioritizeBoldContentInCollapse => false;
 
   @override

@@ -2720,6 +2720,16 @@
   "dayPeriodMidnight": "Late Night",
   "showExactTime": "Show Exact Time",
   "showExactTimeDesc": "Display time (hour:minute) in notes",
+  "showNoteEditTime": "Show Note Edit Time",
+  "showNoteEditTimeDesc": "Display the last edited time in notes",
+  "editedAtLabel": "Edited {dateTime}",
+  "@editedAtLabel": {
+    "placeholders": {
+      "dateTime": {
+        "type": "String"
+      }
+    }
+  },
   "guideHomepageDailyQuoteTitle": "Daily Quote Tips",
   "guideHomepageDailyQuoteDesc": "Single tap to copy content\nDouble tap to quickly add to notes",
   "guideNotePageFilterTitle": "Filter & Sort",
