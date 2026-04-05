@@ -80,7 +80,7 @@ class SettingsService extends ChangeNotifier {
     DateTime? modifiedAt,
   }) async {
     final normalizedDays = AppSettings.normalizeTrashRetentionDays(days);
-    final modified = (modifiedAt ?? DateTime.now().toUtc()).toIso8601String();
+    final modified = (modifiedAt ?? DateTime.now()).toUtc().toIso8601String();
     _appSettings = _appSettings.copyWith(
       trashRetentionDays: normalizedDays,
       trashRetentionLastModified: modified,

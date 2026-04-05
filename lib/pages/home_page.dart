@@ -397,10 +397,17 @@ class _HomePageState extends State<HomePage>
               location: resolvedAddress,
             );
             final updateResult = await dbService.updateQuote(updatedQuote);
-            if (updateResult != QuoteUpdateResult.updated) {
-              continue;
+            switch (updateResult) {
+              case QuoteUpdateResult.updated:
+                updatedCount++;
+                break;
+              case QuoteUpdateResult.notFound:
+                logWarning('回溯更新离线笔记位置时笔记不存在: ${quote.id}');
+                break;
+              case QuoteUpdateResult.skippedDeleted:
+                logWarning('回溯更新离线笔记位置时笔记已删除: ${quote.id}');
+                break;
             }
-            updatedCount++;
           }
         }
 

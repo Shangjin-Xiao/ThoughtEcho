@@ -362,6 +362,8 @@
   "deleteNote": "Delete Note",
   "deleteNoteConfirmation": "Are you sure you want to delete this note? This action cannot be undone.",
   "noteDeleted": "Note deleted",
+  "noteNotFound": "Note not found",
+  "noteUpdateSkippedDeleted": "Note has been deleted, update skipped",
   "favorited": "Favorited ({count})",
   "@favorited": {
     "placeholders": {

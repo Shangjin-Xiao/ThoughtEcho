@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'dart:io';
+import 'package:thoughtecho/utils/platform_io_stub.dart'
+    if (dart.library.io) 'dart:io';
 
 // Flutter核心库
 import 'package:flutter/foundation.dart';

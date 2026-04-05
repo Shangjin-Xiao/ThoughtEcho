@@ -52,8 +52,9 @@ class Quote {
     this.lastModified,
     this.favoriteCount = 0, // 新增：心形点击次数，默认为0
     this.isDeleted = false,
-    this.deletedAt,
-  }) : _source = source;
+    String? deletedAt,
+  })  : _source = source,
+        deletedAt = isDeleted ? (deletedAt ?? date) : null;
 
   /// 获取来源信息 (兼容性 getter)
   /// 如果 sourceAuthor 和 sourceWork 存在，则优先从它们重建
@@ -234,6 +235,7 @@ class Quote {
       }
 
       return Quote(
+        // 构造函数会做 isDeleted/deletedAt 一致性归一化
         id: json['id']?.toString(),
         content: content,
         date: date,
@@ -259,7 +261,11 @@ class Quote {
         favoriteCount:
             (json['favorite_count'] as num?)?.toInt() ?? 0, // 新增：心形点击次数
         isDeleted: _parseDeletedFlag(json['is_deleted']),
-        deletedAt: json['deleted_at']?.toString(),
+        deletedAt: _normalizeDeletedAtForState(
+          isDeleted: _parseDeletedFlag(json['is_deleted']),
+          deletedAt: json['deleted_at']?.toString(),
+          fallbackDate: date,
+        ),
       );
     } on ArgumentError {
       rethrow;
@@ -295,7 +301,7 @@ class Quote {
       'last_modified': lastModified,
       'favorite_count': favoriteCount, // 新增：心形点击次数
       'is_deleted': isDeleted ? 1 : 0,
-      'deleted_at': deletedAt,
+      'deleted_at': isDeleted ? deletedAt : null,
     };
     // 移除tag_ids字段，因为它不再直接存储在quotes表中
     json.remove('tag_ids');
@@ -330,6 +336,11 @@ class Quote {
     Object? isDeleted = _noValue,
     Object? deletedAt = _noValue,
   }) {
+    final nextIsDeleted =
+        identical(isDeleted, _noValue) ? this.isDeleted : isDeleted as bool;
+    final nextDeletedAt =
+        identical(deletedAt, _noValue) ? this.deletedAt : deletedAt as String?;
+
     return Quote(
       id: id ?? this.id,
       content: content ?? this.content,
@@ -354,11 +365,12 @@ class Quote {
       dayPeriod: dayPeriod ?? this.dayPeriod, // 新增：时间段
       lastModified: lastModified ?? this.lastModified,
       favoriteCount: favoriteCount ?? this.favoriteCount, // 新增：心形点击次数
-      isDeleted:
-          identical(isDeleted, _noValue) ? this.isDeleted : isDeleted as bool,
-      deletedAt: identical(deletedAt, _noValue)
-          ? this.deletedAt
-          : deletedAt as String?,
+      isDeleted: nextIsDeleted,
+      deletedAt: _normalizeDeletedAtForState(
+        isDeleted: nextIsDeleted,
+        deletedAt: nextDeletedAt,
+        fallbackDate: date ?? this.date,
+      ),
     );
   }
 
@@ -368,6 +380,27 @@ class Quote {
     if (raw is num) return raw != 0;
     final text = raw.toString().trim().toLowerCase();
     return text == '1' || text == 'true';
+  }
+
+  static String? _normalizeDeletedAtForState({
+    required bool isDeleted,
+    required String? deletedAt,
+    required String fallbackDate,
+  }) {
+    if (!isDeleted) {
+      return null;
+    }
+
+    final trimmed = deletedAt?.trim();
+    if (trimmed != null && trimmed.isNotEmpty && isValidDate(trimmed)) {
+      return trimmed;
+    }
+
+    if (isValidDate(fallbackDate)) {
+      return DateTime.parse(fallbackDate).toUtc().toIso8601String();
+    }
+
+    return DateTime.now().toUtc().toIso8601String();
   }
 
   // 静态key-label映射

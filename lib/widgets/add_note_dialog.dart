@@ -127,6 +127,20 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     }
   }
 
+  String _updateFailureMessage(
+    AppLocalizations l10n,
+    QuoteUpdateResult result,
+  ) {
+    switch (result) {
+      case QuoteUpdateResult.notFound:
+        return l10n.noteNotFound;
+      case QuoteUpdateResult.skippedDeleted:
+        return l10n.noteUpdateSkippedDeleted;
+      case QuoteUpdateResult.updated:
+        return l10n.noteUpdated;
+    }
+  }
+
   // 一言类型到固定分类 ID 的映射
   static final Map<String, String> _hitokotoTypeToCategoryIdMap = {
     'a': DatabaseService.defaultCategoryIdAnime, // 动画
@@ -1463,7 +1477,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
           if (!mounted) return;
           messenger.showSnackBar(
             SnackBar(
-              content: Text(l10n.noteDeleted),
+              content: Text(_updateFailureMessage(l10n, updateResult)),
               duration: AppConstants.snackBarDurationError,
               backgroundColor: Colors.orange,
             ),
@@ -2255,7 +2269,12 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                     if (!context.mounted) return;
                                     messenger.showSnackBar(
                                       SnackBar(
-                                        content: Text(l10n.noteDeleted),
+                                        content: Text(
+                                          _updateFailureMessage(
+                                            l10n,
+                                            updateResult,
+                                          ),
+                                        ),
                                         duration:
                                             AppConstants.snackBarDurationError,
                                         backgroundColor: Colors.orange,

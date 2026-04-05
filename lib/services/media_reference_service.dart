@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:meta/meta.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
@@ -194,6 +195,7 @@ class MediaReferenceService {
   static Future<Map<String, List<String>>> getReferencedFilesBatch(
     Iterable<String> quoteIds,
   ) async {
+    const int maxChunkSize = 900;
     final uniqueIds = quoteIds.where((id) => id.isNotEmpty).toSet().toList();
     if (uniqueIds.isEmpty) {
       return {};
@@ -201,27 +203,37 @@ class MediaReferenceService {
 
     try {
       final db = await database;
-      final placeholders = List.filled(uniqueIds.length, '?').join(',');
-      final result = await db.query(
-        _tableName,
-        columns: ['quote_id', 'file_path'],
-        where: 'quote_id IN ($placeholders)',
-        whereArgs: uniqueIds,
-      );
-
       final grouped = <String, List<String>>{};
-      for (final row in result) {
-        final quoteId = row['quote_id'] as String?;
-        final filePath = row['file_path'] as String?;
-        if (quoteId == null || filePath == null) {
-          continue;
+
+      for (var start = 0; start < uniqueIds.length; start += maxChunkSize) {
+        final end = math.min(start + maxChunkSize, uniqueIds.length);
+        final chunk = uniqueIds.sublist(start, end);
+        final placeholders = List.filled(chunk.length, '?').join(',');
+        final result = await db.query(
+          _tableName,
+          columns: ['quote_id', 'file_path'],
+          where: 'quote_id IN ($placeholders)',
+          whereArgs: chunk,
+        );
+
+        for (final row in result) {
+          final quoteId = row['quote_id'] as String?;
+          final filePath = row['file_path'] as String?;
+          if (quoteId == null || filePath == null) {
+            continue;
+          }
+          grouped.putIfAbsent(quoteId, () => <String>[]).add(filePath);
         }
-        grouped.putIfAbsent(quoteId, () => <String>[]).add(filePath);
       }
       return grouped;
-    } catch (e) {
-      logDebug('批量获取笔记引用的媒体文件失败: $e');
-      return {};
+    } catch (e, stackTrace) {
+      logError(
+        '批量获取笔记引用的媒体文件失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'MediaReferenceService',
+      );
+      rethrow;
     }
   }
 
@@ -666,7 +678,7 @@ class MediaReferenceService {
 
       // 2. 二次确认：即使引用表说没有，也从笔记内容中全文搜索一次（防止引用表损坏/不同步导致的误删）
       // 注意：这步对于数据安全至关重要
-      // 修复：仅搜索未删除的笔记，避免回收站笔记阻止媒体清理
+      // 修复：搜索所有笔记（含回收站），避免误删仍可恢复笔记引用的媒体
       final dbService = DatabaseService();
       final quotesWithFile = await dbService.searchQuotesByContent(
         normalizedPath,

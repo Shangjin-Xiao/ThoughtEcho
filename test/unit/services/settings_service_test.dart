@@ -95,6 +95,21 @@ void main() {
       },
     );
 
+    test('setTrashRetentionDays should persist modifiedAt as UTC timestamp',
+        () async {
+      final localTime = DateTime(2026, 3, 28, 10, 30, 0);
+
+      await settingsService.setTrashRetentionDays(
+        90,
+        modifiedAt: localTime,
+      );
+
+      expect(
+        settingsService.trashRetentionLastModified,
+        equals(localTime.toUtc().toIso8601String()),
+      );
+    });
+
     test(
       'applyIncomingTrashSettings should ignore unparseable retention_days',
       () async {

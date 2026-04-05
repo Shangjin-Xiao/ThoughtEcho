@@ -400,7 +400,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(l10n.noteDeleted),
+                content: Text(_updateFailureMessage(l10n, updateResult)),
                 backgroundColor: Colors.orange,
                 duration: AppConstants.snackBarDurationError,
               ),
@@ -470,6 +470,20 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     }
   }
 
+  String _updateFailureMessage(
+    AppLocalizations l10n,
+    QuoteUpdateResult result,
+  ) {
+    switch (result) {
+      case QuoteUpdateResult.notFound:
+        return l10n.noteNotFound;
+      case QuoteUpdateResult.skippedDeleted:
+        return l10n.noteUpdateSkippedDeleted;
+      case QuoteUpdateResult.updated:
+        return l10n.noteUpdated;
+    }
+  }
+
   Future<void> _rollbackMovedPermanentMediaFiles(
       List<String> movedPaths) async {
     if (movedPaths.isEmpty) {
@@ -479,9 +493,8 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       await Future.wait(
         movedPaths.map((p) async {
           try {
-            final file = File(p);
-            if (await file.exists()) {
-              await file.delete();
+            final deleted = await MediaFileService.deleteMediaFile(p);
+            if (deleted) {
               logDebug('因保存失败，回滚删除永久媒体文件: $p');
             }
           } catch (itemErr) {

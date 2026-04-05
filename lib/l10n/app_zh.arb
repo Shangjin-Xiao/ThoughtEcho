@@ -362,6 +362,8 @@
   "deleteNote": "删除笔记",
   "deleteNoteConfirmation": "确定要删除这条笔记吗？此操作无法撤销。",
   "noteDeleted": "笔记已删除",
+  "noteNotFound": "笔记不存在",
+  "noteUpdateSkippedDeleted": "笔记已删除，更新已跳过",
   "favorited": "已珍藏 ({count})",
   "@favorited": {
     "placeholders": {

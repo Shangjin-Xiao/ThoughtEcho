@@ -498,12 +498,14 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     _initCompleter = Completer<void>();
 
     if (kIsWeb) {
+      _isInitialized = true;
       _isInitializing = false;
-      final error =
-          UnsupportedError('ThoughtEcho does not support the Web platform.');
-      _initCompleter?.completeError(error);
+      if (_initCompleter != null && !_initCompleter!.isCompleted) {
+        _initCompleter!.complete();
+      }
       _initCompleter = null;
-      throw error;
+      logInfo('Web平台使用内存模式，DatabaseService 初始化完成', source: 'DatabaseService');
+      return;
     }
 
     // 修复：更严格的数据库初始化检查
@@ -913,7 +915,11 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     try {
       final mmkv = MMKVService();
       await mmkv.init();
-      final appSettingsJson = mmkv.getString('app_settings');
+      var appSettingsJson = mmkv.getString('app_settings');
+      if (appSettingsJson == null || appSettingsJson.isEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        appSettingsJson = prefs.getString('app_settings');
+      }
       if (appSettingsJson == null || appSettingsJson.isEmpty) {
         return 30;
       }

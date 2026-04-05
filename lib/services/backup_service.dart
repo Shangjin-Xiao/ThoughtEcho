@@ -986,7 +986,18 @@ class BackupService {
         backupData.containsKey('notes') ? backupData['notes'] : backupData,
         sourceDevice: sourceDevice,
       );
-      await _settingsService.applyIncomingTrashSettings(incomingTrashSettings);
+      try {
+        await _settingsService
+            .applyIncomingTrashSettings(incomingTrashSettings);
+      } catch (settingsError, settingsStackTrace) {
+        logError(
+          '应用回收站设置失败: $settingsError',
+          error: settingsError,
+          stackTrace: settingsStackTrace,
+          source: 'BackupService',
+        );
+        return report.addError('应用回收站设置失败: $settingsError');
+      }
       return report;
     } catch (e) {
       logError('LWW导入过程出错: $e', error: e, source: 'BackupService');

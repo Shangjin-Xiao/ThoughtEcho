@@ -93,6 +93,34 @@ void main() {
       expect(quote.deletedAt, isNull);
     });
 
+    test('should normalize deletedAt to null when isDeleted is false', () {
+      final quote = Quote(
+        id: 'test-id',
+        content: '测试内容',
+        date: '2024-01-01T00:00:00.000Z',
+        isDeleted: false,
+        deletedAt: '2024-01-02T00:00:00.000Z',
+      );
+
+      expect(quote.isDeleted, isFalse);
+      expect(quote.deletedAt, isNull);
+      expect(quote.toJson()['deleted_at'], isNull);
+    });
+
+    test(
+        'should backfill deletedAt when isDeleted is true and deletedAt is null',
+        () {
+      final quote = Quote(
+        id: 'test-id',
+        content: '测试内容',
+        date: '2024-01-01T00:00:00.000Z',
+        isDeleted: true,
+      );
+
+      expect(quote.isDeleted, isTrue);
+      expect(quote.deletedAt, equals('2024-01-01T00:00:00.000Z'));
+    });
+
     test('copyWith should update soft delete fields', () {
       final base = Quote(
         id: 'test-id',
