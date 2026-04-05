@@ -147,7 +147,9 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   Future<bool> cleanupTagDataInconsistencies();
   Future<List<int>> getHourDistributionForSmartPush();
   Map<String, dynamic> getQueryPerformanceReport();
-  Future<Map<String, dynamic>?> getLocalDailyQuote();
+  Future<Map<String, dynamic>?> getLocalDailyQuote({
+    String offlineQuoteSource,
+  });
   Future<Map<String, dynamic>> performDatabaseMaintenance({
     Function(String)? onProgress,
   });
