@@ -509,6 +509,7 @@
   "customColor": "自定义颜色",
   "select": "选择",
   "editMetadata": "编辑元数据",
+  "noLocationWeatherRecorded": "此笔记首次保存时未记录位置和天气信息",
   "done": "完成",
   "selectTags": "选择标签",
   "noMatchingTags": "没有找到匹配的标签",
@@ -3192,6 +3193,7 @@
   "unsavedChangesDesc": "您有未保存的编辑内容，是否要放弃这些更改？",
   "continueEditing": "继续编辑",
   "discardChanges": "放弃更改",
+  "saveAndExit": "保存并退出",
 
   "localAiFeatures": "本地 AI 功能",
   "localAiFeaturesPreview": "预览版",
@@ -3544,7 +3546,7 @@
   "operationFailedSimple": "操作失败",
   "skipNonFullscreenEditor": "直接进入全屏编辑器",
   "skipNonFullscreenEditorDesc": "点击添加笔记时跳过快速编辑，直接打开全屏富文本编辑器",
-  "chatHistory": "对话历史",
+"chatHistory": "对话历史",
   "newChat": "新建对话",
   "deleteChat": "删除对话",
   "deleteChatConfirm": "确定删除此对话？所有消息将被清除。",
@@ -3601,5 +3603,9 @@
   "commandDeepAnalysis": "深度分析",
   "commandPolish": "润色",
   "commandContinue": "续写",
-  "favoriteNotes": "收藏的笔记"
+  "favoriteNotes": "收藏的笔记",
+  "offlineQuoteSourceTitle": "离线回退/本地一言数据源",
+  "offlineQuoteSourceDesc": "无网络或仅使用本地时，首页一言展示的内容",
+  "offlineQuoteSourceTagOnly": "仅展示带有「每日一言」标签的笔记",
+  "offlineQuoteSourceAll": "随机展示全部本地笔记"
 }

@@ -11,6 +11,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../services/backup_service.dart';
 import '../services/large_file_manager.dart';
+import '../utils/backup_progress_update_gate.dart';
 import '../utils/time_utils.dart';
 import '../utils/stream_file_selector.dart';
 
@@ -31,6 +32,8 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
   double _progress = 0.0;
   String _progressText = '';
   CancelToken? _cancelToken;
+  final BackupProgressUpdateGate _backupProgressUpdateGate =
+      BackupProgressUpdateGate();
 
   @override
   Widget build(BuildContext context) {
@@ -338,6 +341,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
   Future<void> _handleBackup() async {
     if (!mounted) return;
 
+    _backupProgressUpdateGate.reset();
     setState(() {
       _isLoading = true;
       _progress = 0.0;
@@ -356,31 +360,15 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           '${l10n.appTitle}_${l10n.thoughtEchoBackupFile}_$formattedDate.$extension';
 
       String? backupPath;
+      void onBackupProgress(int current, int total) {
+        _handleBackupProgressUpdate(current, total);
+      }
 
       if (kIsWeb) {
         // Web 平台：直接创建备份并分享
         backupPath = await backupService.exportAllData(
           includeMediaFiles: _includeMediaFiles,
-          onProgress: (current, total) {
-            if (mounted) {
-              setState(() {
-                _progress = (current / total * 100).toDouble();
-
-                // 根据进度阶段显示不同的状态文本
-                if (current < 15) {
-                  _progressText = l10n.collectingData;
-                } else if (current < 30) {
-                  _progressText = l10n.processingNoteData;
-                } else if (current < 60) {
-                  _progressText = l10n.processingMediaFiles;
-                } else if (current < 95) {
-                  _progressText = l10n.creatingBackupFile;
-                } else {
-                  _progressText = l10n.verifyingBackupFile;
-                }
-              });
-            }
-          },
+          onProgress: onBackupProgress,
           cancelToken: _cancelToken,
         );
 
@@ -399,26 +387,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
         // 移动平台：创建备份并分享
         backupPath = await backupService.exportAllData(
           includeMediaFiles: _includeMediaFiles,
-          onProgress: (current, total) {
-            if (mounted) {
-              setState(() {
-                _progress = (current / total * 100).toDouble();
-
-                // 根据进度阶段显示不同的状态文本
-                if (current < 15) {
-                  _progressText = l10n.collectingData;
-                } else if (current < 30) {
-                  _progressText = l10n.processingNoteData;
-                } else if (current < 60) {
-                  _progressText = l10n.processingMediaFiles;
-                } else if (current < 95) {
-                  _progressText = l10n.creatingBackupFile;
-                } else {
-                  _progressText = l10n.verifyingBackupFile;
-                }
-              });
-            }
-          },
+          onProgress: onBackupProgress,
           cancelToken: _cancelToken,
         );
 
@@ -449,26 +418,7 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           backupPath = await backupService.exportAllData(
             includeMediaFiles: _includeMediaFiles,
             customPath: saveLocation.path,
-            onProgress: (current, total) {
-              if (mounted) {
-                setState(() {
-                  _progress = (current / total * 100).toDouble();
-
-                  // 根据进度阶段显示不同的状态文本
-                  if (current < 15) {
-                    _progressText = l10n.collectingData;
-                  } else if (current < 30) {
-                    _progressText = l10n.processingNoteData;
-                  } else if (current < 60) {
-                    _progressText = l10n.processingMediaFiles;
-                  } else if (current < 95) {
-                    _progressText = l10n.creatingBackupFile;
-                  } else {
-                    _progressText = l10n.verifyingBackupFile;
-                  }
-                });
-              }
-            },
+            onProgress: onBackupProgress,
             cancelToken: _cancelToken,
           );
 
@@ -503,6 +453,43 @@ class _BackupRestorePageState extends State<BackupRestorePage> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  void _handleBackupProgressUpdate(int current, int total) {
+    if (!mounted) return;
+
+    final safeTotal = total <= 0 ? 1 : total;
+    final normalizedProgress =
+        ((current / safeTotal) * 100).clamp(0, 100).toDouble();
+    final progressPercent = normalizedProgress.round();
+    final stageKey = resolveBackupStageKey(progressPercent);
+
+    if (!_backupProgressUpdateGate.shouldUpdate(
+      progressPercent: progressPercent,
+      stageKey: stageKey,
+    )) {
+      return;
+    }
+
+    setState(() {
+      _progress = progressPercent.toDouble();
+      _progressText = _backupStageText(stageKey);
+    });
+  }
+
+  String _backupStageText(String stageKey) {
+    switch (stageKey) {
+      case BackupProgressStages.collect:
+        return l10n.collectingData;
+      case BackupProgressStages.note:
+        return l10n.processingNoteData;
+      case BackupProgressStages.media:
+        return l10n.processingMediaFiles;
+      case BackupProgressStages.zip:
+        return l10n.creatingBackupFile;
+      default:
+        return l10n.verifyingBackupFile;
     }
   }
 

@@ -23,7 +23,10 @@ class AppSettings {
   final List<String> defaultTagIds; // 新增：默认标签 ID 列表（自动填充）
   final bool anniversaryShown; // 一周年庆典动画是否已显示过
   final bool anniversaryAnimationEnabled; // 一周年庆典动画是否启用（开发者模式控制）
+  final int trashRetentionDays; // 回收站保留天数（7/30/90）
+  final String? trashRetentionLastModified; // 回收站保留设置更新时间（UTC ISO）
   final bool skipNonFullscreenEditor; // 新增：跳过非全屏编辑器，直接进入全屏编辑器
+  final String offlineQuoteSource;
 
   AppSettings({
     this.hitokotoType = 'a,b,c,d,e,f,g,h,i,j,k', // 默认全选所有类型
@@ -50,7 +53,10 @@ class AppSettings {
     this.defaultTagIds = const [], // 默认无自动填充标签
     this.anniversaryShown = false, // 默认未显示过
     this.anniversaryAnimationEnabled = true, // 默认启用庆典动画
+    this.trashRetentionDays = 30,
+    this.trashRetentionLastModified,
     this.skipNonFullscreenEditor = false, // 默认不跳过非全屏编辑器
+    this.offlineQuoteSource = 'tagOnly', // 默认仅展示带每日一言标签的笔记
   });
 
   Map<String, dynamic> toJson() {
@@ -79,7 +85,10 @@ class AppSettings {
       'defaultTagIds': defaultTagIds,
       'anniversaryShown': anniversaryShown,
       'anniversaryAnimationEnabled': anniversaryAnimationEnabled,
+      'trashRetentionDays': trashRetentionDays,
+      'trashRetentionLastModified': trashRetentionLastModified,
       'skipNonFullscreenEditor': skipNonFullscreenEditor,
+      'offlineQuoteSource': offlineQuoteSource,
     };
   }
 
@@ -112,7 +121,10 @@ class AppSettings {
           (map['defaultTagIds'] as List<dynamic>?)?.cast<String>() ?? const [],
       anniversaryShown: map['anniversaryShown'] ?? false,
       anniversaryAnimationEnabled: map['anniversaryAnimationEnabled'] ?? true,
+      trashRetentionDays: map['trashRetentionDays'] ?? 30,
+      trashRetentionLastModified: map['trashRetentionLastModified'] as String?,
       skipNonFullscreenEditor: map['skipNonFullscreenEditor'] ?? false,
+      offlineQuoteSource: map['offlineQuoteSource'] ?? 'tagOnly',
     );
   }
 
@@ -141,7 +153,10 @@ class AppSettings {
         defaultTagIds: const [],
         anniversaryShown: false,
         anniversaryAnimationEnabled: true,
+        trashRetentionDays: 30,
+        trashRetentionLastModified: null,
         skipNonFullscreenEditor: false, // 默认不跳过非全屏编辑器
+        offlineQuoteSource: 'tagOnly',
       );
 
   /// 使用特殊标记来区分"未指定"和"设置为null（跟随系统）"
@@ -173,7 +188,10 @@ class AppSettings {
     List<String>? defaultTagIds,
     bool? anniversaryShown,
     bool? anniversaryAnimationEnabled,
+    int? trashRetentionDays,
+    String? trashRetentionLastModified,
     bool? skipNonFullscreenEditor,
+    String? offlineQuoteSource,
   }) {
     return AppSettings(
       hitokotoType: hitokotoType ?? this.hitokotoType,
@@ -209,8 +227,12 @@ class AppSettings {
       anniversaryShown: anniversaryShown ?? this.anniversaryShown,
       anniversaryAnimationEnabled:
           anniversaryAnimationEnabled ?? this.anniversaryAnimationEnabled,
+      trashRetentionDays: trashRetentionDays ?? this.trashRetentionDays,
+      trashRetentionLastModified:
+          trashRetentionLastModified ?? this.trashRetentionLastModified,
       skipNonFullscreenEditor:
           skipNonFullscreenEditor ?? this.skipNonFullscreenEditor,
+      offlineQuoteSource: offlineQuoteSource ?? this.offlineQuoteSource,
     );
   }
 }

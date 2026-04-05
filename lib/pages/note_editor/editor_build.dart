@@ -22,14 +22,15 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
           return;
         }
 
-        final shouldDiscard = await showDialog<bool>(
+        // 返回值: null=继续编辑, true=放弃更改, 'save'=保存并退出
+        final dialogResult = await showDialog<dynamic>(
           context: context,
           builder: (ctx) => AlertDialog(
             title: Text(l10n.unsavedChangesTitle),
             content: Text(l10n.unsavedChangesDesc),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
+                onPressed: () => Navigator.pop(ctx, null),
                 child: Text(l10n.continueEditing),
               ),
               TextButton(
@@ -39,17 +40,25 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                   style: TextStyle(color: Colors.red.shade400),
                 ),
               ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, 'save'),
+                child: Text(l10n.saveAndExit),
+              ),
             ],
           ),
         );
 
-        if (shouldDiscard ?? false) {
+        if (dialogResult == true) {
           if (context.mounted) {
             // 用户选择放弃更改，清理草稿
             _clearDraft();
             Navigator.pop(context);
           }
+        } else if (dialogResult == 'save') {
+          // 用户选择保存并退出
+          await _saveContent();
         }
+        // dialogResult == null: 继续编辑，不做任何操作
       },
       child: Scaffold(
         backgroundColor: theme.colorScheme.surface,
@@ -86,7 +95,8 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                         await pauseAllMediaPlayers();
                       } catch (e) {
                         debugPrint(
-                            '[NoteFullEditorPage] pauseAllMediaPlayers failed: $e');
+                          '[NoteFullEditorPage] pauseAllMediaPlayers failed: $e',
+                        );
                       }
                       await _saveContent();
                     },
@@ -121,10 +131,8 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                         color: theme.colorScheme.surface,
                         border: Border(
                           bottom: BorderSide(
-                            color:
-                                theme.colorScheme.outlineVariant.applyOpacity(
-                              0.1,
-                            ),
+                            color: theme.colorScheme.outlineVariant
+                                .applyOpacity(0.1),
                             width: 1,
                           ),
                         ),
@@ -160,10 +168,8 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                                   ),
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(
-                                    color:
-                                        theme.colorScheme.outline.applyOpacity(
-                                      0.2,
-                                    ),
+                                    color: theme.colorScheme.outline
+                                        .applyOpacity(0.2),
                                     width: 1,
                                   ),
                                 ),
@@ -205,9 +211,9 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                           const Spacer(),
                           TextButton(
                             onPressed: () => _showMetadataDialog(context),
-                            child: const Text(
-                              '编辑元数据',
-                              style: TextStyle(fontSize: 12),
+                            child: Text(
+                              l10n.editMetadata,
+                              style: const TextStyle(fontSize: 12),
                             ),
                           ),
                         ],
@@ -227,8 +233,9 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                               : QuillEditorExtensions.getEmbedBuilders(
                                   optimizedImages: false,
                                 ),
-                          placeholder: AppLocalizations.of(context)
-                              .fullscreenEditorPlaceholder,
+                          placeholder: AppLocalizations.of(
+                            context,
+                          ).fullscreenEditorPlaceholder,
                           padding: const EdgeInsets.all(16),
                           autoFocus: false,
                           expands: false,
@@ -285,7 +292,9 @@ extension _NoteEditorBuild on _NoteFullEditorPageState {
                                   ),
                                   const SizedBox(width: 12),
                                   Text(
-                                    _saveProgress < 1.0 ? '正在保存' : '完成',
+                                    _saveProgress < 1.0
+                                        ? l10n.savingNote
+                                        : l10n.done,
                                     style: theme.textTheme.titleMedium,
                                   ),
                                 ],

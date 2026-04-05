@@ -100,7 +100,14 @@ class DatabaseHealthService {
       return false;
     }
     try {
-      final result = await db.rawQuery("PRAGMA table_info($tableName)");
+      // Use the parameterised pragma_table_info() table-valued function.
+      // It requires SQLite 3.16+ (Android 8 / API 26), which is guaranteed
+      // because our minSdkVersion is 28 (Android 9, ships with SQLite 3.22+).
+      // Using a bound parameter avoids any risk of identifier injection.
+      final result = await db.rawQuery(
+        'SELECT name FROM pragma_table_info(?)',
+        [tableName],
+      );
       for (final row in result) {
         if (row['name'] == columnName) {
           return true;
@@ -295,6 +302,7 @@ class DatabaseHealthService {
   /// 优先选择带有"每日一言"标签的笔记，然后选择较短的笔记
   Future<Map<String, dynamic>?> getLocalDailyQuote(
     Database db, {
+    String offlineQuoteSource = 'tagOnly',
     List<Quote>? memoryStore,
     List<NoteCategory>? categoryStore,
   }) async {
@@ -303,32 +311,35 @@ class DatabaseHealthService {
         if (memoryStore == null || categoryStore == null) {
           return null;
         }
-        return _getLocalQuoteFromMemory(memoryStore, categoryStore);
+        return _getLocalQuoteFromMemory(
+          memoryStore,
+          categoryStore,
+          offlineQuoteSource,
+        );
       }
 
-      // 首先尝试获取带有"每日一言"标签的笔记
-      final dailyQuoteCategory = await _getDailyQuoteCategoryId(db);
       List<Map<String, dynamic>> results = [];
 
-      if (dailyQuoteCategory != null) {
+      if (offlineQuoteSource == 'tagOnly') {
         results = await db.rawQuery(
           '''
           SELECT DISTINCT q.* FROM quotes q
           INNER JOIN quote_tags qt ON q.id = qt.quote_id
           INNER JOIN categories c ON qt.tag_id = c.id
-          WHERE c.id = ? AND length(q.content) <= 100
+          WHERE c.id = ?
+            AND length(q.content) <= 100
+            AND (q.is_deleted = 0 OR q.is_deleted IS NULL)
           ORDER BY RANDOM()
           LIMIT 1
         ''',
-          [dailyQuoteCategory],
+          ['default_hitokoto'],
         );
-      }
-
-      // 如果没有找到带"每日一言"标签的笔记，选择较短的其他笔记
-      if (results.isEmpty) {
+      } else {
         results = await db.rawQuery('''
           SELECT * FROM quotes
-          WHERE length(content) <= 80 AND content NOT LIKE '%\n%'
+          WHERE length(content) <= 150
+            AND content NOT LIKE '%\n%'
+            AND (is_deleted = 0 OR is_deleted IS NULL)
           ORDER BY RANDOM()
           LIMIT 1
         ''');
@@ -503,35 +514,31 @@ class DatabaseHealthService {
   Map<String, dynamic>? _getLocalQuoteFromMemory(
     List<Quote> memoryStore,
     List<NoteCategory> categoryStore,
+    String offlineQuoteSource,
   ) {
     try {
-      // 首先尝试获取带有"每日一言"标签的笔记
-      var candidates = memoryStore
-          .where(
-            (quote) =>
-                quote.tagIds.any(
-                  (tagId) => categoryStore.any(
-                    (cat) => cat.id == tagId && cat.name == '每日一言',
-                  ),
-                ) &&
-                quote.content.length <= 100,
-          )
-          .toList();
+      List<Quote> candidates = [];
 
-      // 如果没有找到，选择较短的其他笔记
-      if (candidates.isEmpty) {
+      if (offlineQuoteSource == 'tagOnly') {
         candidates = memoryStore
             .where(
               (quote) =>
-                  quote.content.length <= 80 && !quote.content.contains('\n'),
+                  quote.tagIds.contains('default_hitokoto') &&
+                  quote.content.length <= 100,
+            )
+            .toList();
+      } else {
+        candidates = memoryStore
+            .where(
+              (quote) =>
+                  quote.content.length <= 150 && !quote.content.contains('\n'),
             )
             .toList();
       }
 
       if (candidates.isNotEmpty) {
-        final random =
-            DateTime.now().millisecondsSinceEpoch % candidates.length;
-        final quote = candidates[random];
+        candidates.shuffle();
+        final quote = candidates.first;
         return {
           'content': quote.content,
           'source': quote.sourceWork ?? '',
@@ -545,23 +552,6 @@ class DatabaseHealthService {
       return null;
     } catch (e) {
       logDebug('从内存获取本地每日一言失败: $e');
-      return null;
-    }
-  }
-
-  /// 获取"每日一言"分类的ID
-  Future<String?> _getDailyQuoteCategoryId(Database db) async {
-    try {
-      final results = await db.query(
-        'categories',
-        where: 'name = ?',
-        whereArgs: ['每日一言'],
-        limit: 1,
-      );
-
-      return results.isNotEmpty ? results.first['id'] as String : null;
-    } catch (e) {
-      logDebug('获取每日一言分类ID失败: $e');
       return null;
     }
   }
