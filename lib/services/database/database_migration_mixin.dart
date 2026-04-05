@@ -92,13 +92,15 @@ mixin _DatabaseMigrationMixin on _DatabaseServiceBase {
   /// 获取适合作为每日一言的本地笔记
   /// 优先选择带有"每日一言"标签的笔记，然后选择较短的笔记
   @override
-  Future<Map<String, dynamic>?> getLocalDailyQuote() async {
+  Future<Map<String, dynamic>?> getLocalDailyQuote({
+    String offlineQuoteSource = 'tagOnly',
+  }) async {
     if (!_isInitialized) {
       await init();
     }
     return _healthService.getLocalDailyQuote(
       database,
-      offlineQuoteSource: 'tagOnly',
+      offlineQuoteSource: offlineQuoteSource,
       memoryStore: _memoryStore,
       categoryStore: _categoryStore,
     );

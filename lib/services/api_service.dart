@@ -64,6 +64,7 @@ class ApiService {
         return await _getLocalQuoteOrDefault(
           l10n,
           databaseService,
+          offlineQuoteSource: offlineQuoteSource,
         );
       }
 
@@ -79,6 +80,7 @@ class ApiService {
         return await _getLocalQuoteOrDefault(
           l10n,
           databaseService,
+          offlineQuoteSource: offlineQuoteSource,
           isOffline: true,
         );
       }
@@ -121,17 +123,29 @@ class ApiService {
             };
           } else {
             logDebug('一言API返回数据格式错误: $data');
-            return await _getLocalQuoteOrDefault(l10n, databaseService);
+            return await _getLocalQuoteOrDefault(
+              l10n,
+              databaseService,
+              offlineQuoteSource: offlineQuoteSource,
+            );
           }
         } catch (e) {
           logDebug(
               '一言API JSON解析失败: $e, 响应体: ${response.body.length > 50 ? '${response.body.substring(0, 50)}...' : response.body}');
-          return await _getLocalQuoteOrDefault(l10n, databaseService);
+          return await _getLocalQuoteOrDefault(
+            l10n,
+            databaseService,
+            offlineQuoteSource: offlineQuoteSource,
+          );
         }
       } else {
         logDebug(
             '一言API请求失败: ${response.statusCode}, 响应体: ${response.body.length > 50 ? '${response.body.substring(0, 50)}...' : response.body}');
-        return await _getLocalQuoteOrDefault(l10n, databaseService);
+        return await _getLocalQuoteOrDefault(
+          l10n,
+          databaseService,
+          offlineQuoteSource: offlineQuoteSource,
+        );
       }
     } catch (e) {
       logDebug('获取一言异常: $e');
@@ -143,11 +157,14 @@ class ApiService {
   static Future<Map<String, dynamic>> _getLocalQuoteOrDefault(
     AppLocalizations l10n,
     DatabaseService? databaseService, {
+    String offlineQuoteSource = 'tagOnly',
     bool isOffline = false,
   }) async {
     try {
       if (databaseService != null) {
-        final localQuote = await databaseService.getLocalDailyQuote();
+        final localQuote = await databaseService.getLocalDailyQuote(
+          offlineQuoteSource: offlineQuoteSource,
+        );
         if (localQuote != null) {
           logDebug('使用本地笔记作为一言');
           return localQuote;
