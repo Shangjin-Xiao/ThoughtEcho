@@ -58,13 +58,10 @@ class ApiService {
     try {
       // 如果设置了仅使用本地笔记，直接返回本地一言
       if (useLocalOnly) {
-        if (offlineQuoteSource == 'allNotes') {
-          return await _getAnyLocalQuote(l10n, databaseService);
-        }
-        return await _getLocalQuoteOrDefault(
+        return await _getOfflineQuote(
           l10n,
           databaseService,
-          offlineQuoteSource: offlineQuoteSource,
+          offlineQuoteSource,
         );
       }
 
@@ -74,13 +71,10 @@ class ApiService {
 
       if (!isConnected) {
         logDebug('网络未连接，使用本地笔记');
-        if (offlineQuoteSource == 'allNotes') {
-          return await _getAnyLocalQuote(l10n, databaseService);
-        }
-        return await _getLocalQuoteOrDefault(
+        return await _getOfflineQuote(
           l10n,
           databaseService,
-          offlineQuoteSource: offlineQuoteSource,
+          offlineQuoteSource,
           isOffline: true,
         );
       }
@@ -151,6 +145,24 @@ class ApiService {
       logDebug('获取一言异常: $e');
       return await _getLocalQuoteOrDefault(l10n, databaseService);
     }
+  }
+
+  // 根据 offlineQuoteSource 选择离线数据源
+  static Future<Map<String, dynamic>> _getOfflineQuote(
+    AppLocalizations l10n,
+    DatabaseService? databaseService,
+    String offlineQuoteSource, {
+    bool isOffline = false,
+  }) async {
+    if (offlineQuoteSource == 'allNotes') {
+      return await _getAnyLocalQuote(l10n, databaseService);
+    }
+    return await _getLocalQuoteOrDefault(
+      l10n,
+      databaseService,
+      offlineQuoteSource: offlineQuoteSource,
+      isOffline: isOffline,
+    );
   }
 
   // 获取本地一言或默认一言
