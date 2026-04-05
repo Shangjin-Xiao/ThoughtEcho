@@ -160,7 +160,7 @@ ThoughtEcho 不仅仅是一个记事本，它是你的**私人 AI 灵感助理**
     </tr>
     <tr>
       <td align="center"><b>平台适配</b></td>
-      <td>Windows、Android、iOS全平台支持</td>
+      <td>Windows、Android、iOS全平台支持（不支持 Web）</td>
     </tr>
   </table>
 </div>
@@ -413,7 +413,7 @@ ThoughtEcho is more than just a note-taking app—it's your **personal AI-powere
     </tr>
     <tr>
       <td align="center"><b>Platform Support</b></td>
-      <td>Windows, Android, iOS full platform support (Web not supported)</td>
+      <td>Supports Windows, Android, and iOS (Web is not supported)</td>
     </tr>
   </table>
 </div>

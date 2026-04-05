@@ -55,8 +55,9 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       } else {
         _webTombstones = <String, String>{};
       }
-    } catch (e) {
-      logDebug('初始化Web墓碑记录失败: $e');
+    } catch (e, stack) {
+      UnifiedLogService.instance
+          .error('初始化Web墓碑记录失败', error: e, stackTrace: stack);
       _webTombstones = <String, String>{};
     }
   }
@@ -78,8 +79,9 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
             .toList(),
       );
       await prefs.setString(_webTombstonesKey, json);
-    } catch (e) {
-      logDebug('保存Web墓碑记录失败: $e');
+    } catch (e, stack) {
+      UnifiedLogService.instance
+          .error('保存Web墓碑记录失败', error: e, stackTrace: stack);
     }
   }
 
@@ -385,8 +387,9 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
           quote,
         );
         mediaCandidates.addAll(extracted);
-      } catch (e) {
-        logDebug('提取已删除笔记媒体路径失败: $e');
+      } catch (e, stack) {
+        UnifiedLogService.instance
+            .error('提取已删除笔记媒体路径失败', error: e, stackTrace: stack);
       }
     }
 
@@ -461,8 +464,9 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
             absolutePath,
             cachedAppPath: appPath,
           );
-        } catch (e) {
-          logDebug('清理孤儿媒体文件失败: $mediaPath, 错误: $e');
+        } catch (e, stack) {
+          UnifiedLogService.instance
+              .error('清理孤儿媒体文件失败: $mediaPath', error: e, stackTrace: stack);
         }
       }
 

@@ -349,6 +349,15 @@ class DatabaseHealthService {
 
       List<Map<String, dynamic>> results = [];
 
+      // 兼容迁移前/半迁移状态：先检查 is_deleted 列是否存在
+      final hasDeletedColumn =
+          await checkColumnExists(db, 'quotes', 'is_deleted');
+      final deletedFilter = hasDeletedColumn
+          ? 'AND (q.is_deleted = 0 OR q.is_deleted IS NULL)'
+          : '';
+      final deletedFilterSimple =
+          hasDeletedColumn ? 'AND (is_deleted = 0 OR is_deleted IS NULL)' : '';
+
       if (offlineQuoteSource == 'tagOnly') {
         // 使用底层固定ID查询，避免多语言切换导致的问题
         results = await db.rawQuery(
@@ -358,7 +367,7 @@ class DatabaseHealthService {
           INNER JOIN categories c ON qt.tag_id = c.id
           WHERE c.id = ?
             AND length(q.content) <= 100
-            AND (q.is_deleted = 0 OR q.is_deleted IS NULL)
+            $deletedFilter
           ORDER BY RANDOM()
           LIMIT 1
         ''',
@@ -370,7 +379,7 @@ class DatabaseHealthService {
           SELECT * FROM quotes
           WHERE length(content) <= 150
             AND content NOT LIKE '%\n%'
-            AND (is_deleted = 0 OR is_deleted IS NULL)
+            $deletedFilterSimple
           ORDER BY RANDOM()
           LIMIT 1
         ''');

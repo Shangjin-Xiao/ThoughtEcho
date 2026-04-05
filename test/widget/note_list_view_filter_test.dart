@@ -188,11 +188,13 @@ class _WatchQuotesCall {
   final List<String>? tagIds;
   final List<String>? selectedWeathers;
   final List<String>? selectedDayPeriods;
+  final bool includeDeleted;
 
   const _WatchQuotesCall({
     required this.tagIds,
     required this.selectedWeathers,
     required this.selectedDayPeriods,
+    required this.includeDeleted,
   });
 }
 
@@ -229,6 +231,7 @@ class _FakeDatabaseService extends DatabaseService {
         selectedDayPeriods: selectedDayPeriods == null
             ? null
             : List<String>.from(selectedDayPeriods),
+        includeDeleted: includeDeleted,
       ),
     );
     return Stream<List<Quote>>.value(quotesToEmit);

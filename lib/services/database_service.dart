@@ -18,6 +18,7 @@ import '../utils/database_platform_init.dart';
 import 'large_file_manager.dart';
 import 'media_reference_service.dart';
 import 'mmkv_service.dart';
+import 'unified_log_service.dart';
 import '../models/merge_report.dart';
 import '../widgets/quote_content_widget.dart'; // 用于缓存清理
 import 'database_schema_manager.dart';
@@ -108,16 +109,29 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     bool includeDeleted = false,
   });
 
+  /// 获取回收站中的已删除笔记列表，支持分页
   Future<List<Quote>> getDeletedQuotes({
     int offset = 0,
     int limit = 20,
     String orderBy = 'deleted_at DESC',
   });
+
+  /// 获取回收站中已删除笔记的总数
   Future<int> getDeletedQuotesCount();
+
+  /// 获取墓碑记录用于备份同步（永久删除的笔记 ID 列表）
   Future<List<Map<String, dynamic>>> getTombstonesForBackup();
+
+  /// 从回收站恢复指定笔记
   Future<void> restoreQuote(String id);
+
+  /// 永久删除指定笔记（不可恢复）
   Future<void> permanentlyDeleteQuote(String id);
+
+  /// 清空回收站（永久删除所有已删除笔记）
   Future<void> emptyTrash();
+
+  /// 自动清理超过保留期限的已删除笔记，返回清理数量
   Future<int> autoCleanupExpiredTrash({required int retentionDays});
 
   Future<void> incrementFavoriteCount(String quoteId);

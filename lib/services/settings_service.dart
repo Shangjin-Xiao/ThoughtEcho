@@ -128,14 +128,20 @@ class SettingsService extends ChangeNotifier {
       normalizedIncomingTimestamp =
           LWWUtils.normalizeTimestamp(incomingLastModified);
     } else {
+      // 输入无时间戳：只有本地也无时间戳时才接受（直接赋值），否则跳过
       final localLastModified = _appSettings.trashRetentionLastModified;
       final hasLocalTimestamp =
           localLastModified != null && localLastModified.isNotEmpty;
       if (hasLocalTimestamp) {
+        // 本地有时间戳，远端无时间戳 → 跳过导入
         return false;
       }
-      normalizedIncomingTimestamp =
-          LWWUtils.normalizeTimestamp(LWWUtils.generateTimestamp());
+      // 本地也无时间戳 → 直接接受输入值，不设置时间戳
+      _appSettings = _appSettings.copyWith(trashRetentionDays: incomingDays);
+      await _mmkv.setString(
+          _appSettingsKey, json.encode(_appSettings.toJson()));
+      notifyListeners();
+      return true;
     }
 
     final decision = LWWDecisionMaker.makeDecision(
@@ -195,14 +201,6 @@ class SettingsService extends ChangeNotifier {
   bool get showExactTime => _appSettings.showExactTime;
   Future<void> setShowExactTime(bool enabled) async {
     _appSettings = _appSettings.copyWith(showExactTime: enabled);
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
-  }
-
-  // 无网/离线时的一言回退数据源
-  String get offlineQuoteSource => _appSettings.offlineQuoteSource;
-  Future<void> setOfflineQuoteSource(String source) async {
-    _appSettings = _appSettings.copyWith(offlineQuoteSource: source);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
     notifyListeners();
   }

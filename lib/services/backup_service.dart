@@ -990,17 +990,22 @@ class BackupService {
         backupData.containsKey('notes') ? backupData['notes'] : backupData,
         sourceDevice: sourceDevice,
       );
-      try {
-        await _settingsService
-            .applyIncomingTrashSettings(incomingTrashSettings);
-      } catch (settingsError, settingsStackTrace) {
-        logError(
-          '应用回收站设置失败: $settingsError',
-          error: settingsError,
-          stackTrace: settingsStackTrace,
-          source: 'BackupService',
-        );
-        return report.addError('应用回收站设置失败: $settingsError');
+
+      // 数据库合并成功后，尝试应用设置
+      // 设置应用失败不应阻止整体导入成功，仅记录警告
+      if (incomingTrashSettings != null) {
+        try {
+          await _settingsService
+              .applyIncomingTrashSettings(incomingTrashSettings);
+        } catch (settingsError, settingsStackTrace) {
+          logError(
+            '应用回收站设置失败（数据已成功导入）: $settingsError',
+            error: settingsError,
+            stackTrace: settingsStackTrace,
+            source: 'BackupService',
+          );
+          // 不添加错误到报告，因为核心数据已成功导入
+        }
       }
       return report;
     } catch (e) {

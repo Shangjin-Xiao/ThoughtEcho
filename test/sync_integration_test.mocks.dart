@@ -586,8 +586,12 @@ class MockDatabaseService extends _i1.Mock implements _i12.DatabaseService {
       );
 
   @override
-  _i9.Future<Map<String, dynamic>?> getLocalDailyQuote() => (super.noSuchMethod(
-        Invocation.method(#getLocalDailyQuote, []),
+  _i9.Future<Map<String, dynamic>?> getLocalDailyQuote({
+    String offlineQuoteSource = 'local',
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+            #getLocalDailyQuote, [], {#offlineQuoteSource: offlineQuoteSource}),
         returnValue: _i9.Future<Map<String, dynamic>?>.value(),
       ) as _i9.Future<Map<String, dynamic>?>);
 

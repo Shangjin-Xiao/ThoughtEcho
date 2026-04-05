@@ -27,7 +27,7 @@ class Quote {
   final bool isDeleted; // 回收站标记
   final String? deletedAt; // 删除时间（ISO 8601）
 
-  const Quote({
+  Quote({
     this.id,
     required this.content,
     required this.date,
@@ -54,7 +54,7 @@ class Quote {
     this.isDeleted = false,
     String? deletedAt,
   })  : _source = source,
-        deletedAt = isDeleted ? (deletedAt ?? date) : null;
+        deletedAt = isDeleted ? _normalizeToUtc(deletedAt) : null;
 
   /// 获取来源信息 (兼容性 getter)
   /// 如果 sourceAuthor 和 sourceWork 存在，则优先从它们重建
@@ -264,7 +264,6 @@ class Quote {
         deletedAt: _normalizeDeletedAtForState(
           isDeleted: _parseDeletedFlag(json['is_deleted']),
           deletedAt: json['deleted_at']?.toString(),
-          fallbackDate: date,
         ),
       );
     } on ArgumentError {
@@ -369,7 +368,6 @@ class Quote {
       deletedAt: _normalizeDeletedAtForState(
         isDeleted: nextIsDeleted,
         deletedAt: nextDeletedAt,
-        fallbackDate: date ?? this.date,
       ),
     );
   }
@@ -382,10 +380,18 @@ class Quote {
     return text == '1' || text == 'true';
   }
 
+  /// 将 deletedAt 归一化到 UTC，缺失时生成当前 UTC 时间
+  static String _normalizeToUtc(String? deletedAt) {
+    final trimmed = deletedAt?.trim();
+    if (trimmed != null && trimmed.isNotEmpty && isValidDate(trimmed)) {
+      return DateTime.parse(trimmed).toUtc().toIso8601String();
+    }
+    return DateTime.now().toUtc().toIso8601String();
+  }
+
   static String? _normalizeDeletedAtForState({
     required bool isDeleted,
     required String? deletedAt,
-    required String fallbackDate,
   }) {
     if (!isDeleted) {
       return null;
@@ -393,13 +399,11 @@ class Quote {
 
     final trimmed = deletedAt?.trim();
     if (trimmed != null && trimmed.isNotEmpty && isValidDate(trimmed)) {
-      return trimmed;
+      // 统一归一化到 UTC
+      return DateTime.parse(trimmed).toUtc().toIso8601String();
     }
 
-    if (isValidDate(fallbackDate)) {
-      return DateTime.parse(fallbackDate).toUtc().toIso8601String();
-    }
-
+    // 缺失时生成当前 UTC 时间，而非回退到 quote.date
     return DateTime.now().toUtc().toIso8601String();
   }
 

@@ -251,8 +251,9 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         notifyListeners();
 
         logDebug('笔记已移入回收站，ID: $id');
-      } catch (e) {
-        logDebug('删除笔记时出错: $e');
+      } catch (e, stack) {
+        UnifiedLogService.instance
+            .error('删除笔记时出错', error: e, stackTrace: stack);
         rethrow;
       }
     });
@@ -469,8 +470,9 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         }
         notifyListeners(); // 通知其他监听者
         return QuoteUpdateResult.updated;
-      } catch (e) {
-        logDebug('更新笔记时出错: $e');
+      } catch (e, stack) {
+        UnifiedLogService.instance
+            .error('更新笔记时出错', error: e, stackTrace: stack);
         rethrow; // 重新抛出异常，让调用者处理
       }
     });

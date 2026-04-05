@@ -17,6 +17,7 @@ void main() {
 
     expect(done.insertedQuotes, 1);
     expect(done.updatedQuotes, 1);
+    expect(done.deletedQuotes, 1);
     expect(done.skippedQuotes, 1);
     expect(done.sameTimestampDiffQuotes, 1);
     expect(done.insertedCategories, 1);

@@ -3509,9 +3509,9 @@
   "trashRetentionOption7Days": "7 jours",
   "trashRetentionOption30Days": "30 jours",
   "trashRetentionOption90Days": "90 jours"
-  ,"insertImage": "Insert Image",
-  "insertVideo": "Insert Video",
-  "insertAudio": "Insert Audio",
+  ,"insertImage": "Insérer une image",
+  "insertVideo": "Insérer une vidéo",
+  "insertAudio": "Insérer un audio",
   "clipboardFoundHint": "Contenu du presse-papiers trouvé, appuyez pour ajouter comme note",
   "operationFailedSimple": "L'opération a échoué"
 }

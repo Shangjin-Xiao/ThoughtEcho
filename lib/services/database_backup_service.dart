@@ -367,6 +367,7 @@ class DatabaseBackupService {
         final tombstones = data['tombstones'];
         if (tombstones is List) {
           final tombstoneBatch = txn.batch();
+          final tombstoneRows = <Map<String, dynamic>>[];
           for (final row in tombstones) {
             if (row is! Map<String, dynamic>) {
               continue;
@@ -376,17 +377,34 @@ class DatabaseBackupService {
             if (quoteId == null || quoteId.isEmpty || deletedAt == null) {
               continue;
             }
+            final tombstoneData = {
+              'quote_id': quoteId,
+              'deleted_at': deletedAt,
+              'device_id': row['device_id']?.toString(),
+            };
+            tombstoneRows.add(tombstoneData);
             tombstoneBatch.insert(
               'quote_tombstones',
-              {
-                'quote_id': quoteId,
-                'deleted_at': deletedAt,
-                'device_id': row['device_id']?.toString(),
-              },
+              tombstoneData,
               conflictAlgorithm: ConflictAlgorithm.replace,
             );
           }
-          await tombstoneBatch.commit(noResult: true);
+          try {
+            await tombstoneBatch.commit(noResult: true);
+          } catch (e) {
+            logDebug('tombstones批量提交失败，回退到逐行插入: $e');
+            for (final tombstoneData in tombstoneRows) {
+              try {
+                await txn.insert(
+                  'quote_tombstones',
+                  tombstoneData,
+                  conflictAlgorithm: ConflictAlgorithm.replace,
+                );
+              } catch (e2) {
+                logDebug('插入单条tombstone失败: ${tombstoneData['quote_id']}');
+              }
+            }
+          }
         }
       });
     } catch (e) {
@@ -764,40 +782,33 @@ class DatabaseBackupService {
           final tombstoneAt = localTombstone.first['deleted_at']?.toString();
           final quoteLastModified = quoteData['last_modified']?.toString();
 
-          // Only compare timestamps if both are present and non-empty
-          if (tombstoneAt != null &&
-              tombstoneAt.isNotEmpty &&
-              quoteLastModified != null &&
+          // Defensive check: tombstone must have a valid timestamp to block import
+          // If tombstone has no timestamp, treat it as invalid and allow the quote
+          if (tombstoneAt == null || tombstoneAt.isEmpty) {
+            // Invalid tombstone without timestamp - remove it and allow import
+            await txn.delete(
+              'quote_tombstones',
+              where: 'quote_id = ?',
+              whereArgs: [quoteId],
+            );
+          } else if (quoteLastModified != null &&
               quoteLastModified.isNotEmpty) {
+            // Both timestamps valid - compare them
             if (_compareIsoTime(quoteLastModified, tombstoneAt) <= 0) {
+              // Tombstone is newer or equal - skip the quote
               reportBuilder.addSkippedQuote();
               continue;
+            } else {
+              // Quote is newer - delete the tombstone and allow import
+              await txn.delete(
+                'quote_tombstones',
+                where: 'quote_id = ?',
+                whereArgs: [quoteId],
+              );
             }
-          } else if (tombstoneAt == null || tombstoneAt.isEmpty) {
-            // Invalid tombstone without timestamp - remove it
-            await txn.delete(
-              'quote_tombstones',
-              where: 'quote_id = ?',
-              whereArgs: [quoteId],
-            );
-          } else if (quoteLastModified == null || quoteLastModified.isEmpty) {
-            // Quote has no timestamp but tombstone does - skip the quote
-            reportBuilder.addSkippedQuote();
-            continue;
           }
-
-          // If tombstone is older or invalid, delete it
-          if (tombstoneAt != null &&
-              tombstoneAt.isNotEmpty &&
-              quoteLastModified != null &&
-              quoteLastModified.isNotEmpty &&
-              _compareIsoTime(quoteLastModified, tombstoneAt) > 0) {
-            await txn.delete(
-              'quote_tombstones',
-              where: 'quote_id = ?',
-              whereArgs: [quoteId],
-            );
-          }
+          // If quoteLastModified is null/empty but tombstone has timestamp,
+          // allow the import (defensive: don't block data based on missing metadata)
         }
 
         // 查询本地是否存在该笔记
@@ -915,7 +926,7 @@ class DatabaseBackupService {
               where: 'id = ?',
               whereArgs: [quoteId],
             );
-            reportBuilder.addDeletedQuote();
+            reportBuilder.addDeletedByTombstone();
           } else {
             continue;
           }
@@ -957,6 +968,15 @@ class DatabaseBackupService {
   int _compareIsoTime(String? left, String? right) {
     final leftTs = LWWUtils.normalizeTimestamp(left);
     final rightTs = LWWUtils.normalizeTimestamp(right);
-    return DateTime.parse(leftTs).compareTo(DateTime.parse(rightTs));
+    try {
+      return DateTime.parse(leftTs).compareTo(DateTime.parse(rightTs));
+    } on FormatException {
+      // 回退到Unix纪元时间进行比较
+      final leftDt = DateTime.tryParse(leftTs) ??
+          DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+      final rightDt = DateTime.tryParse(rightTs) ??
+          DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+      return leftDt.compareTo(rightDt);
+    }
   }
 }

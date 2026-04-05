@@ -3,8 +3,13 @@ library;
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/quote_model.dart';
+import '../../test_setup.dart';
 
 void main() {
+  setUpAll(() async {
+    await setupTestEnvironment();
+  });
+
   group('Quote Model Tests', () {
     test('should create quote with required fields', () {
       final quote = Quote(
@@ -39,7 +44,7 @@ void main() {
     });
 
     test('should convert to JSON correctly', () {
-      const quote = Quote(
+      final quote = Quote(
         id: 'test-id',
         content: '测试内容',
         date: '2024-01-01T00:00:00.000Z',
@@ -110,15 +115,31 @@ void main() {
     test(
         'should backfill deletedAt when isDeleted is true and deletedAt is null',
         () {
+      final beforeCreate = DateTime.now().toUtc();
       final quote = Quote(
         id: 'test-id',
         content: '测试内容',
         date: '2024-01-01T00:00:00.000Z',
         isDeleted: true,
       );
+      final afterCreate = DateTime.now().toUtc();
 
       expect(quote.isDeleted, isTrue);
-      expect(quote.deletedAt, equals('2024-01-01T00:00:00.000Z'));
+      expect(quote.deletedAt, isNotNull);
+
+      // deletedAt should be current UTC time, not quote.date
+      final deletedAtTime = DateTime.parse(quote.deletedAt!);
+      expect(
+        deletedAtTime
+            .isAfter(beforeCreate.subtract(const Duration(seconds: 1))),
+        isTrue,
+        reason: 'deletedAt should be after test start time',
+      );
+      expect(
+        deletedAtTime.isBefore(afterCreate.add(const Duration(seconds: 1))),
+        isTrue,
+        reason: 'deletedAt should be before test end time',
+      );
     });
 
     test('copyWith should update soft delete fields', () {

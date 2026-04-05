@@ -63,7 +63,7 @@ void main() {
           FlutterQuillLocalizations.delegate,
         ],
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const NoteFullEditorPage(
+        home: NoteFullEditorPage(
           initialContent: '',
           initialQuote: Quote(
             content: '',
