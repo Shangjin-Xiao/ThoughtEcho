@@ -5,6 +5,8 @@ import 'package:sqflite/sqflite.dart';
 import 'package:thoughtecho/models/chat_message.dart';
 import 'package:thoughtecho/services/chat_session_service.dart';
 
+import '../../test_helpers.dart';
+
 class _FakeDatabase implements Database {
   _FakeDatabase({
     this.sessionsQueryResult = const <Map<String, Object?>>[],
@@ -84,6 +86,10 @@ Future<void> _waitFor(
 }
 
 void main() {
+  setUpAll(() async {
+    await TestHelpers.setupTestEnvironment();
+  });
+
   group('ChatSessionService startup race handling', () {
     test('read waits and restores session after database is injected',
         () async {
@@ -169,11 +175,9 @@ void main() {
       expect(db.chatSessionsUpdateCount, equals(1));
     });
 
-    test('write operations queue when database wait times out and flush later',
+    test('write operations queue when database not ready and flush later',
         () async {
-      final service = ChatSessionService(
-        databaseReadyTimeout: const Duration(milliseconds: 20),
-      );
+      final service = ChatSessionService();
       final message = ChatMessage(
         id: 'queued-msg',
         content: 'queued',

@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../gen_l10n/app_localizations.dart';
@@ -37,8 +36,10 @@ class SmartResultCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              color:
+                  theme.colorScheme.secondaryContainer.withValues(alpha: 0.5),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: Row(
               children: [
@@ -77,13 +78,13 @@ class SmartResultCard extends StatelessWidget {
                 TextButton.icon(
                   onPressed: onAppend,
                   icon: const Icon(Icons.add_circle_outline, size: 18),
-                  label: Text(l10n.appendToNote ?? '追加到末尾'),
+                  label: Text(l10n.appendToNote),
                 ),
                 const SizedBox(width: 8),
                 FilledButton.icon(
                   onPressed: onReplace,
                   icon: const Icon(Icons.find_replace, size: 18),
-                  label: Text(l10n.applyChanges ?? '替换原笔记'),
+                  label: Text(l10n.applyChanges),
                 ),
               ],
             ),

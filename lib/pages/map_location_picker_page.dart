@@ -57,26 +57,31 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
   Future<void> _loadCurrentLocationIfNeeded() async {
     if (!mounted || _selectedPoint != null) return;
 
-    final locationService =
-        Provider.of<LocationService>(context, listen: false);
-    final cached = locationService.currentPosition;
-    if (cached != null) {
-      final point = LatLng(cached.latitude, cached.longitude);
+    try {
+      final locationService =
+          Provider.of<LocationService>(context, listen: false);
+      final cached = locationService.currentPosition;
+      if (cached != null) {
+        final point = LatLng(cached.latitude, cached.longitude);
+        setState(() {
+          _selectedPoint = point;
+        });
+        _mapController.move(point, 14);
+        return;
+      }
+
+      final current =
+          await locationService.getCurrentLocation(highAccuracy: false);
+      if (!mounted || current == null) return;
+      final point = LatLng(current.latitude, current.longitude);
       setState(() {
         _selectedPoint = point;
       });
       _mapController.move(point, 14);
-      return;
+    } catch (e) {
+      // Location access may fail due to permissions or unavailability;
+      // silently ignore and let the user manually select a location.
     }
-
-    final current =
-        await locationService.getCurrentLocation(highAccuracy: false);
-    if (!mounted || current == null) return;
-    final point = LatLng(current.latitude, current.longitude);
-    setState(() {
-      _selectedPoint = point;
-    });
-    _mapController.move(point, 14);
   }
 
   String? _buildPoiName(Map<String, String?> info) {
@@ -115,6 +120,8 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
         }
         poiName = _buildPoiName(addressInfo);
       }
+    } catch (e) {
+      // Geocoding may fail; proceed with coordinates only.
     } finally {
       if (mounted) {
         setState(() {
@@ -168,10 +175,10 @@ class _MapLocationPickerPageState extends State<MapLocationPickerPage> {
                       point: _selectedPoint!,
                       width: 44,
                       height: 44,
-                      child: const Icon(
+                      child: Icon(
                         Icons.location_on,
                         size: 40,
-                        color: Colors.red,
+                        color: Theme.of(context).colorScheme.error,
                       ),
                     ),
                   ],

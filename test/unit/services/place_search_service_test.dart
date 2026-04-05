@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:thoughtecho/services/place_search_service.dart';
 
+import '../../test_helpers.dart';
+
 class _FakeClient extends http.BaseClient {
   _FakeClient(this._responses);
 
@@ -16,9 +18,8 @@ class _FakeClient extends http.BaseClient {
   Future<http.StreamedResponse> send(http.BaseRequest request) async {
     requestedUris.add(request.url);
 
-    final response = _responses[_index < _responses.length
-        ? _index
-        : _responses.length - 1];
+    final response =
+        _responses[_index < _responses.length ? _index : _responses.length - 1];
     _index++;
 
     return http.StreamedResponse(
@@ -34,8 +35,13 @@ class _FakeClient extends http.BaseClient {
 }
 
 void main() {
+  setUpAll(() async {
+    await TestHelpers.setupTestEnvironment();
+  });
+
   group('NominatimPlaceSearchService', () {
-    test('retries on 429 with configured backoff and eventually succeeds', () async {
+    test('retries on 429 with configured backoff and eventually succeeds',
+        () async {
       final fakeClient = _FakeClient(<http.Response>[
         http.Response('', 429),
         http.Response('', 429),
@@ -84,7 +90,8 @@ void main() {
       );
     });
 
-    test('keeps only latest query and discards stale in-flight search', () async {
+    test('keeps only latest query and discards stale in-flight search',
+        () async {
       final fakeClient = _FakeClient(<http.Response>[
         http.Response(
           jsonEncode(<Map<String, Object?>>[
@@ -136,7 +143,8 @@ void main() {
       expect(service.lastResults.first.name, equals('New Result'));
       expect(staleResult.any((p) => p.name == 'Old Result'), isFalse);
       expect(fakeClient.requestedUris, hasLength(1));
-      expect(fakeClient.requestedUris.first.queryParameters['q'], equals('new'));
+      expect(
+          fakeClient.requestedUris.first.queryParameters['q'], equals('new'));
     });
   });
 }

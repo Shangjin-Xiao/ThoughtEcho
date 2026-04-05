@@ -6,6 +6,8 @@ import 'package:thoughtecho/services/agent_tool.dart';
 import 'package:thoughtecho/services/agent_tools/note_search_tool.dart';
 import 'package:thoughtecho/services/database_service.dart';
 
+import '../../test_helpers.dart';
+
 class _TestDatabaseService extends DatabaseService {
   _TestDatabaseService(this._quotes) : super.forTesting();
 
@@ -66,6 +68,10 @@ class _TestDatabaseService extends DatabaseService {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(() async {
+    await TestHelpers.setupTestEnvironment();
+  });
+
   group('NoteSearchTool', () {
     late NoteSearchTool tool;
     late List<Quote> quotes;

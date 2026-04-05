@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
-import 'explore_page.dart';
+import 'package:thoughtecho/pages/explore_page.dart';
 
+/// Wrapper page that embeds [ExplorePage] for use as a tab in navigation.
 class AIFeaturesWrapperPage extends StatelessWidget {
+  /// Creates an [AIFeaturesWrapperPage] widget.
   const AIFeaturesWrapperPage({super.key});
 
   @override

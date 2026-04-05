@@ -2,7 +2,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/services/agent_service.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
 
+import '../../test_helpers.dart';
+
 void main() {
+  setUpAll(() async {
+    await TestHelpers.setupTestEnvironment();
+  });
+
   group('AgentService canonicalJsonForArguments', () {
     test('returns same key for same semantic arguments with different order',
         () {

@@ -3,7 +3,13 @@ library;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/ai_skill.dart';
 
+import '../../test_helpers.dart';
+
 void main() {
+  setUpAll(() async {
+    await TestHelpers.setupTestEnvironment();
+  });
+
   group('AISkill model', () {
     test('creates instance with required fields', () {
       final skill = AISkill(
