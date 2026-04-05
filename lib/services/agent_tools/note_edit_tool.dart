@@ -93,7 +93,7 @@ class NoteEditTool extends AgentTool {
         weather: existingQuote.weather,
         temperature: existingQuote.temperature,
         editSource: null,
-        deltaContent: null,
+        deltaContent: existingQuote.deltaContent,
         dayPeriod: existingQuote.dayPeriod,
         lastModified: DateTime.now().toIso8601String(),
         favoriteCount: existingQuote.favoriteCount,

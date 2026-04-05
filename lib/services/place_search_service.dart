@@ -101,7 +101,7 @@ class NominatimPlaceSearchService extends ChangeNotifier
       final response = await _httpClient.get(
         uri,
         headers: {'User-Agent': _userAgent},
-      );
+      ).timeout(const Duration(seconds: 10));
 
       if (searchToken != null && searchToken != _latestSearchToken) {
         return null;
@@ -207,7 +207,11 @@ class NominatimPlaceSearchService extends ChangeNotifier
       return _lastResults;
     } catch (e) {
       logDebug('PlaceSearchService.searchNearby 错误: $e');
-      return _lastResults = [];
+      // 只有当前搜索仍是最新搜索时才清空缓存
+      if (searchToken == _latestSearchToken) {
+        _lastResults = [];
+      }
+      return [];
     } finally {
       if (searchToken == _latestSearchToken) {
         _isSearching = false;

@@ -144,6 +144,12 @@ class DatabaseSchemaManager {
       'CREATE INDEX IF NOT EXISTS idx_quotes_poi_name ON quotes(poi_name)',
     );
 
+    // 坐标索引（地理位置查询优化）
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_quotes_coordinates '
+      'ON quotes(latitude, longitude)',
+    );
+
     // 创建聊天会话表
     await db.execute('''
       CREATE TABLE chat_sessions(
