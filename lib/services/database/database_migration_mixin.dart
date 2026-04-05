@@ -98,6 +98,7 @@ mixin _DatabaseMigrationMixin on _DatabaseServiceBase {
     }
     return _healthService.getLocalDailyQuote(
       database,
+      offlineQuoteSource: 'tagOnly',
       memoryStore: _memoryStore,
       categoryStore: _categoryStore,
     );

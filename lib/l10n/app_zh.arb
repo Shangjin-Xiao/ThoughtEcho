@@ -3537,5 +3537,9 @@
   "clipboardFoundHint": "发现剪贴板内容，点击添加为笔记",
   "operationFailedSimple": "操作失败",
   "skipNonFullscreenEditor": "直接进入全屏编辑器",
-  "skipNonFullscreenEditorDesc": "点击添加笔记时跳过快速编辑，直接打开全屏富文本编辑器"
+  "skipNonFullscreenEditorDesc": "点击添加笔记时跳过快速编辑，直接打开全屏富文本编辑器",
+  "offlineQuoteSourceTitle": "离线回退/本地一言数据源",
+  "offlineQuoteSourceDesc": "无网络或仅使用本地时，首页一言展示的内容",
+  "offlineQuoteSourceTagOnly": "仅展示带有「每日一言」标签的笔记",
+  "offlineQuoteSourceAll": "随机展示全部本地笔记"
 }

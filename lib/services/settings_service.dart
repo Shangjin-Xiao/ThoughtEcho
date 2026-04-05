@@ -105,6 +105,14 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 无网/离线时的一言回退数据源
+  String get offlineQuoteSource => _appSettings.offlineQuoteSource;
+  Future<void> setOfflineQuoteSource(String source) async {
+    _appSettings = _appSettings.copyWith(offlineQuoteSource: source);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
   // 开发者模式：首次打开后首次滑动卡顿监测开关
   bool get enableFirstOpenScrollPerfMonitor =>
       _appSettings.enableFirstOpenScrollPerfMonitor;
