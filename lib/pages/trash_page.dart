@@ -93,11 +93,13 @@ class _TrashPageState extends State<TrashPage> {
         stackTrace: stackTrace,
         source: 'TrashPage',
       );
-      if (!mounted) {
+      if (!mounted || requestToken != _loadRequestToken) {
         return;
       }
       setState(() {
-        _loadError = true;
+        if (reset) {
+          _loadError = true;
+        }
         _lastLoadErrorMessage = e.toString();
       });
       ScaffoldMessenger.of(context).showSnackBar(
