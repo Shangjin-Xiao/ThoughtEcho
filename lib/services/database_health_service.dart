@@ -341,7 +341,10 @@ class DatabaseHealthService {
           return null;
         }
         return _getLocalQuoteFromMemory(
-            memoryStore, categoryStore, offlineQuoteSource);
+          memoryStore,
+          categoryStore,
+          offlineQuoteSource,
+        );
       }
 
       List<Map<String, dynamic>> results = [];
@@ -568,10 +571,10 @@ class DatabaseHealthService {
       } else {
         candidates = memoryStore
             .where(
-              (q) =>
-                  !q.isDeleted &&
-                  q.content.length <= 150 &&
-                  !q.content.contains('\n'),
+              (quote) =>
+                  !quote.isDeleted &&
+                  quote.content.length <= 150 &&
+                  !quote.content.contains('\n'),
             )
             .toList();
       }

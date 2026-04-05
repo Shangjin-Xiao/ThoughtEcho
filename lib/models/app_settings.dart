@@ -27,7 +27,7 @@ class AppSettings {
   final bool anniversaryAnimationEnabled; // 一周年庆典动画是否启用（开发者模式控制）
   final int trashRetentionDays; // 回收站保留天数（7/30/90）
   final String? trashRetentionLastModified; // 回收站保留设置更新时间（UTC ISO）
-  final bool skipNonFullscreenEditor;
+  final bool skipNonFullscreenEditor; // 新增：跳过非全屏编辑器，直接进入全屏编辑器
   final String offlineQuoteSource;
 
   AppSettings({
@@ -57,7 +57,7 @@ class AppSettings {
     this.anniversaryAnimationEnabled = true, // 默认启用庆典动画
     this.trashRetentionDays = 30,
     this.trashRetentionLastModified,
-    this.skipNonFullscreenEditor = false,
+    this.skipNonFullscreenEditor = false, // 默认不跳过非全屏编辑器
     this.offlineQuoteSource = 'tagOnly', // 默认仅展示带每日一言标签的笔记
   });
 
@@ -174,7 +174,7 @@ class AppSettings {
         anniversaryAnimationEnabled: true,
         trashRetentionDays: 30,
         trashRetentionLastModified: null,
-        skipNonFullscreenEditor: false,
+        skipNonFullscreenEditor: false, // 默认不跳过非全屏编辑器
         offlineQuoteSource: 'tagOnly',
       );
 

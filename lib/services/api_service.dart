@@ -58,11 +58,11 @@ class ApiService {
     try {
       // 如果设置了仅使用本地笔记，直接返回本地一言
       if (useLocalOnly) {
-        if (offlineQuoteSource == 'allNotes') {
-          return await _getAnyLocalQuote(l10n, databaseService);
-        }
-        return await _getLocalQuoteOrDefault(l10n, databaseService,
-            offlineQuoteSource: offlineQuoteSource);
+        return await _getOfflineQuote(
+          l10n,
+          databaseService,
+          offlineQuoteSource,
+        );
       }
 
       // 检查网络连接状态
@@ -71,13 +71,10 @@ class ApiService {
 
       if (!isConnected) {
         logDebug('网络未连接，使用本地笔记');
-        if (offlineQuoteSource == 'allNotes') {
-          return await _getAnyLocalQuote(l10n, databaseService);
-        }
-        return await _getLocalQuoteOrDefault(
+        return await _getOfflineQuote(
           l10n,
           databaseService,
-          offlineQuoteSource: offlineQuoteSource,
+          offlineQuoteSource,
           isOffline: true,
         );
       }
@@ -154,6 +151,24 @@ class ApiService {
     }
   }
 
+  // 根据 offlineQuoteSource 选择离线数据源
+  static Future<Map<String, dynamic>> _getOfflineQuote(
+    AppLocalizations l10n,
+    DatabaseService? databaseService,
+    String offlineQuoteSource, {
+    bool isOffline = false,
+  }) async {
+    if (offlineQuoteSource == 'allNotes') {
+      return await _getAnyLocalQuote(l10n, databaseService);
+    }
+    return await _getLocalQuoteOrDefault(
+      l10n,
+      databaseService,
+      offlineQuoteSource: offlineQuoteSource,
+      isOffline: isOffline,
+    );
+  }
+
   // 获取本地一言或默认一言
   static Future<Map<String, dynamic>> _getLocalQuoteOrDefault(
     AppLocalizations l10n,
@@ -163,7 +178,9 @@ class ApiService {
   }) async {
     try {
       if (databaseService != null) {
-        final localQuote = await databaseService.getLocalDailyQuote();
+        final localQuote = await databaseService.getLocalDailyQuote(
+          offlineQuoteSource: offlineQuoteSource,
+        );
         if (localQuote != null) {
           logDebug('使用本地笔记作为一言');
           return localQuote;
@@ -196,10 +213,25 @@ class ApiService {
   ) async {
     try {
       if (databaseService != null) {
-        final localQuote = await databaseService.getLocalDailyQuote();
-        if (localQuote != null) {
+        final allQuotes = await databaseService.getAllQuotes();
+        final candidates = allQuotes
+            .where(
+              (quote) =>
+                  quote.content.length <= 150 && !quote.content.contains('\n'),
+            )
+            .toList();
+        if (candidates.isNotEmpty) {
+          candidates.shuffle();
+          final quote = candidates.first;
           logDebug('使用全部本地笔记作为一言');
-          return localQuote;
+          return {
+            'content': quote.content,
+            'source': quote.sourceWork ?? '',
+            'author': quote.sourceAuthor ?? '',
+            'type': 'local',
+            'from_who': quote.sourceAuthor ?? '',
+            'from': quote.sourceWork ?? '',
+          };
         }
       }
     } catch (e) {
