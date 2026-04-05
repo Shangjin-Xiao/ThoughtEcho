@@ -4,6 +4,7 @@ import 'package:flutter_map_marker_cluster/flutter_map_marker_cluster.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
+import '../gen_l10n/app_localizations.dart';
 import '../models/quote_model.dart';
 import '../services/database_service.dart';
 import '../widgets/quote_item_widget.dart';
@@ -40,6 +41,7 @@ class _MapMemoryPageState extends State<MapMemoryPage> {
   }
 
   void _showQuoteBottomSheet(BuildContext context, Quote quote) {
+    final l10n = AppLocalizations.of(context);
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -63,13 +65,13 @@ class _MapMemoryPageState extends State<MapMemoryPage> {
                   onEdit: () {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('请在主页列表中进行编辑操作')),
+                      SnackBar(content: Text(l10n.editInMainList)),
                     );
                   },
                   onDelete: () {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('请在主页列表中进行删除操作')),
+                      SnackBar(content: Text(l10n.deleteInMainList)),
                     );
                   },
                   onAskAI: () {
@@ -92,6 +94,7 @@ class _MapMemoryPageState extends State<MapMemoryPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     if (_isLoading) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator()),
@@ -175,9 +178,9 @@ class _MapMemoryPageState extends State<MapMemoryPage> {
                     children: [
                       const Icon(Icons.info_outline, color: Colors.blue),
                       const SizedBox(width: 8),
-                      const Text(
-                        '目前还没有带坐标的笔记',
-                        style: TextStyle(fontSize: 16),
+                      Text(
+                        l10n.noLocationNotes,
+                        style: const TextStyle(fontSize: 16),
                       ),
                     ],
                   ),

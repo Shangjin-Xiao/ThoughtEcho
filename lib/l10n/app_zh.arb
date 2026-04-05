@@ -3585,7 +3585,6 @@
   "agentSearchingNotes": "正在搜索笔记...",
   "agentAnalyzingData": "正在分析数据...",
   "agentWebSearching": "正在搜索网络...",
-  "agentMaxRoundsReached": "Agent 已达到最大执行轮数",
   "agentToolNotAvailable": "工具暂不可用",
   "noteMapTitle": "笔记地图",
   "noteMapNoData": "暂无带位置的笔记",
@@ -3601,5 +3600,17 @@
   "commandDeepAnalysis": "深度分析",
   "commandPolish": "润色",
   "commandContinue": "续写",
-  "favoriteNotes": "收藏的笔记"
+  "favoriteNotes": "收藏的笔记",
+  "agentMaxRoundsReached": "已达到最大执行轮数（{maxRounds}）。\n\n{summary}",
+  "@agentMaxRoundsReached": {
+    "placeholders": {
+      "maxRounds": {"type": "int"},
+      "summary": {"type": "String"}
+    }
+  },
+  "aiAssistantWelcomeAgent": "你好！我是你的 AI 助手。你可以直接向我提问，或者输入 / 查看可用命令。",
+  "editInMainList": "请在主页列表中进行编辑操作",
+  "deleteInMainList": "请在主页列表中进行删除操作",
+  "chatWithAIAssistant": "与 AI 助手进行对话",
+  "noLocationNotes": "目前还没有带坐标的笔记"
 }

@@ -3589,5 +3589,17 @@
   "commandDeepAnalysis": "Deep Analysis",
   "commandPolish": "Polish",
   "commandContinue": "Continue Writing",
-  "favoriteNotes": "Favorite Notes"
+  "favoriteNotes": "Favorite Notes",
+  "agentMaxRoundsReached": "Reached maximum execution rounds ({maxRounds}).\n\n{summary}",
+  "@agentMaxRoundsReached": {
+    "placeholders": {
+      "maxRounds": {"type": "int"},
+      "summary": {"type": "String"}
+    }
+  },
+  "aiAssistantWelcomeAgent": "Hello! I'm your AI assistant. You can ask me questions directly, or type / to see available commands.",
+  "editInMainList": "Please edit in the main list",
+  "deleteInMainList": "Please delete in the main list",
+  "chatWithAIAssistant": "Chat with AI assistant",
+  "noLocationNotes": "No notes with location data yet"
 }

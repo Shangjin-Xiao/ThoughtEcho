@@ -93,7 +93,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   Future<void> _createNewSession() async {
     final session = await _chatSessionService.createSession(
       sessionType: _isNoteMode ? 'note' : 'agent',
-      noteId: widget.quote?.id ?? '',
+      noteId: _isNoteMode ? widget.quote?.id : null,
       title: _isNoteMode ? _getQuotePreview() : 'New Chat',
     );
     _currentSessionId = session.id;
@@ -121,7 +121,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     final l10n = AppLocalizations.of(context);
     final String welcomeContent = _isNoteMode
         ? l10n.aiAssistantWelcome(_getQuotePreview())
-        : '你好！我是你的 AI 助手。你可以直接向我提问，或者输入 / 查看可用命令。'; // Dynamic greeting placeholder
+        : l10n.aiAssistantWelcomeAgent;
 
     final welcomeMsg = app_chat.ChatMessage(
       id: const Uuid().v4(),

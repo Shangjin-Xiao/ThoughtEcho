@@ -89,7 +89,7 @@ class AgentService extends ChangeNotifier {
             messages: messages,
           );
           return AgentResponse(
-            content: '已达到最大执行轮数（$maxToolRounds）。\n\n$summary',
+            content: 'Reached maximum execution rounds ($maxToolRounds).\n\n$summary',
             toolCalls: executedCalls,
             reachedMaxRounds: true,
           );
@@ -107,7 +107,7 @@ class AgentService extends ChangeNotifier {
 
         final choice = completion.firstChoice;
         if (choice == null) {
-          throw StateError('AI 返回为空响应');
+          throw StateError('AI returned empty response');
         }
 
         final assistantMessage = choice.message;
@@ -119,7 +119,7 @@ class AgentService extends ChangeNotifier {
           return AgentResponse(
             content: assistantContent.isNotEmpty
                 ? assistantContent
-                : '我暂时无法继续推理，请稍后再试。',
+                : 'Unable to continue reasoning, please try again later.',
             toolCalls: executedCalls,
           );
         }
@@ -142,7 +142,7 @@ class AgentService extends ChangeNotifier {
         if (currentPatternCount >= _maxRepeatedRoundPattern) {
           final fallback = assistantContent.isNotEmpty
               ? assistantContent
-              : '检测到重复工具调用模式，为避免死循环已停止。';
+              : 'Detected repeated tool call pattern, stopped to avoid infinite loop.';
           return AgentResponse(content: fallback, toolCalls: executedCalls);
         }
 
@@ -163,7 +163,7 @@ class AgentService extends ChangeNotifier {
             messages.add(
               openai.ChatMessage.tool(
                 toolCallId: rawToolCall.id,
-                content: '工具参数不是有效 JSON 对象，无法执行。',
+                content: 'Tool parameters are not valid JSON object, cannot execute.',
               ),
             );
             continue;
@@ -177,7 +177,7 @@ class AgentService extends ChangeNotifier {
             messages.add(
               openai.ChatMessage.tool(
                 toolCallId: rawToolCall.id,
-                content: '同一轮内重复工具调用已忽略。',
+                content: 'Duplicate tool call in same round, ignored.',
               ),
             );
             continue;
@@ -188,7 +188,7 @@ class AgentService extends ChangeNotifier {
             messages.add(
               openai.ChatMessage.tool(
                 toolCallId: rawToolCall.id,
-                content: '该调用与历史完全相同，已忽略。请调整参数后再试。',
+                content: 'This call is identical to a previous one, ignored. Please adjust parameters and try again.',
               ),
             );
             continue;
@@ -210,7 +210,7 @@ class AgentService extends ChangeNotifier {
         if (!repliedAnyToolCall) {
           final fallback = assistantContent.isNotEmpty
               ? assistantContent
-              : '工具调用未能成功执行，已停止本次任务。';
+              : 'Tool calls failed to execute successfully, task stopped.';
           return AgentResponse(content: fallback, toolCalls: executedCalls);
         }
       }

@@ -88,7 +88,7 @@ class _ExplorePageState extends State<ExplorePage> {
                       _EntryCard(
                         icon: Icons.smart_toy_outlined,
                         title: l10n.aiChat,
-                        subtitle: '与 AI 助手进行对话',
+                        subtitle: l10n.chatWithAIAssistant,
                         color: theme.colorScheme.primaryContainer,
                         iconColor: theme.colorScheme.onPrimaryContainer,
                         onTap: () => Navigator.push(
