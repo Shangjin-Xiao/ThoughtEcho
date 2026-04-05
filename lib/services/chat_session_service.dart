@@ -9,86 +9,86 @@ import '../models/chat_session.dart';
 import '../utils/app_logger.dart';
 
 class ChatSessionService extends ChangeNotifier {
-  static const Duration _defaultDatabaseReadyTimeout = Duration(seconds: 5);
-
   Database? _database;
-  bool _isWebPersistenceUnsupported = false;
   final List<Future<void> Function(Database db)> _pendingWrites = [];
   final Completer<void> _databaseReady = Completer<void>();
-  final Duration _databaseReadyTimeout;
-  bool _hasLoggedDatabaseWaitTimeout = false;
 
-  ChatSessionService({
-    Duration databaseReadyTimeout = _defaultDatabaseReadyTimeout,
-  }) : _databaseReadyTimeout = databaseReadyTimeout;
+  ChatSessionService();
 
   void setDatabase(Database? db) {
     _database = db;
-    _isWebPersistenceUnsupported = false;
     if (db != null && !_databaseReady.isCompleted) {
       _databaseReady.complete();
     }
-    if (db != null && _pendingWrites.isNotEmpty) {
-      final writes =
-          List<Future<void> Function(Database db)>.from(_pendingWrites);
-      _pendingWrites.clear();
-      for (final write in writes) {
-        Future<void>.microtask(() async {
-          try {
-            await write(db);
-          } catch (e) {
-            logError(
-              'ChatSessionService 延迟写入执行失败',
-              error: e,
-              source: 'ChatSessionService',
-            );
-          } finally {
-            notifyListeners();
-          }
-        });
-      }
+    if (db != null) {
+      _flushPendingWrites(db);
     }
   }
 
+  void _flushPendingWrites(Database db) {
+    if (_pendingWrites.isEmpty) return;
+    final writes =
+        List<Future<void> Function(Database db)>.from(_pendingWrites);
+    _pendingWrites.clear();
+    for (final write in writes) {
+      Future<void>.microtask(() async {
+        try {
+          await write(db);
+        } catch (e) {
+          logError(
+            'ChatSessionService 延迟写入执行失败',
+            error: e,
+            source: 'ChatSessionService',
+          );
+        } finally {
+          notifyListeners();
+        }
+      });
+    }
+  }
+
+  /// 获取数据库实例，若数据库尚未就绪则等待
+  ///
+  /// 平台差异（如 Web 内存库）由 DatabaseService 层处理，此处不做短路。
   Future<Database?> _getDatabase() async {
-    if (kIsWeb) {
-      _isWebPersistenceUnsupported = true;
-      return null;
-    }
     if (_database != null) return _database;
+    // 无限等待数据库就绪，避免超时后静默丢数据
+    await _databaseReady.future;
+    return _database;
+  }
 
+  /// 获取数据库实例，带超时限制（仅用于只读查询）
+  ///
+  /// 超时后返回 null，调用方需自行处理降级逻辑（如返回空列表）。
+  /// 写操作禁止使用此方法，应使用 [_persistOrQueueWrite]。
+  Future<Database?> _getDatabaseForRead({
+    Duration timeout = const Duration(seconds: 5),
+  }) async {
+    if (_database != null) return _database;
     try {
-      await _databaseReady.future.timeout(_databaseReadyTimeout);
+      await _databaseReady.future.timeout(timeout);
     } on TimeoutException {
-      if (!_hasLoggedDatabaseWaitTimeout) {
-        _hasLoggedDatabaseWaitTimeout = true;
-        logWarning(
-          'ChatSessionService 等待数据库注入超时，跳过本次持久化操作',
-          source: 'ChatSessionService',
-        );
-      }
+      logWarning(
+        'ChatSessionService 等待数据库注入超时（只读查询）',
+        source: 'ChatSessionService',
+      );
       return null;
     }
-
     return _database;
   }
 
   Future<void> _persistOrQueueWrite(
     Future<void> Function(Database db) write, {
     required String operationName,
-    required String onUnavailableLog,
   }) async {
     final db = await _getDatabase();
     if (db == null) {
-      if (_isWebPersistenceUnsupported) {
-        logWarning(
-          '$operationName 跳过持久化：Web 平台当前不支持 SQLite 会话存储',
-          source: 'ChatSessionService',
-        );
-      } else {
-        logWarning(onUnavailableLog, source: 'ChatSessionService');
-        _pendingWrites.add(write);
-      }
+      // 数据库尚未就绪，加入队列等待后续执行
+      logWarning(
+        '$operationName 数据库未就绪，已加入延迟写入队列',
+        source: 'ChatSessionService',
+      );
+      _pendingWrites.add(write);
       return;
     }
     await write(db);
@@ -114,7 +114,6 @@ class ChatSessionService extends ChangeNotifier {
           await db.insert('chat_sessions', session.toMap());
         },
         operationName: 'ChatSessionService.createSession',
-        onUnavailableLog: 'ChatSessionService.createSession 数据库未就绪，已加入延迟写入队列',
       );
     } catch (e) {
       logError(
@@ -128,7 +127,7 @@ class ChatSessionService extends ChangeNotifier {
   }
 
   Future<ChatSession?> getLatestSessionForNote(String noteId) async {
-    final db = await _getDatabase();
+    final db = await _getDatabaseForRead();
     if (db == null) return null;
     try {
       final rows = await db.query(
@@ -151,7 +150,7 @@ class ChatSessionService extends ChangeNotifier {
   }
 
   Future<List<ChatSession>> getSessionsForNote(String noteId) async {
-    final db = await _getDatabase();
+    final db = await _getDatabaseForRead();
     if (db == null) return [];
     try {
       final rows = await db.query(
@@ -172,7 +171,7 @@ class ChatSessionService extends ChangeNotifier {
   }
 
   Future<List<ChatSession>> getAgentSessions() async {
-    final db = await _getDatabase();
+    final db = await _getDatabaseForRead();
     if (db == null) return [];
     try {
       final rows = await db.query(
@@ -196,7 +195,7 @@ class ChatSessionService extends ChangeNotifier {
     int limit = 50,
     int offset = 0,
   }) async {
-    final db = await _getDatabase();
+    final db = await _getDatabaseForRead();
     if (db == null) return [];
     try {
       final rows = await db.query(
@@ -227,7 +226,6 @@ class ChatSessionService extends ChangeNotifier {
           );
         },
         operationName: 'ChatSessionService.deleteSession',
-        onUnavailableLog: 'ChatSessionService.deleteSession 数据库未就绪，已加入延迟写入队列',
       );
     } catch (e) {
       logError(
@@ -254,8 +252,6 @@ class ChatSessionService extends ChangeNotifier {
           );
         },
         operationName: 'ChatSessionService.updateSessionTitle',
-        onUnavailableLog:
-            'ChatSessionService.updateSessionTitle 数据库未就绪，已加入延迟写入队列',
       );
     } catch (e) {
       logError(
@@ -287,7 +283,6 @@ class ChatSessionService extends ChangeNotifier {
           }
         },
         operationName: 'ChatSessionService.togglePin',
-        onUnavailableLog: 'ChatSessionService.togglePin 数据库未就绪，已加入延迟写入队列',
       );
     } catch (e) {
       logError(
@@ -312,7 +307,6 @@ class ChatSessionService extends ChangeNotifier {
           );
         },
         operationName: 'ChatSessionService.addMessage',
-        onUnavailableLog: 'ChatSessionService.addMessage 数据库未就绪，已加入延迟写入队列',
       );
     } catch (e) {
       logError(
@@ -325,7 +319,7 @@ class ChatSessionService extends ChangeNotifier {
   }
 
   Future<List<ChatMessage>> getMessages(String sessionId) async {
-    final db = await _getDatabase();
+    final db = await _getDatabaseForRead();
     if (db == null) return [];
     try {
       final rows = await db.query(
@@ -346,7 +340,7 @@ class ChatSessionService extends ChangeNotifier {
   }
 
   Future<int> getMessageCount(String sessionId) async {
-    final db = await _getDatabase();
+    final db = await _getDatabaseForRead();
     if (db == null) return 0;
     try {
       final result = await db.rawQuery(
@@ -375,7 +369,6 @@ class ChatSessionService extends ChangeNotifier {
           );
         },
         operationName: 'ChatSessionService.deleteMessage',
-        onUnavailableLog: 'ChatSessionService.deleteMessage 数据库未就绪，已加入延迟写入队列',
       );
     } catch (e) {
       logError(
@@ -398,7 +391,6 @@ class ChatSessionService extends ChangeNotifier {
           );
         },
         operationName: 'ChatSessionService.clearMessages',
-        onUnavailableLog: 'ChatSessionService.clearMessages 数据库未就绪，已加入延迟写入队列',
       );
     } catch (e) {
       logError(
@@ -421,8 +413,6 @@ class ChatSessionService extends ChangeNotifier {
           );
         },
         operationName: 'ChatSessionService.deleteSessionsForNote',
-        onUnavailableLog:
-            'ChatSessionService.deleteSessionsForNote 数据库未就绪，已加入延迟写入队列',
       );
     } catch (e) {
       logError(

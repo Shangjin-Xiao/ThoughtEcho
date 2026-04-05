@@ -142,11 +142,14 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
             child: Text(l10n.cancel),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.of(ctx).pop();
+              // 先执行删除回调，确保上层完成删除
               widget.onDelete(sessionId);
-              // 删除后重新加载会话列表
-              _loadSessions();
+              // 删除后重新加载会话列表以刷新 UI
+              if (mounted) {
+                await _loadSessions();
+              }
             },
             child: Text(l10n.delete),
           ),

@@ -766,6 +766,25 @@ class DatabaseSchemaManager {
         throw Exception('升级后缺少必要的表: $missingTables');
       }
 
+      // 验证 quotes 表的关键列是否存在（v20 新增 poi_name）
+      final quotesColumns = await txn.rawQuery('PRAGMA table_info(quotes)');
+      final columnNames =
+          quotesColumns.map((col) => col['name'] as String).toSet();
+
+      final requiredColumns = {
+        'id',
+        'content',
+        'date',
+        'latitude',
+        'longitude',
+        'poi_name', // v20 新增
+      };
+      final missingColumns = requiredColumns.difference(columnNames);
+
+      if (missingColumns.isNotEmpty) {
+        throw Exception('升级后 quotes 表缺少必要的列: $missingColumns');
+      }
+
       logDebug('数据库升级验证通过');
     } catch (e) {
       logError('数据库升级验证失败: $e', error: e, source: 'DatabaseUpgrade');

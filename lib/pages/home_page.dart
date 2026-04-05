@@ -1417,12 +1417,18 @@ class _HomePageState extends State<HomePage>
           TextButton(
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             onPressed: () async {
-              final db = Provider.of<DatabaseService>(context, listen: false);
+              // 先关闭对话框，再执行删除操作
               Navigator.pop(context);
+              // 使用父级 context（this.context）而非对话框 context
+              if (!mounted) return;
               try {
+                final db = Provider.of<DatabaseService>(
+                  this.context,
+                  listen: false,
+                );
                 await db.deleteQuote(noteId);
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
+                if (!mounted) return;
+                ScaffoldMessenger.of(this.context).showSnackBar(
                   SnackBar(
                     content: Text(l10n.noteDeleted),
                     duration: const Duration(seconds: 1),
@@ -1430,8 +1436,8 @@ class _HomePageState extends State<HomePage>
                   ),
                 );
               } catch (e) {
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
+                if (!mounted) return;
+                ScaffoldMessenger.of(this.context).showSnackBar(
                   SnackBar(
                     content: Text(l10n.operationFailedSimple),
                     duration: const Duration(seconds: 2),
