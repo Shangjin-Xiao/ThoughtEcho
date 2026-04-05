@@ -118,6 +118,13 @@ class SettingsService extends ChangeNotifier {
     final incomingLastModified = incoming['last_modified']?.toString();
     String? normalizedIncomingTimestamp;
     if (incomingLastModified != null && incomingLastModified.isNotEmpty) {
+      if (!LWWUtils.isValidTimestamp(incomingLastModified)) {
+        logWarning(
+          '忽略无效的回收站保留期时间戳: $incomingLastModified',
+          source: 'SettingsService',
+        );
+        return false;
+      }
       normalizedIncomingTimestamp =
           LWWUtils.normalizeTimestamp(incomingLastModified);
     } else {

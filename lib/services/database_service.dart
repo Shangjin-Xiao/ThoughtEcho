@@ -505,6 +505,9 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       }
       _initCompleter = null;
       logInfo('Web平台使用内存模式，DatabaseService 初始化完成', source: 'DatabaseService');
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (!_isDisposed) notifyListeners();
+      });
       return;
     }
 
