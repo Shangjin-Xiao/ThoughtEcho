@@ -41,8 +41,14 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
   Future<void> _loadSessions() async {
     setState(() => _isLoading = true);
     try {
-      final sessions =
-          await widget.chatSessionService.getSessionsForNote(widget.noteId);
+      // If no noteId, show all sessions; otherwise filter by noteId
+      final List<ChatSession> sessions;
+      if (widget.noteId.isEmpty) {
+        sessions = await widget.chatSessionService.getAllSessions();
+      } else {
+        sessions =
+            await widget.chatSessionService.getSessionsForNote(widget.noteId);
+      }
       if (mounted) {
         setState(() {
           _sessions = sessions;

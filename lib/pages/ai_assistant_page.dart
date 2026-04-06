@@ -61,6 +61,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   late AIAssistantPageMode _currentMode;
   String _selectedInsightType = 'comprehensive';
   String _selectedInsightStyle = 'professional';
+  bool _showSlashCommands = false; // Only show when user types /
 
   AIAssistantEntrySource get _entrySource =>
       widget.entrySource ??
@@ -142,12 +143,24 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   void initState() {
     super.initState();
     _currentMode = _entryConfig.defaultMode;
+    _textController.addListener(_onTextChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) => _initServicesAndLoad());
+  }
+
+  void _onTextChanged() {
+    final text = _textController.text;
+    final shouldShow = text.startsWith('/');
+    if (shouldShow != _showSlashCommands) {
+      setState(() {
+        _showSlashCommands = shouldShow;
+      });
+    }
   }
 
   @override
   void dispose() {
     _streamSubscription?.cancel();
+    _textController.removeListener(_onTextChanged);
     _textController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -861,15 +874,27 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   }
 
   Widget _buildExploreGuideBanner(ThemeData theme, AppLocalizations l10n) {
+    // Just show the stats summary as context, not the full welcome message
+    // The welcome message is already shown in chat messages
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       color: theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
-      child: Text(
-        l10n.aiAssistantExploreWelcome(widget.exploreGuideSummary!.trim()),
-        style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.onSurfaceVariant,
-        ),
+      child: Row(
+        children: [
+          Icon(Icons.analytics_outlined,
+              size: 16, color: theme.colorScheme.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              l10n.dataOverview,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1150,22 +1175,31 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
         children: [
           _buildModeSwitch(theme, l10n),
           const SizedBox(height: 8),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: workflowDescriptors.map((descriptor) {
-                return ActionChip(
-                  label: Text(descriptor.command),
-                  onPressed: () {
-                    _handleSubmitted(descriptor.command);
-                  },
-                );
-              }).toList(),
+          // Only show slash commands when user types /
+          if (_showSlashCommands)
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: workflowDescriptors.map((descriptor) {
+                  // Filter commands based on current input
+                  final inputText = _textController.text.toLowerCase();
+                  if (inputText.isNotEmpty &&
+                      !descriptor.command.toLowerCase().startsWith(inputText)) {
+                    return const SizedBox.shrink();
+                  }
+                  return ActionChip(
+                    label: Text(descriptor.command),
+                    onPressed: () {
+                      _textController.clear();
+                      _handleSubmitted(descriptor.command);
+                    },
+                  );
+                }).toList(),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
+          if (_showSlashCommands) const SizedBox(height: 8),
           Row(
             children: [
               Expanded(

@@ -2380,9 +2380,9 @@ class _HomePageState extends State<HomePage>
                     label: AppLocalizations.of(context).navNotes,
                   ),
                   NavigationDestination(
-                    icon: const Icon(Icons.explore),
+                    icon: const Icon(Icons.auto_awesome_outlined),
                     selectedIcon: Icon(
-                      Icons.explore,
+                      Icons.auto_awesome,
                       color: theme.colorScheme.primary,
                     ),
                     label: l10n.explore,
