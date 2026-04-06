@@ -194,6 +194,14 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                   onChanged: (v) => settings.setUseLocalQuotesOnly(v),
                 ),
                 _buildDivider(),
+                if (settings.useLocalQuotesOnly) ...[
+                  _buildOfflineQuoteSourceSection(
+                    context,
+                    settings: settings,
+                    l10n: l10n,
+                  ),
+                  _buildDivider(),
+                ],
                 _buildSwitchTile(
                   context: context,
                   title: l10n.settingsAutoAttachLocation,
@@ -506,6 +514,66 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
 
   Widget _buildDivider() {
     return const Divider(height: 1, indent: 68, endIndent: 20);
+  }
+
+  Widget _buildOfflineQuoteSourceSection(
+    BuildContext context, {
+    required SettingsService settings,
+    required AppLocalizations l10n,
+  }) {
+    final theme = Theme.of(context);
+
+    Widget buildOption({
+      required String title,
+      required String value,
+    }) {
+      return RadioListTile<String>(
+        value: value,
+        groupValue: settings.offlineQuoteSource,
+        onChanged: (selectedValue) {
+          if (selectedValue != null) {
+            settings.setOfflineQuoteSource(selectedValue);
+          }
+        },
+        contentPadding: EdgeInsets.zero,
+        visualDensity: VisualDensity.compact,
+        title: Text(
+          title,
+          style: theme.textTheme.bodyMedium,
+        ),
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            l10n.offlineQuoteSourceTitle,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            l10n.offlineQuoteSourceDesc,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+          const SizedBox(height: 8),
+          buildOption(
+            title: l10n.offlineQuoteSourceTagOnly,
+            value: 'tagOnly',
+          ),
+          buildOption(
+            title: l10n.offlineQuoteSourceAll,
+            value: 'allNotes',
+          ),
+        ],
+      ),
+    );
   }
 
   /// 构建文本设置项（点击弹出编辑对话框）
