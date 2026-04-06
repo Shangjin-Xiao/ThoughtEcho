@@ -7,8 +7,7 @@ import '../services/database_service.dart';
 import '../services/settings_service.dart';
 import '../utils/app_logger.dart';
 import '../utils/time_utils.dart';
-
-enum _TrashAction { restore, permanentlyDelete }
+import '../widgets/trash_quote_card.dart';
 
 class TrashPage extends StatefulWidget {
   const TrashPage({super.key});
@@ -27,8 +26,12 @@ class _TrashPageState extends State<TrashPage> {
   String? _lastLoadErrorMessage;
   bool _isRunningAction = false;
   int _loadRequestToken = 0;
+  int _trashTotalCount = 0;
   List<Quote> _trashQuotes = const [];
   final ScrollController _scrollController = ScrollController();
+
+  int get _displayTrashCount =>
+      _trashTotalCount > 0 ? _trashTotalCount : _trashQuotes.length;
 
   @override
   void initState() {
@@ -73,15 +76,20 @@ class _TrashPageState extends State<TrashPage> {
     }
 
     try {
-      final quotes = await db.getDeletedQuotes(
+      final quotesFuture = db.getDeletedQuotes(
         offset: reset ? 0 : _trashQuotes.length,
         limit: _pageSize,
       );
+      final countFuture = reset ? db.getDeletedQuotesCount() : null;
+      final quotes = await quotesFuture;
+      final totalCount =
+          countFuture == null ? _trashTotalCount : await countFuture;
       if (!mounted || requestToken != _loadRequestToken) {
         return;
       }
       setState(() {
         _trashQuotes = reset ? quotes : [..._trashQuotes, ...quotes];
+        _trashTotalCount = totalCount;
         _hasMore = quotes.length == _pageSize;
         _loadError = false;
         _lastLoadErrorMessage = null;
@@ -137,7 +145,8 @@ class _TrashPageState extends State<TrashPage> {
       return l10n.deletedAt('-');
     }
     // Use relative date format for better readability (e.g., "Today 14:30" vs "2025-06-21 14:30")
-    return l10n.deletedAt(TimeUtils.formatRelativeDateTimeLocalized(context, date.toLocal()));
+    return l10n.deletedAt(
+        TimeUtils.formatRelativeDateTimeLocalized(context, date.toLocal()));
   }
 
   String _remainingDaysText(BuildContext context, Quote quote) {
@@ -305,6 +314,7 @@ class _TrashPageState extends State<TrashPage> {
       }
       setState(() {
         _trashQuotes = const [];
+        _trashTotalCount = 0;
         _hasMore = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
@@ -339,16 +349,70 @@ class _TrashPageState extends State<TrashPage> {
     }
   }
 
+  Widget _buildSummaryCard(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context);
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12, 12, 12, 6),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: colorScheme.outlineVariant.withValues(alpha: 0.45),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.auto_delete_outlined,
+            color: colorScheme.primary,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.trashCount(_displayTrashCount),
+                  style: theme.textTheme.titleMedium,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  l10n.trashRetentionHint,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colorScheme.onSurfaceVariant,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.trash),
+        title: Text(
+          _trashQuotes.isEmpty
+              ? l10n.trash
+              : l10n.trashCount(_displayTrashCount),
+        ),
         actions: [
           TextButton(
-            onPressed: (_trashQuotes.isEmpty || _isLoadingMore || _isLoading || _isRunningAction)
+            onPressed: (_trashQuotes.isEmpty ||
+                    _isLoadingMore ||
+                    _isLoading ||
+                    _isRunningAction)
                 ? null
                 : _emptyTrash,
             child: Text(l10n.emptyTrash),
@@ -381,88 +445,71 @@ class _TrashPageState extends State<TrashPage> {
                 )
               : _trashQuotes.isEmpty
                   ? Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.delete_outline, size: 42),
-                          const SizedBox(height: 12),
-                          Text(l10n.trashEmpty),
-                          const SizedBox(height: 6),
-                          Text(l10n.trashEmptyHint),
-                        ],
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.delete_outline, size: 42),
+                            const SizedBox(height: 12),
+                            Text(
+                              l10n.trashEmpty,
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              l10n.trashEmptyHint,
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
                       ),
                     )
                   : Column(
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.info_outline, size: 16),
-                              const SizedBox(width: 8),
-                              Expanded(child: Text(l10n.trashRetentionHint)),
-                            ],
-                          ),
-                        ),
+                        _buildSummaryCard(context),
                         Expanded(
-                          child: ListView.separated(
-                            controller: _scrollController,
-                            itemCount:
-                                _trashQuotes.length + (_isLoadingMore ? 1 : 0),
-                            separatorBuilder: (_, __) =>
-                                const Divider(height: 1, thickness: 0.5),
-                            itemBuilder: (context, index) {
-                              if (index >= _trashQuotes.length) {
-                                return const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 16),
-                                  child: Center(
-                                    child: CircularProgressIndicator(),
+                          child: RefreshIndicator(
+                            onRefresh: () => _loadTrashQuotes(reset: true),
+                            child: ListView.builder(
+                              controller: _scrollController,
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              itemCount: _trashQuotes.length +
+                                  (_isLoadingMore ? 1 : 0),
+                              itemBuilder: (context, index) {
+                                if (index >= _trashQuotes.length) {
+                                  return const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 16),
+                                    child: Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  );
+                                }
+                                final quote = _trashQuotes[index];
+                                final id = quote.id;
+                                return TrashQuoteCard(
+                                  quote: quote,
+                                  deletedAtText: _deletedAtText(context, quote),
+                                  remainingDaysText: _remainingDaysText(
+                                    context,
+                                    quote,
                                   ),
-                                );
-                              }
-                              final quote = _trashQuotes[index];
-                              final id = quote.id;
-                              return ListTile(
-                                title: Text(
-                                  quote.content,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(_deletedAtText(context, quote)),
-                                    Text(_remainingDaysText(context, quote)),
-                                  ],
-                                ),
-                                isThreeLine: true,
-                                trailing: id == null
-                                    ? null
-                                    : PopupMenuButton<_TrashAction>(
-                                        enabled: !_isRunningAction &&
-                                            !_isLoadingMore &&
-                                            !_isLoading,
-                                        onSelected: (action) {
-                                          if (action == _TrashAction.restore) {
+                                  actionsEnabled: !_isRunningAction &&
+                                      !_isLoadingMore &&
+                                      !_isLoading,
+                                  onActionSelected: id == null
+                                      ? null
+                                      : (action) {
+                                          if (action ==
+                                              TrashQuoteCardAction.restore) {
                                             _restoreQuote(id);
                                             return;
                                           }
                                           _permanentlyDelete(id);
                                         },
-                                        itemBuilder: (context) => [
-                                          PopupMenuItem<_TrashAction>(
-                                            value: _TrashAction.restore,
-                                            child: Text(l10n.restoreNote),
-                                          ),
-                                          PopupMenuItem<_TrashAction>(
-                                            value:
-                                                _TrashAction.permanentlyDelete,
-                                            child: Text(l10n.permanentlyDelete),
-                                          ),
-                                        ],
-                                      ),
-                              );
-                            },
+                                );
+                              },
+                            ),
                           ),
                         ),
                       ],

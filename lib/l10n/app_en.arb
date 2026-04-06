@@ -3503,9 +3503,9 @@
   "developerAnniversaryPreview": "Preview Animation Now",
   "developerAnniversaryPreviewDesc": "Tap to play the anniversary animation immediately",
   "trash": "Trash",
-  "trashEmpty": "Trash is empty",
-  "trashEmptyHint": "Deleted notes will appear here",
-  "trashRetentionHint": "Deleted notes will be automatically removed after the selected retention period",
+  "trashEmpty": "No deleted notes waiting here",
+  "trashEmptyHint": "Accidentally deleted notes stay here first, including photos, audio, and video, so you can restore them together.",
+  "trashRetentionHint": "Recently deleted notes and attachments stay here until the retention period ends, then they are cleaned up automatically.",
   "moveNoteToTrashTitle": "Move Note to Trash",
   "moveNoteToTrashConfirmation": "Move this note to trash? You can restore it within {days} days.",
   "@moveNoteToTrashConfirmation": {
