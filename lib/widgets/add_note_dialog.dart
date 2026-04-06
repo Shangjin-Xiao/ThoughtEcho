@@ -105,6 +105,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
   // 一言标签加载状态
   bool _isLoadingHitokotoTags = false;
+  Future<void>? _pendingHitokotoTagTask;
 
   // AI推荐标签相关状态
   // 预留：后续接入本地 embedding/标签推荐时使用
@@ -345,12 +346,25 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
     // 优化：完全异步执行重量级操作，不阻塞 UI
     if (widget.hitokotoData != null) {
-      // 使用 microtask 在下一个事件循环执行，比 Future.delayed 更快
-      Future.microtask(() {
-        if (mounted) {
-          _addDefaultHitokotoTagsAsync();
-        }
+      _pendingHitokotoTagTask = Future.microtask(() async {
+        if (!mounted) return;
+        await _addDefaultHitokotoTagsAsync();
       });
+    }
+  }
+
+  Future<void> _waitForPendingHitokotoTagTask() async {
+    final pendingTask = _pendingHitokotoTagTask;
+    if (pendingTask == null) return;
+
+    try {
+      await pendingTask;
+    } catch (e) {
+      logDebug('等待默认一言标签任务失败: $e');
+    } finally {
+      if (identical(_pendingHitokotoTagTask, pendingTask)) {
+        _pendingHitokotoTagTask = null;
+      }
     }
   }
 
@@ -1393,6 +1407,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       return;
     }
 
+    await _waitForPendingHitokotoTagTask();
+
     // 获取当前时间段
     final String currentDayPeriodKey = TimeUtils.getCurrentDayPeriodKey();
 
@@ -2154,6 +2170,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                         ? null
                         : () async {
                             if (_contentController.text.isNotEmpty) {
+                              await _waitForPendingHitokotoTagTask();
+
                               // 获取当前时间段
                               final String currentDayPeriodKey =
                                   TimeUtils.getCurrentDayPeriodKey(); // 使用 Key

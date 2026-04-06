@@ -397,24 +397,12 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
             if (formattedEditedAt != null)
               Padding(
                 padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: baseContentColor.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 3,
-                    ),
-                    child: Text(
-                      formattedEditedAt,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: secondaryTextColor.withValues(alpha: 0.82),
-                        fontSize: 10,
-                        height: 1.0,
-                      ),
-                    ),
+                child: Text(
+                  formattedEditedAt,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: secondaryTextColor.withValues(alpha: 0.82),
+                    fontSize: 10,
+                    fontStyle: FontStyle.italic,
                   ),
                 ),
               ),

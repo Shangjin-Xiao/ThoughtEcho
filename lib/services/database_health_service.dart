@@ -336,12 +336,13 @@ class DatabaseHealthService {
       List<Map<String, dynamic>> results = [];
 
       if (offlineQuoteSource == 'tagOnly') {
+        // 简化查询：直接用 tag_id 匹配，跳过 categories 表 JOIN
+        // 这样更快且避免了潜在的 categories 表数据不一致问题
         results = await db.rawQuery(
           '''
           SELECT DISTINCT q.* FROM quotes q
           INNER JOIN quote_tags qt ON q.id = qt.quote_id
-          INNER JOIN categories c ON qt.tag_id = c.id
-          WHERE c.id = ?
+          WHERE qt.tag_id = ?
             AND length(q.content) <= $_maxOfflineQuoteLength
             AND (q.is_deleted = 0 OR q.is_deleted IS NULL)
           ORDER BY RANDOM()
