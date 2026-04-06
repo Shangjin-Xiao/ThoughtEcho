@@ -290,9 +290,9 @@ void main() {
     expect(settings.skipNonFullscreenEditor, isTrue);
   });
 
-  testWidgets('偏好设置页在仅使用本地笔记下显示离线一言数据源选项', (tester) async {
+  testWidgets('偏好设置页始终显示离线一言数据源选项', (tester) async {
     final settings = _TestSettingsService(
-      useLocalQuotesOnly: true,
+      useLocalQuotesOnly: false,
       offlineQuoteSource: 'tagOnly',
     );
     final clipboard = _TestClipboardService();
