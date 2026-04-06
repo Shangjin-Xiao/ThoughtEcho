@@ -67,4 +67,75 @@ void main() {
       expect(report['queryTypes']['DELETE']['avgTime'], '100.00ms');
     });
   });
+
+  group('DatabaseHealthService Local Quote Selection', () {
+    late DatabaseHealthService service;
+
+    setUp(() {
+      service = DatabaseHealthService();
+    });
+
+    test('allNotes 仅接受短且单行的笔记', () {
+      final longContent = '长内容' * 40;
+
+      expect(
+        service.isEligibleOfflineQuoteContent(
+          '这是一条适合首页展示的短笔记',
+          offlineQuoteSource: 'allNotes',
+        ),
+        isTrue,
+      );
+      expect(
+        service.isEligibleOfflineQuoteContent(
+          longContent,
+          offlineQuoteSource: 'allNotes',
+        ),
+        isFalse,
+      );
+      expect(
+        service.isEligibleOfflineQuoteContent(
+          '第一行\n第二行',
+          offlineQuoteSource: 'allNotes',
+        ),
+        isFalse,
+      );
+    });
+
+    test('tagOnly 需要每日一言标签且内容足够短', () {
+      expect(
+        service.isEligibleOfflineQuoteContent(
+          '带标签的短笔记',
+          offlineQuoteSource: 'tagOnly',
+          requiresHitokotoTag: true,
+        ),
+        isTrue,
+      );
+      expect(
+        service.isEligibleOfflineQuoteContent(
+          '未带标签的短笔记',
+          offlineQuoteSource: 'tagOnly',
+          requiresHitokotoTag: false,
+        ),
+        isFalse,
+      );
+      expect(
+        service.isEligibleOfflineQuoteContent(
+          '超长内容' * 40,
+          offlineQuoteSource: 'tagOnly',
+          requiresHitokotoTag: true,
+        ),
+        isFalse,
+      );
+    });
+
+    test('allNotes 与仅使用本地笔记开关无关', () {
+      expect(
+        service.isEligibleOfflineQuoteContent(
+          '离线回退时也能展示的短笔记',
+          offlineQuoteSource: 'allNotes',
+        ),
+        isTrue,
+      );
+    });
+  });
 }

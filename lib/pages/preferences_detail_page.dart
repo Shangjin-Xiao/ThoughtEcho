@@ -194,14 +194,12 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                   onChanged: (v) => settings.setUseLocalQuotesOnly(v),
                 ),
                 _buildDivider(),
-                if (settings.useLocalQuotesOnly) ...[
-                  _buildOfflineQuoteSourceSection(
-                    context,
-                    settings: settings,
-                    l10n: l10n,
-                  ),
-                  _buildDivider(),
-                ],
+                _buildOfflineQuoteSourceSection(
+                  context,
+                  settings: settings,
+                  l10n: l10n,
+                ),
+                _buildDivider(),
                 _buildSwitchTile(
                   context: context,
                   title: l10n.settingsAutoAttachLocation,
