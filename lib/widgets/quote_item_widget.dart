@@ -265,12 +265,30 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     final showExactTime = context.select<SettingsService, bool>(
       (s) => s.showExactTime,
     );
+    final showNoteEditTime = context.select<SettingsService, bool>(
+      (s) => s.showNoteEditTime,
+    );
     final String formattedDate = TimeUtils.formatQuoteDateLocalized(
       context,
       quoteDate,
       dayPeriod: quote.dayPeriod,
       showExactTime: showExactTime,
     );
+    final DateTime? lastModified = quote.lastModified != null
+        ? DateTime.tryParse(quote.lastModified!)
+        : null;
+    final bool shouldShowEditedAt = showNoteEditTime &&
+        lastModified != null &&
+        !lastModified.isAtSameMomentAs(quoteDate);
+    final String? formattedEditedAt = shouldShowEditedAt
+        ? l10n.editedAtLabel(
+            TimeUtils.formatQuoteDateLocalized(
+              context,
+              lastModified,
+              showExactTime: showExactTime,
+            ),
+          )
+        : null;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -303,14 +321,29 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
           children: [
             // 头部日期显示
             Padding(
-              padding: const EdgeInsets.fromLTRB(4, 0, 4, 8), // 减少左右边距，调整上下边距
+              padding: EdgeInsets.fromLTRB(
+                4,
+                0,
+                4,
+                formattedEditedAt != null ? 2 : 8,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    formattedDate,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: secondaryTextColor,
+                  Expanded(
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 2,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(
+                          formattedDate,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: secondaryTextColor,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   if (quote.hasLocation ||
@@ -367,6 +400,18 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                 ],
               ),
             ),
+            if (formattedEditedAt != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
+                child: Text(
+                  formattedEditedAt,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: secondaryTextColor.withValues(alpha: 0.82),
+                    fontSize: 10,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ),
 
             // 笔记内容 - 支持双击展开/折叠
             GestureDetector(

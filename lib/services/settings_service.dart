@@ -129,6 +129,14 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 是否显示笔记编辑时间
+  bool get showNoteEditTime => _appSettings.showNoteEditTime;
+  Future<void> setShowNoteEditTime(bool enabled) async {
+    _appSettings = _appSettings.copyWith(showNoteEditTime: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
   // 无网/离线时的一言回退数据源
   String get offlineQuoteSource => _appSettings.offlineQuoteSource;
   Future<void> setOfflineQuoteSource(String source) async {

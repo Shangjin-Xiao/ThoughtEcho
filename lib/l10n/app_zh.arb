@@ -134,6 +134,8 @@
   "settingsAboutSlogan": "你的专属灵感摘录本",
   "settingsViewSource": "查看项目源码 (GitHub)",
   "settingsVisitWebsite": "访问官网",
+  "settingsFeedback": "反馈建议",
+  "settingsContactDeveloper": "联系开发者",
   "settingsViewLicenses": "查看许可证信息",
   "settingsCheckUpdate": "检查更新",
   "settingsCheckUpdateDesc": "检查是否有新版本可用",
@@ -361,14 +363,6 @@
   "noTagsAvailable": "暂无标签数据",
   "deleteNote": "删除笔记",
   "deleteNoteConfirmation": "确定要删除这条笔记吗？此操作无法撤销。",
-  "deleteNoteWithChatsConfirmation": "确定要删除这条笔记吗？此操作无法撤销。\n\n该笔记关联的 {count} 条历史对话也将被一并删除。",
-  "@deleteNoteWithChatsConfirmation": {
-    "placeholders": {
-      "count": {
-        "type": "int"
-      }
-    }
-  },
   "noteDeleted": "笔记已删除",
   "favorited": "已珍藏 ({count})",
   "@favorited": {
@@ -2398,8 +2392,8 @@
   "showFavoriteButtonDesc": "在笔记卡片上显示心形按钮",
   "prioritizeBoldContent": "优先显示加粗内容",
   "prioritizeBoldContentDesc": "折叠时优先显示加粗文字",
-  "useLocalNotesOnly": "仅使用本地笔记",
-  "useLocalNotesOnlyDesc": "关闭后，无网络时自动使用本地记录",
+  "useLocalNotesOnly": "仅展示本地记录",
+  "useLocalNotesOnlyDesc": "首页不再从网络获取新的每日一言",
   "aiSmartFeatures": "AI 智能功能",
   "aiGenerateDailyPrompt": "AI生成每日提示",
   "aiGenerateDailyPromptDesc": "主页每日提示使用AI生成",
@@ -2432,6 +2426,7 @@
   "syncIntegrationNote": "同步功能集成说明：",
   "serviceApiAcknowledgements": "服务与 API 鸣谢：",
   "weatherData": "天气数据",
+  "geocodingApi": "地理编码 API",
   "dailyQuoteApi": "每日一言 API",
   "viewFullDependencyList": "查看完整依赖列表",
   "thankOpenSourceContributors": "感谢所有开源项目与社区贡献者，正是这些工具和服务让本应用成为可能。具体许可证请以各项目仓库或包管理页面为准。",
@@ -2737,6 +2732,16 @@
   "dayPeriodMidnight": "深夜",
   "showExactTime": "显示精确时间",
   "showExactTimeDesc": "在笔记中显示时间（时:分）",
+  "showNoteEditTime": "显示笔记编辑时间",
+  "showNoteEditTimeDesc": "在笔记中显示最后编辑时间",
+  "editedAtLabel": "编辑于 {dateTime}",
+  "@editedAtLabel": {
+    "placeholders": {
+      "dateTime": {
+        "type": "String"
+      }
+    }
+  },
   "guideHomepageDailyQuoteTitle": "每日一言小技巧",
   "guideHomepageDailyQuoteDesc": "单击可快速复制内容\n双击可快速添加到笔记",
   "guideNotePageFilterTitle": "筛选与排序",
@@ -3546,81 +3551,9 @@
   "operationFailedSimple": "操作失败",
   "skipNonFullscreenEditor": "直接进入全屏编辑器",
   "skipNonFullscreenEditorDesc": "点击添加笔记时跳过快速编辑，直接打开全屏富文本编辑器",
-"chatHistory": "对话历史",
-  "newChat": "新建对话",
-  "deleteChat": "删除对话",
-  "deleteChatConfirm": "确定删除此对话？所有消息将被清除。",
-  "chatDeleted": "对话已删除",
-  "noChats": "暂无对话记录",
-  "switchSession": "切换会话",
-  "pinSession": "置顶会话",
-  "unpinSession": "取消置顶",
-  "clearChatHistory": "清空对话",
-  "clearChatConfirm": "确定清空此对话的所有消息？",
-  "chatCleared": "对话已清空",
-  "mapPickerTitle": "选择位置",
-  "mapPickerCurrentLocation": "当前位置",
-  "mapPickerSearchHint": "搜索地点...",
-  "mapPickerConfirm": "确认选择",
-  "mapPickerNoResults": "未找到相关地点",
-  "mapPickerLoading": "正在加载地图...",
-  "mapPickerLocating": "正在定位...",
-  "mapPickerLocationUnavailable": "定位服务不可用",
-  "longPressForMapPicker": "长按选择精确位置",
-  "poiNameLabel": "精确地点",
-  "explore": "探索",
-  "exploreDataOverview": "数据总览",
-  "exploreAiAssistant": "AI 助手",
-  "exploreMapMemory": "地图回忆",
-  "exploreMapMemoryDesc": "在地图上浏览你的笔记足迹",
-  "aiChat": "AI 对话",
-  "aiAgent": "AI Agent",
-  "agentMode": "Agent 模式",
-  "chatMode": "对话模式",
-  "agentThinking": "Agent 正在思考...",
-  "agentToolCall": "正在调用工具: {toolName}",
-  "@agentToolCall": {
-    "placeholders": {
-      "toolName": {"type": "String"}
-    }
-  },
-  "agentSearchingNotes": "正在搜索笔记...",
-  "agentAnalyzingData": "正在分析数据...",
-  "agentWebSearching": "正在搜索网络...",
-  "agentMaxRoundsReached": "Agent 已达到最大执行轮数",
-  "agentToolNotAvailable": "工具暂不可用",
-  "noteMapTitle": "笔记地图",
-  "noteMapNoData": "暂无带位置的笔记",
-  "noteMapClusterCount": "{count} 条笔记",
-  "@noteMapClusterCount": {
-    "placeholders": {
-      "count": {"type": "int"}
-    }
-  },
-  "slashCommandHint": "输入 / 查看可用命令",
-  "commandInsight": "智能洞察",
-  "commandReport": "周期报告",
-  "commandDeepAnalysis": "深度分析",
-  "commandPolish": "润色",
-  "commandContinue": "续写",
-  "aiModeChat": "对话",
-  "aiModeAgent": "Agent",
-  "aiAssistantInputHint": "输入 / 查看功能，或直接对话",
-  "aiAssistantExploreWelcome": "从你的探索概览开始：\n{summary}",
-  "@aiAssistantExploreWelcome": {
-    "placeholders": {
-      "summary": {}
-    }
-  },
-  "aiWorkflowNeedsBoundNote": "请先关联一条具体笔记，或切换到 Agent 模式后说明要处理哪一条笔记。",
-  "workflowUnavailable": "当前模式暂不可直接执行",
-  "replaceOriginalNote": "替换原笔记",
-  "appendToEnd": "追加到末尾",
-  "currentNoteContext": "当前笔记上下文",
-  "confidenceLabel": "置信度:",
-  "favoriteNotes": "收藏的笔记",
-  "offlineQuoteSourceTitle": "离线回退/本地一言数据源",
-  "offlineQuoteSourceDesc": "无网络或仅使用本地时，首页一言展示的内容",
-  "offlineQuoteSourceTagOnly": "仅展示带有「每日一言」标签的笔记",
-  "offlineQuoteSourceAll": "随机展示全部本地笔记"
+  "offlineQuoteSourceTitle": "无网络时展示",
+  "offlineQuoteSourceDesc": "无网络或仅展示本地记录时，首页显示什么内容",
+  "offlineQuoteSourceTagOnly": "历史保存的每日一言",
+  "offlineQuoteSourceAll": "随机展示全部本地记录",
+  "noLocalSavedQuotes": "还没有历史保存的每日一言"
 }

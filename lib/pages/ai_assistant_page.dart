@@ -278,6 +278,11 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   }
 
   Future<void> _startNewChat() async {
+    // Cancel any ongoing stream before starting new chat
+    await _streamSubscription?.cancel();
+    _streamSubscription = null;
+    _isLoading = false;
+
     setState(() {
       _messages.clear();
     });
@@ -788,6 +793,13 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     });
   }
 
+  /// Stop the current generation - cancels the stream subscription
+  void _stopGenerating() {
+    _streamSubscription?.cancel();
+    _streamSubscription = null;
+    _finishLoading();
+  }
+
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
@@ -1178,18 +1190,33 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                 ),
               ),
               const SizedBox(width: 8),
-              Container(
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.primary,
-                  shape: BoxShape.circle,
+              // Show stop button when loading, send button otherwise
+              if (_isLoading)
+                Container(
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.error,
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.stop),
+                    color: theme.colorScheme.onError,
+                    tooltip: l10n.stopGenerate,
+                    onPressed: _stopGenerating,
+                  ),
+                )
+              else
+                Container(
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.send),
+                    color: theme.colorScheme.onPrimary,
+                    tooltip: l10n.confirm,
+                    onPressed: () => _handleSubmitted(_textController.text),
+                  ),
                 ),
-                child: IconButton(
-                  icon: const Icon(Icons.send),
-                  color: theme.colorScheme.onPrimary,
-                  tooltip: l10n.confirm,
-                  onPressed: () => _handleSubmitted(_textController.text),
-                ),
-              ),
             ],
           ),
         ],

@@ -1,6 +1,7 @@
 # PROJECT KNOWLEDGE BASE
 
 **项目**: ThoughtEcho (心迹) — Flutter 3.x 跨平台笔记应用
+**平台支持**: Windows, Android, iOS. **明确不支持 Web 端，开发与代码调整中绝对不要考虑 Web 支持。**
 **技术栈**: Flutter + Dart + SQLite + Provider + FlutterQuill + AI 多 Provider
 
 ---
@@ -167,7 +168,7 @@ class XxxService extends ChangeNotifier {
 | 平台 | 特殊处理 |
 |------|----------|
 | Windows | `sqfliteFfiInit()` + `databaseFactory = databaseFactoryFfi`；数据目录在 Documents/ThoughtEcho |
-| Web | 禁用文件 IO，禁止 `import 'dart:io'`；内存数据库；键值走 SharedPreferences |
+| Web | **不支持 Web 端。禁止考虑或添加任何 Web 兼容代码。** |
 | iOS | 需无签名构建脚本；键值走 MMKV |
 | Android | 移动端用 sqflite + MMKV；32 位 ARM 自动回退 SharedPreferences |
 

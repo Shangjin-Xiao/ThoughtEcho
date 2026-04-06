@@ -9,6 +9,8 @@ import '../models/quote_model.dart';
 import '../utils/app_logger.dart';
 
 class DatabaseHealthService {
+  static const int _maxOfflineQuoteLength = 100;
+
   /// 修复：添加查询性能统计
   final Map<String, int> _queryStats = {}; // 查询次数统计
   final Map<String, int> _queryTotalTime = {}; // 查询总耗时统计
@@ -50,6 +52,19 @@ class DatabaseHealthService {
     }
 
     return report;
+  }
+
+  @visibleForTesting
+  bool isEligibleOfflineQuoteContent(
+    String content, {
+    required String offlineQuoteSource,
+    bool requiresHitokotoTag = false,
+  }) {
+    if (offlineQuoteSource == 'tagOnly') {
+      return requiresHitokotoTag && content.length <= _maxOfflineQuoteLength;
+    }
+
+    return content.length <= _maxOfflineQuoteLength && !content.contains('\n');
   }
 
   /// 安全验证：检查标识符（表名、列名、索引名）是否合法，防止 SQL 注入
@@ -321,13 +336,14 @@ class DatabaseHealthService {
       List<Map<String, dynamic>> results = [];
 
       if (offlineQuoteSource == 'tagOnly') {
+        // 简化查询：直接用 tag_id 匹配，跳过 categories 表 JOIN
+        // 这样更快且避免了潜在的 categories 表数据不一致问题
         results = await db.rawQuery(
           '''
           SELECT DISTINCT q.* FROM quotes q
           INNER JOIN quote_tags qt ON q.id = qt.quote_id
-          INNER JOIN categories c ON qt.tag_id = c.id
-          WHERE c.id = ?
-            AND length(q.content) <= 100
+          WHERE qt.tag_id = ?
+            AND length(q.content) <= $_maxOfflineQuoteLength
             AND (q.is_deleted = 0 OR q.is_deleted IS NULL)
           ORDER BY RANDOM()
           LIMIT 1
@@ -337,7 +353,7 @@ class DatabaseHealthService {
       } else {
         results = await db.rawQuery('''
           SELECT * FROM quotes
-          WHERE length(content) <= 150
+          WHERE length(content) <= $_maxOfflineQuoteLength
             AND content NOT LIKE '%\n%'
             AND (is_deleted = 0 OR is_deleted IS NULL)
           ORDER BY RANDOM()
@@ -522,16 +538,22 @@ class DatabaseHealthService {
       if (offlineQuoteSource == 'tagOnly') {
         candidates = memoryStore
             .where(
-              (quote) =>
-                  quote.tagIds.contains('default_hitokoto') &&
-                  quote.content.length <= 100,
+              (quote) => isEligibleOfflineQuoteContent(
+                quote.content,
+                offlineQuoteSource: offlineQuoteSource,
+                requiresHitokotoTag: quote.tagIds.contains(
+                  'default_hitokoto',
+                ),
+              ),
             )
             .toList();
       } else {
         candidates = memoryStore
             .where(
-              (quote) =>
-                  quote.content.length <= 150 && !quote.content.contains('\n'),
+              (quote) => isEligibleOfflineQuoteContent(
+                quote.content,
+                offlineQuoteSource: offlineQuoteSource,
+              ),
             )
             .toList();
       }

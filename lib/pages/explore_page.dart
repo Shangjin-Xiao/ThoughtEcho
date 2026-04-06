@@ -125,7 +125,7 @@ class _ExplorePageState extends State<ExplorePage> {
                 children: [
                   // ─── 数据概览 ───
                   _SectionHeader(
-                    icon: Icons.analytics_outlined,
+                    icon: Icons.auto_awesome,
                     title: l10n.dataOverview,
                   ),
                   const SizedBox(height: 12),

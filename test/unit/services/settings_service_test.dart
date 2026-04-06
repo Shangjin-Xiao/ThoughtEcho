@@ -4,7 +4,6 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/app_settings.dart';
-import 'package:thoughtecho/models/ai_assistant_entry.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import '../../test_setup.dart';
 
@@ -45,6 +44,11 @@ void main() {
       expect(AppSettings.fromJson(const {}).skipNonFullscreenEditor, isFalse);
     });
 
+    test('AppSettings should default note edit time toggle to false', () {
+      expect(AppSettings.defaultSettings().showNoteEditTime, isFalse);
+      expect(AppSettings.fromJson(const {}).showNoteEditTime, isFalse);
+    });
+
     test('should persist excerpt intake toggle changes', () async {
       expect(settingsService.excerptIntentEnabled, isTrue);
 
@@ -63,31 +67,13 @@ void main() {
       expect(settingsService.appSettings.skipNonFullscreenEditor, isTrue);
     });
 
-    test('should persist split AI assistant mode preferences', () async {
-      expect(
-        settingsService.exploreAiAssistantMode,
-        AIAssistantPageMode.chat,
-      );
-      expect(
-        settingsService.noteAiAssistantMode,
-        AIAssistantPageMode.noteChat,
-      );
+    test('should persist note edit time toggle changes', () async {
+      expect(settingsService.showNoteEditTime, isFalse);
 
-      await settingsService.setExploreAiAssistantMode(
-        AIAssistantPageMode.agent,
-      );
-      await settingsService.setNoteAiAssistantMode(
-        AIAssistantPageMode.agent,
-      );
+      await settingsService.setShowNoteEditTime(true);
 
-      expect(
-        settingsService.exploreAiAssistantMode,
-        AIAssistantPageMode.agent,
-      );
-      expect(
-        settingsService.noteAiAssistantMode,
-        AIAssistantPageMode.agent,
-      );
+      expect(settingsService.showNoteEditTime, isTrue);
+      expect(settingsService.appSettings.showNoteEditTime, isTrue);
     });
   });
 }

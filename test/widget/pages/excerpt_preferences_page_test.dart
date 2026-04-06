@@ -9,13 +9,22 @@ import 'package:thoughtecho/services/settings_service.dart';
 
 class _TestSettingsService extends ChangeNotifier implements SettingsService {
   bool _excerptIntentEnabled;
+  bool _showNoteEditTime;
   bool _skipNonFullscreenEditor;
+  bool _useLocalQuotesOnly;
+  String _offlineQuoteSource;
 
   _TestSettingsService({
     bool excerptIntentEnabled = true,
+    bool showNoteEditTime = false,
     bool skipNonFullscreenEditor = false,
+    bool useLocalQuotesOnly = false,
+    String offlineQuoteSource = 'tagOnly',
   })  : _excerptIntentEnabled = excerptIntentEnabled,
-        _skipNonFullscreenEditor = skipNonFullscreenEditor;
+        _showNoteEditTime = showNoteEditTime,
+        _skipNonFullscreenEditor = skipNonFullscreenEditor,
+        _useLocalQuotesOnly = useLocalQuotesOnly,
+        _offlineQuoteSource = offlineQuoteSource;
 
   @override
   bool get excerptIntentEnabled => _excerptIntentEnabled;
@@ -23,6 +32,15 @@ class _TestSettingsService extends ChangeNotifier implements SettingsService {
   @override
   Future<void> setExcerptIntentEnabled(bool enabled) async {
     _excerptIntentEnabled = enabled;
+    notifyListeners();
+  }
+
+  @override
+  bool get showNoteEditTime => _showNoteEditTime;
+
+  @override
+  Future<void> setShowNoteEditTime(bool enabled) async {
+    _showNoteEditTime = enabled;
     notifyListeners();
   }
 
@@ -54,10 +72,22 @@ class _TestSettingsService extends ChangeNotifier implements SettingsService {
   Future<void> setPrioritizeBoldContentInCollapse(bool enabled) async {}
 
   @override
-  bool get useLocalQuotesOnly => false;
+  bool get useLocalQuotesOnly => _useLocalQuotesOnly;
 
   @override
-  Future<void> setUseLocalQuotesOnly(bool enabled) async {}
+  Future<void> setUseLocalQuotesOnly(bool enabled) async {
+    _useLocalQuotesOnly = enabled;
+    notifyListeners();
+  }
+
+  @override
+  String get offlineQuoteSource => _offlineQuoteSource;
+
+  @override
+  Future<void> setOfflineQuoteSource(String source) async {
+    _offlineQuoteSource = source;
+    notifyListeners();
+  }
 
   @override
   bool get autoAttachLocation => false;
@@ -173,6 +203,14 @@ void main() {
     );
   }
 
+  Finder findSwitchForText(String text) {
+    final textFinder = find.text(text);
+    return find.descendant(
+      of: find.ancestor(of: textFinder, matching: find.byType(ListTile)),
+      matching: find.byType(Switch),
+    );
+  }
+
   testWidgets('偏好设置页显示摘录开关并可切换', (tester) async {
     final settings = _TestSettingsService();
     final clipboard = _TestClipboardService();
@@ -194,10 +232,35 @@ void main() {
     expect(titleFinder, findsOneWidget);
     expect(settings.excerptIntentEnabled, isTrue);
 
-    await tester.tap(find.byType(Switch).at(7));
+    await tester.tap(findSwitchForText(localizations.excerptIntentEnabled));
     await tester.pumpAndSettle();
 
     expect(settings.excerptIntentEnabled, isFalse);
+  });
+
+  testWidgets('偏好设置页显示编辑时间开关并可切换', (tester) async {
+    final settings = _TestSettingsService();
+    final clipboard = _TestClipboardService();
+
+    await tester.pumpWidget(buildApp(settings, clipboard));
+    await tester.pumpAndSettle();
+
+    const titleText = '显示笔记编辑时间';
+    final titleFinder = find.text(titleText);
+    await tester.scrollUntilVisible(
+      titleFinder,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(titleFinder, findsOneWidget);
+    expect(settings.showNoteEditTime, isFalse);
+
+    await tester.tap(findSwitchForText(titleText));
+    await tester.pumpAndSettle();
+
+    expect(settings.showNoteEditTime, isTrue);
   });
 
   testWidgets('偏好设置页显示直接进入全屏编辑器开关并可切换', (tester) async {
@@ -225,5 +288,35 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(settings.skipNonFullscreenEditor, isTrue);
+  });
+
+  testWidgets('偏好设置页始终显示离线一言数据源选项', (tester) async {
+    final settings = _TestSettingsService(
+      useLocalQuotesOnly: false,
+      offlineQuoteSource: 'tagOnly',
+    );
+    final clipboard = _TestClipboardService();
+    final localizations =
+        await AppLocalizations.delegate.load(const Locale('zh'));
+
+    await tester.pumpWidget(buildApp(settings, clipboard));
+    await tester.pumpAndSettle();
+
+    final titleFinder = find.text(localizations.offlineQuoteSourceTitle);
+    await tester.scrollUntilVisible(
+      titleFinder,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(titleFinder, findsOneWidget);
+    expect(find.text(localizations.offlineQuoteSourceTagOnly), findsOneWidget);
+    expect(find.text(localizations.offlineQuoteSourceAll), findsOneWidget);
+
+    await tester.tap(find.text(localizations.offlineQuoteSourceAll));
+    await tester.pumpAndSettle();
+
+    expect(settings.offlineQuoteSource, 'allNotes');
   });
 }

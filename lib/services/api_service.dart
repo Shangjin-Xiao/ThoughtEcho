@@ -58,7 +58,7 @@ class ApiService {
     try {
       // 如果设置了仅使用本地笔记，直接返回本地一言
       if (useLocalOnly) {
-        return await _getOfflineQuote(
+        return await _getLocalOnlyQuote(
           l10n,
           databaseService,
           offlineQuoteSource,
@@ -143,8 +143,30 @@ class ApiService {
       }
     } catch (e) {
       logDebug('获取一言异常: $e');
+      if (useLocalOnly) {
+        return await _getLocalOnlyQuote(
+          l10n,
+          databaseService,
+          offlineQuoteSource,
+        );
+      }
       return await _getLocalQuoteOrDefault(l10n, databaseService);
     }
+  }
+
+  static Future<Map<String, dynamic>> _getLocalOnlyQuote(
+    AppLocalizations l10n,
+    DatabaseService? databaseService,
+    String offlineQuoteSource,
+  ) async {
+    return _getLocalQuoteOrDefault(
+      l10n,
+      databaseService,
+      offlineQuoteSource: offlineQuoteSource,
+      allowDefaultQuote: offlineQuoteSource != 'tagOnly',
+      emptyStateContent: l10n.noLocalSavedQuotes,
+      emptyStateType: 'local-empty',
+    );
   }
 
   // 根据 offlineQuoteSource 选择离线数据源
@@ -154,9 +176,6 @@ class ApiService {
     String offlineQuoteSource, {
     bool isOffline = false,
   }) async {
-    if (offlineQuoteSource == 'allNotes') {
-      return await _getAnyLocalQuote(l10n, databaseService);
-    }
     return await _getLocalQuoteOrDefault(
       l10n,
       databaseService,
@@ -171,6 +190,9 @@ class ApiService {
     DatabaseService? databaseService, {
     String offlineQuoteSource = 'tagOnly',
     bool isOffline = false,
+    bool allowDefaultQuote = true,
+    String? emptyStateContent,
+    String emptyStateType = 'local-empty',
   }) async {
     try {
       if (databaseService != null) {
@@ -198,41 +220,19 @@ class ApiService {
       };
     }
 
-    // 如果不是离线状态但本地笔记获取失败，使用默认一言
-    logDebug('使用默认一言');
-    return _getDefaultQuote(l10n);
-  }
-
-  static Future<Map<String, dynamic>> _getAnyLocalQuote(
-    AppLocalizations l10n,
-    DatabaseService? databaseService,
-  ) async {
-    try {
-      if (databaseService != null) {
-        final allQuotes = await databaseService.getAllQuotes();
-        final candidates = allQuotes
-            .where(
-              (quote) =>
-                  quote.content.length <= 150 && !quote.content.contains('\n'),
-            )
-            .toList();
-        if (candidates.isNotEmpty) {
-          candidates.shuffle();
-          final quote = candidates.first;
-          return {
-            'content': quote.content,
-            'source': quote.sourceWork ?? '',
-            'author': quote.sourceAuthor ?? '',
-            'type': 'local',
-            'from_who': quote.sourceAuthor ?? '',
-            'from': quote.sourceWork ?? '',
-          };
-        }
-      }
-    } catch (e) {
-      logDebug('获取全部本地笔记失败: $e');
+    if (!allowDefaultQuote) {
+      return {
+        'content': emptyStateContent ?? l10n.noLocalSavedQuotes,
+        'source': '',
+        'author': '',
+        'type': emptyStateType,
+        'from_who': '',
+        'from': '',
+      };
     }
 
+    // 如果不是离线状态但本地笔记获取失败，使用默认一言
+    logDebug('使用默认一言');
     return _getDefaultQuote(l10n);
   }
 
