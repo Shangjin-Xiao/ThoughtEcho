@@ -9,6 +9,15 @@ import 'media_reference_service.dart';
 
 class DatabaseSchemaManager {
   @visibleForTesting
+  static const Set<String> requiredTablesForValidation = {
+    'quotes',
+    'categories',
+    'quote_tags',
+    'chat_sessions',
+    'chat_messages',
+  };
+
+  @visibleForTesting
   static String poiNameSelectExpressionFromTableInfo(
     List<Map<String, Object?>> tableInfo,
   ) {
@@ -753,14 +762,8 @@ class DatabaseSchemaManager {
       );
       final tableNames = tables.map((t) => t['name'] as String).toSet();
 
-      final requiredTables = {
-        'quotes',
-        'categories',
-        'quote_tags',
-        'chat_sessions',
-        'chat_messages',
-      };
-      final missingTables = requiredTables.difference(tableNames);
+      final missingTables =
+          requiredTablesForValidation.difference(tableNames);
 
       if (missingTables.isNotEmpty) {
         throw Exception('升级后缺少必要的表: $missingTables');

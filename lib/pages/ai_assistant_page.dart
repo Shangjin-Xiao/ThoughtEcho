@@ -925,10 +925,8 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
               child: AIWorkflowNoticeCard(
                 title: meta['title'] as String? ?? l10n.workflowUnavailable,
                 message: message.content,
-                icon: IconData(
-                  meta['icon'] as int? ?? Icons.info_outline.codePoint,
-                  fontFamily: 'MaterialIcons',
-                ),
+                // 使用默认图标以支持 icon tree shaking
+                // meta['icon'] 是运行时动态值，无法编译时确定为常量
               ),
             );
           case 'markdown_result':

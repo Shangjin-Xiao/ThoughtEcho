@@ -1436,7 +1436,8 @@ class _HomePageState extends State<HomePage>
                     behavior: SnackBarBehavior.floating,
                   ),
                 );
-              } catch (e) {
+              } catch (e, stack) {
+                logError('HomePage.deleteQuote', error: e, stackTrace: stack);
                 if (!mounted) return;
                 ScaffoldMessenger.of(this.context).showSnackBar(
                   SnackBar(

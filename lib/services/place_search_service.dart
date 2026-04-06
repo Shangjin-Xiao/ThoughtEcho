@@ -184,11 +184,14 @@ class NominatimPlaceSearchService extends ChangeNotifier
 
       if (response.statusCode != 200) {
         logDebug('Nominatim search 失败: ${response.statusCode}');
-        return _lastResults = [];
+        if (searchToken == _latestSearchToken) {
+          _lastResults = [];
+        }
+        return [];
       }
 
       final List<dynamic> data = json.decode(response.body);
-      _lastResults = data.map((item) {
+      final results = data.map((item) {
         final itemLat = double.tryParse(item['lat']?.toString() ?? '') ?? 0;
         final itemLon = double.tryParse(item['lon']?.toString() ?? '') ?? 0;
         return PoiInfo(
@@ -201,10 +204,14 @@ class NominatimPlaceSearchService extends ChangeNotifier
         );
       }).toList();
 
-      _lastResults.sort((a, b) => (a.distanceMeters ?? double.infinity)
+      results.sort((a, b) => (a.distanceMeters ?? double.infinity)
           .compareTo(b.distanceMeters ?? double.infinity));
 
-      return _lastResults;
+      // 只在仍是最新请求时更新缓存
+      if (searchToken == _latestSearchToken) {
+        _lastResults = results;
+      }
+      return results;
     } catch (e) {
       logDebug('PlaceSearchService.searchNearby 错误: $e');
       // 只有当前搜索仍是最新搜索时才清空缓存
