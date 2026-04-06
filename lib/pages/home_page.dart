@@ -1209,6 +1209,7 @@ class _HomePageState extends State<HomePage>
             initialAuthor: author,
             initialWork: work,
             skipDefaultMetadataAutofill: hasExplicitAuthorOrWork,
+            isFromDailyQuote: isHitokotoQuickAdd, // 标记来自每日一言
           ),
         ),
       );
