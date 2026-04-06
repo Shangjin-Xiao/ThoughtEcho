@@ -2748,6 +2748,8 @@
   "guideSettingsStartupDesc": "可以设置应用启动时默认打开的页面",
   "guideSettingsThemeTitle": "主题设置",
   "guideSettingsThemeDesc": "这里可以自定义应用的主题颜色和外观",
+  "guideTrashLocationTitle": "回收站位置",
+  "guideTrashLocationDesc": "笔记已移到回收站\n可在「设置」中找到回收站并恢复",
   "apkDownloadTitle": "下载APK",
   "apkDownloading": "正在下载 ThoughtEcho {version}...",
   "@apkDownloading": {
@@ -3503,9 +3505,9 @@
   "trash": "回收站",
   "trashEmpty": "回收站为空",
   "trashEmptyHint": "删除的笔记会出现在这里",
-  "trashRetentionHint": "已删除的笔记将在当前保留期后自动清除",
+  "trashRetentionHint": "已删除的笔记将在保留期满后自动从回收站清除",
   "moveNoteToTrashTitle": "移至回收站",
-  "moveNoteToTrashConfirmation": "确定要将这条笔记移至回收站吗？你可在 {days} 天内恢复。",
+  "moveNoteToTrashConfirmation": "确定要将此笔记移至回收站？您可在 {days} 天内恢复它。",
   "@moveNoteToTrashConfirmation": {
     "placeholders": {
       "days": {
@@ -3521,11 +3523,11 @@
       }
     }
   },
-  "restoreNote": "恢复",
-  "permanentlyDelete": "永久删除",
-  "permanentlyDeleteConfirmation": "此操作无法撤销，笔记将被永久删除。",
+  "restoreNote": "恢复笔记",
+  "permanentlyDelete": "永久删除笔记",
+  "permanentlyDeleteConfirmation": "警告：此操作无法撤销，笔记将被永久删除且无法恢复。",
   "emptyTrash": "清空回收站",
-  "emptyTrashConfirmation": "确定要永久删除回收站中的所有笔记吗？此操作无法撤销。",
+  "emptyTrashConfirmation": "确定要清空整个回收站吗？所有笔记将被永久删除且无法恢复。",
   "noteMovedToTrash": "笔记已移至回收站，可在回收站恢复",
   "noteRestored": "笔记已恢复",
   "trashEmptied": "回收站已清空",

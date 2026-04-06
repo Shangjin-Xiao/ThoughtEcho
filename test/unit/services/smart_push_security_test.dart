@@ -1,11 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/services/database_service.dart';
+import '../../test_setup.dart';
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
-  sqfliteFfiInit();
-  databaseFactory = databaseFactoryFfi;
+  setUpAll(() async {
+    await setupTestEnvironment();
+  });
 
   group('getQuotesForSmartPush Security Tests', () {
     late DatabaseService databaseService;

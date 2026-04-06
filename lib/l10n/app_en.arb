@@ -2742,6 +2742,8 @@
   "guideSettingsStartupDesc": "Set the default page to open when launching the app",
   "guideSettingsThemeTitle": "Theme Settings",
   "guideSettingsThemeDesc": "Customize app theme colors and appearance here",
+  "guideTrashLocationTitle": "Recycle Bin Location",
+  "guideTrashLocationDesc": "Note moved to recycle bin\nFind it in Settings to restore",
   "apkDownloadTitle": "Download APK",
   "apkDownloading": "Downloading ThoughtEcho {version}...",
   "@apkDownloading": {
@@ -3505,7 +3507,7 @@
   "trashEmptyHint": "Deleted notes will appear here",
   "trashRetentionHint": "Deleted notes will be automatically removed after the selected retention period",
   "moveNoteToTrashTitle": "Move Note to Trash",
-  "moveNoteToTrashConfirmation": "Move this note to Trash? You can restore it within {days} days.",
+  "moveNoteToTrashConfirmation": "Move this note to trash? You can restore it within {days} days.",
   "@moveNoteToTrashConfirmation": {
     "placeholders": {
       "days": {
@@ -3521,11 +3523,11 @@
       }
     }
   },
-  "restoreNote": "Restore",
-  "permanentlyDelete": "Permanently Delete",
-  "permanentlyDeleteConfirmation": "This cannot be undone. The note will be permanently deleted.",
+  "restoreNote": "Restore Note",
+  "permanentlyDelete": "Delete Permanently",
+  "permanentlyDeleteConfirmation": "Warning: This cannot be undone. The note will be permanently deleted and cannot be recovered.",
   "emptyTrash": "Empty Trash",
-  "emptyTrashConfirmation": "Permanently delete all notes in trash? This cannot be undone.",
+  "emptyTrashConfirmation": "Permanently delete all notes in trash? This cannot be undone and cannot be recovered.",
   "noteMovedToTrash": "Note moved to trash. You can restore it from Trash",
   "noteRestored": "Note restored",
   "trashEmptied": "Trash emptied",

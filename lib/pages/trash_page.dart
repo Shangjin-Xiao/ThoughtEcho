@@ -136,7 +136,8 @@ class _TrashPageState extends State<TrashPage> {
     if (date == null) {
       return l10n.deletedAt('-');
     }
-    return l10n.deletedAt(TimeUtils.formatDateTime(date.toLocal()));
+    // Use relative date format for better readability (e.g., "Today 14:30" vs "2025-06-21 14:30")
+    return l10n.deletedAt(TimeUtils.formatRelativeDateTimeLocalized(context, date.toLocal()));
   }
 
   String _remainingDaysText(BuildContext context, Quote quote) {
@@ -347,7 +348,7 @@ class _TrashPageState extends State<TrashPage> {
         title: Text(l10n.trash),
         actions: [
           TextButton(
-            onPressed: (_trashQuotes.isEmpty || _isLoadingMore || _isLoading)
+            onPressed: (_trashQuotes.isEmpty || _isLoadingMore || _isLoading || _isRunningAction)
                 ? null
                 : _emptyTrash,
             child: Text(l10n.emptyTrash),

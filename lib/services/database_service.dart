@@ -524,6 +524,37 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       SchedulerBinding.instance.addPostFrameCallback((_) {
         if (!_isDisposed) notifyListeners();
       });
+      // 修复：Web平台也需要执行回收站自动清理
+      Future<void>.microtask(() async {
+        if (_isDisposed) {
+          return;
+        }
+        try {
+          final retentionDays = await _resolveTrashRetentionDays();
+          if (retentionDays == null) {
+            logWarning(
+              '读取回收站保留期失败，跳过启动自动清理',
+              source: 'DatabaseService',
+            );
+            return;
+          }
+          final cleanedCount =
+              await autoCleanupExpiredTrash(retentionDays: retentionDays);
+          if (cleanedCount > 0) {
+            logInfo(
+              '回收站自动清理完成: 删除 $cleanedCount 条过期笔记 (保留 $retentionDays 天)',
+              source: 'DatabaseService',
+            );
+          }
+        } catch (e, stackTrace) {
+          logError(
+            '回收站自动清理失败: $e',
+            error: e,
+            stackTrace: stackTrace,
+            source: 'DatabaseService',
+          );
+        }
+      });
       return;
     }
 

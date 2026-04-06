@@ -349,11 +349,15 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       for (final id in targetDeletedIds) {
         _webTombstones!.putIfAbsent(id, () => deletedAt);
       }
-      await _saveWebTombstones();
-
+      
+      // 修复：先从内存中移除，避免与 restoreQuote 的竞态条件
       _memoryStore.removeWhere(
         (quote) => targetDeletedIds.contains(quote.id) && quote.isDeleted,
       );
+      
+      // 然后持久化墓碑
+      await _saveWebTombstones();
+      
       for (final id in targetDeletedIds) {
         QuoteContent.removeCacheForQuote(id);
       }

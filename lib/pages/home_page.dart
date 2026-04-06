@@ -23,7 +23,6 @@ import '../widgets/local_ai/ocr_result_sheet.dart';
 import '../widgets/local_ai/voice_input_overlay.dart';
 import 'ai_features_page.dart';
 import 'settings_page.dart';
-import 'trash_page.dart';
 import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
 import '../theme/app_theme.dart';
 import 'note_full_editor_page.dart'; // 添加全屏编辑页面导入
@@ -90,6 +89,7 @@ class _HomePageState extends State<HomePage>
   final GlobalKey _noteFavoriteGuideKey = GlobalKey();
   final GlobalKey _noteMoreGuideKey = GlobalKey(); // 功能引导：更多按钮 Key
   final GlobalKey _noteFoldGuideKey = GlobalKey();
+  final GlobalKey _settingsTabGuideKey = GlobalKey(); // 功能引导：设置标签 Key（用于回收站引导）
   final GlobalKey<SettingsPageState> _settingsPageKey =
       GlobalKey<SettingsPageState>();
   bool _homeGuidePending = false;
@@ -961,6 +961,26 @@ class _HomePageState extends State<HomePage>
     });
   }
 
+  /// 显示回收站位置引导（删除笔记后）
+  void _scheduleTrashLocationGuide() {
+    if (!mounted) return;
+    if (FeatureGuideHelper.hasShown(context, 'trash_location_guide')) {
+      return;
+    }
+
+    // 等待 SnackBar 显示完成后再显示引导气泡
+    Future.delayed(const Duration(milliseconds: 1200), () {
+      if (!mounted) return;
+      FeatureGuideHelper.show(
+        context: context,
+        guideId: 'trash_location_guide',
+        targetKey: _settingsTabGuideKey,
+        autoDismissDuration: const Duration(milliseconds: 3000), // 稍长一点，让用户看清
+        shouldShow: () => mounted,
+      );
+    });
+  }
+
   /// 显示首页功能引导
   Future<void> _showHomePageGuides() {
     return FeatureGuideHelper.show(
@@ -1430,6 +1450,8 @@ class _HomePageState extends State<HomePage>
                     behavior: SnackBarBehavior.floating,
                   ),
                 );
+                // 显示回收站位置引导（仅第一次删除笔记时）
+                _scheduleTrashLocationGuide();
               } catch (e, stackTrace) {
                 logError(
                   '移动笔记到回收站失败: $e',
@@ -2034,18 +2056,6 @@ class _HomePageState extends State<HomePage>
                         },
                       ),
 
-                      IconButton(
-                        tooltip: l10n.trash,
-                        icon: const Icon(Icons.delete_outline),
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const TrashPage(),
-                            ),
-                          );
-                        },
-                      ),
-
                       // 显示位置和天气信息（支持多种状态）
                       _buildLocationWeatherDisplay(
                         context,
@@ -2395,6 +2405,7 @@ class _HomePageState extends State<HomePage>
                     label: AppLocalizations.of(context).navInsights,
                   ),
                   NavigationDestination(
+                    key: _settingsTabGuideKey, // 功能引导 key
                     icon: const Icon(Icons.settings_outlined),
                     selectedIcon: Icon(
                       Icons.settings,
