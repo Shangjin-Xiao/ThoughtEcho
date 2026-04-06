@@ -2415,6 +2415,7 @@
   "syncIntegrationNote": "Remarque sur l'intégration de la synchronisation :",
   "serviceApiAcknowledgements": "Remerciements pour les services et l'API :",
   "weatherData": "Données météorologiques",
+  "geocodingApi": "API de géocodage",
   "dailyQuoteApi": "API de devis quotidien",
   "viewFullDependencyList": "Afficher la liste complète des dépendances",
   "thankOpenSourceContributors": "Merci à tous les projets open source et aux contributeurs de la communauté. Ces outils et services rendent cette application possible. Veuillez vous référer au référentiel de chaque projet ou à la page de gestion des packages pour les licences spécifiques.",

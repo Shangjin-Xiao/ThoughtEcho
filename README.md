@@ -261,13 +261,12 @@
 
 ## 🙏 鸣谢
 
-感谢以下服务提供商的支持：
+感谢以下开源项目与服务提供商的支持：
+- [Flutter](https://flutter.dev/) - UI 框架
+- [LocalSend](https://github.com/localsend/localsend) - 局域网同步协议集成
 - [一言（Hitokoto）](https://hitokoto.cn/) - 提供每日一言服务
 - [Open-Meteo](https://open-meteo.com/) - 提供天气数据服务
-- [OpenAI](https://openai.com/) - 提供强大的 AI 模型支持
-- [Anthropic](https://www.anthropic.com/) - 提供 Claude 模型支持
-- [DeepSeek](https://www.deepseek.com/) - 提供 DeepSeek 模型支持
-- [OpenRouter](https://openrouter.ai/) - 提供 AI 模型聚合服务
+- [OpenStreetMap Nominatim](https://nominatim.openstreetmap.org/) - 提供地理编码服务
 
 </div>
 
@@ -521,12 +520,11 @@ This project is licensed under the [MIT License](LICENSE) - feel free to use, mo
 
 ## 🙏 Acknowledgments
 
-Thanks to the following service providers:
+Thanks to the following open-source projects and service providers:
+- [Flutter](https://flutter.dev/) - UI framework
+- [LocalSend](https://github.com/localsend/localsend) - Local network sync integration
 - [Hitokoto](https://hitokoto.cn/) - Daily quote service
 - [Open-Meteo](https://open-meteo.com/) - Weather data service
-- [OpenAI](https://openai.com/) - AI model provider
-- [Anthropic](https://www.anthropic.com/) - Claude model provider
-- [DeepSeek](https://www.deepseek.com/) - DeepSeek model provider
-- [OpenRouter](https://openrouter.ai/) - AI model aggregation service
+- [OpenStreetMap Nominatim](https://nominatim.openstreetmap.org/) - Geocoding service
 
 </details>

@@ -2415,6 +2415,7 @@
   "syncIntegrationNote": "동기화 통합 참고사항:",
   "serviceApiAcknowledgements": "서비스 및 API 승인:",
   "weatherData": "날씨 데이터",
+  "geocodingApi": "지오코딩 API",
   "dailyQuoteApi": "일일 견적 API",
   "viewFullDependencyList": "전체 종속성 목록 보기",
   "thankOpenSourceContributors": "모든 오픈 소스 프로젝트와 커뮤니티 기여자에게 감사드립니다. 이러한 도구와 서비스를 통해 이 앱이 가능해졌습니다. 특정 라이선스에 대해서는 각 프로젝트의 저장소 또는 패키지 관리 페이지를 참조하세요.",

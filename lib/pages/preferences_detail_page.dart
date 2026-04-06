@@ -185,15 +185,6 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                       settings.setPrioritizeBoldContentInCollapse(v),
                 ),
                 _buildDivider(),
-                _buildSwitchTile(
-                  context: context,
-                  title: l10n.useLocalNotesOnly,
-                  subtitle: l10n.useLocalNotesOnlyDesc,
-                  icon: Icons.offline_bolt_outlined,
-                  value: settings.useLocalQuotesOnly,
-                  onChanged: (v) => settings.setUseLocalQuotesOnly(v),
-                ),
-                _buildDivider(),
                 _buildOfflineQuoteSourceSection(
                   context,
                   settings: settings,
@@ -525,51 +516,113 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
       required String title,
       required String value,
     }) {
-      return RadioListTile<String>(
-        value: value,
-        groupValue: settings.offlineQuoteSource,
-        onChanged: (selectedValue) {
-          if (selectedValue != null) {
-            settings.setOfflineQuoteSource(selectedValue);
-          }
-        },
-        contentPadding: EdgeInsets.zero,
-        visualDensity: VisualDensity.compact,
-        title: Text(
-          title,
-          style: theme.textTheme.bodyMedium,
+      final isSelected = settings.offlineQuoteSource == value;
+      return Padding(
+        padding: const EdgeInsets.only(top: 8),
+        child: Material(
+          color: isSelected
+              ? theme.colorScheme.secondaryContainer
+              : theme.colorScheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(14),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(14),
+            onTap: () => settings.setOfflineQuoteSource(value),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              child: RadioListTile<String>(
+                value: value,
+                groupValue: settings.offlineQuoteSource,
+                onChanged: (selectedValue) {
+                  if (selectedValue != null) {
+                    settings.setOfflineQuoteSource(selectedValue);
+                  }
+                },
+                contentPadding: EdgeInsets.zero,
+                visualDensity: VisualDensity.compact,
+                activeColor: theme.colorScheme.primary,
+                title: Text(
+                  title,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       );
     }
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            l10n.offlineQuoteSourceTitle,
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w600,
+      child: Container(
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.45),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SwitchListTile(
+              title: Text(
+                l10n.useLocalNotesOnly,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: Text(
+                l10n.useLocalNotesOnlyDesc,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+              ),
+              secondary: Icon(
+                Icons.offline_bolt_outlined,
+                color: theme.colorScheme.primary,
+              ),
+              value: settings.useLocalQuotesOnly,
+              onChanged: (v) => settings.setUseLocalQuotesOnly(v),
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
+              ),
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            l10n.offlineQuoteSourceDesc,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            const Divider(height: 1, indent: 16, endIndent: 16),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.offlineQuoteSourceTitle,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    l10n.offlineQuoteSourceDesc,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                      height: 1.35,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  buildOption(
+                    title: l10n.offlineQuoteSourceTagOnly,
+                    value: 'tagOnly',
+                  ),
+                  buildOption(
+                    title: l10n.offlineQuoteSourceAll,
+                    value: 'allNotes',
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          buildOption(
-            title: l10n.offlineQuoteSourceTagOnly,
-            value: 'tagOnly',
-          ),
-          buildOption(
-            title: l10n.offlineQuoteSourceAll,
-            value: 'allNotes',
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

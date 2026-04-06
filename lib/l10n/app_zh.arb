@@ -2390,8 +2390,8 @@
   "showFavoriteButtonDesc": "在笔记卡片上显示心形按钮",
   "prioritizeBoldContent": "优先显示加粗内容",
   "prioritizeBoldContentDesc": "折叠时优先显示加粗文字",
-  "useLocalNotesOnly": "仅使用本地笔记",
-  "useLocalNotesOnlyDesc": "关闭后，无网络时自动使用本地记录",
+  "useLocalNotesOnly": "纯本地模式 (不请求网络)",
+  "useLocalNotesOnlyDesc": "首页每日一言不再自动从网络获取新数据",
   "aiSmartFeatures": "AI 智能功能",
   "aiGenerateDailyPrompt": "AI生成每日提示",
   "aiGenerateDailyPromptDesc": "主页每日提示使用AI生成",
@@ -2424,6 +2424,7 @@
   "syncIntegrationNote": "同步功能集成说明：",
   "serviceApiAcknowledgements": "服务与 API 鸣谢：",
   "weatherData": "天气数据",
+  "geocodingApi": "地理编码 API",
   "dailyQuoteApi": "每日一言 API",
   "viewFullDependencyList": "查看完整依赖列表",
   "thankOpenSourceContributors": "感谢所有开源项目与社区贡献者，正是这些工具和服务让本应用成为可能。具体许可证请以各项目仓库或包管理页面为准。",
@@ -3548,8 +3549,9 @@
   "operationFailedSimple": "操作失败",
   "skipNonFullscreenEditor": "直接进入全屏编辑器",
   "skipNonFullscreenEditorDesc": "点击添加笔记时跳过快速编辑，直接打开全屏富文本编辑器",
-  "offlineQuoteSourceTitle": "离线回退/本地一言数据源",
-  "offlineQuoteSourceDesc": "无网络或仅使用本地时，首页一言展示的内容",
-  "offlineQuoteSourceTagOnly": "仅展示带有「每日一言」标签的笔记",
-  "offlineQuoteSourceAll": "随机展示全部本地笔记"
+  "offlineQuoteSourceTitle": "本地及离线展示源",
+  "offlineQuoteSourceDesc": "在无网络或开启纯本地模式时，首页顶部卡片的展示内容",
+  "offlineQuoteSourceTagOnly": "仅展示历史保存过的「每日一言」",
+  "offlineQuoteSourceAll": "随机展示全部本地记录",
+  "noLocalSavedQuotes": "还没有历史保存的每日一言"
 }

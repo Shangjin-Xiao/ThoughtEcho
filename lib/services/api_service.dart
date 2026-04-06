@@ -58,7 +58,7 @@ class ApiService {
     try {
       // 如果设置了仅使用本地笔记，直接返回本地一言
       if (useLocalOnly) {
-        return await _getOfflineQuote(
+        return await _getLocalOnlyQuote(
           l10n,
           databaseService,
           offlineQuoteSource,
@@ -143,8 +143,30 @@ class ApiService {
       }
     } catch (e) {
       logDebug('获取一言异常: $e');
+      if (useLocalOnly) {
+        return await _getLocalOnlyQuote(
+          l10n,
+          databaseService,
+          offlineQuoteSource,
+        );
+      }
       return await _getLocalQuoteOrDefault(l10n, databaseService);
     }
+  }
+
+  static Future<Map<String, dynamic>> _getLocalOnlyQuote(
+    AppLocalizations l10n,
+    DatabaseService? databaseService,
+    String offlineQuoteSource,
+  ) async {
+    return _getLocalQuoteOrDefault(
+      l10n,
+      databaseService,
+      offlineQuoteSource: offlineQuoteSource,
+      allowDefaultQuote: offlineQuoteSource != 'tagOnly',
+      emptyStateContent: l10n.noLocalSavedQuotes,
+      emptyStateType: 'local-empty',
+    );
   }
 
   // 根据 offlineQuoteSource 选择离线数据源
@@ -168,6 +190,9 @@ class ApiService {
     DatabaseService? databaseService, {
     String offlineQuoteSource = 'tagOnly',
     bool isOffline = false,
+    bool allowDefaultQuote = true,
+    String? emptyStateContent,
+    String emptyStateType = 'local-empty',
   }) async {
     try {
       if (databaseService != null) {
@@ -190,6 +215,17 @@ class ApiService {
         'source': '',
         'author': '',
         'type': 'offline',
+        'from_who': '',
+        'from': '',
+      };
+    }
+
+    if (!allowDefaultQuote) {
+      return {
+        'content': emptyStateContent ?? l10n.noLocalSavedQuotes,
+        'source': '',
+        'author': '',
+        'type': emptyStateType,
         'from_who': '',
         'from': '',
       };
