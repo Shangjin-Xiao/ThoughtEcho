@@ -10,12 +10,13 @@
 
 ## Members
 
-| 名字 | 角色 | Charter | 状态 |
-|------|------|---------|------|
+| Name | Role | Charter | Status |
+|------|------|---------|--------|
 | WALL·E | 产品顾问 | .squad/agents/wall-e/charter.md | 🟢 Active |
 | GOPHER | 项目经理 | .squad/agents/gopher/charter.md | 🟢 Active |
 | EVE | UI/UX 设计师 | .squad/agents/eve/charter.md | 🟢 Active |
 | AUTO | 技术主管 | .squad/agents/auto/charter.md | 🟢 Active |
+| GO-4 | 代码审查员 | .squad/agents/go-4/charter.md | 🟡 按需 |
 | M-O | 测试工程师 | .squad/agents/m-o/charter.md | 🟢 Active |
 | BURN-E | 营销专家 | .squad/agents/burn-e/charter.md | 🟢 Active |
 | HAN-S | 内容策划 | .squad/agents/han-s/charter.md | 🟢 Active |
@@ -42,7 +43,13 @@
 
 ## Model Preferences
 
-- **协调/顶层决策**: Claude Opus
-- **小代码任务**: Claude Sonnet
-- **复杂算法/修复**: GPT Codex
-- **测试**: GPT-5.3-Codex
+| 任务类型 | 模型 | 适用角色 |
+|----------|------|----------|
+| **顶层统筹/关键决策** | Claude Opus | WALL·E (产品顾问), GOPHER (项目经理) |
+| **一般代码/UI/文档** | Claude Sonnet | EVE (设计), HAN-S (内容), 常规代码 |
+| **深度逻辑/算法/复杂修复** | GPT-5.3-Codex | AUTO (技术主管), 复杂功能 |
+| **测试** | GPT-5.3-Codex | M-O (测试) |
+| **代码审查** | GPT-5.3-Codex | GO-4 (审查员) |
+| **与上晋沟通** | Claude 系列 | 所有角色 |
+
+**原则**: 不要吝啬使用 Opus！重要决策和高层统筹必须用最强模型。

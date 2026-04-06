@@ -49,6 +49,8 @@ class SettingsPageState extends State<SettingsPage> {
   // --- 定义链接地址 ---
   final String _projectUrl = 'https://github.com/Shangjin-Xiao/ThoughtEcho';
   final String _websiteUrl = 'https://note.shangjinyun.cn/';
+  final String _feedbackUrl =
+      'https://github.com/Shangjin-Xiao/ThoughtEcho/issues/new';
   // --- 链接地址结束 ---
   final TextEditingController _locationController = TextEditingController();
 
@@ -922,6 +924,23 @@ class SettingsPageState extends State<SettingsPage> {
                                 url: _websiteUrl,
                               ),
                               const SizedBox(height: 16),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  Navigator.pop(dialogContext);
+                                  _launchUrl(_feedbackUrl);
+                                },
+                                icon: const Icon(Icons.feedback_outlined),
+                                label: Text(l10n.settingsFeedback),
+                                style: _primaryButtonStyle(context),
+                              ),
+                              const SizedBox(height: 8),
+                              _buildAboutLink(
+                                context: context,
+                                icon: Icons.email_outlined,
+                                text: l10n.settingsContactDeveloper,
+                                url: 'mailto:shangjinyun@proton.me',
+                              ),
+                              const SizedBox(height: 8),
                               ElevatedButton.icon(
                                 onPressed: () {
                                   Navigator.pop(dialogContext);
