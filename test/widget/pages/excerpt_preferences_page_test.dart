@@ -11,14 +11,20 @@ class _TestSettingsService extends ChangeNotifier implements SettingsService {
   bool _excerptIntentEnabled;
   bool _showNoteEditTime;
   bool _skipNonFullscreenEditor;
+  bool _useLocalQuotesOnly;
+  String _offlineQuoteSource;
 
   _TestSettingsService({
     bool excerptIntentEnabled = true,
     bool showNoteEditTime = false,
     bool skipNonFullscreenEditor = false,
+    bool useLocalQuotesOnly = false,
+    String offlineQuoteSource = 'tagOnly',
   })  : _excerptIntentEnabled = excerptIntentEnabled,
         _showNoteEditTime = showNoteEditTime,
-        _skipNonFullscreenEditor = skipNonFullscreenEditor;
+        _skipNonFullscreenEditor = skipNonFullscreenEditor,
+        _useLocalQuotesOnly = useLocalQuotesOnly,
+        _offlineQuoteSource = offlineQuoteSource;
 
   @override
   bool get excerptIntentEnabled => _excerptIntentEnabled;
@@ -66,10 +72,22 @@ class _TestSettingsService extends ChangeNotifier implements SettingsService {
   Future<void> setPrioritizeBoldContentInCollapse(bool enabled) async {}
 
   @override
-  bool get useLocalQuotesOnly => false;
+  bool get useLocalQuotesOnly => _useLocalQuotesOnly;
 
   @override
-  Future<void> setUseLocalQuotesOnly(bool enabled) async {}
+  Future<void> setUseLocalQuotesOnly(bool enabled) async {
+    _useLocalQuotesOnly = enabled;
+    notifyListeners();
+  }
+
+  @override
+  String get offlineQuoteSource => _offlineQuoteSource;
+
+  @override
+  Future<void> setOfflineQuoteSource(String source) async {
+    _offlineQuoteSource = source;
+    notifyListeners();
+  }
 
   @override
   bool get autoAttachLocation => false;
@@ -270,5 +288,35 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(settings.skipNonFullscreenEditor, isTrue);
+  });
+
+  testWidgets('偏好设置页在仅使用本地笔记下显示离线一言数据源选项', (tester) async {
+    final settings = _TestSettingsService(
+      useLocalQuotesOnly: true,
+      offlineQuoteSource: 'tagOnly',
+    );
+    final clipboard = _TestClipboardService();
+    final localizations =
+        await AppLocalizations.delegate.load(const Locale('zh'));
+
+    await tester.pumpWidget(buildApp(settings, clipboard));
+    await tester.pumpAndSettle();
+
+    final titleFinder = find.text(localizations.offlineQuoteSourceTitle);
+    await tester.scrollUntilVisible(
+      titleFinder,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    expect(titleFinder, findsOneWidget);
+    expect(find.text(localizations.offlineQuoteSourceTagOnly), findsOneWidget);
+    expect(find.text(localizations.offlineQuoteSourceAll), findsOneWidget);
+
+    await tester.tap(find.text(localizations.offlineQuoteSourceAll));
+    await tester.pumpAndSettle();
+
+    expect(settings.offlineQuoteSource, 'allNotes');
   });
 }
