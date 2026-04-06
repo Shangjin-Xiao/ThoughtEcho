@@ -313,7 +313,7 @@ void main() {
       expect(find.byType(quill.QuillEditor), findsOneWidget);
     });
 
-    testWidgets('开启后在创建时间下方显示编辑时间', (tester) async {
+    testWidgets('开启后在时间与正文之间轻量显示编辑时间', (tester) async {
       final settings = _FakeSettingsService()..showNoteEditTime = true;
       final quote = _buildQuote(
         date: DateTime(2025, 6, 21, 9, 0).toIso8601String(),
@@ -348,7 +348,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('已编辑'), findsOneWidget);
+      expect(find.textContaining('编辑于'), findsOneWidget);
       expect(find.textContaining('2025-06-22'), findsOneWidget);
     });
 

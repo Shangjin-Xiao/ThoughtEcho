@@ -556,6 +556,7 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
       child: Container(
+        padding: const EdgeInsets.only(bottom: 4),
         decoration: BoxDecoration(
           color: theme.colorScheme.surfaceContainerLowest,
           borderRadius: BorderRadius.circular(18),
@@ -585,6 +586,10 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
               ),
               value: settings.useLocalQuotesOnly,
               onChanged: (v) => settings.setUseLocalQuotesOnly(v),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 4,
+              ),
               shape: const RoundedRectangleBorder(
                 borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
               ),
@@ -598,7 +603,7 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                   Text(
                     l10n.offlineQuoteSourceTitle,
                     style: theme.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 4),

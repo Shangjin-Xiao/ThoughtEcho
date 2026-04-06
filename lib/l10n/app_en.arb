@@ -2382,7 +2382,7 @@
   "prioritizeBoldContent": "Prioritize Bold Content",
   "prioritizeBoldContentDesc": "Show bold text first when collapsed",
   "useLocalNotesOnly": "Only Show Local Records",
-  "useLocalNotesOnlyDesc": "Home will only use your saved local records",
+  "useLocalNotesOnlyDesc": "Home will stop fetching new daily quotes from the network",
   "aiSmartFeatures": "AI Smart Features",
   "aiGenerateDailyPrompt": "AI Generated Daily Prompt",
   "aiGenerateDailyPromptDesc": "Use AI to generate home page daily prompts",
@@ -3538,7 +3538,7 @@
   "skipNonFullscreenEditor": "Open fullscreen editor directly",
   "skipNonFullscreenEditorDesc": "Skip quick edit and open fullscreen rich text editor when adding notes",
   "offlineQuoteSourceTitle": "When Offline, Show",
-  "offlineQuoteSourceDesc": "Choose what appears on the home page when offline or local-only is enabled",
+  "offlineQuoteSourceDesc": "Choose what appears on the home page when offline or when local-only is enabled",
   "offlineQuoteSourceTagOnly": "Previously saved daily quotes",
   "offlineQuoteSourceAll": "Random local records",
   "noLocalSavedQuotes": "No previously saved daily quotes yet"
