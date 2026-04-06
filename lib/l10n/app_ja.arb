@@ -2415,6 +2415,7 @@
   "syncIntegrationNote": "同期機能：",
   "serviceApiAcknowledgements": "API：",
   "weatherData": "天気データ",
+  "geocodingApi": "ジオコーディングAPI",
   "dailyQuoteApi": "一言API",
   "viewFullDependencyList": "全リストを表示",
   "thankOpenSourceContributors": "すべての貢献者に感謝します。",

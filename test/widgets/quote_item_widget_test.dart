@@ -348,7 +348,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('编辑于'), findsOneWidget);
+      expect(find.textContaining('已编辑'), findsOneWidget);
       expect(find.textContaining('2025-06-22'), findsOneWidget);
     });
 

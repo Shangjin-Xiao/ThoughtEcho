@@ -321,15 +321,16 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
           children: [
             // 头部日期显示
             Padding(
-              padding: const EdgeInsets.fromLTRB(4, 0, 4, 8), // 减少左右边距，调整上下边距
+              padding: EdgeInsets.fromLTRB(4, 0, 4, formattedEditedAt != null ? 2 : 8),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 2,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         Text(
                           formattedDate,
@@ -337,17 +338,6 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                             color: secondaryTextColor,
                           ),
                         ),
-                        if (formattedEditedAt != null) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            formattedEditedAt,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: secondaryTextColor,
-                              fontSize: 11,
-                              height: 1.1,
-                            ),
-                          ),
-                        ],
                       ],
                     ),
                   ),
@@ -399,6 +389,17 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                 ],
               ),
             ),
+            if (formattedEditedAt != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+                child: Text(
+                  formattedEditedAt,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: secondaryTextColor.withValues(alpha: 0.5),
+                    fontSize: 10,
+                  ),
+                ),
+              ),
 
             // 笔记内容 - 支持双击展开/折叠
             GestureDetector(

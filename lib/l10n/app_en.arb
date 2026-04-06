@@ -2381,8 +2381,8 @@
   "showFavoriteButtonDesc": "Show heart button on note cards",
   "prioritizeBoldContent": "Prioritize Bold Content",
   "prioritizeBoldContentDesc": "Show bold text first when collapsed",
-  "useLocalNotesOnly": "Use Local Notes Only",
-  "useLocalNotesOnlyDesc": "When off, automatically use local records when offline",
+  "useLocalNotesOnly": "Only Show Local Records",
+  "useLocalNotesOnlyDesc": "Home will only use your saved local records",
   "aiSmartFeatures": "AI Smart Features",
   "aiGenerateDailyPrompt": "AI Generated Daily Prompt",
   "aiGenerateDailyPromptDesc": "Use AI to generate home page daily prompts",
@@ -2415,6 +2415,7 @@
   "syncIntegrationNote": "Sync integration note:",
   "serviceApiAcknowledgements": "Services & API Acknowledgements:",
   "weatherData": "Weather Data",
+  "geocodingApi": "Geocoding API",
   "dailyQuoteApi": "Daily Quote API",
   "viewFullDependencyList": "View Full Dependency List",
   "thankOpenSourceContributors": "Thanks to all open source projects and community contributors. These tools and services make this app possible. Please refer to each project's repository or package management page for specific licenses.",
@@ -2722,7 +2723,7 @@
   "showExactTimeDesc": "Display time (hour:minute) in notes",
   "showNoteEditTime": "Show Note Edit Time",
   "showNoteEditTimeDesc": "Display the last edited time in notes",
-  "editedAtLabel": "Edited {dateTime}",
+  "editedAtLabel": "Edited at {dateTime}",
   "@editedAtLabel": {
     "placeholders": {
       "dateTime": {
@@ -3536,8 +3537,9 @@
   "operationFailedSimple": "Operation failed",
   "skipNonFullscreenEditor": "Open fullscreen editor directly",
   "skipNonFullscreenEditorDesc": "Skip quick edit and open fullscreen rich text editor when adding notes",
-  "offlineQuoteSourceTitle": "Offline/Local Quote Source",
-  "offlineQuoteSourceDesc": "Content displayed on homepage when offline or local-only",
-  "offlineQuoteSourceTagOnly": "Only show notes with \"#Daily Quote\" tag",
-  "offlineQuoteSourceAll": "Randomly show all local notes"
+  "offlineQuoteSourceTitle": "When Offline, Show",
+  "offlineQuoteSourceDesc": "Choose what appears on the home page when offline or local-only is enabled",
+  "offlineQuoteSourceTagOnly": "Previously saved daily quotes",
+  "offlineQuoteSourceAll": "Random local records",
+  "noLocalSavedQuotes": "No previously saved daily quotes yet"
 }
