@@ -62,6 +62,7 @@ class NoteFullEditorPage extends StatefulWidget {
   final bool skipDefaultMetadataAutofill;
   final bool isRestoredDraft; // 新增：标记是否为恢复的草稿
   final String? restoredDraftId; // 新增：恢复草稿的原始ID
+  final bool isFromDailyQuote; // 新增：标记是否来自每日一言
 
   const NoteFullEditorPage({
     super.key,
@@ -73,6 +74,7 @@ class NoteFullEditorPage extends StatefulWidget {
     this.skipDefaultMetadataAutofill = false,
     this.isRestoredDraft = false, // 默认为 false
     this.restoredDraftId, // 恢复草稿的原始ID
+    this.isFromDailyQuote = false, // 默认为 false
   });
 
   @override
