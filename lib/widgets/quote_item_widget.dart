@@ -321,7 +321,12 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
           children: [
             // 头部日期显示
             Padding(
-              padding: EdgeInsets.fromLTRB(4, 0, 4, formattedEditedAt != null ? 2 : 8),
+              padding: EdgeInsets.fromLTRB(
+                4,
+                0,
+                4,
+                formattedEditedAt != null ? 2 : 8,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -391,12 +396,25 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
             ),
             if (formattedEditedAt != null)
               Padding(
-                padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
-                child: Text(
-                  formattedEditedAt,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: secondaryTextColor.withValues(alpha: 0.5),
-                    fontSize: 10,
+                padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: baseContentColor.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 3,
+                    ),
+                    child: Text(
+                      formattedEditedAt,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: secondaryTextColor.withValues(alpha: 0.82),
+                        fontSize: 10,
+                        height: 1.0,
+                      ),
+                    ),
                   ),
                 ),
               ),
