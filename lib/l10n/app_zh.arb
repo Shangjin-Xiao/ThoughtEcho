@@ -3555,5 +3555,69 @@
   "offlineQuoteSourceDesc": "无网络或仅展示本地记录时，首页显示什么内容",
   "offlineQuoteSourceTagOnly": "历史保存的每日一言",
   "offlineQuoteSourceAll": "随机展示全部本地记录",
-  "noLocalSavedQuotes": "还没有历史保存的每日一言"
+  "noLocalSavedQuotes": "还没有历史保存的每日一言",
+
+  "explore": "探索",
+  "aiChat": "AI 对话",
+  "exploreMapMemory": "地图记忆",
+  "exploreMapMemoryDesc": "在地图上探索你的足迹",
+  "favoriteNotes": "收藏笔记",
+
+  "chatHistory": "对话历史",
+  "newChat": "新建对话",
+  "noChats": "暂无对话",
+  "deleteChat": "删除对话",
+  "deleteChatConfirm": "确定要删除这个对话吗？",
+  "deleteNoteWithChatsConfirmation": "删除此笔记将同时删除 {count} 条相关对话。确定要继续吗？",
+  "@deleteNoteWithChatsConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "commandPolish": "润色",
+  "commandContinue": "续写",
+  "commandDeepAnalysis": "深度分析",
+  "commandInsight": "智能洞察",
+
+  "aiAssistantInputHint": "输入问题或使用 / 命令...",
+  "aiAssistantExploreWelcome": "你好！根据你的笔记概览：\n\n{summary}\n\n有什么我可以帮助的吗？",
+  "@aiAssistantExploreWelcome": {
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "currentNoteContext": "当前笔记上下文",
+  "workflowUnavailable": "工作流不可用",
+  "aiWorkflowNeedsBoundNote": "此功能需要绑定笔记才能使用",
+  "confidenceLabel": "置信度",
+  "replaceOriginalNote": "替换原文",
+  "appendToEnd": "追加到末尾",
+  "stopGenerate": "停止生成",
+
+  "aiModeChat": "对话模式",
+  "aiModeAgent": "Agent 模式",
+
+  "agentThinking": "Agent 思考中...",
+  "agentSearchingNotes": "正在搜索笔记...",
+  "agentAnalyzingData": "正在分析数据...",
+  "agentWebSearching": "正在联网搜索...",
+  "agentToolCall": "调用工具: {toolName}",
+  "@agentToolCall": {
+    "placeholders": {
+      "toolName": {
+        "type": "String"
+      }
+    }
+  },
+
+  "mapPickerTitle": "选择位置",
+  "mapPickerCurrentLocation": "当前位置",
+  "mapPickerConfirm": "确认位置",
+  "poiNameLabel": "地点名称",
+  "longPressForMapPicker": "长按打开地图选点"
 }

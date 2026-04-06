@@ -3543,5 +3543,69 @@
   "offlineQuoteSourceDesc": "Choose what appears on the home page when offline or when local-only is enabled",
   "offlineQuoteSourceTagOnly": "Previously saved daily quotes",
   "offlineQuoteSourceAll": "Random local records",
-  "noLocalSavedQuotes": "No previously saved daily quotes yet"
+  "noLocalSavedQuotes": "No previously saved daily quotes yet",
+
+  "explore": "Explore",
+  "aiChat": "AI Chat",
+  "exploreMapMemory": "Map Memory",
+  "exploreMapMemoryDesc": "Explore your footprints on the map",
+  "favoriteNotes": "Favorite Notes",
+
+  "chatHistory": "Chat History",
+  "newChat": "New Chat",
+  "noChats": "No chats yet",
+  "deleteChat": "Delete Chat",
+  "deleteChatConfirm": "Are you sure you want to delete this chat?",
+  "deleteNoteWithChatsConfirmation": "Deleting this note will also delete {count} related chat(s). Continue?",
+  "@deleteNoteWithChatsConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "commandPolish": "Polish",
+  "commandContinue": "Continue",
+  "commandDeepAnalysis": "Deep Analysis",
+  "commandInsight": "Insights",
+
+  "aiAssistantInputHint": "Enter question or use / commands...",
+  "aiAssistantExploreWelcome": "Hello! Based on your notes overview:\n\n{summary}\n\nHow can I help you?",
+  "@aiAssistantExploreWelcome": {
+    "placeholders": {
+      "summary": {
+        "type": "String"
+      }
+    }
+  },
+  "currentNoteContext": "Current Note Context",
+  "workflowUnavailable": "Workflow Unavailable",
+  "aiWorkflowNeedsBoundNote": "This feature requires a bound note",
+  "confidenceLabel": "Confidence",
+  "replaceOriginalNote": "Replace Original",
+  "appendToEnd": "Append to End",
+  "stopGenerate": "Stop",
+
+  "aiModeChat": "Chat Mode",
+  "aiModeAgent": "Agent Mode",
+
+  "agentThinking": "Agent is thinking...",
+  "agentSearchingNotes": "Searching notes...",
+  "agentAnalyzingData": "Analyzing data...",
+  "agentWebSearching": "Searching the web...",
+  "agentToolCall": "Tool call: {toolName}",
+  "@agentToolCall": {
+    "placeholders": {
+      "toolName": {
+        "type": "String"
+      }
+    }
+  },
+
+  "mapPickerTitle": "Select Location",
+  "mapPickerCurrentLocation": "Current Location",
+  "mapPickerConfirm": "Confirm Location",
+  "poiNameLabel": "Place Name",
+  "longPressForMapPicker": "Long press to open map picker"
 }
