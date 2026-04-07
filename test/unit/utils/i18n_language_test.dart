@@ -11,7 +11,8 @@ void main() {
         expect(I18nLanguage.base('fr_FR'), 'fr');
       });
 
-      test('should handle uppercase language codes by converting to lowercase', () {
+      test('should handle uppercase language codes by converting to lowercase',
+          () {
         expect(I18nLanguage.base('ZH_cn'), 'zh');
         expect(I18nLanguage.base('EN-US'), 'en');
       });
@@ -55,14 +56,17 @@ void main() {
         expect(I18nLanguage.appLanguageOrSystem('ja'), 'ja');
       });
 
-      test('should fallback to system locale if provided localeCode is null', () {
+      test('should fallback to system locale if provided localeCode is null',
+          () {
         // Since we can't easily mock Platform.localeName without a wrapper,
         // we'll just verify it doesn't crash and returns a valid supported language or 'en'
         final result = I18nLanguage.appLanguageOrSystem(null);
         expect(['zh', 'en', 'ja', 'ko', 'fr'].contains(result), isTrue);
       });
 
-      test('should fallback to system locale if provided localeCode is empty whitespace', () {
+      test(
+          'should fallback to system locale if provided localeCode is empty whitespace',
+          () {
         final result = I18nLanguage.appLanguageOrSystem('   ');
         expect(['zh', 'en', 'ja', 'ko', 'fr'].contains(result), isTrue);
       });
@@ -74,22 +78,28 @@ void main() {
       });
 
       test('should build correct header for "zh"', () {
-        expect(I18nLanguage.buildAcceptLanguage('zh'), 'zh-CN,zh;q=0.9,en;q=0.8');
+        expect(
+            I18nLanguage.buildAcceptLanguage('zh'), 'zh-CN,zh;q=0.9,en;q=0.8');
       });
 
       test('should build correct header for "ja"', () {
-        expect(I18nLanguage.buildAcceptLanguage('ja'), 'ja-JP,ja;q=0.9,en;q=0.8');
+        expect(
+            I18nLanguage.buildAcceptLanguage('ja'), 'ja-JP,ja;q=0.9,en;q=0.8');
       });
 
       test('should build correct header for "ko"', () {
-        expect(I18nLanguage.buildAcceptLanguage('ko'), 'ko-KR,ko;q=0.9,en;q=0.8');
+        expect(
+            I18nLanguage.buildAcceptLanguage('ko'), 'ko-KR,ko;q=0.9,en;q=0.8');
       });
 
       test('should build correct header for "fr"', () {
-        expect(I18nLanguage.buildAcceptLanguage('fr'), 'fr-FR,fr;q=0.9,en;q=0.8');
+        expect(
+            I18nLanguage.buildAcceptLanguage('fr'), 'fr-FR,fr;q=0.9,en;q=0.8');
       });
 
-      test('should handle unsupported languages gracefully by using them as primary', () {
+      test(
+          'should handle unsupported languages gracefully by using them as primary',
+          () {
         // Even though appLanguage filters out unsupported ones, if this method is called directly:
         expect(I18nLanguage.buildAcceptLanguage('es'), 'es,es;q=0.9,en;q=0.8');
       });

@@ -186,7 +186,8 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
 
     // 如果是来自每日一言且内容未修改，不提示未保存（双击每日一言快速进入，不需要提示）
     final currentPlainText = _controller.document.toPlainText().trim();
-    if (widget.isFromDailyQuote && currentPlainText == _initialPlainText.trim()) {
+    if (widget.isFromDailyQuote &&
+        currentPlainText == _initialPlainText.trim()) {
       return false;
     }
 
