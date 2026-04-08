@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:thoughtecho/services/note_sync_service.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
 import 'package:thoughtecho/services/device_identity_manager.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 import '../gen_l10n/app_localizations.dart';
 
 class _AutoScrollText extends StatefulWidget {
@@ -207,8 +208,13 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           }
         });
       }
-    } catch (e) {
-      debugPrint('启动同步服务失败: $e');
+    } catch (e, stack) {
+      AppLogger.e(
+        '启动同步服务失败',
+        error: e,
+        stackTrace: stack,
+        source: 'NoteSyncPage',
+      );
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         setState(() {
@@ -260,7 +266,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
   Future<bool> _onWillPop() async {
     // 如果没有初始化或已经出错，直接允许返回
     final syncService = _syncService;
-    final busySync = syncService != null &&
+    final busySync =
+        syncService != null &&
         (syncService.syncStatus == SyncStatus.packaging ||
             syncService.syncStatus == SyncStatus.sending ||
             syncService.syncStatus == SyncStatus.receiving ||
@@ -271,7 +278,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     final l10n = AppLocalizations.of(context);
 
     // 弹出确认对话框
-    final shouldLeave = await showDialog<bool>(
+    final shouldLeave =
+        await showDialog<bool>(
           context: context,
           builder: (ctx) {
             return AlertDialog(
@@ -282,8 +290,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                         _getSyncStatusText(syncService.syncStatus, l10n),
                       )
                     : _isScanning
-                        ? l10n.leaveWhileScanning
-                        : l10n.leaveWhileSending,
+                    ? l10n.leaveWhileScanning
+                    : l10n.leaveWhileSending,
               ),
               actions: [
                 TextButton(
@@ -323,13 +331,23 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
             debugPrint('使用context获取的引用停止同步服务...');
             await syncService.stopServer();
           }
-        } catch (e) {
-          debugPrint('通过context停止同步服务失败: $e');
+        } catch (e, stack) {
+          AppLogger.e(
+            '通过context停止同步服务失败',
+            error: e,
+            stackTrace: stack,
+            source: 'NoteSyncPage',
+          );
         }
       }
       debugPrint('同步服务已停止');
-    } catch (e) {
-      debugPrint('停止同步服务失败: $e');
+    } catch (e, stack) {
+      AppLogger.e(
+        '停止同步服务失败',
+        error: e,
+        stackTrace: stack,
+        source: 'NoteSyncPage',
+      );
     } finally {
       _syncService = null; // 清理引用
     }
@@ -351,8 +369,13 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
       NoteSyncService? syncService;
       try {
         syncService = context.read<NoteSyncService>();
-      } catch (e) {
-        debugPrint('获取NoteSyncService失败: $e');
+      } catch (e, stack) {
+        AppLogger.e(
+          '获取NoteSyncService失败',
+          error: e,
+          stackTrace: stack,
+          source: 'NoteSyncPage',
+        );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -442,8 +465,13 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           }
         });
       });
-    } catch (e) {
-      debugPrint('设备发现失败: $e');
+    } catch (e, stack) {
+      AppLogger.e(
+        '设备发现失败',
+        error: e,
+        stackTrace: stack,
+        source: 'NoteSyncPage',
+      );
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -489,7 +517,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
 
     // 先弹出确认对话框（是否包含媒体文件）
     bool includeMedia = _sendIncludeMedia;
-    final confirmed = await showDialog<bool>(
+    final confirmed =
+        await showDialog<bool>(
           context: context,
           builder: (ctx) {
             bool localInclude = includeMedia;
@@ -561,16 +590,22 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
         includeMediaFiles: includeMedia,
       );
       if (!mounted) return;
-      final displayId =
-          sessionId.length <= 8 ? sessionId : '${sessionId.substring(0, 8)}...';
+      final displayId = sessionId.length <= 8
+          ? sessionId
+          : '${sessionId.substring(0, 8)}...';
       messenger.showSnackBar(
         SnackBar(
           content: Text(l10n.sendStarted(displayId)),
           duration: const Duration(seconds: 3),
         ),
       );
-    } catch (e) {
-      debugPrint('发送笔记失败: $e');
+    } catch (e, stack) {
+      AppLogger.e(
+        '发送笔记失败',
+        error: e,
+        stackTrace: stack,
+        source: 'NoteSyncPage',
+      );
       if (mounted) {
         messenger.showSnackBar(
           SnackBar(
@@ -667,8 +702,9 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                               ? Icons.devices
                               : Icons.search,
                           size: 18,
-                          color:
-                              _nearbyDevices.isNotEmpty ? Colors.green : null,
+                          color: _nearbyDevices.isNotEmpty
+                              ? Colors.green
+                              : null,
                         ),
                         const SizedBox(width: 6),
                         Text(l10n.foundDevicesCount(_nearbyDevices.length)),
@@ -778,7 +814,7 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                               borderRadius: BorderRadius.circular(18),
                               color: isSendingToThis
                                   ? theme.colorScheme.primaryContainer
-                                      .withValues(alpha: 0.35)
+                                        .withValues(alpha: 0.35)
                                   : theme.colorScheme.surface,
                               border: Border.all(
                                 color: isSendingToThis
@@ -805,7 +841,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                               leading: CircleAvatar(
                                 radius: 24,
                                 backgroundColor: theme
-                                    .colorScheme.primaryContainer
+                                    .colorScheme
+                                    .primaryContainer
                                     .withValues(alpha: 0.65),
                                 child: Icon(
                                   _getDeviceIcon(device.deviceType),
@@ -909,8 +946,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           icon: _isInitializing
               ? const Icon(Icons.hourglass_empty)
               : _isScanning
-                  ? const Icon(Icons.close)
-                  : const Icon(Icons.search),
+              ? const Icon(Icons.close)
+              : const Icon(Icons.search),
           label: Text(
             _isInitializing
                 ? l10n.initializing
@@ -945,7 +982,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                   final progress = s.syncProgress.clamp(0.0, 1.0);
                   final waitingPeer = s.awaitingPeerApproval;
                   final waitingUser = s.awaitingUserApproval;
-                  final inProgress = s.syncStatus == SyncStatus.packaging ||
+                  final inProgress =
+                      s.syncStatus == SyncStatus.packaging ||
                       s.syncStatus == SyncStatus.sending ||
                       s.syncStatus == SyncStatus.receiving ||
                       s.syncStatus == SyncStatus.merging;
@@ -982,8 +1020,9 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                   final String percentLabel = waitingPeer || waitingUser
                       ? l10n.waitingLabel
                       : '${(s.syncProgress * 100).clamp(0, 100).toStringAsFixed(0)}%';
-                  final double? progressValue =
-                      waitingPeer || waitingUser ? null : progress;
+                  final double? progressValue = waitingPeer || waitingUser
+                      ? null
+                      : progress;
                   final String progressMessage = waitingPeer
                       ? l10n.syncRequestSent
                       : _localizeProgressMessage(s.syncStatusMessage, l10n);
@@ -1196,14 +1235,16 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
 
   void _maybeShowOrHideSyncDialog(NoteSyncService service) {
     // 统一：审批 + 进度 合并为一个弹窗
-    final active = service.awaitingUserApproval ||
+    final active =
+        service.awaitingUserApproval ||
         service.awaitingPeerApproval ||
         service.syncStatus == SyncStatus.packaging ||
         service.syncStatus == SyncStatus.sending ||
         service.syncStatus == SyncStatus.receiving ||
         service.syncStatus == SyncStatus.merging;
 
-    final terminal = service.syncStatus == SyncStatus.completed ||
+    final terminal =
+        service.syncStatus == SyncStatus.completed ||
         service.syncStatus == SyncStatus.failed ||
         service.syncStatus == SyncStatus.idle;
 
@@ -1219,7 +1260,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
                 return;
               }
               final latestService = context.read<NoteSyncService>();
-              final stillActive = latestService.awaitingUserApproval ||
+              final stillActive =
+                  latestService.awaitingUserApproval ||
                   latestService.awaitingPeerApproval ||
                   latestService.syncStatus == SyncStatus.packaging ||
                   latestService.syncStatus == SyncStatus.sending ||
@@ -1355,8 +1397,13 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           ),
         );
       }
-    } catch (e) {
-      debugPrint('[NoteSyncPage._copyIpPort] clipboard copy failed: $e');
+    } catch (e, stack) {
+      AppLogger.e(
+        'clipboard copy failed',
+        error: e,
+        stackTrace: stack,
+        source: 'NoteSyncPage',
+      );
     }
   }
 
@@ -1394,14 +1441,17 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
     final alias = device.alias.trim();
     final model = device.deviceModel?.trim() ?? '';
     final displayName = model.isNotEmpty ? model : alias;
-    final showAlias = model.isNotEmpty &&
+    final showAlias =
+        model.isNotEmpty &&
         alias.isNotEmpty &&
         alias.toLowerCase() != displayName.toLowerCase();
 
-    final tooltipMessage =
-        showAlias ? l10n.deviceAliasAndModel(displayName, alias) : displayName;
+    final tooltipMessage = showAlias
+        ? l10n.deviceAliasAndModel(displayName, alias)
+        : displayName;
 
-    final titleStyle = theme.textTheme.titleMedium?.copyWith(
+    final titleStyle =
+        theme.textTheme.titleMedium?.copyWith(
           fontWeight: FontWeight.w600,
           height: 1.15,
         ) ??
@@ -1411,7 +1461,8 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           height: 1.15,
         );
 
-    final aliasStyle = theme.textTheme.bodySmall?.copyWith(
+    final aliasStyle =
+        theme.textTheme.bodySmall?.copyWith(
           color: theme.colorScheme.onSurfaceVariant,
           height: 1.2,
         ) ??
