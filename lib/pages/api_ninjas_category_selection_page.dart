@@ -26,7 +26,10 @@ class _ApiNinjasCategorySelectionPageState
   void initState() {
     super.initState();
     _searchController = TextEditingController();
-    _selectedCategories = widget.initialSelectedCategories.toSet();
+    final validCategorySet = ApiService.apiNinjasCategoryKeys.toSet();
+    _selectedCategories = widget.initialSelectedCategories
+        .where(validCategorySet.contains)
+        .toSet();
   }
 
   @override

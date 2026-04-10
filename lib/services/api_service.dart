@@ -438,7 +438,7 @@ class ApiService {
         case 'writing':
           return 'd';
         case 'humor':
-          return 'l';
+          return 'g';
       }
     }
 

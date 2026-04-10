@@ -11,7 +11,12 @@ import '../services/settings_service.dart';
 import '../theme/app_theme.dart';
 
 class HitokotoSettingsPage extends StatefulWidget {
-  const HitokotoSettingsPage({super.key});
+  const HitokotoSettingsPage({
+    super.key,
+    this.apiNinjasApiKeyStatusLoader,
+  });
+
+  final Future<bool> Function()? apiNinjasApiKeyStatusLoader;
 
   @override
   State<HitokotoSettingsPage> createState() => _HitokotoSettingsPageState();
@@ -61,15 +66,24 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
   void _saveSelectedProvider(String provider) {
     setState(() {
       _selectedProvider = provider;
+      if (provider != ApiService.apiNinjasProvider) {
+        _hasApiNinjasApiKey = false;
+      }
     });
+    if (provider == ApiService.apiNinjasProvider) {
+      unawaited(_loadApiNinjasApiKeyStatus());
+    }
     context.read<SettingsService>().setDailyQuoteProvider(provider);
     _showSavedSnackBar();
   }
 
   Future<void> _loadApiNinjasApiKeyStatus() async {
-    final hasKey = await APIKeyManager().hasValidProviderApiKey(
-      ApiService.apiNinjasProvider,
-    );
+    final loader = widget.apiNinjasApiKeyStatusLoader;
+    final hasKey = await (loader != null
+        ? loader()
+        : APIKeyManager().hasValidProviderApiKey(
+            ApiService.apiNinjasProvider,
+          ));
     if (!mounted) return;
 
     setState(() {

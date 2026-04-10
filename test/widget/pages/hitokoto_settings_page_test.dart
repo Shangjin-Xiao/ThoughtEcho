@@ -53,20 +53,35 @@ void main() {
     await TestSetup.setupWidgetTest();
   });
 
-  Widget buildApp(SettingsService settings) {
+  Widget buildApp(
+    SettingsService settings, {
+    Future<bool> Function()? apiNinjasApiKeyStatusLoader,
+  }) {
     return ChangeNotifierProvider<SettingsService>.value(
       value: settings,
       child: MaterialApp(
         locale: const Locale('zh'),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const HitokotoSettingsPage(),
+        home: HitokotoSettingsPage(
+          apiNinjasApiKeyStatusLoader:
+              apiNinjasApiKeyStatusLoader ?? (() async => false),
+        ),
       ),
     );
   }
 
-  Future<void> pumpPage(WidgetTester tester, SettingsService settings) async {
-    await tester.pumpWidget(buildApp(settings));
+  Future<void> pumpPage(
+    WidgetTester tester,
+    SettingsService settings, {
+    Future<bool> Function()? apiNinjasApiKeyStatusLoader,
+  }) async {
+    await tester.pumpWidget(
+      buildApp(
+        settings,
+        apiNinjasApiKeyStatusLoader: apiNinjasApiKeyStatusLoader,
+      ),
+    );
     await tester.pump(const Duration(milliseconds: 100));
     await tester.pumpAndSettle();
   }
@@ -119,5 +134,31 @@ void main() {
         findsOneWidget);
     expect(find.text(localizations.dailyQuoteApiNinjasCategorySelection),
         findsOneWidget);
+  });
+
+  testWidgets('切换到 API Ninjas 时刷新密钥状态', (tester) async {
+    final settings = _TestSettingsService();
+    final localizations =
+        await AppLocalizations.delegate.load(const Locale('zh'));
+    var loadCount = 0;
+
+    await pumpPage(
+      tester,
+      settings,
+      apiNinjasApiKeyStatusLoader: () async {
+        loadCount++;
+        return true;
+      },
+    );
+    expect(loadCount, 0);
+
+    await tester.tap(find.text(localizations.dailyQuoteApiApiNinjas));
+    await tester.pumpAndSettle();
+    expect(loadCount, greaterThanOrEqualTo(1));
+
+    expect(find.text(localizations.dailyQuoteApiNinjasApiKeyConfigured),
+        findsOneWidget);
+    expect(find.text(localizations.dailyQuoteApiNinjasApiKeyMissing),
+        findsNothing);
   });
 }

@@ -101,13 +101,19 @@ class AppSettings {
     };
   }
 
+  static List<String> _readStringList(dynamic value) {
+    if (value is! List) {
+      return const [];
+    }
+
+    return value.whereType<String>().toList();
+  }
+
   factory AppSettings.fromJson(Map<String, dynamic> map) {
     return AppSettings(
       hitokotoType: map['hitokotoType'] ?? 'a,b,c,d,e,f,g,h,i,j,k',
       dailyQuoteProvider: map['dailyQuoteProvider'] ?? 'hitokoto',
-      apiNinjasCategories:
-          (map['apiNinjasCategories'] as List<dynamic>?)?.cast<String>() ??
-              const [],
+      apiNinjasCategories: _readStringList(map['apiNinjasCategories']),
       clipboardMonitoringEnabled: map['clipboardMonitoringEnabled'] ?? false,
       defaultStartPage: map['defaultStartPage'] ?? 0,
       hasCompletedOnboarding: map['hasCompletedOnboarding'] ?? false,
@@ -131,8 +137,7 @@ class AppSettings {
       excerptIntentEnabled: map['excerptIntentEnabled'] ?? true,
       defaultAuthor: map['defaultAuthor'] as String?,
       defaultSource: map['defaultSource'] as String?,
-      defaultTagIds:
-          (map['defaultTagIds'] as List<dynamic>?)?.cast<String>() ?? const [],
+      defaultTagIds: _readStringList(map['defaultTagIds']),
       anniversaryShown: map['anniversaryShown'] ?? false,
       anniversaryAnimationEnabled: map['anniversaryAnimationEnabled'] ?? true,
       trashRetentionDays: map['trashRetentionDays'] ?? 30,

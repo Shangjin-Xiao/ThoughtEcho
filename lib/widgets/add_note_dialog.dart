@@ -1198,6 +1198,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
   bool _shouldApplyHitokotoSubtypeTag() {
     final provider = widget.hitokotoData?['provider']?.toString();
+    if (provider == null || provider.trim().isEmpty) {
+      return true;
+    }
     return provider == ApiService.hitokotoProvider;
   }
 

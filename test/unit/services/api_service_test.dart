@@ -124,6 +124,29 @@ void main() {
       expect(result['provider'], 'zenquotes');
     });
 
+    test('maps humor category to supported type key', () async {
+      final l10n = lookupAppLocalizations(const Locale('zh'));
+
+      final result = await ApiService.getDailyQuote(
+        l10n,
+        'a',
+        provider: 'api_ninjas',
+        apiKeyResolver: (_) async => 'sk_test_12345678901234567890',
+        httpGet: (
+          url, {
+          Map<String, String>? headers,
+          int? timeoutSeconds,
+        }) async {
+          return HttpResponse(
+            '[{"quote":"Joke","author":"Anon","categories":["humor"]}]',
+            200,
+          );
+        },
+      );
+
+      expect(result['type'], 'g');
+    });
+
     test('api_ninjas provider sends API key and category filters', () async {
       final l10n = lookupAppLocalizations(const Locale('zh'));
 
