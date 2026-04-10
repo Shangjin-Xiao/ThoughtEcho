@@ -116,6 +116,53 @@ void main() {
       expect(payload['response_chars'], lessThanOrEqualTo(900));
     });
 
+    test('accepts next_cursor for pagination continuation', () async {
+      final first = await tool.execute(
+        ToolCall(
+          id: 'call_1_next_cursor_first',
+          name: 'search_notes',
+          arguments: const {
+            'action': 'search',
+            'query': 'keyword',
+            'target_chars': 1800,
+            'requested_page_size': 3,
+          },
+        ),
+      );
+      expect(first.isError, isFalse);
+      final firstPayload = jsonDecode(first.content) as Map<String, dynamic>;
+      final firstItems =
+          (firstPayload['items'] as List).cast<Map<String, dynamic>>();
+      final nextCursor = firstPayload['next_cursor'];
+      expect(firstItems, isNotEmpty);
+      expect(nextCursor, isNotNull);
+
+      final second = await tool.execute(
+        ToolCall(
+          id: 'call_1_next_cursor_second',
+          name: 'search_notes',
+          arguments: {
+            'action': 'search',
+            'query': 'keyword',
+            'target_chars': 1800,
+            'requested_page_size': 3,
+            'next_cursor': nextCursor,
+          },
+        ),
+      );
+      expect(second.isError, isFalse);
+      final secondPayload = jsonDecode(second.content) as Map<String, dynamic>;
+      final secondItems =
+          (secondPayload['items'] as List).cast<Map<String, dynamic>>();
+
+      expect(secondItems, isNotEmpty);
+
+      final firstIds = firstItems.map((item) => item['id'] as String).toSet();
+      final secondIds = secondItems.map((item) => item['id'] as String).toSet();
+
+      expect(secondIds.intersection(firstIds), isEmpty);
+    });
+
     test('supports incremental note content fetch', () async {
       final longContent =
           '${List<String>.filled(400, 'ABCD').join()} keyword pivot ${List<String>.filled(450, 'WXYZ').join()} tail';

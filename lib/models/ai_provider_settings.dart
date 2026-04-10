@@ -20,6 +20,30 @@ class AIProviderSettings implements AIConfig {
   @override
   final bool isEnabled;
 
+  /// 判断当前模型是否支持思考/推理模式
+  bool get supportsThinking {
+    final m = model.toLowerCase();
+    // Claude 3.5+ 支持 extended thinking
+    if (m.contains('claude-3') &&
+        (m.contains('sonnet') || m.contains('opus'))) {
+      return true;
+    }
+    // DeepSeek Reasoner / R1 系列
+    if (m.contains('deepseek') &&
+        (m.contains('reasoner') || m.contains('r1'))) {
+      return true;
+    }
+    // OpenAI o1/o3 系列
+    if (m.startsWith('o1') || m.startsWith('o3')) {
+      return true;
+    }
+    // Qwen QwQ / reasoning 系列
+    if (m.contains('qwq') || m.contains('qwen') && m.contains('reason')) {
+      return true;
+    }
+    return false;
+  }
+
   const AIProviderSettings({
     required this.id,
     required this.name,

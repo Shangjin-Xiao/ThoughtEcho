@@ -3559,6 +3559,8 @@
 
   "explore": "探索",
   "aiChat": "AI 对话",
+  "dataInsights": "数据分析",
+  "dataInsightsDesc": "深度分析你的笔记数据和写作趋势",
   "exploreMapMemory": "地图记忆",
   "exploreMapMemoryDesc": "在地图上探索你的足迹",
   "favoriteNotes": "收藏笔记",
@@ -3606,6 +3608,20 @@
   "agentSearchingNotes": "正在搜索笔记...",
   "agentAnalyzingData": "正在分析数据...",
   "agentWebSearching": "正在联网搜索...",
+  "aiThinking": "正在思考...",
+  "thinkingMode": "深度思考",
+  "showThinking": "查看思考过程",
+  "hideThinking": "收起思考过程",
+  "toolExecutionProgress": "工具执行中...",
+  "toolExecutionCompleted": "工具执行完成",
+  "executedNOperations": "已执行 {count} 个操作",
+  "@executedNOperations": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "agentToolCall": "调用工具: {toolName}",
   "@agentToolCall": {
     "placeholders": {

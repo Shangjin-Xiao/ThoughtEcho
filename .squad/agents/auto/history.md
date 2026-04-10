@@ -18,3 +18,5 @@
 
 <!-- 在此追加学到的项目知识 -->
 - 2026-04-06: 设置页关于弹窗可通过与用户指南同款 `ElevatedButton.icon` 快速扩展外链操作，使用 `_launchUrl` 统一处理外部链接打开与失败提示。
+- 2026-04-08: AIAssistantPage 会话绑定应使用可空且稳定的 `noteId`（`_boundNoteId`），未保存笔记不要生成临时 UUID，否则 `SessionHistorySheet` 无法回看历史；相关路径：`lib/pages/ai_assistant_page.dart`、`lib/pages/note_editor/editor_ai_features.dart`。
+- 2026-04-08: Explore AI 引导文案采用“双轨策略”：优先 `AIService.streamGeneralConversation` 生成简短总结，失败或无 Key 自动回退本地统计拼接；实现位于 `lib/pages/explore_page.dart`。

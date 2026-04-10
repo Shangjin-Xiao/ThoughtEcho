@@ -227,7 +227,7 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
     }
 
     final tempQuote = Quote(
-      id: widget.initialQuote?.id ?? const Uuid().v4(),
+      id: widget.initialQuote?.id,
       content: plainText,
       date: widget.initialQuote?.date ?? DateTime.now().toIso8601String(),
       dayPeriod: widget.initialQuote?.dayPeriod,
@@ -245,7 +245,10 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
 
     if (result != null && result is Map<String, dynamic> && mounted) {
       final action = result['action'];
-      final text = result['text'] as String;
+      final text = (result['text'] as Object?)?.toString().trim();
+      if (text == null || text.isEmpty) {
+        return;
+      }
 
       if (action == 'replace') {
         _updateState(() {

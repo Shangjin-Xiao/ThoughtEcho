@@ -53,6 +53,10 @@ class NoteSearchTool extends AgentTool {
             'type': ['object', 'string', 'null'],
             'description': '翻页游标，来自上一页 next_cursor',
           },
+          'next_cursor': {
+            'type': ['object', 'string', 'null'],
+            'description': '兼容字段：等价于 cursor，支持直接透传上一页 next_cursor',
+          },
           'target_chars': {
             'type': 'integer',
             'description': '本次结果字符预算（默认 2400）',
@@ -87,7 +91,8 @@ class NoteSearchTool extends AgentTool {
 
   @override
   Future<ToolResult> execute(ToolCall call) async {
-    final action = (call.arguments['action'] as String? ?? 'search').trim();
+    final action =
+        (call.arguments['action'] as String? ?? 'search').trim().toLowerCase();
 
     try {
       return switch (action) {
@@ -137,7 +142,7 @@ class NoteSearchTool extends AgentTool {
       min: _minSnippetChars,
       max: _maxSnippetChars,
     );
-    final cursor = _SearchCursor.fromUnknown(call.arguments['cursor']);
+    final cursor = _parseCursor(call.arguments);
 
     final pageSize = _adaptivePageSize(
       targetChars: targetChars,
@@ -300,6 +305,14 @@ class NoteSearchTool extends AgentTool {
     return parsed.clamp(min, max).toInt();
   }
 
+  static _SearchCursor? _parseCursor(Map<String, Object?> arguments) {
+    final directCursor = _SearchCursor.fromUnknown(arguments['cursor']);
+    if (directCursor != null) {
+      return directCursor;
+    }
+    return _SearchCursor.fromUnknown(arguments['next_cursor']);
+  }
+
   static int _adaptivePageSize({
     required int targetChars,
     required int snippetChars,
@@ -421,7 +434,7 @@ class _SearchCursor {
     if (value is String && value.isNotEmpty) {
       try {
         final decoded = jsonDecode(value);
-        if (decoded is Map<String, dynamic>) {
+        if (decoded is Map) {
           return fromUnknown(decoded);
         }
       } catch (_) {

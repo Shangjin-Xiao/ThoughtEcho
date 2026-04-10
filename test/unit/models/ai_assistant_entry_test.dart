@@ -72,5 +72,23 @@ void main() {
         AIWorkflowId.continueWriting,
       );
     });
+
+    test('matches slash command when prompt text follows', () {
+      expect(
+        AIWorkflowCommandRegistry.match('/深度分析 帮我拆解重点'),
+        AIWorkflowId.deepAnalysis,
+      );
+      expect(
+        AIWorkflowCommandRegistry.match('/POLISH improve readability'),
+        AIWorkflowId.polish,
+      );
+    });
+
+    test('matches full-width slash command input', () {
+      expect(
+        AIWorkflowCommandRegistry.match('／深度分析'),
+        AIWorkflowId.deepAnalysis,
+      );
+    });
   });
 }

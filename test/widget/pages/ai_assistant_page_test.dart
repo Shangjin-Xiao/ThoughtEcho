@@ -1,11 +1,10 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/ai_assistant_entry.dart';
 import 'package:thoughtecho/models/chat_message.dart' as app_chat;
+import 'package:thoughtecho/models/chat_session.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/pages/ai_assistant_page.dart';
 import 'package:thoughtecho/services/agent_service.dart';
@@ -13,59 +12,9 @@ import 'package:thoughtecho/services/agent_tool.dart';
 import 'package:thoughtecho/services/ai_service.dart';
 import 'package:thoughtecho/services/chat_session_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
-import 'package:provider/provider.dart';
+import 'package:thoughtecho/widgets/ai/tool_progress_panel.dart';
 
 import '../../test_setup.dart';
-
-class _FakeDatabase implements Database {
-  _FakeDatabase() {
-    unblockWrites.complete();
-  }
-
-  final Completer<void> unblockWrites = Completer<void>();
-
-  @override
-  Future<int> insert(
-    String table,
-    Map<String, Object?> values, {
-    String? nullColumnHack,
-    ConflictAlgorithm? conflictAlgorithm,
-  }) async {
-    await unblockWrites.future;
-    return 1;
-  }
-
-  @override
-  Future<List<Map<String, Object?>>> query(
-    String table, {
-    bool? distinct,
-    List<String>? columns,
-    String? where,
-    List<Object?>? whereArgs,
-    String? groupBy,
-    String? having,
-    String? orderBy,
-    int? limit,
-    int? offset,
-  }) async {
-    return const <Map<String, Object?>>[];
-  }
-
-  @override
-  Future<int> update(
-    String table,
-    Map<String, Object?> values, {
-    String? where,
-    List<Object?>? whereArgs,
-    ConflictAlgorithm? conflictAlgorithm,
-  }) async {
-    await unblockWrites.future;
-    return 1;
-  }
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
 
 Quote _buildQuote() => Quote(
       id: 'note-1',
@@ -73,8 +22,65 @@ Quote _buildQuote() => Quote(
       date: DateTime(2026, 4, 5).toIso8601String(),
     );
 
+class _InMemoryChatSessionService extends ChatSessionService {
+  final Map<String, ChatSession> _sessions = <String, ChatSession>{};
+  final Map<String, List<app_chat.ChatMessage>> _messages =
+      <String, List<app_chat.ChatMessage>>{};
+  int _sessionSeq = 0;
+
+  @override
+  Future<ChatSession> createSession({
+    required String sessionType,
+    String? noteId,
+    required String title,
+  }) async {
+    final now = DateTime.now();
+    final session = ChatSession(
+      id: 'session-${_sessionSeq++}',
+      sessionType: sessionType,
+      noteId: noteId,
+      title: title,
+      createdAt: now,
+      lastActiveAt: now,
+    );
+    _sessions[session.id] = session;
+    return session;
+  }
+
+  @override
+  Future<ChatSession?> getLatestSessionForNote(String noteId) async {
+    final candidates = _sessions.values
+        .where((session) => session.noteId == noteId)
+        .toList(growable: false);
+    if (candidates.isEmpty) {
+      return null;
+    }
+    candidates.sort((a, b) => b.lastActiveAt.compareTo(a.lastActiveAt));
+    return candidates.first;
+  }
+
+  @override
+  Future<void> addMessage(
+      String sessionId, app_chat.ChatMessage message) async {
+    _messages
+        .putIfAbsent(sessionId, () => <app_chat.ChatMessage>[])
+        .add(message);
+  }
+
+  @override
+  Future<List<app_chat.ChatMessage>> getMessages(String sessionId) async {
+    return List<app_chat.ChatMessage>.from(
+      _messages[sessionId] ?? const <app_chat.ChatMessage>[],
+    );
+  }
+}
+
 class _FakeAIService extends AIService {
   _FakeAIService({required super.settingsService});
+
+  int askQuestionCalls = 0;
+  int summarizeCalls = 0;
+  int generalConversationCalls = 0;
 
   @override
   Stream<String> streamPolishText(String content) => Stream.value('已润色内容');
@@ -83,8 +89,10 @@ class _FakeAIService extends AIService {
   Stream<String> streamContinueText(String content) => Stream.value('续写内容');
 
   @override
-  Stream<String> streamSummarizeNote(Quote quote, {List<String>? tagNames}) =>
-      Stream.value('深度分析结果');
+  Stream<String> streamSummarizeNote(Quote quote, {List<String>? tagNames}) {
+    summarizeCalls++;
+    return Stream.value('深度分析结果');
+  }
 
   @override
   Stream<String> streamAnalyzeSource(String content) => Stream.value(
@@ -104,20 +112,49 @@ class _FakeAIService extends AIService {
     Quote quote,
     String question, {
     List<app_chat.ChatMessage>? history,
-  }) =>
-      Stream.value('笔记问答结果');
+  }) {
+    askQuestionCalls++;
+    return Stream.value('笔记问答结果');
+  }
 
   @override
   Stream<String> streamGeneralConversation(
     String question, {
     List<app_chat.ChatMessage>? history,
     String? systemContext,
-  }) =>
-      Stream.value('普通对话结果');
+  }) {
+    generalConversationCalls++;
+    return Stream.value('普通对话结果');
+  }
 }
 
 class _FakeAgentService extends AgentService {
-  _FakeAgentService({required super.settingsService}) : super(tools: const []);
+  _FakeAgentService({
+    required super.settingsService,
+    this.simulateToolProgress = false,
+    this.responseContent = 'Agent 响应',
+  }) : super(tools: const []);
+
+  int runCount = 0;
+  final bool simulateToolProgress;
+  final String responseContent;
+  bool _mockIsRunning = false;
+  String _mockStatusKey = '';
+
+  @override
+  bool get isRunning => _mockIsRunning;
+
+  @override
+  String get currentStatusKey => _mockStatusKey;
+
+  void _setMockState({
+    required bool isRunning,
+    required String statusKey,
+  }) {
+    _mockIsRunning = isRunning;
+    _mockStatusKey = statusKey;
+    notifyListeners();
+  }
 
   @override
   Future<AgentResponse> runAgent({
@@ -125,25 +162,40 @@ class _FakeAgentService extends AgentService {
     List<app_chat.ChatMessage>? history,
     String? noteContext,
   }) async {
-    return AgentResponse(content: 'Agent 响应');
+    runCount++;
+    _setMockState(isRunning: true, statusKey: 'agentThinking');
+    if (simulateToolProgress) {
+      await Future<void>.delayed(const Duration(milliseconds: 12));
+      _setMockState(
+        isRunning: true,
+        statusKey: '${AgentService.agentToolCallPrefix}search_notes',
+      );
+    }
+    await Future<void>.delayed(const Duration(milliseconds: 12));
+    _setMockState(isRunning: false, statusKey: '');
+    return AgentResponse(content: responseContent);
   }
 }
 
 Future<Widget> _buildHarness({
   required SettingsService settingsService,
   required ChatSessionService chatSessionService,
+  _FakeAIService? aiService,
+  _FakeAgentService? agentService,
   required Widget child,
 }) async {
-  final agentService = _FakeAgentService(settingsService: settingsService);
-  final aiService = _FakeAIService(settingsService: settingsService);
+  final effectiveAgentService =
+      agentService ?? _FakeAgentService(settingsService: settingsService);
+  final effectiveAiService =
+      aiService ?? _FakeAIService(settingsService: settingsService);
 
   return MultiProvider(
     providers: [
       ChangeNotifierProvider<SettingsService>.value(value: settingsService),
       ChangeNotifierProvider<ChatSessionService>.value(
           value: chatSessionService),
-      ChangeNotifierProvider<AgentService>.value(value: agentService),
-      ChangeNotifierProvider<AIService>.value(value: aiService),
+      ChangeNotifierProvider<AgentService>.value(value: effectiveAgentService),
+      ChangeNotifierProvider<AIService>.value(value: effectiveAiService),
     ],
     child: MaterialApp(
       locale: const Locale('zh'),
@@ -154,24 +206,36 @@ Future<Widget> _buildHarness({
   );
 }
 
+Future<void> _submitInput(WidgetTester tester, String text) async {
+  await tester.enterText(find.byType(TextField), text);
+  await tester.pump();
+  final sendButtonFinder = find.ancestor(
+    of: find.byIcon(Icons.send),
+    matching: find.byType(IconButton),
+  );
+  final sendButton = tester.widget<IconButton>(sendButtonFinder);
+  sendButton.onPressed?.call();
+  await tester.pump();
+  await tester.pumpAndSettle();
+}
+
 void main() {
   group('AIAssistantPage', () {
     late SettingsService settingsService;
-    late ChatSessionService chatSessionService;
+    late _InMemoryChatSessionService chatSessionService;
 
     setUp(() async {
       await TestSetup.setupAll();
       settingsService = await SettingsService.create();
-      chatSessionService = ChatSessionService()..setDatabase(_FakeDatabase());
+      chatSessionService = _InMemoryChatSessionService();
     });
 
     tearDown(() async {
       await TestSetup.teardown();
     });
 
-    testWidgets('explore entry defaults to chat mode with toggle', (
-      tester,
-    ) async {
+    testWidgets('explore entry defaults to chat mode with toggle',
+        (tester) async {
       await tester.pumpWidget(
         await _buildHarness(
           settingsService: settingsService,
@@ -193,12 +257,11 @@ void main() {
 
       expect(chatChip.selected, isTrue);
       expect(agentChip.selected, isFalse);
-      expect(find.text('输入 / 查看功能，或直接对话'), findsOneWidget);
+      expect(find.widgetWithText(ActionChip, '/润色'), findsNothing);
     });
 
-    testWidgets('note entry keeps note context and defaults to note chat', (
-      tester,
-    ) async {
+    testWidgets('note entry keeps note context and defaults to note chat',
+        (tester) async {
       await tester.pumpWidget(
         await _buildHarness(
           settingsService: settingsService,
@@ -224,9 +287,8 @@ void main() {
       expect(find.textContaining('当前笔记上下文'), findsOneWidget);
     });
 
-    testWidgets('remembered mode is isolated between explore and note entry', (
-      tester,
-    ) async {
+    testWidgets('remembered mode is isolated between explore and note entry',
+        (tester) async {
       await settingsService.setExploreAiAssistantMode(
         AIAssistantPageMode.agent,
       );
@@ -286,9 +348,8 @@ void main() {
       );
     });
 
-    testWidgets('explore entry shows all workflow command chips', (
-      tester,
-    ) async {
+    testWidgets('slash commands show only when input starts with slash',
+        (tester) async {
       await tester.pumpWidget(
         await _buildHarness(
           settingsService: settingsService,
@@ -301,6 +362,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      expect(find.widgetWithText(ActionChip, '/润色'), findsNothing);
+      await tester.enterText(find.byType(TextField), '/');
+      await tester.pumpAndSettle();
       expect(find.widgetWithText(ActionChip, '/润色'), findsOneWidget);
       expect(find.widgetWithText(ActionChip, '/续写'), findsOneWidget);
       expect(find.widgetWithText(ActionChip, '/深度分析'), findsOneWidget);
@@ -308,15 +372,39 @@ void main() {
       expect(find.widgetWithText(ActionChip, '/智能洞察'), findsOneWidget);
     });
 
-    testWidgets('note entry shows workflow chips and note context together', (
-      tester,
-    ) async {
+    testWidgets('slash command list filters by current input', (tester) async {
       await tester.pumpWidget(
         await _buildHarness(
           settingsService: settingsService,
           chatSessionService: chatSessionService,
+          child: const AIAssistantPage(
+            entrySource: AIAssistantEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '/分');
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(ActionChip, '/分析来源'), findsOneWidget);
+      expect(find.widgetWithText(ActionChip, '/润色'), findsNothing);
+      expect(find.widgetWithText(ActionChip, '/续写'), findsNothing);
+    });
+
+    testWidgets('agent mode routes deep analysis with extra prompt to workflow',
+        (tester) async {
+      final aiService = _FakeAIService(settingsService: settingsService);
+      final agentService = _FakeAgentService(settingsService: settingsService);
+      await settingsService.setNoteAiAssistantMode(AIAssistantPageMode.agent);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          aiService: aiService,
+          agentService: agentService,
           child: AIAssistantPage(
-            key: const ValueKey('note_polish_page'),
             entrySource: AIAssistantEntrySource.note,
             quote: _buildQuote(),
           ),
@@ -324,9 +412,118 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('当前笔记上下文'), findsOneWidget);
-      expect(find.widgetWithText(ActionChip, '/润色'), findsOneWidget);
-      expect(find.widgetWithText(ActionChip, '/续写'), findsOneWidget);
+      await _submitInput(tester, '/深度分析 帮我拆解重点');
+
+      expect(aiService.summarizeCalls, 1);
+      expect(aiService.askQuestionCalls, 0);
+      expect(aiService.generalConversationCalls, 0);
+      expect(agentService.runCount, 0);
+    });
+
+    testWidgets('explore agent mode deep analysis shows bound note notice',
+        (tester) async {
+      final aiService = _FakeAIService(settingsService: settingsService);
+      final agentService = _FakeAgentService(settingsService: settingsService);
+      await settingsService
+          .setExploreAiAssistantMode(AIAssistantPageMode.agent);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          aiService: aiService,
+          agentService: agentService,
+          child: const AIAssistantPage(
+            entrySource: AIAssistantEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await _submitInput(tester, '/深度分析 帮我拆解重点');
+
+      expect(aiService.summarizeCalls, 0);
+      expect(aiService.askQuestionCalls, 0);
+      expect(aiService.generalConversationCalls, 0);
+      expect(agentService.runCount, 0);
+      expect(find.text('此功能需要绑定笔记才能使用'), findsOneWidget);
+    });
+
+    testWidgets(
+        'agent tool progress remains briefly after completion without placeholder',
+        (tester) async {
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        simulateToolProgress: true,
+      );
+      await settingsService
+          .setExploreAiAssistantMode(AIAssistantPageMode.agent);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: const AIAssistantPage(
+            entrySource: AIAssistantEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '帮我做一次分析');
+      await tester.pump();
+      final sendButtonFinder = find.ancestor(
+        of: find.byIcon(Icons.send),
+        matching: find.byType(IconButton),
+      );
+      tester.widget<IconButton>(sendButtonFinder).onPressed?.call();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 60));
+
+      expect(find.text('...'), findsNothing);
+      expect(find.byType(ToolProgressPanel), findsOneWidget);
+
+      await tester.pump(const Duration(milliseconds: 1800));
+      expect(find.byType(ToolProgressPanel), findsNothing);
+    });
+
+    testWidgets('agent structured smart result renders apply card',
+        (tester) async {
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        responseContent: '''
+这是润色建议说明。
+```smart_result
+{"type":"smart_result","title":"润色结果","content":"这是可应用的新内容"}
+```
+''',
+      );
+      await settingsService.setNoteAiAssistantMode(AIAssistantPageMode.agent);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: AIAssistantPage(
+            entrySource: AIAssistantEntrySource.note,
+            quote: _buildQuote(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await _submitInput(tester, '请润色这段文字');
+
+      expect(agentService.runCount, 1);
+      expect(
+        find.byKey(const ValueKey('ai_workflow_result_smart_result')),
+        findsOneWidget,
+      );
+      expect(find.text('这是可应用的新内容'), findsOneWidget);
+      expect(find.text('替换原文'), findsOneWidget);
+      expect(find.text('追加到末尾'), findsOneWidget);
     });
   });
 }

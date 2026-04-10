@@ -128,6 +128,19 @@ openai.ChatCompletion _textCompletion(String content) {
   );
 }
 
+String _chatMessageText(openai.ChatMessage message) {
+  final dynamic dynamicMessage = message;
+  try {
+    final content = dynamicMessage.content;
+    if (content != null) {
+      return content.toString();
+    }
+  } catch (_) {
+    // Fallback to toString below.
+  }
+  return message.toString();
+}
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   group('AgentService native tool loop', () {
@@ -275,6 +288,58 @@ void main() {
         response.toolCalls.map((call) => call.arguments['query']).toList(),
         ['loop', 'fresh'],
       );
+    });
+
+    test('preserves long search tool payload for follow-up reasoning',
+        () async {
+      final provider = const AIProviderSettings(
+        id: 'openai',
+        name: 'OpenAI',
+        apiUrl: 'https://api.openai.com/v1/chat/completions',
+        model: 'gpt-4.1',
+      );
+      final settings = _FakeSettingsService(provider);
+      final marker = '__TAIL_MARKER__';
+      final longBody = List<String>.filled(1500, 'x').join();
+      final tool = _CountingTool(
+        toolName: 'search_notes',
+        resultContent: '{"items":[{"snippet":"$longBody$marker"}]}',
+      );
+
+      final responses = <openai.ChatCompletion>[
+        _toolCallCompletion(
+          callId: 'call_1',
+          toolName: 'search_notes',
+          args: const {'query': 'keyword'},
+        ),
+        _textCompletion('done'),
+      ];
+      var requestCount = 0;
+      var forwardedTranscript = '';
+
+      final service = AgentService(
+        settingsService: settings,
+        tools: [tool],
+        apiKeyResolver: (_) async => 'test-key',
+        completionRequester: ({
+          required provider,
+          required messages,
+          required tools,
+          required temperature,
+          required maxTokens,
+        }) async {
+          requestCount++;
+          if (requestCount == 2) {
+            forwardedTranscript =
+                messages.map(_chatMessageText).join('\n----\n');
+          }
+          return responses.removeAt(0);
+        },
+      );
+
+      await service.runAgent(userMessage: 'test');
+
+      expect(forwardedTranscript, contains(marker));
     });
   });
 }

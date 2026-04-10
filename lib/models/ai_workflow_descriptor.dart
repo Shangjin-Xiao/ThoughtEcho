@@ -39,6 +39,23 @@ class AIWorkflowCommandRegistry {
 
   static AIWorkflowId? match(String text) {
     final trimmed = text.trim();
-    return aliases[trimmed] ?? aliases[trimmed.toLowerCase()];
+    if (trimmed.isEmpty) return null;
+
+    final normalized =
+        trimmed.startsWith('／') ? '/${trimmed.substring(1)}' : trimmed;
+    final primaryToken = normalized.split(RegExp(r'\s+')).first;
+    final candidates = <String>{
+      normalized,
+      normalized.toLowerCase(),
+      primaryToken,
+      primaryToken.toLowerCase(),
+    };
+    for (final candidate in candidates) {
+      final match = aliases[candidate];
+      if (match != null) {
+        return match;
+      }
+    }
+    return null;
   }
 }

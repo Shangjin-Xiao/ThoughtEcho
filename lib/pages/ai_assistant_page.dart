@@ -22,6 +22,8 @@ import '../utils/app_logger.dart';
 import '../utils/string_utils.dart';
 import '../widgets/ai/ai_workflow_cards.dart';
 import '../widgets/ai/smart_result_card.dart';
+import '../widgets/ai/thinking_widget.dart';
+import '../widgets/ai/tool_progress_panel.dart';
 import '../widgets/session_history_sheet.dart';
 import '../widgets/source_analysis_result_dialog.dart';
 
@@ -47,6 +49,7 @@ class AIAssistantPage extends StatefulWidget {
 
 class _AIAssistantPageState extends State<AIAssistantPage> {
   final TextEditingController _textController = TextEditingController();
+  final FocusNode _inputFocusNode = FocusNode();
   final ScrollController _scrollController = ScrollController();
   final List<app_chat.ChatMessage> _messages = [];
   final Uuid _uuid = const Uuid();
@@ -58,10 +61,28 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   late AgentService _agentService;
   late AIService _aiService;
   late SettingsService _settingsService;
+  bool _settingsReady = false;
   late AIAssistantPageMode _currentMode;
   String _selectedInsightType = 'comprehensive';
   String _selectedInsightStyle = 'professional';
   bool _showSlashCommands = false; // Only show when user types /
+  bool _enableThinking = true; // 是否启用思考模式（仅支持的模型显示）
+
+  String _thinkingText = '';
+  bool _isThinking = false;
+  final List<ToolProgressItem> _toolProgressItems = [];
+  bool _isToolInProgress = false;
+  bool _showAgentStatusPanel = false;
+  bool _isInputFocused = false;
+  bool _agentListenerAttached = false;
+  String _lastAgentStatusKey = '';
+  bool _lastAgentRunning = false;
+  Timer? _agentStatusDismissTimer;
+  static const Duration _agentStatusDismissDuration =
+      Duration(milliseconds: 1400);
+  static final RegExp _agentCodeBlockPattern = RegExp(
+    r'```([a-zA-Z0-9_-]+)\s*([\s\S]*?)```',
+  );
 
   AIAssistantEntrySource get _entrySource =>
       widget.entrySource ??
@@ -73,7 +94,22 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
       AIAssistantEntryConfig(source: _entrySource);
 
   bool get _hasBoundNote => widget.quote != null;
+  String? get _boundNoteId {
+    final id = widget.quote?.id?.trim();
+    if (id == null || id.isEmpty) {
+      return null;
+    }
+    return id;
+  }
+
   bool get _isAgentMode => _currentMode == AIAssistantPageMode.agent;
+
+  /// 检查当前模型是否支持思考/推理模式
+  bool get _currentModelSupportsThinking {
+    if (!_settingsReady) return false;
+    final provider = _settingsService.multiAISettings.currentProvider;
+    return provider?.supportsThinking ?? false;
+  }
 
   List<AIWorkflowDescriptor> _buildWorkflowDescriptors(
     AppLocalizations l10n,
@@ -144,11 +180,12 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     super.initState();
     _currentMode = _entryConfig.defaultMode;
     _textController.addListener(_onTextChanged);
+    _inputFocusNode.addListener(_onInputFocusChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) => _initServicesAndLoad());
   }
 
   void _onTextChanged() {
-    final text = _textController.text;
+    final text = _textController.text.trimLeft();
     final shouldShow = text.startsWith('/');
     if (shouldShow != _showSlashCommands) {
       setState(() {
@@ -157,10 +194,25 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     }
   }
 
+  void _onInputFocusChanged() {
+    if (!mounted || _isInputFocused == _inputFocusNode.hasFocus) {
+      return;
+    }
+    setState(() {
+      _isInputFocused = _inputFocusNode.hasFocus;
+    });
+  }
+
   @override
   void dispose() {
+    _agentStatusDismissTimer?.cancel();
+    if (_agentListenerAttached) {
+      _agentService.removeListener(_onAgentServiceChanged);
+    }
     _streamSubscription?.cancel();
+    _inputFocusNode.removeListener(_onInputFocusChanged);
     _textController.removeListener(_onTextChanged);
+    _inputFocusNode.dispose();
     _textController.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -171,6 +223,11 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     _agentService = context.read<AgentService>();
     _aiService = context.read<AIService>();
     _settingsService = context.read<SettingsService>();
+    if (!_agentListenerAttached) {
+      _agentService.addListener(_onAgentServiceChanged);
+      _agentListenerAttached = true;
+    }
+    _settingsReady = true;
     final restoredMode = _restoreModeFromSettings();
     if (restoredMode != _currentMode && mounted) {
       setState(() {
@@ -180,14 +237,18 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
       _currentMode = restoredMode;
     }
 
+    // Initialize _enableThinking based on whether the current model supports thinking.
+    // This is done after _settingsService is guaranteed to be initialized.
+    _enableThinking = _currentModelSupportsThinking;
+
     if (widget.session != null) {
       await _loadSession(widget.session!.id);
     } else if (_hasBoundNote &&
         !_isAgentMode &&
-        widget.quote!.id != null &&
+        _boundNoteId != null &&
         _entrySource == AIAssistantEntrySource.note) {
       final session = await _chatSessionService.getLatestSessionForNote(
-        widget.quote!.id!,
+        _boundNoteId!,
       );
       if (session != null) {
         await _loadSession(session.id);
@@ -206,6 +267,8 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     if (widget.initialQuestion?.trim().isNotEmpty == true) {
       unawaited(_handleSubmitted(widget.initialQuestion!.trim()));
     }
+
+    _onAgentServiceChanged();
   }
 
   AIAssistantPageMode _restoreModeFromSettings() {
@@ -237,7 +300,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   Future<void> _createNewSession() async {
     final session = await _chatSessionService.createSession(
       sessionType: _sessionTypeForMode(_currentMode),
-      noteId: widget.quote?.id ?? '',
+      noteId: _boundNoteId,
       title: _hasBoundNote ? _getQuotePreview() : 'AI Chat',
     );
     _currentSessionId = session.id;
@@ -295,9 +358,17 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     await _streamSubscription?.cancel();
     _streamSubscription = null;
     _isLoading = false;
+    _agentStatusDismissTimer?.cancel();
 
     setState(() {
       _messages.clear();
+      _thinkingText = '';
+      _isThinking = false;
+      _toolProgressItems.clear();
+      _isToolInProgress = false;
+      _showAgentStatusPanel = false;
+      _lastAgentStatusKey = '';
+      _lastAgentRunning = false;
     });
     await _createNewSession();
     _addWelcomeMessage();
@@ -307,7 +378,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     showModalBottomSheet(
       context: context,
       builder: (ctx) => SessionHistorySheet(
-        noteId: widget.quote?.id ?? '',
+        noteId: _boundNoteId ?? '',
         currentSessionId: _currentSessionId,
         chatSessionService: _chatSessionService,
         onSelect: (id) {
@@ -363,6 +434,16 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     }
 
     if (_isAgentMode) {
+      _agentStatusDismissTimer?.cancel();
+      setState(() {
+        _thinkingText = '';
+        _isThinking = false;
+        _toolProgressItems.clear();
+        _isToolInProgress = false;
+        _showAgentStatusPanel = false;
+        _lastAgentStatusKey = '';
+        _lastAgentRunning = false;
+      });
       await _askAgent(trimmed);
       return;
     }
@@ -726,15 +807,65 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
         noteContext: _hasBoundNote ? widget.quote!.content : null,
       );
 
-      final aiMsg = app_chat.ChatMessage(
-        id: _uuid.v4(),
-        content: response.content,
-        isUser: false,
-        role: 'assistant',
-        timestamp: DateTime.now(),
-      );
+      final parsed = _parseAgentSmartResult(response.content, l10n);
 
-      _appendMessage(aiMsg, persist: true);
+      if (parsed.displayText.isNotEmpty) {
+        _appendMessage(
+          app_chat.ChatMessage(
+            id: _uuid.v4(),
+            content: parsed.displayText,
+            isUser: false,
+            role: 'assistant',
+            timestamp: DateTime.now(),
+          ),
+          persist: true,
+        );
+      }
+
+      if (parsed.smartResult != null) {
+        if (_hasBoundNote) {
+          _appendMessage(
+            app_chat.ChatMessage(
+              id: _uuid.v4(),
+              content: parsed.smartResult!.content,
+              isUser: false,
+              role: 'assistant',
+              timestamp: DateTime.now(),
+              metaJson: jsonEncode(<String, dynamic>{
+                'type': 'smart_result',
+                'title': parsed.smartResult!.title,
+                'replaceButtonText': l10n.replaceOriginalNote,
+                'appendButtonText': l10n.appendToEnd,
+              }),
+            ),
+            persist: true,
+          );
+        } else {
+          _appendMessage(
+            app_chat.ChatMessage(
+              id: _uuid.v4(),
+              content: parsed.smartResult!.content,
+              isUser: false,
+              role: 'assistant',
+              timestamp: DateTime.now(),
+            ),
+            persist: true,
+          );
+        }
+      }
+
+      if (parsed.displayText.isEmpty && parsed.smartResult == null) {
+        _appendMessage(
+          app_chat.ChatMessage(
+            id: _uuid.v4(),
+            content: l10n.aiMisunderstoodQuestion,
+            isUser: false,
+            role: 'assistant',
+            timestamp: DateTime.now(),
+          ),
+          persist: true,
+        );
+      }
       _finishLoading();
     } catch (e) {
       _finishLoading();
@@ -743,6 +874,75 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
         SnackBar(content: Text(l10n.aiResponseError(e.toString()))),
       );
     }
+  }
+
+  _AgentSmartResultParseResult _parseAgentSmartResult(
+    String rawContent,
+    AppLocalizations l10n,
+  ) {
+    final trimmed = rawContent.trim();
+    if (trimmed.isEmpty) {
+      return const _AgentSmartResultParseResult(displayText: '');
+    }
+
+    for (final match in _agentCodeBlockPattern.allMatches(trimmed)) {
+      final language = (match.group(1) ?? '').trim().toLowerCase();
+      final payloadText = (match.group(2) ?? '').trim();
+      if (payloadText.isEmpty) {
+        continue;
+      }
+
+      final decoded = _tryDecodeJsonMap(payloadText);
+      if (decoded == null) {
+        continue;
+      }
+
+      final isSmartResultFence =
+          language == 'smart_result' || language == 'smart-result';
+      final type = decoded['type']?.toString().trim().toLowerCase();
+      if (!isSmartResultFence && type != 'smart_result') {
+        continue;
+      }
+
+      final smartContent =
+          (decoded['content'] ?? decoded['text'])?.toString().trim();
+      if (smartContent == null || smartContent.isEmpty) {
+        continue;
+      }
+
+      final titleText = decoded['title']?.toString().trim();
+      final title = titleText != null && titleText.isNotEmpty
+          ? titleText
+          : l10n.analysisResult;
+      final displayText = trimmed.replaceFirst(match.group(0) ?? '', '').trim();
+
+      return _AgentSmartResultParseResult(
+        displayText: displayText,
+        smartResult: _AgentSmartResultPayload(
+          title: title,
+          content: smartContent,
+        ),
+      );
+    }
+
+    return _AgentSmartResultParseResult(displayText: trimmed);
+  }
+
+  Map<String, dynamic>? _tryDecodeJsonMap(String payloadText) {
+    try {
+      final decoded = jsonDecode(payloadText);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+      if (decoded is Map) {
+        return decoded.map(
+          (key, value) => MapEntry(key.toString(), value),
+        );
+      }
+    } catch (_) {
+      return null;
+    }
+    return null;
   }
 
   void _appendCardMessage({
@@ -810,6 +1010,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   void _stopGenerating() {
     _streamSubscription?.cancel();
     _streamSubscription = null;
+    _agentStatusDismissTimer?.cancel();
     _finishLoading();
   }
 
@@ -858,15 +1059,15 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
-              padding: const EdgeInsets.all(16),
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
               itemCount: _messages.length,
               itemBuilder: (context, index) {
                 return _buildMessageBubble(_messages[index], theme, l10n);
               },
             ),
           ),
-          if (_isLoading && _isAgentMode)
-            _buildAgentStatusIndicator(theme, l10n),
+          if (_isAgentMode) _buildAgentStatusIndicator(theme, l10n),
           _buildInputArea(theme, l10n),
         ],
       ),
@@ -1020,8 +1221,30 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     }
 
     final isUser = message.isUser;
+    final isDark = theme.brightness == Brightness.dark;
+    final maxBubbleWidth = MediaQuery.of(context).size.width * 0.8;
+    final userBubbleColor = isDark
+        ? Color.alphaBlend(
+            theme.colorScheme.primary.withValues(alpha: 0.28),
+            theme.colorScheme.surfaceContainerHigh,
+          )
+        : theme.colorScheme.primaryContainer.withValues(alpha: 0.95);
+    final assistantBubbleColor = isDark
+        ? theme.colorScheme.surfaceContainerHigh
+        : theme.colorScheme.surfaceContainerLowest;
+    final bubbleColor = isUser ? userBubbleColor : assistantBubbleColor;
+    final bubbleTextColor = isUser
+        ? (isDark
+            ? theme.colorScheme.onSurface
+            : theme.colorScheme.onPrimaryContainer)
+        : theme.colorScheme.onSurface;
+    final bubbleBorderColor = isUser
+        ? theme.colorScheme.primary.withValues(alpha: isDark ? 0.38 : 0.24)
+        : theme.colorScheme.outlineVariant
+            .withValues(alpha: isDark ? 0.5 : 0.8);
+
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         mainAxisAlignment:
             isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
@@ -1029,49 +1252,79 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
         children: [
           if (!isUser) ...[
             CircleAvatar(
+              radius: 15,
               backgroundColor: theme.colorScheme.primaryContainer,
               child: Icon(
                 Icons.smart_toy,
                 color: theme.colorScheme.onPrimaryContainer,
-                size: 18,
+                size: 16,
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
           ],
           Flexible(
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isUser
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(16).copyWith(
-                  bottomRight: isUser ? const Radius.circular(0) : null,
-                  bottomLeft: !isUser ? const Radius.circular(0) : null,
-                ),
-              ),
-              child: isUser
-                  ? Text(
-                      message.content,
-                      style: TextStyle(color: theme.colorScheme.onPrimary),
-                    )
-                  : MarkdownBody(
-                      data: message.content,
-                      selectable: true,
-                      styleSheet: MarkdownStyleSheet(
-                        p: TextStyle(color: theme.colorScheme.onSurfaceVariant),
-                      ),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxBubbleWidth),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+                decoration: BoxDecoration(
+                  color: bubbleColor,
+                  borderRadius: BorderRadius.circular(18).copyWith(
+                    bottomRight: isUser ? const Radius.circular(6) : null,
+                    bottomLeft: !isUser ? const Radius.circular(6) : null,
+                  ),
+                  border: Border.all(color: bubbleBorderColor, width: 1),
+                  boxShadow: [
+                    BoxShadow(
+                      color:
+                          Colors.black.withValues(alpha: isDark ? 0.16 : 0.06),
+                      blurRadius: 10,
+                      offset: const Offset(0, 3),
                     ),
+                  ],
+                ),
+                child: isUser
+                    ? Text(
+                        message.content,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: bubbleTextColor,
+                          height: 1.4,
+                        ),
+                      )
+                    : MarkdownBody(
+                        data: message.content,
+                        selectable: true,
+                        styleSheet:
+                            MarkdownStyleSheet.fromTheme(theme).copyWith(
+                          p: theme.textTheme.bodyMedium?.copyWith(
+                            color: bubbleTextColor,
+                            height: 1.45,
+                          ),
+                          listBullet: theme.textTheme.bodyMedium?.copyWith(
+                            color: bubbleTextColor,
+                          ),
+                          code: theme.textTheme.bodySmall?.copyWith(
+                            color: bubbleTextColor,
+                            fontFamily: 'monospace',
+                            backgroundColor: theme
+                                .colorScheme.surfaceContainerHighest
+                                .withValues(alpha: 0.65),
+                          ),
+                        ),
+                      ),
+              ),
             ),
           ),
           if (isUser) ...[
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             CircleAvatar(
+              radius: 15,
               backgroundColor: theme.colorScheme.secondaryContainer,
               child: Icon(
                 Icons.person,
                 color: theme.colorScheme.onSecondaryContainer,
-                size: 18,
+                size: 16,
               ),
             ),
           ],
@@ -1106,30 +1359,196 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     };
   }
 
-  Widget _buildAgentStatusIndicator(ThemeData theme, AppLocalizations l10n) {
-    return Consumer<AgentService>(
-      builder: (context, agentService, child) {
-        if (!agentService.isRunning) return const SizedBox.shrink();
-        final statusKey = agentService.currentStatusKey;
-        final statusText = switch (statusKey) {
-          '' => '...',
-          'agentThinking' => l10n.agentThinking,
-          'agentSearchingNotes' => l10n.agentSearchingNotes,
-          'agentAnalyzingData' => l10n.agentAnalyzingData,
-          'agentWebSearching' => l10n.agentWebSearching,
-          _ => statusKey.startsWith(AgentService.agentToolCallPrefix)
-              ? l10n.agentToolCall(
-                  statusKey.substring(
-                    AgentService.agentToolCallPrefix.length,
-                  ),
-                )
-              : l10n.agentThinking,
-        };
+  void _onAgentServiceChanged() {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
+    _syncAgentProgressState(
+      isRunning: _agentService.isRunning,
+      statusKey: _agentService.currentStatusKey,
+      l10n: l10n,
+    );
+  }
 
-        return Padding(
-          padding: const EdgeInsets.all(8),
+  void _scheduleAgentStatusDismiss() {
+    _agentStatusDismissTimer?.cancel();
+    _agentStatusDismissTimer = Timer(_agentStatusDismissDuration, () {
+      if (!mounted || _lastAgentRunning) {
+        return;
+      }
+      setState(() {
+        _showAgentStatusPanel = false;
+        _thinkingText = '';
+        _isThinking = false;
+        _toolProgressItems.clear();
+        _isToolInProgress = false;
+      });
+    });
+  }
+
+  String _resolveAgentStatusText(String statusKey, AppLocalizations l10n) {
+    return switch (statusKey) {
+      '' => '',
+      'agentThinking' => l10n.agentThinking,
+      'agentSearchingNotes' => l10n.agentSearchingNotes,
+      'agentAnalyzingData' => l10n.agentAnalyzingData,
+      'agentWebSearching' => l10n.agentWebSearching,
+      _ => statusKey.startsWith(AgentService.agentToolCallPrefix)
+          ? l10n.agentToolCall(
+              statusKey.substring(AgentService.agentToolCallPrefix.length),
+            )
+          : l10n.agentThinking,
+    };
+  }
+
+  void _syncAgentProgressState({
+    required bool isRunning,
+    required String statusKey,
+    required AppLocalizations l10n,
+  }) {
+    if (_lastAgentStatusKey == statusKey && _lastAgentRunning == isRunning) {
+      return;
+    }
+    if (isRunning) {
+      _agentStatusDismissTimer?.cancel();
+    }
+
+    final nextTools = List<ToolProgressItem>.from(_toolProgressItems);
+    var nextThinking = _isThinking;
+    var nextThinkingText = _thinkingText;
+    var nextToolRunning = _isToolInProgress;
+    var nextShowPanel = _showAgentStatusPanel;
+
+    if (!isRunning) {
+      for (var i = 0; i < nextTools.length; i++) {
+        if (nextTools[i].status == ToolProgressStatus.running) {
+          nextTools[i] = nextTools[i].copyWith(
+            status: ToolProgressStatus.completed,
+            result: l10n.toolExecutionCompleted,
+          );
+        }
+      }
+      nextThinking = false;
+      nextThinkingText = '';
+      nextToolRunning = false;
+      nextShowPanel = nextTools.isNotEmpty;
+    } else {
+      nextShowPanel = true;
+      nextThinking = statusKey == 'agentThinking';
+      nextThinkingText = nextThinking ? l10n.agentThinking : '';
+
+      if (statusKey.startsWith(AgentService.agentToolCallPrefix)) {
+        final toolName =
+            statusKey.substring(AgentService.agentToolCallPrefix.length).trim();
+        if (toolName.isNotEmpty) {
+          if (nextTools.isNotEmpty) {
+            final last = nextTools.last;
+            if (last.status == ToolProgressStatus.running &&
+                last.toolName != toolName) {
+              nextTools[nextTools.length - 1] = last.copyWith(
+                status: ToolProgressStatus.completed,
+                result: l10n.toolExecutionCompleted,
+              );
+            }
+          }
+
+          final hasSameRunning = nextTools.isNotEmpty &&
+              nextTools.last.toolName == toolName &&
+              nextTools.last.status == ToolProgressStatus.running;
+          if (!hasSameRunning) {
+            nextTools.add(
+              ToolProgressItem(
+                toolName: toolName,
+                description: l10n.toolExecutionProgress,
+                status: ToolProgressStatus.running,
+              ),
+            );
+          }
+        }
+      }
+
+      nextToolRunning =
+          nextTools.any((item) => item.status == ToolProgressStatus.running);
+    }
+
+    final currentSig = _toolProgressItems
+        .map((item) => '${item.toolName}|${item.status.name}|${item.result}')
+        .join('||');
+    final nextSig = nextTools
+        .map((item) => '${item.toolName}|${item.status.name}|${item.result}')
+        .join('||');
+
+    final uiChanged = currentSig != nextSig ||
+        nextThinking != _isThinking ||
+        nextThinkingText != _thinkingText ||
+        nextToolRunning != _isToolInProgress ||
+        nextShowPanel != _showAgentStatusPanel;
+
+    if (uiChanged && mounted) {
+      setState(() {
+        _toolProgressItems
+          ..clear()
+          ..addAll(nextTools);
+        _isThinking = nextThinking;
+        _thinkingText = nextThinkingText;
+        _isToolInProgress = nextToolRunning;
+        _showAgentStatusPanel = nextShowPanel;
+        _lastAgentStatusKey = statusKey;
+        _lastAgentRunning = isRunning;
+      });
+    } else {
+      _showAgentStatusPanel = nextShowPanel;
+      _lastAgentStatusKey = statusKey;
+      _lastAgentRunning = isRunning;
+    }
+
+    if (!isRunning && nextTools.isNotEmpty) {
+      _scheduleAgentStatusDismiss();
+    }
+  }
+
+  Widget _buildAgentStatusIndicator(ThemeData theme, AppLocalizations l10n) {
+    if (!_showAgentStatusPanel && !_lastAgentRunning) {
+      return const SizedBox.shrink();
+    }
+
+    final statusText = _resolveAgentStatusText(_lastAgentStatusKey, l10n);
+    final children = <Widget>[];
+    if (_enableThinking &&
+        _currentModelSupportsThinking &&
+        _thinkingText.isNotEmpty) {
+      children.add(
+        ThinkingWidget(
+          key: const ValueKey('agent_status_thinking_widget'),
+          thinkingText: _thinkingText,
+          inProgress: _lastAgentRunning && _isThinking,
+          accentColor: theme.colorScheme.primary,
+        ),
+      );
+    }
+    if (_toolProgressItems.isNotEmpty) {
+      children.add(
+        ToolProgressPanel(
+          key: const ValueKey('agent_status_tool_progress_panel'),
+          title: l10n.toolExecutionProgress,
+          items: List.unmodifiable(_toolProgressItems),
+          inProgress: _isToolInProgress,
+          accentColor: theme.colorScheme.primary,
+        ),
+      );
+    }
+
+    if (children.isEmpty && _lastAgentRunning && statusText.isNotEmpty) {
+      children.add(
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHigh,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
+            ),
+          ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               SizedBox(
                 width: 16,
@@ -1140,144 +1559,284 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                 ),
               ),
               const SizedBox(width: 8),
-              Text(
-                statusText,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+              Expanded(
+                child: Text(
+                  statusText,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ),
             ],
           ),
-        );
-      },
+        ),
+      );
+    }
+
+    if (children.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 220),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      child: Padding(
+        key: ValueKey<String>(
+          'agent-status-$_lastAgentRunning-${_toolProgressItems.length}-${_thinkingText.isNotEmpty}',
+        ),
+        padding: const EdgeInsets.fromLTRB(10, 2, 10, 2),
+        child: AnimatedSize(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: children,
+          ),
+        ),
+      ),
     );
   }
 
   Widget _buildInputArea(ThemeData theme, AppLocalizations l10n) {
     final workflowDescriptors = _buildWorkflowDescriptors(l10n);
+    final inputText = _textController.text.toLowerCase();
+    final filteredWorkflowDescriptors = workflowDescriptors
+        .where(
+          (descriptor) =>
+              inputText.isEmpty ||
+              descriptor.command.toLowerCase().startsWith(inputText),
+        )
+        .toList(growable: false);
+    final shellBorderColor = _isInputFocused
+        ? theme.colorScheme.primary.withValues(alpha: 0.6)
+        : theme.colorScheme.outlineVariant.withValues(alpha: 0.75);
 
-    return Container(
-      padding: const EdgeInsets.all(8).copyWith(
-        bottom: MediaQuery.of(context).padding.bottom + 8,
-      ),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            offset: const Offset(0, -1),
-            blurRadius: 5,
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.fromLTRB(10, 6, 10, 8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: shellBorderColor,
+            width: _isInputFocused ? 1.4 : 1.0,
           ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _buildModeSwitch(theme, l10n),
-          const SizedBox(height: 8),
-          // Only show slash commands when user types /
-          if (_showSlashCommands)
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: workflowDescriptors.map((descriptor) {
-                  // Filter commands based on current input
-                  final inputText = _textController.text.toLowerCase();
-                  if (inputText.isNotEmpty &&
-                      !descriptor.command.toLowerCase().startsWith(inputText)) {
-                    return const SizedBox.shrink();
-                  }
-                  return ActionChip(
-                    label: Text(descriptor.command),
-                    onPressed: () {
-                      _textController.clear();
-                      _handleSubmitted(descriptor.command);
-                    },
-                  );
-                }).toList(),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(
+                alpha: theme.brightness == Brightness.dark ? 0.26 : 0.07,
               ),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
             ),
-          if (_showSlashCommands) const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _textController,
-                  decoration: InputDecoration(
-                    hintText: l10n.aiAssistantInputHint,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(24),
-                      borderSide: BorderSide.none,
-                    ),
-                    filled: true,
-                    fillColor: theme.colorScheme.surfaceContainerHighest,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                  ),
-                  maxLines: null,
-                  textInputAction: TextInputAction.send,
-                  onSubmitted: _handleSubmitted,
-                ),
+            BoxShadow(
+              color: theme.colorScheme.primary.withValues(
+                alpha: _isInputFocused ? 0.1 : 0.03,
               ),
-              const SizedBox(width: 8),
-              // Show stop button when loading, send button otherwise
-              if (_isLoading)
-                Container(
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.error,
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.stop),
-                    color: theme.colorScheme.onError,
-                    tooltip: l10n.stopGenerate,
-                    onPressed: _stopGenerating,
-                  ),
-                )
-              else
-                Container(
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary,
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.send),
-                    color: theme.colorScheme.onPrimary,
-                    tooltip: l10n.confirm,
-                    onPressed: () => _handleSubmitted(_textController.text),
+              blurRadius: 18,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildModeSwitch(theme, l10n),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              switchInCurve: Curves.easeOutCubic,
+              switchOutCurve: Curves.easeInCubic,
+              child:
+                  _showSlashCommands && filteredWorkflowDescriptors.isNotEmpty
+                      ? Padding(
+                          key: const ValueKey('slash_commands_visible'),
+                          padding: const EdgeInsets.only(top: 8, bottom: 8),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children:
+                                  filteredWorkflowDescriptors.map((descriptor) {
+                                return ActionChip(
+                                  label: Text(descriptor.command),
+                                  onPressed: () {
+                                    _textController.clear();
+                                    _handleSubmitted(descriptor.command);
+                                  },
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        )
+                      : const SizedBox.shrink(
+                          key: ValueKey('slash_commands_hidden'),
+                        ),
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _textController,
+                    focusNode: _inputFocusNode,
+                    decoration: InputDecoration(
+                      hintText: l10n.aiAssistantInputHint,
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(
+                          color:
+                              theme.colorScheme.outline.withValues(alpha: 0.45),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(
+                          color: theme.colorScheme.primary,
+                          width: 1.5,
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: theme.colorScheme.surfaceContainerLow,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
+                    ),
+                    maxLines: null,
+                    minLines: 1,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: _handleSubmitted,
                   ),
                 ),
-            ],
-          ),
-        ],
+                const SizedBox(width: 8),
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 160),
+                  decoration: BoxDecoration(
+                    color: _isLoading
+                        ? theme.colorScheme.error
+                        : theme.colorScheme.primary,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.12),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: IconButton(
+                    icon: Icon(_isLoading ? Icons.stop : Icons.send),
+                    color: _isLoading
+                        ? theme.colorScheme.onError
+                        : theme.colorScheme.onPrimary,
+                    tooltip: _isLoading ? l10n.stopGenerate : l10n.confirm,
+                    onPressed: _isLoading
+                        ? _stopGenerating
+                        : () => _handleSubmitted(_textController.text),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildModeSwitch(ThemeData theme, AppLocalizations l10n) {
+    final chips = <Widget>[
+      ChoiceChip(
+        key: const ValueKey('ai_mode_chat_button'),
+        label: Text(l10n.aiModeChat),
+        selected: _currentMode != AIAssistantPageMode.agent,
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        visualDensity: VisualDensity.compact,
+        onSelected: (_) => _setMode(_entryConfig.defaultMode),
+      ),
+      ChoiceChip(
+        key: const ValueKey('ai_mode_agent_button'),
+        label: Text(l10n.aiModeAgent),
+        selected: _currentMode == AIAssistantPageMode.agent,
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        visualDensity: VisualDensity.compact,
+        onSelected: (_) => _setMode(AIAssistantPageMode.agent),
+      ),
+      if (_currentModelSupportsThinking)
+        FilterChip(
+          key: const ValueKey('ai_thinking_toggle'),
+          label: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                _enableThinking ? Icons.psychology : Icons.psychology_outlined,
+                size: 16,
+                color: _enableThinking
+                    ? theme.colorScheme.primary
+                    : theme.colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(width: 4),
+              Text(l10n.aiThinking),
+            ],
+          ),
+          selected: _enableThinking,
+          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          visualDensity: VisualDensity.compact,
+          onSelected: (value) {
+            setState(() {
+              _enableThinking = value;
+            });
+          },
+          showCheckmark: false,
+        ),
+    ];
+
     return Align(
       alignment: Alignment.centerLeft,
-      child: Wrap(
-        spacing: 8,
-        children: [
-          ChoiceChip(
-            key: const ValueKey('ai_mode_chat_button'),
-            label: Text(l10n.aiModeChat),
-            selected: _currentMode != AIAssistantPageMode.agent,
-            onSelected: (_) => _setMode(_entryConfig.defaultMode),
-          ),
-          ChoiceChip(
-            key: const ValueKey('ai_mode_agent_button'),
-            label: Text(l10n.aiModeAgent),
-            selected: _currentMode == AIAssistantPageMode.agent,
-            onSelected: (_) => _setMode(AIAssistantPageMode.agent),
-          ),
-        ],
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < 360) {
+            return SizedBox(
+              height: 40,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: chips.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, index) => Center(child: chips[index]),
+              ),
+            );
+          }
+          return Wrap(
+            spacing: 8,
+            runSpacing: 6,
+            children: chips,
+          );
+        },
       ),
     );
   }
+}
+
+class _AgentSmartResultParseResult {
+  const _AgentSmartResultParseResult({
+    required this.displayText,
+    this.smartResult,
+  });
+
+  final String displayText;
+  final _AgentSmartResultPayload? smartResult;
+}
+
+class _AgentSmartResultPayload {
+  const _AgentSmartResultPayload({
+    required this.title,
+    required this.content,
+  });
+
+  final String title;
+  final String content;
 }

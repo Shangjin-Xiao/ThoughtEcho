@@ -4,8 +4,10 @@ import 'package:provider/provider.dart';
 
 import '../gen_l10n/app_localizations.dart';
 import '../models/ai_assistant_entry.dart';
+import '../services/ai_service.dart';
 import '../services/database_service.dart';
 import 'ai_assistant_page.dart';
+import 'insights_page.dart';
 import 'map_memory_page.dart';
 
 /// 探索页面 — 数据概览 + AI/地图入口 + 收藏笔记
@@ -52,19 +54,20 @@ class _ExplorePageState extends State<ExplorePage> {
   }
 
   Future<void> _openAIAssistant() async {
+    final navigator = Navigator.of(context);
     final l10n = AppLocalizations.of(context);
     final stats = await _statsFuture;
     final favorites = await _favoritesFuture;
     if (!mounted) return;
 
-    final summary = _buildAssistantGuideSummary(
+    final summary = await _buildAssistantGuideSummary(
       l10n: l10n,
       stats: stats,
       favorites: favorites,
     );
+    if (!mounted) return;
 
-    await Navigator.push(
-      context,
+    await navigator.push(
       MaterialPageRoute(
         builder: (_) => AIAssistantPage(
           entrySource: AIAssistantEntrySource.explore,
@@ -74,7 +77,30 @@ class _ExplorePageState extends State<ExplorePage> {
     );
   }
 
-  String _buildAssistantGuideSummary({
+  Future<void> _openInsightsPage() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const InsightsPage(),
+      ),
+    );
+  }
+
+  Future<String> _buildAssistantGuideSummary({
+    required AppLocalizations l10n,
+    required _ExploreStats stats,
+    required List<Map<String, dynamic>> favorites,
+  }) async {
+    final localSummary = _buildLocalAssistantGuideSummary(
+      l10n: l10n,
+      stats: stats,
+      favorites: favorites,
+    );
+    final aiSummary = await _tryBuildAiAssistantGuideSummary(localSummary);
+    return aiSummary ?? localSummary;
+  }
+
+  String _buildLocalAssistantGuideSummary({
     required AppLocalizations l10n,
     required _ExploreStats stats,
     required List<Map<String, dynamic>> favorites,
@@ -101,6 +127,28 @@ class _ExplorePageState extends State<ExplorePage> {
     return buffer.toString().trim();
   }
 
+  Future<String?> _tryBuildAiAssistantGuideSummary(String localSummary) async {
+    final aiService = context.read<AIService>();
+    if (!await aiService.hasValidApiKeyAsync()) {
+      return null;
+    }
+
+    final buffer = StringBuffer();
+    try {
+      await for (final chunk in aiService.streamGeneralConversation(
+        '请基于已有概览数据生成一段简短总结，突出记录特点与建议，100字以内。',
+        systemContext: localSummary,
+      )) {
+        buffer.write(chunk);
+      }
+    } catch (_) {
+      return null;
+    }
+
+    final summary = buffer.toString().trim();
+    return summary.isEmpty ? null : summary;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -113,8 +161,9 @@ class _ExplorePageState extends State<ExplorePage> {
         },
         child: CustomScrollView(
           slivers: [
-            // ── AppBar ──
-            SliverAppBar.medium(
+            // ── AppBar（普通高度减少顶部空白）──
+            SliverAppBar(
+              floating: true,
               title: Text(l10n.explore),
             ),
 
@@ -123,20 +172,17 @@ class _ExplorePageState extends State<ExplorePage> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               sliver: SliverList.list(
                 children: [
-                  // ─── 数据概览 ───
-                  _SectionHeader(
-                    icon: Icons.auto_awesome,
-                    title: l10n.dataOverview,
-                  ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 8),
+                  // ─── 数据概览卡片（点击进入 InsightsPage）───
                   _buildStatsSection(l10n, theme),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
 
                   // ─── 快捷入口 ───
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       _EntryCard(
+                        key: const ValueKey('explore_ai_chat_entry'),
                         icon: Icons.smart_toy_outlined,
                         title: l10n.aiChat,
                         subtitle: l10n.chatWithAiAssistant,
@@ -190,86 +236,77 @@ class _ExplorePageState extends State<ExplorePage> {
             opacity: t,
             child: Transform.translate(
               offset: Offset(0, 16 * (1 - t)),
-              child: Column(
-                children: [
-                  // 第一行：笔记数 + 总字数
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _StatCard(
-                          label: l10n.noteCount,
-                          value: '${stats.noteCount}',
-                          unit: l10n.notesUnitPlain,
-                          icon: Icons.note_alt_outlined,
+              child: Card(
+                key: const ValueKey('explore_stats_section_card'),
+                elevation: 0,
+                color: theme.colorScheme.surfaceContainerLow,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child: InkWell(
+                  onTap: _openInsightsPage,
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.insights_outlined,
+                              color: theme.colorScheme.primary,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                l10n.dataInsights,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            Icon(
+                              Icons.chevron_right,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _StatCard(
-                          label: l10n.totalWordCount,
-                          value: '${stats.totalWords}',
-                          unit: l10n.wordsUnitPlain,
-                          icon: Icons.text_fields,
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _StatsChip(
+                              label: l10n.noteCount,
+                              value: '${stats.noteCount}',
+                            ),
+                            _StatsChip(
+                              label: l10n.totalWordCount,
+                              value: '${stats.totalWords}',
+                            ),
+                            _StatsChip(
+                              label: l10n.activeDays,
+                              value: '${stats.activeDays}',
+                            ),
+                            _StatsChip(
+                              label: l10n.commonPeriod,
+                              value: stats.topPeriod ?? l10n.noDataYet,
+                            ),
+                            _StatsChip(
+                              label: l10n.commonWeather,
+                              value: stats.topWeather ?? l10n.noDataYet,
+                            ),
+                            _StatsChip(
+                              label: l10n.commonTag,
+                              value: stats.topTag ?? l10n.noDataYet,
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  // 第二行：平均字数 + 活跃天数
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _StatCard(
-                          label: l10n.avgWords,
-                          value: '${stats.avgWords}',
-                          unit: l10n.wordsPerNote,
-                          icon: Icons.calculate_outlined,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _StatCard(
-                          label: l10n.activeDays,
-                          value: '${stats.activeDays}',
-                          unit: l10n.daysUnitPlain,
-                          icon: Icons.calendar_today_outlined,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  // 第三行：常用时段 + 天气 + 标签
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _StatCard(
-                          label: l10n.commonPeriod,
-                          value: stats.topPeriod ?? l10n.noDataYet,
-                          icon: Icons.timelapse,
-                          compact: true,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _StatCard(
-                          label: l10n.commonWeather,
-                          value: stats.topWeather ?? l10n.noDataYet,
-                          icon: Icons.cloud_queue,
-                          compact: true,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: _StatCard(
-                          label: l10n.commonTag,
-                          value: stats.topTag ?? l10n.noDataYet,
-                          icon: Icons.label_outline,
-                          compact: true,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
             ),
           ),
@@ -462,65 +499,6 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-class _StatCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final String? unit;
-  final IconData icon;
-  final bool compact;
-
-  const _StatCard({
-    required this.label,
-    required this.value,
-    required this.icon,
-    this.unit,
-    this.compact = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      elevation: 0,
-      color: theme.colorScheme.surfaceContainerLow,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(compact ? 12 : 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon,
-                size: compact ? 18 : 20, color: theme.colorScheme.primary),
-            SizedBox(height: compact ? 6 : 8),
-            Text(
-              value,
-              style: compact
-                  ? theme.textTheme.titleMedium
-                      ?.copyWith(fontWeight: FontWeight.bold)
-                  : theme.textTheme.headlineMedium
-                      ?.copyWith(fontWeight: FontWeight.bold),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            if (unit != null && unit!.isNotEmpty)
-              Text(unit!,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  )),
-            const SizedBox(height: 4),
-            Text(label,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                )),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _EntryCard extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -530,6 +508,7 @@ class _EntryCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const _EntryCard({
+    super.key,
     required this.icon,
     required this.title,
     this.subtitle,
@@ -578,6 +557,29 @@ class _EntryCard extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _StatsChip extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _StatsChip({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        '$label: $value',
+        style: theme.textTheme.bodySmall,
       ),
     );
   }

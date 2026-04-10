@@ -3547,6 +3547,8 @@
 
   "explore": "Explore",
   "aiChat": "AI Chat",
+  "dataInsights": "Data Insights",
+  "dataInsightsDesc": "Deep analysis of your notes and writing trends",
   "exploreMapMemory": "Map Memory",
   "exploreMapMemoryDesc": "Explore your footprints on the map",
   "favoriteNotes": "Favorite Notes",
@@ -3594,6 +3596,20 @@
   "agentSearchingNotes": "Searching notes...",
   "agentAnalyzingData": "Analyzing data...",
   "agentWebSearching": "Searching the web...",
+  "aiThinking": "Thinking...",
+  "thinkingMode": "Deep Thinking",
+  "showThinking": "Show thinking",
+  "hideThinking": "Hide thinking",
+  "toolExecutionProgress": "Tool execution in progress...",
+  "toolExecutionCompleted": "Tool execution completed",
+  "executedNOperations": "Executed {count} operations",
+  "@executedNOperations": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "agentToolCall": "Tool call: {toolName}",
   "@agentToolCall": {
     "placeholders": {
