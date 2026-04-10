@@ -22,7 +22,7 @@ import '../widgets/add_note_dialog.dart';
 import '../widgets/local_ai/ocr_capture_page.dart';
 import '../widgets/local_ai/ocr_result_sheet.dart';
 import '../widgets/local_ai/voice_input_overlay.dart';
-import 'explore_page.dart';
+import 'ai_periodic_report_page.dart';
 import 'settings_page.dart';
 import 'ai_assistant_page.dart'; // 添加问笔记聊天页面导入
 import '../theme/app_theme.dart';
@@ -2312,7 +2312,7 @@ class _HomePageState extends State<HomePage>
               },
             ),
             // 探索页
-            const ExplorePage(),
+            const AIPeriodicReportPage(),
             // 设置页
             SettingsPage(key: _settingsPageKey),
           ],
