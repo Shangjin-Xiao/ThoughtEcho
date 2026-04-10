@@ -1326,6 +1326,8 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
               theme.colorScheme.surfaceContainerHigh,
             )
           : theme.colorScheme.primary;
+      // In dark mode the bubble is a tinted surface, so onSurface gives better
+      // legibility than onPrimary (which is designed for a solid primary bg).
       final textColor =
           isDark ? theme.colorScheme.onSurface : theme.colorScheme.onPrimary;
 
@@ -1371,7 +1373,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
       // ── AI message ── left-aligned, light blue-gray bubble, no border
       final bubbleBg = isDark
           ? theme.colorScheme.surfaceContainerHigh
-          : const Color(0xFFe9eef6);
+          : _kAiMessageBubbleLightColor;
       final senderName = _settingsReady
           ? (_settingsService.multiAISettings.currentProvider?.name ??
               l10n.aiAssistantLabel)
@@ -1940,6 +1942,15 @@ class _AgentSmartResultPayload {
 
 /// 三点弹跳动画，用于 AI 消息加载占位状态
 /// 参考 Google AI Edge Gallery 的 MessageBodyLoading 设计
+// Light-mode AI bubble background – matches Google AI Edge Gallery's agentBubbleBgColor
+const Color _kAiMessageBubbleLightColor = Color(0xFFe9eef6);
+
+// Timing constants for the typing indicator animation
+const Duration _kTypingBounce = Duration(milliseconds: 500);
+const int _kTypingStaggerMs = 160;
+const double _kTypingDotMinAlpha = 0.35;
+const double _kTypingDotAlphaRange = 0.55;
+
 class _TypingIndicator extends StatefulWidget {
   const _TypingIndicator();
 
@@ -1957,7 +1968,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
     super.initState();
     _controllers = List.generate(3, (_) {
       return AnimationController(
-        duration: const Duration(milliseconds: 500),
+        duration: _kTypingBounce,
         vsync: this,
       );
     });
@@ -1973,8 +1984,9 @@ class _TypingIndicatorState extends State<_TypingIndicator>
 
   Future<void> _startStaggered() async {
     for (var i = 0; i < _controllers.length; i++) {
-      await Future.delayed(Duration(milliseconds: i * 160));
-      if (mounted) _controllers[i].repeat(reverse: true);
+      await Future.delayed(Duration(milliseconds: i * _kTypingStaggerMs));
+      if (!mounted) return;
+      _controllers[i].repeat(reverse: true);
     }
   }
 
@@ -2006,7 +2018,9 @@ class _TypingIndicatorState extends State<_TypingIndicator>
                     width: 7,
                     height: 7,
                     decoration: BoxDecoration(
-                      color: baseColor.withValues(alpha: 0.35 + 0.55 * v),
+                      color: baseColor.withValues(
+                        alpha: _kTypingDotMinAlpha + _kTypingDotAlphaRange * v,
+                      ),
                       shape: BoxShape.circle,
                     ),
                   ),
