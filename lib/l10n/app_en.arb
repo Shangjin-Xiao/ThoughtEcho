@@ -585,12 +585,65 @@
   "hitokotoSettings": "Daily Quote Settings",
   "hitokotoTypeSettings": "Daily Quote Type Settings",
   "hitokotoTypeDesc": "You can select one or more daily quote types. The app will randomly display content from your selected types. Different types represent different content sources and styles.",
+  "dailyQuoteApiDesc": "Choose which provider supplies the home page daily quote. Non-Hitokoto providers return a random quote directly from that service.",
+  "dailyQuoteApiHitokoto": "Hitokoto",
+  "dailyQuoteApiZenQuotes": "ZenQuotes",
+  "dailyQuoteApiApiNinjas": "API Ninjas",
+  "dailyQuoteApiMeigen": "Meigen Oshieruyo",
+  "dailyQuoteApiKoreanAdvice": "Korean Advice",
+  "dailyQuoteApiNinjasManageApiKey": "Configure API key",
+  "dailyQuoteApiNinjasApiKeyHint": "Enter the API Ninjas X-Api-Key",
+  "dailyQuoteApiNinjasApiKeyConfigured": "API key configured",
+  "dailyQuoteApiNinjasApiKeyMissing": "No API key configured yet",
+  "dailyQuoteApiNinjasApiKeyInvalid": "The API key format looks invalid",
+  "dailyQuoteApiNinjasCategorySelection": "Category selection",
+  "dailyQuoteApiNinjasCategoryDesc": "Search, select multiple categories, or clear them all. Leaving everything unchecked falls back to fully random quotes.",
+  "dailyQuoteApiNinjasCategorySearchHint": "Search categories",
+  "dailyQuoteApiNinjasNoCategoriesFound": "No matching categories",
+  "dailyQuoteApiNinjasAllCategoriesUsed": "No category filter applied; quotes will be drawn from the full pool",
+  "dailyQuoteApiNinjasSelectedCount": "{count} categories selected",
+  "@dailyQuoteApiNinjasSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dailyQuoteApiNinjasCategoryWisdom": "Wisdom",
+  "dailyQuoteApiNinjasCategoryPhilosophy": "Philosophy",
+  "dailyQuoteApiNinjasCategoryLife": "Life",
+  "dailyQuoteApiNinjasCategoryTruth": "Truth",
+  "dailyQuoteApiNinjasCategoryInspirational": "Inspirational",
+  "dailyQuoteApiNinjasCategoryRelationships": "Relationships",
+  "dailyQuoteApiNinjasCategoryLove": "Love",
+  "dailyQuoteApiNinjasCategoryFaith": "Faith",
+  "dailyQuoteApiNinjasCategoryHumor": "Humor",
+  "dailyQuoteApiNinjasCategorySuccess": "Success",
+  "dailyQuoteApiNinjasCategoryCourage": "Courage",
+  "dailyQuoteApiNinjasCategoryHappiness": "Happiness",
+  "dailyQuoteApiNinjasCategoryArt": "Art",
+  "dailyQuoteApiNinjasCategoryWriting": "Writing",
+  "dailyQuoteApiNinjasCategoryFear": "Fear",
+  "dailyQuoteApiNinjasCategoryNature": "Nature",
+  "dailyQuoteApiNinjasCategoryTime": "Time",
+  "dailyQuoteApiNinjasCategoryFreedom": "Freedom",
+  "dailyQuoteApiNinjasCategoryDeath": "Death",
+  "dailyQuoteApiNinjasCategoryLeadership": "Leadership",
   "selectAll": "Select All",
   "clearAll": "Clear All",
   "typeSelection": "Type Selection",
   "typeSelectionHint": "Tap to select your preferred quote types",
+  "dailyQuoteProviderNoTypeSelection": "This provider does not expose Hitokoto-style type filters. Refreshing will fetch a random quote from the selected service.",
   "usageInstructions": "Instructions",
   "hitokotoServiceProvider": "Quote service provided by Hitokoto",
+  "dailyQuoteServiceProvider": "Current content provided by {provider}",
+  "@dailyQuoteServiceProvider": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
   "hitokotoHelpItem1": "At least one type must be selected. The app will randomly display content from selected types",
   "hitokotoHelpItem2": "Selecting multiple types provides a richer variety of content",
   "hitokotoHelpItem3": "Different types represent different content styles and sources",

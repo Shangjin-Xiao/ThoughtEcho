@@ -1,9 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import '../services/settings_service.dart';
-import '../services/api_service.dart';
-import '../theme/app_theme.dart';
-import '../gen_l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
+
+import '../gen_l10n/app_localizations.dart';
+import '../pages/api_ninjas_category_selection_page.dart';
+import '../services/api_key_manager.dart';
+import '../services/api_service.dart';
+import '../services/settings_service.dart';
+import '../theme/app_theme.dart';
 
 class HitokotoSettingsPage extends StatefulWidget {
   const HitokotoSettingsPage({super.key});
@@ -15,9 +20,11 @@ class HitokotoSettingsPage extends StatefulWidget {
 class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
     with TickerProviderStateMixin {
   late String _selectedType;
+  late String _selectedProvider;
   final List<String> _selectedTypes = [];
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  bool _hasApiNinjasApiKey = false;
 
   @override
   void initState() {
@@ -32,11 +39,16 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
     );
 
     _selectedType = context.read<SettingsService>().appSettings.hitokotoType;
+    _selectedProvider = context.read<SettingsService>().dailyQuoteProvider;
     // 解析当前选择的类型
     if (_selectedType.contains(',')) {
       _selectedTypes.addAll(_selectedType.split(','));
     } else {
       _selectedTypes.add(_selectedType);
+    }
+
+    if (_selectedProvider == ApiService.apiNinjasProvider) {
+      unawaited(_loadApiNinjasApiKeyStatus());
     }
   }
 
@@ -46,18 +58,114 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
     super.dispose();
   }
 
-  // 保存选择的类型
-  void _saveSelectedTypes() {
-    // 确保至少选择一种类型
-    if (_selectedTypes.isEmpty) {
-      _selectedTypes.add('a');
+  void _saveSelectedProvider(String provider) {
+    setState(() {
+      _selectedProvider = provider;
+    });
+    context.read<SettingsService>().setDailyQuoteProvider(provider);
+    _showSavedSnackBar();
+  }
+
+  Future<void> _loadApiNinjasApiKeyStatus() async {
+    final hasKey = await APIKeyManager().hasValidProviderApiKey(
+      ApiService.apiNinjasProvider,
+    );
+    if (!mounted) return;
+
+    setState(() {
+      _hasApiNinjasApiKey = hasKey;
+    });
+  }
+
+  Future<void> _configureApiNinjasApiKey() async {
+    final l10n = AppLocalizations.of(context);
+    final apiKeyManager = APIKeyManager();
+    final controller = TextEditingController(
+      text: await apiKeyManager.getProviderApiKey(ApiService.apiNinjasProvider),
+    );
+
+    if (!mounted) {
+      controller.dispose();
+      return;
     }
-    _selectedType = _selectedTypes.join(',');
-    context.read<SettingsService>().updateHitokotoType(_selectedType);
+
+    final messenger = ScaffoldMessenger.of(context);
+    final result = await showDialog<String?>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(l10n.dailyQuoteApiNinjasManageApiKey),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            obscureText: true,
+            decoration: InputDecoration(
+              hintText: l10n.dailyQuoteApiNinjasApiKeyHint,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(null),
+              child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(''),
+              child: Text(l10n.clear),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(controller.text),
+              child: Text(l10n.add),
+            ),
+          ],
+        );
+      },
+    );
+
+    controller.dispose();
+    if (result == null) return;
+
+    final trimmed = result.trim();
+    if (trimmed.isNotEmpty && !apiKeyManager.isValidApiKeyFormat(trimmed)) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.dailyQuoteApiNinjasApiKeyInvalid)),
+      );
+      return;
+    }
+
+    if (trimmed.isEmpty) {
+      await apiKeyManager.removeProviderApiKey(ApiService.apiNinjasProvider);
+    } else {
+      await apiKeyManager.saveProviderApiKey(
+        ApiService.apiNinjasProvider,
+        trimmed,
+      );
+    }
+
+    if (!mounted) return;
+    await _loadApiNinjasApiKeyStatus();
+    _showSavedSnackBar();
+  }
+
+  Future<void> _openApiNinjasCategorySelection() async {
+    final settingsService = context.read<SettingsService>();
+    final selectedCategories = await Navigator.of(context).push<List<String>>(
+      MaterialPageRoute(
+        builder: (_) => ApiNinjasCategorySelectionPage(
+          initialSelectedCategories: settingsService.apiNinjasCategories,
+        ),
+      ),
+    );
+
+    if (selectedCategories == null) return;
+    await settingsService.setApiNinjasCategories(selectedCategories);
+    if (!mounted) return;
+    _showSavedSnackBar();
+  }
+
+  void _showSavedSnackBar() {
     final l10n = AppLocalizations.of(context);
 
     ScaffoldMessenger.of(context).showSnackBar(
-      // ignore: prefer_const_constructors
       SnackBar(
         content: Row(
           children: [
@@ -81,11 +189,30 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
     );
   }
 
+  // 保存选择的类型
+  void _saveSelectedTypes() {
+    // 确保至少选择一种类型
+    if (_selectedTypes.isEmpty) {
+      _selectedTypes.add('a');
+    }
+    _selectedType = _selectedTypes.join(',');
+    context.read<SettingsService>().updateHitokotoType(_selectedType);
+    _showSavedSnackBar();
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context);
+    final settingsService = context.watch<SettingsService>();
+    final providerLabels = ApiService.getDailyQuoteProviders(l10n);
+    final apiNinjasCategories = settingsService.apiNinjasCategories;
+    final showHitokotoTypeSelection = ApiService.supportsHitokotoTypeSelection(
+      _selectedProvider,
+    );
+    final providerLabel =
+        providerLabels[_selectedProvider] ?? providerLabels.values.first;
 
     return FadeTransition(
       opacity: _fadeAnimation,
@@ -146,7 +273,9 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                l10n.hitokotoTypeSettings,
+                                showHitokotoTypeSelection
+                                    ? l10n.hitokotoTypeSettings
+                                    : l10n.dailyQuoteApi,
                                 style: theme.textTheme.titleLarge?.copyWith(
                                   color: colorScheme.onPrimaryContainer,
                                   fontWeight: FontWeight.bold,
@@ -154,7 +283,9 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                l10n.selectedCount(_selectedTypes.length),
+                                showHitokotoTypeSelection
+                                    ? l10n.selectedCount(_selectedTypes.length)
+                                    : providerLabel,
                                 style: theme.textTheme.bodyMedium?.copyWith(
                                   color: colorScheme.onPrimaryContainer
                                       .withAlpha(180),
@@ -167,7 +298,9 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                     ),
                     const SizedBox(height: 16),
                     Text(
-                      l10n.hitokotoTypeDesc,
+                      showHitokotoTypeSelection
+                          ? l10n.hitokotoTypeDesc
+                          : l10n.dailyQuoteApiDesc,
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: colorScheme.onPrimaryContainer.withAlpha(180),
                         height: 1.5,
@@ -179,50 +312,6 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
 
               const SizedBox(height: 24),
 
-              // 快速操作按钮
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildActionButton(
-                      context: context,
-                      icon: Icons.select_all_rounded,
-                      label: l10n.selectAll,
-                      onPressed: () {
-                        setState(() {
-                          _selectedTypes.clear();
-                          for (final key in ApiService.getHitokotoTypes(
-                            l10n,
-                          ).keys) {
-                            _selectedTypes.add(key);
-                          }
-                        });
-                        _saveSelectedTypes();
-                      },
-                      isPrimary: false,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildActionButton(
-                      context: context,
-                      icon: Icons.deselect_rounded,
-                      label: l10n.clearAll,
-                      onPressed: () {
-                        setState(() {
-                          _selectedTypes.clear();
-                          _selectedTypes.add('a'); // 至少选一个
-                        });
-                        _saveSelectedTypes();
-                      },
-                      isPrimary: false,
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 24),
-
-              // 类型选择卡片
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(24),
@@ -238,7 +327,7 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      l10n.typeSelection,
+                      l10n.dailyQuoteApi,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: colorScheme.onSurface,
@@ -246,39 +335,23 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      l10n.typeSelectionHint,
+                      l10n.dailyQuoteApiDesc,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colorScheme.onSurface.withAlpha(150),
                       ),
                     ),
                     const SizedBox(height: 20),
-
-                    // 类型选择网格
                     Wrap(
                       spacing: 12,
                       runSpacing: 12,
-                      children: ApiService.getHitokotoTypes(l10n).entries.map((
-                        entry,
-                      ) {
-                        final isSelected = _selectedTypes.contains(entry.key);
-                        return _buildTypeChip(
-                          context: context,
-                          type: entry.key,
-                          label: entry.value,
-                          isSelected: isSelected,
+                      children: providerLabels.entries.map((entry) {
+                        return ChoiceChip(
+                          label: Text(entry.value),
+                          selected: _selectedProvider == entry.key,
                           onSelected: (selected) {
-                            setState(() {
-                              if (selected) {
-                                _selectedTypes.add(entry.key);
-                              } else {
-                                _selectedTypes.remove(entry.key);
-                                // 确保至少选择一种类型
-                                if (_selectedTypes.isEmpty) {
-                                  _selectedTypes.add('a');
-                                }
-                              }
-                            });
-                            _saveSelectedTypes();
+                            if (selected && _selectedProvider != entry.key) {
+                              _saveSelectedProvider(entry.key);
+                            }
                           },
                         );
                       }).toList(),
@@ -286,43 +359,194 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                   ],
                 ),
               ),
-              // 帮助信息卡片
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                  border: Border.all(
-                    color: colorScheme.outline.withAlpha(30),
-                    width: 1,
-                  ),
+
+              if (_selectedProvider == ApiService.apiNinjasProvider) ...[
+                const SizedBox(height: 24),
+                _buildSettingsEntryCard(
+                  context: context,
+                  title: l10n.dailyQuoteApiNinjasManageApiKey,
+                  subtitle: _hasApiNinjasApiKey
+                      ? l10n.dailyQuoteApiNinjasApiKeyConfigured
+                      : l10n.dailyQuoteApiNinjasApiKeyMissing,
+                  icon: Icons.key_rounded,
+                  onTap: _configureApiNinjasApiKey,
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(height: 16),
+                _buildSettingsEntryCard(
+                  context: context,
+                  title: l10n.dailyQuoteApiNinjasCategorySelection,
+                  subtitle: apiNinjasCategories.isEmpty
+                      ? l10n.dailyQuoteApiNinjasAllCategoriesUsed
+                      : l10n.dailyQuoteApiNinjasSelectedCount(
+                          apiNinjasCategories.length,
+                        ),
+                  icon: Icons.tune_rounded,
+                  onTap: _openApiNinjasCategorySelection,
+                ),
+              ],
+
+              if (showHitokotoTypeSelection) ...[
+                const SizedBox(height: 24),
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline_rounded,
-                          color: colorScheme.primary,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          l10n.usageInstructions,
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.onSurface,
-                          ),
-                        ),
-                      ],
+                    Expanded(
+                      child: _buildActionButton(
+                        context: context,
+                        icon: Icons.select_all_rounded,
+                        label: l10n.selectAll,
+                        onPressed: () {
+                          setState(() {
+                            _selectedTypes.clear();
+                            for (final key in ApiService.getHitokotoTypes(
+                              l10n,
+                            ).keys) {
+                              _selectedTypes.add(key);
+                            }
+                          });
+                          _saveSelectedTypes();
+                        },
+                        isPrimary: false,
+                      ),
                     ),
-                    const SizedBox(height: 12),
-                    ..._buildHelpItems(context, l10n),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildActionButton(
+                        context: context,
+                        icon: Icons.deselect_rounded,
+                        label: l10n.clearAll,
+                        onPressed: () {
+                          setState(() {
+                            _selectedTypes.clear();
+                            _selectedTypes.add('a');
+                          });
+                          _saveSelectedTypes();
+                        },
+                        isPrimary: false,
+                      ),
+                    ),
                   ],
                 ),
-              ),
+                const SizedBox(height: 24),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                    border: Border.all(
+                      color: colorScheme.outline.withAlpha(50),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.typeSelection,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        l10n.typeSelectionHint,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurface.withAlpha(150),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children:
+                            ApiService.getHitokotoTypes(l10n).entries.map((
+                          entry,
+                        ) {
+                          final isSelected = _selectedTypes.contains(entry.key);
+                          return _buildTypeChip(
+                            context: context,
+                            type: entry.key,
+                            label: entry.value,
+                            isSelected: isSelected,
+                            onSelected: (selected) {
+                              setState(() {
+                                if (selected) {
+                                  _selectedTypes.add(entry.key);
+                                } else {
+                                  _selectedTypes.remove(entry.key);
+                                  if (_selectedTypes.isEmpty) {
+                                    _selectedTypes.add('a');
+                                  }
+                                }
+                              });
+                              _saveSelectedTypes();
+                            },
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else ...[
+                const SizedBox(height: 24),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                    border: Border.all(
+                      color: colorScheme.outline.withAlpha(30),
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    l10n.dailyQuoteProviderNoTypeSelection,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                      height: 1.5,
+                    ),
+                  ),
+                ),
+              ],
+              if (showHitokotoTypeSelection)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surfaceContainerHigh,
+                    borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                    border: Border.all(
+                      color: colorScheme.outline.withAlpha(30),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline_rounded,
+                            color: colorScheme.primary,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            l10n.usageInstructions,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: colorScheme.onSurface,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ..._buildHelpItems(context, l10n),
+                    ],
+                  ),
+                ),
 
               const SizedBox(height: 24),
 
@@ -348,7 +572,7 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        l10n.hitokotoServiceProvider,
+                        l10n.dailyQuoteServiceProvider(providerLabel),
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: colorScheme.onSurface.withAlpha(150),
                         ),
@@ -446,6 +670,59 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
       shadowColor: colorScheme.shadow.withAlpha(100),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       onSelected: onSelected,
+    );
+  }
+
+  Widget _buildSettingsEntryCard({
+    required BuildContext context,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Material(
+      color: colorScheme.surfaceContainerLow,
+      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Row(
+            children: [
+              Icon(icon, color: colorScheme.primary),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: colorScheme.onSurfaceVariant,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 

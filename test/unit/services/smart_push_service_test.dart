@@ -22,6 +22,17 @@ void main() {
       expect(normalized['type'], equals('d'));
     });
 
+    test('preserves provider metadata for notification quick add', () {
+      final normalized = SmartPushService.normalizeDailyQuoteData({
+        'content': 'Stay hungry',
+        'author': 'Steve Jobs',
+        'provider': 'zenquotes',
+      });
+
+      expect(normalized, isNotNull);
+      expect(normalized!['provider'], equals('zenquotes'));
+    });
+
     test('returns null when quote content is empty', () {
       final normalized = SmartPushService.normalizeDailyQuoteData({
         'content': '   ',

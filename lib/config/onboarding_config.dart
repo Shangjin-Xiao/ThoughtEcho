@@ -86,6 +86,11 @@ class OnboardingConfig {
     BuildContext context,
   ) {
     final l10n = AppLocalizations.of(context);
+    final defaultDailyQuoteProvider =
+        ApiService.recommendedDailyQuoteProviderForLanguage(
+      Localizations.localeOf(context).languageCode,
+    );
+
     return [
       // 0. 位置服务（放在最前面）
       OnboardingPreference<bool>(
@@ -96,7 +101,25 @@ class OnboardingConfig {
         type: OnboardingPreferenceType.toggle,
       ),
 
-      // 1. 每日一言类型选择
+      // 1. 每日一言 provider
+      OnboardingPreference<String>(
+        key: 'dailyQuoteProvider',
+        title: l10n.dailyQuoteApi,
+        description: l10n.dailyQuoteApiDesc,
+        defaultValue: defaultDailyQuoteProvider,
+        type: OnboardingPreferenceType.radio,
+        options: ApiService.getDailyQuoteProviders(l10n)
+            .entries
+            .map(
+              (entry) => OnboardingPreferenceOption<String>(
+                value: entry.key,
+                label: entry.value,
+              ),
+            )
+            .toList(),
+      ),
+
+      // 2. 每日一言类型选择
       OnboardingPreference<String>(
         key: 'hitokotoTypes',
         title: l10n.prefDailyQuoteType,
@@ -106,7 +129,7 @@ class OnboardingConfig {
         options: getHitokotoTypeOptions(context),
       ),
 
-      // 2. 默认启动页面
+      // 3. 默认启动页面
       OnboardingPreference<int>(
         key: 'defaultStartPage',
         title: l10n.prefDefaultStartPage,

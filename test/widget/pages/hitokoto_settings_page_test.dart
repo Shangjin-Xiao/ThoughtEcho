@@ -6,6 +6,8 @@ import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/pages/hitokoto_settings_page.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 
+import '../../test_setup.dart';
+
 class _TestSettingsService extends ChangeNotifier implements SettingsService {
   AppSettings _appSettings;
 
@@ -17,8 +19,26 @@ class _TestSettingsService extends ChangeNotifier implements SettingsService {
   AppSettings get appSettings => _appSettings;
 
   @override
+  String get dailyQuoteProvider => _appSettings.dailyQuoteProvider;
+
+  @override
   Future<void> updateHitokotoType(String type) async {
     _appSettings = _appSettings.copyWith(hitokotoType: type);
+    notifyListeners();
+  }
+
+  @override
+  Future<void> setDailyQuoteProvider(String provider) async {
+    _appSettings = _appSettings.copyWith(dailyQuoteProvider: provider);
+    notifyListeners();
+  }
+
+  @override
+  List<String> get apiNinjasCategories => _appSettings.apiNinjasCategories;
+
+  @override
+  Future<void> setApiNinjasCategories(List<String> categories) async {
+    _appSettings = _appSettings.copyWith(apiNinjasCategories: categories);
     notifyListeners();
   }
 
@@ -28,6 +48,10 @@ class _TestSettingsService extends ChangeNotifier implements SettingsService {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUp(() async {
+    await TestSetup.setupWidgetTest();
+  });
 
   Widget buildApp(SettingsService settings) {
     return ChangeNotifierProvider<SettingsService>.value(
@@ -41,17 +65,59 @@ void main() {
     );
   }
 
+  Future<void> pumpPage(WidgetTester tester, SettingsService settings) async {
+    await tester.pumpWidget(buildApp(settings));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('一言设置页不显示离线一言数据源选项', (tester) async {
     final settings = _TestSettingsService();
     final localizations =
         await AppLocalizations.delegate.load(const Locale('zh'));
 
-    await tester.pumpWidget(buildApp(settings));
-    await tester.pumpAndSettle();
+    await pumpPage(tester, settings);
 
     expect(find.text(localizations.hitokotoSettings), findsOneWidget);
     expect(find.text(localizations.offlineQuoteSourceTitle), findsNothing);
     expect(find.text(localizations.offlineQuoteSourceTagOnly), findsNothing);
     expect(find.text(localizations.offlineQuoteSourceAll), findsNothing);
+  });
+
+  testWidgets('切换到其他 provider 时隐藏 Hitokoto 类型筛选', (tester) async {
+    final settings = _TestSettingsService();
+    final localizations =
+        await AppLocalizations.delegate.load(const Locale('zh'));
+
+    await pumpPage(tester, settings);
+
+    expect(find.text(localizations.typeSelection), findsOneWidget);
+
+    await tester.tap(find.text(localizations.dailyQuoteApiZenQuotes));
+    await tester.pumpAndSettle();
+
+    expect(settings.dailyQuoteProvider, 'zenquotes');
+    expect(find.text(localizations.typeSelection), findsNothing);
+    expect(
+      find.text(localizations.dailyQuoteProviderNoTypeSelection),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('选择 API Ninjas 时显示密钥和分类入口', (tester) async {
+    final settings = _TestSettingsService();
+    final localizations =
+        await AppLocalizations.delegate.load(const Locale('zh'));
+
+    await pumpPage(tester, settings);
+
+    await tester.tap(find.text(localizations.dailyQuoteApiApiNinjas));
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.pumpAndSettle();
+
+    expect(find.text(localizations.dailyQuoteApiNinjasManageApiKey),
+        findsOneWidget);
+    expect(find.text(localizations.dailyQuoteApiNinjasCategorySelection),
+        findsOneWidget);
   });
 }

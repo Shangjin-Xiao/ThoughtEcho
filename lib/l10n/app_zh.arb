@@ -585,12 +585,65 @@
   "hitokotoSettings": "每日一言设置",
   "hitokotoTypeSettings": "每日一言类型设置",
   "hitokotoTypeDesc": "您可以选择一个或多个\"每日一言\"类型，程序将从您选择的类型中随机抽取内容展示。不同类型代表不同的内容来源和风格。",
+  "dailyQuoteApiDesc": "选择用于首页每日一言的内容来源。非 Hitokoto provider 会直接随机返回该服务的内容。",
+  "dailyQuoteApiHitokoto": "一言 (Hitokoto)",
+  "dailyQuoteApiZenQuotes": "ZenQuotes",
+  "dailyQuoteApiApiNinjas": "API Ninjas",
+  "dailyQuoteApiMeigen": "名言教えるよ",
+  "dailyQuoteApiKoreanAdvice": "Korean Advice",
+  "dailyQuoteApiNinjasManageApiKey": "配置 API Key",
+  "dailyQuoteApiNinjasApiKeyHint": "输入 API Ninjas 的 X-Api-Key",
+  "dailyQuoteApiNinjasApiKeyConfigured": "已配置 API Key",
+  "dailyQuoteApiNinjasApiKeyMissing": "尚未配置 API Key，无法请求该服务",
+  "dailyQuoteApiNinjasApiKeyInvalid": "API Key 格式无效",
+  "dailyQuoteApiNinjasCategorySelection": "分类选择",
+  "dailyQuoteApiNinjasCategoryDesc": "支持搜索、多选与清空；如果一个也不选，则自动按全局随机处理。",
+  "dailyQuoteApiNinjasCategorySearchHint": "搜索分类",
+  "dailyQuoteApiNinjasNoCategoriesFound": "没有匹配的分类",
+  "dailyQuoteApiNinjasAllCategoriesUsed": "未限制分类，将从全部分类中随机抽取",
+  "dailyQuoteApiNinjasSelectedCount": "已选择 {count} 个分类",
+  "@dailyQuoteApiNinjasSelectedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "dailyQuoteApiNinjasCategoryWisdom": "智慧",
+  "dailyQuoteApiNinjasCategoryPhilosophy": "哲学",
+  "dailyQuoteApiNinjasCategoryLife": "人生",
+  "dailyQuoteApiNinjasCategoryTruth": "真理",
+  "dailyQuoteApiNinjasCategoryInspirational": "励志",
+  "dailyQuoteApiNinjasCategoryRelationships": "关系",
+  "dailyQuoteApiNinjasCategoryLove": "爱情",
+  "dailyQuoteApiNinjasCategoryFaith": "信念",
+  "dailyQuoteApiNinjasCategoryHumor": "幽默",
+  "dailyQuoteApiNinjasCategorySuccess": "成功",
+  "dailyQuoteApiNinjasCategoryCourage": "勇气",
+  "dailyQuoteApiNinjasCategoryHappiness": "幸福",
+  "dailyQuoteApiNinjasCategoryArt": "艺术",
+  "dailyQuoteApiNinjasCategoryWriting": "写作",
+  "dailyQuoteApiNinjasCategoryFear": "恐惧",
+  "dailyQuoteApiNinjasCategoryNature": "自然",
+  "dailyQuoteApiNinjasCategoryTime": "时间",
+  "dailyQuoteApiNinjasCategoryFreedom": "自由",
+  "dailyQuoteApiNinjasCategoryDeath": "死亡",
+  "dailyQuoteApiNinjasCategoryLeadership": "领导力",
   "selectAll": "全选",
   "clearAll": "清除全部",
   "typeSelection": "类型选择",
   "typeSelectionHint": "点击选择您喜欢的句子类型",
+  "dailyQuoteProviderNoTypeSelection": "当前 API 不提供 Hitokoto 式分类筛选，刷新时会从该服务随机获取内容。",
   "usageInstructions": "使用说明",
   "hitokotoServiceProvider": "一言服务由 Hitokoto 提供",
+  "dailyQuoteServiceProvider": "当前内容由 {provider} 提供",
+  "@dailyQuoteServiceProvider": {
+    "placeholders": {
+      "provider": {
+        "type": "String"
+      }
+    }
+  },
   "hitokotoHelpItem1": "至少需要选择一种类型，程序会随机展示选中类型的内容",
   "hitokotoHelpItem2": "选择多种类型可以获得更丰富多样的内容体验",
   "hitokotoHelpItem3": "不同类型代表不同的内容风格和来源平台",

@@ -52,7 +52,7 @@ class OnboardingController extends ChangeNotifier {
         mmkvService: mmkvService,
       );
 
-      _initializePreferences();
+      _initializePreferences(context);
 
       logDebug('OnboardingController初始化完成', source: 'OnboardingController');
     } catch (e, stackTrace) {
@@ -67,10 +67,10 @@ class OnboardingController extends ChangeNotifier {
   }
 
   /// 初始化偏好设置默认值
-  void _initializePreferences() {
+  void _initializePreferences(BuildContext context) {
     final defaultPreferences = <String, dynamic>{};
 
-    for (final preference in OnboardingConfig.preferences) {
+    for (final preference in OnboardingConfig.getPreferences(context)) {
       defaultPreferences[preference.key] = preference.defaultValue;
     }
 
@@ -237,6 +237,7 @@ class OnboardingController extends ChangeNotifier {
         clipboardMonitoringEnabled: _state.getPreference<bool>(
           'clipboardMonitoring',
         ),
+        dailyQuoteProvider: _state.getPreference<String>('dailyQuoteProvider'),
         hitokotoType: _state.getPreference<String>('hitokotoTypes'),
         // 新增偏好持久化
         showFavoriteButton:

@@ -26,7 +26,7 @@ class PreferencesPageView extends StatefulWidget {
 class _PreferencesPageViewState extends State<PreferencesPageView>
     with TickerProviderStateMixin {
   late AnimationController _animationController;
-  late List<Animation<double>> _itemAnimations;
+  List<Animation<double>> _itemAnimations = const [];
 
   @override
   void initState() {
@@ -36,12 +36,25 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
       vsync: this,
     );
 
-    // Fixed count of 3 preferences (location, hitokoto types, start page)
-    const preferencesCount = 3;
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (mounted) {
+        _animationController.forward();
+      }
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    final preferencesCount = OnboardingConfig.getPreferences(context).length;
+    if (_itemAnimations.length == preferencesCount) {
+      return;
+    }
+
     _itemAnimations = List.generate(preferencesCount, (index) {
-      // Calculate intervals that ensure end values don't exceed 1.0
       final startDelay = index * 0.1;
-      const animationDuration = 0.4; // Fixed duration for each animation
+      const animationDuration = 0.4;
       final endTime = (startDelay + animationDuration).clamp(0.0, 1.0);
 
       return Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -50,12 +63,6 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
           curve: Interval(startDelay, endTime, curve: Curves.easeOutCubic),
         ),
       );
-    });
-
-    Future.delayed(const Duration(milliseconds: 200), () {
-      if (mounted) {
-        _animationController.forward();
-      }
     });
   }
 

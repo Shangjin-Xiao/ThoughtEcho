@@ -6,6 +6,7 @@ import 'dart:async';
 import '../gen_l10n/app_localizations.dart';
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
+import '../services/api_service.dart';
 import '../services/database_service.dart';
 import '../services/location_service.dart';
 import '../services/local_geocoding_service.dart';
@@ -1119,7 +1120,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
       // 添加一言类型对应的标签
       String? hitokotoType;
-      if (widget.hitokotoData != null) {
+      if (_shouldApplyHitokotoSubtypeTag()) {
         hitokotoType = _getHitokotoTypeFromApiResponse();
         if (hitokotoType != null && hitokotoType.isNotEmpty) {
           String tagName = _convertHitokotoTypeToTagName(hitokotoType);
@@ -1193,6 +1194,11 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       return widget.hitokotoData!['type'].toString();
     }
     return null;
+  }
+
+  bool _shouldApplyHitokotoSubtypeTag() {
+    final provider = widget.hitokotoData?['provider']?.toString();
+    return provider == ApiService.hitokotoProvider;
   }
 
   // 将一言API的类型代码转换为可读标签名称
