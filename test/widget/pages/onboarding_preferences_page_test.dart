@@ -6,8 +6,12 @@ import 'package:thoughtecho/models/onboarding_models.dart';
 import 'package:thoughtecho/services/api_service.dart';
 import 'package:thoughtecho/widgets/onboarding/preferences_page_view.dart';
 
+import '../../test_setup.dart';
+
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(() async {
+    await TestSetup.setupWidgetTest();
+  });
 
   testWidgets('引导页根据语言为每日一言 provider 选择合适默认值', (
     tester,
