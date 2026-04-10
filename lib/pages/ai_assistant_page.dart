@@ -77,6 +77,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   bool _agentListenerAttached = false;
   String _lastAgentStatusKey = '';
   bool _lastAgentRunning = false;
+  bool _showScrollToBottom = false;
   Timer? _agentStatusDismissTimer;
   static const Duration _agentStatusDismissDuration =
       Duration(milliseconds: 1400);
@@ -103,6 +104,15 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   }
 
   bool get _isAgentMode => _currentMode == AIAssistantPageMode.agent;
+
+  /// 当前模型显示名称（用于 AppBar 副标题）
+  String? get _currentModelDisplayName {
+    if (!_settingsReady) return null;
+    final provider = _settingsService.multiAISettings.currentProvider;
+    if (provider == null) return null;
+    final model = provider.model.trim();
+    return model.isNotEmpty ? model : provider.name;
+  }
 
   /// 检查当前模型是否支持思考/推理模式
   bool get _currentModelSupportsThinking {
@@ -175,13 +185,36 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     return null;
   }
 
+  /// 判断消息内容是否为加载占位文本（此时显示动态点动画）
+  bool _isLoadingPlaceholderContent(String content, AppLocalizations l10n) {
+    return content.isEmpty ||
+        content == l10n.thinkingInProgress ||
+        content == l10n.analyzingNote ||
+        content == l10n.analyzingSource ||
+        content == l10n.polishingText ||
+        content == l10n.continuingText;
+  }
+
   @override
   void initState() {
     super.initState();
     _currentMode = _entryConfig.defaultMode;
     _textController.addListener(_onTextChanged);
     _inputFocusNode.addListener(_onInputFocusChanged);
+    _scrollController.addListener(_onScrollPositionChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) => _initServicesAndLoad());
+  }
+
+  void _onScrollPositionChanged() {
+    if (!_scrollController.hasClients) return;
+    final maxExtent = _scrollController.position.maxScrollExtent;
+    final current = _scrollController.position.pixels;
+    final shouldShow = (maxExtent - current) > 150;
+    if (shouldShow != _showScrollToBottom) {
+      setState(() {
+        _showScrollToBottom = shouldShow;
+      });
+    }
   }
 
   void _onTextChanged() {
@@ -212,6 +245,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     _streamSubscription?.cancel();
     _inputFocusNode.removeListener(_onInputFocusChanged);
     _textController.removeListener(_onTextChanged);
+    _scrollController.removeListener(_onScrollPositionChanged);
     _inputFocusNode.dispose();
     _textController.dispose();
     _scrollController.dispose();
@@ -1030,16 +1064,34 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
+    final modelName = _currentModelDisplayName;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          _hasBoundNote ? l10n.askNoteTitle : l10n.aiAssistantLabel,
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Text(
+              _hasBoundNote ? l10n.askNoteTitle : l10n.aiAssistantLabel,
+            ),
+            if (modelName != null)
+              Text(
+                modelName,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant
+                      .withValues(alpha: 0.75),
+                  fontWeight: FontWeight.normal,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+          ],
         ),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.add_comment),
+            icon: const Icon(Icons.add_comment_outlined),
             tooltip: l10n.newChat,
             onPressed: _startNewChat,
           ),
@@ -1057,14 +1109,38 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
               widget.exploreGuideSummary?.trim().isNotEmpty == true)
             _buildExploreGuideBanner(theme, l10n),
           Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                return _buildMessageBubble(_messages[index], theme, l10n);
-              },
+            child: Stack(
+              children: [
+                ListView.builder(
+                  controller: _scrollController,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: const EdgeInsets.fromLTRB(4, 12, 4, 12),
+                  itemCount: _messages.length,
+                  itemBuilder: (context, index) {
+                    return _buildMessageBubble(_messages[index], theme, l10n);
+                  },
+                ),
+                // Scroll-to-bottom button
+                if (_showScrollToBottom)
+                  Positioned(
+                    bottom: 12,
+                    right: 16,
+                    child: AnimatedOpacity(
+                      opacity: _showScrollToBottom ? 1.0 : 0.0,
+                      duration: const Duration(milliseconds: 200),
+                      child: FloatingActionButton.small(
+                        heroTag: 'scroll_to_bottom_fab',
+                        onPressed: _scrollToBottom,
+                        backgroundColor:
+                            theme.colorScheme.surfaceContainerHigh,
+                        foregroundColor: theme.colorScheme.onSurface,
+                        elevation: 3,
+                        child: const Icon(Icons.keyboard_arrow_down),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
           if (_isAgentMode) _buildAgentStatusIndicator(theme, l10n),
@@ -1102,12 +1178,31 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
 
   Widget _buildNoteContextBanner(ThemeData theme) {
     return Container(
-      padding: const EdgeInsets.all(8),
-      color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.45),
+        border: Border(
+          bottom: BorderSide(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
+          ),
+        ),
+      ),
       child: Row(
         children: [
-          Icon(Icons.description, size: 16, color: theme.colorScheme.primary),
-          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color:
+                  theme.colorScheme.secondaryContainer.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              Icons.description_outlined,
+              size: 14,
+              color: theme.colorScheme.secondary,
+            ),
+          ),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               '${AppLocalizations.of(context).currentNoteContext}: ${_getQuotePreview()}',
@@ -1222,115 +1317,125 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
 
     final isUser = message.isUser;
     final isDark = theme.brightness == Brightness.dark;
-    final maxBubbleWidth = MediaQuery.of(context).size.width * 0.8;
-    final userBubbleColor = isDark
-        ? Color.alphaBlend(
-            theme.colorScheme.primary.withValues(alpha: 0.28),
-            theme.colorScheme.surfaceContainerHigh,
-          )
-        : theme.colorScheme.primaryContainer.withValues(alpha: 0.95);
-    final assistantBubbleColor = isDark
-        ? theme.colorScheme.surfaceContainerHigh
-        : theme.colorScheme.surfaceContainerLowest;
-    final bubbleColor = isUser ? userBubbleColor : assistantBubbleColor;
-    final bubbleTextColor = isUser
-        ? (isDark
-            ? theme.colorScheme.onSurface
-            : theme.colorScheme.onPrimaryContainer)
-        : theme.colorScheme.onSurface;
-    final bubbleBorderColor = isUser
-        ? theme.colorScheme.primary.withValues(alpha: isDark ? 0.38 : 0.24)
-        : theme.colorScheme.outlineVariant
-            .withValues(alpha: isDark ? 0.5 : 0.8);
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment:
-            isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (!isUser) ...[
-            CircleAvatar(
-              radius: 15,
-              backgroundColor: theme.colorScheme.primaryContainer,
-              child: Icon(
-                Icons.smart_toy,
-                color: theme.colorScheme.onPrimaryContainer,
-                size: 16,
+    if (isUser) {
+      // ── User message ── right-aligned pill, Gallery-style primary color, no border
+      final bubbleBg = isDark
+          ? Color.alphaBlend(
+              theme.colorScheme.primary.withValues(alpha: 0.32),
+              theme.colorScheme.surfaceContainerHigh,
+            )
+          : theme.colorScheme.primary;
+      final textColor =
+          isDark ? theme.colorScheme.onSurface : theme.colorScheme.onPrimary;
+
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(56, 3, 12, 3),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 3, right: 2),
+              child: Text(
+                l10n.chatYouLabel,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant
+                      .withValues(alpha: 0.7),
+                ),
               ),
             ),
-            const SizedBox(width: 6),
-          ],
-          Flexible(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: maxBubbleWidth),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                decoration: BoxDecoration(
-                  color: bubbleColor,
-                  borderRadius: BorderRadius.circular(18).copyWith(
-                    bottomRight: isUser ? const Radius.circular(6) : null,
-                    bottomLeft: !isUser ? const Radius.circular(6) : null,
-                  ),
-                  border: Border.all(color: bubbleBorderColor, width: 1),
-                  boxShadow: [
-                    BoxShadow(
-                      color:
-                          Colors.black.withValues(alpha: isDark ? 0.16 : 0.06),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+              decoration: BoxDecoration(
+                color: bubbleBg,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(18),
+                  topRight: Radius.circular(4),
+                  bottomLeft: Radius.circular(18),
+                  bottomRight: Radius.circular(18),
                 ),
-                child: isUser
-                    ? Text(
-                        message.content,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: bubbleTextColor,
-                          height: 1.4,
+              ),
+              child: Text(
+                message.content,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: textColor,
+                  height: 1.45,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    } else {
+      // ── AI message ── left-aligned, light blue-gray bubble, no border
+      final bubbleBg = isDark
+          ? theme.colorScheme.surfaceContainerHigh
+          : const Color(0xFFe9eef6);
+      final senderName = _settingsReady
+          ? (_settingsService.multiAISettings.currentProvider?.name ??
+              l10n.aiAssistantLabel)
+          : l10n.aiAssistantLabel;
+      final isInitialLoading =
+          message.isLoading && _isLoadingPlaceholderContent(message.content, l10n);
+
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(12, 3, 56, 3),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 3, left: 2),
+              child: Text(
+                senderName,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant
+                      .withValues(alpha: 0.7),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+              decoration: BoxDecoration(
+                color: bubbleBg,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(4),
+                  topRight: Radius.circular(18),
+                  bottomLeft: Radius.circular(18),
+                  bottomRight: Radius.circular(18),
+                ),
+              ),
+              child: isInitialLoading
+                  ? const _TypingIndicator()
+                  : MarkdownBody(
+                      data: message.content,
+                      selectable: true,
+                      styleSheet:
+                          MarkdownStyleSheet.fromTheme(theme).copyWith(
+                        p: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurface,
+                          height: 1.5,
                         ),
-                      )
-                    : MarkdownBody(
-                        data: message.content,
-                        selectable: true,
-                        styleSheet:
-                            MarkdownStyleSheet.fromTheme(theme).copyWith(
-                          p: theme.textTheme.bodyMedium?.copyWith(
-                            color: bubbleTextColor,
-                            height: 1.45,
-                          ),
-                          listBullet: theme.textTheme.bodyMedium?.copyWith(
-                            color: bubbleTextColor,
-                          ),
-                          code: theme.textTheme.bodySmall?.copyWith(
-                            color: bubbleTextColor,
-                            fontFamily: 'monospace',
-                            backgroundColor: theme
-                                .colorScheme.surfaceContainerHighest
-                                .withValues(alpha: 0.65),
-                          ),
+                        listBullet: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurface,
+                        ),
+                        code: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface,
+                          fontFamily: 'monospace',
+                          backgroundColor: theme
+                              .colorScheme.surfaceContainerHighest
+                              .withValues(alpha: 0.65),
                         ),
                       ),
-              ),
-            ),
-          ),
-          if (isUser) ...[
-            const SizedBox(width: 6),
-            CircleAvatar(
-              radius: 15,
-              backgroundColor: theme.colorScheme.secondaryContainer,
-              child: Icon(
-                Icons.person,
-                color: theme.colorScheme.onSecondaryContainer,
-                size: 16,
-              ),
+                    ),
             ),
           ],
-        ],
-      ),
-    );
+        ),
+      );
+    }
   }
 
   Map<String, String> _buildInsightTypeLabels(AppLocalizations l10n) {
@@ -1686,25 +1791,17 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                     focusNode: _inputFocusNode,
                     decoration: InputDecoration(
                       hintText: l10n.aiAssistantInputHint,
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(
-                          color:
-                              theme.colorScheme.outline.withValues(alpha: 0.45),
-                        ),
+                      hintStyle: TextStyle(
+                        color: theme.colorScheme.onSurfaceVariant
+                            .withValues(alpha: 0.55),
                       ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(
-                          color: theme.colorScheme.primary,
-                          width: 1.5,
-                        ),
-                      ),
-                      filled: true,
-                      fillColor: theme.colorScheme.surfaceContainerLow,
+                      border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      filled: false,
                       contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
+                        horizontal: 4,
+                        vertical: 8,
                       ),
                     ),
                     maxLines: null,
@@ -1730,7 +1827,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                     ],
                   ),
                   child: IconButton(
-                    icon: Icon(_isLoading ? Icons.stop : Icons.send),
+                    icon: Icon(_isLoading ? Icons.stop_rounded : Icons.send_rounded),
                     color: _isLoading
                         ? theme.colorScheme.onError
                         : theme.colorScheme.onPrimary,
@@ -1839,4 +1936,86 @@ class _AgentSmartResultPayload {
 
   final String title;
   final String content;
+}
+
+/// 三点弹跳动画，用于 AI 消息加载占位状态
+/// 参考 Google AI Edge Gallery 的 MessageBodyLoading 设计
+class _TypingIndicator extends StatefulWidget {
+  const _TypingIndicator();
+
+  @override
+  State<_TypingIndicator> createState() => _TypingIndicatorState();
+}
+
+class _TypingIndicatorState extends State<_TypingIndicator>
+    with TickerProviderStateMixin {
+  late final List<AnimationController> _controllers;
+  late final List<Animation<double>> _animations;
+
+  @override
+  void initState() {
+    super.initState();
+    _controllers = List.generate(3, (_) {
+      return AnimationController(
+        duration: const Duration(milliseconds: 500),
+        vsync: this,
+      );
+    });
+    _animations = _controllers
+        .map(
+          (c) => Tween<double>(begin: 0.0, end: 1.0).animate(
+            CurvedAnimation(parent: c, curve: Curves.easeInOut),
+          ),
+        )
+        .toList();
+    _startStaggered();
+  }
+
+  Future<void> _startStaggered() async {
+    for (var i = 0; i < _controllers.length; i++) {
+      await Future.delayed(Duration(milliseconds: i * 160));
+      if (mounted) _controllers[i].repeat(reverse: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    for (final c in _controllers) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final baseColor = Theme.of(context).colorScheme.onSurface;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(3, (i) {
+          return AnimatedBuilder(
+            animation: _animations[i],
+            builder: (context, _) {
+              final v = _animations[i].value;
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 3),
+                child: Transform.translate(
+                  offset: Offset(0, -5 * v),
+                  child: Container(
+                    width: 7,
+                    height: 7,
+                    decoration: BoxDecoration(
+                      color: baseColor.withValues(alpha: 0.35 + 0.55 * v),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                ),
+              );
+            },
+          );
+        }),
+      ),
+    );
+  }
 }

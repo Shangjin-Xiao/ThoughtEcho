@@ -2605,6 +2605,7 @@
   "gettingLocationHint": "位置获取中...",
   "noteNoLocationWeatherInfo": "此笔记首次保存时未记录位置和天气信息",
   "aiAssistantLabel": "AI助手",
+  "chatYouLabel": "你",
   "polishingText": "正在润色文本...",
   "continuingText": "正在续写文本...",
   "analyzingNote": "正在分析笔记...",

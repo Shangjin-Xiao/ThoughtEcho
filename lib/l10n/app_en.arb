@@ -2596,6 +2596,7 @@
   "gettingLocationHint": "Getting location...",
   "noteNoLocationWeatherInfo": "This note did not record location and weather info on first save",
   "aiAssistantLabel": "AI Assistant",
+  "chatYouLabel": "You",
   "polishingText": "Polishing text...",
   "continuingText": "Continuing text...",
   "analyzingNote": "Analyzing note...",
