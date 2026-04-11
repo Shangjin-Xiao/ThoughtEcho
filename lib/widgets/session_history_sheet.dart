@@ -84,6 +84,32 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
     }
   }
 
+  /// 按日期分组sessions
+  Map<String, List<ChatSession>> _groupSessionsByDate(List<ChatSession> sessions) {
+    final groups = <String, List<ChatSession>>{};
+    final now = DateTime.now();
+
+    for (final session in sessions) {
+      final date = session.lastActiveAt;
+      final dayDiff = now.difference(date).inDays;
+
+      String groupKey;
+      if (dayDiff == 0) {
+        groupKey = '📅 Today';
+      } else if (dayDiff == 1) {
+        groupKey = '📅 Yesterday';
+      } else if (dayDiff < 7) {
+        groupKey = '📅 This Week';
+      } else {
+        groupKey = '📅 Earlier';
+      }
+
+      groups.putIfAbsent(groupKey, () => []).add(session);
+    }
+
+    return groups;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -132,22 +158,60 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
               constraints: BoxConstraints(
                 maxHeight: MediaQuery.of(context).size.height * 0.5,
               ),
-              child: ListView.builder(
-                shrinkWrap: true,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                itemCount: _sessions!.length,
-                itemBuilder: (context, index) {
-                  return _buildSessionCard(
-                    context,
-                    _sessions![index],
-                    theme,
-                    l10n,
-                  );
-                },
-              ),
+              child: _buildGroupedSessionsList(context, theme, l10n),
             ),
         ],
       ),
+    );
+  }
+
+  /// 构建分组的sessions列表
+  Widget _buildGroupedSessionsList(
+    BuildContext context,
+    ThemeData theme,
+    AppLocalizations l10n,
+  ) {
+    final groups = _groupSessionsByDate(_sessions!);
+    final groupOrder = ['📅 Today', '📅 Yesterday', '📅 This Week', '📅 Earlier'];
+
+    return ListView.builder(
+      shrinkWrap: true,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      itemCount: groupOrder.length,
+      itemBuilder: (context, index) {
+        final groupKey = groupOrder[index];
+        final sessions = groups[groupKey];
+
+        if (sessions == null || sessions.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Group Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 12, 4, 8),
+              child: Text(
+                groupKey,
+                style: theme.textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+            // Sessions in this group
+            ...sessions.map((session) {
+              return _buildSessionCard(
+                context,
+                session,
+                theme,
+                l10n,
+              );
+            }).toList(),
+          ],
+        );
+      },
     );
   }
 
@@ -188,11 +252,11 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
           decoration: BoxDecoration(
             color: isCurrent
                 ? theme.colorScheme.primaryContainer.withValues(alpha: 0.5)
-                : theme.colorScheme.surface,
+                : theme.colorScheme.surfaceContainerHigh,
             border: Border.all(
               color: isCurrent
                   ? theme.colorScheme.primary.withValues(alpha: 0.5)
-                  : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                  : Colors.transparent,
               width: isCurrent ? 1.5 : 1,
             ),
             borderRadius: BorderRadius.circular(12),
@@ -207,26 +271,19 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Title and Message Count
+                    // Title and Message Count Badge
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          isCurrent ? Icons.chat_bubble : Icons.chat_bubble_outline,
-                          color: isCurrent
-                              ? theme.colorScheme.primary
-                              : theme.colorScheme.onSurfaceVariant,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
+                        // Title
                         Expanded(
                           child: Text(
                             truncatedTitle,
                             style: theme.textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
                               color: theme.colorScheme.onSurface,
                             ),
-                            maxLines: 2,
+                            maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -242,10 +299,10 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            messageCount.toString(),
+                            '$messageCount msgs',
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: theme.colorScheme.primary,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
