@@ -341,5 +341,50 @@ void main() {
 
       expect(forwardedTranscript, contains(marker));
     });
+
+    test('keeps events stream active across consecutive runs', () async {
+      final provider = const AIProviderSettings(
+        id: 'openai',
+        name: 'OpenAI',
+        apiUrl: 'https://api.openai.com/v1/chat/completions',
+        model: 'gpt-4.1',
+      );
+      final settings = _FakeSettingsService(provider);
+      final responses = <openai.ChatCompletion>[
+        _textCompletion('first'),
+        _textCompletion('second'),
+      ];
+
+      final service = AgentService(
+        settingsService: settings,
+        tools: const <AgentTool>[],
+        apiKeyResolver: (_) async => 'test-key',
+        completionRequester: ({
+          required provider,
+          required messages,
+          required tools,
+          required temperature,
+          required maxTokens,
+        }) async {
+          return responses.removeAt(0);
+        },
+      );
+
+      var responseEvents = 0;
+      final subscription = service.events.listen((event) {
+        if (event is AgentResponseEvent) {
+          responseEvents++;
+        }
+      });
+
+      await service.runAgent(userMessage: 'first');
+      await service.runAgent(userMessage: 'second');
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      await subscription.cancel();
+      service.dispose();
+
+      expect(responseEvents, 2);
+    });
   });
 }

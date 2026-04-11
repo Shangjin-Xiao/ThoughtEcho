@@ -83,17 +83,16 @@ class AgentService extends ChangeNotifier {
   final AgentCompletionRequester? _completionRequester;
   final AgentApiKeyResolver? _apiKeyResolver;
 
-  StreamController<AgentEvent>? _eventController;
+  final StreamController<AgentEvent> _eventController =
+      StreamController<AgentEvent>.broadcast();
 
   /// 实时事件流 — UI 层通过此流获取 Agent 执行过程中的实时更新
-  Stream<AgentEvent> get events {
-    _eventController?.close();
-    _eventController = StreamController<AgentEvent>.broadcast();
-    return _eventController!.stream;
-  }
+  Stream<AgentEvent> get events => _eventController.stream;
 
   void _emitEvent(AgentEvent event) {
-    _eventController?.add(event);
+    if (!_eventController.isClosed) {
+      _eventController.add(event);
+    }
   }
 
   /// Agent 配置
@@ -323,10 +322,16 @@ class AgentService extends ChangeNotifier {
     } finally {
       _isRunning = false;
       _setStatus('');
-      _eventController?.close();
-      _eventController = null;
       notifyListeners();
     }
+  }
+
+  @override
+  void dispose() {
+    if (!_eventController.isClosed) {
+      _eventController.close();
+    }
+    super.dispose();
   }
 
   Future<AIProviderSettings> _getProvider() async {
