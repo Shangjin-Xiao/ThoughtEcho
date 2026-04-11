@@ -349,21 +349,20 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   void _addWelcomeMessage() {
     if (!mounted) return;
     final l10n = AppLocalizations.of(context);
-    final String welcomeContent = _hasBoundNote
-        ? l10n.aiAssistantWelcome(_getQuotePreview())
-        : widget.exploreGuideSummary?.trim().isNotEmpty == true
-            ? l10n.aiAssistantExploreWelcome(widget.exploreGuideSummary!.trim())
-            : l10n.aiAssistantInputHint;
 
-    final welcomeMsg = app_chat.ChatMessage(
-      id: _uuid.v4(),
-      content: welcomeContent,
-      isUser: false,
-      role: 'system',
-      timestamp: DateTime.now(),
-      includedInContext: false,
-    );
-    _appendMessage(welcomeMsg, persist: true);
+    // Only show welcome messages for note context mode
+    if (_hasBoundNote) {
+      final String welcomeContent = l10n.aiAssistantWelcome(_getQuotePreview());
+      final welcomeMsg = app_chat.ChatMessage(
+        id: _uuid.v4(),
+        content: welcomeContent,
+        isUser: false,
+        role: 'system',
+        timestamp: DateTime.now(),
+        includedInContext: false,
+      );
+      _appendMessage(welcomeMsg, persist: true);
+    }
 
     // Generate dynamic insight if in explore mode without explicit guide
     if (!_hasBoundNote &&
@@ -1209,8 +1208,6 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     });
   }
 
-  /// Build simple mode toggle button (Agent/Chat)
-  /// Follows Google AI Gallery design: elliptical button showing current mode
   Widget _buildModeToggleButton(ThemeData theme, AppLocalizations l10n) {
     final allowedModes = [
       if (_entryConfig.allowsMode(_entryConfig.defaultMode)) _entryConfig.defaultMode,
@@ -1233,50 +1230,61 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
             width: 1,
           ),
         ),
+        child: Text(
+          _isAgentMode ? l10n.aiModeAgent : l10n.aiModeChat,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: theme.colorScheme.primary,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      );
+    }
+
+    // Multiple modes available - toggle button with text label
+    return GestureDetector(
+      onTap: _isLoading
+          ? null
+          : () {
+              final nextMode =
+                  _isAgentMode ? _entryConfig.defaultMode : AIAssistantPageMode.agent;
+              if (_entryConfig.allowsMode(nextMode)) {
+                _setMode(nextMode);
+              }
+            },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: _isLoading
+              ? theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.5)
+              : theme.colorScheme.primary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: theme.colorScheme.primary.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               _isAgentMode ? Icons.smart_toy_outlined : Icons.chat_outlined,
               size: 16,
-              color: theme.colorScheme.primary,
+              color: _isLoading
+                  ? theme.colorScheme.onSurfaceVariant
+                  : theme.colorScheme.primary,
             ),
             const SizedBox(width: 6),
             Text(
               _isAgentMode ? l10n.aiModeAgent : l10n.aiModeChat,
               style: theme.textTheme.labelSmall?.copyWith(
-                color: theme.colorScheme.primary,
+                color: _isLoading
+                    ? theme.colorScheme.onSurfaceVariant
+                    : theme.colorScheme.primary,
                 fontWeight: FontWeight.w600,
               ),
             ),
           ],
         ),
-      );
-    }
-
-    // Multiple modes available - toggle button
-    return Tooltip(
-      message: 'Switch to ${_isAgentMode ? l10n.aiModeChat : l10n.aiModeAgent}',
-      child: IconButton(
-        icon: Icon(
-          _isAgentMode ? Icons.smart_toy : Icons.chat,
-          color: theme.colorScheme.primary,
-        ),
-        tooltip: 'Toggle mode',
-        onPressed: _isLoading
-            ? null
-            : () {
-                final nextMode =
-                    _isAgentMode ? _entryConfig.defaultMode : AIAssistantPageMode.agent;
-                if (_entryConfig.allowsMode(nextMode)) {
-                  _setMode(nextMode);
-                }
-              },
-        style: IconButton.styleFrom(
-          backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
-          shape: const CircleBorder(),
-        ),
-        iconSize: 20,
       ),
     );
   }
@@ -1368,7 +1376,6 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
               },
             ),
           ),
-          if (_isAgentMode) _buildAgentStatusIndicator(theme, l10n),
           _buildInputArea(theme, l10n),
         ],
       ),
