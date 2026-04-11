@@ -214,6 +214,20 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     setState(() {
       _isInputFocused = _inputFocusNode.hasFocus;
     });
+
+    // 焦点获得时：延迟200ms后自动滚底
+    if (_inputFocusNode.hasFocus) {
+      Future<void>.delayed(const Duration(milliseconds: 200)).then((_) async {
+        if (mounted && _scrollController.hasClients) {
+          final maxScroll = _scrollController.position.maxScrollExtent;
+          await _scrollController.animateTo(
+            maxScroll,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    }
   }
 
   /// 流式传输防抖更新：防止每个chunk都触发setState()导致UI线程过载
@@ -988,6 +1002,10 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
           isLoading: false,
           state: MessageState.complete,
         );
+        // 如果是新会话且有消息，生成标题
+        if (_messages.length == 2 && _currentSessionId != null) {
+          _generateAndSaveSessionTitle(text);
+        }
       },
       onError: (error) {
         // 错误处理：更新状态为error
@@ -999,6 +1017,27 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
         );
       },
     );
+  }
+
+  /// 生成并保存聊天会话标题（异步，不阻塞UI）
+  Future<void> _generateAndSaveSessionTitle(String firstMessage) async {
+    try {
+      final title = await _aiService.generateSessionTitle(firstMessage);
+      if (mounted && _currentSessionId != null) {
+        await _chatSessionService.updateSessionTitle(_currentSessionId!, title);
+        // 刷新UI显示新标题（如果有显示）
+        if (mounted) {
+          setState(() {});
+        }
+      }
+    } catch (e) {
+      logError(
+        'AIAssistantPage._generateAndSaveSessionTitle',
+        error: e,
+        stackTrace: StackTrace.current,
+      );
+      // 标题生成失败不影响主对话流程
+    }
   }
 
   Future<void> _askAgent(String text) async {
@@ -1440,7 +1479,24 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                 padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
                 itemCount: _messages.length,
                 itemBuilder: (context, index) {
-                  return _buildMessageBubble(_messages[index], theme, l10n);
+                  return LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isTablet = constraints.maxWidth > 600;
+                      final maxBubbleWidth = isTablet
+                          ? constraints.maxWidth * 0.6
+                          : constraints.maxWidth * 0.8;
+
+                      return Align(
+                        alignment: _messages[index].isUser
+                            ? Alignment.centerRight
+                            : Alignment.centerLeft,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(maxWidth: maxBubbleWidth),
+                          child: _buildMessageBubble(_messages[index], theme, l10n),
+                        ),
+                      );
+                    },
+                  );
                 },
               ),
             ),
@@ -1604,30 +1660,8 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
       child: Column(
         crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
-          // Sender Label with Timestamp
-          Padding(
-            padding: const EdgeInsets.only(bottom: 4, left: 4, right: 4),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-              children: [
-                Text(
-                  isUser ? l10n.meUser : l10n.aiAssistantUser,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  _formatTime(message.timestamp),
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          // Sender Label with Timestamp (提取为方法)
+          _buildMessageSender(context, message),
           // 思考内容显示（仅当有思考且非用户消息时）
           if (!isUser &&
               message.thinkingChunks.isNotEmpty &&
@@ -1681,6 +1715,41 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                           ),
                         ),
                       )),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 构建消息发送者标签（用户/Agent名称 + 时间戳）
+  Widget _buildMessageSender(BuildContext context, app_chat.ChatMessage message) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+    final isUserMessage = message.role == 'user';
+    final senderName = isUserMessage ? l10n.meUser : l10n.aiAssistantUser;
+    final timestamp = _formatTime(message.timestamp);
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4, left: 4, right: 4),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: isUserMessage ? MainAxisAlignment.end : MainAxisAlignment.start,
+        children: [
+          Text(
+            senderName,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w500,
+              color: isUserMessage
+                  ? theme.colorScheme.primary
+                  : theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            timestamp,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),
@@ -1994,17 +2063,17 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     }
 
     return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 220),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
+      duration: const Duration(milliseconds: 200),
+      switchInCurve: Curves.easeInOut,
+      switchOutCurve: Curves.easeInOut,
       child: Padding(
         key: ValueKey<String>(
           'agent-status-$_lastAgentRunning-${_toolProgressItems.length}-${_thinkingText.isNotEmpty}',
         ),
         padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
         child: AnimatedSize(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -2044,8 +2113,8 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
       top: false,
       minimum: const EdgeInsets.fromLTRB(10, 6, 10, 8),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOutCubic,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
         padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
@@ -2076,9 +2145,9 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
           children: [
             _buildModeSwitch(theme, l10n),
             AnimatedSwitcher(
-              duration: const Duration(milliseconds: 180),
-              switchInCurve: Curves.easeOutCubic,
-              switchOutCurve: Curves.easeInCubic,
+              duration: const Duration(milliseconds: 200),
+              switchInCurve: Curves.easeInOut,
+              switchOutCurve: Curves.easeInOut,
               child: _showSlashCommands && filteredWorkflowDescriptors.isNotEmpty
                   ? Padding(
                       key: const ValueKey('slash_commands_visible'),

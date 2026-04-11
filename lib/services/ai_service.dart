@@ -1565,7 +1565,47 @@ class AIService extends ChangeNotifier {
     );
   }
 
-  /// 流式抓取网页内容
+  /// 为聊天会话生成标题
+  /// [firstUserMessage] 首条用户消息内容
+  /// 返回生成的标题（≤50字）
+  Future<String> generateSessionTitle(String firstUserMessage) async {
+    try {
+      if (firstUserMessage.isEmpty) return 'Chat';
+
+      if (!await hasValidApiKeyAsync()) {
+        throw Exception('请先在设置中配置 API Key');
+      }
+
+      await _validateSettings();
+      final currentProvider = await _getCurrentProviderWithApiKey();
+
+      // 限制消息长度为100字以内
+      final truncated = firstUserMessage.length > 100
+          ? firstUserMessage.substring(0, 100) + '...'
+          : firstUserMessage;
+
+      final response = await _requestHelper.makeRequestWithProvider(
+        url: currentProvider.apiUrl,
+        systemPrompt: 'You are a title generator. Generate a SHORT title (max 10 words, in the same language as the message, no quotes) for the following message.',
+        userMessage: truncated,
+        provider: currentProvider,
+        temperature: 0.3,
+        maxTokens: 30,
+      );
+
+      final title = _requestHelper.parseResponse(response).trim();
+
+      // 如果生成的标题超长，裁剪
+      return title.length > 50 ? title.substring(0, 50) + '...' : title;
+    } catch (e) {
+      logError(
+        'AIService.generateSessionTitle',
+        error: e,
+        stackTrace: StackTrace.current,
+      );
+      return 'Chat';
+    }
+  }
   /// [url] 要抓取的网页URL
   /// 返回实时推送的Markdown格式内容
   Stream<String> streamFetchWebContent(String url) {
