@@ -163,6 +163,15 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
         allowAgentNaturalLanguageTrigger: true,
         producesEditableResult: false,
       ),
+      AIWorkflowDescriptor(
+        id: AIWorkflowId.webFetch,
+        command: '/web',
+        displayName: 'Web Fetch',
+        requiresBoundNote: false,
+        allowedInStandardMode: true,
+        allowAgentNaturalLanguageTrigger: true,
+        producesEditableResult: false,
+      ),
     ];
   }
 
@@ -483,7 +492,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
 
     final descriptor = _matchWorkflowCommand(trimmed, l10n);
     if (descriptor != null) {
-      await _runExplicitWorkflow(descriptor);
+      await _runExplicitWorkflow(descriptor, trimmed);
       return;
     }
 
@@ -526,7 +535,10 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     await _askGeneralChat(trimmed);
   }
 
-  Future<void> _runExplicitWorkflow(AIWorkflowDescriptor descriptor) async {
+  Future<void> _runExplicitWorkflow(
+    AIWorkflowDescriptor descriptor,
+    String text,
+  ) async {
     final l10n = AppLocalizations.of(context);
 
     if (descriptor.requiresBoundNote && !_hasBoundNote) {
@@ -574,6 +586,9 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
       case AIWorkflowId.insights:
         _showInsightWorkflowCard();
         _finishLoading();
+        break;
+      case AIWorkflowId.webFetch:
+        await _handleWebFetchWorkflow(text, descriptor);
         break;
     }
   }
@@ -732,6 +747,43 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
         _updateMessage(aiMsgId, l10n.aiResponseError(error.toString()),
             isLoading: false);
       },
+    );
+  }
+
+  Future<void> _handleWebFetchWorkflow(
+    String text,
+    AIWorkflowDescriptor descriptor,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+
+    // 从命令文本提取URL
+    final url = WebCommandHelper.extractUrl(text);
+
+    if (url == null || url.isEmpty) {
+      _appendCardMessage(
+        type: 'notice',
+        content: l10n.aiResponseError('Please provide a valid URL with /web command'),
+        meta: <String, dynamic>{
+          'title': 'Invalid URL',
+          'icon': Icons.info_outline.codePoint,
+        },
+      );
+      _finishLoading();
+      return;
+    }
+
+    // 显示工具调用指示
+    final toolCallMsg = SessionMessageHelper.createToolCallIndicatorMessage(
+      toolName: 'web_fetch',
+      parameters: {'url': url},
+    );
+    _appendMessage(toolCallMsg, persist: true);
+
+    // 运行网页抓取工作流
+    await _runMarkdownWorkflow(
+      title: 'Web Content',
+      loadingText: 'Fetching web content from: $url',
+      stream: _aiService.streamFetchWebContent(url),
     );
   }
 

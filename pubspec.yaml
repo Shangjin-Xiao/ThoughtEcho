@@ -74,6 +74,7 @@ dependencies:
   pasteboard: ^0.4.0 # 剪贴板操作
   http: ^1.2.2 # HTTP客户端库
   http_server: ^1.0.0 # for MimeMultipartTransformer and HttpMultipartFormData
+  html: ^0.15.4 # HTML解析库
   collection: ^1.18.0
   refena_flutter: ^3.2.0
   open_file: ^3.5.10 # 用于打开文件，包括APK安装

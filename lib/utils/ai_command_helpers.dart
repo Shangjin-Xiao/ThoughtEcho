@@ -185,8 +185,57 @@ class SessionMessageHelper {
     if (value is String) {
       return '"$value"';
     } else if (value is List) {
-      return '[${(value as List).join(", ")}]';
+      return '[${value.join(", ")}]';
     }
     return value.toString();
+  }
+}
+
+/// Web命令助手
+class WebCommandHelper {
+  /// 从命令文本提取URL
+  /// 支持 `/web <url>` 或 `/web: <url>` 格式
+  static String? extractUrl(String text) {
+    final trimmed = text.trim();
+
+    // 移除命令前缀：/web、/web:
+    String urlPart = '';
+    if (trimmed.startsWith('/web:')) {
+      urlPart = trimmed.substring(5).trim();
+    } else if (trimmed.startsWith('/web')) {
+      urlPart = trimmed.substring(4).trim();
+    } else {
+      return null;
+    }
+
+    if (urlPart.isEmpty) {
+      return null;
+    }
+
+    // 确保URL有协议
+    if (!urlPart.startsWith('http://') && !urlPart.startsWith('https://')) {
+      urlPart = 'https://$urlPart';
+    }
+
+    // 验证URL格式
+    final uri = Uri.tryParse(urlPart);
+    if (uri == null || !uri.isAbsolute) {
+      return null;
+    }
+
+    return urlPart;
+  }
+
+  /// 检测文本是否包含有效的URL（用于自然语言检测）
+  static String? extractUrlFromNaturalLanguage(String text) {
+    // 寻找http://或https://开头的URL
+    final httpPattern = RegExp(r'https?://[^\s]+');
+    final match = httpPattern.firstMatch(text);
+    if (match != null) {
+      final url = match.group(0) ?? '';
+      // 移除末尾的常见标点符号
+      return url.replaceAll(RegExp(r'[,。!！?？;；:：）)]*$'), '').trim();
+    }
+    return null;
   }
 }

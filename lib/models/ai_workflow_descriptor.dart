@@ -4,6 +4,7 @@ enum AIWorkflowId {
   deepAnalysis,
   sourceAnalysis,
   insights,
+  webFetch,
 }
 
 class AIWorkflowDescriptor {
@@ -41,6 +42,7 @@ class AIWorkflowCommandRegistry {
     '/深度分析': AIWorkflowId.deepAnalysis,
     '/分析来源': AIWorkflowId.sourceAnalysis,
     '/智能洞察': AIWorkflowId.insights,
+    '/web': AIWorkflowId.webFetch,
   };
 
   // 自然语言触发关键词映射
@@ -89,6 +91,15 @@ class AIWorkflowCommandRegistry {
       '这告诉我们',
       '背景',
       '联想',
+    ],
+    AIWorkflowId.webFetch: [
+      '网页',
+      '抓取',
+      '获取',
+      '网址',
+      '链接',
+      '查看网页',
+      '获取网页内容',
     ],
   };
 

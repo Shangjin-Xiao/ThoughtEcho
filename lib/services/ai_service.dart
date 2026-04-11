@@ -1526,4 +1526,92 @@ class AIService extends ChangeNotifier {
       context: '高级流式对话',
     );
   }
+
+  /// 抓取网页内容
+  /// [url] 要抓取的网页URL
+  /// 返回Markdown格式的网页内容和总结
+  Future<String> fetchWebContent(String url) async {
+    if (!await hasValidApiKeyAsync()) {
+      throw Exception('请先在设置中配置 API Key');
+    }
+
+    return await _requestHelper.executeWithErrorHandling(
+      operation: () async {
+        await _validateSettings();
+        final currentProvider = await _getCurrentProviderWithApiKey();
+
+        // 验证URL格式
+        final uri = Uri.tryParse(url);
+        if (uri == null || !uri.isAbsolute) {
+          throw Exception('无效的URL地址，请提供完整的URL');
+        }
+
+        // 构建用户消息
+        final userMessage = '请抓取以下网页的内容并用Markdown格式总结主要内容：\n\nURL: $url';
+
+        final response = await _requestHelper.makeRequestWithProvider(
+          url: currentProvider.apiUrl,
+          systemPrompt:
+              '你是一个网页内容抓取和总结专家。当用户提供URL时，请获取网页内容，提取主要信息，并用清晰的Markdown格式呈现。包括标题、关键内容、重点要点等。',
+          userMessage: userMessage,
+          provider: currentProvider,
+          maxTokens: 2000,
+          temperature: 0.3,
+        );
+
+        return _requestHelper.parseResponse(response);
+      },
+      context: '网页抓取',
+    );
+  }
+
+  /// 流式抓取网页内容
+  /// [url] 要抓取的网页URL
+  /// 返回实时推送的Markdown格式内容
+  Stream<String> streamFetchWebContent(String url) {
+    return _requestHelper.executeStreamOperation(
+      operation: (controller) async {
+        if (!await hasValidApiKeyAsync()) {
+          controller.addError(Exception('请先在设置中配置 API Key'));
+          return;
+        }
+
+        await _validateSettings();
+        final currentProvider = await _getCurrentProviderWithApiKey();
+
+        // 验证URL格式
+        final uri = Uri.tryParse(url);
+        if (uri == null || !uri.isAbsolute) {
+          controller.addError(Exception('无效的URL地址，请提供完整的URL'));
+          return;
+        }
+
+        final userMessage = '请抓取以下网页的内容并用Markdown格式总结主要内容：\n\nURL: $url';
+
+        await _requestHelper.makeStreamRequestWithProvider(
+          url: currentProvider.apiUrl,
+          systemPrompt:
+              '你是一个网页内容抓取和总结专家。当用户提供URL时，请获取网页内容，提取主要信息，并用清晰的Markdown格式呈现。包括标题、关键内容、重点要点等。',
+          userMessage: userMessage,
+          provider: currentProvider,
+          onData: (text) => _requestHelper.handleStreamResponse(
+            controller: controller,
+            chunk: text,
+          ),
+          onComplete: (fullText) => _requestHelper.handleStreamComplete(
+            controller: controller,
+            fullText: fullText,
+          ),
+          onError: (error) => _requestHelper.handleStreamError(
+            controller: controller,
+            error: error,
+            context: '流式网页抓取',
+          ),
+          maxTokens: 2000,
+          temperature: 0.3,
+        );
+      },
+      context: '流式网页抓取',
+    );
+  }
 }
