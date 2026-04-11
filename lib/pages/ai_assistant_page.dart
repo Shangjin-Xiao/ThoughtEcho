@@ -1648,36 +1648,39 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
               color: bubbleColor,
               borderRadius: borderRadius,
             ),
-            child: isUser
-                ? Text(
-                    message.content,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: bubbleTextColor,
-                      height: 1.5,
-                    ),
-                  )
-                : MarkdownBody(
-                    data: message.content.isEmpty ? l10n.thinkingInProgress : message.content,
-                    selectable: true,
-                    styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
-                      p: theme.textTheme.bodyMedium?.copyWith(
-                        color: bubbleTextColor,
-                        height: 1.6,
-                      ),
-                      listBullet: theme.textTheme.bodyMedium?.copyWith(
-                        color: bubbleTextColor,
-                      ),
-                      code: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontFamily: 'monospace',
-                        backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                      ),
-                      codeblockDecoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                  ),
+            child: message.isLoading
+                ? _buildLoadingIndicator(theme, l10n.thinkingInProgress)
+                : (isUser
+                    ? Text(
+                        message.content,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: bubbleTextColor,
+                          height: 1.5,
+                        ),
+                      )
+                    : MarkdownBody(
+                        data:
+                            message.content.isEmpty ? l10n.thinkingInProgress : message.content,
+                        selectable: true,
+                        styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
+                          p: theme.textTheme.bodyMedium?.copyWith(
+                            color: bubbleTextColor,
+                            height: 1.6,
+                          ),
+                          listBullet: theme.textTheme.bodyMedium?.copyWith(
+                            color: bubbleTextColor,
+                          ),
+                          code: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            fontFamily: 'monospace',
+                            backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                          ),
+                          codeblockDecoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceContainerLow,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      )),
           ),
         ],
       ),
@@ -1697,6 +1700,14 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     } else {
       return '${messageDay.month.toString().padLeft(2, '0')}-${messageDay.day.toString().padLeft(2, '0')} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
     }
+  }
+
+  /// 构建加载指示器widget
+  Widget _buildLoadingIndicator(ThemeData theme, String label) {
+    return _LoadingIndicatorWidget(
+      label: label,
+      primaryColor: theme.colorScheme.primary,
+    );
   }
 
   Map<String, String> _buildInsightTypeLabels(AppLocalizations l10n) {
@@ -2309,5 +2320,62 @@ class AnimatedIconButton extends StatelessWidget {
       ),
       iconSize: 20,
     );
+  }
+}
+
+/// 加载指示器widget - RotationTransition动画
+class _LoadingIndicatorWidget extends StatefulWidget {
+  final String? label;
+  final Color primaryColor;
+
+  const _LoadingIndicatorWidget({
+    this.label,
+    required this.primaryColor,
+  });
+
+  @override
+  State<_LoadingIndicatorWidget> createState() => _LoadingIndicatorWidgetState();
+}
+
+class _LoadingIndicatorWidgetState extends State<_LoadingIndicatorWidget>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _rotateController;
+
+  @override
+  void initState() {
+    super.initState();
+    _rotateController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    )..repeat();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        RotationTransition(
+          turns: _rotateController,
+          child: CircularProgressIndicator(
+            strokeWidth: 2.0,
+            valueColor: AlwaysStoppedAnimation(widget.primaryColor),
+          ),
+        ),
+        if (widget.label != null) ...[
+          const SizedBox(width: 8),
+          Text(
+            widget.label!,
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ],
+    );
+  }
+
+  @override
+  void dispose() {
+    _rotateController.dispose();
+    super.dispose();
   }
 }
