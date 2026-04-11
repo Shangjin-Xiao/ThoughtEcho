@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -10,9 +12,11 @@ import '../../test_setup.dart';
 
 class _TestSettingsService extends ChangeNotifier implements SettingsService {
   AppSettings _appSettings;
+  final Future<void> Function(String provider)? onSetDailyQuoteProvider;
 
   _TestSettingsService({
     AppSettings? appSettings,
+    this.onSetDailyQuoteProvider,
   }) : _appSettings = appSettings ?? AppSettings();
 
   @override
@@ -29,6 +33,9 @@ class _TestSettingsService extends ChangeNotifier implements SettingsService {
 
   @override
   Future<void> setDailyQuoteProvider(String provider) async {
+    if (onSetDailyQuoteProvider != null) {
+      await onSetDailyQuoteProvider!(provider);
+    }
     _appSettings = _appSettings.copyWith(dailyQuoteProvider: provider);
     notifyListeners();
   }
@@ -160,5 +167,44 @@ void main() {
         findsOneWidget);
     expect(find.text(localizations.dailyQuoteApiNinjasApiKeyMissing),
         findsNothing);
+  });
+
+  testWidgets('provider 保存完成前不显示保存成功提示', (tester) async {
+    final saveCompleter = Completer<void>();
+    final settings = _TestSettingsService(
+      onSetDailyQuoteProvider: (_) => saveCompleter.future,
+    );
+    final localizations =
+        await AppLocalizations.delegate.load(const Locale('zh'));
+
+    await pumpPage(tester, settings);
+
+    await tester.tap(find.text(localizations.dailyQuoteApiZenQuotes));
+    await tester.pump();
+
+    expect(find.text(localizations.settingsSaved), findsNothing);
+
+    saveCompleter.complete();
+    await tester.pumpAndSettle();
+
+    expect(find.text(localizations.settingsSaved), findsOneWidget);
+  });
+
+  testWidgets('provider 保存失败时显示错误提示', (tester) async {
+    final settings = _TestSettingsService(
+      onSetDailyQuoteProvider: (_) async => throw Exception('save-failed'),
+    );
+    final localizations =
+        await AppLocalizations.delegate.load(const Locale('zh'));
+
+    await pumpPage(tester, settings);
+
+    await tester.tap(find.text(localizations.dailyQuoteApiZenQuotes));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(localizations.saveFailed('Exception: save-failed')),
+      findsOneWidget,
+    );
   });
 }

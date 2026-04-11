@@ -29,7 +29,8 @@ void main() {
       expect(settings.defaultTagIds, isEmpty);
     });
 
-    test('falls back to default provider when persisted provider is non-string', () {
+    test('falls back to default provider when persisted provider is non-string',
+        () {
       final settings = AppSettings.fromJson({
         'dailyQuoteProvider': 42,
       });

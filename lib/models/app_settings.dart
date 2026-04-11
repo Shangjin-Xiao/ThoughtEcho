@@ -109,10 +109,14 @@ class AppSettings {
     return value.whereType<String>().toList();
   }
 
+  static String _readString(dynamic value, String fallback) {
+    return value is String ? value : fallback;
+  }
+
   factory AppSettings.fromJson(Map<String, dynamic> map) {
     return AppSettings(
-      hitokotoType: map['hitokotoType'] ?? 'a,b,c,d,e,f,g,h,i,j,k',
-      dailyQuoteProvider: map['dailyQuoteProvider'] ?? 'hitokoto',
+      hitokotoType: _readString(map['hitokotoType'], 'a,b,c,d,e,f,g,h,i,j,k'),
+      dailyQuoteProvider: _readString(map['dailyQuoteProvider'], 'hitokoto'),
       apiNinjasCategories: _readStringList(map['apiNinjasCategories']),
       clipboardMonitoringEnabled: map['clipboardMonitoringEnabled'] ?? false,
       defaultStartPage: map['defaultStartPage'] ?? 0,
@@ -143,7 +147,7 @@ class AppSettings {
       trashRetentionDays: map['trashRetentionDays'] ?? 30,
       trashRetentionLastModified: map['trashRetentionLastModified'] as String?,
       skipNonFullscreenEditor: map['skipNonFullscreenEditor'] ?? false,
-      offlineQuoteSource: map['offlineQuoteSource'] ?? 'tagOnly',
+      offlineQuoteSource: _readString(map['offlineQuoteSource'], 'tagOnly'),
     );
   }
 

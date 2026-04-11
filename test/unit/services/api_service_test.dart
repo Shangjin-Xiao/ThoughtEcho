@@ -182,5 +182,35 @@ void main() {
       expect(result['type'], 'k');
       expect(result['provider'], 'api_ninjas');
     });
+
+    test('api_ninjas provider filters unsupported categories before request',
+        () async {
+      final l10n = lookupAppLocalizations(const Locale('zh'));
+
+      final result = await ApiService.getDailyQuote(
+        l10n,
+        'k',
+        provider: 'api_ninjas',
+        apiNinjasCategories: const ['wisdom', 'unsupported', 'success'],
+        apiKeyResolver: (_) async => 'secret-key',
+        httpGet: (
+          url, {
+          Map<String, String>? headers,
+          int? timeoutSeconds,
+        }) async {
+          expect(
+            url,
+            'https://api.api-ninjas.com/v2/randomquotes?categories=wisdom,success',
+          );
+          return HttpResponse(
+            '[{"quote":"Knowledge speaks","author":"Socrates","categories":["wisdom"]}]',
+            200,
+          );
+        },
+      );
+
+      expect(result['provider'], 'api_ninjas');
+      expect(result['type'], 'k');
+    });
   });
 }

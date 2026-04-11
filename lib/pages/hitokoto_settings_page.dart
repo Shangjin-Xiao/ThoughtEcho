@@ -63,7 +63,8 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
     super.dispose();
   }
 
-  void _saveSelectedProvider(String provider) {
+  Future<void> _saveSelectedProvider(String provider) async {
+    final previousProvider = _selectedProvider;
     setState(() {
       _selectedProvider = provider;
       if (provider != ApiService.apiNinjasProvider) {
@@ -73,8 +74,17 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
     if (provider == ApiService.apiNinjasProvider) {
       unawaited(_loadApiNinjasApiKeyStatus());
     }
-    context.read<SettingsService>().setDailyQuoteProvider(provider);
-    _showSavedSnackBar();
+    try {
+      await context.read<SettingsService>().setDailyQuoteProvider(provider);
+      if (!mounted) return;
+      _showSavedSnackBar();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _selectedProvider = previousProvider;
+      });
+      _showSaveFailedSnackBar(e);
+    }
   }
 
   Future<void> _loadApiNinjasApiKeyStatus() async {
@@ -199,6 +209,16 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
         ),
         margin: const EdgeInsets.all(16),
         duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  void _showSaveFailedSnackBar(Object error) {
+    final l10n = AppLocalizations.of(context);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(l10n.saveFailed(error.toString())),
       ),
     );
   }
@@ -364,7 +384,7 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                           selected: _selectedProvider == entry.key,
                           onSelected: (selected) {
                             if (selected && _selectedProvider != entry.key) {
-                              _saveSelectedProvider(entry.key);
+                              unawaited(_saveSelectedProvider(entry.key));
                             }
                           },
                         );

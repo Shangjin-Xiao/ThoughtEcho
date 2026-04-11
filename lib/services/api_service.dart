@@ -331,8 +331,11 @@ class ApiService {
     }
 
     var apiUrl = 'https://api.api-ninjas.com/v2/randomquotes';
-    if (apiNinjasCategories.isNotEmpty) {
-      apiUrl = '$apiUrl?categories=${apiNinjasCategories.join(',')}';
+    final supportedCategories = apiNinjasCategories
+        .where((category) => apiNinjasCategoryKeys.contains(category))
+        .toList();
+    if (supportedCategories.isNotEmpty) {
+      apiUrl = '$apiUrl?categories=${supportedCategories.join(',')}';
     }
 
     final response = await httpGet(
