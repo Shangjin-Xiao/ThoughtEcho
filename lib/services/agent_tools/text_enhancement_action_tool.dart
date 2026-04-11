@@ -15,8 +15,7 @@ class TextEnhancementActionTool extends AgentTool {
   String get name => 'propose_text_enhancement';
 
   @override
-  String get description =>
-      '提议对笔记进行润色或续写操作。Agent 调用此工具来告诉用户想要执行的操作及目标笔记。';
+  String get description => '提议对笔记进行润色或续写操作。Agent 调用此工具来告诉用户想要执行的操作及目标笔记。';
 
   @override
   Map<String, Object?> get parametersSchema => {
@@ -76,9 +75,8 @@ class TextEnhancementActionTool extends AgentTool {
         'note_id': noteId,
         'has_content': noteContent != null && noteContent.isNotEmpty,
         'reasoning': reasoning,
-        'message': hasNoteId
-            ? '我推荐对笔记进行$actionLabel。'
-            : '我推荐对这段内容进行$actionLabel。',
+        'message':
+            hasNoteId ? '我推荐对笔记进行$actionLabel。' : '我推荐对这段内容进行$actionLabel。',
       };
 
       return ToolResult(
@@ -86,7 +84,8 @@ class TextEnhancementActionTool extends AgentTool {
         content: jsonEncode(response),
       );
     } catch (e, stack) {
-      logError('TextEnhancementActionTool.execute 失败', error: e, stackTrace: stack);
+      logError('TextEnhancementActionTool.execute 失败',
+          error: e, stackTrace: stack);
       return ToolResult(
         toolCallId: call.id,
         content: '提议操作时出错：$e',
