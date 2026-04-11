@@ -1636,7 +1636,6 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     }
 
     final isUser = message.isUser;
-    final isDark = theme.brightness == Brightness.dark;
 
     // Material 3颜色优化：使用主题colorScheme替代硬编码色值
     // 用户气泡：使用primary color
@@ -1867,21 +1866,6 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     );
   }
 
-  String _resolveAgentStatusText(String statusKey, AppLocalizations l10n) {
-    return switch (statusKey) {
-      '' => '',
-      'agentThinking' => l10n.agentThinking,
-      'agentSearchingNotes' => l10n.agentSearchingNotes,
-      'agentAnalyzingData' => l10n.agentAnalyzingData,
-      'agentWebSearching' => l10n.agentWebSearching,
-      _ => statusKey.startsWith(AgentService.agentToolCallPrefix)
-          ? l10n.agentToolCall(
-              statusKey.substring(AgentService.agentToolCallPrefix.length),
-            )
-          : l10n.agentThinking,
-    };
-  }
-
   void _syncAgentProgressState({
     required bool isRunning,
     required String statusKey,
@@ -1984,116 +1968,6 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
       // see the tool calling process (Agent execution path) after generation completes.
       // _scheduleAgentStatusDismiss();
     }
-  }
-
-  Widget _buildAgentStatusIndicator(ThemeData theme, AppLocalizations l10n) {
-    if (!_showAgentStatusPanel && !_lastAgentRunning) {
-      return const SizedBox.shrink();
-    }
-
-    final statusText = _resolveAgentStatusText(_lastAgentStatusKey, l10n);
-    final children = <Widget>[];
-
-    if (_enableThinking && _currentModelSupportsThinking && _thinkingText.isNotEmpty) {
-      children.add(
-        ThinkingWidget(
-          key: const ValueKey('agent_status_thinking_widget'),
-          thinkingText: _thinkingText,
-          inProgress: _lastAgentRunning && _isThinking,
-          accentColor: theme.colorScheme.primary,
-        ),
-      );
-    }
-
-    if (_toolProgressItems.isNotEmpty) {
-      children.add(
-        ToolProgressPanel(
-          key: const ValueKey('agent_status_tool_progress_panel'),
-          title: l10n.toolExecutionProgress,
-          items: List.unmodifiable(_toolProgressItems),
-          inProgress: _isToolInProgress,
-          accentColor: theme.colorScheme.primary,
-        ),
-      );
-    }
-
-    if (children.isEmpty && _lastAgentRunning && statusText.isNotEmpty) {
-      final isDark = theme.brightness == Brightness.dark;
-      final agentBubbleColor = isDark ? const Color(0xFF1b1c1d) : const Color(0xFFe9eef6);
-
-      children.add(
-        Container(
-          margin: const EdgeInsets.symmetric(vertical: 4),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: agentBubbleColor,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.zero,
-              topRight: Radius.circular(24),
-              bottomLeft: Radius.circular(24),
-              bottomRight: Radius.circular(24),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                statusText,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurface,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    if (children.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 200),
-      switchInCurve: Curves.easeInOut,
-      switchOutCurve: Curves.easeInOut,
-      child: Padding(
-        key: ValueKey<String>(
-          'agent-status-$_lastAgentRunning-${_toolProgressItems.length}-${_thinkingText.isNotEmpty}',
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-        child: AnimatedSize(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeInOut,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Sender Label
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4, left: 4, right: 4),
-                child: Text(
-                  l10n.aiAssistantUser,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-              ...children,
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   Widget _buildInputArea(ThemeData theme, AppLocalizations l10n) {
