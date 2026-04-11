@@ -12,6 +12,56 @@ import 'agent_tool.dart';
 import 'api_key_manager.dart';
 import 'settings_service.dart';
 
+/// Agent 运行时事件 — UI 层通过 Stream 订阅这些事件来实时更新界面
+sealed class AgentEvent {}
+
+/// Agent 开始思考（等待 AI 返回）
+class AgentThinkingEvent extends AgentEvent {}
+
+/// Agent 收到一次工具调用请求
+class AgentToolCallStartEvent extends AgentEvent {
+  final String toolCallId;
+  final String toolName;
+  final Map<String, Object?> arguments;
+  AgentToolCallStartEvent({
+    required this.toolCallId,
+    required this.toolName,
+    required this.arguments,
+  });
+}
+
+/// Agent 工具执行完成
+class AgentToolCallResultEvent extends AgentEvent {
+  final String toolCallId;
+  final String toolName;
+  final String result;
+  final bool isError;
+  AgentToolCallResultEvent({
+    required this.toolCallId,
+    required this.toolName,
+    required this.result,
+    required this.isError,
+  });
+}
+
+/// Agent 最终文本回复（完整内容）
+class AgentResponseEvent extends AgentEvent {
+  final String content;
+  final List<ToolCall> toolCalls;
+  final bool reachedMaxRounds;
+  AgentResponseEvent({
+    required this.content,
+    required this.toolCalls,
+    this.reachedMaxRounds = false,
+  });
+}
+
+/// Agent 出错
+class AgentErrorEvent extends AgentEvent {
+  final String message;
+  AgentErrorEvent(this.message);
+}
+
 typedef AgentCompletionRequester = Future<openai.ChatCompletion> Function({
   required AIProviderSettings provider,
   required List<openai.ChatMessage> messages,
@@ -32,6 +82,19 @@ class AgentService extends ChangeNotifier {
   final List<AgentTool> _tools;
   final AgentCompletionRequester? _completionRequester;
   final AgentApiKeyResolver? _apiKeyResolver;
+
+  StreamController<AgentEvent>? _eventController;
+
+  /// 实时事件流 — UI 层通过此流获取 Agent 执行过程中的实时更新
+  Stream<AgentEvent> get events {
+    _eventController?.close();
+    _eventController = StreamController<AgentEvent>.broadcast();
+    return _eventController!.stream;
+  }
+
+  void _emitEvent(AgentEvent event) {
+    _eventController?.add(event);
+  }
 
   /// Agent 配置
   static const int maxToolRounds = 8;
@@ -65,6 +128,7 @@ class AgentService extends ChangeNotifier {
   }) async {
     _isRunning = true;
     _setStatus('agentThinking');
+    _emitEvent(AgentThinkingEvent());
     notifyListeners();
 
     try {
@@ -90,6 +154,11 @@ class AgentService extends ChangeNotifier {
             provider: provider,
             messages: messages,
           );
+          _emitEvent(AgentResponseEvent(
+            content: '已达到最大执行轮数（$maxToolRounds）。\n\n$summary',
+            toolCalls: executedCalls,
+            reachedMaxRounds: true,
+          ));
           return AgentResponse(
             content: '已达到最大执行轮数（$maxToolRounds）。\n\n$summary',
             toolCalls: executedCalls,
@@ -98,6 +167,7 @@ class AgentService extends ChangeNotifier {
         }
         round++;
         _setStatus('agentThinking');
+        _emitEvent(AgentThinkingEvent());
 
         final completion = await _requestCompletion(
           provider: provider,
@@ -118,10 +188,15 @@ class AgentService extends ChangeNotifier {
 
         if (rawToolCalls.isEmpty) {
           _setStatus('');
+          final responseContent = assistantContent.isNotEmpty
+              ? assistantContent
+              : '我暂时无法继续推理，请稍后再试。';
+          _emitEvent(AgentResponseEvent(
+            content: responseContent,
+            toolCalls: executedCalls,
+          ));
           return AgentResponse(
-            content: assistantContent.isNotEmpty
-                ? assistantContent
-                : '我暂时无法继续推理，请稍后再试。',
+            content: responseContent,
             toolCalls: executedCalls,
           );
         }
@@ -145,6 +220,10 @@ class AgentService extends ChangeNotifier {
           final fallback = assistantContent.isNotEmpty
               ? assistantContent
               : '检测到重复工具调用模式，为避免死循环已停止。';
+          _emitEvent(AgentResponseEvent(
+            content: fallback,
+            toolCalls: executedCalls,
+          ));
           return AgentResponse(content: fallback, toolCalls: executedCalls);
         }
 
@@ -200,7 +279,18 @@ class AgentService extends ChangeNotifier {
           }
           seenCallSignatures.add(signature);
 
+          _emitEvent(AgentToolCallStartEvent(
+            toolCallId: parsedToolCall.id,
+            toolName: parsedToolCall.name,
+            arguments: parsedToolCall.arguments,
+          ));
           final result = await _executeToolSafely(parsedToolCall);
+          _emitEvent(AgentToolCallResultEvent(
+            toolCallId: parsedToolCall.id,
+            toolName: parsedToolCall.name,
+            result: result.content,
+            isError: result.isError,
+          ));
           executedCalls.add(parsedToolCall);
           repliedAnyToolCall = true;
 
@@ -219,15 +309,22 @@ class AgentService extends ChangeNotifier {
           final fallback = assistantContent.isNotEmpty
               ? assistantContent
               : '工具调用未能成功执行，已停止本次任务。';
+          _emitEvent(AgentResponseEvent(
+            content: fallback,
+            toolCalls: executedCalls,
+          ));
           return AgentResponse(content: fallback, toolCalls: executedCalls);
         }
       }
     } catch (e, stack) {
       logError('AgentService.runAgent 失败', error: e, stackTrace: stack);
+      _emitEvent(AgentErrorEvent(e.toString()));
       rethrow;
     } finally {
       _isRunning = false;
       _setStatus('');
+      _eventController?.close();
+      _eventController = null;
       notifyListeners();
     }
   }

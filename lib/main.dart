@@ -48,8 +48,10 @@ import 'package:thoughtecho/services/agent_service.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
 import 'package:thoughtecho/services/agent_tools/note_search_tool.dart';
 import 'package:thoughtecho/services/agent_tools/note_stats_tool.dart';
+import 'package:thoughtecho/services/agent_tools/web_fetch_tool.dart';
 import 'package:thoughtecho/services/agent_tools/web_search_tool.dart';
 import 'package:thoughtecho/services/background_push_handler.dart';
+import 'package:thoughtecho/services/web_fetch_service.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'controllers/search_controller.dart';
@@ -146,6 +148,7 @@ List<AgentTool> _buildAgentTools(DatabaseService db) {
     NoteSearchTool(db),
     NoteStatsTool(db),
     const WebSearchTool(),
+    WebFetchTool(WebFetchService()),
   ];
 }
 

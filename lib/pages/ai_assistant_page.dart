@@ -15,7 +15,15 @@ import '../models/chat_message.dart' as app_chat;
 import '../models/chat_message.dart' show MessageState;
 import '../models/chat_session.dart';
 import '../models/quote_model.dart';
-import '../services/agent_service.dart';
+import '../services/agent_service.dart'
+    show
+        AgentEvent,
+        AgentErrorEvent,
+        AgentResponseEvent,
+        AgentService,
+        AgentThinkingEvent,
+        AgentToolCallResultEvent,
+        AgentToolCallStartEvent;
 import '../services/ai_service.dart';
 import '../services/chat_session_service.dart';
 import '../services/database_service.dart';
@@ -29,7 +37,6 @@ import '../widgets/ai/thinking_widget.dart';
 import '../widgets/ai/tool_progress_panel.dart';
 import '../widgets/session_history_sheet.dart';
 import '../widgets/source_analysis_result_dialog.dart';
-
 
 class AIAssistantPage extends StatefulWidget {
   final Quote? quote;
@@ -72,15 +79,8 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   bool _showSlashCommands = false; // Only show when user types /
   bool _enableThinking = true; // 是否启用思考模式（仅支持的模型显示）
 
-  String _thinkingText = '';
-  bool _isThinking = false;
-  final List<ToolProgressItem> _toolProgressItems = [];
-  bool _isToolInProgress = false;
-  bool _showAgentStatusPanel = false;
   bool _isInputFocused = false;
   bool _agentListenerAttached = false;
-  String _lastAgentStatusKey = '';
-  bool _lastAgentRunning = false;
   Timer? _agentStatusDismissTimer;
   final List<PlatformFile> _selectedMediaFiles = [];
   static final RegExp _agentCodeBlockPattern = RegExp(
@@ -218,6 +218,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   @override
   void dispose() {
     _agentStatusDismissTimer?.cancel();
+    _agentEventSubscription?.cancel();
     if (_agentListenerAttached) {
       _agentService.removeListener(_onAgentServiceChanged);
     }
@@ -383,16 +384,14 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
 
       // Calculate simple stats
       final count = quotes.length;
-      final recentCount = quotes
-          .where((q) {
-            try {
-              final qDate = DateTime.parse(q.date);
-              return DateTime.now().difference(qDate).inDays <= 7;
-            } catch (e) {
-              return false;
-            }
-          })
-          .length;
+      final recentCount = quotes.where((q) {
+        try {
+          final qDate = DateTime.parse(q.date);
+          return DateTime.now().difference(qDate).inDays <= 7;
+        } catch (e) {
+          return false;
+        }
+      }).length;
 
       // Generate insight text
       final insightText = 'You have recorded $count thoughts, '
@@ -424,13 +423,6 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
 
     setState(() {
       _messages.clear();
-      _thinkingText = '';
-      _isThinking = false;
-      _toolProgressItems.clear();
-      _isToolInProgress = false;
-      _showAgentStatusPanel = false;
-      _lastAgentStatusKey = '';
-      _lastAgentRunning = false;
       _selectedMediaFiles.clear();
     });
     await _createNewSession();
@@ -514,15 +506,6 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
 
     if (_isAgentMode) {
       _agentStatusDismissTimer?.cancel();
-      setState(() {
-        _thinkingText = '';
-        _isThinking = false;
-        _toolProgressItems.clear();
-        _isToolInProgress = false;
-        _showAgentStatusPanel = false;
-        _lastAgentStatusKey = '';
-        _lastAgentRunning = false;
-      });
       await _askAgent(trimmed);
       return;
     }
@@ -762,7 +745,8 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     if (url == null || url.isEmpty) {
       _appendCardMessage(
         type: 'notice',
-        content: l10n.aiResponseError('Please provide a valid URL with /web command'),
+        content: l10n
+            .aiResponseError('Please provide a valid URL with /web command'),
         meta: <String, dynamic>{
           'title': 'Invalid URL',
           'icon': Icons.info_outline.codePoint,
@@ -878,9 +862,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
         // 完成：更新状态为complete
         _updateMessage(
           aiMsgId,
-          fullResponse.isNotEmpty
-              ? fullResponse
-              : l10n.aiMisunderstoodQuestion,
+          fullResponse.isNotEmpty ? fullResponse : l10n.aiMisunderstoodQuestion,
           isLoading: false,
           state: MessageState.complete,
         );
@@ -945,9 +927,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
         // 完成：更新状态为complete
         _updateMessage(
           aiMsgId,
-          fullResponse.isNotEmpty
-              ? fullResponse
-              : l10n.aiMisunderstoodQuestion,
+          fullResponse.isNotEmpty ? fullResponse : l10n.aiMisunderstoodQuestion,
           isLoading: false,
           state: MessageState.complete,
         );
@@ -964,9 +944,115 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     );
   }
 
+  StreamSubscription<AgentEvent>? _agentEventSubscription;
+
   Future<void> _askAgent(String text) async {
     final l10n = AppLocalizations.of(context);
     final history = _messages.where((m) => m.includedInContext).toList();
+
+    // 用于追踪内联工具调用进度消息的 ID
+    String? toolProgressMsgId;
+    final toolItems = <ToolProgressItem>[];
+
+    // 先订阅事件流，再启动 runAgent
+    _agentEventSubscription?.cancel();
+    final eventStream = _agentService.events;
+    _agentEventSubscription = eventStream.listen((event) {
+      if (!mounted) return;
+
+      switch (event) {
+        case AgentThinkingEvent():
+          // 如果还没有工具进度消息，不做特殊处理（UI 已有 loading 状态）
+          break;
+
+        case AgentToolCallStartEvent():
+          // 添加工具项并创建/更新内联工具进度消息
+          toolItems.add(
+            ToolProgressItem(
+              toolName: event.toolName,
+              description: _formatToolArgs(event.arguments),
+              status: ToolProgressStatus.running,
+            ),
+          );
+          if (toolProgressMsgId == null) {
+            toolProgressMsgId = _uuid.v4();
+            _appendMessage(
+              app_chat.ChatMessage(
+                id: toolProgressMsgId!,
+                content: '',
+                isUser: false,
+                role: 'assistant',
+                timestamp: DateTime.now(),
+                includedInContext: false,
+                metaJson: jsonEncode(<String, dynamic>{
+                  'type': 'tool_progress',
+                  'items': toolItems
+                      .map((i) => {
+                            'toolName': i.toolName,
+                            'description': i.description ?? '',
+                            'status': i.status.name,
+                            'result': i.result ?? '',
+                          })
+                      .toList(),
+                  'inProgress': true,
+                }),
+              ),
+            );
+          } else {
+            _updateToolProgressMessage(
+              toolProgressMsgId!,
+              toolItems,
+              inProgress: true,
+            );
+          }
+
+        case AgentToolCallResultEvent():
+          // 更新对应工具项状态为完成
+          final idx = toolItems.lastIndexWhere(
+            (item) =>
+                item.toolName == event.toolName &&
+                item.status == ToolProgressStatus.running,
+          );
+          if (idx != -1) {
+            toolItems[idx] = toolItems[idx].copyWith(
+              status: event.isError
+                  ? ToolProgressStatus.failed
+                  : ToolProgressStatus.completed,
+              result: _truncateToolResult(event.result),
+            );
+          }
+          if (toolProgressMsgId != null) {
+            // 检查是否还有正在运行的工具
+            final stillRunning = toolItems
+                .any((item) => item.status == ToolProgressStatus.running);
+            _updateToolProgressMessage(
+              toolProgressMsgId!,
+              toolItems,
+              inProgress: stillRunning,
+            );
+          }
+
+        case AgentResponseEvent():
+          // 标记工具进度为完成
+          if (toolProgressMsgId != null) {
+            _updateToolProgressMessage(
+              toolProgressMsgId!,
+              toolItems,
+              inProgress: false,
+            );
+          }
+
+        case AgentErrorEvent():
+          // 标记工具进度为完成
+          if (toolProgressMsgId != null) {
+            _updateToolProgressMessage(
+              toolProgressMsgId!,
+              toolItems,
+              inProgress: false,
+            );
+          }
+      }
+    });
 
     try {
       final response = await _agentService.runAgent(
@@ -1041,7 +1127,56 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.aiResponseError(e.toString()))),
       );
+    } finally {
+      _agentEventSubscription?.cancel();
+      _agentEventSubscription = null;
     }
+  }
+
+  /// 更新内联工具进度消息
+  void _updateToolProgressMessage(
+    String msgId,
+    List<ToolProgressItem> items, {
+    required bool inProgress,
+  }) {
+    setState(() {
+      final idx = _messages.indexWhere((m) => m.id == msgId);
+      if (idx == -1) return;
+      _messages[idx] = _messages[idx].copyWith(
+        metaJson: jsonEncode(<String, dynamic>{
+          'type': 'tool_progress',
+          'items': items
+              .map((i) => {
+                    'toolName': i.toolName,
+                    'description': i.description ?? '',
+                    'status': i.status.name,
+                    'result': i.result ?? '',
+                  })
+              .toList(),
+          'inProgress': inProgress,
+        }),
+      );
+    });
+    _scrollToBottom();
+  }
+
+  /// 格式化工具参数为简短摘要
+  String _formatToolArgs(Map<String, Object?> args) {
+    if (args.isEmpty) return '';
+    return args.entries.take(3).map((e) {
+      final val = e.value is String
+          ? (e.value as String).length > 50
+              ? '${(e.value as String).substring(0, 50)}...'
+              : e.value
+          : e.value;
+      return '${e.key}: $val';
+    }).join(', ');
+  }
+
+  /// 截断工具结果用于进度面板显示
+  String _truncateToolResult(String result) {
+    if (result.length <= 200) return result;
+    return '${result.substring(0, 200)}…';
   }
 
   _AgentSmartResultParseResult _parseAgentSmartResult(
@@ -1268,7 +1403,6 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
               },
             ),
           ),
-          if (_isAgentMode) _buildAgentStatusIndicator(theme, l10n),
           _buildInputArea(theme, l10n),
         ],
       ),
@@ -1394,6 +1528,52 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                 runLabel: l10n.startAnalysis,
               ),
             );
+          case 'tool_progress':
+            final rawItems = meta['items'] as List<dynamic>? ?? [];
+            final inProgress = meta['inProgress'] as bool? ?? false;
+            final progressItems = rawItems.map((item) {
+              final map = item as Map<String, dynamic>;
+              return ToolProgressItem(
+                toolName: map['toolName'] as String? ?? '',
+                description: map['description'] as String?,
+                status: ToolProgressStatus.values.firstWhere(
+                  (s) => s.name == (map['status'] as String? ?? 'pending'),
+                  orElse: () => ToolProgressStatus.pending,
+                ),
+                result: map['result'] as String?,
+              );
+            }).toList();
+            return Padding(
+              padding: const EdgeInsets.symmetric(
+                vertical: 6,
+                horizontal: 12,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      bottom: 4,
+                      left: 4,
+                      right: 4,
+                    ),
+                    child: Text(
+                      l10n.aiAssistantUser,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  ToolProgressPanel(
+                    title: l10n.toolExecutionProgress,
+                    items: progressItems,
+                    inProgress: inProgress,
+                    accentColor: theme.colorScheme.primary,
+                  ),
+                ],
+              ),
+            );
         }
       } catch (e) {
         AppLogger.e('Failed to render AI workflow message', error: e);
@@ -1402,14 +1582,16 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
 
     final isUser = message.isUser;
     final isDark = theme.brightness == Brightness.dark;
-    
+
     // Colors from AI Gallery Theme.kt
-    final userBubbleColor = isDark ? const Color(0xFF1f3760) : const Color(0xFF32628D);
-    final agentBubbleColor = isDark ? const Color(0xFF1b1c1d) : const Color(0xFFe9eef6);
+    final userBubbleColor =
+        isDark ? const Color(0xFF1f3760) : const Color(0xFF32628D);
+    final agentBubbleColor =
+        isDark ? const Color(0xFF1b1c1d) : const Color(0xFFe9eef6);
     final bubbleColor = isUser ? userBubbleColor : agentBubbleColor;
-    
+
     final bubbleTextColor = isUser ? Colors.white : theme.colorScheme.onSurface;
-    
+
     final bubbleRadius = const Radius.circular(24);
     final borderRadius = BorderRadius.only(
       topLeft: isUser ? bubbleRadius : Radius.zero,
@@ -1421,7 +1603,8 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
       child: Column(
-        crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment:
+            isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           // Sender Label with Timestamp
           Padding(
@@ -1492,7 +1675,8 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                       code: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                         fontFamily: 'monospace',
-                        backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                        backgroundColor:
+                            theme.colorScheme.surfaceContainerHighest,
                       ),
                       codeblockDecoration: BoxDecoration(
                         color: theme.colorScheme.surfaceContainerLow,
@@ -1548,248 +1732,9 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   }
 
   void _onAgentServiceChanged() {
+    // Agent 事件现在通过 events stream 内联显示到消息列表中，
+    // 此监听器保留用于 isRunning 状态同步
     if (!mounted) return;
-    final l10n = AppLocalizations.of(context);
-    _syncAgentProgressState(
-      isRunning: _agentService.isRunning,
-      statusKey: _agentService.currentStatusKey,
-      l10n: l10n,
-    );
-  }
-
-  String _resolveAgentStatusText(String statusKey, AppLocalizations l10n) {
-    return switch (statusKey) {
-      '' => '',
-      'agentThinking' => l10n.agentThinking,
-      'agentSearchingNotes' => l10n.agentSearchingNotes,
-      'agentAnalyzingData' => l10n.agentAnalyzingData,
-      'agentWebSearching' => l10n.agentWebSearching,
-      _ => statusKey.startsWith(AgentService.agentToolCallPrefix)
-          ? l10n.agentToolCall(
-              statusKey.substring(AgentService.agentToolCallPrefix.length),
-            )
-          : l10n.agentThinking,
-    };
-  }
-
-  void _syncAgentProgressState({
-    required bool isRunning,
-    required String statusKey,
-    required AppLocalizations l10n,
-  }) {
-    if (_lastAgentStatusKey == statusKey && _lastAgentRunning == isRunning) {
-      return;
-    }
-    if (isRunning) {
-      _agentStatusDismissTimer?.cancel();
-    }
-
-    final nextTools = List<ToolProgressItem>.from(_toolProgressItems);
-    var nextThinking = _isThinking;
-    var nextThinkingText = _thinkingText;
-    var nextToolRunning = _isToolInProgress;
-    var nextShowPanel = _showAgentStatusPanel;
-
-    if (!isRunning) {
-      for (var i = 0; i < nextTools.length; i++) {
-        if (nextTools[i].status == ToolProgressStatus.running) {
-          nextTools[i] = nextTools[i].copyWith(
-            status: ToolProgressStatus.completed,
-            result: l10n.toolExecutionCompleted,
-          );
-        }
-      }
-      nextThinking = false;
-      nextThinkingText = '';
-      nextToolRunning = false;
-      nextShowPanel = nextTools.isNotEmpty;
-    } else {
-      nextShowPanel = true;
-      nextThinking = statusKey == 'agentThinking';
-      nextThinkingText = nextThinking ? l10n.agentThinking : '';
-
-      if (statusKey.startsWith(AgentService.agentToolCallPrefix)) {
-        final toolName =
-            statusKey.substring(AgentService.agentToolCallPrefix.length).trim();
-        if (toolName.isNotEmpty) {
-          if (nextTools.isNotEmpty) {
-            final last = nextTools.last;
-            if (last.status == ToolProgressStatus.running &&
-                last.toolName != toolName) {
-              nextTools[nextTools.length - 1] = last.copyWith(
-                status: ToolProgressStatus.completed,
-                result: l10n.toolExecutionCompleted,
-              );
-            }
-          }
-
-          final hasSameRunning = nextTools.isNotEmpty &&
-              nextTools.last.toolName == toolName &&
-              nextTools.last.status == ToolProgressStatus.running;
-          if (!hasSameRunning) {
-            nextTools.add(
-              ToolProgressItem(
-                toolName: toolName,
-                description: l10n.toolExecutionProgress,
-                status: ToolProgressStatus.running,
-              ),
-            );
-          }
-        }
-      }
-
-      nextToolRunning =
-          nextTools.any((item) => item.status == ToolProgressStatus.running);
-    }
-
-    final currentSig = _toolProgressItems
-        .map((item) => '${item.toolName}|${item.status.name}|${item.result}')
-        .join('||');
-    final nextSig = nextTools
-        .map((item) => '${item.toolName}|${item.status.name}|${item.result}')
-        .join('||');
-
-    final uiChanged = currentSig != nextSig ||
-        nextThinking != _isThinking ||
-        nextThinkingText != _thinkingText ||
-        nextToolRunning != _isToolInProgress ||
-        nextShowPanel != _showAgentStatusPanel;
-
-    if (uiChanged && mounted) {
-      setState(() {
-        _toolProgressItems
-          ..clear()
-          ..addAll(nextTools);
-        _isThinking = nextThinking;
-        _thinkingText = nextThinkingText;
-        _isToolInProgress = nextToolRunning;
-        _showAgentStatusPanel = nextShowPanel;
-        _lastAgentStatusKey = statusKey;
-        _lastAgentRunning = isRunning;
-      });
-    } else {
-      _showAgentStatusPanel = nextShowPanel;
-      _lastAgentStatusKey = statusKey;
-      _lastAgentRunning = isRunning;
-    }
-
-    if (!isRunning && nextTools.isNotEmpty) {
-      // Intentionally not dismissing the status panel automatically so users can 
-      // see the tool calling process (Agent execution path) after generation completes.
-      // _scheduleAgentStatusDismiss();
-    }
-  }
-
-  Widget _buildAgentStatusIndicator(ThemeData theme, AppLocalizations l10n) {
-    if (!_showAgentStatusPanel && !_lastAgentRunning) {
-      return const SizedBox.shrink();
-    }
-
-    final statusText = _resolveAgentStatusText(_lastAgentStatusKey, l10n);
-    final children = <Widget>[];
-    
-    if (_enableThinking &&
-        _currentModelSupportsThinking &&
-        _thinkingText.isNotEmpty) {
-      children.add(
-        ThinkingWidget(
-          key: const ValueKey('agent_status_thinking_widget'),
-          thinkingText: _thinkingText,
-          inProgress: _lastAgentRunning && _isThinking,
-          accentColor: theme.colorScheme.primary,
-        ),
-      );
-    }
-    
-    if (_toolProgressItems.isNotEmpty) {
-      children.add(
-        ToolProgressPanel(
-          key: const ValueKey('agent_status_tool_progress_panel'),
-          title: l10n.toolExecutionProgress,
-          items: List.unmodifiable(_toolProgressItems),
-          inProgress: _isToolInProgress,
-          accentColor: theme.colorScheme.primary,
-        ),
-      );
-    }
-
-    if (children.isEmpty && _lastAgentRunning && statusText.isNotEmpty) {
-      final isDark = theme.brightness == Brightness.dark;
-      final agentBubbleColor = isDark ? const Color(0xFF1b1c1d) : const Color(0xFFe9eef6);
-      
-      children.add(
-        Container(
-          margin: const EdgeInsets.symmetric(vertical: 4),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: agentBubbleColor,
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.zero,
-              topRight: Radius.circular(24),
-              bottomLeft: Radius.circular(24),
-              bottomRight: Radius.circular(24),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                statusText,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurface,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    if (children.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 220),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      child: Padding(
-        key: ValueKey<String>(
-          'agent-status-$_lastAgentRunning-${_toolProgressItems.length}-${_thinkingText.isNotEmpty}',
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
-        child: AnimatedSize(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Sender Label
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4, left: 4, right: 4),
-                child: Text(
-                  l10n.aiAssistantUser,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-              ...children,
-            ],
-          ),
-        ),
-      ),
-    );
   }
 
   Widget _buildInputArea(ThemeData theme, AppLocalizations l10n) {
@@ -1904,10 +1849,8 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                             children: [
                               Flexible(
                                 child: Column(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.center,
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       file.name,
@@ -1920,8 +1863,10 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                                     ),
                                     Text(
                                       '${(file.size / 1024).toStringAsFixed(1)} KB',
-                                      style: theme.textTheme.labelSmall?.copyWith(
-                                        color: theme.colorScheme.onSurfaceVariant,
+                                      style:
+                                          theme.textTheme.labelSmall?.copyWith(
+                                        color:
+                                            theme.colorScheme.onSurfaceVariant,
                                         fontSize: 10,
                                       ),
                                     ),
