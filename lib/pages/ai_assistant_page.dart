@@ -17,6 +17,8 @@ import '../models/chat_session.dart';
 import '../models/quote_model.dart';
 import '../services/agent_service.dart';
 import '../services/ai_service.dart';
+import '../services/agent_tool.dart';
+import '../services/agent_tools/note_edit_tool.dart';
 import '../services/chat_session_service.dart';
 import '../services/database_service.dart';
 import '../services/settings_service.dart';
@@ -2017,21 +2019,61 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     required String proposedContent,
     required String mode,
   }) async {
-    // TODO: 实现调用edit_note工具的逻辑
-    // 1. 获取NoteEditTool实例
-    // 2. 创建ToolCall对象
-    // 3. 调用execute方法
-    // 4. 显示成功反馈消息
+    try {
+      final db = Provider.of<DatabaseService>(context, listen: false);
 
-    _appendMessage(
-      app_chat.ChatMessage(
+      // 获取NoteEditTool实例（从main.dart构建的所有tools中查找）
+      final editNoteTool = NoteEditTool(db);
+
+      // 创建ToolCall对象
+      final toolCall = ToolCall(
         id: _uuid.v4(),
-        content: '✅ 已保存增强内容到笔记（${mode == 'replace' ? '替换' : '追加'}模式）。',
-        isUser: false,
-        role: 'assistant',
-        timestamp: DateTime.now(),
-      ),
-    );
+        name: 'edit_note',
+        arguments: {
+          'note_id': noteId,
+          'new_content': proposedContent,
+          'mode': mode,
+        },
+      );
+
+      // 执行工具
+      final result = await editNoteTool.execute(toolCall);
+
+      if (result.isError) {
+        _appendMessage(
+          app_chat.ChatMessage(
+            id: _uuid.v4(),
+            content: '❌ 保存失败：${result.content}',
+            isUser: false,
+            role: 'assistant',
+            timestamp: DateTime.now(),
+          ),
+        );
+      } else {
+        _appendMessage(
+          app_chat.ChatMessage(
+            id: _uuid.v4(),
+            content: '✅ 已保存增强内容到笔记（${mode == 'replace' ? '替换' : '追加'}模式）。',
+            isUser: false,
+            role: 'assistant',
+            timestamp: DateTime.now(),
+          ),
+        );
+        // 刷新数据显示
+        db.refreshQuotes();
+      }
+    } catch (e, stack) {
+      AppLogger.e('保存笔记失败', error: e, stackTrace: stack);
+      _appendMessage(
+        app_chat.ChatMessage(
+          id: _uuid.v4(),
+          content: '❌ 保存笔记时出错：$e',
+          isUser: false,
+          role: 'assistant',
+          timestamp: DateTime.now(),
+        ),
+      );
+    }
   }
 
   Map<String, String> _buildInsightTypeLabels(AppLocalizations l10n) {
