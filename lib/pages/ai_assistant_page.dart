@@ -70,6 +70,11 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   String _selectedInsightType = 'comprehensive';
   String _selectedInsightStyle = 'professional';
   bool _showSlashCommands = false; // Only show when user types /
+
+  // 防止流式传输时UI过度频繁更新（流式防抖）
+  Timer? _streamUpdateDebounce;
+  String? _pendingStreamingMessageId;
+  String _accumulatedStreamContent = '';
   bool _enableThinking = true; // 是否启用思考模式（仅支持的模型显示）
 
   String _thinkingText = '';
@@ -211,9 +216,53 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     });
   }
 
+  /// 流式传输防抖更新：防止每个chunk都触发setState()导致UI线程过载
+  /// 采用150ms防抖延迟，确保流畅的实时显示效果同时减轻UI压力
+  void _debouncedStreamUpdate({
+    required String messageId,
+    required String content,
+    bool isLoading = true,
+    MessageState state = MessageState.responding,
+  }) {
+    _pendingStreamingMessageId = messageId;
+    _accumulatedStreamContent = content;
+
+    _streamUpdateDebounce?.cancel();
+    _streamUpdateDebounce = Timer(const Duration(milliseconds: 150), () {
+      if (mounted) {
+        _updateMessage(
+          messageId,
+          _accumulatedStreamContent,
+          isLoading: isLoading,
+          state: state,
+        );
+      }
+      _streamUpdateDebounce = null;
+    });
+  }
+
+  /// 立即执行任何待处理的流更新（用于流完成时）
+  void _flushPendingStreamUpdate() {
+    if (_streamUpdateDebounce != null && _pendingStreamingMessageId != null) {
+      _streamUpdateDebounce?.cancel();
+      if (mounted) {
+        _updateMessage(
+          _pendingStreamingMessageId!,
+          _accumulatedStreamContent,
+          isLoading: false,
+          state: MessageState.complete,
+        );
+      }
+      _streamUpdateDebounce = null;
+      _pendingStreamingMessageId = null;
+      _accumulatedStreamContent = '';
+    }
+  }
+
   @override
   void dispose() {
     _agentStatusDismissTimer?.cancel();
+    _streamUpdateDebounce?.cancel();
     if (_agentListenerAttached) {
       _agentService.removeListener(_onAgentServiceChanged);
     }
@@ -854,19 +903,20 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     _streamSubscription =
         _aiService.streamAskQuestion(widget.quote!, text, history: history).listen(
       (chunk) {
-        // 实时累积内容
+        // 累积内容
         fullResponse += chunk;
 
-        // 立即更新UI，无延迟
-        _updateMessage(
-          aiMsgId,
-          fullResponse,
+        // 使用防抖更新，而不是直接setState()
+        _debouncedStreamUpdate(
+          messageId: aiMsgId,
+          content: fullResponse,
           isLoading: true,
           state: MessageState.responding,
         );
       },
       onDone: () {
-        // 完成：更新状态为complete
+        // 刷新任何待处理的更新并标记为完成
+        _flushPendingStreamUpdate();
         _updateMessage(
           aiMsgId,
           fullResponse.isNotEmpty ? fullResponse : l10n.aiMisunderstoodQuestion,
@@ -918,19 +968,20 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     )
         .listen(
       (chunk) {
-        // 实时累积内容
+        // 累积内容
         fullResponse += chunk;
 
-        // 立即更新UI，无延迟
-        _updateMessage(
-          aiMsgId,
-          fullResponse,
+        // 使用防抖更新，而不是直接setState()
+        _debouncedStreamUpdate(
+          messageId: aiMsgId,
+          content: fullResponse,
           isLoading: true,
           state: MessageState.responding,
         );
       },
       onDone: () {
-        // 完成：更新状态为complete
+        // 刷新任何待处理的更新并标记为完成
+        _flushPendingStreamUpdate();
         _updateMessage(
           aiMsgId,
           fullResponse.isNotEmpty ? fullResponse : l10n.aiMisunderstoodQuestion,
