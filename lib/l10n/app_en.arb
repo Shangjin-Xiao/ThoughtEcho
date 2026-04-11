@@ -3623,5 +3623,6 @@
   "mapPickerCurrentLocation": "Current Location",
   "mapPickerConfirm": "Confirm Location",
   "poiNameLabel": "Place Name",
-  "longPressForMapPicker": "Long press to open map picker"
+  "longPressForMapPicker": "Long press to open map picker",
+  "attachFile": "Attach file"
 }

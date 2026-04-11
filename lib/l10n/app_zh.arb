@@ -3635,5 +3635,6 @@
   "mapPickerCurrentLocation": "当前位置",
   "mapPickerConfirm": "确认位置",
   "poiNameLabel": "地点名称",
-  "longPressForMapPicker": "长按打开地图选点"
+  "longPressForMapPicker": "长按打开地图选点",
+  "attachFile": "附加文件"
 }

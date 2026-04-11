@@ -15,15 +15,7 @@ import '../models/chat_message.dart' as app_chat;
 import '../models/chat_message.dart' show MessageState;
 import '../models/chat_session.dart';
 import '../models/quote_model.dart';
-import '../services/agent_service.dart'
-    show
-        AgentEvent,
-        AgentErrorEvent,
-        AgentResponseEvent,
-        AgentService,
-        AgentThinkingEvent,
-        AgentToolCallResultEvent,
-        AgentToolCallStartEvent;
+import '../services/agent_service.dart';
 import '../services/ai_service.dart';
 import '../services/chat_session_service.dart';
 import '../services/database_service.dart';
@@ -68,6 +60,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   bool _isLoading = false;
   String? _currentSessionId;
   StreamSubscription<String>? _streamSubscription;
+  StreamSubscription<dynamic>? _agentEventsSubscription;
   late ChatSessionService _chatSessionService;
   late AgentService _agentService;
   late AIService _aiService;
@@ -79,8 +72,15 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   bool _showSlashCommands = false; // Only show when user types /
   bool _enableThinking = true; // 是否启用思考模式（仅支持的模型显示）
 
+  String _thinkingText = '';
+  bool _isThinking = false;
+  final List<ToolProgressItem> _toolProgressItems = [];
+  bool _isToolInProgress = false;
+  bool _showAgentStatusPanel = false;
   bool _isInputFocused = false;
   bool _agentListenerAttached = false;
+  String _lastAgentStatusKey = '';
+  bool _lastAgentRunning = false;
   Timer? _agentStatusDismissTimer;
   final List<PlatformFile> _selectedMediaFiles = [];
   static final RegExp _agentCodeBlockPattern = RegExp(
@@ -89,12 +89,9 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
 
   AIAssistantEntrySource get _entrySource =>
       widget.entrySource ??
-      (widget.quote != null
-          ? AIAssistantEntrySource.note
-          : AIAssistantEntrySource.explore);
+      (widget.quote != null ? AIAssistantEntrySource.note : AIAssistantEntrySource.explore);
 
-  AIAssistantEntryConfig get _entryConfig =>
-      AIAssistantEntryConfig(source: _entrySource);
+  AIAssistantEntryConfig get _entryConfig => AIAssistantEntryConfig(source: _entrySource);
 
   bool get _hasBoundNote => widget.quote != null;
   String? get _boundNoteId {
@@ -175,8 +172,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     ];
   }
 
-  AIWorkflowDescriptor? _matchWorkflowCommand(
-      String text, AppLocalizations l10n) {
+  AIWorkflowDescriptor? _matchWorkflowCommand(String text, AppLocalizations l10n) {
     final matchedId = AIWorkflowCommandRegistry.match(text);
     if (matchedId == null) return null;
     for (final descriptor in _buildWorkflowDescriptors(l10n)) {
@@ -218,11 +214,11 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   @override
   void dispose() {
     _agentStatusDismissTimer?.cancel();
-    _agentEventSubscription?.cancel();
     if (_agentListenerAttached) {
       _agentService.removeListener(_onAgentServiceChanged);
     }
     _streamSubscription?.cancel();
+    _agentEventsSubscription?.cancel();
     _inputFocusNode.removeListener(_onInputFocusChanged);
     _textController.removeListener(_onTextChanged);
     _inputFocusNode.dispose();
@@ -240,6 +236,11 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
       _agentService.addListener(_onAgentServiceChanged);
       _agentListenerAttached = true;
     }
+
+    // 订阅 Agent 事件流，用于显示工具调用进度
+    _agentEventsSubscription?.cancel();
+    _agentEventsSubscription = _agentService.events.listen(_onAgentEvent);
+
     _settingsReady = true;
     final restoredMode = _restoreModeFromSettings();
     if (restoredMode != _currentMode && mounted) {
@@ -341,8 +342,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
 
   String _getQuotePreview() {
     if (!_hasBoundNote) return '';
-    final content =
-        StringUtils.removeObjectReplacementChar(widget.quote!.content);
+    final content = StringUtils.removeObjectReplacementChar(widget.quote!.content);
     return content.length <= 100 ? content : '${content.substring(0, 100)}...';
   }
 
@@ -423,6 +423,13 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
 
     setState(() {
       _messages.clear();
+      _thinkingText = '';
+      _isThinking = false;
+      _toolProgressItems.clear();
+      _isToolInProgress = false;
+      _showAgentStatusPanel = false;
+      _lastAgentStatusKey = '';
+      _lastAgentRunning = false;
       _selectedMediaFiles.clear();
     });
     await _createNewSession();
@@ -491,8 +498,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     // 检测自然语言触发（Agent模式下）
     if (_isAgentMode && descriptor == null) {
       final workflows = _buildWorkflowDescriptors(l10n);
-      final triggeredId =
-          NaturalLanguageTriggerDetector.shouldAutoTrigger(trimmed, workflows);
+      final triggeredId = NaturalLanguageTriggerDetector.shouldAutoTrigger(trimmed, workflows);
       if (triggeredId != null) {
         final triggered = workflows.firstWhere(
           (d) => d.id == triggeredId,
@@ -506,6 +512,15 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
 
     if (_isAgentMode) {
       _agentStatusDismissTimer?.cancel();
+      setState(() {
+        _thinkingText = '';
+        _isThinking = false;
+        _toolProgressItems.clear();
+        _isToolInProgress = false;
+        _showAgentStatusPanel = false;
+        _lastAgentStatusKey = '';
+        _lastAgentRunning = false;
+      });
       await _askAgent(trimmed);
       return;
     }
@@ -625,8 +640,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
         );
       },
       onError: (error) {
-        _updateMessage(aiMsgId, l10n.aiResponseError(error.toString()),
-            isLoading: false);
+        _updateMessage(aiMsgId, l10n.aiResponseError(error.toString()), isLoading: false);
       },
     );
   }
@@ -668,8 +682,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
         );
       },
       onError: (error) {
-        _updateMessage(aiMsgId, l10n.aiResponseError(error.toString()),
-            isLoading: false);
+        _updateMessage(aiMsgId, l10n.aiResponseError(error.toString()), isLoading: false);
       },
     );
   }
@@ -699,8 +712,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
       },
       onDone: () {
         try {
-          final sourceData =
-              SourceAnalysisResultDialog.parseResult(fullResponse);
+          final sourceData = SourceAnalysisResultDialog.parseResult(fullResponse);
           _updateMessage(
             aiMsgId,
             fullResponse,
@@ -727,8 +739,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
         }
       },
       onError: (error) {
-        _updateMessage(aiMsgId, l10n.aiResponseError(error.toString()),
-            isLoading: false);
+        _updateMessage(aiMsgId, l10n.aiResponseError(error.toString()), isLoading: false);
       },
     );
   }
@@ -745,8 +756,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     if (url == null || url.isEmpty) {
       _appendCardMessage(
         type: 'notice',
-        content: l10n
-            .aiResponseError('Please provide a valid URL with /web command'),
+        content: l10n.aiResponseError('Please provide a valid URL with /web command'),
         meta: <String, dynamic>{
           'title': 'Invalid URL',
           'icon': Icons.info_outline.codePoint,
@@ -836,16 +846,14 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     );
 
     String fullResponse = '';
-    final history = _messages
-        .where((m) => m.includedInContext && m.id != aiMsgId && !m.isLoading)
-        .toList();
+    final history =
+        _messages.where((m) => m.includedInContext && m.id != aiMsgId && !m.isLoading).toList();
 
     _streamSubscription?.cancel();
 
     // 使用流式订阅，支持实时更新 — 每个字符立即显示
-    _streamSubscription = _aiService
-        .streamAskQuestion(widget.quote!, text, history: history)
-        .listen(
+    _streamSubscription =
+        _aiService.streamAskQuestion(widget.quote!, text, history: history).listen(
       (chunk) {
         // 实时累积内容
         fullResponse += chunk;
@@ -897,9 +905,8 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     );
 
     String fullResponse = '';
-    final history = _messages
-        .where((m) => m.includedInContext && m.id != aiMsgId && !m.isLoading)
-        .toList();
+    final history =
+        _messages.where((m) => m.includedInContext && m.id != aiMsgId && !m.isLoading).toList();
 
     _streamSubscription?.cancel();
 
@@ -944,115 +951,9 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     );
   }
 
-  StreamSubscription<AgentEvent>? _agentEventSubscription;
-
   Future<void> _askAgent(String text) async {
     final l10n = AppLocalizations.of(context);
     final history = _messages.where((m) => m.includedInContext).toList();
-
-    // 用于追踪内联工具调用进度消息的 ID
-    String? toolProgressMsgId;
-    final toolItems = <ToolProgressItem>[];
-
-    // 先订阅事件流，再启动 runAgent
-    _agentEventSubscription?.cancel();
-    final eventStream = _agentService.events;
-    _agentEventSubscription = eventStream.listen((event) {
-      if (!mounted) return;
-
-      switch (event) {
-        case AgentThinkingEvent():
-          // 如果还没有工具进度消息，不做特殊处理（UI 已有 loading 状态）
-          break;
-
-        case AgentToolCallStartEvent():
-          // 添加工具项并创建/更新内联工具进度消息
-          toolItems.add(
-            ToolProgressItem(
-              toolName: event.toolName,
-              description: _formatToolArgs(event.arguments),
-              status: ToolProgressStatus.running,
-            ),
-          );
-          if (toolProgressMsgId == null) {
-            toolProgressMsgId = _uuid.v4();
-            _appendMessage(
-              app_chat.ChatMessage(
-                id: toolProgressMsgId!,
-                content: '',
-                isUser: false,
-                role: 'assistant',
-                timestamp: DateTime.now(),
-                includedInContext: false,
-                metaJson: jsonEncode(<String, dynamic>{
-                  'type': 'tool_progress',
-                  'items': toolItems
-                      .map((i) => {
-                            'toolName': i.toolName,
-                            'description': i.description ?? '',
-                            'status': i.status.name,
-                            'result': i.result ?? '',
-                          })
-                      .toList(),
-                  'inProgress': true,
-                }),
-              ),
-            );
-          } else {
-            _updateToolProgressMessage(
-              toolProgressMsgId!,
-              toolItems,
-              inProgress: true,
-            );
-          }
-
-        case AgentToolCallResultEvent():
-          // 更新对应工具项状态为完成
-          final idx = toolItems.lastIndexWhere(
-            (item) =>
-                item.toolName == event.toolName &&
-                item.status == ToolProgressStatus.running,
-          );
-          if (idx != -1) {
-            toolItems[idx] = toolItems[idx].copyWith(
-              status: event.isError
-                  ? ToolProgressStatus.failed
-                  : ToolProgressStatus.completed,
-              result: _truncateToolResult(event.result),
-            );
-          }
-          if (toolProgressMsgId != null) {
-            // 检查是否还有正在运行的工具
-            final stillRunning = toolItems
-                .any((item) => item.status == ToolProgressStatus.running);
-            _updateToolProgressMessage(
-              toolProgressMsgId!,
-              toolItems,
-              inProgress: stillRunning,
-            );
-          }
-
-        case AgentResponseEvent():
-          // 标记工具进度为完成
-          if (toolProgressMsgId != null) {
-            _updateToolProgressMessage(
-              toolProgressMsgId!,
-              toolItems,
-              inProgress: false,
-            );
-          }
-
-        case AgentErrorEvent():
-          // 标记工具进度为完成
-          if (toolProgressMsgId != null) {
-            _updateToolProgressMessage(
-              toolProgressMsgId!,
-              toolItems,
-              inProgress: false,
-            );
-          }
-      }
-    });
 
     try {
       final response = await _agentService.runAgent(
@@ -1127,56 +1028,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.aiResponseError(e.toString()))),
       );
-    } finally {
-      _agentEventSubscription?.cancel();
-      _agentEventSubscription = null;
     }
-  }
-
-  /// 更新内联工具进度消息
-  void _updateToolProgressMessage(
-    String msgId,
-    List<ToolProgressItem> items, {
-    required bool inProgress,
-  }) {
-    setState(() {
-      final idx = _messages.indexWhere((m) => m.id == msgId);
-      if (idx == -1) return;
-      _messages[idx] = _messages[idx].copyWith(
-        metaJson: jsonEncode(<String, dynamic>{
-          'type': 'tool_progress',
-          'items': items
-              .map((i) => {
-                    'toolName': i.toolName,
-                    'description': i.description ?? '',
-                    'status': i.status.name,
-                    'result': i.result ?? '',
-                  })
-              .toList(),
-          'inProgress': inProgress,
-        }),
-      );
-    });
-    _scrollToBottom();
-  }
-
-  /// 格式化工具参数为简短摘要
-  String _formatToolArgs(Map<String, Object?> args) {
-    if (args.isEmpty) return '';
-    return args.entries.take(3).map((e) {
-      final val = e.value is String
-          ? (e.value as String).length > 50
-              ? '${(e.value as String).substring(0, 50)}...'
-              : e.value
-          : e.value;
-      return '${e.key}: $val';
-    }).join(', ');
-  }
-
-  /// 截断工具结果用于进度面板显示
-  String _truncateToolResult(String result) {
-    if (result.length <= 200) return result;
-    return '${result.substring(0, 200)}…';
   }
 
   _AgentSmartResultParseResult _parseAgentSmartResult(
@@ -1200,23 +1052,19 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
         continue;
       }
 
-      final isSmartResultFence =
-          language == 'smart_result' || language == 'smart-result';
+      final isSmartResultFence = language == 'smart_result' || language == 'smart-result';
       final type = decoded['type']?.toString().trim().toLowerCase();
       if (!isSmartResultFence && type != 'smart_result') {
         continue;
       }
 
-      final smartContent =
-          (decoded['content'] ?? decoded['text'])?.toString().trim();
+      final smartContent = (decoded['content'] ?? decoded['text'])?.toString().trim();
       if (smartContent == null || smartContent.isEmpty) {
         continue;
       }
 
       final titleText = decoded['title']?.toString().trim();
-      final title = titleText != null && titleText.isNotEmpty
-          ? titleText
-          : l10n.analysisResult;
+      final title = titleText != null && titleText.isNotEmpty ? titleText : l10n.analysisResult;
       final displayText = trimmed.replaceFirst(match.group(0) ?? '', '').trim();
 
       return _AgentSmartResultParseResult(
@@ -1294,8 +1142,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
       );
       _messages[idx] = updatedMsg;
       if (!isLoading && _currentSessionId != null) {
-        unawaited(
-            _chatSessionService.addMessage(_currentSessionId!, updatedMsg));
+        unawaited(_chatSessionService.addMessage(_currentSessionId!, updatedMsg));
       }
       if (!isLoading) {
         _isLoading = false;
@@ -1362,6 +1209,124 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     });
   }
 
+  /// Build simple mode toggle button (Agent/Chat)
+  /// Follows Google AI Gallery design: elliptical button showing current mode
+  Widget _buildModeToggleButton(ThemeData theme, AppLocalizations l10n) {
+    final allowedModes = [
+      if (_entryConfig.allowsMode(_entryConfig.defaultMode)) _entryConfig.defaultMode,
+      if (_entryConfig.allowsMode(AIAssistantPageMode.agent)) AIAssistantPageMode.agent,
+    ];
+
+    if (allowedModes.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    if (allowedModes.length == 1) {
+      // Only one mode available - show label only, no toggle
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.primary.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: theme.colorScheme.primary.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              _isAgentMode ? Icons.smart_toy_outlined : Icons.chat_outlined,
+              size: 16,
+              color: theme.colorScheme.primary,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              _isAgentMode ? l10n.aiModeAgent : l10n.aiModeChat,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Multiple modes available - toggle button
+    return Tooltip(
+      message: 'Switch to ${_isAgentMode ? l10n.aiModeChat : l10n.aiModeAgent}',
+      child: IconButton(
+        icon: Icon(
+          _isAgentMode ? Icons.smart_toy : Icons.chat,
+          color: theme.colorScheme.primary,
+        ),
+        tooltip: 'Toggle mode',
+        onPressed: _isLoading
+            ? null
+            : () {
+                final nextMode =
+                    _isAgentMode ? _entryConfig.defaultMode : AIAssistantPageMode.agent;
+                if (_entryConfig.allowsMode(nextMode)) {
+                  _setMode(nextMode);
+                }
+              },
+        style: IconButton.styleFrom(
+          backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+          shape: const CircleBorder(),
+        ),
+        iconSize: 20,
+      ),
+    );
+  }
+
+  /// Build thinking toggle button (On/Off)
+  /// Only shown if current model supports thinking
+  Widget _buildThinkingToggleButton(ThemeData theme, AppLocalizations l10n) {
+    return Tooltip(
+      message: l10n.aiThinking,
+      child: IconButton(
+        icon: Icon(
+          _enableThinking ? Icons.psychology : Icons.psychology_outlined,
+          color: _enableThinking ? theme.colorScheme.secondary : theme.colorScheme.onSurfaceVariant,
+        ),
+        tooltip: l10n.aiThinking,
+        onPressed: () {
+          setState(() {
+            _enableThinking = !_enableThinking;
+          });
+        },
+        style: IconButton.styleFrom(
+          backgroundColor: _enableThinking
+              ? theme.colorScheme.secondary.withValues(alpha: 0.1)
+              : theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.5),
+          shape: const CircleBorder(),
+        ),
+        iconSize: 20,
+      ),
+    );
+  }
+
+  /// Build send button with animated state change
+  /// Shows arrow when ready to send, stop icon when generating
+  Widget _buildSendButton(ThemeData theme, AppLocalizations l10n) {
+    return Tooltip(
+      message: _isLoading ? l10n.stopGenerate : l10n.confirm,
+      child: AnimatedIconButton(
+        isLoading: _isLoading,
+        onPressed: _isLoading
+            ? _stopGenerating
+            : () {
+                if (_textController.text.trim().isNotEmpty) {
+                  _handleSubmitted(_textController.text);
+                }
+              },
+        theme: theme,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -1403,6 +1368,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
               },
             ),
           ),
+          if (_isAgentMode) _buildAgentStatusIndicator(theme, l10n),
           _buildInputArea(theme, l10n),
         ],
       ),
@@ -1453,10 +1419,8 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                 key: const ValueKey('ai_workflow_result_smart_result'),
                 title: meta['title'] as String? ?? l10n.analysisResult,
                 content: message.content,
-                replaceButtonText:
-                    meta['replaceButtonText'] as String? ?? l10n.applyChanges,
-                appendButtonText:
-                    meta['appendButtonText'] as String? ?? l10n.appendToNote,
+                replaceButtonText: meta['replaceButtonText'] as String? ?? l10n.applyChanges,
+                appendButtonText: meta['appendButtonText'] as String? ?? l10n.appendToNote,
                 onReplace: () {
                   Navigator.pop(context, {
                     'action': 'replace',
@@ -1528,52 +1492,6 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                 runLabel: l10n.startAnalysis,
               ),
             );
-          case 'tool_progress':
-            final rawItems = meta['items'] as List<dynamic>? ?? [];
-            final inProgress = meta['inProgress'] as bool? ?? false;
-            final progressItems = rawItems.map((item) {
-              final map = item as Map<String, dynamic>;
-              return ToolProgressItem(
-                toolName: map['toolName'] as String? ?? '',
-                description: map['description'] as String?,
-                status: ToolProgressStatus.values.firstWhere(
-                  (s) => s.name == (map['status'] as String? ?? 'pending'),
-                  orElse: () => ToolProgressStatus.pending,
-                ),
-                result: map['result'] as String?,
-              );
-            }).toList();
-            return Padding(
-              padding: const EdgeInsets.symmetric(
-                vertical: 6,
-                horizontal: 12,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(
-                      bottom: 4,
-                      left: 4,
-                      right: 4,
-                    ),
-                    child: Text(
-                      l10n.aiAssistantUser,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w500,
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ),
-                  ToolProgressPanel(
-                    title: l10n.toolExecutionProgress,
-                    items: progressItems,
-                    inProgress: inProgress,
-                    accentColor: theme.colorScheme.primary,
-                  ),
-                ],
-              ),
-            );
         }
       } catch (e) {
         AppLogger.e('Failed to render AI workflow message', error: e);
@@ -1584,10 +1502,8 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     final isDark = theme.brightness == Brightness.dark;
 
     // Colors from AI Gallery Theme.kt
-    final userBubbleColor =
-        isDark ? const Color(0xFF1f3760) : const Color(0xFF32628D);
-    final agentBubbleColor =
-        isDark ? const Color(0xFF1b1c1d) : const Color(0xFFe9eef6);
+    final userBubbleColor = isDark ? const Color(0xFF1f3760) : const Color(0xFF32628D);
+    final agentBubbleColor = isDark ? const Color(0xFF1b1c1d) : const Color(0xFFe9eef6);
     final bubbleColor = isUser ? userBubbleColor : agentBubbleColor;
 
     final bubbleTextColor = isUser ? Colors.white : theme.colorScheme.onSurface;
@@ -1603,16 +1519,14 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
       child: Column(
-        crossAxisAlignment:
-            isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
           // Sender Label with Timestamp
           Padding(
             padding: const EdgeInsets.only(bottom: 4, left: 4, right: 4),
             child: Row(
               mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment:
-                  isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+              mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
               children: [
                 Text(
                   isUser ? l10n.meUser : l10n.aiAssistantUser,
@@ -1660,9 +1574,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                     ),
                   )
                 : MarkdownBody(
-                    data: message.content.isEmpty
-                        ? l10n.thinkingInProgress
-                        : message.content,
+                    data: message.content.isEmpty ? l10n.thinkingInProgress : message.content,
                     selectable: true,
                     styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
                       p: theme.textTheme.bodyMedium?.copyWith(
@@ -1675,8 +1587,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                       code: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                         fontFamily: 'monospace',
-                        backgroundColor:
-                            theme.colorScheme.surfaceContainerHighest,
+                        backgroundColor: theme.colorScheme.surfaceContainerHighest,
                       ),
                       codeblockDecoration: BoxDecoration(
                         color: theme.colorScheme.surfaceContainerLow,
@@ -1731,10 +1642,295 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     };
   }
 
-  void _onAgentServiceChanged() {
-    // Agent 事件现在通过 events stream 内联显示到消息列表中，
-    // 此监听器保留用于 isRunning 状态同步
+  /// 处理 Agent 事件流中的工具调用事件
+  void _onAgentEvent(dynamic event) {
     if (!mounted) return;
+
+    // 处理工具调用开始事件
+    if (event is AgentToolCallStartEvent) {
+      setState(() {
+        // 检查是否已存在相同的工具条目
+        final existingIndex =
+            _toolProgressItems.indexWhere((item) => item.toolName == event.toolName);
+
+        if (existingIndex >= 0) {
+          // 如果存在且已完成，则创建新条目
+          if (_toolProgressItems[existingIndex].status == ToolProgressStatus.completed) {
+            _toolProgressItems.add(
+              ToolProgressItem(
+                toolName: event.toolName,
+                status: ToolProgressStatus.running,
+              ),
+            );
+          }
+          // 否则保持原样（已在运行中）
+        } else {
+          // 新工具条目
+          _toolProgressItems.add(
+            ToolProgressItem(
+              toolName: event.toolName,
+              status: ToolProgressStatus.running,
+            ),
+          );
+        }
+      });
+      return;
+    }
+
+    // 处理工具调用完成事件
+    if (event is AgentToolCallResultEvent) {
+      setState(() {
+        final index = _toolProgressItems.indexWhere(
+            (item) => item.toolName == event.toolName && item.status == ToolProgressStatus.running);
+
+        if (index >= 0) {
+          _toolProgressItems[index] = _toolProgressItems[index].copyWith(
+            status: event.isError ? ToolProgressStatus.failed : ToolProgressStatus.completed,
+            result: event.result,
+          );
+        }
+      });
+      return;
+    }
+  }
+
+  void _onAgentServiceChanged() {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
+    _syncAgentProgressState(
+      isRunning: _agentService.isRunning,
+      statusKey: _agentService.currentStatusKey,
+      l10n: l10n,
+    );
+  }
+
+  String _resolveAgentStatusText(String statusKey, AppLocalizations l10n) {
+    return switch (statusKey) {
+      '' => '',
+      'agentThinking' => l10n.agentThinking,
+      'agentSearchingNotes' => l10n.agentSearchingNotes,
+      'agentAnalyzingData' => l10n.agentAnalyzingData,
+      'agentWebSearching' => l10n.agentWebSearching,
+      _ => statusKey.startsWith(AgentService.agentToolCallPrefix)
+          ? l10n.agentToolCall(
+              statusKey.substring(AgentService.agentToolCallPrefix.length),
+            )
+          : l10n.agentThinking,
+    };
+  }
+
+  void _syncAgentProgressState({
+    required bool isRunning,
+    required String statusKey,
+    required AppLocalizations l10n,
+  }) {
+    if (_lastAgentStatusKey == statusKey && _lastAgentRunning == isRunning) {
+      return;
+    }
+    if (isRunning) {
+      _agentStatusDismissTimer?.cancel();
+    }
+
+    final nextTools = List<ToolProgressItem>.from(_toolProgressItems);
+    var nextThinking = _isThinking;
+    var nextThinkingText = _thinkingText;
+    var nextToolRunning = _isToolInProgress;
+    var nextShowPanel = _showAgentStatusPanel;
+
+    if (!isRunning) {
+      for (var i = 0; i < nextTools.length; i++) {
+        if (nextTools[i].status == ToolProgressStatus.running) {
+          nextTools[i] = nextTools[i].copyWith(
+            status: ToolProgressStatus.completed,
+            result: l10n.toolExecutionCompleted,
+          );
+        }
+      }
+      nextThinking = false;
+      nextThinkingText = '';
+      nextToolRunning = false;
+      nextShowPanel = nextTools.isNotEmpty;
+    } else {
+      nextShowPanel = true;
+      nextThinking = statusKey == 'agentThinking';
+      nextThinkingText = nextThinking ? l10n.agentThinking : '';
+
+      if (statusKey.startsWith(AgentService.agentToolCallPrefix)) {
+        final toolName = statusKey.substring(AgentService.agentToolCallPrefix.length).trim();
+        if (toolName.isNotEmpty) {
+          if (nextTools.isNotEmpty) {
+            final last = nextTools.last;
+            if (last.status == ToolProgressStatus.running && last.toolName != toolName) {
+              nextTools[nextTools.length - 1] = last.copyWith(
+                status: ToolProgressStatus.completed,
+                result: l10n.toolExecutionCompleted,
+              );
+            }
+          }
+
+          final hasSameRunning = nextTools.isNotEmpty &&
+              nextTools.last.toolName == toolName &&
+              nextTools.last.status == ToolProgressStatus.running;
+          if (!hasSameRunning) {
+            nextTools.add(
+              ToolProgressItem(
+                toolName: toolName,
+                description: l10n.toolExecutionProgress,
+                status: ToolProgressStatus.running,
+              ),
+            );
+          }
+        }
+      }
+
+      nextToolRunning = nextTools.any((item) => item.status == ToolProgressStatus.running);
+    }
+
+    final currentSig = _toolProgressItems
+        .map((item) => '${item.toolName}|${item.status.name}|${item.result}')
+        .join('||');
+    final nextSig =
+        nextTools.map((item) => '${item.toolName}|${item.status.name}|${item.result}').join('||');
+
+    final uiChanged = currentSig != nextSig ||
+        nextThinking != _isThinking ||
+        nextThinkingText != _thinkingText ||
+        nextToolRunning != _isToolInProgress ||
+        nextShowPanel != _showAgentStatusPanel;
+
+    if (uiChanged && mounted) {
+      setState(() {
+        _toolProgressItems
+          ..clear()
+          ..addAll(nextTools);
+        _isThinking = nextThinking;
+        _thinkingText = nextThinkingText;
+        _isToolInProgress = nextToolRunning;
+        _showAgentStatusPanel = nextShowPanel;
+        _lastAgentStatusKey = statusKey;
+        _lastAgentRunning = isRunning;
+      });
+    } else {
+      _showAgentStatusPanel = nextShowPanel;
+      _lastAgentStatusKey = statusKey;
+      _lastAgentRunning = isRunning;
+    }
+
+    if (!isRunning && nextTools.isNotEmpty) {
+      // Intentionally not dismissing the status panel automatically so users can
+      // see the tool calling process (Agent execution path) after generation completes.
+      // _scheduleAgentStatusDismiss();
+    }
+  }
+
+  Widget _buildAgentStatusIndicator(ThemeData theme, AppLocalizations l10n) {
+    if (!_showAgentStatusPanel && !_lastAgentRunning) {
+      return const SizedBox.shrink();
+    }
+
+    final statusText = _resolveAgentStatusText(_lastAgentStatusKey, l10n);
+    final children = <Widget>[];
+
+    if (_enableThinking && _currentModelSupportsThinking && _thinkingText.isNotEmpty) {
+      children.add(
+        ThinkingWidget(
+          key: const ValueKey('agent_status_thinking_widget'),
+          thinkingText: _thinkingText,
+          inProgress: _lastAgentRunning && _isThinking,
+          accentColor: theme.colorScheme.primary,
+        ),
+      );
+    }
+
+    if (_toolProgressItems.isNotEmpty) {
+      children.add(
+        ToolProgressPanel(
+          key: const ValueKey('agent_status_tool_progress_panel'),
+          title: l10n.toolExecutionProgress,
+          items: List.unmodifiable(_toolProgressItems),
+          inProgress: _isToolInProgress,
+          accentColor: theme.colorScheme.primary,
+        ),
+      );
+    }
+
+    if (children.isEmpty && _lastAgentRunning && statusText.isNotEmpty) {
+      final isDark = theme.brightness == Brightness.dark;
+      final agentBubbleColor = isDark ? const Color(0xFF1b1c1d) : const Color(0xFFe9eef6);
+
+      children.add(
+        Container(
+          margin: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: agentBubbleColor,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.zero,
+              topRight: Radius.circular(24),
+              bottomLeft: Radius.circular(24),
+              bottomRight: Radius.circular(24),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                statusText,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (children.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 220),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      child: Padding(
+        key: ValueKey<String>(
+          'agent-status-$_lastAgentRunning-${_toolProgressItems.length}-${_thinkingText.isNotEmpty}',
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+        child: AnimatedSize(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Sender Label
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4, left: 4, right: 4),
+                child: Text(
+                  l10n.aiAssistantUser,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              ...children,
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildInputArea(ThemeData theme, AppLocalizations l10n) {
@@ -1743,8 +1939,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     final filteredWorkflowDescriptors = workflowDescriptors
         .where(
           (descriptor) =>
-              inputText.isEmpty ||
-              descriptor.command.toLowerCase().startsWith(inputText),
+              inputText.isEmpty || descriptor.command.toLowerCase().startsWith(inputText),
         )
         .toList(growable: false);
     final shellBorderColor = _isInputFocused
@@ -1790,32 +1985,30 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
               duration: const Duration(milliseconds: 180),
               switchInCurve: Curves.easeOutCubic,
               switchOutCurve: Curves.easeInCubic,
-              child:
-                  _showSlashCommands && filteredWorkflowDescriptors.isNotEmpty
-                      ? Padding(
-                          key: const ValueKey('slash_commands_visible'),
-                          padding: const EdgeInsets.only(top: 8, bottom: 8),
-                          child: Align(
-                            alignment: Alignment.centerLeft,
-                            child: Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children:
-                                  filteredWorkflowDescriptors.map((descriptor) {
-                                return ActionChip(
-                                  label: Text(descriptor.command),
-                                  onPressed: () {
-                                    _textController.clear();
-                                    _handleSubmitted(descriptor.command);
-                                  },
-                                );
-                              }).toList(),
-                            ),
-                          ),
-                        )
-                      : const SizedBox.shrink(
-                          key: ValueKey('slash_commands_hidden'),
+              child: _showSlashCommands && filteredWorkflowDescriptors.isNotEmpty
+                  ? Padding(
+                      key: const ValueKey('slash_commands_visible'),
+                      padding: const EdgeInsets.only(top: 8, bottom: 8),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: filteredWorkflowDescriptors.map((descriptor) {
+                            return ActionChip(
+                              label: Text(descriptor.command),
+                              onPressed: () {
+                                _textController.clear();
+                                _handleSubmitted(descriptor.command);
+                              },
+                            );
+                          }).toList(),
                         ),
+                      ),
+                    )
+                  : const SizedBox.shrink(
+                      key: ValueKey('slash_commands_hidden'),
+                    ),
             ),
             // Display selected media files
             if (_selectedMediaFiles.isNotEmpty)
@@ -1856,17 +2049,14 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                                       file.name,
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style:
-                                          theme.textTheme.labelSmall?.copyWith(
+                                      style: theme.textTheme.labelSmall?.copyWith(
                                         fontWeight: FontWeight.w500,
                                       ),
                                     ),
                                     Text(
                                       '${(file.size / 1024).toStringAsFixed(1)} KB',
-                                      style:
-                                          theme.textTheme.labelSmall?.copyWith(
-                                        color:
-                                            theme.colorScheme.onSurfaceVariant,
+                                      style: theme.textTheme.labelSmall?.copyWith(
+                                        color: theme.colorScheme.onSurfaceVariant,
                                         fontSize: 10,
                                       ),
                                     ),
@@ -1891,208 +2081,43 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                 ),
               ),
             Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // Add media button
-                Container(
-                  decoration: BoxDecoration(
-                    color: _isLoading
-                        ? theme.colorScheme.surfaceContainerHigh
-                        : theme.colorScheme.primaryContainer,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.12),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+                // Left group: Media + Mode + Thinking buttons
+                Flexible(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Media button - simple elliptical IconButton
+                      IconButton(
+                        icon: Icon(
+                          Icons.add,
+                          color: _isLoading
+                              ? theme.colorScheme.onSurfaceVariant
+                              : theme.colorScheme.primary,
+                        ),
+                        tooltip: l10n.attachFile,
+                        onPressed: _isLoading ? null : _pickAndAttachMedia,
+                        style: IconButton.styleFrom(
+                          backgroundColor: _isLoading
+                              ? theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.5)
+                              : theme.colorScheme.primary.withValues(alpha: 0.1),
+                          shape: const CircleBorder(),
+                        ),
+                        iconSize: 20,
                       ),
+                      const SizedBox(width: 6),
+                      // Mode switch button - simple toggle without menu
+                      _buildModeToggleButton(theme, l10n),
+                      const SizedBox(width: 6),
+                      // Thinking toggle button (if model supports thinking)
+                      if (_currentModelSupportsThinking) _buildThinkingToggleButton(theme, l10n),
                     ],
                   ),
-                  child: IconButton(
-                    icon: Icon(
-                      Icons.add,
-                      color: _isLoading
-                          ? theme.colorScheme.onSurfaceVariant
-                          : theme.colorScheme.onPrimaryContainer,
-                    ),
-                    tooltip: 'Add media',
-                    onPressed: _isLoading ? null : _pickAndAttachMedia,
-                    iconSize: 20,
-                  ),
                 ),
                 const SizedBox(width: 8),
-                // Mode indicator/switch button
-                Expanded(
-                  child: Container(
-                    height: 40,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: theme.colorScheme.outline.withValues(
-                          alpha: 0.3,
-                        ),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        PopupMenuButton<AIAssistantPageMode>(
-                          constraints: const BoxConstraints(minWidth: 160),
-                          onSelected: (mode) => _setMode(mode),
-                          itemBuilder: (context) {
-                            return [
-                              PopupMenuItem(
-                                value: _entryConfig.defaultMode,
-                                enabled: _entryConfig
-                                    .allowsMode(_entryConfig.defaultMode),
-                                child: Row(
-                                  children: [
-                                    if (_currentMode ==
-                                        _entryConfig.defaultMode)
-                                      Icon(
-                                        Icons.check_circle,
-                                        size: 18,
-                                        color: theme.colorScheme.primary,
-                                      )
-                                    else
-                                      const SizedBox(width: 18),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      _entryConfig.defaultMode ==
-                                              AIAssistantPageMode.chat
-                                          ? l10n.aiModeChat
-                                          : l10n.aiModeChat,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (_entryConfig
-                                  .allowsMode(AIAssistantPageMode.agent))
-                                PopupMenuItem(
-                                  value: AIAssistantPageMode.agent,
-                                  child: Row(
-                                    children: [
-                                      if (_currentMode ==
-                                          AIAssistantPageMode.agent)
-                                        Icon(
-                                          Icons.check_circle,
-                                          size: 18,
-                                          color: theme.colorScheme.primary,
-                                        )
-                                      else
-                                        const SizedBox(width: 18),
-                                      const SizedBox(width: 8),
-                                      Text(l10n.aiModeAgent),
-                                    ],
-                                  ),
-                                ),
-                            ];
-                          },
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _isAgentMode
-                                    ? Icons.smart_toy_outlined
-                                    : Icons.chat_outlined,
-                                size: 18,
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                              const SizedBox(width: 6),
-                              Flexible(
-                                child: Text(
-                                  _isAgentMode
-                                      ? l10n.aiModeAgent
-                                      : l10n.aiModeChat,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.labelMedium?.copyWith(
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Icon(
-                                Icons.expand_more,
-                                size: 16,
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Thinking toggle button (if supported)
-                if (_currentModelSupportsThinking)
-                  Container(
-                    decoration: BoxDecoration(
-                      color: _enableThinking
-                          ? theme.colorScheme.secondaryContainer
-                          : theme.colorScheme.surfaceContainerHigh,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.12),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: IconButton(
-                      icon: Icon(
-                        _enableThinking
-                            ? Icons.psychology
-                            : Icons.psychology_outlined,
-                        color: _enableThinking
-                            ? theme.colorScheme.onSecondaryContainer
-                            : theme.colorScheme.onSurfaceVariant,
-                      ),
-                      tooltip: l10n.aiThinking,
-                      onPressed: () {
-                        setState(() {
-                          _enableThinking = !_enableThinking;
-                        });
-                      },
-                      iconSize: 20,
-                    ),
-                  ),
-                const SizedBox(width: 8),
-                // Send button
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 160),
-                  decoration: BoxDecoration(
-                    color: _isLoading
-                        ? theme.colorScheme.error
-                        : theme.colorScheme.primary,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.12),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: IconButton(
-                    icon: Icon(_isLoading ? Icons.stop : Icons.send),
-                    color: _isLoading
-                        ? theme.colorScheme.onError
-                        : theme.colorScheme.onPrimary,
-                    tooltip: _isLoading ? l10n.stopGenerate : l10n.confirm,
-                    onPressed: _isLoading
-                        ? _stopGenerating
-                        : () {
-                            if (_textController.text.trim().isNotEmpty) {
-                              _handleSubmitted(_textController.text);
-                            }
-                          },
-                    iconSize: 20,
-                  ),
-                ),
+                // Send button - right side
+                _buildSendButton(theme, l10n),
               ],
             ),
             // Text input field
@@ -2160,4 +2185,46 @@ class _AgentSmartResultPayload {
 
   final String title;
   final String content;
+}
+
+/// Animated send/stop button following Google AI Gallery design patterns
+/// Shows arrow icon when ready, stop icon when generating
+class AnimatedIconButton extends StatelessWidget {
+  final bool isLoading;
+  final VoidCallback onPressed;
+  final ThemeData theme;
+
+  const AnimatedIconButton({
+    required this.isLoading,
+    required this.onPressed,
+    required this.theme,
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 200),
+        transitionBuilder: (child, animation) {
+          return RotationTransition(
+            turns: animation,
+            child: child,
+          );
+        },
+        child: Icon(
+          isLoading ? Icons.stop_circle : Icons.arrow_outward,
+          key: ValueKey<bool>(isLoading),
+          color: isLoading ? theme.colorScheme.onError : theme.colorScheme.onPrimary,
+        ),
+      ),
+      onPressed: onPressed,
+      style: IconButton.styleFrom(
+        backgroundColor: isLoading ? theme.colorScheme.error : theme.colorScheme.primary,
+        shape: const CircleBorder(),
+        splashFactory: InkRipple.splashFactory,
+      ),
+      iconSize: 20,
+    );
+  }
 }

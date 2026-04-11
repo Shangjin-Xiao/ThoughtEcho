@@ -50,6 +50,7 @@ import 'package:thoughtecho/services/agent_tools/note_search_tool.dart';
 import 'package:thoughtecho/services/agent_tools/note_stats_tool.dart';
 import 'package:thoughtecho/services/agent_tools/web_fetch_tool.dart';
 import 'package:thoughtecho/services/agent_tools/web_search_tool.dart';
+import 'package:thoughtecho/services/agent_tools_extensions.dart';
 import 'package:thoughtecho/services/background_push_handler.dart';
 import 'package:thoughtecho/services/web_fetch_service.dart';
 import 'package:workmanager/workmanager.dart';
@@ -143,12 +144,15 @@ void _addDeferredError(Map<String, dynamic> error) {
 }
 
 /// 构建 Agent 工具列表
-List<AgentTool> _buildAgentTools(DatabaseService db) {
+List<AgentTool> _buildAgentTools(DatabaseService db, ChatSessionService chatSessionService) {
   return [
     NoteSearchTool(db),
     NoteStatsTool(db),
     const WebSearchTool(),
     WebFetchTool(WebFetchService()),
+    GetRecentNotesTool(chatSessionService),
+    GetNotesByTagsTool(chatSessionService),
+    GetNotesByDateRangeTool(chatSessionService),
   ];
 }
 
@@ -159,8 +163,7 @@ Future<void> main() async {
   logging.Logger.root.level = logging.Level.INFO;
 
   // Windows平台优化：避免错误处理导致的启动卡死
-  BindingBase.debugZoneErrorsAreFatal =
-      (!kIsWeb && Platform.isWindows) ? false : true;
+  BindingBase.debugZoneErrorsAreFatal = (!kIsWeb && Platform.isWindows) ? false : true;
 
   await runZonedGuarded<Future<void>>(
     () async {
@@ -206,8 +209,7 @@ Future<void> main() async {
         _addDeferredError({
           'message': '平台分发器错误',
           'error': error,
-          'stackTrace':
-              (!kIsWeb && Platform.isWindows) ? null : stack, // Windows平台不记录堆栈
+          'stackTrace': (!kIsWeb && Platform.isWindows) ? null : stack, // Windows平台不记录堆栈
           'source': 'PlatformDispatcher',
         });
 
@@ -269,13 +271,11 @@ Future<void> main() async {
         ]);
         final String currentVersion = packageInfo.version;
         final String? lastVersion = settingsService.getAppVersion();
-        final bool hasCompletedOnboarding =
-            settingsService.hasCompletedOnboarding();
+        final bool hasCompletedOnboarding = settingsService.hasCompletedOnboarding();
 
         // 判断是否需要完整引导或升级引导
         bool showFullOnboarding = !hasCompletedOnboarding;
-        bool showUpdateReady =
-            hasCompletedOnboarding && (lastVersion != currentVersion);
+        bool showUpdateReady = hasCompletedOnboarding && (lastVersion != currentVersion);
         if (showUpdateReady) {
           // 只显示引导最后一页，自动迁移数据，升级完成后写入 lastVersion
           await settingsService.setAppVersion(currentVersion);
@@ -293,8 +293,7 @@ Future<void> main() async {
         final unifiedLogService = UnifiedLogService.instance;
 
         // 根据开发者模式设置日志服务的持久化状态
-        unifiedLogService
-            .setPersistenceEnabled(settingsService.appSettings.developerMode);
+        unifiedLogService.setPersistenceEnabled(settingsService.appSettings.developerMode);
 
         final aiAnalysisDbService = AIAnalysisDatabaseService();
         final connectivityService = ConnectivityService();
@@ -340,8 +339,7 @@ Future<void> main() async {
                 create: (_) => placeSearchService,
               ),
               ChangeNotifierProvider(create: (_) => NoteSearchController()),
-              ChangeNotifierProxyProvider<SettingsService,
-                  InsightHistoryService>(
+              ChangeNotifierProxyProvider<SettingsService, InsightHistoryService>(
                 create: (context) => InsightHistoryService(
                   settingsService: context.read<SettingsService>(),
                 ),
@@ -358,26 +356,28 @@ Future<void> main() async {
               ),
               ValueListenableProvider<bool>.value(value: servicesInitialized),
               ChangeNotifierProxyProvider<SettingsService, AIService>(
-                create: (context) =>
-                    AIService(settingsService: context.read<SettingsService>()),
+                create: (context) => AIService(settingsService: context.read<SettingsService>()),
                 update: (context, settings, previous) =>
                     previous ?? AIService(settingsService: settings),
               ),
-              ChangeNotifierProxyProvider2<SettingsService, DatabaseService,
+              ChangeNotifierProxyProvider3<SettingsService, DatabaseService, ChatSessionService,
                   AgentService>(
                 create: (context) => AgentService(
                   settingsService: context.read<SettingsService>(),
-                  tools: _buildAgentTools(context.read<DatabaseService>()),
+                  tools: _buildAgentTools(
+                    context.read<DatabaseService>(),
+                    context.read<ChatSessionService>(),
+                  ),
                 ),
-                update: (context, settings, db, previous) =>
+                update: (context, settings, db, chatSession, previous) =>
                     previous ??
                     AgentService(
                       settingsService: settings,
-                      tools: _buildAgentTools(db),
+                      tools: _buildAgentTools(db, chatSession),
                     ),
               ),
-              ProxyProvider3<DatabaseService, SettingsService,
-                  AIAnalysisDatabaseService, BackupService>(
+              ProxyProvider3<DatabaseService, SettingsService, AIAnalysisDatabaseService,
+                  BackupService>(
                 update: (
                   context,
                   dbService,
@@ -391,14 +391,13 @@ Future<void> main() async {
                   aiAnalysisDbService: aiService,
                 ),
               ),
-              ChangeNotifierProxyProvider4<BackupService, DatabaseService,
-                  SettingsService, AIAnalysisDatabaseService, NoteSyncService>(
+              ChangeNotifierProxyProvider4<BackupService, DatabaseService, SettingsService,
+                  AIAnalysisDatabaseService, NoteSyncService>(
                 create: (context) => NoteSyncService(
                   backupService: context.read<BackupService>(),
                   databaseService: context.read<DatabaseService>(),
                   settingsService: context.read<SettingsService>(),
-                  aiAnalysisDbService:
-                      context.read<AIAnalysisDatabaseService>(),
+                  aiAnalysisDbService: context.read<AIAnalysisDatabaseService>(),
                 ),
                 update: (
                   context,
@@ -490,8 +489,7 @@ Future<void> main() async {
                 try {
                   await clipboardService.init().timeout(
                         timeoutDuration,
-                        onTimeout: () =>
-                            logWarning('剪贴板服务初始化超时', source: 'BackgroundInit'),
+                        onTimeout: () => logWarning('剪贴板服务初始化超时', source: 'BackgroundInit'),
                       );
                 } catch (e) {
                   logWarning('剪贴板服务初始化失败: $e', source: 'BackgroundInit');
@@ -514,8 +512,7 @@ Future<void> main() async {
 
             // 检查设置服务中的数据库迁移状态
             final hasMigrated = settingsService.isDatabaseMigrationComplete();
-            final hasCompletedOnboarding =
-                settingsService.hasCompletedOnboarding();
+            final hasCompletedOnboarding = settingsService.hasCompletedOnboarding();
             logInfo(
               '数据库迁移状态: ${hasMigrated ? "已完成" : "未完成"}',
               source: 'BackgroundInit',
@@ -706,8 +703,7 @@ Future<void> main() async {
 
         runApp(
           EmergencyApp(
-            error:
-                kDebugMode ? e.toString() : 'Application initialization failed',
+            error: kDebugMode ? e.toString() : 'Application initialization failed',
             stackTrace: kDebugMode ? stackTrace.toString() : '',
           ),
         );
@@ -796,8 +792,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     final settingsService = Provider.of<SettingsService>(context);
     final appTheme = Provider.of<AppTheme>(context);
     // 检查是否需要显示引导页面
-    final bool hasCompletedOnboarding =
-        settingsService.hasCompletedOnboarding();
+    final bool hasCompletedOnboarding = settingsService.hasCompletedOnboarding();
 
     // 获取用户设置的语言，null 表示跟随系统
     final localeCode = settingsService.localeCode;
@@ -832,8 +827,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   : widget.isEmergencyMode
                       ? const EmergencyRecoveryPage()
                       : HomePage(
-                          initialPage:
-                              settingsService.appSettings.defaultStartPage,
+                          initialPage: settingsService.appSettings.defaultStartPage,
                         ),
           localizationsDelegates: const [
             AppLocalizations.delegate,
@@ -1236,8 +1230,7 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
                         } catch (e) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content:
-                                  Text(l10n.emergencyOpenBackupFailed('$e')),
+                              content: Text(l10n.emergencyOpenBackupFailed('$e')),
                               backgroundColor: Colors.red,
                               duration: const Duration(seconds: 3),
                             ),
@@ -1257,16 +1250,13 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
                   margin: const EdgeInsets.only(top: 16),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color:
-                        _hasError ? Colors.red.shade100 : Colors.green.shade100,
+                    color: _hasError ? Colors.red.shade100 : Colors.green.shade100,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     _statusMessage!,
                     style: TextStyle(
-                      color: _hasError
-                          ? Colors.red.shade900
-                          : Colors.green.shade900,
+                      color: _hasError ? Colors.red.shade900 : Colors.green.shade900,
                     ),
                   ),
                 ),
