@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 
 import '../gen_l10n/app_localizations.dart';
 import '../models/chat_session.dart';
 import '../services/chat_session_service.dart';
+import '../utils/app_logger.dart';
 import '../utils/time_utils.dart';
 
-/// 会话历史底部弹窗
+/// 会话历史底部弹窗 - 现代卡片风格设计
 class SessionHistorySheet extends StatefulWidget {
   final String noteId;
   final String? currentSessionId;
@@ -31,6 +33,7 @@ class SessionHistorySheet extends StatefulWidget {
 class _SessionHistorySheetState extends State<SessionHistorySheet> {
   List<ChatSession>? _sessions;
   bool _isLoading = true;
+  Map<String, int> _messageCounts = {};
 
   @override
   void initState() {
@@ -49,16 +52,32 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
         sessions =
             await widget.chatSessionService.getSessionsForNote(widget.noteId);
       }
+
+      // Load message counts for each session
+      final Map<String, int> counts = {};
+      for (final session in sessions) {
+        try {
+          counts[session.id] =
+              await widget.chatSessionService.getMessageCount(session.id);
+        } catch (e) {
+          AppLogger.w('Failed to load message count for ${session.id}', error: e);
+          counts[session.id] = 0;
+        }
+      }
+
       if (mounted) {
         setState(() {
           _sessions = sessions;
+          _messageCounts = counts;
           _isLoading = false;
         });
       }
     } catch (e) {
+      AppLogger.e('Failed to load sessions', error: e);
       if (mounted) {
         setState(() {
           _sessions = [];
+          _messageCounts = {};
           _isLoading = false;
         });
       }
@@ -95,42 +114,158 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
           else if (_sessions == null || _sessions!.isEmpty)
             Padding(
               padding: const EdgeInsets.all(32),
-              child: Text(l10n.noChats,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  )),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.chat_bubble_outline,
+                      size: 48, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                  const SizedBox(height: 12),
+                  Text(l10n.noChats,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      )),
+                ],
+              ),
             )
           else
             ConstrainedBox(
               constraints: BoxConstraints(
-                maxHeight: MediaQuery.of(context).size.height * 0.4,
+                maxHeight: MediaQuery.of(context).size.height * 0.5,
               ),
               child: ListView.builder(
                 shrinkWrap: true,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 itemCount: _sessions!.length,
                 itemBuilder: (context, index) {
-                  final s = _sessions![index];
-                  final isCurrent = s.id == widget.currentSessionId;
-                  return ListTile(
-                    leading: Icon(
-                      isCurrent ? Icons.chat_bubble : Icons.chat_bubble_outline,
-                      color: isCurrent ? theme.colorScheme.primary : null,
-                    ),
-                    title: Text(s.title,
-                        maxLines: 1, overflow: TextOverflow.ellipsis),
-                    subtitle: Text(_fmtDate(context, s.lastActiveAt),
-                        style: theme.textTheme.bodySmall),
-                    selected: isCurrent,
-                    onTap: isCurrent ? null : () => widget.onSelect(s.id),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline, size: 20),
-                      onPressed: () => _confirmDelete(context, s.id),
-                    ),
+                  return _buildSessionCard(
+                    context,
+                    _sessions![index],
+                    theme,
+                    l10n,
                   );
                 },
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSessionCard(
+    BuildContext context,
+    ChatSession session,
+    ThemeData theme,
+    AppLocalizations l10n,
+  ) {
+    final isCurrent = session.id == widget.currentSessionId;
+    final messageCount = _messageCounts[session.id] ?? 0;
+    final truncatedTitle = session.title.length > 50
+        ? '${session.title.substring(0, 50)}...'
+        : session.title;
+    final lastUpdated = TimeUtils.formatElapsedRelativeTimeLocalized(
+      context,
+      session.lastActiveAt,
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Slidable(
+        key: ValueKey(session.id),
+        endActionPane: ActionPane(
+          motion: const ScrollMotion(),
+          children: [
+            SlidableAction(
+              onPressed: (_) => _confirmDelete(context, session.id),
+              backgroundColor: theme.colorScheme.error,
+              foregroundColor: theme.colorScheme.onError,
+              icon: Icons.delete_outline,
+              label: l10n.delete,
+            ),
+          ],
+        ),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            color: isCurrent
+                ? theme.colorScheme.primaryContainer.withValues(alpha: 0.5)
+                : theme.colorScheme.surface,
+            border: Border.all(
+              color: isCurrent
+                  ? theme.colorScheme.primary.withValues(alpha: 0.5)
+                  : theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+              width: isCurrent ? 1.5 : 1,
+            ),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: isCurrent ? null : () => widget.onSelect(session.id),
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Title and Message Count
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          isCurrent ? Icons.chat_bubble : Icons.chat_bubble_outline,
+                          color: isCurrent
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurfaceVariant,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            truncatedTitle,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w500,
+                              color: theme.colorScheme.onSurface,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        // Message count badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            messageCount.toString(),
+                            style: theme.textTheme.labelSmall?.copyWith(
+                              color: theme.colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    // Last Updated Time
+                    Text(
+                      lastUpdated,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -150,9 +285,9 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
           TextButton(
             onPressed: () async {
               Navigator.of(ctx).pop();
-              // 先执行删除回调，确保上层完成删除
+              // Call delete callback
               widget.onDelete(sessionId);
-              // 删除后重新加载会话列表以刷新 UI
+              // Reload sessions after deletion
               if (mounted) {
                 await _loadSessions();
               }

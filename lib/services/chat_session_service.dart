@@ -423,4 +423,226 @@ class ChatSessionService extends ChangeNotifier {
     }
     notifyListeners();
   }
+
+  /// 按标签查询笔记（支持多标签AND查询）
+  Future<List<Map<String, dynamic>>> getNotesByTags(
+    List<String> tags, {
+    int limit = 20,
+  }) async {
+    final db = await _getDatabaseForRead();
+    if (db == null || tags.isEmpty) return [];
+    try {
+      final placeholders = List.filled(tags.length, '?').join(',');
+      final query = '''
+        SELECT DISTINCT q.* FROM quotes q
+        JOIN quote_tags qt ON q.id = qt.quote_id
+        WHERE qt.tag_id IN ($placeholders)
+        GROUP BY q.id
+        HAVING COUNT(DISTINCT qt.tag_id) = ${tags.length}
+        ORDER BY q.date DESC
+        LIMIT ?
+      ''';
+      final args = [...tags, limit];
+      final rows = await db.rawQuery(query, args);
+      return rows;
+    } catch (e) {
+      logError(
+        'ChatSessionService.getNotesByTags 失败',
+        error: e,
+        source: 'ChatSessionService',
+      );
+      return [];
+    }
+  }
+
+  /// 获取最新N条笔记
+  Future<List<Map<String, dynamic>>> getRecentNotes({
+    int limit = 10,
+    String? beforeNoteId,
+  }) async {
+    final db = await _getDatabaseForRead();
+    if (db == null) return [];
+    try {
+      String query = '''
+        SELECT * FROM quotes
+        ORDER BY date DESC
+      ''';
+      final args = <dynamic>[];
+
+      if (beforeNoteId != null && beforeNoteId.isNotEmpty) {
+        query += ' WHERE id != ?';
+        args.add(beforeNoteId);
+      }
+
+      query += ' LIMIT ?';
+      args.add(limit);
+
+      final rows = await db.rawQuery(query, args);
+      return rows;
+    } catch (e) {
+      logError(
+        'ChatSessionService.getRecentNotes 失败',
+        error: e,
+        source: 'ChatSessionService',
+      );
+      return [];
+    }
+  }
+
+  /// 按日期范围查询
+  Future<List<Map<String, dynamic>>> getNotesByDateRange(
+    DateTime start,
+    DateTime end, {
+    int limit = 20,
+  }) async {
+    final db = await _getDatabaseForRead();
+    if (db == null) return [];
+    try {
+      final startStr = start.toIso8601String();
+      final endStr = end.toIso8601String();
+      final rows = await db.query(
+        'quotes',
+        where: 'date BETWEEN ? AND ?',
+        whereArgs: [startStr, endStr],
+        orderBy: 'date DESC',
+        limit: limit,
+      );
+      return rows;
+    } catch (e) {
+      logError(
+        'ChatSessionService.getNotesByDateRange 失败',
+        error: e,
+        source: 'ChatSessionService',
+      );
+      return [];
+    }
+  }
+
+  /// 组合查询：标签 + 日期 + 关键词
+  Future<List<Map<String, dynamic>>> queryNotes({
+    List<String>? tags,
+    DateTime? dateStart,
+    DateTime? dateEnd,
+    String? keyword,
+    int limit = 20,
+  }) async {
+    final db = await _getDatabaseForRead();
+    if (db == null) return [];
+    try {
+      var query = 'SELECT DISTINCT q.* FROM quotes q';
+      final args = <dynamic>[];
+      final conditions = <String>[];
+
+      // 标签条件
+      if (tags != null && tags.isNotEmpty) {
+        query += ' JOIN quote_tags qt ON q.id = qt.quote_id';
+        final placeholders = List.filled(tags.length, '?').join(',');
+        conditions.add('qt.tag_id IN ($placeholders)');
+        args.addAll(tags);
+      }
+
+      // 日期范围条件
+      if (dateStart != null && dateEnd != null) {
+        conditions.add('q.date BETWEEN ? AND ?');
+        args.add(dateStart.toIso8601String());
+        args.add(dateEnd.toIso8601String());
+      }
+
+      // 关键词条件
+      if (keyword != null && keyword.trim().isNotEmpty) {
+        conditions.add('q.content LIKE ?');
+        args.add('%${keyword.trim()}%');
+      }
+
+      if (conditions.isNotEmpty) {
+        query += ' WHERE ${conditions.join(' AND ')}';
+      }
+
+      // 多标签AND查询
+      if (tags != null && tags.isNotEmpty) {
+        query += ' GROUP BY q.id HAVING COUNT(DISTINCT qt.tag_id) = ${tags.length}';
+      }
+
+      query += ' ORDER BY q.date DESC LIMIT ?';
+      args.add(limit);
+
+      final rows = await db.rawQuery(query, args);
+      return rows;
+    } catch (e) {
+      logError(
+        'ChatSessionService.queryNotes 失败',
+        error: e,
+        source: 'ChatSessionService',
+      );
+      return [];
+    }
+  }
+
+  /// 获取笔记标签
+  Future<List<String>> getNoteTagIds(String noteId) async {
+    final db = await _getDatabaseForRead();
+    if (db == null) return [];
+    try {
+      final rows = await db.query(
+        'quote_tags',
+        columns: ['tag_id'],
+        where: 'quote_id = ?',
+        whereArgs: [noteId],
+      );
+      return rows.map((row) => row['tag_id'].toString()).toList();
+    } catch (e) {
+      logError(
+        'ChatSessionService.getNoteTagIds 失败',
+        error: e,
+        source: 'ChatSessionService',
+      );
+      return [];
+    }
+  }
+
+  /// 将笔记数据转换为Agent友好的格式
+  static Map<String, dynamic> formatNoteForAgent(
+    Map<String, dynamic> noteRow, {
+    List<String>? tags,
+    double? matchScore,
+  }) {
+    return {
+      'id': noteRow['id'] ?? '',
+      'title': _extractTitle(noteRow['content'] ?? '', maxLength: 50),
+      'content': noteRow['content'] ?? '',
+      'tags': tags ?? [],
+      'createdAt': noteRow['date'] ?? '',
+      'matchScore': matchScore ?? 1.0,
+      'summary': noteRow['summary'],
+      'sentiment': noteRow['sentiment'],
+      'keywords': _parseKeywords(noteRow['keywords']),
+    };
+  }
+
+  /// 从内容提取标题（前50字）
+  static String _extractTitle(String content, {int maxLength = 50}) {
+    if (content.isEmpty) return '';
+    final lines = content.split('\n');
+    final firstLine = lines.first.trim();
+    if (firstLine.length <= maxLength) {
+      return firstLine;
+    }
+    return '${firstLine.substring(0, maxLength)}...';
+  }
+
+  /// 解析关键词字符串
+  static List<String> _parseKeywords(dynamic keywords) {
+    if (keywords == null) return [];
+    if (keywords is String) {
+      return keywords
+          .split(',')
+          .map((k) => k.trim())
+          .where((k) => k.isNotEmpty)
+          .toList();
+    }
+    if (keywords is List) {
+      return keywords.map((k) => k.toString().trim()).toList();
+    }
+    return [];
+  }
 }

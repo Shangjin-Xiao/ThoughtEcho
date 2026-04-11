@@ -166,28 +166,6 @@ int _listHash<T>(List<T> list) {
   return Object.hashAll(list);
 }
 
-bool _mapEquals<K, V>(Map<K, V> a, Map<K, V> b) {
-  if (identical(a, b)) {
-    return true;
-  }
-  if (a.length != b.length) {
-    return false;
-  }
-  for (final entry in a.entries) {
-    if (!b.containsKey(entry.key) || b[entry.key] != entry.value) {
-      return false;
-    }
-  }
-  return true;
-}
-
-int _mapHash<K, V>(Map<K, V> map) {
-  final keys = map.keys.toList()..sort((a, b) => '$a'.compareTo('$b'));
-  return Object.hashAll(
-    keys.map((key) => Object.hash(key, map[key])),
-  );
-}
-
 Map<String, Object?> _deepFreezeMap(Map<String, Object?> map) {
   final frozen = <String, Object?>{};
   for (final entry in map.entries) {

@@ -1442,4 +1442,88 @@ class AIService extends ChangeNotifier {
       context: '普通对话',
     );
   }
+
+  /// 高级流式对话方法 - SOTA 实时显示支持
+  ///
+  /// 返回 Stream<ChatMessageChunk>，支持：
+  /// - 实时推送thinking过程（思考块）
+  /// - 实时推送response内容（回复块）
+  /// - 每个字符/句子立即显示，无延迟
+  /// - 完整的错误处理和中断支持
+  ///
+  /// 使用示例：
+  /// ```dart
+  /// _aiService.streamMessageChunks(text, history: history).listen((chunk) {
+  ///   setState(() {
+  ///     if (chunk.type == 'thinking') {
+  ///       _thinkingText += chunk.content;
+  ///     } else if (chunk.type == 'response') {
+  ///       _responseText += chunk.content;
+  ///     }
+  ///   });
+  /// });
+  /// ```
+  Stream<dynamic> streamMessageChunks(
+    String question, {
+    List<ChatMessage>? history,
+    String? systemContext,
+  }) {
+    return _requestHelper.executeStreamOperation(
+      operation: (controller) async {
+        if (!await hasValidApiKeyAsync()) {
+          controller.addError(Exception('请先在设置中配置 API Key'));
+          return;
+        }
+
+        await _validateSettings();
+        final currentProvider = await _getCurrentProviderWithApiKey();
+        final buffer = StringBuffer();
+
+        if (systemContext != null && systemContext.trim().isNotEmpty) {
+          buffer.writeln(systemContext.trim());
+          buffer.writeln();
+        }
+
+        if (history != null && history.isNotEmpty) {
+          final contextHistory = history
+              .where((m) => m.includedInContext && !m.isLoading)
+              .take(6)
+              .toList();
+          if (contextHistory.isNotEmpty) {
+            buffer.writeln('【最近对话】');
+            for (final message in contextHistory) {
+              final role = message.isUser ? '用户' : '助手';
+              buffer.writeln('$role：${message.content}');
+            }
+            buffer.writeln();
+          }
+        }
+
+        buffer.writeln('【当前问题】');
+        buffer.write(question);
+
+        await _requestHelper.makeStreamRequestWithProvider(
+          url: currentProvider.apiUrl,
+          systemPrompt: AIPromptManager.personalGrowthCoachPrompt,
+          userMessage: buffer.toString(),
+          provider: currentProvider,
+          onData: (text) => _requestHelper.handleStreamResponse(
+            controller: controller,
+            chunk: text,
+          ),
+          onComplete: (fullText) => _requestHelper.handleStreamComplete(
+            controller: controller,
+            fullText: fullText,
+          ),
+          onError: (error) => _requestHelper.handleStreamError(
+            controller: controller,
+            error: error,
+            context: '高级流式对话',
+          ),
+          maxTokens: 1200,
+        );
+      },
+      context: '高级流式对话',
+    );
+  }
 }

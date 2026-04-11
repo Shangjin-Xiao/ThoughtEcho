@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:provider/provider.dart';
@@ -11,6 +12,7 @@ import '../models/ai_assistant_entry.dart';
 import '../models/ai_insight_workflow_options.dart';
 import '../models/ai_workflow_descriptor.dart';
 import '../models/chat_message.dart' as app_chat;
+import '../models/chat_message.dart' show MessageState;
 import '../models/chat_session.dart';
 import '../models/quote_model.dart';
 import '../services/agent_service.dart';
@@ -18,6 +20,7 @@ import '../services/ai_service.dart';
 import '../services/chat_session_service.dart';
 import '../services/database_service.dart';
 import '../services/settings_service.dart';
+import '../utils/ai_command_helpers.dart';
 import '../utils/app_logger.dart';
 import '../utils/string_utils.dart';
 import '../widgets/ai/ai_workflow_cards.dart';
@@ -26,6 +29,7 @@ import '../widgets/ai/thinking_widget.dart';
 import '../widgets/ai/tool_progress_panel.dart';
 import '../widgets/session_history_sheet.dart';
 import '../widgets/source_analysis_result_dialog.dart';
+
 
 class AIAssistantPage extends StatefulWidget {
   final Quote? quote;
@@ -78,6 +82,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   String _lastAgentStatusKey = '';
   bool _lastAgentRunning = false;
   Timer? _agentStatusDismissTimer;
+  final List<PlatformFile> _selectedMediaFiles = [];
   static final RegExp _agentCodeBlockPattern = RegExp(
     r'```([a-zA-Z0-9_-]+)\s*([\s\S]*?)```',
   );
@@ -349,6 +354,56 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
       includedInContext: false,
     );
     _appendMessage(welcomeMsg, persist: true);
+
+    // Generate dynamic insight if in explore mode without explicit guide
+    if (!_hasBoundNote &&
+        (widget.exploreGuideSummary?.trim().isEmpty ?? true) &&
+        _entrySource == AIAssistantEntrySource.explore) {
+      _generateAndShowDynamicInsight();
+    }
+  }
+
+  /// Generate and display a dynamic insight based on current data
+  Future<void> _generateAndShowDynamicInsight() async {
+    final databaseService = _tryGetDatabaseService();
+    if (databaseService == null) return;
+
+    try {
+      final quotes = await databaseService.getUserQuotes();
+      if (quotes.isEmpty) return;
+
+      // Calculate simple stats
+      final count = quotes.length;
+      final recentCount = quotes
+          .where((q) {
+            try {
+              final qDate = DateTime.parse(q.date);
+              return DateTime.now().difference(qDate).inDays <= 7;
+            } catch (e) {
+              return false;
+            }
+          })
+          .length;
+
+      // Generate insight text
+      final insightText = 'You have recorded $count thoughts, '
+          'with $recentCount from the past 7 days. '
+          'Share your thoughts to explore deeper insights.';
+
+      if (!mounted) return;
+
+      final insightMsg = app_chat.ChatMessage(
+        id: _uuid.v4(),
+        content: insightText,
+        isUser: false,
+        role: 'system',
+        timestamp: DateTime.now(),
+        includedInContext: false,
+      );
+      _appendMessage(insightMsg, persist: false);
+    } catch (e) {
+      AppLogger.d('Failed to generate dynamic insight: $e');
+    }
   }
 
   Future<void> _startNewChat() async {
@@ -367,6 +422,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
       _showAgentStatusPanel = false;
       _lastAgentStatusKey = '';
       _lastAgentRunning = false;
+      _selectedMediaFiles.clear();
     });
     await _createNewSession();
     _addWelcomeMessage();
@@ -429,6 +485,22 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     if (descriptor != null) {
       await _runExplicitWorkflow(descriptor);
       return;
+    }
+
+    // 检测自然语言触发（Agent模式下）
+    if (_isAgentMode && descriptor == null) {
+      final workflows = _buildWorkflowDescriptors(l10n);
+      final triggeredId =
+          NaturalLanguageTriggerDetector.shouldAutoTrigger(trimmed, workflows);
+      if (triggeredId != null) {
+        final triggered = workflows.firstWhere(
+          (d) => d.id == triggeredId,
+          orElse: () => workflows.first,
+        );
+        logDebug('自然语言触发命令: ${triggered.command}');
+        // 可以选择自动触发或提示用户
+        // 这里我们可以添加用户提示或直接执行
+      }
     }
 
     if (_isAgentMode) {
@@ -713,6 +785,8 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   Future<void> _askBoundNote(String text) async {
     final l10n = AppLocalizations.of(context);
     final aiMsgId = _uuid.v4();
+
+    // 初始化AI回复消息，状态为thinking
     _appendMessage(
       app_chat.ChatMessage(
         id: aiMsgId,
@@ -721,6 +795,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
         role: 'assistant',
         timestamp: DateTime.now(),
         isLoading: true,
+        state: MessageState.thinking,
       ),
     );
 
@@ -728,24 +803,44 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     final history = _messages
         .where((m) => m.includedInContext && m.id != aiMsgId && !m.isLoading)
         .toList();
+
     _streamSubscription?.cancel();
+
+    // 使用流式订阅，支持实时更新 — 每个字符立即显示
     _streamSubscription = _aiService
         .streamAskQuestion(widget.quote!, text, history: history)
         .listen(
       (chunk) {
+        // 实时累积内容
         fullResponse += chunk;
-        _updateMessage(aiMsgId, fullResponse, isLoading: true);
-      },
-      onDone: () {
+
+        // 立即更新UI，无延迟
         _updateMessage(
           aiMsgId,
-          fullResponse.isNotEmpty ? fullResponse : l10n.aiMisunderstoodQuestion,
+          fullResponse,
+          isLoading: true,
+          state: MessageState.responding,
+        );
+      },
+      onDone: () {
+        // 完成：更新状态为complete
+        _updateMessage(
+          aiMsgId,
+          fullResponse.isNotEmpty
+              ? fullResponse
+              : l10n.aiMisunderstoodQuestion,
           isLoading: false,
+          state: MessageState.complete,
         );
       },
       onError: (error) {
-        _updateMessage(aiMsgId, l10n.aiResponseError(error.toString()),
-            isLoading: false);
+        // 错误处理：更新状态为error
+        _updateMessage(
+          aiMsgId,
+          l10n.aiResponseError(error.toString()),
+          isLoading: false,
+          state: MessageState.error,
+        );
       },
     );
   }
@@ -753,6 +848,8 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   Future<void> _askGeneralChat(String text) async {
     final l10n = AppLocalizations.of(context);
     final aiMsgId = _uuid.v4();
+
+    // 初始化AI回复消息，状态为thinking
     _appendMessage(
       app_chat.ChatMessage(
         id: aiMsgId,
@@ -761,6 +858,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
         role: 'assistant',
         timestamp: DateTime.now(),
         isLoading: true,
+        state: MessageState.thinking,
       ),
     );
 
@@ -768,7 +866,10 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     final history = _messages
         .where((m) => m.includedInContext && m.id != aiMsgId && !m.isLoading)
         .toList();
+
     _streamSubscription?.cancel();
+
+    // 使用流式订阅，支持实时更新 — 每个字符立即显示
     _streamSubscription = _aiService
         .streamGeneralConversation(
       text,
@@ -777,19 +878,36 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     )
         .listen(
       (chunk) {
+        // 实时累积内容
         fullResponse += chunk;
-        _updateMessage(aiMsgId, fullResponse, isLoading: true);
-      },
-      onDone: () {
+
+        // 立即更新UI，无延迟
         _updateMessage(
           aiMsgId,
-          fullResponse.isNotEmpty ? fullResponse : l10n.aiMisunderstoodQuestion,
+          fullResponse,
+          isLoading: true,
+          state: MessageState.responding,
+        );
+      },
+      onDone: () {
+        // 完成：更新状态为complete
+        _updateMessage(
+          aiMsgId,
+          fullResponse.isNotEmpty
+              ? fullResponse
+              : l10n.aiMisunderstoodQuestion,
           isLoading: false,
+          state: MessageState.complete,
         );
       },
       onError: (error) {
-        _updateMessage(aiMsgId, l10n.aiResponseError(error.toString()),
-            isLoading: false);
+        // 错误处理：更新状态为error
+        _updateMessage(
+          aiMsgId,
+          l10n.aiResponseError(error.toString()),
+          isLoading: false,
+          state: MessageState.error,
+        );
       },
     );
   }
@@ -975,6 +1093,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     String newContent, {
     required bool isLoading,
     String? metaJson,
+    app_chat.MessageState? state,
   }) {
     setState(() {
       final idx = _messages.indexWhere((m) => m.id == id);
@@ -984,6 +1103,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
         content: newContent,
         isLoading: isLoading,
         metaJson: metaJson,
+        state: state ?? oldMsg.state,
       );
       _messages[idx] = updatedMsg;
       if (!isLoading && _currentSessionId != null) {
@@ -1024,6 +1144,37 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     });
   }
 
+  /// 选择并附加媒体文件
+  Future<void> _pickAndAttachMedia() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        allowMultiple: true,
+        type: FileType.any,
+        onFileLoading: (FilePickerStatus status) {
+          // Optional: Handle loading state
+        },
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        setState(() {
+          _selectedMediaFiles.addAll(result.files);
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to pick files: $e')),
+      );
+    }
+  }
+
+  /// 移除已选择的媒体文件
+  void _removeMediaFile(int index) {
+    setState(() {
+      _selectedMediaFiles.removeAt(index);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -1044,7 +1195,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
           IconButton(
             icon: const Icon(Icons.history),
             tooltip: l10n.chatHistory,
-            onPressed: _showSessionHistory,
+            onPressed: _isLoading ? null : _showSessionHistory,
           ),
         ],
       ),
@@ -1073,29 +1224,8 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   }
 
   Widget _buildExploreGuideBanner(ThemeData theme, AppLocalizations l10n) {
-    // Just show the stats summary as context, not the full welcome message
-    // The welcome message is already shown in chat messages
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      color: theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
-      child: Row(
-        children: [
-          Icon(Icons.analytics_outlined,
-              size: 16, color: theme.colorScheme.primary),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              l10n.dataOverview,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+    // Removed DataOverview banner - user guidance moved to welcome message only
+    return const SizedBox.shrink();
   }
 
   Widget _buildNoteContextBanner(ThemeData theme) {
@@ -1241,18 +1371,45 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
       child: Column(
         crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
-          // Sender Label
+          // Sender Label with Timestamp
           Padding(
             padding: const EdgeInsets.only(bottom: 4, left: 4, right: 4),
-            child: Text(
-              isUser ? l10n.meUser : l10n.aiAssistantUser,
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w500,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment:
+                  isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+              children: [
+                Text(
+                  isUser ? l10n.meUser : l10n.aiAssistantUser,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _formatTime(message.timestamp),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
             ),
           ),
-          // Bubble
+          // 思考内容显示（仅当有思考且非用户消息时）
+          if (!isUser &&
+              message.thinkingChunks.isNotEmpty &&
+              message.thinkingChunks.join('').isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: ThinkingWidget(
+                key: ValueKey('thinking_${message.id}'),
+                thinkingText: message.thinkingChunks.join(''),
+                inProgress: message.state == MessageState.thinking,
+                accentColor: theme.colorScheme.primary,
+              ),
+            ),
+          // Main Content Bubble
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
@@ -1268,7 +1425,9 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                     ),
                   )
                 : MarkdownBody(
-                    data: message.content,
+                    data: message.content.isEmpty
+                        ? l10n.thinkingInProgress
+                        : message.content,
                     selectable: true,
                     styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
                       p: theme.textTheme.bodyMedium?.copyWith(
@@ -1293,6 +1452,21 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
         ],
       ),
     );
+  }
+
+  /// 格式化时间显示
+  String _formatTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final messageDay = DateTime(dateTime.year, dateTime.month, dateTime.day);
+
+    if (messageDay == today) {
+      return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+    } else if (messageDay == today.subtract(const Duration(days: 1))) {
+      return '昨天 ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+    } else {
+      return '${messageDay.month.toString().padLeft(2, '0')}-${messageDay.day.toString().padLeft(2, '0')} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+    }
   }
 
   Map<String, String> _buildInsightTypeLabels(AppLocalizations l10n) {
@@ -1646,42 +1820,251 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                           key: ValueKey('slash_commands_hidden'),
                         ),
             ),
+            // Display selected media files
+            if (_selectedMediaFiles.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: SizedBox(
+                  height: 60,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _selectedMediaFiles.length,
+                    itemBuilder: (context, index) {
+                      final file = _selectedMediaFiles[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.surfaceContainerLow,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: theme.colorScheme.outline.withValues(
+                                alpha: 0.3,
+                              ),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Flexible(
+                                child: Column(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.center,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      file.name,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style:
+                                          theme.textTheme.labelSmall?.copyWith(
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                    Text(
+                                      '${(file.size / 1024).toStringAsFixed(1)} KB',
+                                      style: theme.textTheme.labelSmall?.copyWith(
+                                        color: theme.colorScheme.onSurfaceVariant,
+                                        fontSize: 10,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              InkWell(
+                                onTap: () => _removeMediaFile(index),
+                                child: Icon(
+                                  Icons.close,
+                                  size: 16,
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
             Row(
               children: [
-                Expanded(
-                  child: TextField(
-                    controller: _textController,
-                    focusNode: _inputFocusNode,
-                    decoration: InputDecoration(
-                      hintText: l10n.aiAssistantInputHint,
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(
-                          color:
-                              theme.colorScheme.outline.withValues(alpha: 0.45),
-                        ),
+                // Add media button
+                Container(
+                  decoration: BoxDecoration(
+                    color: _isLoading
+                        ? theme.colorScheme.surfaceContainerHigh
+                        : theme.colorScheme.primaryContainer,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.12),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide(
-                          color: theme.colorScheme.primary,
-                          width: 1.5,
-                        ),
-                      ),
-                      filled: true,
-                      fillColor: theme.colorScheme.surfaceContainerLow,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 10,
-                      ),
+                    ],
+                  ),
+                  child: IconButton(
+                    icon: Icon(
+                      Icons.add,
+                      color: _isLoading
+                          ? theme.colorScheme.onSurfaceVariant
+                          : theme.colorScheme.onPrimaryContainer,
                     ),
-                    maxLines: null,
-                    minLines: 1,
-                    textInputAction: TextInputAction.send,
-                    onSubmitted: _handleSubmitted,
+                    tooltip: 'Add media',
+                    onPressed: _isLoading ? null : _pickAndAttachMedia,
+                    iconSize: 20,
                   ),
                 ),
                 const SizedBox(width: 8),
+                // Mode indicator/switch button
+                Expanded(
+                  child: Container(
+                    height: 40,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerLow,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: theme.colorScheme.outline.withValues(
+                          alpha: 0.3,
+                        ),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        PopupMenuButton<AIAssistantPageMode>(
+                          constraints: const BoxConstraints(minWidth: 160),
+                          onSelected: (mode) => _setMode(mode),
+                          itemBuilder: (context) {
+                            return [
+                              PopupMenuItem(
+                                value: _entryConfig.defaultMode,
+                                enabled: _entryConfig
+                                    .allowsMode(_entryConfig.defaultMode),
+                                child: Row(
+                                  children: [
+                                    if (_currentMode ==
+                                        _entryConfig.defaultMode)
+                                      Icon(
+                                        Icons.check_circle,
+                                        size: 18,
+                                        color: theme.colorScheme.primary,
+                                      )
+                                    else
+                                      const SizedBox(width: 18),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      _entryConfig.defaultMode ==
+                                              AIAssistantPageMode.chat
+                                          ? l10n.aiModeChat
+                                          : l10n.aiModeChat,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              if (_entryConfig
+                                  .allowsMode(AIAssistantPageMode.agent))
+                                PopupMenuItem(
+                                  value: AIAssistantPageMode.agent,
+                                  child: Row(
+                                    children: [
+                                      if (_currentMode ==
+                                          AIAssistantPageMode.agent)
+                                        Icon(
+                                          Icons.check_circle,
+                                          size: 18,
+                                          color: theme.colorScheme.primary,
+                                        )
+                                      else
+                                        const SizedBox(width: 18),
+                                      const SizedBox(width: 8),
+                                      Text(l10n.aiModeAgent),
+                                    ],
+                                  ),
+                                ),
+                            ];
+                          },
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _isAgentMode
+                                    ? Icons.smart_toy_outlined
+                                    : Icons.chat_outlined,
+                                size: 18,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text(
+                                  _isAgentMode
+                                      ? l10n.aiModeAgent
+                                      : l10n.aiModeChat,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: theme.textTheme.labelMedium?.copyWith(
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Icon(
+                                Icons.expand_more,
+                                size: 16,
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Thinking toggle button (if supported)
+                if (_currentModelSupportsThinking)
+                  Container(
+                    decoration: BoxDecoration(
+                      color: _enableThinking
+                          ? theme.colorScheme.secondaryContainer
+                          : theme.colorScheme.surfaceContainerHigh,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.12),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: IconButton(
+                      icon: Icon(
+                        _enableThinking
+                            ? Icons.psychology
+                            : Icons.psychology_outlined,
+                        color: _enableThinking
+                            ? theme.colorScheme.onSecondaryContainer
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                      tooltip: l10n.aiThinking,
+                      onPressed: () {
+                        setState(() {
+                          _enableThinking = !_enableThinking;
+                        });
+                      },
+                      iconSize: 20,
+                    ),
+                  ),
+                const SizedBox(width: 8),
+                // Send button
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 160),
                   decoration: BoxDecoration(
@@ -1705,10 +2088,49 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                     tooltip: _isLoading ? l10n.stopGenerate : l10n.confirm,
                     onPressed: _isLoading
                         ? _stopGenerating
-                        : () => _handleSubmitted(_textController.text),
+                        : () {
+                            if (_textController.text.trim().isNotEmpty) {
+                              _handleSubmitted(_textController.text);
+                            }
+                          },
+                    iconSize: 20,
                   ),
                 ),
               ],
+            ),
+            // Text input field
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: TextField(
+                controller: _textController,
+                focusNode: _inputFocusNode,
+                decoration: InputDecoration(
+                  hintText: l10n.aiAssistantInputHint,
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(
+                      color: theme.colorScheme.outline.withValues(alpha: 0.45),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide(
+                      color: theme.colorScheme.primary,
+                      width: 1.5,
+                    ),
+                  ),
+                  filled: true,
+                  fillColor: theme.colorScheme.surfaceContainerLow,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                ),
+                maxLines: null,
+                minLines: 1,
+                textInputAction: TextInputAction.send,
+                onSubmitted: _handleSubmitted,
+              ),
             ),
           ],
         ),
@@ -1717,75 +2139,9 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   }
 
   Widget _buildModeSwitch(ThemeData theme, AppLocalizations l10n) {
-    final chips = <Widget>[
-      ChoiceChip(
-        key: const ValueKey('ai_mode_chat_button'),
-        label: Text(l10n.aiModeChat),
-        selected: _currentMode != AIAssistantPageMode.agent,
-        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        visualDensity: VisualDensity.compact,
-        onSelected: (_) => _setMode(_entryConfig.defaultMode),
-      ),
-      ChoiceChip(
-        key: const ValueKey('ai_mode_agent_button'),
-        label: Text(l10n.aiModeAgent),
-        selected: _currentMode == AIAssistantPageMode.agent,
-        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        visualDensity: VisualDensity.compact,
-        onSelected: (_) => _setMode(AIAssistantPageMode.agent),
-      ),
-      if (_currentModelSupportsThinking)
-        FilterChip(
-          key: const ValueKey('ai_thinking_toggle'),
-          label: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                _enableThinking ? Icons.psychology : Icons.psychology_outlined,
-                size: 16,
-                color: _enableThinking
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: 4),
-              Text(l10n.aiThinking),
-            ],
-          ),
-          selected: _enableThinking,
-          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          visualDensity: VisualDensity.compact,
-          onSelected: (value) {
-            setState(() {
-              _enableThinking = value;
-            });
-          },
-          showCheckmark: false,
-        ),
-    ];
-
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          if (constraints.maxWidth < 360) {
-            return SizedBox(
-              height: 40,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: chips.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 8),
-                itemBuilder: (context, index) => Center(child: chips[index]),
-              ),
-            );
-          }
-          return Wrap(
-            spacing: 8,
-            runSpacing: 6,
-            children: chips,
-          );
-        },
-      ),
-    );
+    // Simplified mode indicator in the input area header
+    // The main mode switching is done via dropdown in action buttons
+    return const SizedBox.shrink();
   }
 }
 
