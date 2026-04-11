@@ -150,80 +150,88 @@ class _ToolProgressPanelState extends State<ToolProgressPanel>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final iconColor = widget.accentColor ?? theme.colorScheme.primary;
+    final backgroundColor = theme.colorScheme.surfaceContainerHigh;
 
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(12),
+        color: backgroundColor,
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.zero,
+          topRight: Radius.circular(24),
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 可点击的头部
+          // Header Row
           InkWell(
             onTap: _toggleExpanded,
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.zero,
+              topRight: Radius.circular(24),
+              bottomLeft: Radius.circular(24),
+              bottomRight: Radius.circular(24),
+            ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  // 进度指示器或完成图标
-                  if (widget.inProgress)
-                    SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        valueColor: AlwaysStoppedAnimation<Color>(iconColor),
-                      ),
-                    )
-                  else
-                    Icon(
-                      widget.doneIcon ?? Icons.check_circle,
-                      size: 20,
-                      color: iconColor,
+                  // Progress indicator or done icon
+                  SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: Center(
+                      child: widget.inProgress
+                          ? SizedBox(
+                              width: 16,
+                              height: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.0,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            )
+                          : Icon(
+                              widget.doneIcon ?? Icons.check_circle_outline,
+                              size: 24,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
                     ),
+                  ),
                   const SizedBox(width: 12),
-                  // 标题（动画切换）
+                  // Title
                   Expanded(
                     child: AnimatedSwitcher(
                       duration: const Duration(milliseconds: 250),
-                      transitionBuilder: (child, animation) {
-                        return FadeTransition(
-                          opacity: animation,
-                          child: child,
-                        );
-                      },
                       child: Text(
                         _getDisplayTitle(context),
                         key: ValueKey(widget.inProgress),
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: iconColor,
-                          fontWeight: FontWeight.w500,
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          color: theme.colorScheme.onSurface,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
                   ),
-                  // 展开/折叠图标
-                  RotationTransition(
-                    turns: Tween(begin: 0.0, end: 0.5)
-                        .animate(_rotationController),
-                    child: Icon(
-                      Icons.keyboard_arrow_down,
-                      size: 20,
-                      color: iconColor,
-                    ),
+                  // Expand/Collapse Icon
+                  Icon(
+                    _isExpanded
+                        ? Icons.keyboard_arrow_up
+                        : Icons.keyboard_arrow_down,
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ],
               ),
             ),
           ),
-          // 工具调用列表（可展开/折叠）
+          // Collapsable Content
           AnimatedSize(
             duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
+            curve: Curves.easeInOutCubic,
             child: _isExpanded
                 ? Padding(
                     padding: const EdgeInsets.only(
@@ -247,57 +255,34 @@ class _ToolProgressPanelState extends State<ToolProgressPanel>
 
   Widget _buildToolItem(BuildContext context, ToolProgressItem item) {
     final theme = Theme.of(context);
-    final iconColor = widget.accentColor ?? theme.colorScheme.primary;
+    final itemBackgroundColor = theme.colorScheme.surfaceContainerLow;
 
-    // 根据状态选择图标和颜色
-    IconData statusIcon;
-    Color statusColor;
-    switch (item.status) {
-      case ToolProgressStatus.pending:
-        statusIcon = Icons.schedule;
-        statusColor = theme.colorScheme.outline;
-        break;
-      case ToolProgressStatus.running:
-        statusIcon = Icons.sync;
-        statusColor = iconColor;
-        break;
-      case ToolProgressStatus.completed:
-        statusIcon = Icons.check_circle_outline;
-        statusColor = theme.colorScheme.tertiary;
-        break;
-      case ToolProgressStatus.failed:
-        statusIcon = Icons.error_outline;
-        statusColor = theme.colorScheme.error;
-        break;
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: itemBackgroundColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 状态指示器
+          // Dot
           Container(
-            width: 24,
-            height: 24,
-            margin: const EdgeInsets.only(right: 12),
-            child: item.status == ToolProgressStatus.running
-                ? CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(statusColor),
-                  )
-                : Icon(
-                    statusIcon,
-                    size: 18,
-                    color: statusColor,
-                  ),
+            margin: const EdgeInsets.only(top: 4, right: 12),
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: theme.colorScheme.secondaryContainer,
+            ),
           ),
-          // 工具信息
+          // Content
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 工具名称
+                // Title
                 Text(
                   item.toolName,
                   style: theme.textTheme.labelMedium?.copyWith(
@@ -305,43 +290,31 @@ class _ToolProgressPanelState extends State<ToolProgressPanel>
                     color: theme.colorScheme.onSurface,
                   ),
                 ),
-                // 描述或参数摘要
+                // Description
                 if (item.description != null && item.description!.isNotEmpty)
                   Padding(
-                    padding: const EdgeInsets.only(top: 4),
+                    padding: const EdgeInsets.only(top: 2),
                     child: Text(
                       item.description!,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
-                        height: 1.4,
                       ),
-                      maxLines: 2,
+                      maxLines: 5,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                // 结果摘要
+                // Result
                 if (item.result != null && item.result!.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
+                    child: Text(
+                      item.result!,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontFamily: 'monospace',
                       ),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceContainerHighest,
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        item.result!,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                          fontFamily: 'monospace',
-                          height: 1.3,
-                        ),
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      maxLines: 5,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
               ],

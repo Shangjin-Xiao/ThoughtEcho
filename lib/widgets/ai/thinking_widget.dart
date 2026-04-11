@@ -83,66 +83,37 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
-    final lineColor =
-        widget.accentColor ?? theme.colorScheme.primary.withValues(alpha: 0.3);
-    final iconColor = widget.accentColor ?? theme.colorScheme.primary;
 
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      width: double.infinity,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // 标题栏（可点击切换展开）
           InkWell(
             onTap: _toggleExpanded,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(4),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: 4),
               child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  // 思考图标
-                  Icon(
+                  Text(
                     widget.inProgress
-                        ? Icons.psychology_outlined
-                        : Icons.lightbulb_outline,
-                    size: 20,
-                    color: iconColor,
-                  ),
-                  const SizedBox(width: 8),
-                  // 标题文字
-                  Expanded(
-                    child: Text(
-                      widget.inProgress
-                          ? l10n.aiThinking
-                          : (_isExpanded
-                              ? l10n.hideThinking
-                              : l10n.showThinking),
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: iconColor,
-                        fontWeight: FontWeight.w500,
-                      ),
+                        ? l10n.aiThinking
+                        : (_isExpanded
+                            ? l10n.hideThinking
+                            : l10n.showThinking),
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                  // 进行中指示器或展开/折叠图标
-                  if (widget.inProgress)
-                    SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(iconColor),
-                      ),
-                    )
-                  else
-                    RotationTransition(
-                      turns: Tween(begin: 0.0, end: 0.5)
-                          .animate(_rotationController),
-                      child: Icon(
-                        Icons.keyboard_arrow_down,
-                        size: 20,
-                        color: iconColor,
-                      ),
-                    ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    _isExpanded ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+                    size: 24,
+                  ),
                 ],
               ),
             ),
@@ -150,30 +121,36 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
           // 思考内容区域（可展开/折叠）
           AnimatedSize(
             duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
+            curve: Curves.easeInOutCubic,
             child: _isExpanded
-                ? Container(
-                    margin: const EdgeInsets.only(left: 12, top: 8),
-                    padding: const EdgeInsets.only(left: 16, right: 12),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        left: BorderSide(
-                          color: lineColor,
-                          width: 3,
+                ? Padding(
+                    padding: const EdgeInsets.only(
+                      top: 8,
+                      bottom: 4,
+                      left: 8,
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.only(left: 12),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          left: BorderSide(
+                            color: theme.colorScheme.outlineVariant,
+                            width: 2,
+                          ),
                         ),
                       ),
-                    ),
-                    child: MarkdownBody(
-                      data: widget.thinkingText,
-                      styleSheet: MarkdownStyleSheet(
-                        p: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                          height: 1.5,
-                        ),
-                        code: theme.textTheme.bodySmall?.copyWith(
-                          fontFamily: 'monospace',
-                          backgroundColor:
-                              theme.colorScheme.surfaceContainerHighest,
+                      child: MarkdownBody(
+                        data: widget.thinkingText,
+                        styleSheet: MarkdownStyleSheet(
+                          p: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                            height: 1.5,
+                          ),
+                          code: theme.textTheme.bodySmall?.copyWith(
+                            fontFamily: 'monospace',
+                            backgroundColor:
+                                theme.colorScheme.surfaceContainerHighest,
+                          ),
                         ),
                       ),
                     ),

@@ -78,8 +78,6 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   String _lastAgentStatusKey = '';
   bool _lastAgentRunning = false;
   Timer? _agentStatusDismissTimer;
-  static const Duration _agentStatusDismissDuration =
-      Duration(milliseconds: 1400);
   static final RegExp _agentCodeBlockPattern = RegExp(
     r'```([a-zA-Z0-9_-]+)\s*([\s\S]*?)```',
   );
@@ -1222,112 +1220,76 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
 
     final isUser = message.isUser;
     final isDark = theme.brightness == Brightness.dark;
-    final maxBubbleWidth = MediaQuery.of(context).size.width * 0.8;
-    final userBubbleColor = isDark
-        ? Color.alphaBlend(
-            theme.colorScheme.primary.withValues(alpha: 0.28),
-            theme.colorScheme.surfaceContainerHigh,
-          )
-        : theme.colorScheme.primaryContainer.withValues(alpha: 0.95);
-    final assistantBubbleColor = isDark
-        ? theme.colorScheme.surfaceContainerHigh
-        : theme.colorScheme.surfaceContainerLowest;
-    final bubbleColor = isUser ? userBubbleColor : assistantBubbleColor;
-    final bubbleTextColor = isUser
-        ? (isDark
-            ? theme.colorScheme.onSurface
-            : theme.colorScheme.onPrimaryContainer)
-        : theme.colorScheme.onSurface;
-    final bubbleBorderColor = isUser
-        ? theme.colorScheme.primary.withValues(alpha: isDark ? 0.38 : 0.24)
-        : theme.colorScheme.outlineVariant
-            .withValues(alpha: isDark ? 0.5 : 0.8);
+    
+    // Colors from AI Gallery Theme.kt
+    final userBubbleColor = isDark ? const Color(0xFF1f3760) : const Color(0xFF32628D);
+    final agentBubbleColor = isDark ? const Color(0xFF1b1c1d) : const Color(0xFFe9eef6);
+    final bubbleColor = isUser ? userBubbleColor : agentBubbleColor;
+    
+    final bubbleTextColor = isUser ? Colors.white : theme.colorScheme.onSurface;
+    
+    final bubbleRadius = const Radius.circular(24);
+    final borderRadius = BorderRadius.only(
+      topLeft: isUser ? bubbleRadius : Radius.zero,
+      topRight: isUser ? Radius.zero : bubbleRadius,
+      bottomLeft: bubbleRadius,
+      bottomRight: bubbleRadius,
+    );
 
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment:
-            isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+      child: Column(
+        crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
-          if (!isUser) ...[
-            CircleAvatar(
-              radius: 15,
-              backgroundColor: theme.colorScheme.primaryContainer,
-              child: Icon(
-                Icons.smart_toy,
-                color: theme.colorScheme.onPrimaryContainer,
-                size: 16,
-              ),
-            ),
-            const SizedBox(width: 6),
-          ],
-          Flexible(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: maxBubbleWidth),
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-                decoration: BoxDecoration(
-                  color: bubbleColor,
-                  borderRadius: BorderRadius.circular(18).copyWith(
-                    bottomRight: isUser ? const Radius.circular(6) : null,
-                    bottomLeft: !isUser ? const Radius.circular(6) : null,
-                  ),
-                  border: Border.all(color: bubbleBorderColor, width: 1),
-                  boxShadow: [
-                    BoxShadow(
-                      color:
-                          Colors.black.withValues(alpha: isDark ? 0.16 : 0.06),
-                      blurRadius: 10,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
-                ),
-                child: isUser
-                    ? Text(
-                        message.content,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: bubbleTextColor,
-                          height: 1.4,
-                        ),
-                      )
-                    : MarkdownBody(
-                        data: message.content,
-                        selectable: true,
-                        styleSheet:
-                            MarkdownStyleSheet.fromTheme(theme).copyWith(
-                          p: theme.textTheme.bodyMedium?.copyWith(
-                            color: bubbleTextColor,
-                            height: 1.45,
-                          ),
-                          listBullet: theme.textTheme.bodyMedium?.copyWith(
-                            color: bubbleTextColor,
-                          ),
-                          code: theme.textTheme.bodySmall?.copyWith(
-                            color: bubbleTextColor,
-                            fontFamily: 'monospace',
-                            backgroundColor: theme
-                                .colorScheme.surfaceContainerHighest
-                                .withValues(alpha: 0.65),
-                          ),
-                        ),
-                      ),
+          // Sender Label
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4, left: 4, right: 4),
+            child: Text(
+              isUser ? l10n.meUser : l10n.aiAssistantUser,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w500,
+                color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
           ),
-          if (isUser) ...[
-            const SizedBox(width: 6),
-            CircleAvatar(
-              radius: 15,
-              backgroundColor: theme.colorScheme.secondaryContainer,
-              child: Icon(
-                Icons.person,
-                color: theme.colorScheme.onSecondaryContainer,
-                size: 16,
-              ),
+          // Bubble
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: bubbleColor,
+              borderRadius: borderRadius,
             ),
-          ],
+            child: isUser
+                ? Text(
+                    message.content,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: bubbleTextColor,
+                      height: 1.5,
+                    ),
+                  )
+                : MarkdownBody(
+                    data: message.content,
+                    selectable: true,
+                    styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
+                      p: theme.textTheme.bodyMedium?.copyWith(
+                        color: bubbleTextColor,
+                        height: 1.6,
+                      ),
+                      listBullet: theme.textTheme.bodyMedium?.copyWith(
+                        color: bubbleTextColor,
+                      ),
+                      code: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontFamily: 'monospace',
+                        backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                      ),
+                      codeblockDecoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+          ),
         ],
       ),
     );
@@ -1367,22 +1329,6 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
       statusKey: _agentService.currentStatusKey,
       l10n: l10n,
     );
-  }
-
-  void _scheduleAgentStatusDismiss() {
-    _agentStatusDismissTimer?.cancel();
-    _agentStatusDismissTimer = Timer(_agentStatusDismissDuration, () {
-      if (!mounted || _lastAgentRunning) {
-        return;
-      }
-      setState(() {
-        _showAgentStatusPanel = false;
-        _thinkingText = '';
-        _isThinking = false;
-        _toolProgressItems.clear();
-        _isToolInProgress = false;
-      });
-    });
   }
 
   String _resolveAgentStatusText(String statusKey, AppLocalizations l10n) {
@@ -1502,7 +1448,9 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     }
 
     if (!isRunning && nextTools.isNotEmpty) {
-      _scheduleAgentStatusDismiss();
+      // Intentionally not dismissing the status panel automatically so users can 
+      // see the tool calling process (Agent execution path) after generation completes.
+      // _scheduleAgentStatusDismiss();
     }
   }
 
@@ -1513,6 +1461,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
 
     final statusText = _resolveAgentStatusText(_lastAgentStatusKey, l10n);
     final children = <Widget>[];
+    
     if (_enableThinking &&
         _currentModelSupportsThinking &&
         _thinkingText.isNotEmpty) {
@@ -1525,6 +1474,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
         ),
       );
     }
+    
     if (_toolProgressItems.isNotEmpty) {
       children.add(
         ToolProgressPanel(
@@ -1538,33 +1488,38 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     }
 
     if (children.isEmpty && _lastAgentRunning && statusText.isNotEmpty) {
+      final isDark = theme.brightness == Brightness.dark;
+      final agentBubbleColor = isDark ? const Color(0xFF1b1c1d) : const Color(0xFFe9eef6);
+      
       children.add(
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          margin: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerHigh,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.6),
+            color: agentBubbleColor,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.zero,
+              topRight: Radius.circular(24),
+              bottomLeft: Radius.circular(24),
+              bottomRight: Radius.circular(24),
             ),
           ),
           child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               SizedBox(
                 width: 16,
                 height: 16,
                 child: CircularProgressIndicator(
                   strokeWidth: 2,
-                  color: theme.colorScheme.primary,
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  statusText,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
+              const SizedBox(width: 12),
+              Text(
+                statusText,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
             ],
@@ -1585,13 +1540,26 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
         key: ValueKey<String>(
           'agent-status-$_lastAgentRunning-${_toolProgressItems.length}-${_thinkingText.isNotEmpty}',
         ),
-        padding: const EdgeInsets.fromLTRB(10, 2, 10, 2),
+        padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
         child: AnimatedSize(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOutCubic,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: children,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Sender Label
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4, left: 4, right: 4),
+                child: Text(
+                  l10n.aiAssistantUser,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              ...children,
+            ],
           ),
         ),
       ),
