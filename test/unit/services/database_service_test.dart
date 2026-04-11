@@ -2,6 +2,7 @@
 library;
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:thoughtecho/services/database_schema_manager.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/models/note_category.dart';
@@ -33,6 +34,13 @@ void main() {
 
       expect(category.id, equals('test-id'));
       expect(category.name, equals('测试分类'));
+    });
+
+    test('should keep database version in sync with schema migrations', () {
+      expect(
+        DatabaseService.databaseVersion,
+        equals(DatabaseSchemaManager.schemaVersion),
+      );
     });
   });
 }

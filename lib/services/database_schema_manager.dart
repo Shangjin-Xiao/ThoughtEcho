@@ -8,6 +8,8 @@ import '../utils/time_utils.dart';
 import 'media_reference_service.dart';
 
 class DatabaseSchemaManager {
+  static const int schemaVersion = 20;
+
   @visibleForTesting
   static const Set<String> requiredTablesForValidation = {
     'quotes',
@@ -29,7 +31,7 @@ class DatabaseSchemaManager {
   Future<Database> _initDatabase(String path) async {
     return await openDatabase(
       path,
-      version: 20, // 版本号升级至20，添加poi_name + chat_sessions + chat_messages
+      version: schemaVersion,
       onCreate: (db, version) async {
         await createTables(db);
       },
@@ -762,8 +764,7 @@ class DatabaseSchemaManager {
       );
       final tableNames = tables.map((t) => t['name'] as String).toSet();
 
-      final missingTables =
-          requiredTablesForValidation.difference(tableNames);
+      final missingTables = requiredTablesForValidation.difference(tableNames);
 
       if (missingTables.isNotEmpty) {
         throw Exception('升级后缺少必要的表: $missingTables');

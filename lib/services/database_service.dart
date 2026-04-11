@@ -620,7 +620,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   Future<Database> _initDatabase(String path) async {
     return await openDatabase(
       path,
-      version: 19, // 版本号升级至19，添加latitude/longitude字段支持离线位置存储
+      version: DatabaseService.databaseVersion,
       onCreate: (db, version) async {
         await _schemaManager.createTables(db);
       },
@@ -910,6 +910,9 @@ class DatabaseService extends _DatabaseServiceBase
   static const String defaultCategoryIdJoke = 'default_joke';
   static const String hiddenTagId = 'system_hidden_tag';
   static const String hiddenTagIconName = '🔒';
+
+  @visibleForTesting
+  static const int databaseVersion = DatabaseSchemaManager.schemaVersion;
 
   static Database? get rawDatabaseInstance => _DatabaseServiceBase._database;
 
