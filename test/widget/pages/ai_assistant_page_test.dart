@@ -219,6 +219,14 @@ Future<void> _submitInput(WidgetTester tester, String text) async {
   await tester.pumpAndSettle();
 }
 
+AppLocalizations _l10n(WidgetTester tester) {
+  return AppLocalizations.of(tester.element(find.byType(AIAssistantPage)))!;
+}
+
+Finder _modePopupFinder() {
+  return find.byType(PopupMenuButton<AIAssistantPageMode>);
+}
+
 void main() {
   group('AIAssistantPage', () {
     late SettingsService settingsService;
@@ -248,15 +256,15 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final chatChip = tester.widget<ChoiceChip>(
-        find.byKey(const ValueKey('ai_mode_chat_button')),
+      final l10n = _l10n(tester);
+      expect(_modePopupFinder(), findsOneWidget);
+      expect(
+        find.descendant(
+          of: _modePopupFinder(),
+          matching: find.text(l10n.aiModeChat),
+        ),
+        findsOneWidget,
       );
-      final agentChip = tester.widget<ChoiceChip>(
-        find.byKey(const ValueKey('ai_mode_agent_button')),
-      );
-
-      expect(chatChip.selected, isTrue);
-      expect(agentChip.selected, isFalse);
       expect(find.widgetWithText(ActionChip, '/润色'), findsNothing);
     });
 
@@ -275,16 +283,16 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      final chatChip = tester.widget<ChoiceChip>(
-        find.byKey(const ValueKey('ai_mode_chat_button')),
+      final l10n = _l10n(tester);
+      expect(_modePopupFinder(), findsOneWidget);
+      expect(
+        find.descendant(
+          of: _modePopupFinder(),
+          matching: find.text(l10n.aiModeChat),
+        ),
+        findsOneWidget,
       );
-      final agentChip = tester.widget<ChoiceChip>(
-        find.byKey(const ValueKey('ai_mode_agent_button')),
-      );
-
-      expect(chatChip.selected, isTrue);
-      expect(agentChip.selected, isFalse);
-      expect(find.textContaining('当前笔记上下文'), findsOneWidget);
+      expect(find.textContaining(l10n.currentNoteContext), findsOneWidget);
     });
 
     testWidgets('remembered mode is isolated between explore and note entry',
@@ -308,13 +316,14 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      final l10n = _l10n(tester);
+      expect(_modePopupFinder(), findsOneWidget);
       expect(
-        tester
-            .widget<ChoiceChip>(
-              find.byKey(const ValueKey('ai_mode_agent_button')),
-            )
-            .selected,
-        isTrue,
+        find.descendant(
+          of: _modePopupFinder(),
+          matching: find.text(l10n.aiModeAgent),
+        ),
+        findsOneWidget,
       );
 
       await tester.pumpWidget(
@@ -330,21 +339,14 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      final noteL10n = _l10n(tester);
+      expect(_modePopupFinder(), findsOneWidget);
       expect(
-        tester
-            .widget<ChoiceChip>(
-              find.byKey(const ValueKey('ai_mode_chat_button')),
-            )
-            .selected,
-        isTrue,
-      );
-      expect(
-        tester
-            .widget<ChoiceChip>(
-              find.byKey(const ValueKey('ai_mode_agent_button')),
-            )
-            .selected,
-        isFalse,
+        find.descendant(
+          of: _modePopupFinder(),
+          matching: find.text(noteL10n.aiModeChat),
+        ),
+        findsOneWidget,
       );
     });
 
@@ -362,9 +364,11 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      expect(find.byKey(const ValueKey('slash_commands_hidden')), findsOneWidget);
       expect(find.widgetWithText(ActionChip, '/润色'), findsNothing);
       await tester.enterText(find.byType(TextField), '/');
       await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('slash_commands_visible')), findsOneWidget);
       expect(find.widgetWithText(ActionChip, '/润色'), findsOneWidget);
       expect(find.widgetWithText(ActionChip, '/续写'), findsOneWidget);
       expect(find.widgetWithText(ActionChip, '/深度分析'), findsOneWidget);
@@ -387,6 +391,7 @@ void main() {
       await tester.enterText(find.byType(TextField), '/分');
       await tester.pumpAndSettle();
 
+      expect(find.byKey(const ValueKey('slash_commands_visible')), findsOneWidget);
       expect(find.widgetWithText(ActionChip, '/分析来源'), findsOneWidget);
       expect(find.widgetWithText(ActionChip, '/润色'), findsNothing);
       expect(find.widgetWithText(ActionChip, '/续写'), findsNothing);
@@ -479,13 +484,21 @@ void main() {
       );
       tester.widget<IconButton>(sendButtonFinder).onPressed?.call();
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 60));
+      await tester.pump(const Duration(milliseconds: 20));
 
       expect(find.text('...'), findsNothing);
-      expect(find.byType(ToolProgressPanel), findsOneWidget);
+      expect(find.byType(ToolProgressPanel), findsWidgets);
 
-      await tester.pump(const Duration(milliseconds: 1800));
-      expect(find.byType(ToolProgressPanel), findsNothing);
+      await tester.pump(const Duration(milliseconds: 500));
+      final l10n = _l10n(tester);
+      final completedHeaderFinder =
+          find.textContaining(l10n.executedNOperations(1));
+      expect(completedHeaderFinder, findsOneWidget);
+      final completedPanelFinder = find.ancestor(
+        of: completedHeaderFinder,
+        matching: find.byType(ToolProgressPanel),
+      );
+      expect(completedPanelFinder, findsWidgets);
     });
 
     testWidgets('agent structured smart result renders apply card',

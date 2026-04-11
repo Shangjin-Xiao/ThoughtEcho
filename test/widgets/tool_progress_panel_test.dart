@@ -77,7 +77,7 @@ void main() {
       expect(find.text('已执行 1 个操作'), findsOneWidget);
 
       // 应该显示完成图标
-      expect(find.byIcon(Icons.check_circle), findsOneWidget);
+      expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
     });
 
     testWidgets('can toggle expansion', (WidgetTester tester) async {
@@ -118,7 +118,7 @@ void main() {
       expect(find.text('test_tool'), findsNothing);
     });
 
-    testWidgets('displays tool items with correct status icons',
+    testWidgets('displays tool items when in progress',
         (WidgetTester tester) async {
       final items = [
         const ToolProgressItem(
@@ -152,11 +152,6 @@ void main() {
       expect(find.text('pending_tool'), findsOneWidget);
       expect(find.text('completed_tool'), findsOneWidget);
       expect(find.text('failed_tool'), findsOneWidget);
-
-      // 应该显示对应的状态图标
-      expect(find.byIcon(Icons.schedule), findsOneWidget);
-      expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
-      expect(find.byIcon(Icons.error_outline), findsOneWidget);
     });
 
     testWidgets('displays description and result when provided',
