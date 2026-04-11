@@ -1559,9 +1559,11 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     final isUser = message.isUser;
     final isDark = theme.brightness == Brightness.dark;
 
-    // Colors from AI Gallery Theme.kt
-    final userBubbleColor = isDark ? const Color(0xFF1f3760) : const Color(0xFF32628D);
-    final agentBubbleColor = isDark ? const Color(0xFF1b1c1d) : const Color(0xFFe9eef6);
+    // Material 3颜色优化：使用主题colorScheme替代硬编码色值
+    // 用户气泡：使用primary color
+    // Agent气泡：使用surfaceContainerHigh
+    final userBubbleColor = theme.colorScheme.primary;
+    final agentBubbleColor = theme.colorScheme.surfaceContainerHigh;
     final bubbleColor = isUser ? userBubbleColor : agentBubbleColor;
 
     final bubbleTextColor = isUser ? Colors.white : theme.colorScheme.onSurface;
@@ -1618,7 +1620,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
             ),
           // Main Content Bubble
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: bubbleColor,
               borderRadius: borderRadius,
