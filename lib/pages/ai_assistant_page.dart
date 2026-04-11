@@ -29,6 +29,7 @@ import '../widgets/ai/thinking_widget.dart';
 import '../widgets/ai/tool_progress_panel.dart';
 import '../widgets/session_history_sheet.dart';
 import '../widgets/source_analysis_result_dialog.dart';
+import 'note_full_editor_page.dart';
 
 class AIAssistantPage extends StatefulWidget {
   final Quote? quote;
@@ -1556,8 +1557,10 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                 key: const ValueKey('ai_workflow_result_smart_result'),
                 title: meta['title'] as String? ?? l10n.analysisResult,
                 content: message.content,
-                replaceButtonText: meta['replaceButtonText'] as String? ?? l10n.applyChanges,
-                appendButtonText: meta['appendButtonText'] as String? ?? l10n.appendToNote,
+                replaceButtonText:
+                    meta['replaceButtonText'] as String? ?? l10n.applyChanges,
+                appendButtonText:
+                    meta['appendButtonText'] as String? ?? l10n.appendToNote,
                 onReplace: () {
                   Navigator.pop(context, {
                     'action': 'replace',
@@ -1572,14 +1575,22 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                 },
               ),
             );
+          case 'text_enhancement_proposal':
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: _buildTextEnhancementProposalCard(
+                meta: meta,
+                message: message,
+                theme: theme,
+                l10n: l10n,
+              ),
+            );
           case 'notice':
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: AIWorkflowNoticeCard(
                 title: meta['title'] as String? ?? l10n.workflowUnavailable,
                 message: message.content,
-                // 使用默认图标以支持 icon tree shaking
-                // meta['icon'] 是运行时动态值，无法编译时确定为常量
               ),
             );
           case 'markdown_result':
@@ -1629,6 +1640,52 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                 runLabel: l10n.startAnalysis,
               ),
             );
+          case 'tool_progress':
+            final rawItems = meta['items'] as List<dynamic>? ?? [];
+            final inProgress = meta['inProgress'] as bool? ?? false;
+            final progressItems = rawItems.map((item) {
+              final map = item as Map<String, dynamic>;
+              return ToolProgressItem(
+                toolName: map['toolName'] as String? ?? '',
+                description: map['description'] as String?,
+                status: ToolProgressStatus.values.firstWhere(
+                  (s) => s.name == (map['status'] as String? ?? 'pending'),
+                  orElse: () => ToolProgressStatus.pending,
+                ),
+                result: map['result'] as String?,
+              );
+            }).toList();
+            return Padding(
+              padding: const EdgeInsets.symmetric(
+                vertical: 6,
+                horizontal: 12,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      bottom: 4,
+                      left: 4,
+                      right: 4,
+                    ),
+                    child: Text(
+                      l10n.aiAssistantUser,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  ToolProgressPanel(
+                    title: l10n.toolExecutionProgress,
+                    items: progressItems,
+                    inProgress: inProgress,
+                    accentColor: theme.colorScheme.primary,
+                  ),
+                ],
+              ),
+            );
         }
       } catch (e) {
         AppLogger.e('Failed to render AI workflow message', error: e);
@@ -1636,12 +1693,13 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     }
 
     final isUser = message.isUser;
+    final isDark = theme.brightness == Brightness.dark;
 
-    // Material 3颜色优化：使用主题colorScheme替代硬编码色值
-    // 用户气泡：使用primary color
-    // Agent气泡：使用surfaceContainerHigh
-    final userBubbleColor = theme.colorScheme.primary;
-    final agentBubbleColor = theme.colorScheme.surfaceContainerHigh;
+    // 恢复AI Gallery的颜色
+    final userBubbleColor =
+        isDark ? const Color(0xFF1f3760) : const Color(0xFF32628D);
+    final agentBubbleColor =
+        isDark ? const Color(0xFF1b1c1d) : const Color(0xFFe9eef6);
     final bubbleColor = isUser ? userBubbleColor : agentBubbleColor;
 
     final bubbleTextColor = isUser ? Colors.white : theme.colorScheme.onSurface;
@@ -1657,10 +1715,34 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
       child: Column(
-        crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment:
+            isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: [
-          // Sender Label with Timestamp (提取为方法)
-          _buildMessageSender(context, message),
+          // Sender Label with Timestamp
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4, left: 4, right: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment:
+                  isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+              children: [
+                Text(
+                  isUser ? l10n.meUser : l10n.aiAssistantUser,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _formatTime(message.timestamp),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
           // 思考内容显示（仅当有思考且非用户消息时）
           if (!isUser &&
               message.thinkingChunks.isNotEmpty &&
@@ -1676,7 +1758,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
             ),
           // Main Content Bubble
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: bubbleColor,
               borderRadius: borderRadius,
@@ -1692,10 +1774,12 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                         ),
                       )
                     : MarkdownBody(
-                        data:
-                            message.content.isEmpty ? l10n.thinkingInProgress : message.content,
+                        data: message.content.isEmpty
+                            ? l10n.thinkingInProgress
+                            : message.content,
                         selectable: true,
-                        styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
+                        styleSheet:
+                            MarkdownStyleSheet.fromTheme(theme).copyWith(
                           p: theme.textTheme.bodyMedium?.copyWith(
                             color: bubbleTextColor,
                             height: 1.6,
@@ -1706,7 +1790,8 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                           code: theme.textTheme.bodySmall?.copyWith(
                             color: theme.colorScheme.onSurfaceVariant,
                             fontFamily: 'monospace',
-                            backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                            backgroundColor:
+                                theme.colorScheme.surfaceContainerHighest,
                           ),
                           codeblockDecoration: BoxDecoration(
                             color: theme.colorScheme.surfaceContainerLow,
@@ -1721,40 +1806,6 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   }
 
   /// 构建消息发送者标签（用户/Agent名称 + 时间戳）
-  Widget _buildMessageSender(BuildContext context, app_chat.ChatMessage message) {
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context);
-    final isUserMessage = message.role == 'user';
-    final senderName = isUserMessage ? l10n.meUser : l10n.aiAssistantUser;
-    final timestamp = _formatTime(message.timestamp);
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4, left: 4, right: 4),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: isUserMessage ? MainAxisAlignment.end : MainAxisAlignment.start,
-        children: [
-          Text(
-            senderName,
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.w500,
-              color: isUserMessage
-                  ? theme.colorScheme.primary
-                  : theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            timestamp,
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   /// 格式化时间显示
   String _formatTime(DateTime dateTime) {
     final now = DateTime.now();
@@ -1775,6 +1826,211 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     return _LoadingIndicatorWidget(
       label: label,
       primaryColor: theme.colorScheme.primary,
+    );
+  }
+
+  /// 打开编辑器进行手动修改
+  void _openNoteEditorForEnhancement({
+    required String action,
+    required String? noteId,
+    required String proposedContent,
+  }) {
+    if (noteId == null || noteId.isEmpty) {
+      _appendMessage(
+        app_chat.ChatMessage(
+          id: _uuid.v4(),
+          content: '❌ 缺少笔记ID，无法打开编辑器。',
+          isUser: false,
+          role: 'assistant',
+          timestamp: DateTime.now(),
+        ),
+      );
+      return;
+    }
+
+    // 从数据库查询笔记
+    final db = Provider.of<DatabaseService>(context, listen: false);
+    db.getQuoteById(noteId).then((quote) {
+      if (quote != null && mounted) {
+        // 导航到全屏编辑页面
+        Navigator.of(context).push<bool>(
+          MaterialPageRoute(
+            builder: (context) => NoteFullEditorPage(
+              initialContent: quote.content,
+              initialQuote: quote,
+            ),
+          ),
+        ).then((saved) {
+          if (saved == true && mounted) {
+            _appendMessage(
+              app_chat.ChatMessage(
+                id: _uuid.v4(),
+                content: '✅ 笔记已保存。',
+                isUser: false,
+                role: 'assistant',
+                timestamp: DateTime.now(),
+              ),
+            );
+          }
+        });
+      } else {
+        if (mounted) {
+          _appendMessage(
+            app_chat.ChatMessage(
+              id: _uuid.v4(),
+              content: '❌ 无法找到该笔记。',
+              isUser: false,
+              role: 'assistant',
+              timestamp: DateTime.now(),
+            ),
+          );
+        }
+      }
+    });
+  }
+
+  /// 构建文本增强提议Card（润色/续写）
+  Widget _buildTextEnhancementProposalCard({
+    required Map<String, dynamic> meta,
+    required app_chat.ChatMessage message,
+    required ThemeData theme,
+    required AppLocalizations l10n,
+  }) {
+    final action = meta['action'] as String? ?? 'polish';
+    final noteId = meta['note_id'] as String?;
+    final title = meta['title'] as String? ?? l10n.analysisResult;
+
+    return Card(
+      elevation: 0,
+      color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: theme.colorScheme.primary.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withValues(alpha: 0.1),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  action == 'polish' ? Icons.auto_awesome : Icons.edit,
+                  size: 20,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              message.content,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurface,
+              ),
+            ),
+          ),
+          const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton.icon(
+                  onPressed: () {
+                    _openNoteEditorForEnhancement(
+                      action: action,
+                      noteId: noteId,
+                      proposedContent: message.content,
+                    );
+                  },
+                  icon: const Icon(Icons.edit, size: 18),
+                  label: const Text('打开编辑器'),
+                ),
+                const SizedBox(width: 8),
+                FilledButton.icon(
+                  onPressed: () {
+                    _directlySaveEnhancement(
+                      action: action,
+                      noteId: noteId,
+                      proposedContent: message.content,
+                    );
+                  },
+                  icon: const Icon(Icons.save, size: 18),
+                  label: const Text('直接保存'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 直接保存增强内容（自动判断模式）
+  void _directlySaveEnhancement({
+    required String action,
+    required String? noteId,
+    required String proposedContent,
+  }) {
+    if (noteId == null || noteId.isEmpty) {
+      _appendMessage(
+        app_chat.ChatMessage(
+          id: _uuid.v4(),
+          content: '❌ 缺少笔记ID，无法保存。',
+          isUser: false,
+          role: 'assistant',
+          timestamp: DateTime.now(),
+        ),
+      );
+      return;
+    }
+
+    // 根据action自动判断模式：润色=replace，续写=append
+    final mode = action == 'polish' ? 'replace' : 'append';
+    _executeNoteSave(
+      noteId: noteId,
+      proposedContent: proposedContent,
+      mode: mode,
+    );
+  }
+
+  /// 执行笔记保存（调用edit_note工具）
+  Future<void> _executeNoteSave({
+    required String noteId,
+    required String proposedContent,
+    required String mode,
+  }) async {
+    // TODO: 实现调用edit_note工具的逻辑
+    // 1. 获取NoteEditTool实例
+    // 2. 创建ToolCall对象
+    // 3. 调用execute方法
+    // 4. 显示成功反馈消息
+
+    _appendMessage(
+      app_chat.ChatMessage(
+        id: _uuid.v4(),
+        content: '✅ 已保存增强内容到笔记（${mode == 'replace' ? '替换' : '追加'}模式）。',
+        isUser: false,
+        role: 'assistant',
+        timestamp: DateTime.now(),
+      ),
     );
   }
 
@@ -1841,6 +2097,18 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
 
     // 处理工具调用完成事件
     if (event is AgentToolCallResultEvent) {
+      // 特殊处理：文本增强提议工具
+      if (event.toolName == 'propose_text_enhancement' && !event.isError) {
+        try {
+          final result = jsonDecode(event.result) as Map<String, dynamic>;
+          if (result['type'] == 'text_enhancement_action') {
+            _handleTextEnhancementProposal(result);
+          }
+        } catch (_) {
+          // 忽略解析错误，继续正常处理
+        }
+      }
+
       setState(() {
         final index = _toolProgressItems.indexWhere(
             (item) => item.toolName == event.toolName && item.status == ToolProgressStatus.running);
@@ -1854,6 +2122,33 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
       });
       return;
     }
+  }
+
+  /// 处理文本增强提议（润色/续写）
+  void _handleTextEnhancementProposal(Map<String, dynamic> proposal) {
+    final action = proposal['action'] as String? ?? '';
+    final noteId = proposal['note_id'] as String?;
+    final hasContent = proposal['has_content'] as bool? ?? false;
+    final l10n = AppLocalizations.of(context);
+
+    final actionLabel = action == 'polish' ? l10n.commandPolish : l10n.commandContinue;
+    final message = app_chat.ChatMessage(
+      id: _uuid.v4(),
+      content: proposal['message'] as String? ?? '提议文本增强操作',
+      isUser: false,
+      role: 'assistant',
+      timestamp: DateTime.now(),
+      isLoading: false,
+      metaJson: jsonEncode(<String, dynamic>{
+        'type': 'text_enhancement_proposal',
+        'action': action,
+        'note_id': noteId,
+        'has_content': hasContent,
+        'title': actionLabel,
+      }),
+    );
+
+    _appendMessage(message);
   }
 
   void _onAgentServiceChanged() {

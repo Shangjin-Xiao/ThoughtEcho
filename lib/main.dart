@@ -50,6 +50,8 @@ import 'package:thoughtecho/services/agent_tools/note_search_tool.dart';
 import 'package:thoughtecho/services/agent_tools/note_stats_tool.dart';
 import 'package:thoughtecho/services/agent_tools/web_fetch_tool.dart';
 import 'package:thoughtecho/services/agent_tools/web_search_tool.dart';
+import 'package:thoughtecho/services/agent_tools/note_edit_tool.dart';
+import 'package:thoughtecho/services/agent_tools/text_enhancement_action_tool.dart';
 import 'package:thoughtecho/services/agent_tools_extensions.dart';
 import 'package:thoughtecho/services/background_push_handler.dart';
 import 'package:thoughtecho/services/web_fetch_service.dart';
@@ -153,6 +155,8 @@ List<AgentTool> _buildAgentTools(DatabaseService db, ChatSessionService chatSess
     GetRecentNotesTool(chatSessionService),
     GetNotesByTagsTool(chatSessionService),
     GetNotesByDateRangeTool(chatSessionService),
+    NoteEditTool(db),
+    const TextEnhancementActionTool(),
   ];
 }
 

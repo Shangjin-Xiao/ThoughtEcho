@@ -107,25 +107,41 @@ class WebSearchTool extends AgentTool {
       dotAll: true,
     );
 
-    for (final block in blockPattern.allMatches(html)) {
+    for (final blockMatch in blockPattern.allMatches(html)) {
       if (results.length >= limit) break;
 
-      final blockHtml = block.group(1) ?? '';
+      final blockHtml = blockMatch.group(1) ?? '';
+      if (blockHtml.isEmpty) continue;
 
-      // 提取标题
+      // 提取标题：从h2中的第一个<a>标签
+      String title = '';
       final titleMatch = RegExp(
-        r'<h2[^>]*>.*?<a[^>]*>(.*?)</a>',
+        r'<h2[^>]*>(.*?)</h2>',
         dotAll: true,
       ).firstMatch(blockHtml);
-      final title = _stripHtml(titleMatch?.group(1) ?? '').trim();
 
-      // 提取摘要
+      if (titleMatch != null) {
+        final h2Content = titleMatch.group(1) ?? '';
+        final linkMatch = RegExp(
+          r'<a[^>]*>(.*?)</a>',
+          dotAll: true,
+        ).firstMatch(h2Content);
+        if (linkMatch != null) {
+          title = _stripHtml(linkMatch.group(1) ?? '').trim();
+        }
+      }
+
+      // 提取摘要：第一个<p>标签
+      String snippet = '';
       final snippetMatch = RegExp(
         r'<p[^>]*>(.*?)</p>',
         dotAll: true,
       ).firstMatch(blockHtml);
-      final snippet = _stripHtml(snippetMatch?.group(1) ?? '').trim();
+      if (snippetMatch != null) {
+        snippet = _stripHtml(snippetMatch.group(1) ?? '').trim();
+      }
 
+      // 只有标题非空才添加结果
       if (title.isNotEmpty) {
         results.add(_SearchResult(title: title, snippet: snippet));
       }
