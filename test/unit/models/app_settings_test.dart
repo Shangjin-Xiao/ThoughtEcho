@@ -1,7 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/app_settings.dart';
 
+import '../../test_setup.dart';
+
 void main() {
+  setUpAll(() async {
+    await TestSetup.setupUnitTest();
+  });
+
   group('AppSettings.fromJson list deserialization', () {
     test('filters non-string items from persisted list fields', () {
       final settings = AppSettings.fromJson({
@@ -21,6 +27,14 @@ void main() {
 
       expect(settings.apiNinjasCategories, isEmpty);
       expect(settings.defaultTagIds, isEmpty);
+    });
+
+    test('falls back to default provider when persisted provider is non-string', () {
+      final settings = AppSettings.fromJson({
+        'dailyQuoteProvider': 42,
+      });
+
+      expect(settings.dailyQuoteProvider, 'hitokoto');
     });
   });
 }
