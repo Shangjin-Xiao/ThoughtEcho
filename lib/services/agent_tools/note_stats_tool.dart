@@ -45,8 +45,8 @@ class NoteStatsTool extends AgentTool {
 
   @override
   Future<ToolResult> execute(ToolCall call) async {
-    final startDate = call.arguments['start_date'] as String?;
-    final endDate = call.arguments['end_date'] as String?;
+    final startDate = call.getString('start_date');
+    final endDate = call.getString('end_date');
 
     try {
       final db = _db.database;
@@ -54,14 +54,14 @@ class NoteStatsTool extends AgentTool {
       // 构建 WHERE 子句
       String? where;
       List<Object?>? whereArgs;
-      if (startDate != null || endDate != null) {
+      if (startDate.isNotEmpty || endDate.isNotEmpty) {
         final conditions = <String>[];
         whereArgs = <Object?>[];
-        if (startDate != null) {
+        if (startDate.isNotEmpty) {
           conditions.add('date >= ?');
           whereArgs.add(_normalizeDateLowerBound(startDate));
         }
-        if (endDate != null) {
+        if (endDate.isNotEmpty) {
           conditions.add('date <= ?');
           whereArgs.add(_normalizeDateUpperBound(endDate));
         }
@@ -123,7 +123,7 @@ class NoteStatsTool extends AgentTool {
 
       return ToolResult(toolCallId: call.id, content: buffer.toString());
     } catch (e, stack) {
-      logError('NoteStatsTool.execute 失败', error: e, stackTrace: stack);
+      call.logError('NoteStatsTool.execute 失败', error: e, stackTrace: stack);
       return ToolResult(
         toolCallId: call.id,
         content: '获取统计信息时出错：$e',

@@ -1,0 +1,676 @@
+part of '../ai_assistant_page.dart';
+
+extension _AIAssistantPageUI on _AIAssistantPageState {
+  void _onTextChanged() {
+    final text = _textController.text.trimLeft();
+    final shouldShow = text.startsWith('/');
+    if (shouldShow != _showSlashCommands) {
+      _setState(() {
+        _showSlashCommands = shouldShow;
+      });
+    }
+  }
+
+  void _onInputFocusChanged() {
+    if (!mounted || _isInputFocused == _inputFocusNode.hasFocus) {
+      return;
+    }
+    _setState(() {
+      _isInputFocused = _inputFocusNode.hasFocus;
+    });
+  }
+
+  /// 选择并附加媒体文件
+  Future<void> _pickAndAttachMedia() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        allowMultiple: true,
+        type: FileType.any,
+        onFileLoading: (FilePickerStatus status) {
+          // Optional: Handle loading state
+        },
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        _setState(() {
+          _selectedMediaFiles.addAll(result.files);
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to pick files: $e')),
+      );
+    }
+  }
+
+  /// 移除已选择的媒体文件
+  void _removeMediaFile(int index) {
+    _setState(() {
+      _selectedMediaFiles.removeAt(index);
+    });
+  }
+
+  Widget _buildPage(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          _hasBoundNote ? l10n.askNoteTitle : l10n.aiAssistantLabel,
+        ),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add_comment),
+            tooltip: l10n.newChat,
+            onPressed: _startNewChat,
+          ),
+          IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: l10n.chatHistory,
+            onPressed: _isLoading ? null : _showSessionHistory,
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          if (_hasBoundNote) _buildNoteContextBanner(theme),
+          if (_entrySource == AIAssistantEntrySource.explore &&
+              widget.exploreGuideSummary?.trim().isNotEmpty == true)
+            _buildExploreGuideBanner(theme, l10n),
+          Expanded(
+            child: ListView.builder(
+              controller: _scrollController,
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+              itemCount: _messages.length,
+              itemBuilder: (context, index) {
+                return _buildMessageBubble(_messages[index], theme, l10n);
+              },
+            ),
+          ),
+          _buildInputArea(theme, l10n),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExploreGuideBanner(ThemeData theme, AppLocalizations l10n) {
+    // Removed DataOverview banner - user guidance moved to welcome message only
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildNoteContextBanner(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+      child: Row(
+        children: [
+          Icon(Icons.description, size: 16, color: theme.colorScheme.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '${AppLocalizations.of(context).currentNoteContext}: ${_getQuotePreview()}',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMessageBubble(
+    app_chat.ChatMessage message,
+    ThemeData theme,
+    AppLocalizations l10n,
+  ) {
+    if (message.metaJson != null) {
+      try {
+        final meta = jsonDecode(message.metaJson!) as Map<String, dynamic>;
+        switch (meta['type']) {
+          case 'smart_result':
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: SmartResultCard(
+                key: const ValueKey('ai_workflow_result_smart_result'),
+                title: meta['title'] as String? ?? l10n.analysisResult,
+                content: message.content,
+                replaceButtonText:
+                    meta['replaceButtonText'] as String? ?? l10n.applyChanges,
+                appendButtonText:
+                    meta['appendButtonText'] as String? ?? l10n.appendToNote,
+                onReplace: () {
+                  Navigator.pop(context, {
+                    'action': 'replace',
+                    'text': message.content,
+                  });
+                },
+                onAppend: () {
+                  Navigator.pop(context, {
+                    'action': 'append',
+                    'text': message.content,
+                  });
+                },
+                onOpenInEditor: () {
+                  Navigator.pop(context, {
+                    'action': 'edit',
+                    'text': message.content,
+                  });
+                },
+                onSaveDirectly: () {
+                  // 根据元数据中的提示类型决定是替换还是追加
+                  final isContinuation =
+                      meta['title']?.toString().contains('续写') ?? false;
+                  Navigator.pop(context, {
+                    'action': isContinuation ? 'append' : 'replace',
+                    'text': message.content,
+                  });
+                },
+              ),
+            );
+          case 'notice':
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: AIWorkflowNoticeCard(
+                title: meta['title'] as String? ?? l10n.workflowUnavailable,
+                message: message.content,
+                // 使用默认图标以支持 icon tree shaking
+                // meta['icon'] 是运行时动态值，无法编译时确定为常量
+              ),
+            );
+          case 'markdown_result':
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: AIWorkflowMarkdownCard(
+                title: meta['title'] as String? ?? l10n.analysisResult,
+                content: message.content,
+              ),
+            );
+          case 'source_analysis_result':
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: AISourceAnalysisResultCard(
+                title: meta['title'] as String? ?? l10n.analysisResult,
+                author: meta['author'] as String?,
+                work: meta['work'] as String?,
+                confidence: meta['confidence'] as String? ?? l10n.unknown,
+                explanation: meta['explanation'] as String? ?? '',
+                authorLabel: '${l10n.possibleAuthor} ',
+                workLabel: '${l10n.possibleWork} ',
+                confidenceLabel: '${l10n.confidenceLabel} ',
+              ),
+            );
+          case 'insight_config':
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: AIInsightWorkflowCard(
+                title: l10n.commandInsight,
+                analysisTypes: _buildInsightTypeLabels(l10n),
+                analysisStyles: _buildInsightStyleLabels(l10n),
+                selectedType: _selectedInsightType,
+                selectedStyle: _selectedInsightStyle,
+                onSelectType: (value) {
+                  _setState(() {
+                    _selectedInsightType = value;
+                  });
+                },
+                onSelectStyle: (value) {
+                  _setState(() {
+                    _selectedInsightStyle = value;
+                  });
+                },
+                onRun: () {
+                  _runInsightsWorkflow();
+                },
+                runLabel: l10n.startAnalysis,
+              ),
+            );
+          case 'tool_progress':
+            final rawItems = meta['items'] as List<dynamic>? ?? [];
+            final inProgress = meta['inProgress'] as bool? ?? false;
+            final progressItems = rawItems.map((item) {
+              final map = item as Map<String, dynamic>;
+              return ToolProgressItem(
+                toolName: map['toolName'] as String? ?? '',
+                description: map['description'] as String?,
+                status: ToolProgressStatus.values.firstWhere(
+                  (s) => s.name == (map['status'] as String? ?? 'pending'),
+                  orElse: () => ToolProgressStatus.pending,
+                ),
+                result: map['result'] as String?,
+              );
+            }).toList();
+            return Padding(
+              padding: const EdgeInsets.symmetric(
+                vertical: 6,
+                horizontal: 12,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      bottom: 4,
+                      left: 4,
+                      right: 4,
+                    ),
+                    child: Text(
+                      l10n.aiAssistantUser,
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w500,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                  ToolProgressPanel(
+                    title: l10n.toolExecutionProgress,
+                    items: progressItems,
+                    inProgress: inProgress,
+                    accentColor: theme.colorScheme.primary,
+                  ),
+                ],
+              ),
+            );
+        }
+      } catch (e) {
+        AppLogger.e('Failed to render AI workflow message', error: e);
+      }
+    }
+
+    final isUser = message.isUser;
+    final isDark = theme.brightness == Brightness.dark;
+
+    // Colors from AI Gallery Theme.kt
+    final userBubbleColor =
+        isDark ? const Color(0xFF1f3760) : const Color(0xFF32628D);
+    final agentBubbleColor =
+        isDark ? const Color(0xFF1b1c1d) : const Color(0xFFe9eef6);
+    final bubbleColor = isUser ? userBubbleColor : agentBubbleColor;
+
+    final bubbleTextColor = isUser ? Colors.white : theme.colorScheme.onSurface;
+
+    final bubbleRadius = const Radius.circular(24);
+    final borderRadius = BorderRadius.only(
+      topLeft: isUser ? bubbleRadius : Radius.zero,
+      topRight: isUser ? Radius.zero : bubbleRadius,
+      bottomLeft: bubbleRadius,
+      bottomRight: bubbleRadius,
+    );
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+      child: Column(
+        crossAxisAlignment:
+            isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        children: [
+          // Sender Label with Timestamp
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4, left: 4, right: 4),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment:
+                  isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+              children: [
+                Text(
+                  isUser ? l10n.meUser : l10n.aiAssistantUser,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _formatTime(message.timestamp),
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // 思考内容显示（仅当有思考且非用户消息时）
+          if (!isUser &&
+              message.thinkingChunks.isNotEmpty &&
+              message.thinkingChunks.join('').isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: ThinkingWidget(
+                key: ValueKey('thinking_${message.id}'),
+                thinkingText: message.thinkingChunks.join(''),
+                inProgress: message.state == MessageState.thinking,
+                accentColor: theme.colorScheme.primary,
+              ),
+            ),
+          // Main Content Bubble
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: bubbleColor,
+              borderRadius: borderRadius,
+            ),
+            child: isUser
+                ? Text(
+                    message.content,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: bubbleTextColor,
+                      height: 1.5,
+                    ),
+                  )
+                : MarkdownBody(
+                    data: message.content.isEmpty
+                        ? l10n.thinkingInProgress
+                        : message.content,
+                    selectable: true,
+                    styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
+                      p: theme.textTheme.bodyMedium?.copyWith(
+                        color: bubbleTextColor,
+                        height: 1.6,
+                      ),
+                      listBullet: theme.textTheme.bodyMedium?.copyWith(
+                        color: bubbleTextColor,
+                      ),
+                      code: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontFamily: 'monospace',
+                        backgroundColor:
+                            theme.colorScheme.surfaceContainerHighest,
+                      ),
+                      codeblockDecoration: BoxDecoration(
+                        color: theme.colorScheme.surfaceContainerLow,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 格式化时间显示
+  String _formatTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final messageDay = DateTime(dateTime.year, dateTime.month, dateTime.day);
+
+    if (messageDay == today) {
+      return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+    } else if (messageDay == today.subtract(const Duration(days: 1))) {
+      final l10n = AppLocalizations.of(context);
+      return '${l10n.yesterday} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+    } else {
+      return '${messageDay.month.toString().padLeft(2, '0')}-${messageDay.day.toString().padLeft(2, '0')} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+    }
+  }
+
+  Map<String, String> _buildInsightTypeLabels(AppLocalizations l10n) {
+    return <String, String>{
+      for (final option in AIInsightWorkflowOptions.analysisTypes)
+        option.key: switch (option.l10nKey) {
+          'comprehensive' => l10n.analysisTypeComprehensive,
+          'emotional' => l10n.analysisTypeEmotional,
+          'mindmap' => l10n.analysisTypeMindmap,
+          'growth' => l10n.analysisTypeGrowth,
+          _ => option.key,
+        },
+    };
+  }
+
+  Map<String, String> _buildInsightStyleLabels(AppLocalizations l10n) {
+    return <String, String>{
+      for (final option in AIInsightWorkflowOptions.analysisStyles)
+        option.key: switch (option.l10nKey) {
+          'professional' => l10n.analysisStyleProfessional,
+          'friendly' => l10n.analysisStyleFriendly,
+          'humorous' => l10n.analysisStyleHumorous,
+          'literary' => l10n.analysisStyleLiterary,
+          _ => option.key,
+        },
+    };
+  }
+
+  void _onAgentServiceChanged() {
+    // Agent 事件现在通过 events stream 内联显示到消息列表中，
+    // 此监听器保留用于 isRunning 状态同步
+    if (!mounted) return;
+  }
+
+  Widget _buildInputArea(ThemeData theme, AppLocalizations l10n) {
+    final workflowDescriptors = _buildWorkflowDescriptors(l10n);
+    final inputText = _textController.text.toLowerCase();
+    final filteredWorkflowDescriptors = workflowDescriptors
+        .where(
+          (descriptor) =>
+              inputText.isEmpty ||
+              descriptor.command.toLowerCase().startsWith(inputText),
+        )
+        .toList(growable: false);
+    final shellBorderColor = _isInputFocused
+        ? theme.colorScheme.primary.withValues(alpha: 0.6)
+        : theme.colorScheme.outlineVariant.withValues(alpha: 0.75);
+
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.fromLTRB(10, 6, 10, 8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        curve: Curves.easeOutCubic,
+        padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: shellBorderColor,
+            width: _isInputFocused ? 1.4 : 1.0,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(
+                alpha: theme.brightness == Brightness.dark ? 0.26 : 0.07,
+              ),
+              blurRadius: 18,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Slash commands
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              child:
+                  _showSlashCommands && filteredWorkflowDescriptors.isNotEmpty
+                      ? Padding(
+                          key: const ValueKey('slash_commands_visible'),
+                          padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children:
+                                  filteredWorkflowDescriptors.map((descriptor) {
+                                return ActionChip(
+                                  label: Text(descriptor.command),
+                                  onPressed: () {
+                                    _textController.clear();
+                                    _handleSubmitted(descriptor.command);
+                                  },
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        )
+                      : const SizedBox.shrink(
+                          key: ValueKey('slash_commands_hidden'),
+                        ),
+            ),
+            // Selected media files
+            if (_selectedMediaFiles.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+                child: SizedBox(
+                  height: 52,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: _selectedMediaFiles.length,
+                    itemBuilder: (context, index) {
+                      final file = _selectedMediaFiles[index];
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: Chip(
+                          label: Text(
+                            file.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          deleteIcon: const Icon(Icons.close, size: 16),
+                          onDeleted: () => _removeMediaFile(index),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            // Text field
+            TextField(
+              controller: _textController,
+              focusNode: _inputFocusNode,
+              decoration: InputDecoration(
+                hintText: l10n.aiAssistantInputHint,
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+              ),
+              maxLines: null,
+              minLines: 1,
+              textInputAction: TextInputAction.send,
+              onSubmitted: _handleSubmitted,
+            ),
+            // Action row: + | mode toggle | thinking | send
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 0, 4, 2),
+              child: Row(
+                children: [
+                  // Add media
+                  IconButton(
+                    icon: const Icon(Icons.add, size: 20),
+                    onPressed: _isLoading ? null : _pickAndAttachMedia,
+                    style: IconButton.styleFrom(
+                      padding: const EdgeInsets.all(8),
+                      minimumSize: const Size(36, 36),
+                    ),
+                  ),
+                  // Mode toggle (direct tap)
+                  if (_entryConfig.allowsMode(AIAssistantPageMode.agent))
+                    GestureDetector(
+                      onTap: _isLoading
+                          ? null
+                          : () {
+                              final next = _isAgentMode
+                                  ? _entryConfig.defaultMode
+                                  : AIAssistantPageMode.agent;
+                              _setMode(next);
+                            },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _isAgentMode
+                              ? theme.colorScheme.primaryContainer
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _isAgentMode
+                                  ? Icons.smart_toy
+                                  : Icons.chat_outlined,
+                              size: 16,
+                              color: _isAgentMode
+                                  ? theme.colorScheme.onPrimaryContainer
+                                  : theme.colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              _isAgentMode ? l10n.aiModeAgent : l10n.aiModeChat,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: _isAgentMode
+                                    ? theme.colorScheme.onPrimaryContainer
+                                    : theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  // Thinking toggle
+                  if (_currentModelSupportsThinking)
+                    IconButton(
+                      icon: Icon(
+                        _enableThinking
+                            ? Icons.psychology
+                            : Icons.psychology_outlined,
+                        size: 20,
+                        color: _enableThinking
+                            ? theme.colorScheme.secondary
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
+                      onPressed: () {
+                        _setState(() {
+                          _enableThinking = !_enableThinking;
+                        });
+                      },
+                      style: IconButton.styleFrom(
+                        padding: const EdgeInsets.all(8),
+                        minimumSize: const Size(36, 36),
+                      ),
+                    ),
+                  const Spacer(),
+                  // Send / Stop
+                  IconButton(
+                    icon: Icon(
+                      _isLoading ? Icons.stop : Icons.arrow_upward,
+                      size: 20,
+                    ),
+                    onPressed: _isLoading
+                        ? _stopGenerating
+                        : () {
+                            if (_textController.text.trim().isNotEmpty) {
+                              _handleSubmitted(_textController.text);
+                            }
+                          },
+                    style: IconButton.styleFrom(
+                      backgroundColor: _isLoading
+                          ? theme.colorScheme.error
+                          : theme.colorScheme.primary,
+                      foregroundColor: _isLoading
+                          ? theme.colorScheme.onError
+                          : theme.colorScheme.onPrimary,
+                      padding: const EdgeInsets.all(8),
+                      minimumSize: const Size(36, 36),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

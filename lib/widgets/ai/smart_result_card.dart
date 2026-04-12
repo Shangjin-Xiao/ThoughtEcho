@@ -88,13 +88,13 @@ class SmartResultCard extends StatelessWidget {
                   TextButton.icon(
                     onPressed: onOpenInEditor,
                     icon: const Icon(Icons.edit_note, size: 18),
-                    label: const Text('打开编辑器'),
+                    label: Text(l10n.openInEditor),
                   ),
                 if (onSaveDirectly != null)
                   TextButton.icon(
                     onPressed: onSaveDirectly,
                     icon: const Icon(Icons.save_outlined, size: 18),
-                    label: const Text('直接保存'),
+                    label: Text(l10n.saveDirectly),
                   ),
                 TextButton.icon(
                   onPressed: onAppend,

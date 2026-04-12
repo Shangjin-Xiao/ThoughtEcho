@@ -3636,5 +3636,8 @@
   "mapPickerConfirm": "确认位置",
   "poiNameLabel": "地点名称",
   "longPressForMapPicker": "长按打开地图选点",
-  "attachFile": "附加文件"
+  "attachFile": "附加文件",
+  "yesterday": "昨天",
+  "openInEditor": "打开编辑器",
+  "saveDirectly": "直接保存"
 }

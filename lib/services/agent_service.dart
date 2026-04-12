@@ -707,9 +707,9 @@ $toolDescriptions
     escaped = escaped.replaceAll(
         RegExp(r'\[USER\]', caseSensitive: false), '[US_ER]');
     escaped = escaped.replaceAll(
-        RegExp(r'<\|im_start\|>', caseSensitive: false), '<|im_start|>');
+        RegExp(r'<\|im_start\|>', caseSensitive: false), '<|im\\_start|>');
     escaped = escaped.replaceAll(
-        RegExp(r'<\|im_end\|>', caseSensitive: false), '<|im_end|>');
+        RegExp(r'<\|im_end\|>', caseSensitive: false), '<|im\\_end|>');
 
     // 限制连续换行（最多 2 个）
     escaped = escaped.replaceAll(RegExp(r'\n{3,}'), '\n\n');

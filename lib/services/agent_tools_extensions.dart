@@ -33,7 +33,7 @@ class GetRecentNotesTool extends AgentTool {
   @override
   Future<ToolResult> execute(ToolCall toolCall) async {
     try {
-      final limit = (toolCall.arguments['limit'] as num?)?.toInt() ?? 10;
+      final limit = toolCall.getInt('limit', defaultValue: 10);
       final notes = await _chatSessionService.getRecentNotes(limit: limit);
 
       if (notes.isEmpty) {
@@ -63,7 +63,7 @@ class GetRecentNotesTool extends AgentTool {
         }),
       );
     } catch (e, stack) {
-      logError(
+      toolCall.logError(
         'get_recent_notes 工具执行失败',
         error: e,
         stackTrace: stack,
@@ -141,7 +141,7 @@ class GetNotesByTagsTool extends AgentTool {
       }
 
       final tags = tagsArg.map((t) => t.toString()).toList();
-      final limit = (toolCall.arguments['limit'] as num?)?.toInt() ?? 10;
+      final limit = toolCall.getInt('limit', defaultValue: 10);
       final notes = await _chatSessionService.getNotesByTags(tags, limit: limit);
 
       if (notes.isEmpty) {
@@ -171,7 +171,7 @@ class GetNotesByTagsTool extends AgentTool {
         }),
       );
     } catch (e, stack) {
-      logError(
+      toolCall.logError(
         'get_notes_by_tags 工具执行失败',
         error: e,
         stackTrace: stack,
@@ -258,7 +258,7 @@ class GetNotesByDateRangeTool extends AgentTool {
       try {
         final dateStart = DateTime.parse(dateStartStr);
         final dateEnd = DateTime.parse(dateEndStr);
-        final limit = (toolCall.arguments['limit'] as num?)?.toInt() ?? 20;
+        final limit = toolCall.getInt('limit', defaultValue: 20);
 
         final notes = await _chatSessionService.getNotesByDateRange(
           dateStart,
@@ -298,12 +298,12 @@ class GetNotesByDateRangeTool extends AgentTool {
       } on FormatException {
         return ToolResult(
           toolCallId: toolCall.id,
-          content: '日期格式无效，请使用ISO8601格式（例如2024-01-01）',
+          content: '日期格式无效，请使用ISO8601格式 （例如2024-01-01）',
           isError: true,
         );
       }
-    } catch (e, stack) {
-      logError(
+      } catch (e, stack) {
+      toolCall.logError(
         'get_notes_by_date_range 工具执行失败',
         error: e,
         stackTrace: stack,
@@ -313,7 +313,7 @@ class GetNotesByDateRangeTool extends AgentTool {
         content: '查询笔记失败: ${e.toString()}',
         isError: true,
       );
-    }
+      }
   }
 
   static String _extractTitle(String content) {

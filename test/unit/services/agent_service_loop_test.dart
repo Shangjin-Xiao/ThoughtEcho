@@ -7,6 +7,8 @@ import 'package:thoughtecho/services/agent_service.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 
+import '../../test_helpers.dart';
+
 class _FakeSettingsService extends ChangeNotifier implements SettingsService {
   _FakeSettingsService(this._provider);
 
@@ -143,6 +145,11 @@ String _chatMessageText(openai.ChatMessage message) {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() async {
+    await TestHelpers.setupTestEnvironment();
+  });
+
   group('AgentService native tool loop', () {
     test('stops when same tool call is repeated', () async {
       final provider = const AIProviderSettings(

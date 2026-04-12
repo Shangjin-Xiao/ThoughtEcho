@@ -3624,5 +3624,8 @@
   "mapPickerConfirm": "Confirm Location",
   "poiNameLabel": "Place Name",
   "longPressForMapPicker": "Long press to open map picker",
-  "attachFile": "Attach file"
+  "attachFile": "Attach file",
+  "yesterday": "Yesterday",
+  "openInEditor": "Open in Editor",
+  "saveDirectly": "Save Directly"
 }

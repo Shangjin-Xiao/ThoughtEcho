@@ -44,10 +44,10 @@ class TextEnhancementActionTool extends AgentTool {
 
   @override
   Future<ToolResult> execute(ToolCall call) async {
-    final action = call.arguments['action'] as String? ?? '';
-    final noteId = call.arguments['note_id'] as String?;
-    final noteContent = call.arguments['note_content'] as String?;
-    final reasoning = call.arguments['reasoning'] as String? ?? '';
+    final action = call.getString('action');
+    final noteId = call.getString('note_id');
+    final noteContent = call.getString('note_content');
+    final reasoning = call.getString('reasoning');
 
     if (action != 'polish' && action != 'continue_writing') {
       return ToolResult(
@@ -57,7 +57,7 @@ class TextEnhancementActionTool extends AgentTool {
       );
     }
 
-    if ((noteId?.isEmpty ?? true) && (noteContent?.isEmpty ?? true)) {
+    if (noteId.isEmpty && noteContent.isEmpty) {
       return ToolResult(
         toolCallId: call.id,
         content: '必须提供 note_id 或 note_content 中的至少一个',
@@ -67,24 +67,25 @@ class TextEnhancementActionTool extends AgentTool {
 
     try {
       final actionLabel = action == 'polish' ? '润色' : '续写';
-      final hasNoteId = noteId != null && noteId.isNotEmpty;
+      final hasNoteId = noteId.isNotEmpty;
 
       final response = <String, dynamic>{
         'type': 'text_enhancement_action',
         'action': action,
         'note_id': noteId,
-        'has_content': noteContent != null && noteContent.isNotEmpty,
+        'has_content': noteContent.isNotEmpty,
         'reasoning': reasoning,
         'message':
             hasNoteId ? '我推荐对笔记进行$actionLabel。' : '我推荐对这段内容进行$actionLabel。',
       };
+
 
       return ToolResult(
         toolCallId: call.id,
         content: jsonEncode(response),
       );
     } catch (e, stack) {
-      logError('TextEnhancementActionTool.execute 失败',
+      call.logError('TextEnhancementActionTool.execute 失败',
           error: e, stackTrace: stack);
       return ToolResult(
         toolCallId: call.id,

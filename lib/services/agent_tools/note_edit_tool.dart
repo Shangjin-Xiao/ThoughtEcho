@@ -43,9 +43,9 @@ class NoteEditTool extends AgentTool {
 
   @override
   Future<ToolResult> execute(ToolCall call) async {
-    final noteId = call.arguments['note_id'] as String? ?? '';
-    final newContent = call.arguments['new_content'] as String? ?? '';
-    final mode = call.arguments['mode'] as String? ?? 'replace';
+    final noteId = call.getString('note_id');
+    final newContent = call.getString('new_content');
+    final mode = call.getString('mode', defaultValue: 'replace');
 
     if (noteId.isEmpty) {
       return ToolResult(

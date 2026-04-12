@@ -30,7 +30,7 @@ class WebFetchTool extends AgentTool {
 
   @override
   Future<ToolResult> execute(ToolCall call) async {
-    final url = call.arguments['url'] as String? ?? '';
+    final url = call.getString('url');
 
     if (url.trim().isEmpty) {
       return ToolResult(
@@ -65,7 +65,7 @@ class WebFetchTool extends AgentTool {
 
       return ToolResult(toolCallId: call.id, content: truncated);
     } catch (e, stack) {
-      logError('WebFetchTool.execute 失败', error: e, stackTrace: stack);
+      call.logError('WebFetchTool.execute 失败', error: e, stackTrace: stack);
       return ToolResult(
         toolCallId: call.id,
         content: '网页抓取失败：$e',
