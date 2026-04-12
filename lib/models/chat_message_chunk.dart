@@ -29,6 +29,42 @@ class ChatMessageChunk {
     this.fullContent,
   });
 
+  ChatMessageChunk copyWith({
+    String? type,
+    String? content,
+    int? index,
+    bool? isLast,
+    String? fullContent,
+  }) {
+    return ChatMessageChunk(
+      type: type ?? this.type,
+      content: content ?? this.content,
+      index: index ?? this.index,
+      isLast: isLast ?? this.isLast,
+      fullContent: fullContent ?? this.fullContent,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'type': type,
+      'content': content,
+      'index': index,
+      'isLast': isLast ? 1 : 0,
+      'fullContent': fullContent,
+    };
+  }
+
+  factory ChatMessageChunk.fromMap(Map<String, dynamic> map) {
+    return ChatMessageChunk(
+      type: map['type'] as String? ?? 'response',
+      content: map['content'] as String? ?? '',
+      index: map['index'] as int? ?? 0,
+      isLast: (map['isLast'] as int? ?? 0) == 1,
+      fullContent: map['fullContent'] as String?,
+    );
+  }
+
   /// 创建一个thinking块
   factory ChatMessageChunk.thinking(
     String content, {

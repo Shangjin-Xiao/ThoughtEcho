@@ -236,6 +236,8 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
     bool excludeHiddenNotes = true,
+    String? dateStart,
+    String? dateEnd,
   }) async {
     // 判断是否正在查询隐藏标签
     final isQueryingHiddenTag =
@@ -295,6 +297,28 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
             .toList();
       }
 
+      // 日期筛选
+      if (dateStart != null && dateStart.isNotEmpty) {
+        final start = DateTime.tryParse(dateStart);
+        if (start != null) {
+          filtered = filtered.where((q) {
+            final qDate = DateTime.tryParse(q.date);
+            return qDate != null &&
+                (qDate.isAfter(start) || qDate.isAtSameMomentAs(start));
+          }).toList();
+        }
+      }
+      if (dateEnd != null && dateEnd.isNotEmpty) {
+        final end = DateTime.tryParse(dateEnd);
+        if (end != null) {
+          filtered = filtered.where((q) {
+            final qDate = DateTime.tryParse(q.date);
+            return qDate != null &&
+                (qDate.isBefore(end) || qDate.isAtSameMomentAs(end));
+          }).toList();
+        }
+      }
+
       return filtered.length;
     }
     try {
@@ -335,6 +359,16 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
             selectedDayPeriods.map((_) => '?').join(',');
         conditions.add('q.day_period IN ($dayPeriodPlaceholders)');
         args.addAll(selectedDayPeriods);
+      }
+
+      // 日期范围筛选
+      if (dateStart != null && dateStart.isNotEmpty) {
+        conditions.add('q.date >= ?');
+        args.add(dateStart);
+      }
+      if (dateEnd != null && dateEnd.isNotEmpty) {
+        conditions.add('q.date <= ?');
+        args.add(dateEnd);
       }
 
       String query;

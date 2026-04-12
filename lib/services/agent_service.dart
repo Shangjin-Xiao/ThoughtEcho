@@ -546,10 +546,11 @@ $toolDescriptions
 
 ## 工具调用策略（重要）
 - 使用原生 function calling，不要在文本里伪造 XML/JSON 标签。
-- 对于笔记检索，优先调用 `search_notes` 的 `action=search` 获取分页结果和 `next_cursor`。
-- 当需要某条笔记的完整上下文时，再调用 `search_notes` 的 `action=fetch_note` 按块增量拉取，避免一次拉取整篇全文。
-- 结果不足时继续使用 `next_cursor` 翻页，而不是重复同一调用。
-- 若工具返回错误，调整参数后再试，不要重复完全相同的调用。
+- 对于笔记检索与探索，主要调用 `explore_notes`。
+- 你可以像用户浏览朋友圈一样使用 `explore_notes`：
+  - 如果用户问“我最近写了什么”，不传参数直接调用，查看最新笔记。
+  - 支持多维组合：你可以同时根据“下雨天”、“凌晨”、“标签”和“日期范围”来精准定位某条记录。
+  - 使用 `next_offset` 参数进行翻页，不要重复拉取同一页。
 - 最终回复必须是面向用户的自然语言结论。
 - 默认使用中文回复（除非用户明确使用其他语言）。
 - 不要声称已直接修改笔记，你没有任何修改笔记的权限。所有改动都必须通过调用 `propose_edit` 工具向用户提议，由用户手动应用。
@@ -578,8 +579,7 @@ $toolDescriptions
 
   String _toolStatusText(String toolName) {
     return switch (toolName) {
-      'search_notes' => 'agentSearchingNotes',
-      'get_note_stats' => 'agentAnalyzingData',
+      'explore_notes' => 'agentSearchingNotes',
       'web_search' => 'agentWebSearching',
       _ => '$agentToolCallPrefix$toolName',
     };
@@ -587,7 +587,7 @@ $toolDescriptions
 
   int _toolMessageCharLimit(String toolName) {
     return switch (toolName) {
-      'search_notes' => _searchToolMaxSingleMessageChars,
+      'explore_notes' => _searchToolMaxSingleMessageChars,
       _ => _defaultMaxSingleMessageChars,
     };
   }
@@ -613,7 +613,12 @@ $toolDescriptions
   @visibleForTesting
   static String normalizeOpenAIBaseUrl(String apiUrl) {
     final trimmed = apiUrl.trim();
-    final uri = Uri.parse(trimmed);
+    final Uri uri;
+    try {
+      uri = Uri.parse(trimmed);
+    } catch (e) {
+      throw FormatException('无效的 API URL 格式: "$trimmed"');
+    }
     var path = uri.path;
 
     const chatSuffix = '/chat/completions';

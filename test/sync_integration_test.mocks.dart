@@ -348,6 +348,8 @@ class MockDatabaseService extends _i1.Mock implements _i12.DatabaseService {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
     bool excludeHiddenNotes = true,
+    String? dateStart,
+    String? dateEnd,
   }) =>
       (super.noSuchMethod(
         Invocation.method(#getUserQuotes, [], {
@@ -360,6 +362,8 @@ class MockDatabaseService extends _i1.Mock implements _i12.DatabaseService {
           #selectedWeathers: selectedWeathers,
           #selectedDayPeriods: selectedDayPeriods,
           #excludeHiddenNotes: excludeHiddenNotes,
+          #dateStart: dateStart,
+          #dateEnd: dateEnd,
         }),
         returnValue: _i9.Future<List<_i14.Quote>>.value(<_i14.Quote>[]),
       ) as _i9.Future<List<_i14.Quote>>);
@@ -401,6 +405,8 @@ class MockDatabaseService extends _i1.Mock implements _i12.DatabaseService {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
     bool excludeHiddenNotes = true,
+    String? dateStart,
+    String? dateEnd,
   }) =>
       (super.noSuchMethod(
         Invocation.method(#getQuotesCount, [], {
@@ -410,6 +416,8 @@ class MockDatabaseService extends _i1.Mock implements _i12.DatabaseService {
           #selectedWeathers: selectedWeathers,
           #selectedDayPeriods: selectedDayPeriods,
           #excludeHiddenNotes: excludeHiddenNotes,
+          #dateStart: dateStart,
+          #dateEnd: dateEnd,
         }),
         returnValue: _i9.Future<int>.value(0),
       ) as _i9.Future<int>);

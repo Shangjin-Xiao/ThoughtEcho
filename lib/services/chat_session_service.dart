@@ -298,17 +298,19 @@ class ChatSessionService extends ChangeNotifier {
     try {
       await _persistOrQueueWrite(
         (db) async {
-          await db.insert(
-            'chat_messages',
-            message.toMap(sessionId),
-            conflictAlgorithm: ConflictAlgorithm.replace,
-          );
-          await db.update(
-            'chat_sessions',
-            {'last_active_at': DateTime.now().toIso8601String()},
-            where: 'id = ?',
-            whereArgs: [sessionId],
-          );
+          await db.transaction((txn) async {
+            await txn.insert(
+              'chat_messages',
+              message.toMap(sessionId),
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+            await txn.update(
+              'chat_sessions',
+              {'last_active_at': DateTime.now().toIso8601String()},
+              where: 'id = ?',
+              whereArgs: [sessionId],
+            );
+          });
         },
         operationName: 'ChatSessionService.addMessage',
       );
@@ -410,11 +412,33 @@ class ChatSessionService extends ChangeNotifier {
     try {
       await _persistOrQueueWrite(
         (db) async {
-          await db.delete(
-            'chat_sessions',
-            where: 'note_id = ?',
-            whereArgs: [noteId],
-          );
+          await db.transaction((txn) async {
+            // 首先通过 note_id 找到所有相关的会话 ID
+            final sessions = await txn.query(
+              'chat_sessions',
+              columns: ['id'],
+              where: 'note_id = ?',
+              whereArgs: [noteId],
+            );
+
+            if (sessions.isNotEmpty) {
+              final sessionIds = sessions.map((s) => s['id'] as String).toList();
+              // 删除这些会话的所有消息
+              final placeholders = List.filled(sessionIds.length, '?').join(',');
+              await txn.delete(
+                'chat_messages',
+                where: 'session_id IN ($placeholders)',
+                whereArgs: sessionIds,
+              );
+            }
+
+            // 然后删除会话本身
+            await txn.delete(
+              'chat_sessions',
+              where: 'note_id = ?',
+              whereArgs: [noteId],
+            );
+          });
         },
         operationName: 'ChatSessionService.deleteSessionsForNote',
       );

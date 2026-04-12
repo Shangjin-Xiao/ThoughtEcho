@@ -27,8 +27,12 @@ class ChatSession {
 
   /// 从 SQLite 行映射构建（不含 messages，需单独查询）
   factory ChatSession.fromMap(Map<String, dynamic> map) {
+    final id = map['id'] as String?;
+    if (id == null || id.isEmpty) {
+      throw const FormatException('ChatSession.fromMap: id 不能为空');
+    }
     return ChatSession(
-      id: map['id'] as String,
+      id: id,
       sessionType: map['session_type'] as String? ?? 'note',
       noteId: map['note_id'] as String?,
       title: map['title'] as String? ?? '',
@@ -92,6 +96,7 @@ class ChatSession {
     String? id,
     String? sessionType,
     String? noteId,
+    bool clearNoteId = false,
     String? title,
     DateTime? createdAt,
     DateTime? lastActiveAt,
@@ -101,7 +106,7 @@ class ChatSession {
     return ChatSession(
       id: id ?? this.id,
       sessionType: sessionType ?? this.sessionType,
-      noteId: noteId ?? this.noteId,
+      noteId: clearNoteId ? null : (noteId ?? this.noteId),
       title: title ?? this.title,
       createdAt: createdAt ?? this.createdAt,
       lastActiveAt: lastActiveAt ?? this.lastActiveAt,

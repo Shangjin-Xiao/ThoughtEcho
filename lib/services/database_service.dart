@@ -74,6 +74,8 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
     bool excludeHiddenNotes = true,
+    String? dateStart,
+    String? dateEnd,
   });
   Future<List<Quote>> getQuotesForSmartPush({
     int limit = 200,
@@ -86,6 +88,8 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
     bool excludeHiddenNotes = true,
+    String? dateStart,
+    String? dateEnd,
   });
 
   Future<void> incrementFavoriteCount(String quoteId);

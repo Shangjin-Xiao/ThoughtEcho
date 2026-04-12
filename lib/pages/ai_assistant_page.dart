@@ -31,6 +31,7 @@ import '../services/settings_service.dart';
 import '../utils/ai_command_helpers.dart';
 import '../utils/app_logger.dart';
 import '../utils/string_utils.dart';
+import '../utils/time_utils.dart';
 import '../widgets/ai/ai_workflow_cards.dart';
 import '../widgets/ai/smart_result_card.dart';
 import '../widgets/ai/thinking_widget.dart';
@@ -84,6 +85,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   String _selectedInsightStyle = 'professional';
   bool _showSlashCommands = false; // Only show when user types /
   bool _enableThinking = true; // 是否启用思考模式（仅支持的模型显示）
+  String _currentStatusKey = ''; // 当前 Agent 状态 L10n Key
 
   bool _isInputFocused = false;
   bool _agentListenerAttached = false;
@@ -276,6 +278,12 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
 
   void _setState(VoidCallback fn) {
     setState(fn);
+  }
+
+  void _setStatus(String status) {
+    _setState(() {
+      _currentStatusKey = status;
+    });
   }
 
   /// Stop the current generation - cancels the stream subscription

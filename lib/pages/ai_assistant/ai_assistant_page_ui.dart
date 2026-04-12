@@ -269,8 +269,6 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
               child: AIWorkflowNoticeCard(
                 title: meta['title'] as String? ?? l10n.workflowUnavailable,
                 message: message.content,
-                // 使用默认图标以支持 icon tree shaking
-                // meta['icon'] 是运行时动态值，无法编译时确定为常量
               ),
             );
           case 'markdown_result':
@@ -415,7 +413,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  _formatTime(message.timestamp),
+                  TimeUtils.formatRelativeDateTimeLocalized(
+                      context, message.timestamp),
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -482,22 +481,6 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     );
   }
 
-  /// 格式化时间显示
-  String _formatTime(DateTime dateTime) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final messageDay = DateTime(dateTime.year, dateTime.month, dateTime.day);
-
-    if (messageDay == today) {
-      return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
-    } else if (messageDay == today.subtract(const Duration(days: 1))) {
-      final l10n = AppLocalizations.of(context);
-      return '${l10n.yesterday} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
-    } else {
-      return '${messageDay.month.toString().padLeft(2, '0')}-${messageDay.day.toString().padLeft(2, '0')} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
-    }
-  }
-
   Map<String, String> _buildInsightTypeLabels(AppLocalizations l10n) {
     return <String, String>{
       for (final option in AIInsightWorkflowOptions.analysisTypes)
@@ -525,8 +508,6 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
   }
 
   void _onAgentServiceChanged() {
-    // Agent 事件现在通过 events stream 内联显示到消息列表中，
-    // 此监听器保留用于 isRunning 状态同步
     if (!mounted) return;
   }
 

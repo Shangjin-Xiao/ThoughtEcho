@@ -1,4 +1,5 @@
 import 'dart:convert';
+import '../../utils/app_logger.dart';
 import '../agent_tool.dart';
 
 /// 提议编辑工具 - 让AI正式发起修改建议
@@ -82,7 +83,9 @@ class ProposeEditTool extends AgentTool {
         toolCallId: call.id,
         content: resultBlock,
       );
-    } catch (e) {
+    } catch (e, stack) {
+      logError('ProposeEditTool.execute 失败',
+          error: e, stackTrace: stack, source: 'ProposeEditTool');
       return ToolResult(
         toolCallId: call.id,
         content: '生成编辑提议失败：$e',

@@ -1780,6 +1780,20 @@
   "thinkingInProgress": "Thinking...",
   "aiMisunderstoodQuestion": "Sorry, I couldn't understand this question. Please try asking in a different way.",
   "aiResponseError": "Sorry, an error occurred while responding: {error}",
+  "toolCallStatusPending": "Pending",
+  "toolCallStatusExecuting": "Executing",
+  "toolCallStatusCompleted": "Completed",
+  "toolCallStatusError": "Error",
+  "toolCallParameters": "Parameters",
+  "toolCallResult": "Result",
+  "failedToPickFiles": "Failed to pick files: {error}",
+  "@failedToPickFiles": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "apiKeyDiagnosticsTitle": "API Key Diagnostics",
   "apiKeyDiagnosticsTool": "API Key Diagnostics Tool",
   "apiKeyDiagnosticsDesc": "This tool checks the storage and retrieval of API keys to help diagnose 401 authentication errors.",

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../gen_l10n/app_localizations.dart';
 
 /// Tool调用状态
 enum ToolCallStatus {

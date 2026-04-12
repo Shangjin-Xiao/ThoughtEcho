@@ -3,208 +3,176 @@ part of '../ai_assistant_page.dart';
 extension _AIAssistantPageAgent on _AIAssistantPageState {
   Future<void> _askAgent(String text) async {
     final l10n = AppLocalizations.of(context);
-    final history = _messages.where((m) => m.includedInContext).toList();
+    final history = _messages
+        .where((m) =>
+            m.role != 'system' && m.metaJson == null) // 排除系统消息和工具卡片
+        .toList();
 
-    // 用于追踪内联工具调用进度消息的 ID
-    String? toolProgressMsgId;
-    final toolItems = <ToolProgressItem>[];
+    // 记录用户消息
+    final userMsg = app_chat.ChatMessage(
+      id: const Uuid().v4(),
+      role: 'user',
+      isUser: true,
+      content: text,
+      timestamp: DateTime.now(),
+    );
 
-    // 先订阅事件流，再启动 runAgent
-    _agentEventSubscription?.cancel();
-    final eventStream = _agentService.events;
-    _agentEventSubscription = eventStream.listen((event) {
-      if (!mounted) return;
+    _setState(() {
+      _messages.add(userMsg);
+      _isLoading = true;
+    });
+    _scrollToBottom();
 
-      switch (event) {
-        case AgentThinkingEvent():
-          // 如果还没有工具进度消息，不做特殊处理（UI 已有 loading 状态）
-          break;
+    if (_currentSessionId == null) {
+      await _createNewSession();
+    }
+    await _chatSessionService.addMessage(_currentSessionId!, userMsg);
 
-        case AgentToolCallStartEvent():
-          // 添加工具项并创建/更新内联工具进度消息
-          toolItems.add(
-            ToolProgressItem(
-              toolName: event.toolName,
-              description: _formatToolArgs(event.arguments),
-              status: ToolProgressStatus.running,
-            ),
-          );
-          if (toolProgressMsgId == null) {
-            toolProgressMsgId = _uuid.v4();
-            _appendMessage(
-              app_chat.ChatMessage(
+    try {
+      String? toolProgressMsgId;
+      final toolItems = <ToolProgressItem>[];
+
+      // 监听 Agent 事件流
+      final eventSub = _agentService.events.listen((event) {
+        if (!mounted) return;
+        switch (event) {
+          case AgentThinkingEvent():
+            _setStatus('agentThinking');
+          case AgentToolCallStartEvent():
+            if (toolProgressMsgId == null) {
+              toolProgressMsgId = const Uuid().v4();
+              final msg = app_chat.ChatMessage(
                 id: toolProgressMsgId!,
-                content: '',
-                isUser: false,
                 role: 'assistant',
+                isUser: false,
+                content: '',
                 timestamp: DateTime.now(),
-                includedInContext: false,
-                metaJson: jsonEncode(<String, dynamic>{
+                metaJson: jsonEncode({
                   'type': 'tool_progress',
-                  'items': toolItems
-                      .map((i) => {
-                            'toolName': i.toolName,
-                            'description': i.description ?? '',
-                            'status': i.status.name,
-                            'result': i.result ?? '',
-                          })
-                      .toList(),
+                  'items': [],
                   'inProgress': true,
                 }),
-              ),
+              );
+              _setState(() => _messages.add(msg));
+              _scrollToBottom();
+            }
+
+            final newItem = ToolProgressItem(
+              toolName: event.toolName,
+              status: ToolProgressStatus.running,
+              description: _formatToolArgs(event.toolName, event.arguments),
             );
-          } else {
+            // 这里我们无法直接拿到 toolCallId，因为 ToolProgressItem 没有该字段
+            // 我们通过 toolName 简单追踪，或者重构 ToolProgressItem
+            toolItems.add(newItem);
             _updateToolProgressMessage(
               toolProgressMsgId!,
               toolItems,
               inProgress: true,
             );
-          }
 
-        case AgentToolCallResultEvent():
-          // 更新对应工具项状态为完成
-          final idx = toolItems.lastIndexWhere(
-            (item) =>
-                item.toolName == event.toolName &&
-                item.status == ToolProgressStatus.running,
-          );
-          if (idx != -1) {
-            toolItems[idx] = toolItems[idx].copyWith(
-              status: event.isError
-                  ? ToolProgressStatus.failed
-                  : ToolProgressStatus.completed,
-              result: _truncateToolResult(event.result),
-            );
-          }
-          if (toolProgressMsgId != null) {
-            // 检查是否还有正在运行的工具
-            final stillRunning = toolItems
-                .any((item) => item.status == ToolProgressStatus.running);
-            _updateToolProgressMessage(
-              toolProgressMsgId!,
-              toolItems,
-              inProgress: stillRunning,
-            );
-          }
+          case AgentToolCallResultEvent():
+            final idx = toolItems.lastIndexWhere((i) => i.toolName == event.toolName);
+            if (idx != -1) {
+              toolItems[idx] = toolItems[idx].copyWith(
+                status: event.isError ? ToolProgressStatus.failed : ToolProgressStatus.completed,
+                result: event.result,
+              );
+              _updateToolProgressMessage(
+                toolProgressMsgId!,
+                toolItems,
+                inProgress: true,
+              );
+            }
 
-        case AgentResponseEvent():
-          // 标记工具进度为完成
-          if (toolProgressMsgId != null) {
-            _updateToolProgressMessage(
-              toolProgressMsgId!,
-              toolItems,
-              inProgress: false,
-            );
-          }
+          case AgentResponseEvent():
+            // 标记工具进度为完成
+            if (toolProgressMsgId != null) {
+              _updateToolProgressMessage(
+                toolProgressMsgId!,
+                toolItems,
+                inProgress: false,
+              );
+            }
+            _setStatus('');
 
-        case AgentErrorEvent():
-          // 标记工具进度为完成
-          if (toolProgressMsgId != null) {
-            _updateToolProgressMessage(
-              toolProgressMsgId!,
-              toolItems,
-              inProgress: false,
-            );
-          }
-      }
-    });
+          case AgentErrorEvent():
+            // 标记工具进度为完成
+            if (toolProgressMsgId != null) {
+              _updateToolProgressMessage(
+                toolProgressMsgId!,
+                toolItems,
+                inProgress: false,
+              );
+            }
+            _setStatus('');
+        }
+      });
 
-    try {
       final response = await _agentService.runAgent(
         userMessage: text,
         history: history,
         noteContext: _hasBoundNote ? widget.quote!.content : null,
       );
 
+      await eventSub.cancel();
+
+      if (!mounted) return;
+
       final parsed = _parseAgentSmartResult(response.content, l10n);
 
       if (parsed.displayText.isNotEmpty) {
-        _appendMessage(
-          app_chat.ChatMessage(
-            id: _uuid.v4(),
-            content: parsed.displayText,
-            isUser: false,
-            role: 'assistant',
-            timestamp: DateTime.now(),
-          ),
-          persist: true,
+        final assistantMsg = app_chat.ChatMessage(
+          id: const Uuid().v4(),
+          role: 'assistant',
+          isUser: false,
+          content: parsed.displayText,
+          timestamp: DateTime.now(),
         );
+        _setState(() => _messages.add(assistantMsg));
+        await _chatSessionService.addMessage(_currentSessionId!, assistantMsg);
       }
 
       if (parsed.smartResult != null) {
-        if (_hasBoundNote) {
-          _appendMessage(
-            app_chat.ChatMessage(
-              id: _uuid.v4(),
-              content: parsed.smartResult!.content,
-              isUser: false,
-              role: 'assistant',
-              timestamp: DateTime.now(),
-              metaJson: jsonEncode(<String, dynamic>{
-                'type': 'smart_result',
-                'title': parsed.smartResult!.title,
-                'replaceButtonText': l10n.replaceOriginalNote,
-                'appendButtonText': l10n.appendToEnd,
-                'note_id': parsed.smartResult!.noteId,
-              }),
-            ),
-            persist: true,
-          );
-        } else {
-          _appendMessage(
-            app_chat.ChatMessage(
-              id: _uuid.v4(),
-              content: parsed.smartResult!.content,
-              isUser: false,
-              role: 'assistant',
-              timestamp: DateTime.now(),
-              metaJson: jsonEncode(<String, dynamic>{
-                'type': 'smart_result',
-                'title': parsed.smartResult!.title,
-                'note_id': parsed.smartResult!.noteId,
-              }),
-            ),
-            persist: true,
-          );
-        }
+        final cardMsg = app_chat.ChatMessage(
+          id: const Uuid().v4(),
+          role: 'assistant',
+          isUser: false,
+          content: parsed.smartResult!.content,
+          timestamp: DateTime.now(),
+          metaJson: jsonEncode({
+            'type': 'smart_result',
+            'title': parsed.smartResult!.title,
+            'note_id': parsed.smartResult!.noteId,
+          }),
+        );
+        _setState(() => _messages.add(cardMsg));
+        await _chatSessionService.addMessage(_currentSessionId!, cardMsg);
       }
 
-      if (parsed.displayText.isEmpty && parsed.smartResult == null) {
-        _appendMessage(
-          app_chat.ChatMessage(
-            id: _uuid.v4(),
-            content: l10n.aiMisunderstoodQuestion,
-            isUser: false,
-            role: 'assistant',
-            timestamp: DateTime.now(),
-          ),
-          persist: true,
-        );
-      }
-      _finishLoading();
+      _scrollToBottom();
     } catch (e) {
-      _finishLoading();
       if (!mounted) return;
+      _finishLoading();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.aiResponseError(e.toString()))),
       );
     } finally {
-      _agentEventSubscription?.cancel();
-      _agentEventSubscription = null;
+      if (mounted) {
+        _finishLoading();
+      }
     }
   }
 
-  /// 更新内联工具进度消息
   void _updateToolProgressMessage(
     String msgId,
     List<ToolProgressItem> items, {
     required bool inProgress,
   }) {
-    app_chat.ChatMessage? updatedMsg;
     _setState(() {
       final idx = _messages.indexWhere((m) => m.id == msgId);
       if (idx == -1) return;
-      _messages[idx] = _messages[idx].copyWith(
+      final updatedMsg = _messages[idx].copyWith(
         metaJson: jsonEncode(<String, dynamic>{
           'type': 'tool_progress',
           'items': items
@@ -218,33 +186,32 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
           'inProgress': inProgress,
         }),
       );
-      updatedMsg = _messages[idx];
+      _messages[idx] = updatedMsg;
+
+      // 同步保存到数据库
+      if (_currentSessionId != null) {
+        _chatSessionService.addMessage(_currentSessionId!, updatedMsg);
+      }
     });
-    if (updatedMsg != null && _currentSessionId != null) {
-      _chatSessionService.addMessage(_currentSessionId!, updatedMsg!);
-    }
     _scrollToBottom();
   }
 
   /// 格式化工具参数为简短摘要
-  String _formatToolArgs(Map<String, Object?> args) {
+  String _formatToolArgs(String toolName, Map<String, dynamic> args) {
+    if (toolName == 'explore_notes' && args.containsKey('query')) {
+      return '搜索: ${args['query']}';
+    }
+    if (toolName == 'web_search' && args.containsKey('query')) {
+      return '联网搜索: ${args['query']}';
+    }
+    if (toolName == 'web_fetch' && args.containsKey('url')) {
+      return '抓取网页: ${args['url']}';
+    }
     if (args.isEmpty) return '';
-    return args.entries.take(3).map((e) {
-      final val = e.value is String
-          ? (e.value as String).length > 50
-              ? '${(e.value as String).substring(0, 50)}...'
-              : e.value
-          : e.value;
-      return '${e.key}: $val';
-    }).join(', ');
+    return args.toString();
   }
 
-  /// 截断工具结果用于进度面板显示
-  String _truncateToolResult(String result) {
-    if (result.length <= 200) return result;
-    return '${result.substring(0, 200)}…';
-  }
-
+  /// 解析 Agent 回复中的 Smart Result 代码块
   _AgentSmartResultParseResult _parseAgentSmartResult(
     String rawContent,
     AppLocalizations l10n,
@@ -254,67 +221,33 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
       return const _AgentSmartResultParseResult(displayText: '');
     }
 
-    for (final match
-        in _AIAssistantPageState._agentCodeBlockPattern.allMatches(trimmed)) {
-      final language = (match.group(1) ?? '').trim().toLowerCase();
-      final payloadText = (match.group(2) ?? '').trim();
-      if (payloadText.isEmpty) {
-        continue;
-      }
+    // 匹配 ```smart_result ... ```
+    final regex = RegExp(
+      r'```(?:smart_result|smart-result)\s*([\s\S]*?)\s*```',
+      caseSensitive: false,
+    );
 
-      final decoded = _tryDecodeJsonMap(payloadText);
-      if (decoded == null) {
-        continue;
-      }
+    final match = regex.firstMatch(trimmed);
+    if (match == null) {
+      return _AgentSmartResultParseResult(displayText: trimmed);
+    }
 
-      final isSmartResultFence =
-          language == 'smart_result' || language == 'smart-result';
-      final type = decoded['type']?.toString().trim().toLowerCase();
-      if (!isSmartResultFence && type != 'smart_result') {
-        continue;
-      }
+    final jsonText = match.group(1) ?? '';
+    final displayText = trimmed.replaceRange(match.start, match.end, '').trim();
 
-      final smartContent =
-          (decoded['content'] ?? decoded['text'])?.toString().trim();
-      if (smartContent == null || smartContent.isEmpty) {
-        continue;
-      }
-
-      final noteId = decoded['note_id']?.toString().trim();
-      final titleText = decoded['title']?.toString().trim();
-      final title = titleText != null && titleText.isNotEmpty
-          ? titleText
-          : l10n.analysisResult;
-      final displayText = trimmed.replaceFirst(match.group(0) ?? '', '').trim();
-
+    try {
+      final data = jsonDecode(jsonText) as Map<String, dynamic>;
       return _AgentSmartResultParseResult(
         displayText: displayText,
         smartResult: _AgentSmartResultPayload(
-          title: title,
-          content: smartContent,
-          noteId: noteId,
+          title: data['title']?.toString() ?? 'AI 建议',
+          content: data['content']?.toString() ?? '',
+          noteId: data['note_id']?.toString(),
         ),
       );
+    } catch (e) {
+      return _AgentSmartResultParseResult(displayText: trimmed);
     }
-
-    return _AgentSmartResultParseResult(displayText: trimmed);
-  }
-
-  Map<String, dynamic>? _tryDecodeJsonMap(String payloadText) {
-    try {
-      final decoded = jsonDecode(payloadText);
-      if (decoded is Map<String, dynamic>) {
-        return decoded;
-      }
-      if (decoded is Map) {
-        return decoded.map(
-          (key, value) => MapEntry(key.toString(), value),
-        );
-      }
-    } catch (_) {
-      return null;
-    }
-    return null;
   }
 }
 

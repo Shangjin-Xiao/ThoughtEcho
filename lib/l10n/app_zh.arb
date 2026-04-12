@@ -1780,6 +1780,20 @@
   "thinkingInProgress": "正在思考中...",
   "aiMisunderstoodQuestion": "抱歉，我没能理解这个问题。请尝试换个方式问我。",
   "aiResponseError": "抱歉，回答时出现了错误：{error}",
+  "toolCallStatusPending": "待执行",
+  "toolCallStatusExecuting": "执行中",
+  "toolCallStatusCompleted": "完成",
+  "toolCallStatusError": "错误",
+  "toolCallParameters": "参数",
+  "toolCallResult": "结果",
+  "failedToPickFiles": "选择文件失败: {error}",
+  "@failedToPickFiles": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "apiKeyDiagnosticsTitle": "API密钥诊断",
   "apiKeyDiagnosticsTool": "API密钥诊断工具",
   "apiKeyDiagnosticsDesc": "此工具将检查API密钥的存储和获取情况，帮助诊断401认证错误。",

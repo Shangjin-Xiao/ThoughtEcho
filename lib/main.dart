@@ -46,12 +46,10 @@ import 'package:thoughtecho/services/chat_session_service.dart';
 import 'package:thoughtecho/services/place_search_service.dart';
 import 'package:thoughtecho/services/agent_service.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
-import 'package:thoughtecho/services/agent_tools/note_search_tool.dart';
-import 'package:thoughtecho/services/agent_tools/note_stats_tool.dart';
+import 'package:thoughtecho/services/agent_tools/explore_notes_tool.dart';
 import 'package:thoughtecho/services/agent_tools/web_fetch_tool.dart';
 import 'package:thoughtecho/services/agent_tools/web_search_tool.dart';
 import 'package:thoughtecho/services/agent_tools/propose_edit_tool.dart';
-import 'package:thoughtecho/services/agent_tools_extensions.dart';
 import 'package:thoughtecho/services/background_push_handler.dart';
 import 'package:thoughtecho/services/web_fetch_service.dart';
 import 'package:workmanager/workmanager.dart';
@@ -148,13 +146,9 @@ void _addDeferredError(Map<String, dynamic> error) {
 List<AgentTool> _buildAgentTools(
     DatabaseService db, ChatSessionService chatSessionService) {
   return [
-    NoteSearchTool(db),
-    NoteStatsTool(db),
+    ExploreNotesTool(db),
     const WebSearchTool(),
     WebFetchTool(WebFetchService()),
-    GetRecentNotesTool(chatSessionService),
-    GetNotesByTagsTool(chatSessionService),
-    GetNotesByDateRangeTool(chatSessionService),
     const ProposeEditTool(),
   ];
 }
