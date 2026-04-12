@@ -157,6 +157,21 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                     'text': message.content,
                   });
                 },
+                onOpenInEditor: () {
+                  Navigator.pop(context, {
+                    'action': 'edit',
+                    'text': message.content,
+                  });
+                },
+                onSaveDirectly: () {
+                  // 根据元数据中的提示类型决定是替换还是追加
+                  final isContinuation =
+                      meta['title']?.toString().contains('续写') ?? false;
+                  Navigator.pop(context, {
+                    'action': isContinuation ? 'append' : 'replace',
+                    'text': message.content,
+                  });
+                },
               ),
             );
           case 'notice':
@@ -387,7 +402,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     if (messageDay == today) {
       return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
     } else if (messageDay == today.subtract(const Duration(days: 1))) {
-      return '昨天 ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+      final l10n = AppLocalizations.of(context);
+      return '${l10n.yesterday} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
     } else {
       return '${messageDay.month.toString().padLeft(2, '0')}-${messageDay.day.toString().padLeft(2, '0')} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
     }
@@ -590,7 +606,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              _isAgentMode ? 'Agent' : 'Chat',
+                              _isAgentMode ? l10n.aiModeAgent : l10n.aiModeChat,
                               style: theme.textTheme.labelSmall?.copyWith(
                                 fontWeight: FontWeight.w600,
                                 color: _isAgentMode

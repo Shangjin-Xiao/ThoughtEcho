@@ -1,3 +1,5 @@
+import "package:flutter/foundation.dart";
+import "package:thoughtecho/services/unified_log_service.dart";
 import 'dart:collection';
 
 abstract class AgentTool {
@@ -54,6 +56,56 @@ class ToolCall {
   @override
   int get hashCode {
     return Object.hash(id, name, _deepHash(arguments));
+  }
+}
+
+extension ToolCallExtensions on ToolCall {
+  /// Safely gets a string argument.
+  String getString(String key, {String defaultValue = ''}) {
+    final value = arguments[key];
+    if (value is String) return value;
+    return value?.toString() ?? defaultValue;
+  }
+
+  /// Safely gets an integer argument, handling num and string inputs from LLM.
+  int getInt(String key, {int defaultValue = 0}) {
+    final value = arguments[key];
+    if (value is num) return value.toInt();
+    if (value is String) {
+      return int.tryParse(value) ?? defaultValue;
+    }
+    return defaultValue;
+  }
+
+  /// Safely gets a boolean argument.
+  bool getBool(String key, {bool defaultValue = false}) {
+    final value = arguments[key];
+    if (value is bool) return value;
+    if (value is String) {
+      final lower = value.toLowerCase();
+      if (lower == 'true' || lower == '1' || lower == 'yes') return true;
+      if (lower == 'false' || lower == '0' || lower == 'no') return false;
+    }
+    return defaultValue;
+  }
+
+  /// Logs a tool-related error to UnifiedLogService.
+  void logError(String message, {Object? error, StackTrace? stackTrace}) {
+    try {
+      // We use string-based lookup to avoid hard dependency if possible,
+      // but here we know it exists.
+      UnifiedLogService.instance.log(
+        UnifiedLogLevel.error,
+        'Tool[$name]: $message',
+        error: error,
+        stackTrace: stackTrace,
+        source: 'AgentTool',
+      );
+    } catch (e) {
+      // Fallback to debugPrint if service is not available
+      debugPrint('Failed to log tool error: $e');
+      debugPrint('Original error: $message $error');
+    }
   }
 }
 

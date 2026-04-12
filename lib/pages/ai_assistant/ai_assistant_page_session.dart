@@ -23,56 +23,61 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
   }
 
   Future<void> _initServicesAndLoad() async {
-    _chatSessionService = context.read<ChatSessionService>();
-    _agentService = context.read<AgentService>();
-    _aiService = context.read<AIService>();
-    _settingsService = context.read<SettingsService>();
-    if (!_agentListenerAttached) {
-      _agentService.addListener(_onAgentServiceChanged);
-      _agentListenerAttached = true;
-    }
-    _settingsReady = true;
-    final restoredMode = _restoreModeFromSettings();
-    if (restoredMode != _currentMode && mounted) {
-      _setState(() {
+    try {
+      _chatSessionService = context.read<ChatSessionService>();
+      _agentService = context.read<AgentService>();
+      _aiService = context.read<AIService>();
+      _settingsService = context.read<SettingsService>();
+      if (!_agentListenerAttached) {
+        _agentService.addListener(_onAgentServiceChanged);
+        _agentListenerAttached = true;
+      }
+      _settingsReady = true;
+      final restoredMode = _restoreModeFromSettings();
+      if (restoredMode != _currentMode && mounted) {
+        _setState(() {
+          _currentMode = restoredMode;
+        });
+      } else {
         _currentMode = restoredMode;
-      });
-    } else {
-      _currentMode = restoredMode;
-    }
+      }
 
-    // Initialize _enableThinking based on whether the current model supports thinking.
-    // This is done after _settingsService is guaranteed to be initialized.
-    _enableThinking = _currentModelSupportsThinking;
+      // Initialize _enableThinking based on whether the current model supports thinking.
+      // This is done after _settingsService is guaranteed to be initialized.
+      _enableThinking = _currentModelSupportsThinking;
 
-    if (widget.session != null) {
-      await _loadSession(widget.session!.id);
-    } else if (_hasBoundNote &&
-        !_isAgentMode &&
-        _boundNoteId != null &&
-        _entrySource == AIAssistantEntrySource.note) {
-      final session = await _chatSessionService.getLatestSessionForNote(
-        _boundNoteId!,
-      );
-      if (session != null) {
-        await _loadSession(session.id);
+      if (widget.session != null) {
+        await _loadSession(widget.session!.id);
+      } else if (_hasBoundNote &&
+          !_isAgentMode &&
+          _boundNoteId != null &&
+          _entrySource == AIAssistantEntrySource.note) {
+        final session = await _chatSessionService.getLatestSessionForNote(
+          _boundNoteId!,
+        );
+        if (session != null) {
+          await _loadSession(session.id);
+        } else {
+          await _createNewSession();
+        }
       } else {
         await _createNewSession();
       }
-    } else {
-      await _createNewSession();
-    }
 
-    if (!mounted) return;
-    if (_messages.isEmpty) {
-      _addWelcomeMessage();
-    }
+      if (!mounted) return;
+      if (_messages.isEmpty) {
+        _addWelcomeMessage();
+      }
 
-    if (widget.initialQuestion?.trim().isNotEmpty == true) {
-      unawaited(_handleSubmitted(widget.initialQuestion!.trim()));
-    }
+      if (widget.initialQuestion?.trim().isNotEmpty == true) {
+        unawaited(_handleSubmitted(widget.initialQuestion!.trim()));
+      }
 
-    _onAgentServiceChanged();
+      _onAgentServiceChanged();
+    } catch (e, stack) {
+      AppLogger.e('Failed to initialize AI Assistant Page services',
+          error: e, stackTrace: stack);
+    }
   }
 
   AIAssistantPageMode _restoreModeFromSettings() {
@@ -119,15 +124,19 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
   }
 
   Future<void> _loadSession(String sessionId) async {
-    _currentSessionId = sessionId;
-    final messages = await _chatSessionService.getMessages(sessionId);
-    if (!mounted) return;
-    _setState(() {
-      _messages
-        ..clear()
-        ..addAll(messages);
-    });
-    _scrollToBottom();
+    try {
+      _currentSessionId = sessionId;
+      final messages = await _chatSessionService.getMessages(sessionId);
+      if (!mounted) return;
+      _setState(() {
+        _messages
+          ..clear()
+          ..addAll(messages);
+      });
+      _scrollToBottom();
+    } catch (e, stack) {
+      AppLogger.e('Failed to load chat session', error: e, stackTrace: stack);
+    }
   }
 
   String _getQuotePreview() {
@@ -206,18 +215,23 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
   }
 
   Future<void> _startNewChat() async {
-    // Cancel any ongoing stream before starting new chat
-    await _streamSubscription?.cancel();
-    _streamSubscription = null;
-    _isLoading = false;
-    _agentStatusDismissTimer?.cancel();
+    try {
+      // Cancel any ongoing stream before starting new chat
+      await _streamSubscription?.cancel();
+      _streamSubscription = null;
+      _isLoading = false;
+      _agentStatusDismissTimer?.cancel();
 
-    _setState(() {
-      _messages.clear();
-      _selectedMediaFiles.clear();
-    });
-    await _createNewSession();
-    _addWelcomeMessage();
+      _setState(() {
+        _messages.clear();
+        _selectedMediaFiles.clear();
+      });
+      await _createNewSession();
+      _addWelcomeMessage();
+    } catch (e, stack) {
+      AppLogger.e('Failed to start a new chat session',
+          error: e, stackTrace: stack);
+    }
   }
 
   void _showSessionHistory() {

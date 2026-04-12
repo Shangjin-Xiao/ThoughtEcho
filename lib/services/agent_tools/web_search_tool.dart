@@ -38,9 +38,8 @@ class WebSearchTool extends AgentTool {
 
   @override
   Future<ToolResult> execute(ToolCall call) async {
-    final query = call.arguments['query'] as String? ?? '';
-    final requestedLimit =
-        (call.arguments['limit'] as num?)?.toInt() ?? _defaultLimit;
+    final query = call.getString('query');
+    final requestedLimit = call.getInt('limit', defaultValue: _defaultLimit);
     final limit = requestedLimit.clamp(1, _maxLimit).toInt();
 
     if (query.trim().isEmpty) {
@@ -88,7 +87,7 @@ class WebSearchTool extends AgentTool {
 
       return ToolResult(toolCallId: call.id, content: buffer.toString());
     } catch (e, stack) {
-      logError('WebSearchTool.execute 失败', error: e, stackTrace: stack);
+      call.logError('WebSearchTool.execute 失败', error: e, stackTrace: stack);
       return ToolResult(
         toolCallId: call.id,
         content: '网络搜索时出错：$e',

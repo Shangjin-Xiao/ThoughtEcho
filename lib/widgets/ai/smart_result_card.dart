@@ -7,6 +7,8 @@ class SmartResultCard extends StatelessWidget {
   final String content;
   final VoidCallback onReplace;
   final VoidCallback onAppend;
+  final VoidCallback? onOpenInEditor;
+  final VoidCallback? onSaveDirectly;
   final String? replaceButtonText;
   final String? appendButtonText;
 
@@ -16,6 +18,8 @@ class SmartResultCard extends StatelessWidget {
     required this.content,
     required this.onReplace,
     required this.onAppend,
+    this.onOpenInEditor,
+    this.onSaveDirectly,
     this.replaceButtonText,
     this.appendButtonText,
   });
@@ -76,15 +80,27 @@ class SmartResultCard extends StatelessWidget {
           const Divider(height: 1),
           Padding(
             padding: const EdgeInsets.all(8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            child: Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 8,
               children: [
+                if (onOpenInEditor != null)
+                  TextButton.icon(
+                    onPressed: onOpenInEditor,
+                    icon: const Icon(Icons.edit_note, size: 18),
+                    label: Text(l10n.openInEditor),
+                  ),
+                if (onSaveDirectly != null)
+                  TextButton.icon(
+                    onPressed: onSaveDirectly,
+                    icon: const Icon(Icons.save_outlined, size: 18),
+                    label: Text(l10n.saveDirectly),
+                  ),
                 TextButton.icon(
                   onPressed: onAppend,
                   icon: const Icon(Icons.add_circle_outline, size: 18),
                   label: Text(appendButtonText ?? l10n.appendToNote),
                 ),
-                const SizedBox(width: 8),
                 FilledButton.icon(
                   onPressed: onReplace,
                   icon: const Icon(Icons.find_replace, size: 18),

@@ -194,6 +194,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
     List<ToolProgressItem> items, {
     required bool inProgress,
   }) {
+    app_chat.ChatMessage? updatedMsg;
     _setState(() {
       final idx = _messages.indexWhere((m) => m.id == msgId);
       if (idx == -1) return;
@@ -211,7 +212,11 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
           'inProgress': inProgress,
         }),
       );
+      updatedMsg = _messages[idx];
     });
+    if (updatedMsg != null && _currentSessionId != null) {
+      _chatSessionService.addMessage(_currentSessionId!, updatedMsg!);
+    }
     _scrollToBottom();
   }
 

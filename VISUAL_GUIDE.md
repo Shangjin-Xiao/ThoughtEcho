@@ -16,15 +16,15 @@
 │  ╚════════════════════════════════════════════════════╝   │
 │                                                            │
 │  ┌────────────────────────────────────────────────────┐  │
-│  │ Input Area Container (rounded border)            │  │
+│  │ Input Area Container (rounded border)              │  │
 │  ├────────────────────────────────────────────────────┤  │
-│  │ [+]  [🤖]  [🧠]                    [→]            │  │
-│  │ Media Agent Thinking              Send           │  │
+│  │ [+]  [Agent]  [Thinking]           [Send]          │  │
+│  │ Media Mode     Toggle              Button          │  │
 │  ├────────────────────────────────────────────────────┤  │
-│  │ [=== Selected Media Files ===]                   │  │
-│  │ [image.jpg 250KB ✕] [doc.pdf 1.2MB ✕]          │  │
+│  │ [=== Selected Media Files ===]                     │  │
+│  │ [image.jpg 250KB ✕] [doc.pdf 1.2MB ✕]            │  │
 │  ├────────────────────────────────────────────────────┤  │
-│  │ [    Type message... (multiline)    ]            │  │
+│  │ [    Type message... (multiline)    ]              │  │
 │  └────────────────────────────────────────────────────┘  │
 │                                                            │
 └────────────────────────────────────────────────────────────┘
@@ -35,18 +35,18 @@
 ### Detailed Button Layout
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│ LEFT GROUP (Flexible, minSize)     │  SEND (Fixed)     │
-├─────────────────────────────────────────────────────────┤
-│                                                          │
-│  ┌──────┐ 6px ┌──────┐ 6px ┌──────┐                   │
-│  │  +   │     │ 🤖   │     │ 🧠  │       8px      │ → │
-│  └──────┘     └──────┘     └──────┘                   │
-│   Media        Mode       Thinking                Send  │
-│   Button      Toggle      Toggle                Button  │
-│                                                          │
-│ (Wraps if needed)        (Hidden if not supported)      │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│ LEFT GROUP (Flexible, minSize)        │  SEND (Fixed)        │
+├──────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌──────┐ 6px ┌──────┐ 6px ┌──────────┐        ┌──────┐      │
+│  │  +   │     │ Agent│     │ Thinking │  8px   │ Send │      │
+│  └──────┘     └──────┘     └──────────┘  gap   └──────┘      │
+│   Media        Mode         Thinking            Send         │
+│   Button      Toggle        Toggle              Button       │
+│                                                              │
+│ (Wraps if needed)           (Hidden if not supported)        │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 ## Button State Diagram
@@ -118,7 +118,7 @@ Model Supports Thinking:
 
 Off State:
 ┌─────────────────┐
-│  Icon: 🧠 (outlined)
+│  Icon: Thinking (outlined)
 │  Color: Gray
 │  BG: surfaceContainerHigh (0.5 alpha)
 │  OnTap: Enable thinking
@@ -126,7 +126,7 @@ Off State:
 
 On State:
 ┌─────────────────┐
-│  Icon: 🧠 (filled)
+│  Icon: Thinking (filled)
 │  Color: Secondary
 │  BG: Secondary (0.1 alpha)
 │  OnTap: Disable thinking
@@ -138,7 +138,7 @@ On State:
 ```
 Idle State:
 ┌────────────────────┐
-│ Icon: → (arrow)    │
+│ Icon: Send (arrow) │
 │ Color: OnPrimary   │
 │ BG: Primary        │
 │ OnTap: Send msg    │
@@ -157,7 +157,7 @@ Idle State:
      ↓
 Loading State:
 ┌────────────────────┐
-│ Icon: ⊗ (stop)     │
+│ Icon: Stop (⊗)     │
 │ Color: OnError     │
 │ BG: Error          │
 │ OnTap: Stop gen.   │
@@ -173,303 +173,8 @@ Loading State:
 
 ```
 Button Spacing:
-┌────────┬──┬────────┬──┬────────┬────────┬────────┐
-│ Media  │6px│ Mode   │6px│Thinking│ 8px   │ Send  │
-│ [+]    │   │ [🤖]   │   │ [🧠]  │ gap   │ [→]  │
-└────────┴──┴────────┴──┴────────┴────────┴────────┘
-                                    ↑
-                           Emphasis gap
-                       (separates send action)
-
-Label Pill (Single Mode):
-┌─────────────────────────────┐
-│ ┌──┐ 6px [Icon+Text]       │
-│ │  │ "Agent" or "Chat"      │
-│ └──┘                        │
-│ 12px padding all sides       │
-└─────────────────────────────┘
+┌────────┬──┬────────┬──┬──────────┬────────┬────────┐
+│ Media  │6px│ Mode   │6px│ Thinking │  8px   │ Send   │
+│ [+]    │  │ [Agent] │  │ [Think]  │  gap   │ [Send] │
+└────────┴──┴────────┴──┴──────────┴────────┴────────┘
 ```
-
-## Animation Timeline
-
-### Send Button Icon Transition
-
-```
-T = 0ms (Idle)
-┌─────────────────────────────┐
-│    → (arrow_outward)        │
-│    Color: OnPrimary         │
-│    BG: Primary              │
-└──────────────┬──────────────┘
-               │
-               │ Icon Change Triggers
-               │
-T = 100ms (Midpoint)
-┌─────────────────────────────┐
-│    ↻ (rotating)             │
-│    Opacity: 0.5             │
-└──────────────┬──────────────┘
-               │
-               │ RotationTransition
-               │ Turns: 0 → 1 (full rotation)
-               │
-T = 200ms (Loading)
-┌─────────────────────────────┐
-│    ⊗ (stop_circle)          │
-│    Color: OnError           │
-│    BG: Error                │
-└─────────────────────────────┘
-```
-
-## Color Schemes
-
-### Light Theme
-
-```
-Media Button:
-┌────────────────┐
-│ Icon: Primary  │
-│ BG: Primary 0.1
-│ Border: none   │
-└────────────────┘
-
-Mode Toggle:
-┌────────────────┐
-│ Icon: Primary  │
-│ BG: Primary 0.1
-│ Border: none   │
-└────────────────┘
-
-Thinking (Off):
-┌────────────────┐
-│ Icon: Gray     │
-│ BG: Gray 0.5   │
-│ Border: none   │
-└────────────────┘
-
-Thinking (On):
-┌────────────────┐
-│ Icon: Secondary│
-│ BG: Secondary 0.1
-│ Border: none   │
-└────────────────┘
-
-Send (Idle):
-┌────────────────┐
-│ Icon: OnPrimary│
-│ BG: Primary    │
-│ Border: none   │
-└────────────────┘
-
-Send (Loading):
-┌────────────────┐
-│ Icon: OnError  │
-│ BG: Error      │
-│ Border: none   │
-└────────────────┘
-```
-
-### Dark Theme
-
-```
-Same pattern, but colors adjusted for dark mode:
-- Primary → Lighter primary
-- Secondary → Lighter secondary
-- Error → Lighter error
-- All alphas and contrasts adjusted for readability
-```
-
-## Touch Target Sizes
-
-```
-┌────────────────────────────────────┐
-│ Each Button: 48dp x 48dp (Material │
-│ Minimum Touch Target)              │
-│                                    │
-│  IconButton with 20px icons:      │
-│  - Icon: 20px                      │
-│  - Padding: 12px                   │
-│  - Total: ~44px (> 48dp)           │
-│                                    │
-│  Accessible for touch              │
-└────────────────────────────────────┘
-```
-
-## Media File Preview
-
-```
-When media files are selected:
-┌────────────────────────────────────┐
-│ Media Preview Strip (60px height)  │
-├────────────────────────────────────┤
-│ ┌─────────────┐ ┌─────────────┐   │
-│ │ image.jpg   │ │ doc.pdf     │   │
-│ │ 250KB       │ │ 1.2MB       │   │
-│ │  [X]        │ │  [X]        │   │
-│ └─────────────┘ └─────────────┘   │
-│  (Horizontal scrollable)            │
-└────────────────────────────────────┘
-```
-
-## Responsive Layout
-
-### Wide Screen (Desktop/Tablet)
-
-```
-┌─────────────────────────────────────────────┐
-│ [+] [🤖] [🧠]              [→]             │
-│ (plenty of space)                           │
-└─────────────────────────────────────────────┘
-```
-
-### Narrow Screen (Mobile)
-
-```
-┌──────────────────────────────┐
-│ [+] [🤖] [🧠]   [→]         │
-│ (buttons wrap if needed)      │
-└──────────────────────────────┘
-```
-
-## Accessibility Features
-
-```
-┌─────────────────────────────────────┐
-│ All Buttons Have:                   │
-├─────────────────────────────────────┤
-│ ✓ Tooltips on hover                 │
-│   - Media: "Attach File"            │
-│   - Mode: "Switch to Agent/Chat"    │
-│   - Thinking: "AI Thinking"         │
-│   - Send: "Send Message" or "Stop"  │
-│                                     │
-│ ✓ Semantic labels for assistive tech│
-│   - Role: button                    │
-│   - Label: descriptive text         │
-│   - Enabled/Disabled state          │
-│                                     │
-│ ✓ Proper color contrast             │
-│   - Text: high contrast with bg     │
-│   - Icons: visible in both themes   │
-│                                     │
-│ ✓ Keyboard accessible               │
-│   - Tab to focus                    │
-│   - Enter/Space to activate         │
-└─────────────────────────────────────┘
-```
-
-## State Flow Diagram
-
-```
-User Opens AIAssistantPage
-│
-├─ Model Supports Thinking?
-│  ├─ YES → Show Thinking Button
-│  └─ NO  → Hide Thinking Button
-│
-├─ Available Modes?
-│  ├─ 1 Mode   → Show Label Pill
-│  └─ 2+ Modes → Show Toggle Button
-│
-├─ User Taps Media Button
-│  → FilePicker Opens
-│  → Select Files
-│  → Display Previews Above Input
-│
-├─ User Taps Mode Toggle
-│  → Switch Mode (if multiple available)
-│  → Update Button Icon
-│  → Persist State
-│
-├─ User Taps Thinking Toggle
-│  → Toggle _enableThinking
-│  → Update Button Color/Icon
-│  → No persistence needed
-│
-├─ User Types Message
-│  → Send Button Enabled
-│  → "/" Triggers Slash Commands
-│
-├─ User Taps Send Button (Idle)
-│  → Message Sent
-│  → Generation Starts
-│  → Send Button Transitions to Stop
-│  → Icon Rotates 200ms
-│  → All Input Buttons Disabled
-│
-├─ User Taps Send Button (Loading)
-│  → Generation Stops
-│  → Message Cancelled
-│  → Button Transitions Back to Send
-│  → Input Buttons Enabled
-│
-└─ Generation Complete
-   → Button Back to Idle
-   → All Input Buttons Enabled
-```
-
-## Interaction Patterns
-
-### Quick Tap (Single Click)
-```
-User Action → Button Visual Feedback → Action Executed
-┌─────────────────────────────────────────┐
-│ User taps Send button                   │
-│ ↓                                       │
-│ Ripple animation (Material default)     │
-│ ↓                                       │
-│ Icon rotates to stop (200ms)            │
-│ ↓                                       │
-│ Message sent, generation starts         │
-└─────────────────────────────────────────┘
-```
-
-### Long Press (Hold)
-```
-Currently: No long press handlers
-(All buttons use single tap)
-```
-
-### Double Tap
-```
-Currently: No double tap handlers
-(Not supported by design)
-```
-
-## Error States
-
-```
-FilePickerError:
-┌─────────────────────────────┐
-│ SnackBar Alert:             │
-│ "Failed to pick files: ..."│
-└─────────────────────────────┘
-
-GenerationError:
-┌─────────────────────────────┐
-│ Send Button:                │
-│ Color: Red (Error)          │
-│ Stops generation            │
-│ Shows error message         │
-└─────────────────────────────┘
-```
-
-## Theme Consistency
-
-```
-Light Theme:
-- Primary: #1f3760 (Dark Blue)
-- Secondary: #627D8C (Slate)
-- Error: #B3261E (Red)
-- Background: #FFFBFE
-
-Dark Theme:
-- Primary: #B3E5FC (Light Blue)
-- Secondary: #B0BEC5 (Gray)
-- Error: #F28482 (Light Red)
-- Background: #1C1B1F
-```
-
----
-
-This visual guide complements the code implementation and provides UI/UX designers with clear layouts, spacing, colors, and interaction patterns.
