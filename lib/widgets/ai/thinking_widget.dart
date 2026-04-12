@@ -36,7 +36,7 @@ class ThinkingWidget extends StatefulWidget {
 }
 
 class _ThinkingWidgetState extends State<ThinkingWidget>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late bool _isExpanded;
   late AnimationController _rotationController;
   late AnimationController _pulseController;

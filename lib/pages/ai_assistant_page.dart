@@ -24,6 +24,7 @@ import '../services/agent_service.dart'
         AgentThinkingEvent,
         AgentToolCallResultEvent,
         AgentToolCallStartEvent;
+import '../services/agent_tool.dart' show AgentResponse, ToolCall;
 import '../services/ai_service.dart';
 import '../services/chat_session_service.dart';
 import '../services/database_service.dart';
@@ -85,16 +86,12 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   String _selectedInsightStyle = 'professional';
   bool _showSlashCommands = false; // Only show when user types /
   bool _enableThinking = true; // 是否启用思考模式（仅支持的模型显示）
-  String _currentStatusKey = ''; // 当前 Agent 状态 L10n Key
 
   bool _isInputFocused = false;
   bool _agentListenerAttached = false;
   Timer? _agentStatusDismissTimer;
   final List<PlatformFile> _selectedMediaFiles = [];
   StreamSubscription<AgentEvent>? _agentEventSubscription;
-  static final RegExp _agentCodeBlockPattern = RegExp(
-    r'```([a-zA-Z0-9_-]+)\s*([\s\S]*?)```',
-  );
 
   AIAssistantEntrySource get _entrySource =>
       widget.entrySource ??
@@ -246,6 +243,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     required bool isLoading,
     String? metaJson,
     app_chat.MessageState? state,
+    List<String>? thinkingChunks,
   }) {
     _setState(() {
       final idx = _messages.indexWhere((m) => m.id == id);
@@ -256,6 +254,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
         isLoading: isLoading,
         metaJson: metaJson,
         state: state ?? oldMsg.state,
+        thinkingChunks: thinkingChunks,
       );
       _messages[idx] = updatedMsg;
       if (!isLoading && _currentSessionId != null) {
@@ -278,12 +277,6 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
 
   void _setState(VoidCallback fn) {
     setState(fn);
-  }
-
-  void _setStatus(String status) {
-    _setState(() {
-      _currentStatusKey = status;
-    });
   }
 
   /// Stop the current generation - cancels the stream subscription

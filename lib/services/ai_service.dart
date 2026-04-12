@@ -1181,6 +1181,7 @@ class AIService extends ChangeNotifier {
     Quote quote,
     String question, {
     List<ChatMessage>? history,
+    Function(String)? onThinking,
   }) {
     return _requestHelper.executeStreamOperation(
       operation: (controller) async {
@@ -1255,6 +1256,7 @@ class AIService extends ChangeNotifier {
             error: error,
             context: '流式问答',
           ),
+          onThinking: onThinking,
         );
       },
       context: '流式问答',
@@ -1383,6 +1385,7 @@ class AIService extends ChangeNotifier {
     String question, {
     List<ChatMessage>? history,
     String? systemContext,
+    Function(String)? onThinking,
   }) {
     return _requestHelper.executeStreamOperation(
       operation: (controller) async {
@@ -1436,6 +1439,7 @@ class AIService extends ChangeNotifier {
             error: error,
             context: '普通对话',
           ),
+          onThinking: onThinking,
           maxTokens: 1200,
         );
       },

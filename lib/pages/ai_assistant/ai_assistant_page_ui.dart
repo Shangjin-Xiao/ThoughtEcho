@@ -146,14 +146,13 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 appendButtonText:
                     meta['appendButtonText'] as String? ?? l10n.appendToNote,
                 onOpenInEditor: () async {
-                  final isContinuation =
-                      meta['title']?.toString().contains('续写') ?? false;
+                  final String modeAction = meta['action']?.toString() == 'append' ? 'append' : 'replace';
                   final noteId = meta['note_id']?.toString();
 
                   if (_hasBoundNote) {
                     Navigator.pop(context, {
                       'action': 'edit',
-                      'mode': isContinuation ? 'append' : 'replace',
+                      'mode': modeAction,
                       'text': message.content,
                     });
                   } else if (noteId != null && noteId.isNotEmpty) {
@@ -196,14 +195,13 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                   }
                 },
                 onSaveDirectly: () async {
-                  final isContinuation =
-                      meta['title']?.toString().contains('续写') ?? false;
+                  final String modeAction = meta['action']?.toString() == 'append' ? 'append' : 'replace';
                   final noteId = meta['note_id']?.toString();
 
                   if (_hasBoundNote) {
                     Navigator.pop(context, {
                       'action': 'save',
-                      'mode': isContinuation ? 'append' : 'replace',
+                      'mode': modeAction,
                       'text': message.content,
                     });
                   } else if (noteId != null && noteId.isNotEmpty) {
@@ -215,7 +213,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                         throw Exception('Note not found');
                       }
 
-                      final newContent = isContinuation
+                      final newContent = modeAction == 'append'
                           ? '${existingNote.content}\n${message.content}'
                           : message.content;
 

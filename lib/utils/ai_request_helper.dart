@@ -225,6 +225,7 @@ class AIRequestHelper {
     required Function(String) onData,
     required Function(String) onComplete,
     required Function(dynamic) onError,
+    Function(String)? onThinking,
     double? temperature,
     int? maxTokens,
     String? model,
@@ -248,6 +249,7 @@ class AIRequestHelper {
       onData: onData,
       onComplete: onComplete,
       onError: onError,
+      onThinking: onThinking,
       timeout: defaultTimeout,
     );
   }
@@ -271,7 +273,7 @@ class AIRequestHelper {
 
   /// 创建流式控制器并处理通用逻辑
   StreamController<String> createStreamController() {
-    return StreamController<String>.broadcast();
+    return StreamController<String>();
   }
 
   /// 处理流式响应的通用逻辑
@@ -397,19 +399,28 @@ class AIRequestHelper {
   }
 
   /// 创建并执行流式操作的通用模式
+  ///
+  /// 使用 onListen 延迟启动，确保监听者先挂载再生产数据，
+  /// 避免 broadcast 或 fire-and-forget 模式导致的事件丢失。
   Stream<String> executeStreamOperation({
     required Future<void> Function(StreamController<String>) operation,
     required String context,
   }) {
-    final controller = createStreamController();
+    late final StreamController<String> controller;
 
-    () async {
-      try {
-        await operation(controller);
-      } catch (e) {
-        handleStreamError(controller: controller, error: e, context: context);
-      }
-    }();
+    controller = StreamController<String>(
+      onListen: () async {
+        try {
+          await operation(controller);
+        } catch (e) {
+          handleStreamError(
+            controller: controller,
+            error: e,
+            context: context,
+          );
+        }
+      },
+    );
 
     return controller.stream;
   }

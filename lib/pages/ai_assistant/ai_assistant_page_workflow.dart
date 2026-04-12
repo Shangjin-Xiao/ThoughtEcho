@@ -373,6 +373,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
     );
 
     String fullResponse = '';
+    final thinkingParts = <String>[];
     final history = _messages
         .where((m) => m.includedInContext && m.id != aiMsgId && !m.isLoading)
         .toList();
@@ -381,31 +382,44 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
 
     // 使用流式订阅，支持实时更新 — 每个字符立即显示
     _streamSubscription = _aiService
-        .streamAskQuestion(widget.quote!, text, history: history)
+        .streamAskQuestion(
+      widget.quote!,
+      text,
+      history: history,
+      onThinking: (thinkingChunk) {
+        thinkingParts.add(thinkingChunk);
+        _updateMessage(
+          aiMsgId,
+          fullResponse,
+          isLoading: true,
+          state: MessageState.thinking,
+          thinkingChunks: List<String>.from(thinkingParts),
+        );
+      },
+    )
         .listen(
       (chunk) {
-        // 实时累积内容
         fullResponse += chunk;
-
-        // 立即更新UI，无延迟
         _updateMessage(
           aiMsgId,
           fullResponse,
           isLoading: true,
           state: MessageState.responding,
+          thinkingChunks:
+              thinkingParts.isNotEmpty ? List<String>.from(thinkingParts) : null,
         );
       },
       onDone: () {
-        // 完成：更新状态为complete
         _updateMessage(
           aiMsgId,
           fullResponse.isNotEmpty ? fullResponse : l10n.aiMisunderstoodQuestion,
           isLoading: false,
           state: MessageState.complete,
+          thinkingChunks:
+              thinkingParts.isNotEmpty ? List<String>.from(thinkingParts) : null,
         );
       },
       onError: (error) {
-        // 错误处理：更新状态为error
         _updateMessage(
           aiMsgId,
           l10n.aiResponseError(error.toString()),
@@ -434,6 +448,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
     );
 
     String fullResponse = '';
+    final thinkingParts = <String>[];
     final history = _messages
         .where((m) => m.includedInContext && m.id != aiMsgId && !m.isLoading)
         .toList();
@@ -446,31 +461,40 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
       text,
       history: history,
       systemContext: widget.exploreGuideSummary,
+      onThinking: (thinkingChunk) {
+        thinkingParts.add(thinkingChunk);
+        _updateMessage(
+          aiMsgId,
+          fullResponse,
+          isLoading: true,
+          state: MessageState.thinking,
+          thinkingChunks: List<String>.from(thinkingParts),
+        );
+      },
     )
         .listen(
       (chunk) {
-        // 实时累积内容
         fullResponse += chunk;
-
-        // 立即更新UI，无延迟
         _updateMessage(
           aiMsgId,
           fullResponse,
           isLoading: true,
           state: MessageState.responding,
+          thinkingChunks:
+              thinkingParts.isNotEmpty ? List<String>.from(thinkingParts) : null,
         );
       },
       onDone: () {
-        // 完成：更新状态为complete
         _updateMessage(
           aiMsgId,
           fullResponse.isNotEmpty ? fullResponse : l10n.aiMisunderstoodQuestion,
           isLoading: false,
           state: MessageState.complete,
+          thinkingChunks:
+              thinkingParts.isNotEmpty ? List<String>.from(thinkingParts) : null,
         );
       },
       onError: (error) {
-        // 错误处理：更新状态为error
         _updateMessage(
           aiMsgId,
           l10n.aiResponseError(error.toString()),

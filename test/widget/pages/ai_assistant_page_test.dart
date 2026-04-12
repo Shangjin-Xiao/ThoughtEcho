@@ -112,6 +112,7 @@ class _FakeAIService extends AIService {
     Quote quote,
     String question, {
     List<app_chat.ChatMessage>? history,
+    Function(String)? onThinking,
   }) {
     askQuestionCalls++;
     return Stream.value('笔记问答结果');
@@ -122,6 +123,7 @@ class _FakeAIService extends AIService {
     String question, {
     List<app_chat.ChatMessage>? history,
     String? systemContext,
+    Function(String)? onThinking,
   }) {
     generalConversationCalls++;
     return Stream.value('普通对话结果');

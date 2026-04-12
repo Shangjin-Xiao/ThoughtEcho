@@ -71,15 +71,21 @@ class WebSearchTool extends AgentTool {
           );
         }
 
+        final limitedResults = results.take(limit).toList();
+
         final buffer = StringBuffer('🔍 搜索「$query」的结果：\n\n');
-        for (var i = 0; i < results.length; i++) {
-          final result = results[i];
-          final title = result['title'] ?? '无标题';
-          final snippet = result['body'] ?? result['description'] ?? '';
+        for (var i = 0; i < limitedResults.length; i++) {
+          final result = limitedResults[i] as Map<String, dynamic>;
+          final title = result['title']?.toString() ?? '无标题';
+          final snippet = result['body']?.toString() ?? result['description']?.toString() ?? '';
+          final href = result['href']?.toString() ?? '';
           
           buffer.writeln('${i + 1}. $title');
+          if (href.isNotEmpty) {
+            buffer.writeln('   链接: $href');
+          }
           if (snippet.isNotEmpty) {
-            buffer.writeln('   $snippet');
+            buffer.writeln('   摘要: $snippet');
           }
           buffer.writeln();
         }

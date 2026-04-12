@@ -3,30 +3,23 @@ part of '../ai_assistant_page.dart';
 extension _AIAssistantPageAgent on _AIAssistantPageState {
   Future<void> _askAgent(String text) async {
     final l10n = AppLocalizations.of(context);
-    final history = _messages
+    
+    // 获取历史记录，排除系统消息和工具卡片。
+    // 因为 _handleSubmitted 已经把当前用户消息加进去了，所以需要把它从传给 AI 的 history 里剔除，
+    // 避免 AI 收到两遍当前问题。
+    var history = _messages
         .where((m) =>
-            m.role != 'system' && m.metaJson == null) // 排除系统消息和工具卡片
+            m.role != 'system' && m.metaJson == null) 
         .toList();
-
-    // 记录用户消息
-    final userMsg = app_chat.ChatMessage(
-      id: const Uuid().v4(),
-      role: 'user',
-      isUser: true,
-      content: text,
-      timestamp: DateTime.now(),
-    );
+        
+    if (history.isNotEmpty && history.last.isUser && history.last.content == text) {
+      history = history.sublist(0, history.length - 1);
+    }
 
     _setState(() {
-      _messages.add(userMsg);
       _isLoading = true;
     });
     _scrollToBottom();
-
-    if (_currentSessionId == null) {
-      await _createNewSession();
-    }
-    await _chatSessionService.addMessage(_currentSessionId!, userMsg);
 
     try {
       String? toolProgressMsgId;
@@ -37,7 +30,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
         if (!mounted) return;
         switch (event) {
           case AgentThinkingEvent():
-            _setStatus('agentThinking');
+            break;
           case AgentToolCallStartEvent():
             if (toolProgressMsgId == null) {
               toolProgressMsgId = const Uuid().v4();
@@ -94,7 +87,6 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
                 inProgress: false,
               );
             }
-            _setStatus('');
 
           case AgentErrorEvent():
             // 标记工具进度为完成
@@ -105,10 +97,8 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
                 inProgress: false,
               );
             }
-            _setStatus('');
         }
       });
-
       final response = await _agentService.runAgent(
         userMessage: text,
         history: history,
@@ -119,7 +109,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
 
       if (!mounted) return;
 
-      final parsed = _parseAgentSmartResult(response.content, l10n);
+      final parsed = _parseAgentSmartResult(response, l10n);
 
       if (parsed.displayText.isNotEmpty) {
         final assistantMsg = app_chat.ChatMessage(
@@ -144,6 +134,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             'type': 'smart_result',
             'title': parsed.smartResult!.title,
             'note_id': parsed.smartResult!.noteId,
+            'action': parsed.smartResult!.action, // 保存 action (replace或append)
           }),
         );
         _setState(() => _messages.add(cardMsg));
@@ -211,17 +202,37 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
     return args.toString();
   }
 
-  /// 解析 Agent 回复中的 Smart Result 代码块
+  /// 解析 Agent 回复中的 Smart Result 代码块或工具调用结果
   _AgentSmartResultParseResult _parseAgentSmartResult(
-    String rawContent,
+    AgentResponse response,
     AppLocalizations l10n,
   ) {
-    final trimmed = rawContent.trim();
+    final trimmed = response.content.trim();
+    
+    // 首先检查是否有 propose_edit 工具调用
+    final editCalls = response.toolCalls.where((c) => c.name == 'propose_edit').toList();
+    if (editCalls.isNotEmpty) {
+      final call = editCalls.last;
+      try {
+        return _AgentSmartResultParseResult(
+          displayText: trimmed, // 显示 AI 最终的回复（解释理由）
+          smartResult: _AgentSmartResultPayload(
+            title: call.arguments['title']?.toString() ?? 'AI 建议',
+            content: call.arguments['content']?.toString() ?? '',
+            noteId: call.arguments['note_id']?.toString(),
+            action: call.arguments['action']?.toString(),
+          ),
+        );
+      } catch (_) {
+        // 如果出错则回退到正则解析
+      }
+    }
+
     if (trimmed.isEmpty) {
       return const _AgentSmartResultParseResult(displayText: '');
     }
 
-    // 匹配 ```smart_result ... ```
+    // 回退机制：匹配 ```smart_result ... ```
     final regex = RegExp(
       r'```(?:smart_result|smart-result)\s*([\s\S]*?)\s*```',
       caseSensitive: false,
@@ -243,6 +254,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
           title: data['title']?.toString() ?? 'AI 建议',
           content: data['content']?.toString() ?? '',
           noteId: data['note_id']?.toString(),
+          action: data['action']?.toString(),
         ),
       );
     } catch (e) {
@@ -266,9 +278,11 @@ class _AgentSmartResultPayload {
     required this.title,
     required this.content,
     this.noteId,
+    this.action,
   });
 
   final String title;
   final String content;
   final String? noteId;
+  final String? action;
 }

@@ -172,12 +172,16 @@ class AINetworkManager {
   }
 
   /// 发送流式AI请求
+  ///
+  /// [onThinking] 可选回调，用于接收 thinking/reasoning 内容块
+  /// （DeepSeek reasoning_content、Anthropic thinking 等）。
   static Future<void> makeStreamRequest({
     required String url,
     required Map<String, dynamic> data,
     required Function(String) onData,
     required Function(String) onComplete,
     required Function(Exception) onError,
+    Function(String)? onThinking,
     AISettings? legacySettings,
     AIProviderSettings? provider,
     multi_ai.MultiAISettings? multiSettings,
@@ -198,6 +202,7 @@ class AINetworkManager {
         onData,
         onComplete,
         onError,
+        onThinking: onThinking,
       );
     } else if (multiSettings != null) {
       return await _makeStreamRequestWithFailover(
@@ -208,6 +213,7 @@ class AINetworkManager {
         onComplete,
         onError,
         timeout,
+        onThinking: onThinking,
       );
     } else if (legacySettings != null) {
       final response = await _makeBaseRequest(
@@ -222,6 +228,7 @@ class AINetworkManager {
         onData,
         onComplete,
         onError,
+        onThinking: onThinking,
       );
     } else {
       throw Exception('未提供有效的AI设置');
@@ -308,8 +315,9 @@ class AINetworkManager {
     Function(String) onData,
     Function(String) onComplete,
     Function(Exception) onError,
-    Duration? timeout,
-  ) async {
+    Duration? timeout, {
+    Function(String)? onThinking,
+  }) async {
     final availableProviders = multiSettings.availableProviders;
 
     if (availableProviders.isEmpty) {
@@ -340,6 +348,7 @@ class AINetworkManager {
           onData,
           onComplete,
           onError,
+          onThinking: onThinking,
         );
         return;
       } catch (e) {
@@ -375,6 +384,7 @@ class AINetworkManager {
             onData,
             onComplete,
             onError,
+            onThinking: onThinking,
           );
           return;
         } catch (e) {
@@ -412,20 +422,28 @@ class AINetworkManager {
   }
 
   /// 处理流式响应
+  ///
+  /// [onThinking] 可选回调，接收 thinking/reasoning 增量内容。
+  /// 支持的 thinking 格式：
+  /// - OpenAI 兼容：`delta.reasoning_content`（DeepSeek、QwQ 等）
+  /// - Anthropic：`type: "content_block_delta"` + `delta.type: "thinking_delta"`
   static Future<void> _processStreamResponse(
     Stream<List<int>> stream,
     Function(String) onData,
     Function(String) onComplete,
-    Function(Exception) onError,
-  ) async {
+    Function(Exception) onError, {
+    Function(String)? onThinking,
+  }) async {
     final completer = Completer<void>();
     final buffer = StringBuffer();
     String partialLine = '';
 
-    stream.listen(
-      (data) {
+    // 使用流式 UTF-8 解码器，避免多字节字符跨 chunk 时截断
+    final utf8Stream = utf8.decoder.bind(stream);
+
+    utf8Stream.listen(
+      (chunk) {
         try {
-          final chunk = utf8.decode(data, allowMalformed: true);
           final lines = (partialLine + chunk).split('\n');
           partialLine = lines.removeLast();
 
@@ -434,23 +452,69 @@ class AINetworkManager {
               final jsonStr = line.substring(5).trim();
               if (jsonStr == '[DONE]') {
                 onComplete(buffer.toString());
-                completer.complete();
+                if (!completer.isCompleted) completer.complete();
                 return;
               }
               try {
                 final json = jsonDecode(jsonStr);
 
-                // 处理OpenAI格式
-                final content = json['choices']?[0]?['delta']?['content'];
-                if (content != null &&
-                    content is String &&
-                    content.isNotEmpty) {
-                  buffer.write(content);
-                  onData(content);
+                // ── OpenAI 兼容格式 ──
+                final delta = json['choices']?[0]?['delta'];
+                if (delta is Map) {
+                  // thinking / reasoning 内容
+                  // DeepSeek: reasoning_content, 部分兼容: reasoning
+                  final reasoning = delta['reasoning_content'] ??
+                      delta['reasoning'];
+                  if (reasoning != null &&
+                      reasoning is String &&
+                      reasoning.isNotEmpty) {
+                    onThinking?.call(reasoning);
+                  }
+
+                  // 正文内容
+                  final content = delta['content'];
+                  if (content != null &&
+                      content is String &&
+                      content.isNotEmpty) {
+                    buffer.write(content);
+                    onData(content);
+                  }
                   continue;
                 }
 
-                // 处理Anthropic格式
+                // ── Anthropic 格式 ──
+                final eventType = json['type'] as String?;
+
+                // Anthropic thinking_delta
+                if (eventType == 'content_block_delta') {
+                  final deltaObj = json['delta'];
+                  if (deltaObj is Map) {
+                    final deltaType = deltaObj['type'] as String?;
+                    if (deltaType == 'thinking_delta') {
+                      final thinking = deltaObj['thinking'] as String?;
+                      if (thinking != null && thinking.isNotEmpty) {
+                        onThinking?.call(thinking);
+                      }
+                      continue;
+                    }
+                    // Anthropic text_delta
+                    final text = deltaObj['text'] as String?;
+                    if (text != null && text.isNotEmpty) {
+                      buffer.write(text);
+                      onData(text);
+                      continue;
+                    }
+                  }
+                }
+
+                // Anthropic message_stop
+                if (eventType == 'message_stop') {
+                  onComplete(buffer.toString());
+                  if (!completer.isCompleted) completer.complete();
+                  return;
+                }
+
+                // 旧版 Anthropic 兼容: delta.text 顶层
                 final anthropicContent = json['delta']?['text'];
                 if (anthropicContent != null &&
                     anthropicContent is String &&
