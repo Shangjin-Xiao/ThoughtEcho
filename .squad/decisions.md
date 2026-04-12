@@ -181,3 +181,50 @@
 - EVE: P2-1探索页布局、P2-2 AI对话现代化、P2-4斜杠命令菜单
 
 ---
+
+## 2026-04-12: Agent 工具调用内联显示架构决策
+
+**决策者**: 上晋 + Amp  
+**类型**: 架构决策 + 代码规范
+
+**背景**: Agent 界面多次被其他 AI 代理改烂，需要明确记录正确架构。
+
+**核心架构决策**:
+
+### 1. 工具调用必须内联显示到消息列表（非独立面板）
+- 工具调用进度作为 `tool_progress` 类型的 `ChatMessage` 插入 `_messages` 列表
+- 在 `_buildMessageBubble` 的 `metaJson` switch 中渲染 `ToolProgressPanel`
+- **禁止**: 在输入框区域或底部独立面板中显示工具调用
+- **禁止**: 使用 `_buildAgentStatusIndicator` 等独立组件
+- 工具调用完成后永久保留在对话流中（不自动消失）
+
+### 2. AgentService 事件流架构
+- `AgentService` 使用 `StreamController<AgentEvent>.broadcast()` 持久控制器
+- 事件类型: `AgentThinkingEvent` / `AgentToolCallStartEvent` / `AgentToolCallResultEvent` / `AgentResponseEvent` / `AgentErrorEvent`
+- UI 层在 `_askAgent` 中订阅事件流，每个事件更新 `_messages` 中的内联 tool_progress 消息
+- `runAgent()` 返回类型保持 `Future<AgentResponse>` 不变
+
+### 3. 输入框布局规范
+- 输入框使用 `SafeArea` 包裹，**禁止**手动添加 `keyboardHeight` padding
+- **禁止** `AnimatedContainer` + `MediaQuery.viewInsets.bottom` 手动处理键盘高度
+- Flutter 的 `Scaffold` + `resizeToAvoidBottomInset` 已自动处理键盘避让
+
+### 4. 流式传输规范
+- chat/noteChat 模式：直接 `_updateMessage` + `setState`，**禁止**防抖
+- Agent 模式：非流式（`runAgent` 是 `Future`），通过事件流实时更新工具进度
+
+### 5. 禁止添加的代码
+- `_debouncedStreamUpdate` / `_flushPendingStreamUpdate` — 会破坏流式实时性
+- `_buildTextEnhancementProposalCard` / `_openNoteEditorForEnhancement` / `_directlySaveEnhancement` / `_executeNoteSave` — 过度工程化
+- `AnimatedIconButton` / `_LoadingIndicatorWidget` — 不必要的 Widget 拆分
+- `LayoutBuilder` + `ConstrainedBox` 包裹消息 — 增加复杂度无实际收益
+- `NotificationListener<ScrollNotification>` 自动隐藏键盘 — 与 `keyboardDismissBehavior` 冲突
+
+**参考实现**: Google AI Gallery (`google-ai-edge/gallery`) 的 `ChatPanel.kt` + `MessageBodyCollapsableProgressPanel.kt`
+
+**状态字段清单** (仅保留):
+- `_isLoading`, `_isInputFocused`, `_agentListenerAttached`, `_enableThinking`
+- `_agentStatusDismissTimer`, `_selectedMediaFiles`
+- **已删除**: `_thinkingText`, `_isThinking`, `_toolProgressItems`, `_isToolInProgress`, `_showAgentStatusPanel`, `_lastAgentStatusKey`, `_lastAgentRunning`, `_streamUpdateDebounce`, `_pendingStreamingMessageId`, `_accumulatedStreamContent`
+
+---
