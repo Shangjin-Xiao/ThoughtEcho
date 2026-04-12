@@ -34,7 +34,7 @@ class NoteSearchTool extends AgentTool {
   String get name => 'search_notes';
 
   @override
-  String get description => '搜索用户笔记并返回分页摘要；可按需增量拉取单条笔记全文片段，避免上下文过载';
+  String get description => '【只读】搜索用户笔记并返回分页摘要；可按需增量拉取单条笔记全文片段。此工具没有任何修改权限。';
 
   @override
   Map<String, Object?> get parametersSchema => {

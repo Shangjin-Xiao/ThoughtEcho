@@ -5,8 +5,8 @@ import '../../gen_l10n/app_localizations.dart';
 class SmartResultCard extends StatelessWidget {
   final String title;
   final String content;
-  final VoidCallback onReplace;
-  final VoidCallback onAppend;
+  final VoidCallback? onReplace;
+  final VoidCallback? onAppend;
   final VoidCallback? onOpenInEditor;
   final VoidCallback? onSaveDirectly;
   final String? replaceButtonText;
@@ -16,8 +16,8 @@ class SmartResultCard extends StatelessWidget {
     super.key,
     required this.title,
     required this.content,
-    required this.onReplace,
-    required this.onAppend,
+    this.onReplace,
+    this.onAppend,
     this.onOpenInEditor,
     this.onSaveDirectly,
     this.replaceButtonText,
@@ -91,21 +91,11 @@ class SmartResultCard extends StatelessWidget {
                     label: Text(l10n.openInEditor),
                   ),
                 if (onSaveDirectly != null)
-                  TextButton.icon(
+                  FilledButton.icon(
                     onPressed: onSaveDirectly,
                     icon: const Icon(Icons.save_outlined, size: 18),
                     label: Text(l10n.saveDirectly),
                   ),
-                TextButton.icon(
-                  onPressed: onAppend,
-                  icon: const Icon(Icons.add_circle_outline, size: 18),
-                  label: Text(appendButtonText ?? l10n.appendToNote),
-                ),
-                FilledButton.icon(
-                  onPressed: onReplace,
-                  icon: const Icon(Icons.find_replace, size: 18),
-                  label: Text(replaceButtonText ?? l10n.applyChanges),
-                ),
               ],
             ),
           ),

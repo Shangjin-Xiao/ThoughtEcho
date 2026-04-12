@@ -14,7 +14,7 @@ class WebFetchTool extends AgentTool {
   String get name => 'web_fetch';
 
   @override
-  String get description => '抓取指定网页的内容，获取网页纯文本信息。适用于需要阅读特定网页内容的场景。';
+  String get description => '【只读】抓取指定网页的内容。此工具仅用于获取信息。';
 
   @override
   Map<String, Object?> get parametersSchema => {

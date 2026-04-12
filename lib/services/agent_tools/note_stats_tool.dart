@@ -26,7 +26,7 @@ class NoteStatsTool extends AgentTool {
   String get name => 'get_note_stats';
 
   @override
-  String get description => '获取用户笔记的统计概览（总数、日期范围、分类分布、情感分布等）';
+  String get description => '【只读】获取笔记库的统计信息（总数、日期范围、情感分布等）。此工具无法修改任何数据。';
 
   @override
   Map<String, Object?> get parametersSchema => {

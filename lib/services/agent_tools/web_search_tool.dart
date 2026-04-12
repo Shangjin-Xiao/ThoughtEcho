@@ -18,7 +18,7 @@ class WebSearchTool extends AgentTool {
   String get name => 'web_search';
 
   @override
-  String get description => '搜索互联网获取实时信息（使用 Bing 搜索）';
+  String get description => '【只读】通过外部搜索引擎搜索实时信息。此工具仅用于获取信息。';
 
   @override
   Map<String, Object?> get parametersSchema => {

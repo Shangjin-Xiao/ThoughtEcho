@@ -145,32 +145,58 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                     meta['replaceButtonText'] as String? ?? l10n.applyChanges,
                 appendButtonText:
                     meta['appendButtonText'] as String? ?? l10n.appendToNote,
-                onReplace: () {
-                  Navigator.pop(context, {
-                    'action': 'replace',
-                    'text': message.content,
-                  });
-                },
-                onAppend: () {
-                  Navigator.pop(context, {
-                    'action': 'append',
-                    'text': message.content,
-                  });
-                },
                 onOpenInEditor: () {
-                  Navigator.pop(context, {
-                    'action': 'edit',
-                    'text': message.content,
-                  });
-                },
-                onSaveDirectly: () {
-                  // 根据元数据中的提示类型决定是替换还是追加
                   final isContinuation =
                       meta['title']?.toString().contains('续写') ?? false;
-                  Navigator.pop(context, {
-                    'action': isContinuation ? 'append' : 'replace',
-                    'text': message.content,
-                  });
+                  if (_hasBoundNote) {
+                    Navigator.pop(context, {
+                      'action': 'edit',
+                      'mode': isContinuation ? 'append' : 'replace',
+                      'text': message.content,
+                    });
+                  } else {
+                    // 全局模式：直接打开新编辑器
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => NoteFullEditorPage(
+                          initialContent: message.content,
+                        ),
+                      ),
+                    );
+                  }
+                },
+                onSaveDirectly: () async {
+                  final isContinuation =
+                      meta['title']?.toString().contains('续写') ?? false;
+                  if (_hasBoundNote) {
+                    Navigator.pop(context, {
+                      'action': 'save',
+                      'mode': isContinuation ? 'append' : 'replace',
+                      'text': message.content,
+                    });
+                  } else {
+                    // 全局模式：直接保存为新笔记
+                    try {
+                      final db = context.read<DatabaseService>();
+                      final quote = Quote.validated(
+                        content: message.content,
+                        date: DateTime.now().toIso8601String(),
+                      );
+                      await db.addQuote(quote);
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(l10n.saveSuccess)),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(l10n.saveFailed(e.toString()))),
+                        );
+                      }
+                    }
+                  }
                 },
               ),
             );

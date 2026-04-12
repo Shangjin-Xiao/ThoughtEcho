@@ -156,7 +156,6 @@ List<AgentTool> _buildAgentTools(
     GetRecentNotesTool(chatSessionService),
     GetNotesByTagsTool(chatSessionService),
     GetNotesByDateRangeTool(chatSessionService),
-    NoteEditTool(db),
     const TextEnhancementActionTool(),
   ];
 }

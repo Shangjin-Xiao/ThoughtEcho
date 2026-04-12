@@ -245,20 +245,20 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
 
     if (result != null && result is Map<String, dynamic> && mounted) {
       final action = result['action'];
+      final mode = result['mode'] ?? (action == 'append' ? 'append' : 'replace');
       final text = (result['text'] as Object?)?.toString().trim();
       if (text == null || text.isEmpty) {
         return;
       }
 
-      if (action == 'replace') {
-        _updateState(() {
+      // 执行应用逻辑
+      void applyChanges() {
+        if (mode == 'replace') {
           _controller.document = QuillAiApplyUtils.applyPolishedText(
             originalDocument: _controller.document,
             polishedText: text,
           );
-        });
-      } else if (action == 'append') {
-        _updateState(() {
+        } else if (mode == 'append') {
           final int insertPosition = _controller.document.length - 1;
           if (insertPosition >= 0) {
             _controller.document.insert(insertPosition, '\n\n$text');
@@ -267,7 +267,15 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
             TextSelection.collapsed(offset: _controller.document.length - 1),
             quill.ChangeSource.local,
           );
-        });
+        }
+      }
+
+      if (action == 'replace' || action == 'append' || action == 'edit') {
+        _updateState(applyChanges);
+      } else if (action == 'save') {
+        _updateState(applyChanges);
+        // 自动保存到数据库
+        await _saveContent();
       }
     }
   }

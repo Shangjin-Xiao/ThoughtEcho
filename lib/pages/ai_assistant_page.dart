@@ -37,6 +37,7 @@ import '../widgets/ai/thinking_widget.dart';
 import '../widgets/ai/tool_progress_panel.dart';
 import '../widgets/session_history_sheet.dart';
 import '../widgets/source_analysis_result_dialog.dart';
+import 'note_full_editor_page.dart';
 
 part 'ai_assistant/ai_assistant_page_session.dart';
 part 'ai_assistant/ai_assistant_page_workflow.dart';

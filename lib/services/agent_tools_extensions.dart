@@ -14,7 +14,7 @@ class GetRecentNotesTool extends AgentTool {
   String get name => 'get_recent_notes';
 
   @override
-  String get description => '获取最近创建的笔记，用于了解用户最近的思考内容';
+  String get description => '【只读】获取最近创建的笔记。此工具无法修改笔记。';
 
   @override
   Map<String, Object?> get parametersSchema => {
@@ -106,7 +106,7 @@ class GetNotesByTagsTool extends AgentTool {
   String get name => 'get_notes_by_tags';
 
   @override
-  String get description => '按标签查询笔记，支持多标签AND查询';
+  String get description => '【只读】按标签查询笔记。此工具无法修改笔记。';
 
   @override
   Map<String, Object?> get parametersSchema => {
@@ -214,7 +214,7 @@ class GetNotesByDateRangeTool extends AgentTool {
   String get name => 'get_notes_by_date_range';
 
   @override
-  String get description => '查询指定日期范围内的笔记';
+  String get description => '【只读】查询指定日期范围内的笔记。此工具无法修改笔记。';
 
   @override
   Map<String, Object?> get parametersSchema => {

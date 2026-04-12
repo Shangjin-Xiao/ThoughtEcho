@@ -401,6 +401,7 @@
       }
     }
   },
+  "saveSuccess": "保存成功",
   "saveFailed": "保存失败: {error}",
   "@saveFailed": {
     "placeholders": {

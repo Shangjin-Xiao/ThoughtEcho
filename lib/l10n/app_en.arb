@@ -401,6 +401,7 @@
       }
     }
   },
+  "saveSuccess": "Saved successfully",
   "saveFailed": "Save failed: {error}",
   "@saveFailed": {
     "placeholders": {
