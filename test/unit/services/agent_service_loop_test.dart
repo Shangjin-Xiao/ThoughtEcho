@@ -386,5 +386,85 @@ void main() {
 
       expect(responseEvents, 2);
     });
+
+    test('returns max-rounds summary when tool loop never converges', () async {
+      final provider = const AIProviderSettings(
+        id: 'openai',
+        name: 'OpenAI',
+        apiUrl: 'https://api.openai.com/v1/chat/completions',
+        model: 'gpt-4.1',
+      );
+      final settings = _FakeSettingsService(provider);
+      final tool = _CountingTool(toolName: 'search_notes', resultContent: 'ok');
+
+      final responses = <openai.ChatCompletion>[
+        for (var i = 0; i < 8; i++)
+          _toolCallCompletion(
+            callId: 'call_$i',
+            toolName: 'search_notes',
+            args: {'query': 'q_$i'},
+          ),
+        _textCompletion('summary answer'),
+      ];
+
+      final service = AgentService(
+        settingsService: settings,
+        tools: [tool],
+        apiKeyResolver: (_) async => 'test-key',
+        completionRequester: ({
+          required provider,
+          required messages,
+          required tools,
+          required temperature,
+          required maxTokens,
+        }) async {
+          return responses.removeAt(0);
+        },
+      );
+
+      final response = await service.runAgent(userMessage: 'test');
+      expect(tool.executeCount, 8);
+      expect(response.reachedMaxRounds, isTrue);
+      expect(response.content, contains('已达到最大执行轮数'));
+      expect(response.content, contains('summary answer'));
+    });
+
+    test('emits error event when completion request fails', () async {
+      final provider = const AIProviderSettings(
+        id: 'openai',
+        name: 'OpenAI',
+        apiUrl: 'https://api.openai.com/v1/chat/completions',
+        model: 'gpt-4.1',
+      );
+      final settings = _FakeSettingsService(provider);
+      final service = AgentService(
+        settingsService: settings,
+        tools: const <AgentTool>[],
+        apiKeyResolver: (_) async => 'test-key',
+        completionRequester: ({
+          required provider,
+          required messages,
+          required tools,
+          required temperature,
+          required maxTokens,
+        }) async {
+          throw Exception('api down');
+        },
+      );
+
+      final events = <AgentEvent>[];
+      final subscription = service.events.listen(events.add);
+
+      await expectLater(
+        () => service.runAgent(userMessage: 'test'),
+        throwsException,
+      );
+
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      await subscription.cancel();
+      service.dispose();
+
+      expect(events.any((e) => e is AgentErrorEvent), isTrue);
+    });
   });
 }

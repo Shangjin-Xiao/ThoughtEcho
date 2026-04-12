@@ -421,6 +421,23 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     if (!mounted) return;
     final l10n = AppLocalizations.of(context);
 
+    final guideSummary = widget.exploreGuideSummary?.trim();
+    if (!_hasBoundNote &&
+        _entrySource == AIAssistantEntrySource.explore &&
+        guideSummary != null &&
+        guideSummary.isNotEmpty) {
+      final guideMsg = app_chat.ChatMessage(
+        id: _uuid.v4(),
+        content: guideSummary,
+        isUser: false,
+        role: 'system',
+        timestamp: DateTime.now(),
+        includedInContext: false,
+      );
+      _appendMessage(guideMsg, persist: false);
+      return;
+    }
+
     // Only show welcome messages for note context mode
     if (_hasBoundNote) {
       final String welcomeContent = l10n.aiAssistantWelcome(_getQuotePreview());
@@ -1341,6 +1358,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     if (allowedModes.length == 1) {
       // Only one mode available - show label only, no toggle
       return Container(
+        key: const ValueKey('ai_assistant_mode_toggle'),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: theme.colorScheme.primary.withValues(alpha: 0.1),
@@ -1362,6 +1380,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
 
     // Multiple modes available - toggle button with text label
     return GestureDetector(
+      key: const ValueKey('ai_assistant_mode_toggle'),
       onTap: _isLoading
           ? null
           : () {
@@ -1445,6 +1464,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     return Tooltip(
       message: _isLoading ? l10n.stopGenerate : l10n.confirm,
       child: AnimatedIconButton(
+        iconButtonKey: const ValueKey('ai_assistant_send_button'),
         isLoading: _isLoading,
         onPressed: _isLoading
             ? _stopGenerating
@@ -2425,6 +2445,16 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                           key: ValueKey('slash_commands_hidden'),
                         ),
             ),
+            if (_showAgentStatusPanel && _toolProgressItems.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: ToolProgressPanel(
+                  title: l10n.toolExecutionProgress,
+                  items: _toolProgressItems,
+                  inProgress: _isToolInProgress,
+                  accentColor: theme.colorScheme.primary,
+                ),
+              ),
             // Display selected media files
             if (_selectedMediaFiles.isNotEmpty)
               Padding(
@@ -2611,11 +2641,13 @@ class _AgentSmartResultPayload {
 /// Animated send/stop button following Google AI Gallery design patterns
 /// Shows arrow icon when ready, stop icon when generating
 class AnimatedIconButton extends StatelessWidget {
+  final Key? iconButtonKey;
   final bool isLoading;
   final VoidCallback onPressed;
   final ThemeData theme;
 
   const AnimatedIconButton({
+    this.iconButtonKey,
     required this.isLoading,
     required this.onPressed,
     required this.theme,
@@ -2625,6 +2657,7 @@ class AnimatedIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IconButton(
+      key: iconButtonKey,
       icon: AnimatedSwitcher(
         duration: const Duration(milliseconds: 200),
         transitionBuilder: (child, animation) {

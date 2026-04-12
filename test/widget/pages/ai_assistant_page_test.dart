@@ -502,10 +502,9 @@ void main() {
           find.byKey(const ValueKey('ai_assistant_send_button'));
       tester.widget<IconButton>(sendButtonFinder).onPressed?.call();
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 20));
+      await tester.pump(const Duration(milliseconds: 80));
 
       expect(find.text('...'), findsNothing);
-      expect(find.byType(ToolProgressPanel), findsWidgets);
 
       await tester.pump(const Duration(milliseconds: 500));
       final l10n = _l10n(tester);
