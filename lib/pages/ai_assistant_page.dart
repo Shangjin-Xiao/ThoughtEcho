@@ -1757,10 +1757,10 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
         curve: Curves.easeOutCubic,
-        padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
+        padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
         decoration: BoxDecoration(
           color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(24),
           border: Border.all(
             color: shellBorderColor,
             width: _isInputFocused ? 1.4 : 1.0,
@@ -1773,28 +1773,19 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
               blurRadius: 18,
               offset: const Offset(0, 6),
             ),
-            BoxShadow(
-              color: theme.colorScheme.primary.withValues(
-                alpha: _isInputFocused ? 0.1 : 0.03,
-              ),
-              blurRadius: 18,
-              offset: const Offset(0, 4),
-            ),
           ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _buildModeSwitch(theme, l10n),
+            // Slash commands
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 180),
-              switchInCurve: Curves.easeOutCubic,
-              switchOutCurve: Curves.easeInCubic,
               child:
                   _showSlashCommands && filteredWorkflowDescriptors.isNotEmpty
                       ? Padding(
                           key: const ValueKey('slash_commands_visible'),
-                          padding: const EdgeInsets.only(top: 8, bottom: 8),
+                          padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
                           child: Align(
                             alignment: Alignment.centerLeft,
                             child: Wrap(
@@ -1817,12 +1808,12 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                           key: ValueKey('slash_commands_hidden'),
                         ),
             ),
-            // Display selected media files
+            // Selected media files
             if (_selectedMediaFiles.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
                 child: SizedBox(
-                  height: 60,
+                  height: 52,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     itemCount: _selectedMediaFiles.length,
@@ -1830,259 +1821,128 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                       final file = _selectedMediaFiles[index];
                       return Padding(
                         padding: const EdgeInsets.only(right: 8),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
+                        child: Chip(
+                          label: Text(
+                            file.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.surfaceContainerLow,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: theme.colorScheme.outline.withValues(
-                                alpha: 0.3,
-                              ),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Flexible(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      file.name,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style:
-                                          theme.textTheme.labelSmall?.copyWith(
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    Text(
-                                      '${(file.size / 1024).toStringAsFixed(1)} KB',
-                                      style:
-                                          theme.textTheme.labelSmall?.copyWith(
-                                        color:
-                                            theme.colorScheme.onSurfaceVariant,
-                                        fontSize: 10,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              InkWell(
-                                onTap: () => _removeMediaFile(index),
-                                child: Icon(
-                                  Icons.close,
-                                  size: 16,
-                                  color: theme.colorScheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
-                          ),
+                          deleteIcon: const Icon(Icons.close, size: 16),
+                          onDeleted: () => _removeMediaFile(index),
                         ),
                       );
                     },
                   ),
                 ),
               ),
-            Row(
-              children: [
-                // Add media button
-                Container(
-                  decoration: BoxDecoration(
-                    color: _isLoading
-                        ? theme.colorScheme.surfaceContainerHigh
-                        : theme.colorScheme.primaryContainer,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.12),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: IconButton(
-                    icon: Icon(
-                      Icons.add,
-                      color: _isLoading
-                          ? theme.colorScheme.onSurfaceVariant
-                          : theme.colorScheme.onPrimaryContainer,
-                    ),
-                    tooltip: 'Add media',
+            // Text field
+            TextField(
+              controller: _textController,
+              focusNode: _inputFocusNode,
+              decoration: InputDecoration(
+                hintText: l10n.aiAssistantInputHint,
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
+              ),
+              maxLines: null,
+              minLines: 1,
+              textInputAction: TextInputAction.send,
+              onSubmitted: _handleSubmitted,
+            ),
+            // Action row: + | mode toggle | thinking | send
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 0, 4, 2),
+              child: Row(
+                children: [
+                  // Add media
+                  IconButton(
+                    icon: const Icon(Icons.add, size: 20),
                     onPressed: _isLoading ? null : _pickAndAttachMedia,
-                    iconSize: 20,
+                    style: IconButton.styleFrom(
+                      padding: const EdgeInsets.all(8),
+                      minimumSize: const Size(36, 36),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                // Mode indicator/switch button
-                Expanded(
-                  child: Container(
-                    height: 40,
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: theme.colorScheme.outline.withValues(
-                          alpha: 0.3,
+                  // Mode toggle (direct tap)
+                  if (_entryConfig.allowsMode(AIAssistantPageMode.agent))
+                    GestureDetector(
+                      onTap: _isLoading
+                          ? null
+                          : () {
+                              final next = _isAgentMode
+                                  ? _entryConfig.defaultMode
+                                  : AIAssistantPageMode.agent;
+                              _setMode(next);
+                            },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _isAgentMode
+                              ? theme.colorScheme.primaryContainer
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _isAgentMode
+                                  ? Icons.smart_toy
+                                  : Icons.chat_outlined,
+                              size: 16,
+                              color: _isAgentMode
+                                  ? theme.colorScheme.onPrimaryContainer
+                                  : theme.colorScheme.onSurfaceVariant,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              _isAgentMode ? 'Agent' : 'Chat',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: _isAgentMode
+                                    ? theme.colorScheme.onPrimaryContainer
+                                    : theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        PopupMenuButton<AIAssistantPageMode>(
-                          constraints: const BoxConstraints(minWidth: 160),
-                          onSelected: (mode) => _setMode(mode),
-                          itemBuilder: (context) {
-                            return [
-                              PopupMenuItem(
-                                value: _entryConfig.defaultMode,
-                                enabled: _entryConfig
-                                    .allowsMode(_entryConfig.defaultMode),
-                                child: Row(
-                                  children: [
-                                    if (_currentMode ==
-                                        _entryConfig.defaultMode)
-                                      Icon(
-                                        Icons.check_circle,
-                                        size: 18,
-                                        color: theme.colorScheme.primary,
-                                      )
-                                    else
-                                      const SizedBox(width: 18),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      _entryConfig.defaultMode ==
-                                              AIAssistantPageMode.chat
-                                          ? l10n.aiModeChat
-                                          : l10n.aiModeChat,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (_entryConfig
-                                  .allowsMode(AIAssistantPageMode.agent))
-                                PopupMenuItem(
-                                  value: AIAssistantPageMode.agent,
-                                  child: Row(
-                                    children: [
-                                      if (_currentMode ==
-                                          AIAssistantPageMode.agent)
-                                        Icon(
-                                          Icons.check_circle,
-                                          size: 18,
-                                          color: theme.colorScheme.primary,
-                                        )
-                                      else
-                                        const SizedBox(width: 18),
-                                      const SizedBox(width: 8),
-                                      Text(l10n.aiModeAgent),
-                                    ],
-                                  ),
-                                ),
-                            ];
-                          },
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(
-                                _isAgentMode
-                                    ? Icons.smart_toy_outlined
-                                    : Icons.chat_outlined,
-                                size: 18,
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                              const SizedBox(width: 6),
-                              Flexible(
-                                child: Text(
-                                  _isAgentMode
-                                      ? l10n.aiModeAgent
-                                      : l10n.aiModeChat,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: theme.textTheme.labelMedium?.copyWith(
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Icon(
-                                Icons.expand_more,
-                                size: 16,
-                                color: theme.colorScheme.onSurfaceVariant,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Thinking toggle button (if supported)
-                if (_currentModelSupportsThinking)
-                  Container(
-                    decoration: BoxDecoration(
-                      color: _enableThinking
-                          ? theme.colorScheme.secondaryContainer
-                          : theme.colorScheme.surfaceContainerHigh,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.12),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: IconButton(
+                  // Thinking toggle
+                  if (_currentModelSupportsThinking)
+                    IconButton(
                       icon: Icon(
                         _enableThinking
                             ? Icons.psychology
                             : Icons.psychology_outlined,
+                        size: 20,
                         color: _enableThinking
-                            ? theme.colorScheme.onSecondaryContainer
+                            ? theme.colorScheme.secondary
                             : theme.colorScheme.onSurfaceVariant,
                       ),
-                      tooltip: l10n.aiThinking,
                       onPressed: () {
                         setState(() {
                           _enableThinking = !_enableThinking;
                         });
                       },
-                      iconSize: 20,
-                    ),
-                  ),
-                const SizedBox(width: 8),
-                // Send button
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 160),
-                  decoration: BoxDecoration(
-                    color: _isLoading
-                        ? theme.colorScheme.error
-                        : theme.colorScheme.primary,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.12),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
+                      style: IconButton.styleFrom(
+                        padding: const EdgeInsets.all(8),
+                        minimumSize: const Size(36, 36),
                       ),
-                    ],
-                  ),
-                  child: IconButton(
-                    icon: Icon(_isLoading ? Icons.stop : Icons.send),
-                    color: _isLoading
-                        ? theme.colorScheme.onError
-                        : theme.colorScheme.onPrimary,
-                    tooltip: _isLoading ? l10n.stopGenerate : l10n.confirm,
+                    ),
+                  const Spacer(),
+                  // Send / Stop
+                  IconButton(
+                    icon: Icon(
+                      _isLoading ? Icons.stop : Icons.arrow_upward,
+                      size: 20,
+                    ),
                     onPressed: _isLoading
                         ? _stopGenerating
                         : () {
@@ -2090,55 +1950,24 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                               _handleSubmitted(_textController.text);
                             }
                           },
-                    iconSize: 20,
-                  ),
-                ),
-              ],
-            ),
-            // Text input field
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: TextField(
-                controller: _textController,
-                focusNode: _inputFocusNode,
-                decoration: InputDecoration(
-                  hintText: l10n.aiAssistantInputHint,
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(
-                      color: theme.colorScheme.outline.withValues(alpha: 0.45),
+                    style: IconButton.styleFrom(
+                      backgroundColor: _isLoading
+                          ? theme.colorScheme.error
+                          : theme.colorScheme.primary,
+                      foregroundColor: _isLoading
+                          ? theme.colorScheme.onError
+                          : theme.colorScheme.onPrimary,
+                      padding: const EdgeInsets.all(8),
+                      minimumSize: const Size(36, 36),
                     ),
                   ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide(
-                      color: theme.colorScheme.primary,
-                      width: 1.5,
-                    ),
-                  ),
-                  filled: true,
-                  fillColor: theme.colorScheme.surfaceContainerLow,
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
-                ),
-                maxLines: null,
-                minLines: 1,
-                textInputAction: TextInputAction.send,
-                onSubmitted: _handleSubmitted,
+                ],
               ),
             ),
           ],
         ),
       ),
     );
-  }
-
-  Widget _buildModeSwitch(ThemeData theme, AppLocalizations l10n) {
-    // Simplified mode indicator in the input area header
-    // The main mode switching is done via dropdown in action buttons
-    return const SizedBox.shrink();
   }
 }
 

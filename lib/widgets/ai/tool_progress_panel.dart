@@ -92,46 +92,21 @@ class ToolProgressPanel extends StatefulWidget {
 class _ToolProgressPanelState extends State<ToolProgressPanel>
     with SingleTickerProviderStateMixin {
   late bool _isExpanded;
-  late bool _userManuallyToggled; // 跟踪用户是否手动展开/折叠
   late AnimationController _rotationController;
 
   @override
   void initState() {
     super.initState();
-    // 进行中时默认展开，完成后默认折叠
-    _isExpanded = widget.inProgress;
-    _userManuallyToggled = false;
+    _isExpanded = false;
     _rotationController = AnimationController(
       duration: const Duration(milliseconds: 200),
       vsync: this,
     );
-    if (_isExpanded) {
-      _rotationController.value = 1.0;
-    }
   }
 
   @override
   void didUpdateWidget(ToolProgressPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // 如果从进行中变为完成，自动折叠（但如果用户手动展开过，保持展开）
-    if (oldWidget.inProgress && !widget.inProgress) {
-      if (!_userManuallyToggled) {
-        setState(() {
-          _isExpanded = false;
-          _rotationController.reverse();
-        });
-      }
-    }
-    // 新的任务开始，重置用户手动标志
-    if (!oldWidget.inProgress && widget.inProgress) {
-      _userManuallyToggled = false;
-      if (!_isExpanded) {
-        setState(() {
-          _isExpanded = true;
-          _rotationController.forward();
-        });
-      }
-    }
   }
 
   @override
@@ -142,7 +117,6 @@ class _ToolProgressPanelState extends State<ToolProgressPanel>
 
   void _toggleExpanded() {
     setState(() {
-      _userManuallyToggled = true; // 标记用户已手动操作
       _isExpanded = !_isExpanded;
       if (_isExpanded) {
         _rotationController.forward();
