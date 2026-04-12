@@ -91,6 +91,8 @@ dependencies:
   gpt_markdown: ^1.1.5 # Markdown 渲染（AI 回复）
   openai_dart: ^4.0.1
   flutter_slidable: ^3.1.1 # 滑动删除支持
+  ddgs: ^0.3.2
+  metadata_fetch: ^0.4.2
 
 dev_dependencies:
   flutter_test:
