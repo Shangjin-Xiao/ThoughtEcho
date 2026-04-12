@@ -145,15 +145,44 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                     meta['replaceButtonText'] as String? ?? l10n.applyChanges,
                 appendButtonText:
                     meta['appendButtonText'] as String? ?? l10n.appendToNote,
-                onOpenInEditor: () {
+                onOpenInEditor: () async {
                   final isContinuation =
                       meta['title']?.toString().contains('续写') ?? false;
+                  final noteId = meta['note_id']?.toString();
+
                   if (_hasBoundNote) {
                     Navigator.pop(context, {
                       'action': 'edit',
                       'mode': isContinuation ? 'append' : 'replace',
                       'text': message.content,
                     });
+                  } else if (noteId != null && noteId.isNotEmpty) {
+                    // 全局模式但绑定了特定笔记
+                    final db = context.read<DatabaseService>();
+                    final note = await db.getQuoteById(noteId);
+                    if (mounted) {
+                      if (note != null) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => NoteFullEditorPage(
+                              initialContent: message.content,
+                              initialQuote: note,
+                            ),
+                          ),
+                        );
+                      } else {
+                        // 回退到普通新笔记模式
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => NoteFullEditorPage(
+                              initialContent: message.content,
+                            ),
+                          ),
+                        );
+                      }
+                    }
                   } else {
                     // 全局模式：直接打开新编辑器
                     Navigator.push(
@@ -169,12 +198,46 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 onSaveDirectly: () async {
                   final isContinuation =
                       meta['title']?.toString().contains('续写') ?? false;
+                  final noteId = meta['note_id']?.toString();
+
                   if (_hasBoundNote) {
                     Navigator.pop(context, {
                       'action': 'save',
                       'mode': isContinuation ? 'append' : 'replace',
                       'text': message.content,
                     });
+                  } else if (noteId != null && noteId.isNotEmpty) {
+                    // 全局模式但绑定了特定笔记
+                    try {
+                      final db = context.read<DatabaseService>();
+                      final existingNote = await db.getQuoteById(noteId);
+                      if (existingNote == null) {
+                        throw Exception('Note not found');
+                      }
+
+                      final newContent = isContinuation
+                          ? '${existingNote.content}\n${message.content}'
+                          : message.content;
+
+                      final updatedNote = existingNote.copyWith(
+                        content: newContent,
+                        lastModified: DateTime.now().toIso8601String(),
+                      );
+
+                      await db.updateQuote(updatedNote);
+
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(l10n.saveSuccess)),
+                        );
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(l10n.saveFailed(e.toString()))),
+                        );
+                      }
+                    }
                   } else {
                     // 全局模式：直接保存为新笔记
                     try {

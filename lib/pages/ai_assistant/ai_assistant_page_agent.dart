@@ -145,6 +145,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
                 'title': parsed.smartResult!.title,
                 'replaceButtonText': l10n.replaceOriginalNote,
                 'appendButtonText': l10n.appendToEnd,
+                'note_id': parsed.smartResult!.noteId,
               }),
             ),
             persist: true,
@@ -157,6 +158,11 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
               isUser: false,
               role: 'assistant',
               timestamp: DateTime.now(),
+              metaJson: jsonEncode(<String, dynamic>{
+                'type': 'smart_result',
+                'title': parsed.smartResult!.title,
+                'note_id': parsed.smartResult!.noteId,
+              }),
             ),
             persist: true,
           );
@@ -274,6 +280,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
         continue;
       }
 
+      final noteId = decoded['note_id']?.toString().trim();
       final titleText = decoded['title']?.toString().trim();
       final title = titleText != null && titleText.isNotEmpty
           ? titleText
@@ -285,6 +292,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
         smartResult: _AgentSmartResultPayload(
           title: title,
           content: smartContent,
+          noteId: noteId,
         ),
       );
     }
@@ -324,8 +332,10 @@ class _AgentSmartResultPayload {
   const _AgentSmartResultPayload({
     required this.title,
     required this.content,
+    this.noteId,
   });
 
   final String title;
   final String content;
+  final String? noteId;
 }
