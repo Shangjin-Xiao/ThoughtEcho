@@ -1142,7 +1142,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     setState(() {
       final idx = _messages.indexWhere((m) => m.id == msgId);
       if (idx == -1) return;
-      _messages[idx] = _messages[idx].copyWith(
+      final updatedMsg = _messages[idx].copyWith(
         metaJson: jsonEncode(<String, dynamic>{
           'type': 'tool_progress',
           'items': items
@@ -1156,6 +1156,12 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
           'inProgress': inProgress,
         }),
       );
+      _messages[idx] = updatedMsg;
+      
+      // 同步保存到数据库
+      if (_currentSessionId != null) {
+        _chatSessionService.addMessage(_currentSessionId!, updatedMsg);
+      }
     });
     _scrollToBottom();
   }
@@ -1466,6 +1472,21 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
                 onAppend: () {
                   Navigator.pop(context, {
                     'action': 'append',
+                    'text': message.content,
+                  });
+                },
+                onOpenInEditor: () {
+                  Navigator.pop(context, {
+                    'action': 'edit',
+                    'text': message.content,
+                  });
+                },
+                onSaveDirectly: () {
+                  // 根据元数据中的提示类型决定是替换还是追加
+                  final isContinuation =
+                      meta['title']?.toString().contains('续写') ?? false;
+                  Navigator.pop(context, {
+                    'action': isContinuation ? 'append' : 'replace',
                     'text': message.content,
                   });
                 },

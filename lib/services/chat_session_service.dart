@@ -298,7 +298,11 @@ class ChatSessionService extends ChangeNotifier {
     try {
       await _persistOrQueueWrite(
         (db) async {
-          await db.insert('chat_messages', message.toMap(sessionId));
+          await db.insert(
+            'chat_messages',
+            message.toMap(sessionId),
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
           await db.update(
             'chat_sessions',
             {'last_active_at': DateTime.now().toIso8601String()},
