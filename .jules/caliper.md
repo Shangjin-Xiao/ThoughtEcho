@@ -7,3 +7,6 @@
 ## 2026-03-24 - [补充 I18nLanguage 的测试]
 **盲点:** `I18nLanguage` 负责系统语言代码解析和 HTTP 头部生成，这类纯函数直接影响应用的国际化展示逻辑，但由于通常被当作简单的工具类而缺乏测试覆盖。这可能导致处理极端输入（如全大写、前后包含空格的 locale 字符串）或新增语言支持时引入错误。
 **对策:** 为 `base`、`appLanguage`、`appLanguageOrSystem` 及 `buildAcceptLanguage` 编写无依赖的单元测试，涵盖正常区域代码格式、空值回退机制及大小写容错，保证核心语言映射逻辑稳定可靠。
+## 2026-03-24 - [补充 MemoryOptimizationHelper 的测试]
+**盲点:** `ProcessingStrategyExt` 在 `MemoryOptimizationHelper` 中作为一个核心的纯枚举扩展，包含了内存优化策略的状态描述与隔离执行判断（`description`, `useIsolate`）。但由于缺乏单元测试覆盖，其逻辑在重构或新增状态时可能出现遗漏。
+**对策:** 编写极简的枚举扩展测试。通过直接断言各种策略类型在调用 `description` 和 `useIsolate` 方法时的返回结果，快速验证且不依赖其他环境。
