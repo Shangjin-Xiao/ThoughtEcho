@@ -1592,31 +1592,45 @@ class AIService extends ChangeNotifier {
     try {
       if (firstUserMessage.isEmpty) return 'Chat';
 
-      if (!await hasValidApiKeyAsync()) {
-        throw Exception('请先在设置中配置 API Key');
+      // 优先尝试用 AI 生成标题
+      if (await hasValidApiKeyAsync()) {
+        try {
+          await _validateSettings();
+          final currentProvider = await _getCurrentProviderWithApiKey();
+
+          // 限制消息长度为100字以内
+          final truncated = firstUserMessage.length > 100
+              ? firstUserMessage.substring(0, 100) + '...'
+              : firstUserMessage;
+
+          final response = await _requestHelper.makeRequestWithProvider(
+            url: currentProvider.apiUrl,
+            systemPrompt: 'You are a title generator. Generate a SHORT title (max 10 words, in the same language as the message, no quotes) for the following message.',
+            userMessage: truncated,
+            provider: currentProvider,
+            temperature: 0.3,
+            maxTokens: 30,
+          );
+
+          final title = _requestHelper.parseResponse(response).trim();
+
+          // 如果生成的标题超长，裁剪
+          return title.length > 50 ? title.substring(0, 50) + '...' : title;
+        } catch (e) {
+          logDebug('AI 标题生成失败，降级到本地方法: $e');
+          // 降级：使用本地方法生成标题
+        }
       }
 
-      await _validateSettings();
-      final currentProvider = await _getCurrentProviderWithApiKey();
+      // Fallback: 本地生成标题（取前20个字）
+      final cleanMsg = firstUserMessage.trim();
+      if (cleanMsg.isEmpty) return 'Chat';
 
-      // 限制消息长度为100字以内
-      final truncated = firstUserMessage.length > 100
-          ? firstUserMessage.substring(0, 100) + '...'
-          : firstUserMessage;
-
-      final response = await _requestHelper.makeRequestWithProvider(
-        url: currentProvider.apiUrl,
-        systemPrompt: 'You are a title generator. Generate a SHORT title (max 10 words, in the same language as the message, no quotes) for the following message.',
-        userMessage: truncated,
-        provider: currentProvider,
-        temperature: 0.3,
-        maxTokens: 30,
-      );
-
-      final title = _requestHelper.parseResponse(response).trim();
-
-      // 如果生成的标题超长，裁剪
-      return title.length > 50 ? title.substring(0, 50) + '...' : title;
+      final maxLen = 20;
+      final title = cleanMsg.length > maxLen
+          ? cleanMsg.substring(0, maxLen) + '...'
+          : cleanMsg;
+      return title;
     } catch (e) {
       logError(
         'AIService.generateSessionTitle',

@@ -170,26 +170,36 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
   void _addWelcomeMessage() {
     if (!mounted) return;
     final l10n = AppLocalizations.of(context);
-    final String welcomeContent = _hasBoundNote
-        ? l10n.aiAssistantWelcome(_getQuotePreview())
-        : widget.exploreGuideSummary?.trim().isNotEmpty == true
-            ? l10n.aiAssistantExploreWelcome(widget.exploreGuideSummary!.trim())
-            : l10n.aiAssistantInputHint;
 
-    final welcomeMsg = app_chat.ChatMessage(
-      id: _uuid.v4(),
-      content: welcomeContent,
-      isUser: false,
-      role: 'system',
-      timestamp: DateTime.now(),
-      includedInContext: false,
-    );
-    _appendMessage(welcomeMsg, persist: false);
+    // 绑定笔记模式：显示笔记欢迎信息
+    if (_hasBoundNote) {
+      final welcomeContent = l10n.aiAssistantWelcome(_getQuotePreview());
+      final welcomeMsg = app_chat.ChatMessage(
+        id: _uuid.v4(),
+        content: welcomeContent,
+        isUser: false,
+        role: 'system',
+        timestamp: DateTime.now(),
+        includedInContext: false,
+      );
+      _appendMessage(welcomeMsg, persist: false);
+      return;
+    }
 
-    // Generate dynamic insight if in explore mode without explicit guide
-    if (!_hasBoundNote &&
-        (widget.exploreGuideSummary?.trim().isEmpty ?? true) &&
-        _entrySource == AIAssistantEntrySource.explore) {
+    // Explore 模式：如果有显式总结，显示总结；否则直接生成动态洞察（不显示"输入问题"提示）
+    if (widget.exploreGuideSummary?.trim().isNotEmpty == true) {
+      final welcomeContent = l10n.aiAssistantExploreWelcome(widget.exploreGuideSummary!.trim());
+      final welcomeMsg = app_chat.ChatMessage(
+        id: _uuid.v4(),
+        content: welcomeContent,
+        isUser: false,
+        role: 'system',
+        timestamp: DateTime.now(),
+        includedInContext: false,
+      );
+      _appendMessage(welcomeMsg, persist: false);
+    } else if (_entrySource == AIAssistantEntrySource.explore) {
+      // 无显式总结时，跳过"输入问题"提示，直接生成动态洞察
       _generateAndShowDynamicInsight();
     }
   }
