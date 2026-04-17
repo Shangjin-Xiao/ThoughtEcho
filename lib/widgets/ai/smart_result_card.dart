@@ -11,6 +11,7 @@ class SmartResultCard extends StatelessWidget {
   final VoidCallback? onSaveDirectly;
   final String? replaceButtonText;
   final String? appendButtonText;
+  final String editorSource; // 'fullscreen' | 'addnote_dialog' - 编辑器来源标识
 
   const SmartResultCard({
     super.key,
@@ -22,6 +23,7 @@ class SmartResultCard extends StatelessWidget {
     this.onSaveDirectly,
     this.replaceButtonText,
     this.appendButtonText,
+    this.editorSource = 'fullscreen',
   });
 
   @override
