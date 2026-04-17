@@ -23,3 +23,6 @@
 **Learning:** In SQLite queries with pagination (`LIMIT`/`OFFSET`), fetching aggregated related data (e.g., tags) via `LEFT JOIN` and `GROUP BY` causes severe performance degradation because it aggregates the entire table *before* applying the limit. This affects functions like `_directGetQuotes`.
 **Action:** Use a scalar subquery in the `SELECT` clause (e.g., `(SELECT GROUP_CONCAT(tag_id) FROM quote_tags WHERE quote_id = q.id)`) to only aggregate the limited rows, avoiding full-table aggregation.
 >>>>>>> main
+## 2026-04-14 - [N+1 Query in AI Annual Report]
+**Learning:** Found an O(N) database query bottleneck in `_generateAIAnnualReport` where `getCategoryById` was being called inside a loop over all notes for the year to build category statistics. This is a common anti-pattern that can severely degrade performance as user data grows.
+**Action:** Replace looped database queries with a single bulk fetch (`getCategories()`) and create an in-memory map (`{for (var c in allCategories) c.id: c.name}`) for O(1) lookups. Always prefer pre-fetching reference data over per-item database hits during aggregate operations.
