@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 
@@ -31,6 +32,7 @@ import '../services/database_service.dart';
 import '../services/settings_service.dart';
 import '../utils/ai_command_helpers.dart';
 import '../utils/app_logger.dart';
+import '../utils/quill_ai_apply_utils.dart';
 import '../utils/string_utils.dart';
 import '../utils/time_utils.dart';
 import '../widgets/ai/ai_workflow_cards.dart';

@@ -82,6 +82,7 @@ dependencies:
   flutter_chat_core: ^2.8.0
   local_auth: ^2.3.0 # 生物识别验证（指纹、面容识别等）
   android_alarm_manager_plus: ^4.0.0
+  ddgs: ^0.3.2
   timezone: ^0.10.0
   workmanager: ^0.9.0+3
   flutter_blue_plus: ^1.32.0 # BLE 蓝牙通信，用于向树莓派 Pico 发送数据
@@ -91,6 +92,7 @@ dependencies:
   gpt_markdown: ^1.1.5 # Markdown 渲染（AI 回复）
   openai_dart: ^4.0.1
   flutter_slidable: ^3.1.1 # 滑动删除支持
+  html2md: ^1.3.2
 
 dev_dependencies:
   flutter_test:

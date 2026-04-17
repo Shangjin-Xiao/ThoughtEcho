@@ -1,5 +1,8 @@
 import 'dart:collection';
 
+import 'package:flutter/foundation.dart';
+import '../utils/app_logger.dart';
+
 abstract class AgentTool {
   const AgentTool();
 
@@ -33,6 +36,38 @@ class ToolCall {
       name: name ?? this.name,
       arguments: arguments ?? this.arguments,
     );
+  }
+
+  /// 获取字符串参数
+  String getString(String key, {String defaultValue = ''}) {
+    final value = arguments[key];
+    if (value is String) return value;
+    return defaultValue;
+  }
+
+  /// 获取整数参数
+  int getInt(String key, {int defaultValue = 0}) {
+    final value = arguments[key];
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) {
+      try {
+        return int.parse(value);
+      } catch (e) {
+        logError('Failed to parse int from "$value"', error: e);
+        return defaultValue;
+      }
+    }
+    return defaultValue;
+  }
+
+  /// 记录错误日志
+  void logError(String message, {Object? error, StackTrace? stackTrace}) {
+    if (kDebugMode) {
+      print('[$name] $message');
+      if (error != null) print('  Error: $error');
+      if (stackTrace != null) print('  Stack: $stackTrace');
+    }
   }
 
   @override

@@ -273,7 +273,7 @@ class AIRequestHelper {
 
   /// 创建流式控制器并处理通用逻辑
   StreamController<String> createStreamController() {
-    return StreamController<String>();
+    return StreamController<String>(sync: true);
   }
 
   /// 处理流式响应的通用逻辑
