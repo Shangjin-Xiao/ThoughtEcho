@@ -86,7 +86,7 @@ class _ExplorePageState extends State<ExplorePage> {
     );
   }
 
-  Future<String> _buildAssistantGuideSummary({
+  Future<String?> _buildAssistantGuideSummary({
     required AppLocalizations l10n,
     required _ExploreStats stats,
     required List<Map<String, dynamic>> favorites,
@@ -96,8 +96,9 @@ class _ExplorePageState extends State<ExplorePage> {
       stats: stats,
       favorites: favorites,
     );
-    final aiSummary = await _tryBuildAiAssistantGuideSummary(localSummary);
-    return aiSummary ?? localSummary;
+    // 只返回 AI 生成的自然语言总结；AI 不可用时返回 null，
+    // 由 _generateAndShowDynamicInsight 显示简洁统计
+    return _tryBuildAiAssistantGuideSummary(localSummary);
   }
 
   String _buildLocalAssistantGuideSummary({

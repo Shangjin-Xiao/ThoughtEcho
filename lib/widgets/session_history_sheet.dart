@@ -34,11 +34,19 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
   List<ChatSession>? _sessions;
   bool _isLoading = true;
   Map<String, int> _messageCounts = {};
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _loadSessions();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadSessions() async {
@@ -85,7 +93,8 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
   }
 
   /// 按日期分组sessions
-  Map<String, List<ChatSession>> _groupSessionsByDate(List<ChatSession> sessions) {
+  Map<String, List<ChatSession>> _groupSessionsByDate(
+      List<ChatSession> sessions, AppLocalizations l10n) {
     final groups = <String, List<ChatSession>>{};
     final now = DateTime.now();
 
@@ -95,13 +104,13 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
 
       String groupKey;
       if (dayDiff == 0) {
-        groupKey = '📅 Today';
+        groupKey = l10n.sessionGroupToday;
       } else if (dayDiff == 1) {
-        groupKey = '📅 Yesterday';
+        groupKey = l10n.sessionGroupYesterday;
       } else if (dayDiff < 7) {
-        groupKey = '📅 This Week';
+        groupKey = l10n.sessionGroupThisWeek;
       } else {
-        groupKey = '📅 Earlier';
+        groupKey = l10n.sessionGroupEarlier;
       }
 
       groups.putIfAbsent(groupKey, () => []).add(session);
@@ -132,6 +141,34 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
             ]),
           ),
           const Divider(height: 1),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: l10n.searchChatHistory,
+                prefixIcon: const Icon(Icons.search, size: 20),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 8),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: theme.colorScheme.surfaceContainerHighest,
+                suffixIcon: _searchQuery.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 18),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _searchQuery = '');
+                        },
+                      )
+                    : null,
+              ),
+              onChanged: (value) => setState(() => _searchQuery = value),
+            ),
+          ),
           if (_isLoading)
             const Padding(
               padding: EdgeInsets.all(32),
@@ -171,8 +208,33 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
     ThemeData theme,
     AppLocalizations l10n,
   ) {
-    final groups = _groupSessionsByDate(_sessions!);
-    final groupOrder = ['📅 Today', '📅 Yesterday', '📅 This Week', '📅 Earlier'];
+    final filtered = _searchQuery.isEmpty
+        ? _sessions!
+        : _sessions!
+            .where((s) => s.title
+                .toLowerCase()
+                .contains(_searchQuery.toLowerCase()))
+            .toList();
+    if (filtered.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Text(
+            l10n.noChats,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      );
+    }
+    final groups = _groupSessionsByDate(filtered, l10n);
+    final groupOrder = [
+      l10n.sessionGroupToday,
+      l10n.sessionGroupYesterday,
+      l10n.sessionGroupThisWeek,
+      l10n.sessionGroupEarlier,
+    ];
 
     return ListView.builder(
       shrinkWrap: true,
@@ -208,7 +270,7 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
                 theme,
                 l10n,
               );
-            }).toList(),
+            }),
           ],
         );
       },
@@ -299,7 +361,7 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
-                            '$messageCount msgs',
+                            l10n.messageCountLabel(messageCount),
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: theme.colorScheme.primary,
                               fontWeight: FontWeight.w600,
@@ -356,7 +418,4 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
     );
   }
 
-  String _fmtDate(BuildContext context, DateTime d) {
-    return TimeUtils.formatElapsedRelativeTimeLocalized(context, d);
-  }
 }

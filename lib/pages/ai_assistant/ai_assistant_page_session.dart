@@ -57,12 +57,10 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
         );
         if (session != null) {
           await _loadSession(session.id);
-        } else {
-          await _createNewSession();
         }
-      } else {
-        await _createNewSession();
+        // else: leave _currentSessionId null, session created on first message
       }
+      // else: leave _currentSessionId null, session created on first message
 
       if (!mounted) return;
       if (_messages.isEmpty) {
@@ -123,6 +121,29 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
     };
   }
 
+  /// 延迟创建会话，并异步生成 AI 标题
+  Future<void> _ensureSessionCreated(String firstUserMessage) async {
+    if (_currentSessionId != null) return;
+    await _createNewSession();
+    // 异步生成 AI 标题，不阻塞主流程
+    unawaited(_generateAITitle(firstUserMessage));
+  }
+
+  Future<void> _generateAITitle(String firstUserMessage) async {
+    if (_currentSessionId == null) return;
+    try {
+      final title = await _aiService.generateSessionTitle(firstUserMessage);
+      if (title.isNotEmpty && title != 'Chat') {
+        await _chatSessionService.updateSessionTitle(
+          _currentSessionId!,
+          title,
+        );
+      }
+    } catch (e) {
+      logDebug('生成会话标题失败: $e');
+    }
+  }
+
   Future<void> _loadSession(String sessionId) async {
     try {
       _currentSessionId = sessionId;
@@ -163,7 +184,7 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
       timestamp: DateTime.now(),
       includedInContext: false,
     );
-    _appendMessage(welcomeMsg, persist: true);
+    _appendMessage(welcomeMsg, persist: false);
 
     // Generate dynamic insight if in explore mode without explicit guide
     if (!_hasBoundNote &&
@@ -174,6 +195,7 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
   }
 
   /// Generate and display a dynamic insight based on current data
+  /// 复用报告页小灯泡的 buildLocalReportInsight 逻辑
   Future<void> _generateAndShowDynamicInsight() async {
     final databaseService = _tryGetDatabaseService();
     if (databaseService == null) return;
@@ -182,23 +204,69 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
       final quotes = await databaseService.getUserQuotes();
       if (quotes.isEmpty) return;
 
-      // Calculate simple stats
-      final count = quotes.length;
-      final recentCount = quotes.where((q) {
-        try {
-          final qDate = DateTime.parse(q.date);
-          return DateTime.now().difference(qDate).inDays <= 7;
-        } catch (e) {
-          return false;
-        }
-      }).length;
+      final noteCount = quotes.length;
+      final totalWords =
+          quotes.fold<int>(0, (sum, q) => sum + q.content.length);
+      final activeDays =
+          quotes.map((q) => q.date.substring(0, 10)).toSet().length;
 
-      // Generate insight text
-      final insightText = 'You have recorded $count thoughts, '
-          'with $recentCount from the past 7 days. '
-          'Share your thoughts to explore deeper insights.';
+      // 最常用时段
+      final periodCounts = <String, int>{};
+      for (final q in quotes) {
+        if (q.dayPeriod != null && q.dayPeriod!.isNotEmpty) {
+          periodCounts[q.dayPeriod!] =
+              (periodCounts[q.dayPeriod!] ?? 0) + 1;
+        }
+      }
+      final topPeriod = periodCounts.entries.isNotEmpty
+          ? periodCounts.entries
+              .reduce((a, b) => a.value >= b.value ? a : b)
+              .key
+          : null;
+
+      // 最常用天气
+      final weatherCounts = <String, int>{};
+      for (final q in quotes) {
+        if (q.weather != null && q.weather!.isNotEmpty) {
+          weatherCounts[q.weather!] =
+              (weatherCounts[q.weather!] ?? 0) + 1;
+        }
+      }
+      final topWeather = weatherCounts.entries.isNotEmpty
+          ? weatherCounts.entries
+              .reduce((a, b) => a.value >= b.value ? a : b)
+              .key
+          : null;
+
+      // 最常用标签（解析为名称）
+      String? topTag;
+      final tagCounts = <String, int>{};
+      for (final q in quotes) {
+        for (final tagId in q.tagIds) {
+          tagCounts[tagId] = (tagCounts[tagId] ?? 0) + 1;
+        }
+      }
+      if (tagCounts.isNotEmpty) {
+        final topTagId =
+            tagCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+        final cat = await databaseService.getCategoryById(topTagId);
+        topTag = cat?.name;
+      }
 
       if (!mounted) return;
+
+      final l10n = AppLocalizations.of(context);
+      final insightText = _aiService.buildLocalReportInsight(
+        periodLabel: l10n.thisWeek,
+        mostTimePeriod: topPeriod,
+        mostWeather: topWeather,
+        topTag: topTag,
+        activeDays: activeDays,
+        noteCount: noteCount,
+        totalWordCount: totalWords,
+      );
+
+      if (insightText.isEmpty) return;
 
       final insightMsg = app_chat.ChatMessage(
         id: _uuid.v4(),

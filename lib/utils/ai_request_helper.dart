@@ -400,15 +400,18 @@ class AIRequestHelper {
 
   /// 创建并执行流式操作的通用模式
   ///
-  /// 使用 onListen 延迟启动，确保监听者先挂载再生产数据，
-  /// 避免 broadcast 或 fire-and-forget 模式导致的事件丢失。
+  /// 使用 onListen 延迟启动，确保监听者先挂载再生产数据。
+  /// **sync: true** 保证 controller.add() 立即同步投递到监听者，
+  /// 而不是排入微任务队列——否则同一帧内到达的多个 chunk 会被
+  /// Flutter 合并成一次 setState，导致用户看到"全部出完才显示"。
   Stream<String> executeStreamOperation({
     required Future<void> Function(StreamController<String>) operation,
     required String context,
   }) {
     late final StreamController<String> controller;
 
-    controller = StreamController<String>(
+    controller = StreamController<String>.broadcast(
+      sync: true,
       onListen: () async {
         try {
           await operation(controller);

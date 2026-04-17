@@ -22,9 +22,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
     });
     _scrollToBottom();
 
-    if (_currentSessionId == null) {
-      await _createNewSession();
-    }
+    await _ensureSessionCreated(trimmed);
     await _chatSessionService.addMessage(_currentSessionId!, userMsg);
 
     final descriptor = _matchWorkflowCommand(trimmed, l10n);
@@ -380,7 +378,9 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
 
     _streamSubscription?.cancel();
 
-    // 使用流式订阅，支持实时更新 — 每个字符立即显示
+    int uiChunkCount = 0;
+
+    // 使用流式订阅，支持实时更新
     _streamSubscription = _aiService
         .streamAskQuestion(
       widget.quote!,
@@ -399,6 +399,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
     )
         .listen(
       (chunk) {
+        uiChunkCount++;
         fullResponse += chunk;
         _updateMessage(
           aiMsgId,
@@ -410,6 +411,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
         );
       },
       onDone: () {
+        logDebug('[UI] _askBoundNote 完成: $uiChunkCount 个 UI chunk');
         _updateMessage(
           aiMsgId,
           fullResponse.isNotEmpty ? fullResponse : l10n.aiMisunderstoodQuestion,
@@ -455,7 +457,9 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
 
     _streamSubscription?.cancel();
 
-    // 使用流式订阅，支持实时更新 — 每个字符立即显示
+    int uiChunkCount = 0;
+
+    // 使用流式订阅，支持实时更新
     _streamSubscription = _aiService
         .streamGeneralConversation(
       text,
@@ -474,6 +478,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
     )
         .listen(
       (chunk) {
+        uiChunkCount++;
         fullResponse += chunk;
         _updateMessage(
           aiMsgId,
@@ -485,6 +490,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
         );
       },
       onDone: () {
+        logDebug('[UI] _askGeneralChat 完成: $uiChunkCount 个 UI chunk');
         _updateMessage(
           aiMsgId,
           fullResponse.isNotEmpty ? fullResponse : l10n.aiMisunderstoodQuestion,

@@ -318,10 +318,14 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
             );
           case 'tool_progress':
             final rawItems = meta['items'] as List<dynamic>? ?? [];
-            final inProgress = meta['inProgress'] as bool? ?? false;
+            // 从历史恢复的 tool_progress 消息不应再转圈：
+            // 如果 message 不处于 loading 状态，强制 inProgress=false
+            final inProgress = message.isLoading &&
+                (meta['inProgress'] as bool? ?? false);
             final progressItems = rawItems.map((item) {
               final map = item as Map<String, dynamic>;
               return ToolProgressItem(
+                toolCallId: map['toolCallId'] as String?,
                 toolName: map['toolName'] as String? ?? '',
                 description: map['description'] as String?,
                 status: ToolProgressStatus.values.firstWhere(

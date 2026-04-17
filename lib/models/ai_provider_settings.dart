@@ -55,6 +55,64 @@ class AIProviderSettings implements AIConfig {
     this.hostOverride,
     this.isEnabled = true,
   });
+
+  bool get isAnthropicMessagesApi {
+    if (id == 'anthropic') {
+      return true;
+    }
+    return apiUrl.toLowerCase().contains('/v1/messages');
+  }
+
+  bool get isLikelyOpenAICompatible {
+    if (isAnthropicMessagesApi) {
+      return false;
+    }
+    final lowerUrl = apiUrl.toLowerCase();
+    return id == 'openai' ||
+        id == 'openrouter' ||
+        id == 'deepseek' ||
+        lowerUrl.contains('openai.com') ||
+        lowerUrl.contains('openrouter.ai') ||
+        lowerUrl.contains('deepseek.com');
+  }
+
+  /// 规范化请求 URL，兼容「base URL」与「完整 endpoint」两种输入。
+  ///
+  /// OpenAI 兼容接口若只配置到 `/v1`，会自动补全为 `/v1/chat/completions`。
+  String resolveRequestUrl(String rawUrl) {
+    final trimmed = rawUrl.trim();
+    if (trimmed.isEmpty) {
+      return trimmed;
+    }
+
+    Uri uri;
+    try {
+      uri = Uri.parse(trimmed);
+    } catch (_) {
+      return trimmed;
+    }
+
+    var path = uri.path.trim();
+    while (path.length > 1 && path.endsWith('/')) {
+      path = path.substring(0, path.length - 1);
+    }
+
+    if (isAnthropicMessagesApi) {
+      return uri.replace(path: path).toString();
+    }
+
+    const chatCompletionsPath = '/chat/completions';
+    if (path.endsWith(chatCompletionsPath)) {
+      return uri.replace(path: path).toString();
+    }
+
+    if (isLikelyOpenAICompatible && path.endsWith('/v1')) {
+      return uri.replace(path: '$path$chatCompletionsPath').toString();
+    }
+
+    return uri.replace(path: path).toString();
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,

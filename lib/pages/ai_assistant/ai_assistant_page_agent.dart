@@ -3,16 +3,17 @@ part of '../ai_assistant_page.dart';
 extension _AIAssistantPageAgent on _AIAssistantPageState {
   Future<void> _askAgent(String text) async {
     final l10n = AppLocalizations.of(context);
-    
+
     // 获取历史记录，排除系统消息和工具卡片。
     // 因为 _handleSubmitted 已经把当前用户消息加进去了，所以需要把它从传给 AI 的 history 里剔除，
     // 避免 AI 收到两遍当前问题。
     var history = _messages
-        .where((m) =>
-            m.role != 'system' && m.metaJson == null) 
+        .where((m) => m.role != 'system' && m.metaJson == null)
         .toList();
-        
-    if (history.isNotEmpty && history.last.isUser && history.last.content == text) {
+
+    if (history.isNotEmpty &&
+        history.last.isUser &&
+        history.last.content == text) {
       history = history.sublist(0, history.length - 1);
     }
 
@@ -21,10 +22,10 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
     });
     _scrollToBottom();
 
-    try {
-      String? toolProgressMsgId;
-      final toolItems = <ToolProgressItem>[];
+    String? toolProgressMsgId;
+    final toolItems = <ToolProgressItem>[];
 
+    try {
       // 监听 Agent 事件流
       final eventSub = _agentService.events.listen((event) {
         if (!mounted) return;
@@ -51,12 +52,11 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             }
 
             final newItem = ToolProgressItem(
+              toolCallId: event.toolCallId,
               toolName: event.toolName,
               status: ToolProgressStatus.running,
               description: _formatToolArgs(event.toolName, event.arguments),
             );
-            // 这里我们无法直接拿到 toolCallId，因为 ToolProgressItem 没有该字段
-            // 我们通过 toolName 简单追踪，或者重构 ToolProgressItem
             toolItems.add(newItem);
             _updateToolProgressMessage(
               toolProgressMsgId!,
@@ -65,10 +65,15 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             );
 
           case AgentToolCallResultEvent():
-            final idx = toolItems.lastIndexWhere((i) => i.toolName == event.toolName);
+            // 通过 toolCallId 精确匹配，避免同名工具多次调用时错配
+            final idx = toolItems.indexWhere(
+              (i) => i.toolCallId == event.toolCallId,
+            );
             if (idx != -1) {
               toolItems[idx] = toolItems[idx].copyWith(
-                status: event.isError ? ToolProgressStatus.failed : ToolProgressStatus.completed,
+                status: event.isError
+                    ? ToolProgressStatus.failed
+                    : ToolProgressStatus.completed,
                 result: event.result,
               );
               _updateToolProgressMessage(
@@ -79,7 +84,6 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             }
 
           case AgentResponseEvent():
-            // 标记工具进度为完成
             if (toolProgressMsgId != null) {
               _updateToolProgressMessage(
                 toolProgressMsgId!,
@@ -89,7 +93,6 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             }
 
           case AgentErrorEvent():
-            // 标记工具进度为完成
             if (toolProgressMsgId != null) {
               _updateToolProgressMessage(
                 toolProgressMsgId!,
@@ -99,6 +102,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             }
         }
       });
+
       final response = await _agentService.runAgent(
         userMessage: text,
         history: history,
@@ -120,7 +124,10 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
           timestamp: DateTime.now(),
         );
         _setState(() => _messages.add(assistantMsg));
-        await _chatSessionService.addMessage(_currentSessionId!, assistantMsg);
+        await _chatSessionService.addMessage(
+          _currentSessionId!,
+          assistantMsg,
+        );
       }
 
       if (parsed.smartResult != null) {
@@ -134,7 +141,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             'type': 'smart_result',
             'title': parsed.smartResult!.title,
             'note_id': parsed.smartResult!.noteId,
-            'action': parsed.smartResult!.action, // 保存 action (replace或append)
+            'action': parsed.smartResult!.action,
           }),
         );
         _setState(() => _messages.add(cardMsg));
@@ -144,12 +151,19 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
       _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
-      _finishLoading();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.aiResponseError(e.toString()))),
       );
     } finally {
       if (mounted) {
+        // 安全兜底：确保工具进度停止转圈
+        if (toolProgressMsgId != null) {
+          _updateToolProgressMessage(
+            toolProgressMsgId!,
+            toolItems,
+            inProgress: false,
+          );
+        }
         _finishLoading();
       }
     }
@@ -164,10 +178,12 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
       final idx = _messages.indexWhere((m) => m.id == msgId);
       if (idx == -1) return;
       final updatedMsg = _messages[idx].copyWith(
+        isLoading: inProgress,
         metaJson: jsonEncode(<String, dynamic>{
           'type': 'tool_progress',
           'items': items
               .map((i) => {
+                    'toolCallId': i.toolCallId ?? '',
                     'toolName': i.toolName,
                     'description': i.description ?? '',
                     'status': i.status.name,
@@ -179,8 +195,8 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
       );
       _messages[idx] = updatedMsg;
 
-      // 同步保存到数据库
-      if (_currentSessionId != null) {
+      // 保存到数据库（完成时持久化最终状态）
+      if (!inProgress && _currentSessionId != null) {
         _chatSessionService.addMessage(_currentSessionId!, updatedMsg);
       }
     });

@@ -121,6 +121,13 @@ class AINetworkManager {
         throw Exception('请求数据JSON编码失败: $e');
       }
 
+      // 流式请求需要 SSE 专用头，告知服务端和中间代理不要缓冲
+      if (responseType == ResponseType.stream) {
+        headers['Accept'] = 'text/event-stream';
+        headers['Cache-Control'] = 'no-cache';
+        headers['Connection'] = 'keep-alive';
+      }
+
       final response = await _dio.post(
         finalUrl,
         data: adjustedData,
@@ -149,11 +156,12 @@ class AINetworkManager {
     if (provider != null) {
       // 在发送请求前先从加密存储加载API Key
       final providerWithApiKey = await _loadApiKeyForProvider(provider);
+      final resolvedUrl = providerWithApiKey.resolveRequestUrl(url);
       return await _makeBaseRequest(
         config: providerWithApiKey,
         data: data,
         responseType: ResponseType.json,
-        urlOverride: url.isNotEmpty ? url : null,
+        urlOverride: resolvedUrl.isNotEmpty ? resolvedUrl : null,
         timeout: timeout,
       );
     } else if (multiSettings != null) {
@@ -190,11 +198,12 @@ class AINetworkManager {
     if (provider != null) {
       // 在发送流式请求前先从加密存储加载API Key
       final providerWithApiKey = await _loadApiKeyForProvider(provider);
+      final resolvedUrl = providerWithApiKey.resolveRequestUrl(url);
       final response = await _makeBaseRequest(
         config: providerWithApiKey,
         data: {...data, 'stream': true},
         responseType: ResponseType.stream,
-        urlOverride: url.isNotEmpty ? url : null,
+        urlOverride: resolvedUrl.isNotEmpty ? resolvedUrl : null,
         timeout: timeout,
       );
       await _processStreamResponse(
@@ -437,6 +446,8 @@ class AINetworkManager {
     final completer = Completer<void>();
     final buffer = StringBuffer();
     String partialLine = '';
+    int chunkCount = 0;
+    final stopwatch = Stopwatch()..start();
 
     // 使用流式 UTF-8 解码器，避免多字节字符跨 chunk 时截断
     final utf8Stream = utf8.decoder.bind(stream);
@@ -444,6 +455,14 @@ class AINetworkManager {
     utf8Stream.listen(
       (chunk) {
         try {
+          chunkCount++;
+          if (chunkCount <= 3 || chunkCount % 20 == 0) {
+            logDebug(
+              '[Stream] chunk #$chunkCount 到达 '
+              '(+${stopwatch.elapsedMilliseconds}ms, '
+              '${chunk.length} chars)',
+            );
+          }
           final lines = (partialLine + chunk).split('\n');
           partialLine = lines.removeLast();
 
@@ -463,8 +482,8 @@ class AINetworkManager {
                 if (delta is Map) {
                   // thinking / reasoning 内容
                   // DeepSeek: reasoning_content, 部分兼容: reasoning
-                  final reasoning = delta['reasoning_content'] ??
-                      delta['reasoning'];
+                  final reasoning =
+                      delta['reasoning_content'] ?? delta['reasoning'];
                   if (reasoning != null &&
                       reasoning is String &&
                       reasoning.isNotEmpty) {
@@ -536,13 +555,18 @@ class AINetworkManager {
         }
       },
       onError: (error) {
-        logDebug('流式响应错误: $error');
+        logDebug('[Stream] 错误 (+${stopwatch.elapsedMilliseconds}ms): $error');
         onError(_handleError(error));
         if (!completer.isCompleted) {
           completer.completeError(_handleError(error));
         }
       },
       onDone: () {
+        logDebug(
+          '[Stream] 完成: $chunkCount 个 chunk, '
+          '${buffer.length} chars, '
+          '${stopwatch.elapsedMilliseconds}ms',
+        );
         if (!completer.isCompleted) {
           onComplete(buffer.toString());
           completer.complete();

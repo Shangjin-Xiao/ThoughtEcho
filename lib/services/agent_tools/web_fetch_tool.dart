@@ -1,9 +1,9 @@
 import '../agent_tool.dart';
 import '../web_fetch_service.dart';
 
-/// 抓取网页内容，获取网页的纯文本信息
+/// 抓取网页内容，返回 Markdown 格式的正文
 class WebFetchTool extends AgentTool {
-  static const int _maxContentLength = 4000;
+  static const int _maxContentLength = 5000;
 
   final WebFetchService _webFetchService;
 

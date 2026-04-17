@@ -3585,6 +3585,24 @@
   "noChats": "暂无对话",
   "deleteChat": "删除对话",
   "deleteChatConfirm": "确定要删除这个对话吗？",
+  "searchChatHistory": "搜索对话...",
+  "dynamicInsightStats": "你已记录 {count} 条心迹，最近 7 天新增 {recentCount} 条。",
+  "@dynamicInsightStats": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "recentCount": { "type": "int" }
+    }
+  },
+  "sessionGroupToday": "今天",
+  "sessionGroupYesterday": "昨天",
+  "sessionGroupThisWeek": "本周",
+  "sessionGroupEarlier": "更早",
+  "messageCountLabel": "{count} 条消息",
+  "@messageCountLabel": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "deleteNoteWithChatsConfirmation": "删除此笔记将同时删除 {count} 条相关对话。确定要继续吗？",
   "@deleteNoteWithChatsConfirmation": {
     "placeholders": {
@@ -3600,7 +3618,7 @@
   "commandInsight": "智能洞察",
 
   "aiAssistantInputHint": "输入问题或使用 / 命令...",
-  "aiAssistantExploreWelcome": "你好！根据你的笔记概览：\n\n{summary}\n\n有什么我可以帮助的吗？",
+  "aiAssistantExploreWelcome": "{summary}",
   "@aiAssistantExploreWelcome": {
     "placeholders": {
       "summary": {

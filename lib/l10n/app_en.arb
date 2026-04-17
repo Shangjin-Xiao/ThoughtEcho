@@ -3573,6 +3573,24 @@
   "noChats": "No chats yet",
   "deleteChat": "Delete Chat",
   "deleteChatConfirm": "Are you sure you want to delete this chat?",
+  "searchChatHistory": "Search chats...",
+  "dynamicInsightStats": "You have recorded {count} thoughts, with {recentCount} from the past 7 days.",
+  "@dynamicInsightStats": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "recentCount": { "type": "int" }
+    }
+  },
+  "sessionGroupToday": "Today",
+  "sessionGroupYesterday": "Yesterday",
+  "sessionGroupThisWeek": "This Week",
+  "sessionGroupEarlier": "Earlier",
+  "messageCountLabel": "{count} msgs",
+  "@messageCountLabel": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "deleteNoteWithChatsConfirmation": "Deleting this note will also delete {count} related chat(s). Continue?",
   "@deleteNoteWithChatsConfirmation": {
     "placeholders": {
@@ -3588,7 +3606,7 @@
   "commandInsight": "Insights",
 
   "aiAssistantInputHint": "Enter question or use / commands...",
-  "aiAssistantExploreWelcome": "Hello! Based on your notes overview:\n\n{summary}\n\nHow can I help you?",
+  "aiAssistantExploreWelcome": "{summary}",
   "@aiAssistantExploreWelcome": {
     "placeholders": {
       "summary": {

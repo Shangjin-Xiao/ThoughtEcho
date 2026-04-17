@@ -12,6 +12,7 @@ import '../utils/ai_request_helper.dart';
 import '../utils/app_logger.dart';
 import '../utils/string_utils.dart';
 import '../gen_l10n/app_localizations.dart';
+import 'web_fetch_service.dart';
 
 // 定义流式响应的回调类型
 typedef StreamingResponseCallback = void Function(String text);
@@ -1550,13 +1551,28 @@ class AIService extends ChangeNotifier {
           throw Exception('无效的URL地址，请提供完整的URL');
         }
 
-        // 构建用户消息
-        final userMessage = '请抓取以下网页的内容并用Markdown格式总结主要内容：\n\nURL: $url';
+        // 真正抓取网页内容（已转为 Markdown 格式）
+        final webFetchService = WebFetchService();
+        final markdown = await webFetchService.fetchText(url);
+
+        if (markdown.trim().isEmpty) {
+          throw Exception('无法从该网页提取到有效文本内容');
+        }
+
+        // 截断过长内容，避免超出 token 限制
+        final truncated = markdown.length > 6000
+            ? '${markdown.substring(0, 6000)}\n\n[内容已截断]'
+            : markdown;
+
+        final userMessage =
+            '以下是从 $url 抓取到的网页内容（Markdown 格式），'
+            '请总结其中的关键信息和要点：\n\n$truncated';
 
         final response = await _requestHelper.makeRequestWithProvider(
           url: currentProvider.apiUrl,
           systemPrompt:
-              '你是一个网页内容抓取和总结专家。当用户提供URL时，请获取网页内容，提取主要信息，并用清晰的Markdown格式呈现。包括标题、关键内容、重点要点等。',
+              '你是一个内容总结专家。用户会提供从网页抓取的 Markdown 内容，'
+              '请提炼关键信息，生成结构清晰的摘要。',
           userMessage: userMessage,
           provider: currentProvider,
           maxTokens: 2000,
@@ -1630,12 +1646,29 @@ class AIService extends ChangeNotifier {
           return;
         }
 
-        final userMessage = '请抓取以下网页的内容并用Markdown格式总结主要内容：\n\nURL: $url';
+        // 真正抓取网页内容（已转为 Markdown 格式）
+        final webFetchService = WebFetchService();
+        final markdown = await webFetchService.fetchText(url);
+
+        if (markdown.trim().isEmpty) {
+          controller.addError(Exception('无法从该网页提取到有效文本内容'));
+          return;
+        }
+
+        // 截断过长内容，避免超出 token 限制
+        final truncated = markdown.length > 6000
+            ? '${markdown.substring(0, 6000)}\n\n[内容已截断]'
+            : markdown;
+
+        final userMessage =
+            '以下是从 $url 抓取到的网页内容（Markdown 格式），'
+            '请总结其中的关键信息和要点：\n\n$truncated';
 
         await _requestHelper.makeStreamRequestWithProvider(
           url: currentProvider.apiUrl,
           systemPrompt:
-              '你是一个网页内容抓取和总结专家。当用户提供URL时，请获取网页内容，提取主要信息，并用清晰的Markdown格式呈现。包括标题、关键内容、重点要点等。',
+              '你是一个内容总结专家。用户会提供从网页抓取的 Markdown 内容，'
+              '请提炼关键信息，生成结构清晰的摘要。',
           userMessage: userMessage,
           provider: currentProvider,
           onData: (text) => _requestHelper.handleStreamResponse(

@@ -84,7 +84,7 @@ class AgentService extends ChangeNotifier {
   final AgentApiKeyResolver? _apiKeyResolver;
 
   final StreamController<AgentEvent> _eventController =
-      StreamController<AgentEvent>.broadcast();
+      StreamController<AgentEvent>.broadcast(sync: true);
 
   /// 实时事件流 — UI 层通过此流获取 Agent 执行过程中的实时更新
   Stream<AgentEvent> get events => _eventController.stream;
@@ -581,13 +581,17 @@ $toolDescriptions
     return switch (toolName) {
       'explore_notes' => 'agentSearchingNotes',
       'web_search' => 'agentWebSearching',
+      'web_fetch' => 'agentFetchingWeb',
       _ => '$agentToolCallPrefix$toolName',
     };
   }
 
   int _toolMessageCharLimit(String toolName) {
     return switch (toolName) {
-      'explore_notes' => _searchToolMaxSingleMessageChars,
+      'explore_notes' ||
+      'web_fetch' ||
+      'web_search' =>
+        _searchToolMaxSingleMessageChars,
       _ => _defaultMaxSingleMessageChars,
     };
   }
@@ -600,14 +604,7 @@ $toolDescriptions
   }
 
   static bool _supportsChatCompletions(AIProviderSettings provider) {
-    if (provider.id == 'anthropic') {
-      return false;
-    }
-    final lowerUrl = provider.apiUrl.toLowerCase();
-    if (lowerUrl.contains('/v1/messages')) {
-      return false;
-    }
-    return true;
+    return !provider.isAnthropicMessagesApi;
   }
 
   @visibleForTesting

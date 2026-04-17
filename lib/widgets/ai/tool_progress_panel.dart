@@ -19,6 +19,9 @@ enum ToolProgressStatus {
 
 /// 工具调用进度项
 class ToolProgressItem {
+  /// 工具调用 ID（用于精确匹配结果）
+  final String? toolCallId;
+
   /// 工具名称
   final String toolName;
 
@@ -32,6 +35,7 @@ class ToolProgressItem {
   final String? result;
 
   const ToolProgressItem({
+    this.toolCallId,
     required this.toolName,
     this.description,
     required this.status,
@@ -39,12 +43,14 @@ class ToolProgressItem {
   });
 
   ToolProgressItem copyWith({
+    String? toolCallId,
     String? toolName,
     String? description,
     ToolProgressStatus? status,
     String? result,
   }) {
     return ToolProgressItem(
+      toolCallId: toolCallId ?? this.toolCallId,
       toolName: toolName ?? this.toolName,
       description: description ?? this.description,
       status: status ?? this.status,

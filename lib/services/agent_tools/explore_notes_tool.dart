@@ -108,14 +108,70 @@ class ExploreNotesTool extends AgentTool {
         selectedDayPeriods: dayPeriods,
       );
 
-      final formattedNotes = quotes.map((q) => {
-        'id': q.id,
-        'content_preview': q.content.length > 200 ? '${q.content.substring(0, 200)}...' : q.content,
-        'date': q.date,
-        'tags': q.tagIds,
-        'weather': q.weather,
-        'day_period': q.dayPeriod,
-        'content_length': q.content.length,
+      // 批量解析标签ID/分类ID → 名称
+      final allIds = <String>{
+        ...quotes.expand((q) => q.tagIds),
+        ...quotes
+            .map((q) => q.categoryId)
+            .whereType<String>()
+            .where((id) => id.isNotEmpty),
+      };
+      final tagNameMap = <String, String>{};
+      for (final id in allIds) {
+        final cat = await _db.getCategoryById(id);
+        if (cat != null) tagNameMap[id] = cat.name;
+      }
+
+      final formattedNotes = quotes.map((q) {
+        final note = <String, Object?>{
+          'id': q.id,
+          'content_preview': q.content.length > 200
+              ? '${q.content.substring(0, 200)}...'
+              : q.content,
+          'date': q.date,
+          'content_length': q.content.length,
+        };
+
+        // 标签：返回人类可读名称
+        final tagNames = q.tagIds
+            .where((id) => tagNameMap.containsKey(id))
+            .map((id) => tagNameMap[id]!)
+            .toList();
+        if (tagNames.isNotEmpty) note['tags'] = tagNames;
+
+        // 位置信息：优先 poiName，其次 location
+        final loc = q.poiName ?? q.location;
+        if (loc != null && loc.isNotEmpty) note['location'] = loc;
+
+        // 天气 + 气温
+        if (q.weather != null && q.weather!.isNotEmpty) {
+          note['weather'] = q.weather;
+        }
+        if (q.temperature != null && q.temperature!.isNotEmpty) {
+          note['temperature'] = q.temperature;
+        }
+
+        // 时段
+        if (q.dayPeriod != null && q.dayPeriod!.isNotEmpty) {
+          note['day_period'] = q.dayPeriod;
+        }
+
+        // 来源信息
+        final src = q.source;
+        if (src != null && src.isNotEmpty) note['source'] = src;
+
+        // 喜爱度
+        if (q.favoriteCount > 0) note['favorite_count'] = q.favoriteCount;
+
+        // 分类
+        if (q.categoryId != null && q.categoryId!.isNotEmpty) {
+          final catName = tagNameMap[q.categoryId!];
+          if (catName != null) {
+            note['category'] = catName;
+          }
+        }
+
+        return note;
       }).toList();
 
       final response = {
@@ -127,7 +183,7 @@ class ExploreNotesTool extends AgentTool {
           'has_more': total > offset + formattedNotes.length,
           'total_count': total,
         },
-        'summary': '找到 ${formattedNotes.length} 条匹配笔记' + (total > formattedNotes.length ? '（总计 $total 条，可分页查看）' : ''),
+        'summary': '找到 ${formattedNotes.length} 条匹配笔记${total > offset + formattedNotes.length ? '（总计 $total 条，可分页查看）' : ''}',
       };
 
       return ToolResult(

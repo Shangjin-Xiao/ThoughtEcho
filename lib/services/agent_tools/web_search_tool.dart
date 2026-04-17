@@ -1,5 +1,7 @@
 import 'dart:io';
+
 import 'package:ddgs/ddgs.dart';
+
 import '../../utils/app_logger.dart';
 import '../agent_tool.dart';
 
@@ -14,7 +16,7 @@ class WebSearchTool extends AgentTool {
   String get name => 'web_search';
 
   @override
-  String get description => '【只读】通过外部搜索引擎搜索实时信息。此工具 仅用于获取信息。';
+  String get description => '【只读】通过外部搜索引擎搜索实时信息。此工具仅用于获取信息。';
 
   @override
   Map<String, Object?> get parametersSchema => {
@@ -36,7 +38,7 @@ class WebSearchTool extends AgentTool {
   Future<ToolResult> execute(ToolCall call) async {
     final query = call.getString('query');
     final requestedLimit = call.getInt('limit', defaultValue: _defaultLimit);
-    final limit = requestedLimit.clamp(1, _maxLimit).toInt();
+    final limit = requestedLimit.clamp(1, _maxLimit);
 
     if (query.trim().isEmpty) {
       return ToolResult(
@@ -47,20 +49,22 @@ class WebSearchTool extends AgentTool {
     }
 
     try {
-      // 检测语言环境或查询内容是否包含中文
-      final bool isChinese = Platform.localeName.toLowerCase().startsWith('zh') ||
-          _containsChinese(query);
+      final isChinese =
+          Platform.localeName.toLowerCase().startsWith('zh') ||
+              _containsChinese(query);
 
-      // 根据语言选择后端引擎：中文用 bing，其他用 duckduckgo
-      final backend = isChinese ? 'bing' : 'duckduckgo';
+      // 中文查询优先使用 bing（中文搜索质量更高），否则使用 auto（多引擎）
+      final backend = isChinese ? 'bing' : 'auto';
+      final region = isChinese ? 'cn-zh' : 'us-en';
 
-      logDebug('WebSearchTool: 正在使用 $backend 搜索 "$query"');
+      logDebug('WebSearchTool: 使用 $backend ($region) 搜索 "$query"');
 
-      final ddgs = DDGS();
+      final ddgs = DDGS(timeout: const Duration(seconds: 15));
       try {
         final results = await ddgs.text(
           query,
           backend: backend,
+          region: region,
           maxResults: limit,
         );
 
@@ -71,15 +75,15 @@ class WebSearchTool extends AgentTool {
           );
         }
 
-        final limitedResults = results.take(limit).toList();
-
-        final buffer = StringBuffer('🔍 搜索「$query」的结果：\n\n');
-        for (var i = 0; i < limitedResults.length; i++) {
-          final result = limitedResults[i] as Map<String, dynamic>;
+        final buffer = StringBuffer('搜索「$query」的结果：\n\n');
+        for (var i = 0; i < results.length; i++) {
+          final result = results[i];
           final title = result['title']?.toString() ?? '无标题';
-          final snippet = result['body']?.toString() ?? result['description']?.toString() ?? '';
+          final snippet = result['body']?.toString() ??
+              result['description']?.toString() ??
+              '';
           final href = result['href']?.toString() ?? '';
-          
+
           buffer.writeln('${i + 1}. $title');
           if (href.isNotEmpty) {
             buffer.writeln('   链接: $href');
@@ -105,7 +109,7 @@ class WebSearchTool extends AgentTool {
   }
 
   /// 检查字符串是否包含中文字符
-  bool _containsChinese(String text) {
+  static bool _containsChinese(String text) {
     return RegExp(r'[\u4e00-\u9fa5]').hasMatch(text);
   }
 }
