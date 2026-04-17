@@ -144,10 +144,13 @@ void _addDeferredError(Map<String, dynamic> error) {
 
 /// 构建 Agent 工具列表
 List<AgentTool> _buildAgentTools(
-    DatabaseService db, ChatSessionService chatSessionService) {
+  SettingsService settingsService,
+  DatabaseService db,
+  ChatSessionService chatSessionService,
+) {
   return [
     ExploreNotesTool(db),
-    const WebSearchTool(),
+    WebSearchTool(settingsService),
     WebFetchTool(WebFetchService()),
     const ProposeEditTool(),
   ];
@@ -369,6 +372,7 @@ Future<void> main() async {
                 create: (context) => AgentService(
                   settingsService: context.read<SettingsService>(),
                   tools: _buildAgentTools(
+                    context.read<SettingsService>(),
                     context.read<DatabaseService>(),
                     context.read<ChatSessionService>(),
                   ),
@@ -377,7 +381,7 @@ Future<void> main() async {
                     previous ??
                     AgentService(
                       settingsService: settings,
-                      tools: _buildAgentTools(db, chatSession),
+                      tools: _buildAgentTools(settings, db, chatSession),
                     ),
               ),
               ProxyProvider3<DatabaseService, SettingsService,

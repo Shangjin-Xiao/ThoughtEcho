@@ -4,13 +4,25 @@ import 'package:ddgs/ddgs.dart';
 
 import '../../utils/app_logger.dart';
 import '../agent_tool.dart';
+import '../settings_service.dart';
 
 /// 搜索互联网获取实时信息（使用 ddgs 库）
+///
+/// 语言检测优先级：
+/// 1. 应用语言设置（最优先）
+/// 2. 系统语言环境（仅当应用设置为null时）
+/// 3. 搜索词是否包含中文（备选指标，仅当无法获取应用设置时）
 class WebSearchTool extends AgentTool {
   static const int _defaultLimit = 5;
   static const int _maxLimit = 10;
 
-  const WebSearchTool();
+  final SettingsService? _settingsService;
+
+  /// 创建 WebSearchTool
+  ///
+  /// [settingsService] 可选，用于获取用户应用语言设置。
+  /// 如果不提供，将仅使用系统语言和搜索词检测。
+  const WebSearchTool([this._settingsService]);
 
   @override
   String get name => 'web_search';
@@ -49,15 +61,17 @@ class WebSearchTool extends AgentTool {
     }
 
     try {
-      final isChinese =
-          Platform.localeName.toLowerCase().startsWith('zh') ||
-              _containsChinese(query);
+      final isChinese = _detectLanguageIsChinese(query);
 
       // 中文查询优先使用 bing（中文搜索质量更高），否则使用 auto（多引擎）
       final backend = isChinese ? 'bing' : 'auto';
       final region = isChinese ? 'cn-zh' : 'us-en';
 
-      logDebug('WebSearchTool: 使用 $backend ($region) 搜索 "$query"');
+      final appLangInfo = _settingsService?.localeCode != null
+          ? '应用语言: ${_settingsService!.localeCode}'
+          : '应用语言: 跟随系统';
+      logDebug(
+          'WebSearchTool: $appLangInfo, 检测结果: ${isChinese ? "Chinese" : "Other"}, 使用 $backend ($region) 搜索 "$query"');
 
       final ddgs = DDGS(timeout: const Duration(seconds: 15));
       try {
@@ -106,6 +120,32 @@ class WebSearchTool extends AgentTool {
         isError: true,
       );
     }
+  }
+
+  /// 检测语言是否为中文
+  ///
+  /// 优先级顺序：
+  /// 1. 检查应用语言设置（如果提供了SettingsService）
+  /// 2. 检查系统语言环境 (Platform.localeName)
+  /// 3. 检查搜索词是否包含中文字符（备选指标）
+  bool _detectLanguageIsChinese(String query) {
+    // 优先级1：应用语言设置
+    if (_settingsService != null) {
+      final localeCode = _settingsService.localeCode;
+      if (localeCode != null) {
+        // 用户显式设置了应用语言
+        return localeCode.toLowerCase().startsWith('zh');
+      }
+      // 如果localeCode为null，表示跟随系统，继续检查系统语言
+    }
+
+    // 优先级2：系统语言环境
+    if (Platform.localeName.toLowerCase().startsWith('zh')) {
+      return true;
+    }
+
+    // 优先级3：搜索词是否包含中文（备选指标）
+    return _containsChinese(query);
   }
 
   /// 检查字符串是否包含中文字符
