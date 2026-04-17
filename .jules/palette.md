@@ -4,3 +4,6 @@
 ## 2026-04-03 - Added Semantics/Tooltips for IconButtons
 **Learning:** Icon-only buttons often lack accessibility context for screen readers in Flutter. Using `tooltip` in `IconButton` or wrapping `InkWell` containing `Icon` with `Tooltip` provides semantics and mouse hover text automatically.
 **Action:** Always add `tooltip` for `IconButton` or semantic labels for icon-only components.
+## 2025-04-17 - [Add tooltip to motion photo close button]
+**Learning:** In Flutter, icon-only buttons (`IconButton`) require an explicit `tooltip` to provide semantic labels for screen readers. Using `MaterialLocalizations.of(context).closeButtonTooltip` is a localized, zero-maintenance way to add this without modifying `l10n` resource files directly.
+**Action:** When adding close/cancel icon buttons, always check for missing tooltips and use standard `MaterialLocalizations` when applicable.
