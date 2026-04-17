@@ -57,6 +57,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   final GlobalKey _tagGuideKey = GlobalKey(); // 标签功能引导 Key
   final List<String> _selectedTagIds = [];
   String? _aiSummary;
+  String? _aiPolishedContent;           // AI润色后的内容
+  String? _aiPolishTitle;               // AI润色结果标题
   Quote? _fullInitialQuote;
   bool _isLoadingFullQuote = false;
 
