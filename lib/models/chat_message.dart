@@ -28,6 +28,10 @@ class ChatMessage {
   final List<String> thinkingChunks;     // 思考过程增量（每个thinking块一项）
   final List<String> responseChunks;     // 回复增量（每个response块一项）
 
+  // AI 富文本内容相关字段
+  final String? contentFormat;           // 内容格式: 'plain' | 'delta' | 'markdown'
+  final String? deltaJson;               // Delta 格式的富文本内容（JSON 字符串）
+
   ChatMessage({
     required this.id,
     required this.content,
@@ -40,6 +44,8 @@ class ChatMessage {
     this.state = MessageState.complete,
     this.thinkingChunks = const [],
     this.responseChunks = const [],
+    this.contentFormat,
+    this.deltaJson,
   }) : role = role ?? (isUser ? 'user' : 'assistant');
 
   /// 从 SQLite 行映射构建
@@ -54,6 +60,8 @@ class ChatMessage {
           DateTime.now(),
       includedInContext: (map['included_in_context'] as int? ?? 1) == 1,
       metaJson: map['meta_json'] as String?,
+      contentFormat: map['content_format'] as String?,
+      deltaJson: map['delta_json'] as String?,
     );
   }
 
@@ -67,6 +75,8 @@ class ChatMessage {
       'created_at': timestamp.toIso8601String(),
       'included_in_context': includedInContext ? 1 : 0,
       'meta_json': metaJson,
+      'content_format': contentFormat,
+      'delta_json': deltaJson,
     };
   }
 
@@ -83,6 +93,8 @@ class ChatMessage {
       'state': state.name,
       'thinkingChunks': thinkingChunks,
       'responseChunks': responseChunks,
+      'contentFormat': contentFormat,
+      'deltaJson': deltaJson,
     };
   }
 
@@ -114,6 +126,8 @@ class ChatMessage {
       state: state,
       thinkingChunks: _toStringList(json['thinkingChunks']),
       responseChunks: _toStringList(json['responseChunks']),
+      contentFormat: json['contentFormat'] as String?,
+      deltaJson: json['deltaJson'] as String?,
     );
   }
 
