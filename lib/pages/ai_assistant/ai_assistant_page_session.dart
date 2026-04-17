@@ -188,7 +188,8 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
 
     // Explore 模式：如果有显式总结，显示总结；否则直接生成动态洞察（不显示"输入问题"提示）
     if (widget.exploreGuideSummary?.trim().isNotEmpty == true) {
-      final welcomeContent = l10n.aiAssistantExploreWelcome(widget.exploreGuideSummary!.trim());
+      final welcomeContent =
+          l10n.aiAssistantExploreWelcome(widget.exploreGuideSummary!.trim());
       final welcomeMsg = app_chat.ChatMessage(
         id: _uuid.v4(),
         content: welcomeContent,
@@ -224,8 +225,7 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
       final periodCounts = <String, int>{};
       for (final q in quotes) {
         if (q.dayPeriod != null && q.dayPeriod!.isNotEmpty) {
-          periodCounts[q.dayPeriod!] =
-              (periodCounts[q.dayPeriod!] ?? 0) + 1;
+          periodCounts[q.dayPeriod!] = (periodCounts[q.dayPeriod!] ?? 0) + 1;
         }
       }
       final topPeriod = periodCounts.entries.isNotEmpty
@@ -238,8 +238,7 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
       final weatherCounts = <String, int>{};
       for (final q in quotes) {
         if (q.weather != null && q.weather!.isNotEmpty) {
-          weatherCounts[q.weather!] =
-              (weatherCounts[q.weather!] ?? 0) + 1;
+          weatherCounts[q.weather!] = (weatherCounts[q.weather!] ?? 0) + 1;
         }
       }
       final topWeather = weatherCounts.entries.isNotEmpty

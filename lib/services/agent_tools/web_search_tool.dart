@@ -153,4 +153,3 @@ class WebSearchTool extends AgentTool {
     return RegExp(r'[\u4e00-\u9fa5]').hasMatch(text);
   }
 }
-
