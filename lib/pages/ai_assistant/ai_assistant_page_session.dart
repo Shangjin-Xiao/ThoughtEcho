@@ -20,6 +20,28 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
     _inputFocusNode.dispose();
     _textController.dispose();
     _scrollController.dispose();
+
+    // 清理空会话：如果当前会话没有任何消息，就删除它
+    _cleanupEmptySession();
+  }
+
+  /// 删除空的会话（没有用户消息）
+  void _cleanupEmptySession() {
+    if (_currentSessionId == null) return;
+
+    // 检查是否有任何非系统消息
+    final hasUserMessages = _messages.any((msg) => msg.isUser);
+
+    if (!hasUserMessages) {
+      // 在后台删除空会话，不阻塞dispose
+      unawaited(
+        _chatSessionService.deleteSession(_currentSessionId!).catchError(
+          (e) {
+            logDebug('清理空会话失败: $_currentSessionId - $e');
+          },
+        ),
+      );
+    }
   }
 
   Future<void> _initServicesAndLoad() async {
