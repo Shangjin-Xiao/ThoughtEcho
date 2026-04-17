@@ -87,9 +87,7 @@ class DatabaseSchemaManager {
     );
 
     // 搜索优化索引
-    await db.execute(
-      'CREATE INDEX idx_quotes_content_fts ON quotes(content)',
-    );
+    await db.execute('CREATE INDEX idx_quotes_content_fts ON quotes(content)');
 
     // 天气和时间段查询索引
     await db.execute(
@@ -138,7 +136,10 @@ class DatabaseSchemaManager {
   }
 
   Future<void> upgradeDatabase(
-      Database db, int oldVersion, int newVersion) async {
+    Database db,
+    int oldVersion,
+    int newVersion,
+  ) async {
     logDebug('开始数据库升级: $oldVersion -> $newVersion');
 
     try {
@@ -377,7 +378,10 @@ class DatabaseSchemaManager {
       logDebug('数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 delta_content 字段');
       try {
         // 先检查字段是否已存在
-        final columns = await txn.rawQuery('PRAGMA table_info(quotes)');
+        final columns = await txn.rawQuery(
+          'SELECT name FROM pragma_table_info(?)',
+          ['quotes'],
+        );
         final hasColumn = columns.any((col) => col['name'] == 'delta_content');
 
         if (!hasColumn) {
@@ -387,8 +391,11 @@ class DatabaseSchemaManager {
           logDebug('数据库升级：delta_content 字段已存在，跳过添加');
         }
       } catch (e) {
-        logError('delta_content 字段升级失败: $e',
-            error: e, source: 'DatabaseUpgrade');
+        logError(
+          'delta_content 字段升级失败: $e',
+          error: e,
+          source: 'DatabaseUpgrade',
+        );
       }
     }
 
@@ -413,7 +420,10 @@ class DatabaseSchemaManager {
 
       try {
         // 先检查字段是否已存在
-        final columns = await txn.rawQuery('PRAGMA table_info(quotes)');
+        final columns = await txn.rawQuery(
+          'SELECT name FROM pragma_table_info(?)',
+          ['quotes'],
+        );
         final hasColumn = columns.any((col) => col['name'] == 'day_period');
 
         if (!hasColumn) {
@@ -438,7 +448,10 @@ class DatabaseSchemaManager {
     if (oldVersion < 15) {
       logDebug('数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 last_modified 字段');
       try {
-        final columns = await txn.rawQuery('PRAGMA table_info(quotes)');
+        final columns = await txn.rawQuery(
+          'SELECT name FROM pragma_table_info(?)',
+          ['quotes'],
+        );
         final hasColumn = columns.any((col) => col['name'] == 'last_modified');
         if (!hasColumn) {
           await txn.execute('ALTER TABLE quotes ADD COLUMN last_modified TEXT');
@@ -471,7 +484,10 @@ class DatabaseSchemaManager {
         '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，为分类表添加 last_modified 字段',
       );
       try {
-        final columns = await txn.rawQuery('PRAGMA table_info(categories)');
+        final columns = await txn.rawQuery(
+          'SELECT name FROM pragma_table_info(?)',
+          ['categories'],
+        );
         final hasColumn = columns.any((col) => col['name'] == 'last_modified');
         if (!hasColumn) {
           await txn.execute(
@@ -504,7 +520,10 @@ class DatabaseSchemaManager {
         '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，为笔记表添加 favorite_count 字段',
       );
       try {
-        final columns = await txn.rawQuery('PRAGMA table_info(quotes)');
+        final columns = await txn.rawQuery(
+          'SELECT name FROM pragma_table_info(?)',
+          ['quotes'],
+        );
         final hasColumn = columns.any((col) => col['name'] == 'favorite_count');
         if (!hasColumn) {
           await txn.execute(
@@ -578,7 +597,10 @@ class DatabaseSchemaManager {
         '数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加 latitude/longitude 字段',
       );
       try {
-        final columns = await txn.rawQuery('PRAGMA table_info(quotes)');
+        final columns = await txn.rawQuery(
+          'SELECT name FROM pragma_table_info(?)',
+          ['quotes'],
+        );
 
         // 检查并添加 latitude 字段
         final hasLatitude = columns.any((col) => col['name'] == 'latitude');
@@ -669,7 +691,10 @@ class DatabaseSchemaManager {
   /// 修复：安全的标签数据迁移
   Future<void> _migrateTagDataSafely(Transaction txn) async {
     // 首先检查tag_ids列是否存在
-    final tableInfo = await txn.rawQuery('PRAGMA table_info(quotes)');
+    final tableInfo = await txn.rawQuery(
+      'SELECT name FROM pragma_table_info(?)',
+      ['quotes'],
+    );
     final hasTagIdsColumn = tableInfo.any((col) => col['name'] == 'tag_ids');
 
     if (!hasTagIdsColumn) {
@@ -727,13 +752,10 @@ class DatabaseSchemaManager {
 
         // 插入有效的标签关联（添加到batch）
         for (final tagId in validTagIds) {
-          batch.insert(
-              'quote_tags',
-              {
-                'quote_id': quoteId,
-                'tag_id': tagId,
-              },
-              conflictAlgorithm: ConflictAlgorithm.ignore);
+          batch.insert('quote_tags', {
+            'quote_id': quoteId,
+            'tag_id': tagId,
+          }, conflictAlgorithm: ConflictAlgorithm.ignore);
         }
 
         migratedCount++;
@@ -759,7 +781,10 @@ class DatabaseSchemaManager {
   Future<void> _removeTagIdsColumnSafely(Transaction txn) async {
     try {
       // 首先检查tag_ids列是否存在
-      final tableInfo = await txn.rawQuery('PRAGMA table_info(quotes)');
+      final tableInfo = await txn.rawQuery(
+        'SELECT name FROM pragma_table_info(?)',
+        ['quotes'],
+      );
       final hasTagIdsColumn = tableInfo.any((col) => col['name'] == 'tag_ids');
 
       if (!hasTagIdsColumn) {
@@ -860,7 +885,10 @@ class DatabaseSchemaManager {
   Future<void> cleanupLegacyTagIdsColumn(Database db) async {
     try {
       // 检查quotes表是否还有tag_ids列
-      final tableInfo = await db.rawQuery('PRAGMA table_info(quotes)');
+      final tableInfo = await db.rawQuery(
+        'SELECT name FROM pragma_table_info(?)',
+        ['quotes'],
+      );
       final hasTagIdsColumn = tableInfo.any((col) => col['name'] == 'tag_ids');
 
       if (!hasTagIdsColumn) {
@@ -955,7 +983,10 @@ class DatabaseSchemaManager {
   Future<void> checkAndFixDatabaseStructure(Database db) async {
     try {
       // 获取quotes表的列信息
-      final tableInfo = await db.rawQuery('PRAGMA table_info(quotes)');
+      final tableInfo = await db.rawQuery(
+        'SELECT name FROM pragma_table_info(?)',
+        ['quotes'],
+      );
       final columnNames = tableInfo.map((col) => col['name'] as String).toSet();
 
       logDebug('当前quotes表列: $columnNames');
@@ -1271,8 +1302,8 @@ class DatabaseSchemaManager {
         // 3. 查询需要迁移的数据
         // 性能优化：仅查询值为中文标签的记录
         // 使用参数化查询而不是字符串拼接，防止潜在的 SQL 注入问题
-        final weatherLabels =
-            WeatherService.legacyWeatherKeyToLabel.values.toList();
+        final weatherLabels = WeatherService.legacyWeatherKeyToLabel.values
+            .toList();
         if (weatherLabels.isEmpty) {
           logDebug('没有需要迁移的 weather 标签');
           return;
@@ -1408,7 +1439,10 @@ class DatabaseSchemaManager {
       );
 
       // 修复：检查quotes表中是否还有tag_ids列，如果有则说明迁移未完成
-      final tableInfo = await db.rawQuery('PRAGMA table_info(quotes)');
+      final tableInfo = await db.rawQuery(
+        'SELECT name FROM pragma_table_info(?)',
+        ['quotes'],
+      );
       final hasTagIdsColumn = tableInfo.any((col) => col['name'] == 'tag_ids');
 
       if (hasTagIdsColumn) {
