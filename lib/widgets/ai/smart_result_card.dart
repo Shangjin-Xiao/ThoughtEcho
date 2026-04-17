@@ -31,6 +31,11 @@ class SmartResultCard extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
 
+    // 根据来源编辑器调整按钮显示
+    final showReplace = onReplace != null && editorSource == 'fullscreen';
+    final showAppend = onAppend != null && editorSource == 'fullscreen';
+    final showSaveDirectly = onSaveDirectly != null && editorSource == 'addnote_dialog';
+
     return Card(
       elevation: 0,
       color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
@@ -86,13 +91,25 @@ class SmartResultCard extends StatelessWidget {
               alignment: WrapAlignment.end,
               spacing: 8,
               children: [
+                if (showReplace)
+                  TextButton.icon(
+                    onPressed: onReplace,
+                    icon: const Icon(Icons.find_replace, size: 18),
+                    label: Text(replaceButtonText ?? l10n.replace),
+                  ),
+                if (showAppend)
+                  TextButton.icon(
+                    onPressed: onAppend,
+                    icon: const Icon(Icons.add, size: 18),
+                    label: Text(appendButtonText ?? l10n.append),
+                  ),
                 if (onOpenInEditor != null)
                   TextButton.icon(
                     onPressed: onOpenInEditor,
                     icon: const Icon(Icons.edit_note, size: 18),
                     label: Text(l10n.openInEditor),
                   ),
-                if (onSaveDirectly != null)
+                if (showSaveDirectly)
                   FilledButton.icon(
                     onPressed: onSaveDirectly,
                     icon: const Icon(Icons.save_outlined, size: 18),

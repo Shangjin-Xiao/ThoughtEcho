@@ -28,9 +28,9 @@ class ChatMessage {
   final List<String> thinkingChunks;     // 思考过程增量（每个thinking块一项）
   final List<String> responseChunks;     // 回复增量（每个response块一项）
 
-  // AI 富文本内容相关字段
-  final String? contentFormat;           // 内容格式: 'plain' | 'delta' | 'markdown'
-  final String? deltaJson;               // Delta 格式的富文本内容（JSON 字符串）
+  // 格式化相关字段（支持富文本内容）
+  final String? contentFormat;           // 'plain' | 'delta' - 内容格式
+  final String? deltaJson;               // Delta JSON 字符串 - 富文本数据
 
   ChatMessage({
     required this.id,
@@ -151,6 +151,8 @@ class ChatMessage {
     MessageState? state,
     List<String>? thinkingChunks,
     List<String>? responseChunks,
+    String? contentFormat,
+    String? deltaJson,
   }) {
     return ChatMessage(
       id: id ?? this.id,
@@ -164,6 +166,8 @@ class ChatMessage {
       state: state ?? this.state,
       thinkingChunks: thinkingChunks ?? this.thinkingChunks,
       responseChunks: responseChunks ?? this.responseChunks,
+      contentFormat: contentFormat ?? this.contentFormat,
+      deltaJson: deltaJson ?? this.deltaJson,
     );
   }
 
