@@ -57,6 +57,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   final GlobalKey _tagGuideKey = GlobalKey(); // 标签功能引导 Key
   final List<String> _selectedTagIds = [];
   String? _aiSummary;
+  String? _aiPolishedContent;           // AI润色后的内容
+  String? _aiPolishTitle;               // AI润色结果标题
   Quote? _fullInitialQuote;
   bool _isLoadingFullQuote = false;
 
@@ -440,8 +442,56 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     });
   }
 
-  /// 显示功能引导序列
-  void _showGuides() {
+  /// 处理AI润色结果
+  void _handleAiPolishedResult({
+    required String title,
+    required String content,
+  }) {
+    setState(() {
+      _aiPolishTitle = title;
+      _aiPolishedContent = content;
+    });
+    logDebug('接收AI润色结果: $title');
+  }
+
+  /// 应用AI润色结果到编辑器
+  void _applyAiPolishedContent() {
+    if (_aiPolishedContent == null || _aiPolishedContent!.isEmpty) return;
+
+    setState(() {
+      _contentController.text = _aiPolishedContent!;
+      _aiPolishedContent = null; // 清除已应用的润色结果
+      _aiPolishTitle = null;
+    });
+
+    logDebug('应用AI润色内容到编辑器');
+  }
+
+  /// 追加AI润色结果到现有内容
+  void _appendAiPolishedContent() {
+    if (_aiPolishedContent == null || _aiPolishedContent!.isEmpty) return;
+
+    setState(() {
+      if (_contentController.text.isNotEmpty &&
+          !_contentController.text.endsWith('\n')) {
+        _contentController.text += '\n\n';
+      }
+      _contentController.text += _aiPolishedContent!;
+      _aiPolishedContent = null; // 清除已应用的润色结果
+      _aiPolishTitle = null;
+    });
+
+    logDebug('追加AI润色内容到编辑器');
+  }
+
+  /// 丢弃AI润色结果
+  void _discardAiPolishedContent() {
+    setState(() {
+      _aiPolishedContent = null;
+      _aiPolishTitle = null;
+    });
+    logDebug('已丢弃AI润色结果');
+  }
     FeatureGuideHelper.showSequence(
       context: context,
       guides: [
