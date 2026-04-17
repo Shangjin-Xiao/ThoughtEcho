@@ -168,14 +168,35 @@ class AIPromptManager {
 
 【编辑环境】完整编辑模式（NoteFullEditor）
 - 用户：深度编辑和排版，可能需要结构化内容
-- 格式：支持Markdown（平台会自动转换为Delta富文本）
-- 预期输出：结构清晰、排版精美的内容
+- 格式：Quill Delta JSON（富文本编辑格式）
+- 预期输出：Delta操作数组，支持加粗、标题、列表等格式
+
+【Quill Delta JSON 格式指南】
+Delta是一个JSON数组，每个元素表示一个编辑操作。示例：
+
+基础操作：
+- {"insert": "Plain text"}  // 纯文本
+- {"insert": "\\n"}  // 换行符
+
+格式属性（attributes）：
+- {"insert": "Bold", "attributes": {"bold": true}}
+- {"insert": "Italic", "attributes": {"italic": true}}
+- {"insert": "Title\\n", "attributes": {"header": 1}}  // H1
+- {"insert": "Subtitle\\n", "attributes": {"header": 2}}  // H2
+- {"insert": "Bullet\\n", "attributes": {"list": "bullet"}}
+- {"insert": "Numbered\\n", "attributes": {"list": "ordered"}}
 
 【输出要求】
-1. 可以使用Markdown格式符号进行排版（#标题、**加粗**、-列表等）
-2. 使用合理的标题层级和段落结构
-3. 如果用户要求添加到现有笔记，请保持原有结构并无缝衔接
-4. 输出应该是用户可以直接预览的专业内容''';
+1. 返回一个有效的Quill Delta JSON数组
+2. 所有 [[TE_MEDIA_N]] 占位符必须原样保留（代表图片/视频）
+3. 使用合理的标题层级（header: 1, 2, 3）
+4. 使用列表格式使内容更清晰
+5. 如果用户要求append，新增内容添加到数组末尾
+6. 用代码块返回：\`\`\`json [your Delta JSON array] \`\`\`
+
+【重要】
+- 确保返回的JSON格式有效，可被JSON.parse()解析
+- 不要返回Markdown，只返回Delta JSON''';
 
   /// 根据编辑器类型获取AI提示词
   /// [editorType] 可选值：'quick_add'（快速新增）、'full_editor'（完整编辑）
