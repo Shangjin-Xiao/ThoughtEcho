@@ -219,6 +219,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
 
                       final updatedNote = existingNote.copyWith(
                         content: newContent,
+                        deltaContent: existingNote.deltaContent,
                         lastModified: DateTime.now().toIso8601String(),
                       );
 
