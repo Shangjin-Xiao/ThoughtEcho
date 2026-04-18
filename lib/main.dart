@@ -23,6 +23,7 @@ import 'package:logging/logging.dart' as logging;
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
 import 'package:thoughtecho/services/note_sync_service.dart';
 import 'package:thoughtecho/services/ai_service.dart';
+import 'package:thoughtecho/services/openai_stream_service.dart';
 import 'package:thoughtecho/services/backup_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
@@ -366,6 +367,9 @@ Future<void> main() async {
                     AIService(settingsService: context.read<SettingsService>()),
                 update: (context, settings, previous) =>
                     previous ?? AIService(settingsService: settings),
+              ),
+              ChangeNotifierProvider<OpenAIStreamService>(
+                create: (_) => OpenAIStreamService(),
               ),
               ChangeNotifierProxyProvider3<SettingsService, DatabaseService,
                   ChatSessionService, AgentService>(
