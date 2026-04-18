@@ -25,8 +25,9 @@ enum ApiRoute {
 
   /// The client url
   String target(Device target, {Map<String, String>? query}) {
+    final scheme = target.https ? 'https' : 'http';
     return Uri(
-      scheme: target.https ? 'https' : 'http',
+      scheme: scheme,
       host: target.ip,
       port: target.port,
       path: target.version == '1.0' ? v1 : v2,

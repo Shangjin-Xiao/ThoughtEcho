@@ -35,3 +35,7 @@
 **Vulnerability:** Cross-Site Scripting (XSS) vulnerability due to rendering raw `widget.htmlContent` (potentially containing AI-generated or user-provided malicious scripts) in `AIAnnualReportWebView`. Furthermore, `ContentSanitizer.injectCsp` could be bypassed by an attacker providing their own permissive CSP meta tag.
 **Learning:** Raw HTML content must always be properly sanitized *before* initial use, rather than only at export/share time. Regex-based stripping of scripts should be combined with strict Content-Security-Policy injection for defense-in-depth against XSS.
 **Prevention:** Ensured `_sanitizedHtmlContent` is instantiated securely in `initState` and propagated to all file read/write/share and rendering contexts. Updated `ContentSanitizer` to aggressively strip existing CSP meta tags and `<script>` blocks before applying the safe, default CSP.
+## 2025-05-15 - Fix Hardcoded HTTP in NoteSyncService
+**Vulnerability:** The `NoteSyncService` used hardcoded `http://` for local network synchronization intent and preflight checks, ignoring the `https` capability of the target device. This leads to unencrypted transmission of sensitive sync handshake data.
+**Learning:** Hardcoded protocols in P2P communication can bypass established security negotiation flags. Centralized URL builders like `ApiRoute` should be used to ensure protocol consistency.
+**Prevention:** Always use the `scheme` property of `Uri` based on device metadata instead of string interpolation for protocols. Implement security logging when falling back to unencrypted channels.

@@ -11,6 +11,7 @@ import 'package:thoughtecho/services/localsend/localsend_server.dart';
 import 'package:thoughtecho/services/localsend/localsend_send_provider.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
 import 'package:thoughtecho/services/localsend/constants.dart';
+import 'package:thoughtecho/services/localsend/api_route_builder.dart';
 import 'package:thoughtecho/models/merge_report.dart';
 import 'package:dio/dio.dart';
 import 'device_identity_manager.dart';
@@ -422,8 +423,18 @@ class NoteSyncService extends ChangeNotifier {
     // 注意：即使本地设置了 skipSyncConfirmation，我们仍然需要发送 intent
     // 以便接收方知道即将到来的同步，并且接收方可以根据自己的设置决定是否需要审批
     try {
-      final uri = Uri.parse(
-        'http://${target.ip}:${target.port}/api/thoughtecho/v1/sync-intent',
+      final scheme = target.https ? 'https' : 'http';
+      if (!target.https) {
+        logSecurity(
+          'Using unencrypted HTTP for sync-intent with ${target.ip}. Data is not protected by TLS.',
+          source: 'NoteSyncService',
+        );
+      }
+      final uri = Uri(
+        scheme: scheme,
+        host: target.ip,
+        port: target.port,
+        path: '/api/thoughtecho/v1/sync-intent',
       );
       final fp = await DeviceIdentityManager.I.getFingerprint();
       // 直接使用 discoveryService 的设备型号，它已经正确地从设备信息中获取
@@ -558,10 +569,24 @@ class NoteSyncService extends ChangeNotifier {
       validateStatus: (_) => true,
     ));
     try {
-      final infoUrlV2 =
-          'http://${target.ip}:${target.port}/api/localsend/v2/info';
-      final infoUrlV1 =
-          'http://${target.ip}:${target.port}/api/localsend/v1/info';
+      if (!target.https) {
+        logSecurity(
+          'Using unencrypted HTTP for preflight check with ${target.ip}.',
+          source: 'NoteSyncService',
+        );
+      }
+      final infoUrlV2 = ApiRoute.info.targetRaw(
+        target.ip ?? '127.0.0.1',
+        target.port,
+        target.https,
+        '2.0',
+      );
+      final infoUrlV1 = ApiRoute.info.targetRaw(
+        target.ip ?? '127.0.0.1',
+        target.port,
+        target.https,
+        '1.0',
+      );
       int statusCode = 0;
       try {
         final resp = await dio.get(infoUrlV2);
