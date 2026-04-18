@@ -75,7 +75,9 @@ class ProposeNewNoteTool extends AgentTool {
         : <String>[];
 
     final knownTags = await _databaseService.getCategories();
-    final validTagIds = knownTags.map((tag) => tag.id).toSet();
+    final visibleTags =
+        knownTags.where((tag) => tag.id != 'system_hidden_tag').toList();
+    final validTagIds = visibleTags.map((tag) => tag.id).toSet();
     final invalidTagIds =
         tagIds.where((tagId) => !validTagIds.contains(tagId)).toList();
     if (invalidTagIds.isNotEmpty) {

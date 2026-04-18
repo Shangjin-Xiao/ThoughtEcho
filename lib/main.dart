@@ -155,8 +155,8 @@ List<AgentTool> _buildAgentTools(
 ) {
   return [
     ExploreNotesTool(db),
-    GetAppContextTool(
-      databaseService: db,
+    GetTagsTool(db),
+    GetLocationWeatherTool(
       locationService: locationService,
       weatherService: weatherService,
     ),

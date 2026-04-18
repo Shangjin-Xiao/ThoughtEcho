@@ -136,16 +136,71 @@ void main() {
     });
   });
 
-  group('GetAppContextTool', () {
-    test('returns available tags and current location weather snapshot',
-        () async {
-      final tool = GetAppContextTool(
-        databaseService: _TestDatabaseService(
+  group('GetTagsTool', () {
+    test('returns available tags excluding hidden tag', () async {
+      final tool = GetTagsTool(
+        _TestDatabaseService(
           [
             NoteCategory(id: 'tag_work', name: '工作'),
             NoteCategory(id: 'tag_life', name: '生活'),
+            NoteCategory(
+              id: 'system_hidden_tag',
+              name: '隐藏',
+              isDefault: true,
+            ),
           ],
         ),
+      );
+
+      final result = await tool.execute(
+        ToolCall(
+          id: 'call_3',
+          name: 'get_tags',
+          arguments: const {},
+        ),
+      );
+
+      expect(result.isError, isFalse);
+      final payload = jsonDecode(result.content) as Map<String, dynamic>;
+      expect(payload['available_tags'], [
+        {'id': 'tag_work', 'name': '工作', 'is_default': false},
+        {'id': 'tag_life', 'name': '生活', 'is_default': false},
+      ]);
+      final pagination = payload['pagination'] as Map<String, dynamic>;
+      expect(pagination['total_count'], 2);
+      expect(pagination['has_more'], isFalse);
+    });
+
+    test('supports pagination', () async {
+      final tags = List.generate(
+        5,
+        (i) => NoteCategory(id: 'tag_$i', name: '标签$i'),
+      );
+      final tool = GetTagsTool(_TestDatabaseService(tags));
+
+      final result = await tool.execute(
+        ToolCall(
+          id: 'call_3b',
+          name: 'get_tags',
+          arguments: const {'offset': 2, 'limit': 2},
+        ),
+      );
+
+      expect(result.isError, isFalse);
+      final payload = jsonDecode(result.content) as Map<String, dynamic>;
+      final list = payload['available_tags'] as List;
+      expect(list.length, 2);
+      expect((list[0] as Map)['id'], 'tag_2');
+      expect((list[1] as Map)['id'], 'tag_3');
+      final pagination = payload['pagination'] as Map<String, dynamic>;
+      expect(pagination['total_count'], 5);
+      expect(pagination['has_more'], isTrue);
+    });
+  });
+
+  group('GetLocationWeatherTool', () {
+    test('returns current location and weather snapshot', () async {
+      final tool = GetLocationWeatherTool(
         locationService: _TestLocationService(
           locationDisplay: '广州市·天河区',
           formattedLocation: '中国,广东省,广州市,天河区',
@@ -159,26 +214,19 @@ void main() {
 
       final result = await tool.execute(
         ToolCall(
-          id: 'call_3',
-          name: 'get_app_context',
+          id: 'call_4',
+          name: 'get_location_weather',
           arguments: const {},
         ),
       );
 
       expect(result.isError, isFalse);
       final payload = jsonDecode(result.content) as Map<String, dynamic>;
-      expect(payload['available_tags'], [
-        {'id': 'tag_work', 'name': '工作'},
-        {'id': 'tag_life', 'name': '生活'},
-      ]);
-
-      final locationWeather =
-          payload['location_weather'] as Map<String, dynamic>;
-      expect(locationWeather['location_display'], '广州市·天河区');
-      expect(locationWeather['location_storage'], '中国,广东省,广州市,天河区');
-      expect(locationWeather['weather_key'], 'clear');
-      expect(locationWeather['temperature'], '27°C');
-      expect(locationWeather['weather_display'], '晴 27°C');
+      expect(payload['location_display'], '广州市·天河区');
+      expect(payload['location_storage'], '中国,广东省,广州市,天河区');
+      expect(payload['weather_key'], 'clear');
+      expect(payload['temperature'], '27°C');
+      expect(payload['weather_display'], '晴 27°C');
     });
   });
 }

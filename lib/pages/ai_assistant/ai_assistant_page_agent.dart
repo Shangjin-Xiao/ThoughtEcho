@@ -211,8 +211,11 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
     if (toolName == 'explore_notes' && args.containsKey('query')) {
       return '搜索: ${args['query']}';
     }
-    if (toolName == 'get_app_context') {
-      return '读取标签、位置与天气';
+    if (toolName == 'get_tags') {
+      return '读取标签列表';
+    }
+    if (toolName == 'get_location_weather') {
+      return '读取位置与天气';
     }
     if (toolName == 'propose_new_note') {
       return '新建笔记建议: ${args['title'] ?? ''}';
