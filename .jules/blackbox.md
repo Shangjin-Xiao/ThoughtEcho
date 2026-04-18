@@ -15,3 +15,7 @@
 ## 2025-10-24 - 🗃️ 黑匣: [完善 NoteSyncPage 模块的结构化日志]
 **异常:** [NoteSyncPage 模块在初始化同步服务、设备发现、发送笔记以及异常停止等环节遇到错误时，仅使用了 `debugPrint` 进行了粗糙的打印。这不仅丢失了关键的异常堆栈信息，还缺少统一的日志来源（source）标记，使得排查同步相关故障时难以追溯上下文。]
 **拦截:** [已将上述流程中的 `debugPrint('...失败: $e')` 替换为结构化的 `AppLogger.e`，注入了对应的报错描述、具体的异常对象 `error: e`、堆栈轨迹 `stackTrace: stack`，以及指定了明确的日志来源模块 `source: 'NoteSyncPage'`。确认所有的错误记录仅涉及连接、通信与网络相关的异常对象自身，未包含任何同步的笔记内容文本、用户凭据等敏感隐私数据。]
+
+## 2024-05-31 - [完善 NetworkService 模块的结构化日志]
+**异常:** NetworkService 的 GET 和 POST 方法在遇到 DioException 时，只返回了携带简短 error 信息的 HttpResponse，没有使用统一的 AppLogger 进行上报；AI 流式请求和重试拦截器中的错误捕获存在空捕获或缺失堆栈信息的情况，会导致线上排查困难且掩盖了重试中途的隐蔽错误。
+**拦截:** 修改所有拦截点，强制使用 `catch (e, stack)` 进行捕获，并使用 `AppLogger.e('...', error: e, stackTrace: stack, source: 'NetworkService')` 上报。所有日志中均仅记录 url、状态码和异常对象，绝不包含用户授权凭证、请求体或响应体内容。
