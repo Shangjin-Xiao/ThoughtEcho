@@ -135,6 +135,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         final meta = jsonDecode(message.metaJson!) as Map<String, dynamic>;
         switch (meta['type']) {
           case 'smart_result':
+            final action = meta['action']?.toString();
+            final isNewNoteProposal = action == 'create';
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: SmartResultCard(
@@ -145,6 +147,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                     meta['replaceButtonText'] as String? ?? l10n.applyChanges,
                 appendButtonText:
                     meta['appendButtonText'] as String? ?? l10n.appendToNote,
+                editorSource: isNewNoteProposal ? 'new_note' : 'fullscreen',
                 onOpenInEditor: () async {
                   final String modeAction =
                       meta['action']?.toString() == 'append'
@@ -152,7 +155,9 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                           : 'replace';
                   final noteId = meta['note_id']?.toString();
 
-                  if (_hasBoundNote) {
+                  if (isNewNoteProposal) {
+                    await _openSmartResultAsNewNote(message.content);
+                  } else if (_hasBoundNote) {
                     Navigator.pop(context, {
                       'action': 'edit',
                       'mode': modeAction,
@@ -186,25 +191,20 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                       }
                     }
                   } else {
-                    // 全局模式：直接打开新编辑器
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => NoteFullEditorPage(
-                          initialContent: message.content,
-                        ),
-                      ),
-                    );
+                    await _openSmartResultInEditor(meta, message.content);
                   }
                 },
                 onSaveDirectly: () async {
+<<<<<<< HEAD
                   final String modeAction =
                       meta['action']?.toString() == 'append'
                           ? 'append'
                           : 'replace';
                   final noteId = meta['note_id']?.toString();
 
-                  if (_hasBoundNote) {
+                  if (isNewNoteProposal) {
+                    await _saveSmartResultAsNewNote(meta, message.content);
+                  } else if (_hasBoundNote) {
                     Navigator.pop(context, {
                       'action': 'save',
                       'mode': modeAction,
@@ -267,18 +267,6 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                       }
                     }
                   }
-                },
-              ),
-            );
-          case 'notice':
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: AIWorkflowNoticeCard(
-                title: meta['title'] as String? ?? l10n.workflowUnavailable,
-                message: message.content,
-              ),
-            );
-          case 'markdown_result':
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: AIWorkflowMarkdownCard(
@@ -753,5 +741,168 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         ),
       ),
     );
+  }
+
+  Future<void> _openSmartResultInEditor(
+    Map<String, dynamic> meta,
+    String content,
+  ) async {
+    final modeAction =
+        meta['action']?.toString() == 'append' ? 'append' : 'replace';
+    final noteId = meta['note_id']?.toString();
+
+    if (_hasBoundNote) {
+      Navigator.pop(context, {
+        'action': 'edit',
+        'mode': modeAction,
+        'text': content,
+      });
+      return;
+    }
+
+    if (noteId != null && noteId.isNotEmpty) {
+      final db = context.read<DatabaseService>();
+      final note = await db.getQuoteById(noteId);
+      if (!mounted) {
+        return;
+      }
+      if (note != null) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => NoteFullEditorPage(
+              initialContent: content,
+              initialQuote: note,
+            ),
+          ),
+        );
+        return;
+      }
+    }
+
+    await _openSmartResultAsNewNote(content);
+  }
+
+  Future<void> _openSmartResultAsNewNote(String content) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => NoteFullEditorPage(
+          initialContent: content,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _saveSmartResultToExistingNote(
+    Map<String, dynamic> meta,
+    String content,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    final modeAction =
+        meta['action']?.toString() == 'append' ? 'append' : 'replace';
+    final noteId = meta['note_id']?.toString();
+
+    if (_hasBoundNote) {
+      Navigator.pop(context, {
+        'action': 'save',
+        'mode': modeAction,
+        'text': content,
+      });
+      return;
+    }
+
+    if (noteId != null && noteId.isNotEmpty) {
+      try {
+        final db = context.read<DatabaseService>();
+        final existingNote = await db.getQuoteById(noteId);
+        if (existingNote == null) {
+          throw Exception('Note not found');
+        }
+
+        final newContent = modeAction == 'append'
+            ? '${existingNote.content}\n$content'
+            : content;
+
+        final updatedNote = existingNote.copyWith(
+          content: newContent,
+          deltaContent: existingNote.deltaContent,
+          lastModified: DateTime.now().toIso8601String(),
+        );
+
+        await db.updateQuote(updatedNote);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.saveSuccess)),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.saveFailed(e.toString()))),
+          );
+        }
+      }
+      return;
+    }
+
+    await _saveSmartResultAsNewNote(meta, content);
+  }
+
+  Future<void> _saveSmartResultAsNewNote(
+    Map<String, dynamic> meta,
+    String content,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+
+    try {
+      final db = context.read<DatabaseService>();
+      final locationService = context.read<LocationService>();
+      final weatherService = context.read<WeatherService>();
+      final includeLocation = meta['include_location'] == true;
+      final includeWeather = meta['include_weather'] == true;
+      final rawTagIds = meta['tag_ids'] as List<dynamic>? ?? const [];
+      final tagIds = rawTagIds
+          .map((item) => item.toString().trim())
+          .where((item) => item.isNotEmpty)
+          .toList();
+
+      final position = locationService.currentPosition;
+      final formattedLocation = locationService.getFormattedLocation();
+      final storedLocation = includeLocation
+          ? (formattedLocation.isNotEmpty
+              ? formattedLocation
+              : (position != null ? LocationService.kAddressPending : null))
+          : null;
+
+      final quote = Quote.validated(
+        content: content,
+        date: DateTime.now().toIso8601String(),
+        tagIds: tagIds,
+        location: storedLocation,
+        latitude:
+            (includeLocation || includeWeather) ? position?.latitude : null,
+        longitude:
+            (includeLocation || includeWeather) ? position?.longitude : null,
+        weather: includeWeather ? weatherService.currentWeather : null,
+        temperature: includeWeather ? weatherService.temperature : null,
+        dayPeriod: TimeUtils.getCurrentDayPeriodKey(),
+      );
+
+      await db.addQuote(quote);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.saveSuccess)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.saveFailed(e.toString()))),
+        );
+      }
+    }
   }
 }

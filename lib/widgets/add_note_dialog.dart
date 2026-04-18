@@ -57,8 +57,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   final GlobalKey _tagGuideKey = GlobalKey(); // 标签功能引导 Key
   final List<String> _selectedTagIds = [];
   String? _aiSummary;
-  String? _aiPolishedContent;           // AI润色后的内容
-  String? _aiPolishTitle;               // AI润色结果标题
+  String? _aiPolishedContent; // AI润色后的内容
+  String? _aiPolishTitle; // AI润色结果标题
   Quote? _fullInitialQuote;
   bool _isLoadingFullQuote = false;
 
@@ -494,13 +494,14 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   }
 
   /// 显示功能引导
-  void _showGuides() {
-    FeatureGuideHelper.showSequence(
+  Future<void> _showGuides() async {
+    await FeatureGuideHelper.showSequence(
       context: context,
       guides: [
         ('add_note_fullscreen_button', _fullscreenButtonKey),
         ('add_note_tag_hidden', _tagGuideKey),
       ],
+      shouldShow: () => mounted,
     );
   }
 

@@ -142,6 +142,9 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             'title': parsed.smartResult!.title,
             'note_id': parsed.smartResult!.noteId,
             'action': parsed.smartResult!.action,
+            'tag_ids': parsed.smartResult!.tagIds,
+            'include_location': parsed.smartResult!.includeLocation,
+            'include_weather': parsed.smartResult!.includeWeather,
           }),
         );
         _setState(() => _messages.add(cardMsg));
@@ -208,6 +211,12 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
     if (toolName == 'explore_notes' && args.containsKey('query')) {
       return '搜索: ${args['query']}';
     }
+    if (toolName == 'get_app_context') {
+      return '读取标签、位置与天气';
+    }
+    if (toolName == 'propose_new_note') {
+      return '新建笔记建议: ${args['title'] ?? ''}';
+    }
     if (toolName == 'web_search' && args.containsKey('query')) {
       return '联网搜索: ${args['query']}';
     }
@@ -225,11 +234,12 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
   ) {
     final trimmed = response.content.trim();
 
-    // 首先检查是否有 propose_edit 工具调用
-    final editCalls =
-        response.toolCalls.where((c) => c.name == 'propose_edit').toList();
-    if (editCalls.isNotEmpty) {
-      final call = editCalls.last;
+    // 首先检查结构化提议工具调用 (propose_edit 或 propose_new_note)
+    final smartResultCalls = response.toolCalls
+        .where((c) => c.name == 'propose_edit' || c.name == 'propose_new_note')
+        .toList();
+    if (smartResultCalls.isNotEmpty) {
+      final call = smartResultCalls.last;
       try {
         return _AgentSmartResultParseResult(
           displayText: trimmed, // 显示 AI 最终的回复（解释理由）
@@ -238,6 +248,11 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             content: call.arguments['content']?.toString() ?? '',
             noteId: call.arguments['note_id']?.toString(),
             action: call.arguments['action']?.toString(),
+            tagIds: (call.arguments['tag_ids'] as List?)
+                ?.map((item) => item.toString())
+                .toList(),
+            includeLocation: call.arguments['include_location'] == true,
+            includeWeather: call.arguments['include_weather'] == true,
           ),
         );
       } catch (_) {
@@ -272,6 +287,11 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
           content: data['content']?.toString() ?? '',
           noteId: data['note_id']?.toString(),
           action: data['action']?.toString(),
+          tagIds: (data['tag_ids'] as List?)
+              ?.map((item) => item.toString())
+              .toList(),
+          includeLocation: data['include_location'] == true,
+          includeWeather: data['include_weather'] == true,
         ),
       );
     } catch (e) {
@@ -296,10 +316,16 @@ class _AgentSmartResultPayload {
     required this.content,
     this.noteId,
     this.action,
+    this.tagIds,
+    this.includeLocation = false,
+    this.includeWeather = false,
   });
 
   final String title;
   final String content;
   final String? noteId;
   final String? action;
+  final List<String>? tagIds;
+  final bool includeLocation;
+  final bool includeWeather;
 }
