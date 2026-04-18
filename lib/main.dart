@@ -47,6 +47,8 @@ import 'package:thoughtecho/services/place_search_service.dart';
 import 'package:thoughtecho/services/agent_service.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
 import 'package:thoughtecho/services/agent_tools/explore_notes_tool.dart';
+import 'package:thoughtecho/services/agent_tools/get_app_context_tool.dart';
+import 'package:thoughtecho/services/agent_tools/propose_new_note_tool.dart';
 import 'package:thoughtecho/services/agent_tools/web_fetch_tool.dart';
 import 'package:thoughtecho/services/agent_tools/web_search_tool.dart';
 import 'package:thoughtecho/services/agent_tools/propose_edit_tool.dart';
@@ -147,12 +149,20 @@ List<AgentTool> _buildAgentTools(
   SettingsService settingsService,
   DatabaseService db,
   ChatSessionService chatSessionService,
+  LocationService locationService,
+  WeatherService weatherService,
 ) {
   return [
     ExploreNotesTool(db),
+    GetAppContextTool(
+      databaseService: db,
+      locationService: locationService,
+      weatherService: weatherService,
+    ),
     WebSearchTool(settingsService),
     WebFetchTool(WebFetchService()),
     const ProposeEditTool(),
+    ProposeNewNoteTool(db),
   ];
 }
 
@@ -367,21 +377,42 @@ Future<void> main() async {
                 update: (context, settings, previous) =>
                     previous ?? AIService(settingsService: settings),
               ),
-              ChangeNotifierProxyProvider3<SettingsService, DatabaseService,
-                  ChatSessionService, AgentService>(
+              ChangeNotifierProxyProvider5<
+                  SettingsService,
+                  DatabaseService,
+                  ChatSessionService,
+                  LocationService,
+                  WeatherService,
+                  AgentService>(
                 create: (context) => AgentService(
                   settingsService: context.read<SettingsService>(),
                   tools: _buildAgentTools(
                     context.read<SettingsService>(),
                     context.read<DatabaseService>(),
                     context.read<ChatSessionService>(),
+                    context.read<LocationService>(),
+                    context.read<WeatherService>(),
                   ),
                 ),
-                update: (context, settings, db, chatSession, previous) =>
+                update: (
+                  context,
+                  settings,
+                  db,
+                  chatSession,
+                  locationService,
+                  weatherService,
+                  previous,
+                ) =>
                     previous ??
                     AgentService(
                       settingsService: settings,
-                      tools: _buildAgentTools(settings, db, chatSession),
+                      tools: _buildAgentTools(
+                        settings,
+                        db,
+                        chatSession,
+                        locationService,
+                        weatherService,
+                      ),
                     ),
               ),
               ProxyProvider3<DatabaseService, SettingsService,

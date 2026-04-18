@@ -209,11 +209,15 @@ Future<Widget> _buildHarness({
 }
 
 Future<void> _submitInput(WidgetTester tester, String text) async {
-  await tester.enterText(find.byType(TextField), text);
+  await tester.enterText(find.byType(TextField).last, text);
   await tester.pump();
-  final sendButtonFinder =
-      find.byKey(const ValueKey('ai_assistant_send_button'));
-  final sendButton = tester.widget<IconButton>(sendButtonFinder);
+  final sendButtonFinder = find.byKey(
+    const ValueKey('ai_assistant_send_button'),
+  );
+  final effectiveSendFinder = sendButtonFinder.evaluate().isNotEmpty
+      ? sendButtonFinder
+      : find.widgetWithIcon(IconButton, Icons.arrow_upward).last;
+  final sendButton = tester.widget<IconButton>(effectiveSendFinder);
   sendButton.onPressed?.call();
   await tester.pump();
   await tester.pumpAndSettle();

@@ -135,6 +135,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         final meta = jsonDecode(message.metaJson!) as Map<String, dynamic>;
         switch (meta['type']) {
           case 'smart_result':
+            final action = meta['action']?.toString();
+            final isNewNoteProposal = action == 'create';
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: SmartResultCard(
@@ -145,119 +147,19 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                     meta['replaceButtonText'] as String? ?? l10n.applyChanges,
                 appendButtonText:
                     meta['appendButtonText'] as String? ?? l10n.appendToNote,
+                editorSource: isNewNoteProposal ? 'new_note' : 'fullscreen',
                 onOpenInEditor: () async {
-                  final String modeAction = meta['action']?.toString() == 'append' ? 'append' : 'replace';
-                  final noteId = meta['note_id']?.toString();
-
-                  if (_hasBoundNote) {
-                    Navigator.pop(context, {
-                      'action': 'edit',
-                      'mode': modeAction,
-                      'text': message.content,
-                    });
-                  } else if (noteId != null && noteId.isNotEmpty) {
-                    // 全局模式但绑定了特定笔记
-                    final db = context.read<DatabaseService>();
-                    final note = await db.getQuoteById(noteId);
-                    if (mounted) {
-                      if (note != null) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => NoteFullEditorPage(
-                              initialContent: message.content,
-                              initialQuote: note,
-                            ),
-                          ),
-                        );
-                      } else {
-                        // 回退到普通新笔记模式
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => NoteFullEditorPage(
-                              initialContent: message.content,
-                            ),
-                          ),
-                        );
-                      }
-                    }
+                  if (isNewNoteProposal) {
+                    await _openSmartResultAsNewNote(message.content);
                   } else {
-                    // 全局模式：直接打开新编辑器
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => NoteFullEditorPage(
-                          initialContent: message.content,
-                        ),
-                      ),
-                    );
+                    await _openSmartResultInEditor(meta, message.content);
                   }
                 },
                 onSaveDirectly: () async {
-                  final String modeAction = meta['action']?.toString() == 'append' ? 'append' : 'replace';
-                  final noteId = meta['note_id']?.toString();
-
-                  if (_hasBoundNote) {
-                    Navigator.pop(context, {
-                      'action': 'save',
-                      'mode': modeAction,
-                      'text': message.content,
-                    });
-                  } else if (noteId != null && noteId.isNotEmpty) {
-                    // 全局模式但绑定了特定笔记
-                    try {
-                      final db = context.read<DatabaseService>();
-                      final existingNote = await db.getQuoteById(noteId);
-                      if (existingNote == null) {
-                        throw Exception('Note not found');
-                      }
-
-                      final newContent = modeAction == 'append'
-                          ? '${existingNote.content}\n${message.content}'
-                          : message.content;
-
-                      final updatedNote = existingNote.copyWith(
-                        content: newContent,
-                        deltaContent: existingNote.deltaContent,
-                        lastModified: DateTime.now().toIso8601String(),
-                      );
-
-                      await db.updateQuote(updatedNote);
-
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(l10n.saveSuccess)),
-                        );
-                      }
-                    } catch (e) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(l10n.saveFailed(e.toString()))),
-                        );
-                      }
-                    }
+                  if (isNewNoteProposal) {
+                    await _saveSmartResultAsNewNote(meta, message.content);
                   } else {
-                    // 全局模式：直接保存为新笔记
-                    try {
-                      final db = context.read<DatabaseService>();
-                      final quote = Quote.validated(
-                        content: message.content,
-                        date: DateTime.now().toIso8601String(),
-                      );
-                      await db.addQuote(quote);
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(l10n.saveSuccess)),
-                        );
-                      }
-                    } catch (e) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(l10n.saveFailed(e.toString()))),
-                        );
-                      }
-                    }
+                    await _saveSmartResultToExistingNote(meta, message.content);
                   }
                 },
               ),
@@ -321,8 +223,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
             final rawItems = meta['items'] as List<dynamic>? ?? [];
             // 从历史恢复的 tool_progress 消息不应再转圈：
             // 如果 message 不处于 loading 状态，强制 inProgress=false
-            final inProgress = message.isLoading &&
-                (meta['inProgress'] as bool? ?? false);
+            final inProgress =
+                message.isLoading && (meta['inProgress'] as bool? ?? false);
             final progressItems = rawItems.map((item) {
               final map = item as Map<String, dynamic>;
               return ToolProgressItem(
@@ -745,5 +647,168 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         ),
       ),
     );
+  }
+
+  Future<void> _openSmartResultInEditor(
+    Map<String, dynamic> meta,
+    String content,
+  ) async {
+    final modeAction =
+        meta['action']?.toString() == 'append' ? 'append' : 'replace';
+    final noteId = meta['note_id']?.toString();
+
+    if (_hasBoundNote) {
+      Navigator.pop(context, {
+        'action': 'edit',
+        'mode': modeAction,
+        'text': content,
+      });
+      return;
+    }
+
+    if (noteId != null && noteId.isNotEmpty) {
+      final db = context.read<DatabaseService>();
+      final note = await db.getQuoteById(noteId);
+      if (!mounted) {
+        return;
+      }
+      if (note != null) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => NoteFullEditorPage(
+              initialContent: content,
+              initialQuote: note,
+            ),
+          ),
+        );
+        return;
+      }
+    }
+
+    await _openSmartResultAsNewNote(content);
+  }
+
+  Future<void> _openSmartResultAsNewNote(String content) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => NoteFullEditorPage(
+          initialContent: content,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _saveSmartResultToExistingNote(
+    Map<String, dynamic> meta,
+    String content,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+    final modeAction =
+        meta['action']?.toString() == 'append' ? 'append' : 'replace';
+    final noteId = meta['note_id']?.toString();
+
+    if (_hasBoundNote) {
+      Navigator.pop(context, {
+        'action': 'save',
+        'mode': modeAction,
+        'text': content,
+      });
+      return;
+    }
+
+    if (noteId != null && noteId.isNotEmpty) {
+      try {
+        final db = context.read<DatabaseService>();
+        final existingNote = await db.getQuoteById(noteId);
+        if (existingNote == null) {
+          throw Exception('Note not found');
+        }
+
+        final newContent = modeAction == 'append'
+            ? '${existingNote.content}\n$content'
+            : content;
+
+        final updatedNote = existingNote.copyWith(
+          content: newContent,
+          deltaContent: existingNote.deltaContent,
+          lastModified: DateTime.now().toIso8601String(),
+        );
+
+        await db.updateQuote(updatedNote);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.saveSuccess)),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.saveFailed(e.toString()))),
+          );
+        }
+      }
+      return;
+    }
+
+    await _saveSmartResultAsNewNote(meta, content);
+  }
+
+  Future<void> _saveSmartResultAsNewNote(
+    Map<String, dynamic> meta,
+    String content,
+  ) async {
+    final l10n = AppLocalizations.of(context);
+
+    try {
+      final db = context.read<DatabaseService>();
+      final locationService = context.read<LocationService>();
+      final weatherService = context.read<WeatherService>();
+      final includeLocation = meta['include_location'] == true;
+      final includeWeather = meta['include_weather'] == true;
+      final rawTagIds = meta['tag_ids'] as List<dynamic>? ?? const [];
+      final tagIds = rawTagIds
+          .map((item) => item.toString().trim())
+          .where((item) => item.isNotEmpty)
+          .toList();
+
+      final position = locationService.currentPosition;
+      final formattedLocation = locationService.getFormattedLocation();
+      final storedLocation = includeLocation
+          ? (formattedLocation.isNotEmpty
+              ? formattedLocation
+              : (position != null ? LocationService.kAddressPending : null))
+          : null;
+
+      final quote = Quote.validated(
+        content: content,
+        date: DateTime.now().toIso8601String(),
+        tagIds: tagIds,
+        location: storedLocation,
+        latitude:
+            (includeLocation || includeWeather) ? position?.latitude : null,
+        longitude:
+            (includeLocation || includeWeather) ? position?.longitude : null,
+        weather: includeWeather ? weatherService.currentWeather : null,
+        temperature: includeWeather ? weatherService.temperature : null,
+        dayPeriod: TimeUtils.getCurrentDayPeriodKey(),
+      );
+
+      await db.addQuote(quote);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.saveSuccess)),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.saveFailed(e.toString()))),
+        );
+      }
+    }
   }
 }

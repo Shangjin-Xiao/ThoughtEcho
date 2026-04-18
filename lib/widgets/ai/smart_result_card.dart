@@ -11,7 +11,7 @@ class SmartResultCard extends StatelessWidget {
   final VoidCallback? onSaveDirectly;
   final String? replaceButtonText;
   final String? appendButtonText;
-  final String editorSource; // 'fullscreen' | 'addnote_dialog' - 编辑器来源标识
+  final String editorSource; // 'fullscreen' | 'addnote_dialog' | 'new_note'
 
   const SmartResultCard({
     super.key,
@@ -34,7 +34,8 @@ class SmartResultCard extends StatelessWidget {
     // 根据来源编辑器调整按钮显示
     final showReplace = onReplace != null && editorSource == 'fullscreen';
     final showAppend = onAppend != null && editorSource == 'fullscreen';
-    final showSaveDirectly = onSaveDirectly != null && editorSource == 'addnote_dialog';
+    final showSaveDirectly = onSaveDirectly != null &&
+        (editorSource == 'addnote_dialog' || editorSource == 'new_note');
 
     return Card(
       elevation: 0,
@@ -95,13 +96,13 @@ class SmartResultCard extends StatelessWidget {
                   TextButton.icon(
                     onPressed: onReplace,
                     icon: const Icon(Icons.find_replace, size: 18),
-                    label: Text(replaceButtonText ?? l10n.replace),
+                    label: Text(replaceButtonText ?? l10n.applyChanges),
                   ),
                 if (showAppend)
                   TextButton.icon(
                     onPressed: onAppend,
                     icon: const Icon(Icons.add, size: 18),
-                    label: Text(appendButtonText ?? l10n.append),
+                    label: Text(appendButtonText ?? l10n.appendToNote),
                   ),
                 if (onOpenInEditor != null)
                   TextButton.icon(
