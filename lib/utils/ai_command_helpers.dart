@@ -69,8 +69,9 @@ class NoteQueryHelper {
     for (int i = 0; i < notes.length; i++) {
       final note = notes[i];
       final tags = tagsList != null && i < tagsList.length ? tagsList[i] : [];
-      final score =
-          matchScores != null && i < matchScores.length ? matchScores[i] : 1.0;
+      final score = matchScores != null && i < matchScores.length
+          ? matchScores[i]
+          : 1.0;
 
       formatted.add({
         'id': note['id'] ?? '',
@@ -143,7 +144,9 @@ class SessionMessageHelper {
   }) {
     return app_chat.ChatMessage(
       id: _uuid.v4(),
-      content: isError ? '工具执行出错: $result' : '[工具结果完成]\n$result',
+      content: isError
+          ? '工具执行出错: $result'
+          : '[工具结果完成]\n$result',
       isUser: false,
       role: 'assistant',
       timestamp: DateTime.now(),

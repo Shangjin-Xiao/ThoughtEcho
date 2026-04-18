@@ -94,8 +94,9 @@ class WebFetchService {
     try {
       final client = http.Client();
       try {
-        final response = await client.head(Uri.parse(url),
-            headers: {'User-Agent': _userAgent}).timeout(_timeout);
+        final response = await client
+            .head(Uri.parse(url), headers: {'User-Agent': _userAgent})
+            .timeout(_timeout);
         return response.statusCode == 200;
       } finally {
         client.close();
