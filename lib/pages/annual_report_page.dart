@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'dart:async';
 import 'package:provider/provider.dart';
+
+import '../extensions/note_category_localization_extension.dart';
 import '../theme/app_theme.dart';
 import '../models/quote_model.dart';
 import '../services/database_service.dart';
@@ -111,10 +113,12 @@ class _AnnualReportPageState extends State<AnnualReportPage>
 
   Future<AnnualStats> _resolveTagNames(AnnualStats stats) async {
     try {
+      final l10n = AppLocalizations.of(context);
       final databaseService = context.read<DatabaseService>();
       final allCategories = await databaseService.getCategories();
       final tagIdToName = {
-        for (var category in allCategories) category.id: category.name,
+        for (var category in allCategories)
+          category.id: category.localizedName(l10n),
       };
 
       final resolvedTopTags = stats.topTags.map((tagStat) {

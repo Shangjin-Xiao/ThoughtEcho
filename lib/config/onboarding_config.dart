@@ -86,9 +86,10 @@ class OnboardingConfig {
     BuildContext context,
   ) {
     final l10n = AppLocalizations.of(context);
+    final localeCode = Localizations.localeOf(context).toLanguageTag();
     final defaultDailyQuoteProvider =
         ApiService.recommendedDailyQuoteProviderForLanguage(
-      Localizations.localeOf(context).languageCode,
+      localeCode,
     );
 
     return [

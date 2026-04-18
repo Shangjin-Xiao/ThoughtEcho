@@ -45,4 +45,31 @@ void main() {
       findsOneWidget,
     );
   });
+
+  testWidgets('引导页在类型选择区域展示 API 选择', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(
+          builder: (context) {
+            return PreferencesPageView(
+              pageData: OnboardingConfig.getPageDataWithContext(context, 2),
+              state: const OnboardingState(),
+              onPreferenceChanged: (_, __) {},
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
+
+    expect(find.text('每日一言类型'), findsOneWidget);
+    expect(find.text('每日一言 API'), findsOneWidget);
+    expect(find.text('一言 (Hitokoto)'), findsOneWidget);
+  });
 }

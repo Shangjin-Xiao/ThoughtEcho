@@ -28,6 +28,12 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
   late AnimationController _animationController;
   List<Animation<double>> _itemAnimations = const [];
 
+  List<OnboardingPreference<dynamic>> _buildDisplayPreferences() {
+    return OnboardingConfig.getPreferences(
+      context,
+    ).where((preference) => preference.key != 'dailyQuoteProvider').toList();
+  }
+
   @override
   void initState() {
     super.initState();
@@ -47,7 +53,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
   void didChangeDependencies() {
     super.didChangeDependencies();
 
-    final preferencesCount = OnboardingConfig.getPreferences(context).length;
+    final preferencesCount = _buildDisplayPreferences().length;
     if (_itemAnimations.length == preferencesCount) {
       return;
     }
@@ -75,6 +81,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final displayPreferences = _buildDisplayPreferences();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
@@ -109,7 +116,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
           const SizedBox(height: 32),
 
           // 偏好设置列表（使用动态国际化版本）
-          ...OnboardingConfig.getPreferences(context).asMap().entries.map((
+          ...displayPreferences.asMap().entries.map((
             entry,
           ) {
             final index = entry.key;
@@ -468,6 +475,11 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
                 color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
+            if (preference.key == 'hitokotoTypes') ...[
+              const SizedBox(height: 16),
+              _buildDailyQuoteProviderSelector(theme),
+              const SizedBox(height: 4),
+            ],
             const SizedBox(height: 16),
 
             // 快速操作按钮
@@ -562,6 +574,63 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDailyQuoteProviderSelector(ThemeData theme) {
+    final providerPreference = OnboardingConfig.getPreferences(
+      context,
+    ).firstWhere((preference) => preference.key == 'dailyQuoteProvider');
+    final options = providerPreference.options ?? [];
+    final value = widget.state.getPreference<String>('dailyQuoteProvider') ??
+        providerPreference.defaultValue as String;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            providerPreference.title,
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            providerPreference.description,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+          const SizedBox(height: 8),
+          RadioGroup<String>(
+            groupValue: value,
+            onChanged: (newValue) {
+              if (newValue != null) {
+                widget.onPreferenceChanged('dailyQuoteProvider', newValue);
+              }
+            },
+            child: Column(
+              children: options.map((option) {
+                return RadioListTile<String>(
+                  value: option.value as String,
+                  title: Text(option.label),
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                  visualDensity: VisualDensity.compact,
+                  activeColor: theme.colorScheme.primary,
+                );
+              }).toList(),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -4,6 +4,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/app_settings.dart';
+import 'package:thoughtecho/services/api_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import '../../test_setup.dart';
 
@@ -107,6 +108,17 @@ void main() {
         settingsService.appSettings.apiNinjasCategories,
         ['wisdom', 'success'],
       );
+    });
+
+    test('set locale with region keeps locale-native daily quote provider',
+        () async {
+      await settingsService.setLocale('zh_CN');
+
+      final provider = ApiService.recommendedDailyQuoteProviderForLanguage(
+        settingsService.localeCode,
+      );
+
+      expect(provider, ApiService.hitokotoProvider);
     });
   });
 }

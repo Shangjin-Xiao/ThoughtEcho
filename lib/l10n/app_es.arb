@@ -9,12 +9,21 @@
   "languageKorean": "한국어",
   "languageSpanish": "Español",
   "languageFrench": "Français",
-  "languageGerman": "Deutsch"
-  ,  "insertImage": "Insert Image",
+  "languageGerman": "Deutsch",
+  "insertImage": "Insert Image",
   "insertVideo": "Insert Video",
   "insertAudio": "Insert Audio",
   "aiGenerating": "IA generando...",
   "complete": "Completado",
   "clipboardFoundHint": "Contenido del portapapeles encontrado, toca para añadir como nota",
-  "operationFailed": "Operación fallida"
+  "operationFailed": "Operación fallida",
+  "dailyQuoteApiDesc": "Elige la fuente para el texto diario de la pantalla principal.",
+  "dailyQuoteProviderTypeSupportHint": "Solo Hitokoto admite filtros por tipo por ahora; los demás proveedores no admiten filtrado por categoría.",
+  "dailyQuoteProviderNoTypeSelection": "Este proveedor no admite filtrado por categoría.",
+  "dailyQuoteApiHitokoto": "Hitokoto",
+  "dailyQuoteApiZenQuotes": "ZenQuotes",
+  "dailyQuoteApiApiNinjas": "API Ninjas",
+  "dailyQuoteApiMeigen": "Meigen Oshieruyo",
+  "dailyQuoteApiKoreanAdvice": "Korean Advice",
+  "featureDailyQuote": "Cita diaria"
 }

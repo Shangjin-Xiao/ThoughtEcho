@@ -102,7 +102,9 @@ class ApiService {
   static String recommendedDailyQuoteProviderForLanguage(
     String? languageCode,
   ) {
-    switch ((languageCode ?? '').toLowerCase()) {
+    final normalizedLanguageCode =
+        (languageCode ?? '').toLowerCase().split(RegExp(r'[_-]')).first;
+    switch (normalizedLanguageCode) {
       case 'zh':
         return hitokotoProvider;
       case 'ja':

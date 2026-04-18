@@ -9,12 +9,21 @@
   "languageKorean": "한국어",
   "languageSpanish": "Español",
   "languageFrench": "Français",
-  "languageGerman": "Deutsch"
-  ,  "insertImage": "Insert Image",
+  "languageGerman": "Deutsch",
+  "insertImage": "Insert Image",
   "insertVideo": "Insert Video",
   "insertAudio": "Insert Audio",
   "aiGenerating": "KI generiert...",
   "complete": "Fertig",
   "clipboardFoundHint": "Zwischenablage gefunden, tippen um als Notiz hinzuzufügen",
-  "operationFailed": "Vorgang fehlgeschlagen"
+  "operationFailed": "Vorgang fehlgeschlagen",
+  "dailyQuoteApiDesc": "Wählen Sie die Quelle für den täglichen Text auf der Startseite.",
+  "dailyQuoteProviderTypeSupportHint": "Derzeit unterstützt nur Hitokoto Typ-Filter; andere Anbieter unterstützen keine Kategoriefilter.",
+  "dailyQuoteProviderNoTypeSelection": "Dieser Anbieter unterstützt keine Kategoriefilter.",
+  "dailyQuoteApiHitokoto": "Hitokoto",
+  "dailyQuoteApiZenQuotes": "ZenQuotes",
+  "dailyQuoteApiApiNinjas": "API Ninjas",
+  "dailyQuoteApiMeigen": "Meigen Oshieruyo",
+  "dailyQuoteApiKoreanAdvice": "Korean Advice",
+  "featureDailyQuote": "Tageszitat"
 }

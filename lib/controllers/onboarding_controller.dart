@@ -7,6 +7,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../models/onboarding_models.dart';
 import '../config/onboarding_config.dart';
+import '../services/api_service.dart';
 import '../services/migration_service.dart';
 import '../services/settings_service.dart';
 import '../services/clipboard_service.dart';
@@ -20,6 +21,7 @@ class OnboardingController extends ChangeNotifier {
   final PageController _pageController = PageController();
   OnboardingState _state = const OnboardingState();
   final ValueNotifier<bool>? servicesInitializedNotifier;
+  String _systemLocaleCode = 'en';
 
   // Services
   late final MigrationService _migrationService;
@@ -51,6 +53,7 @@ class OnboardingController extends ChangeNotifier {
         settingsService: settingsService,
         mmkvService: mmkvService,
       );
+      _systemLocaleCode = Localizations.localeOf(context).toLanguageTag();
 
       _initializePreferences(context);
 
@@ -80,7 +83,21 @@ class OnboardingController extends ChangeNotifier {
 
   /// 更新偏好设置
   void updatePreference(String key, dynamic value) {
-    _state = _state.updatePreference(key, value);
+    final newPreferences = Map<String, dynamic>.from(_state.preferences);
+    newPreferences[key] = value;
+
+    if (key == 'localeCode') {
+      final selectedLocaleCode = (value as String?)?.trim() ?? '';
+      final effectiveLocaleCode = selectedLocaleCode.isNotEmpty
+          ? selectedLocaleCode
+          : _systemLocaleCode;
+      newPreferences['dailyQuoteProvider'] =
+          ApiService.recommendedDailyQuoteProviderForLanguage(
+        effectiveLocaleCode,
+      );
+    }
+
+    _state = _state.copyWith(preferences: newPreferences);
     _updateNavigationState();
     notifyListeners();
   }

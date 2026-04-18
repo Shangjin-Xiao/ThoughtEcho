@@ -47,7 +47,7 @@ extension NoteListFiltersExtension on NoteListViewState {
             },
             child: _buildModernFilterChip(
               theme: theme,
-              label: tag.name,
+              label: tag.localizedName(AppLocalizations.of(context)),
               icon: IconUtils.isEmoji(tag.iconName)
                   ? IconUtils.getDisplayIcon(tag.iconName)
                   : IconUtils.getIconData(tag.iconName),

@@ -31,6 +31,25 @@ void main() {
         ApiService.zenQuotesProvider,
       );
     });
+
+    test('supports locale codes with region suffix', () {
+      expect(
+        ApiService.recommendedDailyQuoteProviderForLanguage('zh_CN'),
+        ApiService.hitokotoProvider,
+      );
+      expect(
+        ApiService.recommendedDailyQuoteProviderForLanguage('ja-JP'),
+        ApiService.meigenProvider,
+      );
+      expect(
+        ApiService.recommendedDailyQuoteProviderForLanguage('ko_KR'),
+        ApiService.koreanAdviceProvider,
+      );
+      expect(
+        ApiService.recommendedDailyQuoteProviderForLanguage('en_US'),
+        ApiService.zenQuotesProvider,
+      );
+    });
   });
 
   group('ApiService local-only fallback logic', () {

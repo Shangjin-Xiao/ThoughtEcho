@@ -31,6 +31,14 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
   late Animation<double> _fadeAnimation;
   bool _hasApiNinjasApiKey = false;
 
+  static final Map<String, Set<String>> _providerSupportedCapabilities = {
+    ApiService.hitokotoProvider: {'type'},
+    ApiService.apiNinjasProvider: {'category', 'apiKey'},
+    ApiService.zenQuotesProvider: const {},
+    ApiService.meigenProvider: const {},
+    ApiService.koreanAdviceProvider: const {},
+  };
+
   @override
   void initState() {
     super.initState();
@@ -247,6 +255,8 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
     );
     final providerLabel =
         providerLabels[_selectedProvider] ?? providerLabels.values.first;
+    final providerCapabilities =
+        _providerSupportedCapabilities[_selectedProvider] ?? const {};
 
     return FadeTransition(
       opacity: _fadeAnimation,
@@ -389,6 +399,36 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                           },
                         );
                       }).toList(),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      l10n.dailyQuoteProviderTypeSupportHint,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.4,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _buildCapabilityChip(
+                          context: context,
+                          label: l10n.typeSelection,
+                          supported: providerCapabilities.contains('type'),
+                        ),
+                        _buildCapabilityChip(
+                          context: context,
+                          label: l10n.dailyQuoteApiNinjasCategorySelection,
+                          supported: providerCapabilities.contains('category'),
+                        ),
+                        _buildCapabilityChip(
+                          context: context,
+                          label: l10n.dailyQuoteApiNinjasManageApiKey,
+                          supported: providerCapabilities.contains('apiKey'),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -756,6 +796,51 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildCapabilityChip({
+    required BuildContext context,
+    required String label,
+    required bool supported,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: supported
+            ? colorScheme.primaryContainer
+            : colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: supported
+              ? colorScheme.primary
+              : colorScheme.outline.withAlpha(80),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            supported ? Icons.check_circle_outline : Icons.block,
+            size: 14,
+            color:
+                supported ? colorScheme.primary : colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            '$label ${supported ? '✓' : '✕'}',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: supported
+                  ? colorScheme.onPrimaryContainer
+                  : colorScheme.onSurfaceVariant,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
