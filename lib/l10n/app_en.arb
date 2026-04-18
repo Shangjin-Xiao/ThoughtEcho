@@ -2742,8 +2742,8 @@
   "guideSettingsStartupDesc": "Set the default page to open when launching the app",
   "guideSettingsThemeTitle": "Theme Settings",
   "guideSettingsThemeDesc": "Customize app theme colors and appearance here",
-  "guideTrashLocationTitle": "Recycle Bin Location",
-  "guideTrashLocationDesc": "Note moved to recycle bin\nFind it in Settings to restore",
+  "guideTrashLocationTitle": "Trash Location",
+  "guideTrashLocationDesc": "Note moved to trash\nOpen Trash in Settings to restore it",
   "apkDownloadTitle": "Download APK",
   "apkDownloading": "Downloading ThoughtEcho {version}...",
   "@apkDownloading": {
@@ -3503,7 +3503,7 @@
   "developerAnniversaryPreview": "Preview Animation Now",
   "developerAnniversaryPreviewDesc": "Tap to play the anniversary animation immediately",
   "trash": "Trash",
-  "trashEmpty": "No deleted notes waiting here",
+  "trashEmpty": "Trash is empty",
   "trashEmptyHint": "Accidentally deleted notes stay here first, including photos, audio, and video, so you can restore them together.",
   "trashRetentionHint": "Recently deleted notes and attachments stay here until the retention period ends, then they are cleaned up automatically.",
   "moveNoteToTrashTitle": "Move Note to Trash",
@@ -3523,7 +3523,7 @@
       }
     }
   },
-  "restoreNote": "Restore Note",
+  "restoreNote": "Restore",
   "permanentlyDelete": "Delete Permanently",
   "permanentlyDeleteConfirmation": "Warning: This cannot be undone. The note will be permanently deleted and cannot be recovered.",
   "emptyTrash": "Empty Trash",

@@ -2733,6 +2733,8 @@
   "guideSettingsStartupDesc": "Définir la page par défaut à ouvrir lors du lancement de l'application",
   "guideSettingsThemeTitle": "Paramètres du thème",
   "guideSettingsThemeDesc": "Personnalisez les couleurs et l'apparence du thème de l'application ici",
+  "guideTrashLocationTitle": "Emplacement de la corbeille",
+  "guideTrashLocationDesc": "La note a été déplacée vers la corbeille\nOuvrez la corbeille dans Paramètres pour la restaurer",
   "apkDownloadTitle": "Télécharger l'APK",
   "apkDownloading": "Téléchargement de ThoughtEcho {version}...",
   "@apkDownloading": {
@@ -3461,7 +3463,7 @@
   "viewNoteInfo": "Afficher les informations sur les notes",
   "first100CharsLabel": "100 premiers caractères :",
   "trash": "Corbeille",
-  "trashEmpty": "Aucune note supprimée à traiter pour le moment",
+  "trashEmpty": "La corbeille est vide",
   "trashEmptyHint": "Les notes supprimées par erreur restent d'abord ici, y compris les photos, l'audio et la vidéo, afin que vous puissiez tout restaurer ensemble.",
   "trashRetentionHint": "Les notes et pièces jointes récemment supprimées restent ici jusqu'à la fin de la période de rétention, puis sont supprimées automatiquement.",
   "moveNoteToTrashTitle": "Déplacer vers la corbeille",

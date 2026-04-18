@@ -2740,6 +2740,8 @@
   "guideSettingsStartupDesc": "앱 실행 시 열리는 기본 페이지 설정",
   "guideSettingsThemeTitle": "테마 설정",
   "guideSettingsThemeDesc": "여기에서 앱 테마 색상과 모양을 맞춤설정하세요.",
+  "guideTrashLocationTitle": "휴지통 위치",
+  "guideTrashLocationDesc": "노트가 휴지통으로 이동되었습니다\n설정에서 휴지통을 열어 복원할 수 있습니다",
   "apkDownloadTitle": "APK 다운로드",
   "apkDownloading": "Downloading ThoughtEcho {version}...",
   "@apkDownloading": {
@@ -3468,7 +3470,7 @@
   "viewNoteInfo": "메모 정보 보기",
   "first100CharsLabel": "처음 100자:",
   "trash": "휴지통",
-  "trashEmpty": "지금은 복원 대기 중인 노트가 없습니다",
+  "trashEmpty": "휴지통이 비어 있습니다",
   "trashEmptyHint": "실수로 삭제한 내용은 먼저 여기에 보관되며, 사진·오디오·비디오도 함께 복원할 수 있습니다.",
   "trashRetentionHint": "최근 삭제한 노트와 첨부 파일은 여기 잠시 보관되며, 보관 기간이 지나면 자동으로 정리됩니다.",
   "moveNoteToTrashTitle": "휴지통으로 이동",

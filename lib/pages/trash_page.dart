@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../gen_l10n/app_localizations.dart';
+import '../models/note_category.dart'; // Added
 import '../models/quote_model.dart';
 import '../services/database_service.dart';
 import '../services/settings_service.dart';
@@ -28,6 +29,7 @@ class _TrashPageState extends State<TrashPage> {
   int _loadRequestToken = 0;
   int _trashTotalCount = 0;
   List<Quote> _trashQuotes = const [];
+  Map<String, NoteCategory> _tagMap = const {}; // Added
   final ScrollController _scrollController = ScrollController();
 
   int get _displayTrashCount =>
@@ -38,6 +40,27 @@ class _TrashPageState extends State<TrashPage> {
     super.initState();
     _scrollController.addListener(_handleScroll);
     _loadTrashQuotes();
+    _loadTags(); // Added
+  }
+
+  // Added method to load tags
+  Future<void> _loadTags() async {
+    try {
+      final db = context.read<DatabaseService>();
+      final tags = await db.getCategories();
+      if (!mounted) return;
+      setState(() {
+        _tagMap = {for (var tag in tags) tag.id: tag};
+      });
+    } catch (e, stackTrace) {
+      logError(
+        'Failed to load tags for TrashPage: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'TrashPage',
+      );
+      // Optionally show a snackbar or other error indicator
+    }
   }
 
   @override
@@ -507,6 +530,7 @@ class _TrashPageState extends State<TrashPage> {
                                           }
                                           _permanentlyDelete(id);
                                         },
+                                  tagMap: _tagMap,
                                 );
                               },
                             ),

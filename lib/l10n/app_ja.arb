@@ -2740,6 +2740,8 @@
   "guideSettingsStartupDesc": "デフォルトページ設定",
   "guideSettingsThemeTitle": "テーマ",
   "guideSettingsThemeDesc": "色変更",
+  "guideTrashLocationTitle": "ゴミ箱の場所",
+  "guideTrashLocationDesc": "ノートをゴミ箱に移動しました\n「設定」からゴミ箱を開いて復元できます",
   "apkDownloadTitle": "APKダウンロード",
   "apkDownloading": "ダウンロード中 {version}...",
   "@apkDownloading": {
@@ -3468,7 +3470,7 @@
   "viewNoteInfo": "ノート情報を表示",
   "first100CharsLabel": "最初の100文字：",
   "trash": "ゴミ箱",
-  "trashEmpty": "いまは復元待ちのノートはありません",
+  "trashEmpty": "ゴミ箱は空です",
   "trashEmptyHint": "誤って削除した内容はここに一時保存され、画像・音声・動画もまとめて復元できます。",
   "trashRetentionHint": "最近削除したノートと添付ファイルはここに一時保存され、保持期間を過ぎると自動で削除されます。",
   "moveNoteToTrashTitle": "ゴミ箱に移動",

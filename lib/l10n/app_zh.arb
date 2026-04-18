@@ -3503,7 +3503,7 @@
   "developerAnniversaryPreview": "立即预览动画",
   "developerAnniversaryPreviewDesc": "点击立即播放一周年庆典动画",
   "trash": "回收站",
-  "trashEmpty": "这里还没有待处理的删除记录",
+  "trashEmpty": "回收站为空",
   "trashEmptyHint": "误删的内容会先暂存在这里，包含图片、音频和视频，也都可以一起恢复。",
   "trashRetentionHint": "最近删除的记录和附件会在这里暂存，超过保留期后自动清理。",
   "moveNoteToTrashTitle": "移至回收站",
@@ -3523,8 +3523,8 @@
       }
     }
   },
-  "restoreNote": "恢复笔记",
-  "permanentlyDelete": "永久删除笔记",
+  "restoreNote": "恢复",
+  "permanentlyDelete": "永久删除",
   "permanentlyDeleteConfirmation": "警告：此操作无法撤销，笔记将被永久删除且无法恢复。",
   "emptyTrash": "清空回收站",
   "emptyTrashConfirmation": "确定要清空整个回收站吗？所有笔记将被永久删除且无法恢复。",
