@@ -149,132 +149,22 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                     meta['appendButtonText'] as String? ?? l10n.appendToNote,
                 editorSource: isNewNoteProposal ? 'new_note' : 'fullscreen',
                 onOpenInEditor: () async {
-                  final String modeAction =
-                      meta['action']?.toString() == 'append'
-                          ? 'append'
-                          : 'replace';
-                  final noteId = meta['note_id']?.toString();
-
                   if (isNewNoteProposal) {
                     await _openSmartResultAsNewNote(message.content);
-                  } else if (_hasBoundNote) {
-                    Navigator.pop(context, {
-                      'action': 'edit',
-                      'mode': modeAction,
-                      'text': message.content,
-                    });
-                  } else if (noteId != null && noteId.isNotEmpty) {
-                    // 全局模式但绑定了特定笔记
-                    final db = context.read<DatabaseService>();
-                    final note = await db.getQuoteById(noteId);
-                    if (mounted) {
-                      if (note != null) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => NoteFullEditorPage(
-                              initialContent: message.content,
-                              initialQuote: note,
-                            ),
-                          ),
-                        );
-                      } else {
-                        // 回退到普通新笔记模式
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => NoteFullEditorPage(
-                              initialContent: message.content,
-                            ),
-                          ),
-                        );
-                      }
-                    }
                   } else {
                     await _openSmartResultInEditor(meta, message.content);
                   }
                 },
                 onSaveDirectly: () async {
-                  final String modeAction =
-                      meta['action']?.toString() == 'append'
-                          ? 'append'
-                          : 'replace';
-                  final noteId = meta['note_id']?.toString();
-
                   if (isNewNoteProposal) {
                     await _saveSmartResultAsNewNote(meta, message.content);
-                  } else if (_hasBoundNote) {
-                    Navigator.pop(context, {
-                      'action': 'save',
-                      'mode': modeAction,
-                      'text': message.content,
-                    });
-                  } else if (noteId != null && noteId.isNotEmpty) {
-                    // 全局模式但绑定了特定笔记
-                    try {
-                      final db = context.read<DatabaseService>();
-                      final existingNote = await db.getQuoteById(noteId);
-                      if (existingNote == null) {
-                        throw Exception('Note not found');
-                      }
-
-                      final newContent = modeAction == 'append'
-                          ? '${existingNote.content}\n${message.content}'
-                          : message.content;
-
-                      final updatedNote = existingNote.copyWith(
-                        content: newContent,
-                        deltaContent: existingNote.deltaContent,
-                        lastModified: DateTime.now().toIso8601String(),
-                      );
-
-                      await db.updateQuote(updatedNote);
-
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(l10n.saveSuccess)),
-                        );
-                      }
-                    } catch (e) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content: Text(l10n.saveFailed(e.toString()))),
-                        );
-                      }
-                    }
                   } else {
-                    // 全局模式：直接保存为新笔记
-                    try {
-                      final db = context.read<DatabaseService>();
-                      final quote = Quote.validated(
-                        content: message.content,
-                        date: DateTime.now().toIso8601String(),
-                      );
-                      await db.addQuote(quote);
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(l10n.saveSuccess)),
-                        );
-                      }
-                    } catch (e) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                              content: Text(l10n.saveFailed(e.toString()))),
-                        );
-                      }
-                    }
+                    await _saveSmartResultToExistingNote(meta, message.content);
                   }
                 },
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: AIWorkflowMarkdownCard(
-                title: meta['title'] as String? ?? l10n.analysisResult,
-                content: message.content,
               ),
             );
-          case 'source_analysis_result':
+          case 'notice':
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: AISourceAnalysisResultCard(
