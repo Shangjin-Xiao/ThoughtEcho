@@ -467,9 +467,20 @@ class BackupService {
       cancelToken?.throwIfCancelled();
 
       // 恢复笔记数据
-      if (backupData.containsKey('notes')) {
+      Map<String, dynamic>? notesData;
+      final rawNotes = backupData['notes'];
+      if (rawNotes is Map && rawNotes.isNotEmpty) {
+        notesData = Map<String, dynamic>.from(rawNotes);
+      } else if (backupData['quotes'] is List ||
+          backupData['categories'] is List) {
+        notesData = <String, dynamic>{
+          'categories': backupData['categories'] ?? <dynamic>[],
+          'quotes': backupData['quotes'] ?? <dynamic>[],
+        };
+      }
+
+      if (notesData != null) {
         logDebug('恢复笔记数据...');
-        var notesData = Map<String, dynamic>.from(backupData['notes']);
 
         // 检查是否包含媒体文件
         final hasMediaFiles = await _checkBackupHasMediaFiles(backupData);

@@ -783,7 +783,7 @@ class DatabaseBackupService {
           final quoteLastModified = quoteData['last_modified']?.toString();
 
           // Defensive check: tombstone must have a valid timestamp to block import
-          // If tombstone has no timestamp, treat it as invalid and allow the quote
+          // If remote quote lacks last_modified, keep the tombstone decision.
           if (tombstoneAt == null || tombstoneAt.isEmpty) {
             // Invalid tombstone without timestamp - remove it and allow import
             await txn.delete(
@@ -791,24 +791,22 @@ class DatabaseBackupService {
               where: 'quote_id = ?',
               whereArgs: [quoteId],
             );
-          } else if (quoteLastModified != null &&
-              quoteLastModified.isNotEmpty) {
-            // Both timestamps valid - compare them
-            if (_compareIsoTime(quoteLastModified, tombstoneAt) <= 0) {
-              // Tombstone is newer or equal - skip the quote
-              reportBuilder.addSkippedQuote();
-              continue;
-            } else {
-              // Quote is newer - delete the tombstone and allow import
-              await txn.delete(
-                'quote_tombstones',
-                where: 'quote_id = ?',
-                whereArgs: [quoteId],
-              );
-            }
+          } else if (quoteLastModified == null || quoteLastModified.isEmpty) {
+            // Missing remote timestamp must not revive a permanently deleted quote.
+            reportBuilder.addSkippedQuote();
+            continue;
+          } else if (_compareIsoTime(quoteLastModified, tombstoneAt) <= 0) {
+            // Tombstone is newer or equal - skip the quote
+            reportBuilder.addSkippedQuote();
+            continue;
+          } else {
+            // Quote is newer - delete the tombstone and allow import
+            await txn.delete(
+              'quote_tombstones',
+              where: 'quote_id = ?',
+              whereArgs: [quoteId],
+            );
           }
-          // If quoteLastModified is null/empty but tombstone has timestamp,
-          // allow the import (defensive: don't block data based on missing metadata)
         }
 
         // 查询本地是否存在该笔记
@@ -920,7 +918,15 @@ class DatabaseBackupService {
         if (quoteRows.isNotEmpty) {
           final quoteLastModified =
               quoteRows.first['last_modified']?.toString();
-          if (_compareIsoTime(normalizedIncoming, quoteLastModified) >= 0) {
+          if (quoteLastModified == null || quoteLastModified.isEmpty) {
+            await txn.delete(
+              'quotes',
+              where: 'id = ?',
+              whereArgs: [quoteId],
+            );
+            reportBuilder.addDeletedByTombstone();
+          } else if (_compareIsoTime(normalizedIncoming, quoteLastModified) >=
+              0) {
             await txn.delete(
               'quotes',
               where: 'id = ?',

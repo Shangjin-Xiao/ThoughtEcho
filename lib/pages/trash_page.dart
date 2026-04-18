@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -30,6 +32,7 @@ class _TrashPageState extends State<TrashPage> {
   int _trashTotalCount = 0;
   List<Quote> _trashQuotes = const [];
   Map<String, NoteCategory> _tagMap = const {}; // Added
+  StreamSubscription<List<NoteCategory>>? _categoriesSubscription;
   final ScrollController _scrollController = ScrollController();
 
   int get _displayTrashCount =>
@@ -39,32 +42,23 @@ class _TrashPageState extends State<TrashPage> {
   void initState() {
     super.initState();
     _scrollController.addListener(_handleScroll);
+    _categoriesSubscription =
+        context.read<DatabaseService>().watchCategories().listen(
+      (tags) {
+        if (!mounted) {
+          return;
+        }
+        setState(() {
+          _tagMap = {for (var tag in tags) tag.id: tag};
+        });
+      },
+    );
     _loadTrashQuotes();
-    _loadTags(); // Added
-  }
-
-  // Added method to load tags
-  Future<void> _loadTags() async {
-    try {
-      final db = context.read<DatabaseService>();
-      final tags = await db.getCategories();
-      if (!mounted) return;
-      setState(() {
-        _tagMap = {for (var tag in tags) tag.id: tag};
-      });
-    } catch (e, stackTrace) {
-      logError(
-        'Failed to load tags for TrashPage: $e',
-        error: e,
-        stackTrace: stackTrace,
-        source: 'TrashPage',
-      );
-      // Optionally show a snackbar or other error indicator
-    }
   }
 
   @override
   void dispose() {
+    _categoriesSubscription?.cancel();
     _scrollController.dispose();
     super.dispose();
   }

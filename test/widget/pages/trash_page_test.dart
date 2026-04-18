@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+import 'package:thoughtecho/models/note_category.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/pages/trash_page.dart';
 import 'package:thoughtecho/services/database_service.dart';
@@ -12,12 +13,17 @@ import 'package:thoughtecho/services/settings_service.dart';
 import 'package:thoughtecho/widgets/quote_content_widget.dart';
 import 'package:thoughtecho/widgets/trash_quote_card.dart';
 
+import '../../test_setup.dart';
+
 class _FakeSettingsService extends ChangeNotifier implements SettingsService {
   @override
   int get trashRetentionDays => 30;
 
   @override
   bool get prioritizeBoldContentInCollapse => false;
+
+  @override
+  bool get showExactTime => false;
 
   @override
   noSuchMethod(Invocation invocation) =>
@@ -44,6 +50,12 @@ class _FakeDatabaseService extends ChangeNotifier implements DatabaseService {
 
   @override
   Future<int> getDeletedQuotesCount() async => _quotes.length;
+
+  @override
+  Stream<List<NoteCategory>> watchCategories() =>
+      Stream<List<NoteCategory>>.value(
+        const [],
+      );
 
   @override
   noSuchMethod(Invocation invocation) =>
@@ -99,6 +111,10 @@ Widget _buildTestApp({required DatabaseService databaseService}) {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  setUpAll(() async {
+    await setupTestEnvironment();
+  });
 
   group('TrashPage', () {
     testWidgets('用富文本内容组件展示已删除笔记，保留回收站操作入口', (tester) async {

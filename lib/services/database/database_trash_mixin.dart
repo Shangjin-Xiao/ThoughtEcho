@@ -183,7 +183,7 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       return;
     }
 
-    await _executeWithLock('restoreQuote_$id', () async {
+    await _executeWithLock('hardDeleteQuotes', () async {
       final db = await safeDatabase;
 
       // 修复：检查笔记是否已被永久删除（tombstone存在）
@@ -349,15 +349,15 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       for (final id in targetDeletedIds) {
         _webTombstones!.putIfAbsent(id, () => deletedAt);
       }
-      
+
       // 修复：先从内存中移除，避免与 restoreQuote 的竞态条件
       _memoryStore.removeWhere(
         (quote) => targetDeletedIds.contains(quote.id) && quote.isDeleted,
       );
-      
+
       // 然后持久化墓碑
       await _saveWebTombstones();
-      
+
       for (final id in targetDeletedIds) {
         QuoteContent.removeCacheForQuote(id);
       }
