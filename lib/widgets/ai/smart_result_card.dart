@@ -34,7 +34,8 @@ class SmartResultCard extends StatelessWidget {
     // 根据来源编辑器调整按钮显示
     final showReplace = onReplace != null && editorSource == 'fullscreen';
     final showAppend = onAppend != null && editorSource == 'fullscreen';
-    final showSaveDirectly = onSaveDirectly != null && editorSource == 'addnote_dialog';
+    final showSaveDirectly =
+        onSaveDirectly != null && editorSource == 'addnote_dialog';
 
     return Card(
       elevation: 0,

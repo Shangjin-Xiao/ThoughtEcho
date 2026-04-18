@@ -68,7 +68,8 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
           counts[session.id] =
               await widget.chatSessionService.getMessageCount(session.id);
         } catch (e) {
-          AppLogger.w('Failed to load message count for ${session.id}', error: e);
+          AppLogger.w('Failed to load message count for ${session.id}',
+              error: e);
           counts[session.id] = 0;
         }
       }
@@ -181,7 +182,9 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.chat_bubble_outline,
-                      size: 48, color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                      size: 48,
+                      color: theme.colorScheme.onSurfaceVariant
+                          .withValues(alpha: 0.5)),
                   const SizedBox(height: 12),
                   Text(l10n.noChats,
                       style: theme.textTheme.bodyMedium?.copyWith(
@@ -211,9 +214,8 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
     final filtered = _searchQuery.isEmpty
         ? _sessions!
         : _sessions!
-            .where((s) => s.title
-                .toLowerCase()
-                .contains(_searchQuery.toLowerCase()))
+            .where((s) =>
+                s.title.toLowerCase().contains(_searchQuery.toLowerCase()))
             .toList();
     if (filtered.isEmpty) {
       return Center(
@@ -329,7 +331,8 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
               onTap: isCurrent ? null : () => widget.onSelect(session.id),
               borderRadius: BorderRadius.circular(12),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -357,7 +360,8 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                            color: theme.colorScheme.primary
+                                .withValues(alpha: 0.2),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -417,5 +421,4 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
       ),
     );
   }
-
 }

@@ -71,15 +71,13 @@ class ExploreNotesTool extends AgentTool {
   Future<ToolResult> execute(ToolCall call) async {
     try {
       final query = call.getString('query');
-      final tagIds = (call.arguments['tag_ids'] as List?)
-          ?.whereType<String>()
-          .toList();
+      final tagIds =
+          (call.arguments['tag_ids'] as List?)?.whereType<String>().toList();
       final categoryId = call.getString('category_id');
       final dateStart = call.getString('date_start');
       final dateEnd = call.getString('date_end');
-      final weathers = (call.arguments['weathers'] as List?)
-          ?.whereType<String>()
-          .toList();
+      final weathers =
+          (call.arguments['weathers'] as List?)?.whereType<String>().toList();
       final dayPeriods = (call.arguments['day_periods'] as List?)
           ?.whereType<String>()
           .toList();
@@ -183,7 +181,8 @@ class ExploreNotesTool extends AgentTool {
           'has_more': total > offset + formattedNotes.length,
           'total_count': total,
         },
-        'summary': '找到 ${formattedNotes.length} 条匹配笔记${total > offset + formattedNotes.length ? '（总计 $total 条，可分页查看）' : ''}',
+        'summary':
+            '找到 ${formattedNotes.length} 条匹配笔记${total > offset + formattedNotes.length ? '（总计 $total 条，可分页查看）' : ''}',
       };
 
       return ToolResult(

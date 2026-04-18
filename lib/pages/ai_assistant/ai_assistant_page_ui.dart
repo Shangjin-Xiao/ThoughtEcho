@@ -146,7 +146,10 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 appendButtonText:
                     meta['appendButtonText'] as String? ?? l10n.appendToNote,
                 onOpenInEditor: () async {
-                  final String modeAction = meta['action']?.toString() == 'append' ? 'append' : 'replace';
+                  final String modeAction =
+                      meta['action']?.toString() == 'append'
+                          ? 'append'
+                          : 'replace';
                   final noteId = meta['note_id']?.toString();
 
                   if (_hasBoundNote) {
@@ -195,7 +198,10 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                   }
                 },
                 onSaveDirectly: () async {
-                  final String modeAction = meta['action']?.toString() == 'append' ? 'append' : 'replace';
+                  final String modeAction =
+                      meta['action']?.toString() == 'append'
+                          ? 'append'
+                          : 'replace';
                   final noteId = meta['note_id']?.toString();
 
                   if (_hasBoundNote) {
@@ -233,7 +239,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                     } catch (e) {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(l10n.saveFailed(e.toString()))),
+                          SnackBar(
+                              content: Text(l10n.saveFailed(e.toString()))),
                         );
                       }
                     }
@@ -254,7 +261,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                     } catch (e) {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(l10n.saveFailed(e.toString()))),
+                          SnackBar(
+                              content: Text(l10n.saveFailed(e.toString()))),
                         );
                       }
                     }
@@ -321,8 +329,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
             final rawItems = meta['items'] as List<dynamic>? ?? [];
             // 从历史恢复的 tool_progress 消息不应再转圈：
             // 如果 message 不处于 loading 状态，强制 inProgress=false
-            final inProgress = message.isLoading &&
-                (meta['inProgress'] as bool? ?? false);
+            final inProgress =
+                message.isLoading && (meta['inProgress'] as bool? ?? false);
             final progressItems = rawItems.map((item) {
               final map = item as Map<String, dynamic>;
               return ToolProgressItem(

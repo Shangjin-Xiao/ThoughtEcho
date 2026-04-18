@@ -237,9 +237,8 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
                               child: MarkdownBody(
                                 data: widget.thinkingText,
                                 selectable: true,
-                                styleSheet:
-                                    MarkdownStyleSheet.fromTheme(theme)
-                                        .copyWith(
+                                styleSheet: MarkdownStyleSheet.fromTheme(theme)
+                                    .copyWith(
                                   p: theme.textTheme.bodySmall?.copyWith(
                                     color: theme.colorScheme.onSurface,
                                     height: 1.5,
@@ -251,11 +250,12 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
                                   code: theme.textTheme.bodySmall?.copyWith(
                                     fontFamily: 'monospace',
                                     color: theme.colorScheme.onSurfaceVariant,
-                                    backgroundColor: theme.colorScheme
-                                        .surfaceContainerHighest,
+                                    backgroundColor: theme
+                                        .colorScheme.surfaceContainerHighest,
                                   ),
                                   codeblockDecoration: BoxDecoration(
-                                    color: theme.colorScheme.surfaceContainerLow,
+                                    color:
+                                        theme.colorScheme.surfaceContainerLow,
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   blockquote:

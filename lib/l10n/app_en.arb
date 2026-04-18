@@ -3660,5 +3660,7 @@
   "attachFile": "Attach file",
   "yesterday": "Yesterday",
   "openInEditor": "Open in Editor",
-  "saveDirectly": "Save Directly"
+  "saveDirectly": "Save Directly",
+  "replace": "Replace",
+  "append": "Append"
 }

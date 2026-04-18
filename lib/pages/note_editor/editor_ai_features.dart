@@ -245,7 +245,8 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
 
     if (result != null && result is Map<String, dynamic> && mounted) {
       final action = result['action'];
-      final mode = result['mode'] ?? (action == 'append' ? 'append' : 'replace');
+      final mode =
+          result['mode'] ?? (action == 'append' ? 'append' : 'replace');
       final text = (result['text'] as Object?)?.toString().trim();
       if (text == null || text.isEmpty) {
         return;

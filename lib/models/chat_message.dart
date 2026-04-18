@@ -1,11 +1,11 @@
 /// 消息状态枚举 - 追踪消息的生成过程
 enum MessageState {
-  pending,       // 等待中
-  thinking,      // AI思考中
-  responding,    // AI生成回复中
-  toolCalling,   // 工具调用中
-  complete,      // 完成
-  error,         // 错误
+  pending, // 等待中
+  thinking, // AI思考中
+  responding, // AI生成回复中
+  toolCalling, // 工具调用中
+  complete, // 完成
+  error, // 错误
 }
 
 /// 聊天消息模型 — 单一定义源（Single Source of Truth）
@@ -24,13 +24,13 @@ class ChatMessage {
   final String? metaJson; // 扩展元数据（Phase 2 tool_call 等）
 
   // 流式传输相关字段（SOTA 实时显示）
-  final MessageState state;              // 消息当前状态
-  final List<String> thinkingChunks;     // 思考过程增量（每个thinking块一项）
-  final List<String> responseChunks;     // 回复增量（每个response块一项）
+  final MessageState state; // 消息当前状态
+  final List<String> thinkingChunks; // 思考过程增量（每个thinking块一项）
+  final List<String> responseChunks; // 回复增量（每个response块一项）
 
   // 格式化相关字段（支持富文本内容）
-  final String? contentFormat;           // 'plain' | 'delta' - 内容格式
-  final String? deltaJson;               // Delta JSON 字符串 - 富文本数据
+  final String? contentFormat; // 'plain' | 'delta' - 内容格式
+  final String? deltaJson; // Delta JSON 字符串 - 富文本数据
 
   ChatMessage({
     required this.id,

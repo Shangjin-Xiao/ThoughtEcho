@@ -492,6 +492,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     });
     logDebug('已丢弃AI润色结果');
   }
+
+  /// 显示功能引导
+  void _showGuides() {
     FeatureGuideHelper.showSequence(
       context: context,
       guides: [

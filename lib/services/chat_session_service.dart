@@ -422,9 +422,11 @@ class ChatSessionService extends ChangeNotifier {
             );
 
             if (sessions.isNotEmpty) {
-              final sessionIds = sessions.map((s) => s['id'] as String).toList();
+              final sessionIds =
+                  sessions.map((s) => s['id'] as String).toList();
               // 删除这些会话的所有消息
-              final placeholders = List.filled(sessionIds.length, '?').join(',');
+              final placeholders =
+                  List.filled(sessionIds.length, '?').join(',');
               await txn.delete(
                 'chat_messages',
                 where: 'session_id IN ($placeholders)',
@@ -588,7 +590,8 @@ class ChatSessionService extends ChangeNotifier {
 
       // 多标签AND查询
       if (tags != null && tags.isNotEmpty) {
-        query += ' GROUP BY q.id HAVING COUNT(DISTINCT qt.tag_id) = ${tags.length}';
+        query +=
+            ' GROUP BY q.id HAVING COUNT(DISTINCT qt.tag_id) = ${tags.length}';
       }
 
       query += ' ORDER BY q.date DESC LIMIT ?';

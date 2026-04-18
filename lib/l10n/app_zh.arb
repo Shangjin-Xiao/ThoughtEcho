@@ -3672,5 +3672,7 @@
   "attachFile": "附加文件",
   "yesterday": "昨天",
   "openInEditor": "打开编辑器",
-  "saveDirectly": "直接保存"
+  "saveDirectly": "直接保存",
+  "replace": "替换",
+  "append": "追加"
 }

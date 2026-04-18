@@ -39,7 +39,8 @@ class _SlashCommandsMenuState extends State<SlashCommandsMenu>
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, -0.1),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _animationController, curve: Curves.easeOut));
+    ).animate(
+        CurvedAnimation(parent: _animationController, curve: Curves.easeOut));
 
     _fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
@@ -73,7 +74,9 @@ class _SlashCommandsMenuState extends State<SlashCommandsMenu>
     final filteredCommands = widget.commands
         .where((cmd) =>
             widget.filterText.isEmpty ||
-            cmd.command.toLowerCase().contains(widget.filterText.toLowerCase()) ||
+            cmd.command
+                .toLowerCase()
+                .contains(widget.filterText.toLowerCase()) ||
             cmd.displayName
                 .toLowerCase()
                 .contains(widget.filterText.toLowerCase()))

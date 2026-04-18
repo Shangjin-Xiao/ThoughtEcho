@@ -53,7 +53,7 @@ void main() {
       expect(() => call.arguments['query'] = 'changed', throwsUnsupportedError);
       final nested = call.arguments['filters'] as Map<String, Object?>;
       expect(() => nested['tags'] = <Object?>['z'], throwsUnsupportedError);
-      
+
       // Test nested List immutability
       final nestedList = nested['tags'] as List<Object?>;
       expect(() => nestedList[0] = 'changed', throwsUnsupportedError);

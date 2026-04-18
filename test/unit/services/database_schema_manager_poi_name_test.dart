@@ -37,9 +37,8 @@ void main() {
   group('DatabaseSchemaManager v20 validation targets', () {
     test('required tables include chat persistence tables', () {
       // Use the actual required tables set from production code
-      final requiredTables =
-          DatabaseSchemaManager.requiredTablesForValidation;
-      
+      final requiredTables = DatabaseSchemaManager.requiredTablesForValidation;
+
       expect(requiredTables.contains('quotes'), isTrue);
       expect(requiredTables.contains('categories'), isTrue);
       expect(requiredTables.contains('quote_tags'), isTrue);

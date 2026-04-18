@@ -249,10 +249,10 @@ class _ToolCallProgressCardState extends State<ToolCallProgressCard>
                     ),
 
                     // 展开按钮
-                    if (toolCall.result != null || toolCall.errorMessage != null)
+                    if (toolCall.result != null ||
+                        toolCall.errorMessage != null)
                       RotationTransition(
-                        turns:
-                            Tween<double>(begin: 0, end: 0.5).animate(
+                        turns: Tween<double>(begin: 0, end: 0.5).animate(
                           _expandController,
                         ),
                         child: Icon(
@@ -274,7 +274,8 @@ class _ToolCallProgressCardState extends State<ToolCallProgressCard>
               children: [
                 Container(
                   height: 1,
-                  color: theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
+                  color:
+                      theme.colorScheme.outlineVariant.withValues(alpha: 0.3),
                 ),
 
                 // 参数
@@ -286,7 +287,8 @@ class _ToolCallProgressCardState extends State<ToolCallProgressCard>
                   ),
 
                 // 结果
-                if (toolCall.result != null && toolCall.status == ToolCallStatus.completed)
+                if (toolCall.result != null &&
+                    toolCall.status == ToolCallStatus.completed)
                   _ToolCallDetailSection(
                     title: '结果',
                     content: _formatResult(toolCall.result),

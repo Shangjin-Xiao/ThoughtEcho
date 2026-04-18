@@ -224,9 +224,10 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
     AppLocalizations l10n,
   ) {
     final trimmed = response.content.trim();
-    
+
     // 首先检查是否有 propose_edit 工具调用
-    final editCalls = response.toolCalls.where((c) => c.name == 'propose_edit').toList();
+    final editCalls =
+        response.toolCalls.where((c) => c.name == 'propose_edit').toList();
     if (editCalls.isNotEmpty) {
       final call = editCalls.last;
       try {

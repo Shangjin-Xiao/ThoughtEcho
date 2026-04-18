@@ -381,8 +381,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
     int uiChunkCount = 0;
 
     // 使用流式订阅，支持实时更新
-    _streamSubscription = _aiService
-        .streamAskQuestion(
+    _streamSubscription = _aiService.streamAskQuestion(
       widget.quote!,
       text,
       history: history,
@@ -396,8 +395,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
           thinkingChunks: List<String>.from(thinkingParts),
         );
       },
-    )
-        .listen(
+    ).listen(
       (chunk) {
         uiChunkCount++;
         fullResponse += chunk;
@@ -406,8 +404,9 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
           fullResponse,
           isLoading: true,
           state: MessageState.responding,
-          thinkingChunks:
-              thinkingParts.isNotEmpty ? List<String>.from(thinkingParts) : null,
+          thinkingChunks: thinkingParts.isNotEmpty
+              ? List<String>.from(thinkingParts)
+              : null,
         );
       },
       onDone: () {
@@ -417,8 +416,9 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
           fullResponse.isNotEmpty ? fullResponse : l10n.aiMisunderstoodQuestion,
           isLoading: false,
           state: MessageState.complete,
-          thinkingChunks:
-              thinkingParts.isNotEmpty ? List<String>.from(thinkingParts) : null,
+          thinkingChunks: thinkingParts.isNotEmpty
+              ? List<String>.from(thinkingParts)
+              : null,
         );
       },
       onError: (error) {
@@ -460,8 +460,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
     int uiChunkCount = 0;
 
     // 使用流式订阅，支持实时更新
-    _streamSubscription = _aiService
-        .streamGeneralConversation(
+    _streamSubscription = _aiService.streamGeneralConversation(
       text,
       history: history,
       systemContext: widget.exploreGuideSummary,
@@ -475,8 +474,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
           thinkingChunks: List<String>.from(thinkingParts),
         );
       },
-    )
-        .listen(
+    ).listen(
       (chunk) {
         uiChunkCount++;
         fullResponse += chunk;
@@ -485,8 +483,9 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
           fullResponse,
           isLoading: true,
           state: MessageState.responding,
-          thinkingChunks:
-              thinkingParts.isNotEmpty ? List<String>.from(thinkingParts) : null,
+          thinkingChunks: thinkingParts.isNotEmpty
+              ? List<String>.from(thinkingParts)
+              : null,
         );
       },
       onDone: () {
@@ -496,8 +495,9 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
           fullResponse.isNotEmpty ? fullResponse : l10n.aiMisunderstoodQuestion,
           isLoading: false,
           state: MessageState.complete,
-          thinkingChunks:
-              thinkingParts.isNotEmpty ? List<String>.from(thinkingParts) : null,
+          thinkingChunks: thinkingParts.isNotEmpty
+              ? List<String>.from(thinkingParts)
+              : null,
         );
       },
       onError: (error) {
