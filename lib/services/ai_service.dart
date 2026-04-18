@@ -1,9 +1,11 @@
 import 'package:flutter/foundation.dart';
+import 'package:openai_dart/openai_dart.dart' as openai;
 import '../models/quote_model.dart';
 import '../models/chat_message.dart';
 import '../models/ai_provider_settings.dart';
 import '../services/settings_service.dart' show SettingsService;
 import '../services/api_key_manager.dart';
+import '../services/openai_stream_service.dart';
 import 'dart:async';
 import '../utils/daily_prompt_generator.dart';
 import '../utils/ai_network_manager.dart';
@@ -24,6 +26,7 @@ class AIService extends ChangeNotifier {
   final APIKeyManager _apiKeyManager = APIKeyManager();
   final AIPromptManager _promptManager = AIPromptManager();
   final AIRequestHelper _requestHelper = AIRequestHelper();
+  final OpenAIStreamService _openAIStreamService = OpenAIStreamService();
 
   AIService({required SettingsService settingsService})
       : _settingsService = settingsService;
@@ -198,6 +201,141 @@ class AIService extends ChangeNotifier {
     return providerWithApiKey;
   }
 
+  /// 构建聊天消息列表（用于 OpenAIStreamService）
+  ///
+  /// 将系统提示词和用户消息转换为 openai_dart 的
+  /// ChatMessage 格式，支持可选的历史对话上下文。
+  List<openai.ChatMessage> _buildChatMessages({
+    required String systemPrompt,
+    required String userMessage,
+    List<ChatMessage>? history,
+  }) {
+    final messages = <openai.ChatMessage>[
+      openai.ChatMessage.system(systemPrompt),
+    ];
+
+    if (history != null && history.isNotEmpty) {
+      final contextMessages = history
+          .where(
+            (m) =>
+                m.includedInContext &&
+                !m.isLoading &&
+                (m.role == 'user' || m.role == 'assistant'),
+          )
+          .toList();
+
+      // Token 预算截断：保留近期的对话历史
+      int usedChars = 0;
+      final budget = 6000 - userMessage.length;
+      final singleMessageCap = 1200;
+
+      for (int i = contextMessages.length - 1; i >= 0; i--) {
+        String content = contextMessages[i].content;
+        if (content.length > singleMessageCap) {
+          content = '${content.substring(0, singleMessageCap)}...';
+        }
+        if (usedChars + content.length > budget) break;
+        usedChars += content.length;
+        messages.insert(
+          messages.length,
+          contextMessages[i].isUser
+              ? openai.ChatMessage.user(content)
+              : openai.ChatMessage.assistant(content: content),
+        );
+      }
+    }
+
+    messages.add(openai.ChatMessage.user(userMessage));
+    return messages;
+  }
+
+  /// 内部流式请求辅助方法（通过 OpenAIStreamService）
+  ///
+  /// 统一封装流式请求逻辑：验证 → 获取 provider → 构建消息 → 调用流式服务。
+  /// 所有迁移到 OpenAIStreamService 的流式方法都用此辅助方法。
+  Stream<String> _streamViaOpenAI({
+    required String systemPrompt,
+    required String userMessage,
+    List<ChatMessage>? history,
+    double? temperature,
+    int? maxTokens,
+    Function(String)? onThinking,
+  }) {
+    final controller = StreamController<String>(sync: true);
+
+    () async {
+      try {
+        if (!await hasValidApiKeyAsync()) {
+          controller.addError(Exception('请先在设置中配置 API Key'));
+          return;
+        }
+
+        await _validateSettings();
+        final provider = await _getCurrentProviderWithApiKey();
+
+        final messages = _buildChatMessages(
+          systemPrompt: systemPrompt,
+          userMessage: userMessage,
+          history: history,
+        );
+
+        await for (final chunk in _openAIStreamService.streamChatWithThinking(
+          provider: provider,
+          messages: messages,
+          temperature: temperature ?? provider.temperature,
+          maxTokens:
+              maxTokens ?? (provider.maxTokens > 0 ? provider.maxTokens : null),
+          enableThinking: null,
+          onThinking: onThinking,
+        )) {
+          if (controller.isClosed) break;
+          controller.add(chunk);
+        }
+      } catch (e, stack) {
+        logError('AIService._streamViaOpenAI', error: e, stackTrace: stack);
+        if (!controller.isClosed) {
+          controller.addError(e, stack);
+        }
+      } finally {
+        if (!controller.isClosed) {
+          await controller.close();
+        }
+      }
+    }();
+
+    return controller.stream;
+  }
+
+  /// 内部非流式请求辅助方法（通过 OpenAIStreamService）
+  ///
+  /// 用于非流式请求如 generateSessionTitle，避免 405 错误。
+  Future<String> _chatCompletionViaOpenAI({
+    required String systemPrompt,
+    required String userMessage,
+    double? temperature,
+    int? maxTokens,
+  }) async {
+    if (!await hasValidApiKeyAsync()) {
+      throw Exception('请先在设置中配置 API Key');
+    }
+
+    await _validateSettings();
+    final provider = await _getCurrentProviderWithApiKey();
+
+    final messages = <openai.ChatMessage>[
+      openai.ChatMessage.system(systemPrompt),
+      openai.ChatMessage.user(userMessage),
+    ];
+
+    return await _openAIStreamService.chatCompletion(
+      provider: provider,
+      messages: messages,
+      temperature: temperature ?? provider.temperature,
+      maxTokens:
+          maxTokens ?? (provider.maxTokens > 0 ? provider.maxTokens : null),
+    );
+  }
+
   Future<String> summarizeNote(Quote quote) async {
     // 使用异步验证确保API Key有效性
     if (!await hasValidApiKeyAsync()) {
@@ -232,60 +370,37 @@ class AIService extends ChangeNotifier {
     );
   } // 流式笔记分析（支持完整元数据）
 
+  /// 流式笔记分析（支持完整元数据）
+  ///
+  /// 迁移到 OpenAIStreamService：内部委托给 _streamViaOpenAI，
+  /// 公开签名不变，调用方零改动。
   Stream<String> streamSummarizeNote(Quote quote, {List<String>? tagNames}) {
-    return _requestHelper.executeStreamOperation(
-      operation: (controller) async {
-        // 在异步操作中验证API Key
-        if (!await hasValidApiKeyAsync()) {
-          controller.addError(Exception('请先在设置中配置 API Key'));
-          return;
-        }
+    // 直接使用Quote的content字段（纯文本内容），移除媒体占位符
+    final content =
+        StringUtils.removeObjectReplacementChar(quote.content).trim();
 
-        await _validateSettings();
-        final multiSettings = _settingsService.multiAISettings;
-        final currentProvider = multiSettings.currentProvider!;
+    if (content.isEmpty) {
+      final controller = StreamController<String>(sync: true);
+      controller.addError(Exception('没有可分析的文本内容'));
+      controller.close();
+      return controller.stream;
+    }
 
-        // 直接使用Quote的content字段（纯文本内容），移除媒体占位符
-        final content =
-            StringUtils.removeObjectReplacementChar(quote.content).trim();
+    // 传递完整的笔记元数据给 AI（包括标签）
+    final userMessage = _promptManager.buildAnalysisUserMessage(
+      content,
+      sourceAuthor: quote.sourceAuthor,
+      sourceWork: quote.sourceWork,
+      location: quote.location,
+      weather: quote.weather,
+      temperature: quote.temperature,
+      dayPeriod: quote.dayPeriod,
+      tagNames: tagNames,
+    );
 
-        if (content.isEmpty) {
-          controller.addError(Exception('没有可分析的文本内容'));
-          return;
-        }
-
-        // 传递完整的笔记元数据给 AI（包括标签）
-        final userMessage = _promptManager.buildAnalysisUserMessage(
-          content,
-          sourceAuthor: quote.sourceAuthor,
-          sourceWork: quote.sourceWork,
-          location: quote.location,
-          weather: quote.weather,
-          temperature: quote.temperature,
-          dayPeriod: quote.dayPeriod,
-          tagNames: tagNames,
-        );
-        await _requestHelper.makeStreamRequestWithProvider(
-          url: currentProvider.apiUrl,
-          systemPrompt: AIPromptManager.personalGrowthCoachPrompt,
-          userMessage: userMessage,
-          provider: currentProvider,
-          onData: (text) => _requestHelper.handleStreamResponse(
-            controller: controller,
-            chunk: text,
-          ),
-          onComplete: (fullText) => _requestHelper.handleStreamComplete(
-            controller: controller,
-            fullText: fullText,
-          ),
-          onError: (error) => _requestHelper.handleStreamError(
-            controller: controller,
-            error: error,
-            context: '流式笔记分析',
-          ),
-        );
-      },
-      context: '流式笔记分析',
+    return _streamViaOpenAI(
+      systemPrompt: AIPromptManager.personalGrowthCoachPrompt,
+      userMessage: userMessage,
     );
   }
 
@@ -302,76 +417,30 @@ class AIService extends ChangeNotifier {
     String? fullNotesContent, // 新增：完整笔记内容用于深度分析
     String? previousInsights, // 新增：历史洞察上下文
   }) {
-    final controller = _requestHelper.createStreamController();
-
     // 获取用户设置的语言代码
     final languageCode = _settingsService.localeCode;
 
-    _requestHelper
-        .executeStreamOperation(
-          operation: (innerController) async {
-            try {
-              if (!await hasValidApiKeyAsync()) {
-                innerController.addError(Exception('请先在设置中配置 API Key'));
-                return;
-              }
+    final prompt = _promptManager.getReportInsightSystemPrompt(
+      'poetic',
+      languageCode: languageCode,
+    );
+    final user = _promptManager.buildReportInsightUserMessage(
+      periodLabel: periodLabel,
+      mostTimePeriod: mostTimePeriod,
+      mostWeather: mostWeather,
+      topTag: topTag,
+      activeDays: activeDays,
+      noteCount: noteCount,
+      totalWordCount: totalWordCount,
+      notesPreview: notesPreview,
+      fullNotesContent: fullNotesContent,
+      previousInsights: previousInsights,
+    );
 
-              await _validateSettings();
-              final provider = await _getCurrentProviderWithApiKey();
-
-              final prompt = _promptManager.getReportInsightSystemPrompt(
-                'poetic',
-                languageCode: languageCode,
-              );
-              final user = _promptManager.buildReportInsightUserMessage(
-                periodLabel: periodLabel,
-                mostTimePeriod: mostTimePeriod,
-                mostWeather: mostWeather,
-                topTag: topTag,
-                activeDays: activeDays,
-                noteCount: noteCount,
-                totalWordCount: totalWordCount,
-                notesPreview: notesPreview,
-                fullNotesContent: fullNotesContent, // 传递完整内容
-                previousInsights: previousInsights, // 传递历史洞察
-              );
-
-              await _requestHelper.makeStreamRequestWithProvider(
-                url: provider.apiUrl,
-                systemPrompt: prompt,
-                userMessage: user,
-                provider: provider,
-                onData: (text) => _requestHelper.handleStreamResponse(
-                  controller: innerController,
-                  chunk: text,
-                ),
-                onComplete: (fullText) => _requestHelper.handleStreamComplete(
-                  controller: innerController,
-                  fullText: fullText,
-                ),
-                onError: (error) => _requestHelper.handleStreamError(
-                  controller: innerController,
-                  error: error,
-                  context: '报告洞察流式',
-                ),
-              );
-            } catch (e) {
-              _requestHelper.handleStreamError(
-                controller: innerController,
-                error: e,
-                context: '报告洞察流式异常',
-              );
-            }
-          },
-          context: '报告洞察流式',
-        )
-        .listen(
-          (chunk) => controller.add(chunk),
-          onError: controller.addError,
-          onDone: controller.close,
-        );
-
-    return controller.stream;
+    return _streamViaOpenAI(
+      systemPrompt: prompt,
+      userMessage: user,
+    );
   }
 
   /// 本地生成报告洞察（不开启AI时）
@@ -400,89 +469,80 @@ class AIService extends ChangeNotifier {
   }
 
   // 新增：流式生成每日提示
+  ///
+  /// 迁移到 OpenAIStreamService：使用 _streamViaOpenAI，
+  /// 保留 API Key 失败时的降级逻辑。
   Stream<String> streamGenerateDailyPrompt(
     AppLocalizations l10n, {
     String? city,
     String? weather,
     String? temperature,
-    String? historicalInsights, // 新增：历史洞察参考
+    String? historicalInsights,
   }) {
     // 获取用户设置的语言代码
     final languageCode = _settingsService.localeCode;
 
-    return _requestHelper.executeStreamOperation(
-      operation: (controller) async {
+    final controller = StreamController<String>(sync: true);
+
+    () async {
+      try {
         // 异步检查API Key是否有效
         if (!await hasValidApiKeyAsync()) {
           logDebug('API Key无效，使用DailyPromptGenerator生成每日提示');
-          // 使用默认提示生成器
           controller.add(DailyPromptGenerator.getDefaultPrompt(l10n));
-          controller.close();
+          await controller.close();
           return;
         }
 
         // 验证AI设置是否已初始化
-        bool settingsValid = false;
-        AIProviderSettings? currentProvider;
         try {
-          await _validateSettings(); // 确保其他设置也有效
-          // 获取带有API Key的当前provider
-          currentProvider = await _getCurrentProviderWithApiKey();
-          settingsValid = true;
+          await _validateSettings();
         } catch (e) {
           logDebug('AI设置验证失败: $e，将使用默认提示');
-          settingsValid = false;
-        }
-
-        // 如果设置有效，调用AI生成流式提示
-        if (settingsValid && currentProvider != null) {
-          logDebug('API Key有效，使用AI生成每日提示');
-
-          // 获取包含环境信息的系统提示词
-          final systemPromptWithContext =
-              _promptManager.getDailyPromptSystemPromptWithContext(
-            city: city,
-            weather: weather,
-            temperature: temperature,
-            historicalInsights: historicalInsights, // 传递历史洞察
-            languageCode: languageCode, // 传递语言代码
-          );
-
-          final userMessage = _promptManager.buildDailyPromptUserMessage(
-            city: city,
-            weather: weather,
-            temperature: temperature,
-          );
-
-          await _requestHelper.makeStreamRequestWithProvider(
-            url: currentProvider.apiUrl,
-            systemPrompt: systemPromptWithContext,
-            userMessage: userMessage,
-            provider: currentProvider,
-            onData: (text) => _requestHelper.handleStreamResponse(
-              controller: controller,
-              chunk: text,
-            ),
-            onComplete: (fullText) => _requestHelper.handleStreamComplete(
-              controller: controller,
-              fullText: fullText,
-            ),
-            onError: (error) => _requestHelper.handleStreamError(
-              controller: controller,
-              error: error,
-              context: 'AI生成每日提示',
-            ),
-            temperature: 1.0, // 可以调整温度以获得更有创意的提示
-            maxTokens: 100, // 限制提示的长度
-          );
-        } else {
-          // 如果设置无效，使用默认提示生成器
           controller.add(DailyPromptGenerator.getDefaultPrompt(l10n));
-          controller.close();
+          await controller.close();
+          return;
         }
-      },
-      context: '流式生成每日提示',
-    );
+
+        // 获取包含环境信息的系统提示词
+        final systemPromptWithContext =
+            _promptManager.getDailyPromptSystemPromptWithContext(
+          city: city,
+          weather: weather,
+          temperature: temperature,
+          historicalInsights: historicalInsights,
+          languageCode: languageCode,
+        );
+
+        final userMessage = _promptManager.buildDailyPromptUserMessage(
+          city: city,
+          weather: weather,
+          temperature: temperature,
+        );
+
+        await for (final chunk in _streamViaOpenAI(
+          systemPrompt: systemPromptWithContext,
+          userMessage: userMessage,
+          temperature: 1.0,
+          maxTokens: 100,
+        )) {
+          if (controller.isClosed) break;
+          controller.add(chunk);
+        }
+      } catch (e, stack) {
+        logError('AIService.streamGenerateDailyPrompt',
+            error: e, stackTrace: stack);
+        if (!controller.isClosed) {
+          controller.addError(e, stack);
+        }
+      } finally {
+        if (!controller.isClosed) {
+          await controller.close();
+        }
+      }
+    }();
+
+    return controller.stream;
   }
 
   Future<String> generateInsights(
@@ -533,69 +593,41 @@ class AIService extends ChangeNotifier {
   }
 
   // 流式生成洞察
+  /// 迁移到 OpenAIStreamService：使用 _streamViaOpenAI。
   Stream<String> streamGenerateInsights(
     List<Quote> quotes, {
     String analysisType = 'comprehensive',
     String analysisStyle = 'professional',
     String? customPrompt,
   }) {
-    return _requestHelper.executeStreamOperation(
-      operation: (controller) async {
-        // 在异步操作中验证API Key
-        if (!await hasValidApiKeyAsync()) {
-          controller.addError(Exception('请先在设置中配置 API Key'));
-          return;
-        }
+    // 将笔记数据转换为JSON格式
+    final jsonData = _requestHelper.convertQuotesToJson(
+      quotes,
+      analysisType: analysisType,
+      analysisStyle: analysisStyle,
+    );
+    jsonData['metadata']['customPromptUsed'] =
+        (customPrompt != null && customPrompt.isNotEmpty).toString();
+    final quotesText = _requestHelper.formatJsonData(jsonData);
 
-        await _validateSettings();
-        final currentProvider = await _getCurrentProviderWithApiKey();
+    // 根据分析类型选择系统提示词
+    String systemPrompt;
+    if (customPrompt != null && customPrompt.isNotEmpty) {
+      systemPrompt = customPrompt;
+    } else {
+      systemPrompt = _promptManager.getAnalysisTypePrompt(analysisType);
+      systemPrompt = _promptManager.appendAnalysisStylePrompt(
+        systemPrompt,
+        analysisStyle,
+      );
+    }
 
-        // 将笔记数据转换为JSON格式
-        final jsonData = _requestHelper.convertQuotesToJson(
-          quotes,
-          analysisType: analysisType,
-          analysisStyle: analysisStyle,
-        );
-        // 添加自定义提示词使用标记（转换为字符串以避免类型错误）
-        jsonData['metadata']['customPromptUsed'] =
-            (customPrompt != null && customPrompt.isNotEmpty).toString();
-        final quotesText = _requestHelper.formatJsonData(jsonData);
+    final userMessage = '请分析以下结构化的笔记数据：\n\n$quotesText';
 
-        // 根据分析类型选择系统提示词 或 使用自定义提示词
-        String systemPrompt;
-        if (customPrompt != null && customPrompt.isNotEmpty) {
-          systemPrompt = customPrompt;
-        } else {
-          systemPrompt = _promptManager.getAnalysisTypePrompt(analysisType);
-          systemPrompt = _promptManager.appendAnalysisStylePrompt(
-            systemPrompt,
-            analysisStyle,
-          );
-        }
-
-        final userMessage = '请分析以下结构化的笔记数据：\n\n$quotesText';
-        await _requestHelper.makeStreamRequestWithProvider(
-          url: currentProvider.apiUrl,
-          systemPrompt: systemPrompt,
-          userMessage: userMessage,
-          provider: currentProvider,
-          onData: (text) => _requestHelper.handleStreamResponse(
-            controller: controller,
-            chunk: text,
-          ),
-          onComplete: (fullText) => _requestHelper.handleStreamComplete(
-            controller: controller,
-            fullText: fullText,
-          ),
-          onError: (error) => _requestHelper.handleStreamError(
-            controller: controller,
-            error: error,
-            context: '流式生成洞察',
-          ),
-          maxTokens: 2500,
-        );
-      },
-      context: '流式生成洞察',
+    return _streamViaOpenAI(
+      systemPrompt: systemPrompt,
+      userMessage: userMessage,
+      maxTokens: 2500,
     );
   }
 
@@ -930,44 +962,15 @@ class AIService extends ChangeNotifier {
   }
 
   // 流式分析来源
+  /// 迁移到 OpenAIStreamService：使用 _streamViaOpenAI。
   Stream<String> streamAnalyzeSource(String content) {
-    return _requestHelper.executeStreamOperation(
-      operation: (controller) async {
-        // 在异步操作中验证API Key
-        if (!await hasValidApiKeyAsync()) {
-          controller.addError(Exception('请先在设置中配置 API Key'));
-          return;
-        }
+    final userMessage = _promptManager.buildSourceAnalysisUserMessage(content);
 
-        await _validateSettings();
-        final currentProvider = await _getCurrentProviderWithApiKey();
-
-        final userMessage = _promptManager.buildSourceAnalysisUserMessage(
-          content,
-        );
-        await _requestHelper.makeStreamRequestWithProvider(
-          url: currentProvider.apiUrl,
-          systemPrompt: AIPromptManager.sourceAnalysisPrompt,
-          userMessage: userMessage,
-          provider: currentProvider,
-          onData: (text) => _requestHelper.handleStreamResponse(
-            controller: controller,
-            chunk: text,
-          ),
-          onComplete: (fullText) => _requestHelper.handleStreamComplete(
-            controller: controller,
-            fullText: fullText,
-          ),
-          onError: (error) => _requestHelper.handleStreamError(
-            controller: controller,
-            error: error,
-            context: '流式分析来源',
-          ),
-          temperature: 0.4, // 使用较低的温度确保格式一致性
-          maxTokens: 500,
-        );
-      },
-      context: '流式分析来源',
+    return _streamViaOpenAI(
+      systemPrompt: AIPromptManager.sourceAnalysisPrompt,
+      userMessage: userMessage,
+      temperature: 0.4,
+      maxTokens: 500,
     );
   }
 
@@ -999,41 +1002,14 @@ class AIService extends ChangeNotifier {
   }
 
   // 流式润色文本
+  /// 迁移到 OpenAIStreamService：使用 _streamViaOpenAI。
   Stream<String> streamPolishText(String content) {
-    return _requestHelper.executeStreamOperation(
-      operation: (controller) async {
-        // 在异步操作中验证API Key
-        if (!await hasValidApiKeyAsync()) {
-          controller.addError(Exception('请先在设置中配置 API Key'));
-          return;
-        }
+    final userMessage = _promptManager.buildPolishUserMessage(content);
 
-        await _validateSettings();
-        final currentProvider = await _getCurrentProviderWithApiKey();
-
-        final userMessage = _promptManager.buildPolishUserMessage(content);
-        await _requestHelper.makeStreamRequestWithProvider(
-          url: currentProvider.apiUrl,
-          systemPrompt: AIPromptManager.textPolishPrompt,
-          userMessage: userMessage,
-          provider: currentProvider,
-          onData: (text) => _requestHelper.handleStreamResponse(
-            controller: controller,
-            chunk: text,
-          ),
-          onComplete: (fullText) => _requestHelper.handleStreamComplete(
-            controller: controller,
-            fullText: fullText,
-          ),
-          onError: (error) => _requestHelper.handleStreamError(
-            controller: controller,
-            error: error,
-            context: '流式润色文本',
-          ),
-          maxTokens: 1000,
-        );
-      },
-      context: '流式润色文本',
+    return _streamViaOpenAI(
+      systemPrompt: AIPromptManager.textPolishPrompt,
+      userMessage: userMessage,
+      maxTokens: 1000,
     );
   }
 
@@ -1068,44 +1044,15 @@ class AIService extends ChangeNotifier {
   }
 
   // 流式续写文本
+  /// 迁移到 OpenAIStreamService：使用 _streamViaOpenAI。
   Stream<String> streamContinueText(String content) {
-    return _requestHelper.executeStreamOperation(
-      operation: (controller) async {
-        // 在异步操作中验证API Key
-        if (!await hasValidApiKeyAsync()) {
-          controller.addError(Exception('请先在设置中配置 API Key'));
-          return;
-        }
+    final userMessage = _promptManager.buildContinuationUserMessage(content);
 
-        await _validateSettings();
-        final currentProvider = await _getCurrentProviderWithApiKey();
-
-        final userMessage = _promptManager.buildContinuationUserMessage(
-          content,
-        );
-        await _requestHelper.makeStreamRequestWithProvider(
-          url: currentProvider.apiUrl,
-          systemPrompt: AIPromptManager.textContinuationPrompt,
-          userMessage: userMessage,
-          provider: currentProvider,
-          onData: (text) => _requestHelper.handleStreamResponse(
-            controller: controller,
-            chunk: text,
-          ),
-          onComplete: (fullText) => _requestHelper.handleStreamComplete(
-            controller: controller,
-            fullText: fullText,
-          ),
-          onError: (error) => _requestHelper.handleStreamError(
-            controller: controller,
-            error: error,
-            context: '流式续写文本',
-          ),
-          temperature: 0.8, // 使用较高的温度以增加创意性
-          maxTokens: 1000,
-        );
-      },
-      context: '流式续写文本',
+    return _streamViaOpenAI(
+      systemPrompt: AIPromptManager.textContinuationPrompt,
+      userMessage: userMessage,
+      temperature: 0.8,
+      maxTokens: 1000,
     );
   }
 
@@ -1178,89 +1125,46 @@ class AIService extends ChangeNotifier {
   }
 
   // 流式问答（支持完整笔记元数据）
+  /// 流式问答（支持完整笔记元数据 + thinking 回调）
+  ///
+  /// 迁移到 OpenAIStreamService：使用 _streamViaOpenAI，
+  /// 支持 onThinking 回调接收推理内容。
   Stream<String> streamAskQuestion(
     Quote quote,
     String question, {
     List<ChatMessage>? history,
     Function(String)? onThinking,
   }) {
-    return _requestHelper.executeStreamOperation(
-      operation: (controller) async {
-        // 在异步操作中验证API Key
-        if (!await hasValidApiKeyAsync()) {
-          controller.addError(Exception('请先在设置中配置 API Key'));
-          return;
-        }
+    // 直接使用Quote的content字段（纯文本内容），移除媒体占位符
+    final content =
+        StringUtils.removeObjectReplacementChar(quote.content).trim();
 
-        await _validateSettings();
-        final currentProvider = await _getCurrentProviderWithApiKey();
+    if (content.isEmpty) {
+      final controller = StreamController<String>(sync: true);
+      controller.addError(Exception('没有可分析的文本内容'));
+      controller.close();
+      return controller.stream;
+    }
 
-        // 直接使用Quote的content字段（纯文本内容），移除媒体占位符
-        final content =
-            StringUtils.removeObjectReplacementChar(quote.content).trim();
+    // 传递完整的笔记元数据给 AI
+    final userMessage = _promptManager.buildQAUserMessage(
+      content,
+      question,
+      sourceAuthor: quote.sourceAuthor,
+      sourceWork: quote.sourceWork,
+      location: quote.location,
+      weather: quote.weather,
+      temperature: quote.temperature,
+      dayPeriod: quote.dayPeriod,
+    );
 
-        if (content.isEmpty) {
-          controller.addError(Exception('没有可分析的文本内容'));
-          return;
-        }
-
-        // 传递完整的笔记元数据给 AI
-        final userMessage = _promptManager.buildQAUserMessage(
-          content,
-          question,
-          sourceAuthor: quote.sourceAuthor,
-          sourceWork: quote.sourceWork,
-          location: quote.location,
-          weather: quote.weather,
-          temperature: quote.temperature,
-          dayPeriod: quote.dayPeriod,
-        );
-        // 构建消息列表：system prompt + 历史 + 当前问题
-        final List<Map<String, dynamic>> messages;
-        if (history != null && history.isNotEmpty) {
-          messages = _requestHelper.createMessagesWithHistory(
-            systemPrompt: AIPromptManager.noteQAAssistantPrompt,
-            history: history,
-            currentUserMessageLength: userMessage.length,
-          );
-        } else {
-          messages = [
-            {
-              'role': 'system',
-              'content': AIPromptManager.noteQAAssistantPrompt,
-            },
-          ];
-        }
-        // 追加当前轮用户消息（含笔记全文 + 元数据 + 问题）
-        messages.add({'role': 'user', 'content': userMessage});
-
-        final body = _requestHelper.createRequestBody(
-          messages: messages,
-          temperature: 0.5,
-          maxTokens: 1000,
-        );
-
-        await AINetworkManager.makeStreamRequest(
-          url: currentProvider.apiUrl,
-          data: body,
-          provider: currentProvider,
-          onData: (text) => _requestHelper.handleStreamResponse(
-            controller: controller,
-            chunk: text,
-          ),
-          onComplete: (fullText) => _requestHelper.handleStreamComplete(
-            controller: controller,
-            fullText: fullText,
-          ),
-          onError: (error) => _requestHelper.handleStreamError(
-            controller: controller,
-            error: error,
-            context: '流式问答',
-          ),
-          onThinking: onThinking,
-        );
-      },
-      context: '流式问答',
+    return _streamViaOpenAI(
+      systemPrompt: AIPromptManager.noteQAAssistantPrompt,
+      userMessage: userMessage,
+      history: history,
+      temperature: 0.5,
+      maxTokens: 1000,
+      onThinking: onThinking,
     );
   }
 
@@ -1382,153 +1286,91 @@ class AIService extends ChangeNotifier {
     }
   }
 
+  /// 流式普通对话（支持 thinking 回调）
+  ///
+  /// 迁移到 OpenAIStreamService：使用 _streamViaOpenAI，
+  /// 支持 onThinking 回调接收推理内容。
   Stream<String> streamGeneralConversation(
     String question, {
     List<ChatMessage>? history,
     String? systemContext,
     Function(String)? onThinking,
   }) {
-    return _requestHelper.executeStreamOperation(
-      operation: (controller) async {
-        if (!await hasValidApiKeyAsync()) {
-          controller.addError(Exception('请先在设置中配置 API Key'));
-          return;
+    final buffer = StringBuffer();
+
+    if (systemContext != null && systemContext.trim().isNotEmpty) {
+      buffer.writeln(systemContext.trim());
+      buffer.writeln();
+    }
+
+    if (history != null && history.isNotEmpty) {
+      final contextHistory = history
+          .where((m) => m.includedInContext && !m.isLoading)
+          .take(6)
+          .toList();
+      if (contextHistory.isNotEmpty) {
+        buffer.writeln('【最近对话】');
+        for (final message in contextHistory) {
+          final role = message.isUser ? '用户' : '助手';
+          buffer.writeln('$role：${message.content}');
         }
+        buffer.writeln();
+      }
+    }
 
-        await _validateSettings();
-        final currentProvider = await _getCurrentProviderWithApiKey();
-        final buffer = StringBuffer();
+    buffer.writeln('【当前问题】');
+    buffer.write(question);
 
-        if (systemContext != null && systemContext.trim().isNotEmpty) {
-          buffer.writeln(systemContext.trim());
-          buffer.writeln();
-        }
-
-        if (history != null && history.isNotEmpty) {
-          final contextHistory = history
-              .where((m) => m.includedInContext && !m.isLoading)
-              .take(6)
-              .toList();
-          if (contextHistory.isNotEmpty) {
-            buffer.writeln('【最近对话】');
-            for (final message in contextHistory) {
-              final role = message.isUser ? '用户' : '助手';
-              buffer.writeln('$role：${message.content}');
-            }
-            buffer.writeln();
-          }
-        }
-
-        buffer.writeln('【当前问题】');
-        buffer.write(question);
-
-        await _requestHelper.makeStreamRequestWithProvider(
-          url: currentProvider.apiUrl,
-          systemPrompt: AIPromptManager.personalGrowthCoachPrompt,
-          userMessage: buffer.toString(),
-          provider: currentProvider,
-          onData: (text) => _requestHelper.handleStreamResponse(
-            controller: controller,
-            chunk: text,
-          ),
-          onComplete: (fullText) => _requestHelper.handleStreamComplete(
-            controller: controller,
-            fullText: fullText,
-          ),
-          onError: (error) => _requestHelper.handleStreamError(
-            controller: controller,
-            error: error,
-            context: '普通对话',
-          ),
-          onThinking: onThinking,
-          maxTokens: 1200,
-        );
-      },
-      context: '普通对话',
+    return _streamViaOpenAI(
+      systemPrompt: AIPromptManager.personalGrowthCoachPrompt,
+      userMessage: buffer.toString(),
+      history: history,
+      maxTokens: 1200,
+      onThinking: onThinking,
     );
   }
 
   /// 高级流式对话方法 - SOTA 实时显示支持
   ///
-  /// 返回 Stream<ChatMessageChunk>，支持：
-  /// - 实时推送thinking过程（思考块）
-  /// - 实时推送response内容（回复块）
-  /// - 每个字符/句子立即显示，无延迟
-  /// - 完整的错误处理和中断支持
-  ///
-  /// 使用示例：
-  /// ```dart
-  /// _aiService.streamMessageChunks(text, history: history).listen((chunk) {
-  ///   setState(() {
-  ///     if (chunk.type == 'thinking') {
-  ///       _thinkingText += chunk.content;
-  ///     } else if (chunk.type == 'response') {
-  ///       _responseText += chunk.content;
-  ///     }
-  ///   });
-  /// });
-  /// ```
+  /// 迁移到 OpenAIStreamService：使用 _streamViaOpenAI。
+  /// 注意：原方法返回 Stream<dynamic>，现在返回 Stream<String>，
+  /// 因为 OpenAIStreamService 只产生文本 chunk。
+  /// 调用方式不变（.listen 仍然工作，String 是 dynamic 的子类型）。
   Stream<dynamic> streamMessageChunks(
     String question, {
     List<ChatMessage>? history,
     String? systemContext,
   }) {
-    return _requestHelper.executeStreamOperation(
-      operation: (controller) async {
-        if (!await hasValidApiKeyAsync()) {
-          controller.addError(Exception('请先在设置中配置 API Key'));
-          return;
+    final buffer = StringBuffer();
+
+    if (systemContext != null && systemContext.trim().isNotEmpty) {
+      buffer.writeln(systemContext.trim());
+      buffer.writeln();
+    }
+
+    if (history != null && history.isNotEmpty) {
+      final contextHistory = history
+          .where((m) => m.includedInContext && !m.isLoading)
+          .take(6)
+          .toList();
+      if (contextHistory.isNotEmpty) {
+        buffer.writeln('【最近对话】');
+        for (final message in contextHistory) {
+          final role = message.isUser ? '用户' : '助手';
+          buffer.writeln('$role：${message.content}');
         }
+        buffer.writeln();
+      }
+    }
 
-        await _validateSettings();
-        final currentProvider = await _getCurrentProviderWithApiKey();
-        final buffer = StringBuffer();
+    buffer.writeln('【当前问题】');
+    buffer.write(question);
 
-        if (systemContext != null && systemContext.trim().isNotEmpty) {
-          buffer.writeln(systemContext.trim());
-          buffer.writeln();
-        }
-
-        if (history != null && history.isNotEmpty) {
-          final contextHistory = history
-              .where((m) => m.includedInContext && !m.isLoading)
-              .take(6)
-              .toList();
-          if (contextHistory.isNotEmpty) {
-            buffer.writeln('【最近对话】');
-            for (final message in contextHistory) {
-              final role = message.isUser ? '用户' : '助手';
-              buffer.writeln('$role：${message.content}');
-            }
-            buffer.writeln();
-          }
-        }
-
-        buffer.writeln('【当前问题】');
-        buffer.write(question);
-
-        await _requestHelper.makeStreamRequestWithProvider(
-          url: currentProvider.apiUrl,
-          systemPrompt: AIPromptManager.personalGrowthCoachPrompt,
-          userMessage: buffer.toString(),
-          provider: currentProvider,
-          onData: (text) => _requestHelper.handleStreamResponse(
-            controller: controller,
-            chunk: text,
-          ),
-          onComplete: (fullText) => _requestHelper.handleStreamComplete(
-            controller: controller,
-            fullText: fullText,
-          ),
-          onError: (error) => _requestHelper.handleStreamError(
-            controller: controller,
-            error: error,
-            context: '高级流式对话',
-          ),
-          maxTokens: 1200,
-        );
-      },
-      context: '高级流式对话',
+    return _streamViaOpenAI(
+      systemPrompt: AIPromptManager.personalGrowthCoachPrompt,
+      userMessage: buffer.toString(),
+      history: history,
+      maxTokens: 1200,
     );
   }
 
@@ -1564,14 +1406,12 @@ class AIService extends ChangeNotifier {
             ? '${markdown.substring(0, 6000)}\n\n[内容已截断]'
             : markdown;
 
-        final userMessage =
-            '以下是从 $url 抓取到的网页内容（Markdown 格式），'
+        final userMessage = '以下是从 $url 抓取到的网页内容（Markdown 格式），'
             '请总结其中的关键信息和要点：\n\n$truncated';
 
         final response = await _requestHelper.makeRequestWithProvider(
           url: currentProvider.apiUrl,
-          systemPrompt:
-              '你是一个内容总结专家。用户会提供从网页抓取的 Markdown 内容，'
+          systemPrompt: '你是一个内容总结专家。用户会提供从网页抓取的 Markdown 内容，'
               '请提炼关键信息，生成结构清晰的摘要。',
           userMessage: userMessage,
           provider: currentProvider,
@@ -1588,6 +1428,10 @@ class AIService extends ChangeNotifier {
   /// 为聊天会话生成标题
   /// [firstUserMessage] 首条用户消息内容
   /// 返回生成的标题（≤50字）
+  /// 为聊天会话生成标题
+  ///
+  /// 迁移到 OpenAIStreamService：使用 _chatCompletionViaOpenAI
+  /// 避免 405 错误（openai_dart 正确构造 URL）。
   Future<String> generateSessionTitle(String firstUserMessage) async {
     try {
       if (firstUserMessage.isEmpty) return 'Chat';
@@ -1595,27 +1439,25 @@ class AIService extends ChangeNotifier {
       // 优先尝试用 AI 生成标题
       if (await hasValidApiKeyAsync()) {
         try {
-          await _validateSettings();
-          final currentProvider = await _getCurrentProviderWithApiKey();
-
           // 限制消息长度为100字以内
           final truncated = firstUserMessage.length > 100
               ? firstUserMessage.substring(0, 100) + '...'
               : firstUserMessage;
 
-          final response = await _requestHelper.makeRequestWithProvider(
-            url: currentProvider.apiUrl,
-            systemPrompt: 'You are a title generator. Generate a SHORT title (max 10 words, in the same language as the message, no quotes) for the following message.',
+          final title = await _chatCompletionViaOpenAI(
+            systemPrompt:
+                'You are a title generator. Generate a SHORT title (max 10 words, in the same language as the message, no quotes) for the following message.',
             userMessage: truncated,
-            provider: currentProvider,
             temperature: 0.3,
             maxTokens: 30,
           );
 
-          final title = _requestHelper.parseResponse(response).trim();
+          final trimmedTitle = title.trim();
 
           // 如果生成的标题超长，裁剪
-          return title.length > 50 ? title.substring(0, 50) + '...' : title;
+          return trimmedTitle.length > 50
+              ? trimmedTitle.substring(0, 50) + '...'
+              : trimmedTitle;
         } catch (e) {
           logDebug('AI 标题生成失败，降级到本地方法: $e');
           // 降级：使用本地方法生成标题
@@ -1640,18 +1482,24 @@ class AIService extends ChangeNotifier {
       return 'Chat';
     }
   }
+
   /// [url] 要抓取的网页URL
   /// 返回实时推送的Markdown格式内容
+  /// 流式网页内容抓取
+  ///
+  /// 迁移到 OpenAIStreamService：先抓取网页内容，
+  /// 再通过 _streamViaOpenAI 进行流式总结。
   Stream<String> streamFetchWebContent(String url) {
-    return _requestHelper.executeStreamOperation(
-      operation: (controller) async {
+    final controller = StreamController<String>(sync: true);
+
+    () async {
+      try {
         if (!await hasValidApiKeyAsync()) {
           controller.addError(Exception('请先在设置中配置 API Key'));
           return;
         }
 
         await _validateSettings();
-        final currentProvider = await _getCurrentProviderWithApiKey();
 
         // 验证URL格式
         final uri = Uri.tryParse(url);
@@ -1674,35 +1522,32 @@ class AIService extends ChangeNotifier {
             ? '${markdown.substring(0, 6000)}\n\n[内容已截断]'
             : markdown;
 
-        final userMessage =
-            '以下是从 $url 抓取到的网页内容（Markdown 格式），'
+        final userMessage = '以下是从 $url 抓取到的网页内容（Markdown 格式），'
             '请总结其中的关键信息和要点：\n\n$truncated';
 
-        await _requestHelper.makeStreamRequestWithProvider(
-          url: currentProvider.apiUrl,
-          systemPrompt:
-              '你是一个内容总结专家。用户会提供从网页抓取的 Markdown 内容，'
+        await for (final chunk in _streamViaOpenAI(
+          systemPrompt: '你是一个内容总结专家。用户会提供从网页抓取的 Markdown 内容，'
               '请提炼关键信息，生成结构清晰的摘要。',
           userMessage: userMessage,
-          provider: currentProvider,
-          onData: (text) => _requestHelper.handleStreamResponse(
-            controller: controller,
-            chunk: text,
-          ),
-          onComplete: (fullText) => _requestHelper.handleStreamComplete(
-            controller: controller,
-            fullText: fullText,
-          ),
-          onError: (error) => _requestHelper.handleStreamError(
-            controller: controller,
-            error: error,
-            context: '流式网页抓取',
-          ),
           maxTokens: 2000,
           temperature: 0.3,
-        );
-      },
-      context: '流式网页抓取',
-    );
+        )) {
+          if (controller.isClosed) break;
+          controller.add(chunk);
+        }
+      } catch (e, stack) {
+        logError('AIService.streamFetchWebContent',
+            error: e, stackTrace: stack);
+        if (!controller.isClosed) {
+          controller.addError(e, stack);
+        }
+      } finally {
+        if (!controller.isClosed) {
+          await controller.close();
+        }
+      }
+    }();
+
+    return controller.stream;
   }
 }
