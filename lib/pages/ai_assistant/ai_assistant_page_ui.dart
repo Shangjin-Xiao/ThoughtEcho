@@ -195,7 +195,6 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                   }
                 },
                 onSaveDirectly: () async {
-<<<<<<< HEAD
                   final String modeAction =
                       meta['action']?.toString() == 'append'
                           ? 'append'
@@ -267,6 +266,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                       }
                     }
                   }
+                },
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: AIWorkflowMarkdownCard(
