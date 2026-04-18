@@ -35,3 +35,7 @@
 **Vulnerability:** Cross-Site Scripting (XSS) vulnerability due to rendering raw `widget.htmlContent` (potentially containing AI-generated or user-provided malicious scripts) in `AIAnnualReportWebView`. Furthermore, `ContentSanitizer.injectCsp` could be bypassed by an attacker providing their own permissive CSP meta tag.
 **Learning:** Raw HTML content must always be properly sanitized *before* initial use, rather than only at export/share time. Regex-based stripping of scripts should be combined with strict Content-Security-Policy injection for defense-in-depth against XSS.
 **Prevention:** Ensured `_sanitizedHtmlContent` is instantiated securely in `initState` and propagated to all file read/write/share and rendering contexts. Updated `ContentSanitizer` to aggressively strip existing CSP meta tags and `<script>` blocks before applying the safe, default CSP.
+
+## 2024-06-03 - [Security Enhancement] Parameterize Database Schema Inspection
+**Learning:** SQLite `PRAGMA` statements are generally not parameterized, increasing the risk of SQL injection if user input ever makes it into the schema queries. Using the equivalent SQLite table-valued function `pragma_table_info(?)` allows for safe parameterization.
+**Action:** Replaced hardcoded PRAGMA table_info calls in `lib/services/database_schema_manager.dart` with safe parameterized queries `SELECT name FROM pragma_table_info(?)`.
