@@ -73,10 +73,16 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
           counts[session.id] = 0;
         }
       }
+      final visibleSessions = sessions
+          .where((session) => !_isEmptyUntitledSession(
+                session,
+                counts[session.id] ?? 0,
+              ))
+          .toList();
 
       if (mounted) {
         setState(() {
-          _sessions = sessions;
+          _sessions = visibleSessions;
           _messageCounts = counts;
           _isLoading = false;
         });
@@ -214,8 +220,9 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
     final filtered = _searchQuery.isEmpty
         ? _sessions!
         : _sessions!
-            .where((s) =>
-                s.title.toLowerCase().contains(_searchQuery.toLowerCase()))
+            .where((s) => _resolveSessionTitle(s, l10n)
+                .toLowerCase()
+                .contains(_searchQuery.toLowerCase()))
             .toList();
     if (filtered.isEmpty) {
       return Center(
@@ -287,9 +294,10 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
   ) {
     final isCurrent = session.id == widget.currentSessionId;
     final messageCount = _messageCounts[session.id] ?? 0;
-    final truncatedTitle = session.title.length > 50
-        ? '${session.title.substring(0, 50)}...'
-        : session.title;
+    final displayTitle = _resolveSessionTitle(session, l10n);
+    final truncatedTitle = displayTitle.length > 50
+        ? '${displayTitle.substring(0, 50)}...'
+        : displayTitle;
     final lastUpdated = TimeUtils.formatElapsedRelativeTimeLocalized(
       context,
       session.lastActiveAt,
@@ -391,6 +399,15 @@ class _SessionHistorySheetState extends State<SessionHistorySheet> {
         ),
       ),
     );
+  }
+
+  bool _isEmptyUntitledSession(ChatSession session, int messageCount) {
+    return session.title.trim().isEmpty && messageCount == 0;
+  }
+
+  String _resolveSessionTitle(ChatSession session, AppLocalizations l10n) {
+    final trimmed = session.title.trim();
+    return trimmed.isEmpty ? l10n.unnamed : trimmed;
   }
 
   void _confirmDelete(BuildContext context, String sessionId) {
