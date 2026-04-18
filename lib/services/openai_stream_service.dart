@@ -150,7 +150,7 @@ class OpenAIStreamService extends ChangeNotifier {
   /// [onThinking] 在收到 reasoning_content/reasoning delta 时回调。
   /// 同时仍然返回 `Stream<String>` 用于普通响应文本。
   ///
-  /// 对于 Ollama 模型，当 [enableThinking] 为 true 时，
+  /// 对于 Ollama 模型，当 [enableThinking] 为 true（或自动推断为 true）时，
   /// 会在请求体中注入 `think: true` 参数（通过自定义 SSE 流）。
   Stream<String> streamChatWithThinking({
     required AIProviderSettings provider,
@@ -160,13 +160,14 @@ class OpenAIStreamService extends ChangeNotifier {
     bool? enableThinking,
     void Function(String thinkingContent)? onThinking,
   }) {
+    final resolvedThinking = enableThinking ?? provider.enableThinking;
     return processStreamToText(
       _createStream(
         provider: provider,
         messages: messages,
         temperature: temperature,
         maxTokens: maxTokens,
-        enableThinking: enableThinking,
+        enableThinking: resolvedThinking,
       ),
       onThinking: onThinking,
     );
@@ -237,13 +238,17 @@ class OpenAIStreamService extends ChangeNotifier {
 
         // 提取思考/推理内容（DeepSeek reasoning_content、
         // OpenRouter reasoning）
+        final reasoningChunks = <String>[];
+        if (delta.reasoningContent != null &&
+            delta.reasoningContent!.isNotEmpty) {
+          reasoningChunks.add(delta.reasoningContent!);
+        }
+        if (delta.reasoning != null && delta.reasoning!.isNotEmpty) {
+          reasoningChunks.add(delta.reasoning!);
+        }
         if (onThinking != null) {
-          if (delta.reasoningContent != null &&
-              delta.reasoningContent!.isNotEmpty) {
-            onThinking(delta.reasoningContent!);
-          }
-          if (delta.reasoning != null && delta.reasoning!.isNotEmpty) {
-            onThinking(delta.reasoning!);
+          for (final reasoningChunk in reasoningChunks) {
+            onThinking(reasoningChunk);
           }
         }
       }
@@ -294,16 +299,23 @@ class OpenAIStreamService extends ChangeNotifier {
           maxTokens: maxTokens,
         );
 
+        final shouldInjectOllamaThinking = _resolveThinkingEnabled(
+          provider: provider,
+          enableThinking: enableThinking,
+        );
+
         logDebug(
           '[OpenAIStreamService] streamChat: '
           'model=${provider.model}, '
           'baseUrl=${config.baseUrl}, '
-          'thinking=$enableThinking',
+          'thinking=$enableThinking, '
+          'providerThinking=${provider.enableThinking}, '
+          'injectOllamaThink=$shouldInjectOllamaThinking',
         );
 
         // 判断是否需要注入额外参数（如 Ollama think: true）
         final needsCustomBody =
-            enableThinking == true && _isOllamaProvider(provider);
+            shouldInjectOllamaThinking && _isOllamaProvider(provider);
 
         if (needsCustomBody) {
           // Ollama + thinking: 使用自定义 HTTP 请求注入 think: true
@@ -445,5 +457,16 @@ class OpenAIStreamService extends ChangeNotifier {
         provider.apiUrl.contains('localhost:11434') ||
         provider.apiUrl.contains('127.0.0.1:11434') ||
         provider.apiUrl.contains('ollama');
+  }
+
+  static bool _resolveThinkingEnabled({
+    required AIProviderSettings provider,
+    bool? enableThinking,
+  }) {
+    final explicitThinking = enableThinking ?? provider.enableThinking;
+    if (explicitThinking != null) {
+      return explicitThinking;
+    }
+    return provider.supportsThinking;
   }
 }

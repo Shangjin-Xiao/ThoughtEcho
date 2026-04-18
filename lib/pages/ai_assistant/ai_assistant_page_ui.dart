@@ -589,11 +589,13 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                             ? theme.colorScheme.secondary
                             : theme.colorScheme.onSurfaceVariant,
                       ),
-                      onPressed: () {
-                        _setState(() {
-                          _enableThinking = !_enableThinking;
-                        });
-                      },
+                      onPressed: _isLoading
+                          ? null
+                          : () {
+                              unawaited(
+                                _setThinkingEnabled(!_enableThinking),
+                              );
+                            },
                       style: IconButton.styleFrom(
                         padding: const EdgeInsets.all(8),
                         minimumSize: const Size(36, 36),

@@ -13,8 +13,7 @@ class ProposeEditTool extends AgentTool {
   String get name => 'propose_edit';
 
   @override
-  String get description =>
-      '【核心工具】提议对现有笔记进行修改。当你想要润色、续写、总结或整理现有笔记内容时，必须调用此工具。';
+  String get description => '【核心工具】提议对现有笔记进行修改。当你想要润色、续写、总结或整理现有笔记内容时，必须调用此工具。';
 
   @override
   Map<String, Object?> get parametersSchema => {

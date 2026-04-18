@@ -2,6 +2,8 @@ import 'ai_config.dart';
 
 /// AI服务商的具体配置实现
 class AIProviderSettings implements AIConfig {
+  static const Object _copyWithUnset = Object();
+
   @override
   final String id;
   @override
@@ -20,9 +22,15 @@ class AIProviderSettings implements AIConfig {
   @override
   final bool isEnabled;
 
+  /// null: 自动推断；true: 强制开启；false: 强制关闭
+  final bool? enableThinking;
+
   /// 判断当前模型是否支持思考/推理模式
   bool get supportsThinking {
     final m = model.toLowerCase();
+    if (m.startsWith('anthropic/')) {
+      return true;
+    }
     // Claude 3.5+ 支持 extended thinking
     if (m.contains('claude-3') &&
         (m.contains('sonnet') || m.contains('opus'))) {
@@ -34,14 +42,17 @@ class AIProviderSettings implements AIConfig {
       return true;
     }
     // OpenAI o1/o3 系列
-    if (m.startsWith('o1') || m.startsWith('o3')) {
+    if (m.startsWith('o1') || m.startsWith('o3') || m.startsWith('o4')) {
       return true;
     }
     // Qwen QwQ / reasoning 系列
-    if (m.contains('qwq') || m.contains('qwen') && m.contains('reason')) {
+    if (m.contains('qwq') ||
+        m.contains('qwen3') ||
+        m.contains('qwen') && m.contains('reason')) {
       return true;
     }
-    return false;
+    // 兜底：用户手动强制开启时，显示支持思考能力
+    return enableThinking == true;
   }
 
   const AIProviderSettings({
@@ -54,6 +65,7 @@ class AIProviderSettings implements AIConfig {
     this.maxTokens = 32000,
     this.hostOverride,
     this.isEnabled = true,
+    this.enableThinking,
   });
 
   bool get isAnthropicMessagesApi {
@@ -124,6 +136,7 @@ class AIProviderSettings implements AIConfig {
       'maxTokens': maxTokens,
       'hostOverride': hostOverride,
       'isEnabled': isEnabled,
+      'enableThinking': enableThinking,
     };
   }
 
@@ -141,6 +154,7 @@ class AIProviderSettings implements AIConfig {
           map['maxTokens'] != null ? (map['maxTokens'] as num).toInt() : 1000,
       hostOverride: map['hostOverride'],
       isEnabled: map['isEnabled'] ?? true,
+      enableThinking: map['enableThinking'] as bool?,
     );
   }
 
@@ -154,6 +168,7 @@ class AIProviderSettings implements AIConfig {
     int? maxTokens,
     String? hostOverride,
     bool? isEnabled,
+    Object? enableThinking = _copyWithUnset,
   }) {
     return AIProviderSettings(
       id: id ?? this.id,
@@ -165,6 +180,9 @@ class AIProviderSettings implements AIConfig {
       maxTokens: maxTokens ?? this.maxTokens,
       hostOverride: hostOverride ?? this.hostOverride,
       isEnabled: isEnabled ?? this.isEnabled,
+      enableThinking: identical(enableThinking, _copyWithUnset)
+          ? this.enableThinking
+          : enableThinking as bool?,
     );
   }
 

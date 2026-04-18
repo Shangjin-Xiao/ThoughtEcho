@@ -64,9 +64,10 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
         _currentMode = restoredMode;
       }
 
-      // Initialize _enableThinking based on whether the current model supports thinking.
-      // This is done after _settingsService is guaranteed to be initialized.
-      _enableThinking = _currentModelSupportsThinking;
+      // 按 provider 配置初始化：优先使用用户开关，其次自动推断
+      final currentProvider = _settingsService.multiAISettings.currentProvider;
+      _enableThinking = currentProvider?.enableThinking ??
+          (currentProvider?.supportsThinking ?? false);
 
       if (widget.session != null) {
         await _loadSession(widget.session!.id);
@@ -124,6 +125,40 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
       _currentMode = mode;
     });
     await _persistMode(mode);
+  }
+
+  Future<void> _setThinkingEnabled(bool enabled) async {
+    _setState(() {
+      _enableThinking = enabled;
+    });
+    if (!_settingsReady) {
+      return;
+    }
+
+    final multiSettings = _settingsService.multiAISettings;
+    final currentProvider = multiSettings.currentProvider;
+    if (currentProvider == null) {
+      return;
+    }
+
+    final updatedProviders = multiSettings.providers
+        .map(
+          (provider) => provider.id == currentProvider.id
+              ? provider.copyWith(enableThinking: enabled)
+              : provider,
+        )
+        .toList(growable: false);
+
+    try {
+      await _settingsService.saveMultiAISettings(
+        multiSettings.copyWith(
+          providers: updatedProviders,
+          currentProviderId: currentProvider.id,
+        ),
+      );
+    } catch (e) {
+      logDebug('保存 Thinking 开关失败: $e');
+    }
   }
 
   Future<void> _createNewSession() async {

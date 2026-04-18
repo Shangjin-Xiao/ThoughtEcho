@@ -187,15 +187,8 @@ class AIService extends ChangeNotifier {
     );
 
     // 创建provider副本并注入API Key
-    final providerWithApiKey = AIProviderSettings(
-      id: currentProvider.id,
-      name: currentProvider.name,
-      apiUrl: currentProvider.apiUrl,
-      model: currentProvider.model,
+    final providerWithApiKey = currentProvider.copyWith(
       apiKey: apiKey, // 注入真实的API Key
-      isEnabled: currentProvider.isEnabled,
-      maxTokens: currentProvider.maxTokens,
-      temperature: currentProvider.temperature,
     );
 
     return providerWithApiKey;
@@ -259,6 +252,7 @@ class AIService extends ChangeNotifier {
     List<ChatMessage>? history,
     double? temperature,
     int? maxTokens,
+    bool? enableThinking,
     Function(String)? onThinking,
   }) {
     final controller = StreamController<String>(sync: true);
@@ -271,7 +265,10 @@ class AIService extends ChangeNotifier {
         }
 
         await _validateSettings();
-        final provider = await _getCurrentProviderWithApiKey();
+        var provider = await _getCurrentProviderWithApiKey();
+        if (enableThinking != null) {
+          provider = provider.copyWith(enableThinking: enableThinking);
+        }
 
         final messages = _buildChatMessages(
           systemPrompt: systemPrompt,
@@ -285,7 +282,7 @@ class AIService extends ChangeNotifier {
           temperature: temperature ?? provider.temperature,
           maxTokens:
               maxTokens ?? (provider.maxTokens > 0 ? provider.maxTokens : null),
-          enableThinking: null,
+          enableThinking: enableThinking,
           onThinking: onThinking,
         )) {
           if (controller.isClosed) break;
@@ -1133,6 +1130,7 @@ class AIService extends ChangeNotifier {
     Quote quote,
     String question, {
     List<ChatMessage>? history,
+    bool? enableThinking,
     Function(String)? onThinking,
   }) {
     // 直接使用Quote的content字段（纯文本内容），移除媒体占位符
@@ -1164,6 +1162,7 @@ class AIService extends ChangeNotifier {
       history: history,
       temperature: 0.5,
       maxTokens: 1000,
+      enableThinking: enableThinking,
       onThinking: onThinking,
     );
   }
@@ -1294,6 +1293,7 @@ class AIService extends ChangeNotifier {
     String question, {
     List<ChatMessage>? history,
     String? systemContext,
+    bool? enableThinking,
     Function(String)? onThinking,
   }) {
     final buffer = StringBuffer();
@@ -1326,6 +1326,7 @@ class AIService extends ChangeNotifier {
       userMessage: buffer.toString(),
       history: history,
       maxTokens: 1200,
+      enableThinking: enableThinking,
       onThinking: onThinking,
     );
   }

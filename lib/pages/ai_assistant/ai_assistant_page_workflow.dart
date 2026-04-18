@@ -385,6 +385,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
       widget.quote!,
       text,
       history: history,
+      enableThinking: _enableThinking,
       onThinking: (thinkingChunk) {
         thinkingParts.add(thinkingChunk);
         _updateMessage(
@@ -464,6 +465,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
       text,
       history: history,
       systemContext: widget.exploreGuideSummary,
+      enableThinking: _enableThinking,
       onThinking: (thinkingChunk) {
         thinkingParts.add(thinkingChunk);
         _updateMessage(
