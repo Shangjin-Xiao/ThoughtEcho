@@ -17,12 +17,26 @@ class WebSearchTool extends AgentTool {
   static const int _maxLimit = 10;
 
   final SettingsService? _settingsService;
+  final Future<List<Map<String, dynamic>>> Function(
+    String query, {
+    required String backend,
+    required String region,
+    required int maxResults,
+  }) _searchExecutor;
 
   /// 创建 WebSearchTool
   ///
   /// [settingsService] 可选，用于获取用户应用语言设置。
   /// 如果不提供，将仅使用系统语言和搜索词检测。
-  const WebSearchTool([this._settingsService]);
+  WebSearchTool([
+    this._settingsService,
+    Future<List<Map<String, dynamic>>> Function(
+      String query, {
+      required String backend,
+      required String region,
+      required int maxResults,
+    })? searchExecutor,
+  ]) : _searchExecutor = searchExecutor ?? _defaultSearchExecutor;
 
   @override
   String get name => 'web_search';
@@ -73,45 +87,49 @@ class WebSearchTool extends AgentTool {
       logDebug(
           'WebSearchTool: $appLangInfo, 检测结果: ${isChinese ? "Chinese" : "Other"}, 使用 $backend ($region) 搜索 "$query"');
 
-      final ddgs = DDGS(timeout: const Duration(seconds: 15));
-      try {
-        final results = await ddgs.text(
-          query,
-          backend: backend,
-          region: region,
-          maxResults: limit,
+      final results = await _searchExecutor(
+        query,
+        backend: backend,
+        region: region,
+        maxResults: limit,
+      );
+
+      final finalResults = results.isNotEmpty || backend != 'bing'
+          ? results
+          : await _searchExecutor(
+              query,
+              backend: 'auto',
+              region: region,
+              maxResults: limit,
+            );
+
+      if (finalResults.isEmpty) {
+        return ToolResult(
+          toolCallId: call.id,
+          content: '未找到与「$query」相关的搜索结果。',
         );
-
-        if (results.isEmpty) {
-          return ToolResult(
-            toolCallId: call.id,
-            content: '未找到与「$query」相关的搜索结果。',
-          );
-        }
-
-        final buffer = StringBuffer('搜索「$query」的结果：\n\n');
-        for (var i = 0; i < results.length; i++) {
-          final result = results[i];
-          final title = result['title']?.toString() ?? '无标题';
-          final snippet = result['body']?.toString() ??
-              result['description']?.toString() ??
-              '';
-          final href = result['href']?.toString() ?? '';
-
-          buffer.writeln('${i + 1}. $title');
-          if (href.isNotEmpty) {
-            buffer.writeln('   链接: $href');
-          }
-          if (snippet.isNotEmpty) {
-            buffer.writeln('   摘要: $snippet');
-          }
-          buffer.writeln();
-        }
-
-        return ToolResult(toolCallId: call.id, content: buffer.toString());
-      } finally {
-        ddgs.close();
       }
+
+      final buffer = StringBuffer('搜索「$query」的结果：\n\n');
+      for (var i = 0; i < finalResults.length; i++) {
+        final result = finalResults[i];
+        final title = result['title']?.toString() ?? '无标题';
+        final snippet = result['body']?.toString() ??
+            result['description']?.toString() ??
+            '';
+        final href = result['href']?.toString() ?? '';
+
+        buffer.writeln('${i + 1}. $title');
+        if (href.isNotEmpty) {
+          buffer.writeln('   链接: $href');
+        }
+        if (snippet.isNotEmpty) {
+          buffer.writeln('   摘要: $snippet');
+        }
+        buffer.writeln();
+      }
+
+      return ToolResult(toolCallId: call.id, content: buffer.toString());
     } catch (e, stack) {
       call.logError('WebSearchTool.execute 失败', error: e, stackTrace: stack);
       return ToolResult(
@@ -151,5 +169,24 @@ class WebSearchTool extends AgentTool {
   /// 检查字符串是否包含中文字符
   static bool _containsChinese(String text) {
     return RegExp(r'[\u4e00-\u9fa5]').hasMatch(text);
+  }
+
+  static Future<List<Map<String, dynamic>>> _defaultSearchExecutor(
+    String query, {
+    required String backend,
+    required String region,
+    required int maxResults,
+  }) async {
+    final ddgs = DDGS(timeout: const Duration(seconds: 15));
+    try {
+      return await ddgs.text(
+        query,
+        backend: backend,
+        region: region,
+        maxResults: maxResults,
+      );
+    } finally {
+      ddgs.close();
+    }
   }
 }

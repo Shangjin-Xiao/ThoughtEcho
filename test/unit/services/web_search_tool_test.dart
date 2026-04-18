@@ -23,6 +23,14 @@ class MockSharedPreferences implements SharedPreferences {
   noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+List<Map<String, dynamic>> _mockResult(String title) => [
+      <String, dynamic>{
+        'title': title,
+        'body': '摘要',
+        'href': 'https://example.com',
+      },
+    ];
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() async {
@@ -31,7 +39,7 @@ void main() {
 
   group('WebSearchTool Language Detection', () {
     test('works without SettingsService (backward compatibility)', () {
-      final tool = const WebSearchTool();
+      final tool = WebSearchTool();
       expect(tool, isNotNull);
     });
 
@@ -47,14 +55,14 @@ void main() {
     });
 
     test('tool has correct name and description', () {
-      final tool = const WebSearchTool();
+      final tool = WebSearchTool();
       expect(tool.name, equals('web_search'));
       expect(tool.description, isNotEmpty);
       expect(tool.description, contains('搜索'));
     });
 
     test('tool has correct parameter schema', () {
-      final tool = const WebSearchTool();
+      final tool = WebSearchTool();
       final schema = tool.parametersSchema;
       expect(schema['type'], equals('object'));
       expect(schema['properties'], isNotNull);
@@ -65,7 +73,7 @@ void main() {
     });
 
     test('rejects empty search query', () async {
-      final tool = const WebSearchTool();
+      final tool = WebSearchTool();
       final result = await tool.execute(
         ToolCall(
           id: 'test_1',
@@ -78,7 +86,7 @@ void main() {
     });
 
     test('rejects whitespace-only search query', () async {
-      final tool = const WebSearchTool();
+      final tool = WebSearchTool();
       final result = await tool.execute(
         ToolCall(
           id: 'test_1',
@@ -90,14 +98,14 @@ void main() {
     });
 
     test('backward compatibility: const constructor still works', () {
-      final tool1 = const WebSearchTool();
-      final tool2 = const WebSearchTool();
-      // Both should be the same instance due to const
-      expect(identical(tool1, tool2), isTrue);
+      final tool1 = WebSearchTool();
+      final tool2 = WebSearchTool();
+      expect(tool1, isNotNull);
+      expect(tool2, isNotNull);
     });
 
     test('tool accepts valid query with default limit', () async {
-      const tool = WebSearchTool();
+      final tool = WebSearchTool();
       // We won't actually hit the network, just test parameter handling
       expect(tool.name, equals('web_search'));
     });
@@ -124,11 +132,37 @@ void main() {
 
     test('tool accepts optional settingsService parameter', () {
       // Test constructor variations
-      expect(const WebSearchTool(), isNotNull);
+      expect(WebSearchTool(), isNotNull);
 
       // Test with null (which is valid)
       final toolWithNull = WebSearchTool(null);
       expect(toolWithNull, isNotNull);
+    });
+
+    test('Chinese search falls back to auto when bing is empty', () async {
+      final calls = <String>[];
+      final tool = WebSearchTool(
+        _MockSettingsService('zh'),
+        (query, {required backend, required region, required maxResults}) async {
+          calls.add(backend);
+          if (backend == 'bing') {
+            return <Map<String, dynamic>>[];
+          }
+          return _mockResult('回退结果');
+        },
+      );
+
+      final result = await tool.execute(
+        ToolCall(
+          id: 'test_fallback',
+          name: 'web_search',
+          arguments: const {'query': '中文搜索测试'},
+        ),
+      );
+
+      expect(result.isError, isFalse);
+      expect(result.content, contains('回退结果'));
+      expect(calls, equals(['bing', 'auto']));
     });
   });
 }
