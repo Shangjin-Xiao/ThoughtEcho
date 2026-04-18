@@ -8,7 +8,6 @@ import '../services/api_key_manager.dart';
 import '../services/openai_stream_service.dart';
 import 'dart:async';
 import '../utils/daily_prompt_generator.dart';
-import '../utils/ai_network_manager.dart';
 import '../utils/ai_prompt_manager.dart';
 import '../utils/ai_request_helper.dart';
 import '../utils/app_logger.dart';
@@ -90,8 +89,7 @@ class AIService extends ChangeNotifier {
   /// 验证网络连接（可选调用，避免每次验证都进行网络请求）
   Future<bool> _testConnection(AIProviderSettings provider) async {
     try {
-      final response = await _requestHelper.makeRequestWithProvider(
-        url: provider.apiUrl,
+      final content = await _chatCompletionViaOpenAI(
         systemPrompt: AIPromptManager.connectionTestPrompt,
         userMessage: '测试连接',
         provider: provider,
@@ -99,7 +97,6 @@ class AIService extends ChangeNotifier {
         maxTokens: 50,
       );
 
-      final content = _requestHelper.parseResponse(response);
       final preview =
           content.length > 20 ? '${content.substring(0, 20)}...' : content;
       logDebug('AI连接测试成功: $preview');
@@ -309,6 +306,7 @@ class AIService extends ChangeNotifier {
   Future<String> _chatCompletionViaOpenAI({
     required String systemPrompt,
     required String userMessage,
+    AIProviderSettings? provider,
     double? temperature,
     int? maxTokens,
   }) async {
@@ -317,7 +315,11 @@ class AIService extends ChangeNotifier {
     }
 
     await _validateSettings();
-    final provider = await _getCurrentProviderWithApiKey();
+    final resolvedProvider = provider != null
+        ? provider.copyWith(
+            apiKey: await _apiKeyManager.getProviderApiKey(provider.id),
+          )
+        : await _getCurrentProviderWithApiKey();
 
     final messages = <openai.ChatMessage>[
       openai.ChatMessage.system(systemPrompt),
@@ -325,11 +327,11 @@ class AIService extends ChangeNotifier {
     ];
 
     return await _openAIStreamService.chatCompletion(
-      provider: provider,
+      provider: resolvedProvider,
       messages: messages,
-      temperature: temperature ?? provider.temperature,
-      maxTokens:
-          maxTokens ?? (provider.maxTokens > 0 ? provider.maxTokens : null),
+      temperature: temperature ?? resolvedProvider.temperature,
+      maxTokens: maxTokens ??
+          (resolvedProvider.maxTokens > 0 ? resolvedProvider.maxTokens : null),
     );
   }
 
@@ -341,10 +343,6 @@ class AIService extends ChangeNotifier {
 
     return await _requestHelper.executeWithErrorHandling(
       operation: () async {
-        await _validateSettings();
-        final multiSettings = _settingsService.multiAISettings;
-        final currentProvider = multiSettings.currentProvider!;
-
         // 直接使用Quote的content字段（纯文本内容），移除媒体占位符
         final content =
             StringUtils.removeObjectReplacementChar(quote.content).trim();
@@ -354,14 +352,10 @@ class AIService extends ChangeNotifier {
         }
 
         final userMessage = _promptManager.buildUserMessage(content);
-        final response = await _requestHelper.makeRequestWithProvider(
-          url: currentProvider.apiUrl,
+        return await _chatCompletionViaOpenAI(
           systemPrompt: AIPromptManager.personalGrowthCoachPrompt,
           userMessage: userMessage,
-          provider: currentProvider,
         );
-
-        return _requestHelper.parseResponse(response);
       },
       context: '笔记分析',
     );
@@ -554,9 +548,6 @@ class AIService extends ChangeNotifier {
 
     return await _requestHelper.executeWithErrorHandling(
       operation: () async {
-        await _validateSettings();
-        final currentProvider = await _getCurrentProviderWithApiKey();
-
         // 将笔记数据转换为JSON格式
         final jsonData = _requestHelper.convertQuotesToJson(
           quotes,
@@ -575,15 +566,11 @@ class AIService extends ChangeNotifier {
         );
 
         final userMessage = '请分析以下结构化的笔记数据：\n\n$quotesText';
-        final response = await _requestHelper.makeRequestWithProvider(
-          url: currentProvider.apiUrl,
+        return await _chatCompletionViaOpenAI(
           systemPrompt: systemPrompt,
           userMessage: userMessage,
-          provider: currentProvider,
           maxTokens: 2500,
         );
-
-        return _requestHelper.parseResponse(response);
       },
       context: '生成洞察',
     );
@@ -645,24 +632,17 @@ class AIService extends ChangeNotifier {
 
     return await _requestHelper.executeWithErrorHandling(
       operation: () async {
-        await _validateSettings();
-        final currentProvider = await _getCurrentProviderWithApiKey();
-
         final userMessage = _promptManager.buildSourceAnalysisUserMessage(
           content,
           existingAuthor: existingAuthor,
           existingWork: existingWork,
         );
-        final response = await _requestHelper.makeRequestWithProvider(
-          url: currentProvider.apiUrl,
+        return await _chatCompletionViaOpenAI(
           systemPrompt: AIPromptManager.sourceAnalysisPrompt,
           userMessage: userMessage,
-          provider: currentProvider,
           temperature: 0.4, // 使用较低的温度确保格式一致性
           maxTokens: 500,
         );
-
-        return _requestHelper.parseResponse(response);
       },
       context: '分析来源',
     );
@@ -677,19 +657,12 @@ class AIService extends ChangeNotifier {
 
     return await _requestHelper.executeWithErrorHandling(
       operation: () async {
-        await _validateSettings();
-        final currentProvider = await _getCurrentProviderWithApiKey();
-
-        final response = await _requestHelper.makeRequestWithProvider(
-          url: currentProvider.apiUrl,
+        String result = await _chatCompletionViaOpenAI(
           systemPrompt: AIPromptManager.annualReportPrompt,
           userMessage: _buildEnhancedAnnualReportPrompt(prompt),
-          provider: currentProvider,
           temperature: 0.3, // 使用较低的温度确保格式一致性
           maxTokens: 4000, // 增加token限制以支持完整HTML
         );
-
-        String result = _requestHelper.parseResponse(response);
 
         // 验证返回内容是否为HTML格式
         if (!_isValidHtml(result)) {
@@ -980,19 +953,12 @@ class AIService extends ChangeNotifier {
 
     return await _requestHelper.executeWithErrorHandling(
       operation: () async {
-        await _validateSettings();
-        final currentProvider = await _getCurrentProviderWithApiKey();
-
         final userMessage = _promptManager.buildPolishUserMessage(content);
-        final response = await _requestHelper.makeRequestWithProvider(
-          url: currentProvider.apiUrl,
+        return await _chatCompletionViaOpenAI(
           systemPrompt: AIPromptManager.textPolishPrompt,
           userMessage: userMessage,
-          provider: currentProvider,
           maxTokens: 1000,
         );
-
-        return _requestHelper.parseResponse(response);
       },
       context: '文本润色',
     );
@@ -1019,22 +985,15 @@ class AIService extends ChangeNotifier {
 
     return await _requestHelper.executeWithErrorHandling(
       operation: () async {
-        await _validateSettings();
-        final currentProvider = await _getCurrentProviderWithApiKey();
-
         final userMessage = _promptManager.buildContinuationUserMessage(
           content,
         );
-        final response = await _requestHelper.makeRequestWithProvider(
-          url: currentProvider.apiUrl,
+        return await _chatCompletionViaOpenAI(
           systemPrompt: AIPromptManager.textContinuationPrompt,
           userMessage: userMessage,
-          provider: currentProvider,
           temperature: 0.8, // 使用较高的温度以增加创意性
           maxTokens: 1000,
         );
-
-        return _requestHelper.parseResponse(response);
       },
       context: '文本续写',
     );
@@ -1063,20 +1022,13 @@ class AIService extends ChangeNotifier {
 
     return await _requestHelper.executeWithErrorHandling(
       operation: () async {
-        await _validateSettings();
-        final currentProvider = await _getCurrentProviderWithApiKey();
-
-        final response = await _requestHelper.makeRequestWithProvider(
-          url: currentProvider.apiUrl,
+        return await _chatCompletionViaOpenAI(
           systemPrompt:
               'You are an expert SVG designer. Generate clean, valid SVG code based on the user\'s requirements. Only return the SVG code without any explanations or markdown formatting.',
           userMessage: prompt,
-          provider: currentProvider,
           temperature: 0.7, // 适中的创意性
           maxTokens: 2000, // 足够生成完整的SVG
         );
-
-        return _requestHelper.parseResponse(response);
       },
       context: 'SVG生成',
     );
@@ -1091,9 +1043,6 @@ class AIService extends ChangeNotifier {
 
     return await _requestHelper.executeWithErrorHandling(
       operation: () async {
-        await _validateSettings();
-        final currentProvider = await _getCurrentProviderWithApiKey();
-
         // 直接使用Quote的content字段（纯文本内容），移除媒体占位符
         final content =
             StringUtils.removeObjectReplacementChar(quote.content).trim();
@@ -1106,16 +1055,12 @@ class AIService extends ChangeNotifier {
           content,
           question,
         );
-        final response = await _requestHelper.makeRequestWithProvider(
-          url: currentProvider.apiUrl,
+        return await _chatCompletionViaOpenAI(
           systemPrompt: AIPromptManager.noteQAAssistantPrompt,
           userMessage: userMessage,
-          provider: currentProvider,
           temperature: 0.5,
           maxTokens: 1000,
         );
-
-        return _requestHelper.parseResponse(response);
       },
       context: '问答',
     );
@@ -1176,19 +1121,13 @@ class AIService extends ChangeNotifier {
 
     await _requestHelper.executeWithErrorHandling(
       operation: () async {
-        await _validateSettings();
-        final currentProvider = await _getCurrentProviderWithApiKey();
-
-        final response = await _requestHelper.makeRequestWithProvider(
-          url: currentProvider.apiUrl,
+        final content = await _chatCompletionViaOpenAI(
           systemPrompt: AIPromptManager.connectionTestPrompt,
           userMessage: '测试连接',
-          provider: currentProvider,
           temperature: 0.1,
           maxTokens: 50,
         );
 
-        final content = _requestHelper.parseResponse(response);
         final preview =
             content.length > 20 ? '${content.substring(0, 20)}...' : content;
         logDebug('AI连接测试成功: $preview');
@@ -1204,37 +1143,18 @@ class AIService extends ChangeNotifier {
       throw Exception('请先在设置中配置 API Key');
     }
 
-    try {
-      final multiSettings = _settingsService.multiAISettings;
-
-      final messages = [
-        {'role': 'system', 'content': '你是一个AI助手。请简单回复"连接测试成功"。'},
-        {'role': 'user', 'content': '测试连接'},
-      ];
-      final response = await AINetworkManager.makeRequest(
-        url: '',
-        data: {'messages': messages, 'temperature': 0.1, 'max_tokens': 50},
-        multiSettings: multiSettings,
-        timeout: const Duration(seconds: 30),
-      );
-
-      if (response.statusCode == 200 && response.data != null) {
-        final data = response.data;
-        if (data['choices'] != null &&
-            data['choices'].isNotEmpty &&
-            data['choices'][0]['message'] != null) {
-          logDebug(
-            '多provider连接测试成功: ${data['choices'][0]['message']['content']}',
-          );
-          return;
-        }
-      }
-
-      throw Exception('API响应格式异常');
-    } catch (e) {
-      logDebug('多provider连接测试失败: $e');
-      rethrow;
-    }
+    await _requestHelper.executeWithErrorHandling(
+      operation: () async {
+        final content = await _chatCompletionViaOpenAI(
+          systemPrompt: '你是一个AI助手。请简单回复"连接测试成功"。',
+          userMessage: '测试连接',
+          temperature: 0.1,
+          maxTokens: 50,
+        );
+        logDebug('多provider连接测试成功: $content');
+      },
+      context: '多provider连接测试',
+    );
   }
 
   /// 使用多provider进行笔记分析（新版本）
@@ -1245,40 +1165,7 @@ class AIService extends ChangeNotifier {
     }
 
     try {
-      final multiSettings = _settingsService.multiAISettings;
-
-      // 直接使用Quote的content字段（纯文本内容），移除媒体占位符
-      final content =
-          StringUtils.removeObjectReplacementChar(quote.content).trim();
-
-      if (content.isEmpty) {
-        throw Exception('没有可分析的文本内容');
-      }
-
-      final messages = [
-        {
-          'role': 'system',
-          'content':
-              '你是一位资深的个人成长导师和思维教练，拥有卓越的洞察力和分析能力。你的任务是深入分析用户笔记内容，帮助用户更好地理解自己的想法和情感。请像一位富有经验的导师一样，从以下几个方面进行专业、细致且富有启发性的分析：\n\n1. **核心思想 (Main Idea)**：  提炼并概括笔记内容的核心思想或主题，用简洁明了的语言点明笔记的重点。\n\n2. **情感色彩 (Emotional Tone)**：  分析笔记中流露出的情感倾向，例如积极、消极、平静、焦虑等，并尝试解读情感背后的原因。\n\n3. **行动启示 (Actionable Insights)**：  基于笔记内容和分析结果，为用户提供具体、可执行的行动建议或启示，帮助用户将思考转化为行动，促进个人成长和改进。\n\n请确保你的分析既专业深入，又通俗易懂，能够真正帮助用户理解自己，并获得成长和提升。',
-        },
-        {'role': 'user', 'content': '请分析以下内容：\n$content'},
-      ];
-      final response = await AINetworkManager.makeRequest(
-        url: '',
-        data: {'messages': messages, 'temperature': 0.7},
-        multiSettings: multiSettings,
-      );
-
-      if (response.statusCode == 200 && response.data != null) {
-        final data = response.data;
-        if (data['choices'] != null &&
-            data['choices'].isNotEmpty &&
-            data['choices'][0]['message'] != null) {
-          return data['choices'][0]['message']['content'];
-        }
-      }
-
-      throw Exception('API响应格式错误');
+      return await summarizeNote(quote);
     } catch (e) {
       logDebug('多provider笔记分析错误: $e');
       rethrow;
@@ -1385,9 +1272,6 @@ class AIService extends ChangeNotifier {
 
     return await _requestHelper.executeWithErrorHandling(
       operation: () async {
-        await _validateSettings();
-        final currentProvider = await _getCurrentProviderWithApiKey();
-
         // 验证URL格式
         final uri = Uri.tryParse(url);
         if (uri == null || !uri.isAbsolute) {
@@ -1410,17 +1294,13 @@ class AIService extends ChangeNotifier {
         final userMessage = '以下是从 $url 抓取到的网页内容（Markdown 格式），'
             '请总结其中的关键信息和要点：\n\n$truncated';
 
-        final response = await _requestHelper.makeRequestWithProvider(
-          url: currentProvider.apiUrl,
+        return await _chatCompletionViaOpenAI(
           systemPrompt: '你是一个内容总结专家。用户会提供从网页抓取的 Markdown 内容，'
               '请提炼关键信息，生成结构清晰的摘要。',
           userMessage: userMessage,
-          provider: currentProvider,
           maxTokens: 2000,
           temperature: 0.3,
         );
-
-        return _requestHelper.parseResponse(response);
       },
       context: '网页抓取',
     );

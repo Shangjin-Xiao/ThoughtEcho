@@ -76,6 +76,7 @@ class AIRequestHelper {
   }
 
   /// 创建标准请求体
+  @Deprecated('Use OpenAIStreamService instead')
   Map<String, dynamic> createRequestBody({
     required List<Map<String, dynamic>> messages,
     double? temperature,
@@ -136,6 +137,7 @@ class AIRequestHelper {
   }
 
   /// 使用Provider发送普通AI请求
+  @Deprecated('Use OpenAIStreamService instead')
   Future<Response> makeRequestWithProvider({
     required String url,
     required String systemPrompt,
@@ -217,6 +219,7 @@ class AIRequestHelper {
   }
 
   /// 使用Provider发送流式AI请求
+  @Deprecated('Use OpenAIStreamService instead')
   Future<void> makeStreamRequestWithProvider({
     required String url,
     required String systemPrompt,
@@ -277,6 +280,7 @@ class AIRequestHelper {
   }
 
   /// 处理流式响应的通用逻辑
+  @Deprecated('Use OpenAIStreamService instead')
   void handleStreamResponse({
     required StreamController<String> controller,
     required dynamic chunk, // 改为dynamic以便进行类型检查
@@ -304,6 +308,7 @@ class AIRequestHelper {
   }
 
   /// 处理流式完成的通用逻辑
+  @Deprecated('Use OpenAIStreamService instead')
   void handleStreamComplete({
     required StreamController<String> controller,
     String? fullText,
@@ -314,6 +319,7 @@ class AIRequestHelper {
   }
 
   /// 处理流式错误的通用逻辑
+  @Deprecated('Use OpenAIStreamService instead')
   void handleStreamError({
     required StreamController<String> controller,
     required dynamic error,
@@ -404,6 +410,7 @@ class AIRequestHelper {
   /// **sync: true** 保证 controller.add() 立即同步投递到监听者，
   /// 而不是排入微任务队列——否则同一帧内到达的多个 chunk 会被
   /// Flutter 合并成一次 setState，导致用户看到"全部出完才显示"。
+  @Deprecated('Use OpenAIStreamService instead')
   Stream<String> executeStreamOperation({
     required Future<void> Function(StreamController<String>) operation,
     required String context,

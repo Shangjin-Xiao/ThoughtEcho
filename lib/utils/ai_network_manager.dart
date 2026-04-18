@@ -63,6 +63,7 @@ class AINetworkManager {
   }
 
   /// 通用AI请求方法
+  @Deprecated('Use OpenAIStreamService instead')
   static Future<Response> _makeBaseRequest({
     required AIConfig config,
     required Map<String, dynamic> data,
@@ -145,6 +146,7 @@ class AINetworkManager {
   }
 
   /// 发送普通AI请求
+  @Deprecated('Use OpenAIStreamService instead')
   static Future<Response> makeRequest({
     required String url,
     required Map<String, dynamic> data,
@@ -183,6 +185,7 @@ class AINetworkManager {
   ///
   /// [onThinking] 可选回调，用于接收 thinking/reasoning 内容块
   /// （DeepSeek reasoning_content、Anthropic thinking 等）。
+  @Deprecated('Use OpenAIStreamService instead')
   static Future<void> makeStreamRequest({
     required String url,
     required Map<String, dynamic> data,
@@ -436,6 +439,7 @@ class AINetworkManager {
   /// 支持的 thinking 格式：
   /// - OpenAI 兼容：`delta.reasoning_content`（DeepSeek、QwQ 等）
   /// - Anthropic：`type: "content_block_delta"` + `delta.type: "thinking_delta"`
+  @Deprecated('Use OpenAIStreamService instead')
   static Future<void> _processStreamResponse(
     Stream<List<int>> stream,
     Function(String) onData,

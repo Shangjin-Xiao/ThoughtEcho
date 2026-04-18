@@ -38,7 +38,11 @@ class OpenAIStreamService extends ChangeNotifier {
     final Uri uri;
     try {
       uri = Uri.parse(trimmed);
+      if (!uri.hasScheme || (!uri.scheme.startsWith('http'))) {
+        throw const FormatException('无效的 API URL 格式: 缺少 http/https 协议');
+      }
     } catch (e) {
+      if (e is FormatException) rethrow;
       throw FormatException('无效的 API URL 格式: "$trimmed"');
     }
 
@@ -70,8 +74,13 @@ class OpenAIStreamService extends ChangeNotifier {
       path = '$path/v1';
     }
 
-    // 移除 query 和 fragment
-    return uri.replace(path: path, query: null, fragment: null).toString();
+    // 重新构建不含 query 和 fragment 的 URL
+    // 注意：Uri.replace(query: '', fragment: '') 会产生 ?# 后缀
+    // 因此手动拼接以避免这个问题
+    final scheme = uri.hasScheme ? '${uri.scheme}://' : '';
+    final host = uri.host;
+    final port = uri.hasPort && uri.port != 0 ? ':${uri.port}' : '';
+    return '$scheme$host$port$path';
   }
 
   /// 从 AIProviderSettings 构建 OpenAIConfig
