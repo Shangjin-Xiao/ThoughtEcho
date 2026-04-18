@@ -3662,5 +3662,10 @@
   "openInEditor": "Open in Editor",
   "saveDirectly": "Save Directly",
   "replace": "Replace",
-  "append": "Append"
+  "append": "Append",
+  "saveRequired": "Save Required",
+  "saveBeforeAiAssistant": "Please save your note before entering the AI assistant",
+  "saveAndContinue": "Save & Continue",
+  "toggleAddLocation": "Add location",
+  "toggleAddWeather": "Add weather"
 }

@@ -148,16 +148,31 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 appendButtonText:
                     meta['appendButtonText'] as String? ?? l10n.appendToNote,
                 editorSource: isNewNoteProposal ? 'new_note' : 'fullscreen',
-                onOpenInEditor: () async {
+                initialIncludeLocation: meta['include_location'] == true,
+                initialIncludeWeather: meta['include_weather'] == true,
+                onOpenInEditor: (includeLocation, includeWeather) async {
                   if (isNewNoteProposal) {
-                    await _openSmartResultAsNewNote(message.content);
+                    final rawTagIds = meta['tag_ids'] as List<dynamic>? ?? const [];
+                    final tagIds = rawTagIds
+                        .map((item) => item.toString().trim())
+                        .where((item) => item.isNotEmpty)
+                        .toList();
+                    await _openSmartResultAsNewNote(
+                      message.content,
+                      tagIds: tagIds,
+                      includeLocation: includeLocation,
+                      includeWeather: includeWeather,
+                    );
                   } else {
                     await _openSmartResultInEditor(meta, message.content);
                   }
                 },
-                onSaveDirectly: () async {
+                onSaveDirectly: (includeLocation, includeWeather) async {
                   if (isNewNoteProposal) {
-                    await _saveSmartResultAsNewNote(meta, message.content);
+                    final updatedMeta = Map<String, dynamic>.from(meta);
+                    updatedMeta['include_location'] = includeLocation;
+                    updatedMeta['include_weather'] = includeWeather;
+                    await _saveSmartResultAsNewNote(updatedMeta, message.content);
                   } else {
                     await _saveSmartResultToExistingNote(meta, message.content);
                   }
@@ -677,12 +692,66 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     await _openSmartResultAsNewNote(content);
   }
 
-  Future<void> _openSmartResultAsNewNote(String content) async {
+  bool _isShortContent(String content) {
+    return content.length < 200 && '\n'.allMatches(content).length <= 2;
+  }
+
+  Future<void> _openSmartResultAsNewNote(
+    String content, {
+    List<String>? tagIds,
+    bool includeLocation = false,
+    bool includeWeather = false,
+  }) async {
+    if (_isShortContent(content)) {
+      final db = context.read<DatabaseService>();
+      final tags = await db.getCategories();
+      if (!mounted) return;
+      await showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerLowest,
+        builder: (_) => AddNoteDialog(
+          prefilledContent: content,
+          prefilledTagIds: tagIds,
+          prefilledIncludeLocation: includeLocation,
+          prefilledIncludeWeather: includeWeather,
+          tags: tags,
+          onSave: (_) {},
+        ),
+      );
+      return;
+    }
+
+    final locationService = context.read<LocationService>();
+    final weatherService = context.read<WeatherService>();
+    final position = locationService.currentPosition;
+
+    Quote? initialQuote;
+    if (tagIds != null || includeLocation || includeWeather) {
+      final formattedLocation = locationService.getFormattedLocation();
+      initialQuote = Quote(
+        content: content,
+        date: DateTime.now().toIso8601String(),
+        tagIds: tagIds ?? [],
+        location: includeLocation
+            ? (formattedLocation.isNotEmpty
+                ? formattedLocation
+                : (position != null ? LocationService.kAddressPending : null))
+            : null,
+        latitude: (includeLocation || includeWeather) ? position?.latitude : null,
+        longitude: (includeLocation || includeWeather) ? position?.longitude : null,
+        weather: includeWeather ? weatherService.currentWeather : null,
+        temperature: includeWeather ? weatherService.temperature : null,
+        dayPeriod: TimeUtils.getCurrentDayPeriodKey(),
+      );
+    }
+
     await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => NoteFullEditorPage(
           initialContent: content,
+          initialQuote: initialQuote,
         ),
       ),
     );

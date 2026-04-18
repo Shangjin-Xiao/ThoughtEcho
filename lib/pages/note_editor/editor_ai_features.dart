@@ -226,6 +226,31 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
       return;
     }
 
+    if (_hasUnsavedChanges()) {
+      final l10n = AppLocalizations.of(context);
+      final shouldSave = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.saveRequired),
+          content: Text(l10n.saveBeforeAiAssistant),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(l10n.saveAndContinue),
+            ),
+          ],
+        ),
+      );
+      if (shouldSave != true) return;
+      await _saveContent();
+      if (!mounted) return;
+    }
+
     final tempQuote = Quote(
       id: widget.initialQuote?.id,
       content: plainText,

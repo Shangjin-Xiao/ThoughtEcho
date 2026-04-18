@@ -2,16 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../gen_l10n/app_localizations.dart';
 
-class SmartResultCard extends StatelessWidget {
+class SmartResultCard extends StatefulWidget {
   final String title;
   final String content;
   final VoidCallback? onReplace;
   final VoidCallback? onAppend;
-  final VoidCallback? onOpenInEditor;
-  final VoidCallback? onSaveDirectly;
+  final void Function(bool includeLocation, bool includeWeather)? onOpenInEditor;
+  final void Function(bool includeLocation, bool includeWeather)? onSaveDirectly;
   final String? replaceButtonText;
   final String? appendButtonText;
-  final String editorSource; // 'fullscreen' | 'addnote_dialog' | 'new_note'
+  final String editorSource;
+  final bool initialIncludeLocation;
+  final bool initialIncludeWeather;
 
   const SmartResultCard({
     super.key,
@@ -24,18 +26,46 @@ class SmartResultCard extends StatelessWidget {
     this.replaceButtonText,
     this.appendButtonText,
     this.editorSource = 'fullscreen',
+    this.initialIncludeLocation = false,
+    this.initialIncludeWeather = false,
   });
+
+  @override
+  State<SmartResultCard> createState() => _SmartResultCardState();
+}
+
+class _SmartResultCardState extends State<SmartResultCard> {
+  late bool _includeLocation;
+  late bool _includeWeather;
+
+  @override
+  void initState() {
+    super.initState();
+    _includeLocation = widget.initialIncludeLocation;
+    _includeWeather = widget.initialIncludeWeather;
+  }
+
+  @override
+  void didUpdateWidget(SmartResultCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialIncludeLocation != widget.initialIncludeLocation) {
+      _includeLocation = widget.initialIncludeLocation;
+    }
+    if (oldWidget.initialIncludeWeather != widget.initialIncludeWeather) {
+      _includeWeather = widget.initialIncludeWeather;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
 
-    // 根据来源编辑器调整按钮显示
-    final showReplace = onReplace != null && editorSource == 'fullscreen';
-    final showAppend = onAppend != null && editorSource == 'fullscreen';
-    final showSaveDirectly = onSaveDirectly != null &&
-        (editorSource == 'addnote_dialog' || editorSource == 'new_note');
+    final isNewNote = widget.editorSource == 'new_note';
+    final showReplace = widget.onReplace != null && widget.editorSource == 'fullscreen';
+    final showAppend = widget.onAppend != null && widget.editorSource == 'fullscreen';
+    final showSaveDirectly = widget.onSaveDirectly != null &&
+        (widget.editorSource == 'addnote_dialog' || widget.editorSource == 'new_note');
 
     return Card(
       elevation: 0,
@@ -66,7 +96,7 @@ class SmartResultCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  title,
+                  widget.title,
                   style: theme.textTheme.titleSmall?.copyWith(
                     color: theme.colorScheme.onSecondaryContainer,
                     fontWeight: FontWeight.bold,
@@ -78,13 +108,41 @@ class SmartResultCard extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(16),
             child: MarkdownBody(
-              data: content,
+              data: widget.content,
               selectable: true,
               styleSheet: MarkdownStyleSheet(
                 p: TextStyle(color: theme.colorScheme.onSurfaceVariant),
               ),
             ),
           ),
+          if (isNewNote)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Wrap(
+                spacing: 8,
+                children: [
+                  FilterChip(
+                    label: Text(l10n.toggleAddLocation),
+                    selected: _includeLocation,
+                    onSelected: (value) {
+                      setState(() {
+                        _includeLocation = value;
+                      });
+                    },
+                  ),
+                  FilterChip(
+                    label: Text(l10n.toggleAddWeather),
+                    selected: _includeWeather,
+                    onSelected: (value) {
+                      setState(() {
+                        _includeWeather = value;
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+          if (isNewNote) const SizedBox(height: 8),
           const Divider(height: 1),
           Padding(
             padding: const EdgeInsets.all(8),
@@ -94,25 +152,27 @@ class SmartResultCard extends StatelessWidget {
               children: [
                 if (showReplace)
                   TextButton.icon(
-                    onPressed: onReplace,
+                    onPressed: widget.onReplace,
                     icon: const Icon(Icons.find_replace, size: 18),
-                    label: Text(replaceButtonText ?? l10n.applyChanges),
+                    label: Text(widget.replaceButtonText ?? l10n.applyChanges),
                   ),
                 if (showAppend)
                   TextButton.icon(
-                    onPressed: onAppend,
+                    onPressed: widget.onAppend,
                     icon: const Icon(Icons.add, size: 18),
-                    label: Text(appendButtonText ?? l10n.appendToNote),
+                    label: Text(widget.appendButtonText ?? l10n.appendToNote),
                   ),
-                if (onOpenInEditor != null)
+                if (widget.onOpenInEditor != null)
                   TextButton.icon(
-                    onPressed: onOpenInEditor,
+                    onPressed: () =>
+                        widget.onOpenInEditor?.call(_includeLocation, _includeWeather),
                     icon: const Icon(Icons.edit_note, size: 18),
                     label: Text(l10n.openInEditor),
                   ),
                 if (showSaveDirectly)
                   FilledButton.icon(
-                    onPressed: onSaveDirectly,
+                    onPressed: () =>
+                        widget.onSaveDirectly?.call(_includeLocation, _includeWeather),
                     icon: const Icon(Icons.save_outlined, size: 18),
                     label: Text(l10n.saveDirectly),
                   ),

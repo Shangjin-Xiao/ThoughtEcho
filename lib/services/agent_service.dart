@@ -62,6 +62,12 @@ class AgentErrorEvent extends AgentEvent {
   AgentErrorEvent(this.message);
 }
 
+/// Agent 文本增量事件（流式输出时逐步推送文本片段）
+class AgentTextDeltaEvent extends AgentEvent {
+  final String delta;
+  AgentTextDeltaEvent(this.delta);
+}
+
 typedef AgentCompletionRequester = Future<openai.ChatCompletion> Function({
   required AIProviderSettings provider,
   required List<openai.ChatMessage> messages,
@@ -119,7 +125,7 @@ class AgentService extends ChangeNotifier {
         _completionRequester = completionRequester,
         _apiKeyResolver = apiKeyResolver;
 
-  /// 执行 Agent 任务（非流式，基于原生 tool calling 循环）
+  /// 执行 Agent 任务（流式，基于原生 tool calling 循环）
   Future<AgentResponse> runAgent({
     required String userMessage,
     List<app_chat.ChatMessage>? history,
@@ -168,7 +174,7 @@ class AgentService extends ChangeNotifier {
         _setStatus('agentThinking');
         _emitEvent(AgentThinkingEvent());
 
-        final completion = await _requestCompletion(
+        final result = await _streamCompletion(
           provider: provider,
           messages: messages,
           tools: openAITools,
@@ -176,14 +182,12 @@ class AgentService extends ChangeNotifier {
           maxTokens: 2000,
         );
 
-        final choice = completion.firstChoice;
-        if (choice == null) {
+        if (result.content.trim().isEmpty && result.toolCalls.isEmpty) {
           throw StateError('AI 返回为空响应');
         }
 
-        final assistantMessage = choice.message;
-        final assistantContent = (assistantMessage.content ?? '').trim();
-        final rawToolCalls = assistantMessage.toolCalls ?? const [];
+        final assistantContent = result.content.trim();
+        final rawToolCalls = result.toolCalls;
 
         if (rawToolCalls.isEmpty) {
           _setStatus('');
@@ -228,8 +232,8 @@ class AgentService extends ChangeNotifier {
 
         messages.add(
           openai.ChatMessage.assistant(
-            content: assistantMessage.content,
-            toolCalls: rawToolCalls,
+            content: result.content.isNotEmpty ? result.content : null,
+            toolCalls: rawToolCalls.isNotEmpty ? rawToolCalls : null,
           ),
         );
 
@@ -391,14 +395,87 @@ class AgentService extends ChangeNotifier {
     }
   }
 
+  /// 流式请求 AI 补全，逐 token 推送 [AgentTextDeltaEvent]
+  ///
+  /// 优先使用 [_completionRequester]（测试注入）；否则使用真实的流式 API。
+  Future<_StreamCompletionResult> _streamCompletion({
+    required AIProviderSettings provider,
+    required List<openai.ChatMessage> messages,
+    required List<openai.Tool> tools,
+    required double temperature,
+    required int maxTokens,
+  }) async {
+    // 测试注入路径：将非流式结果转换为流式结果
+    if (_completionRequester != null) {
+      final completion = await _completionRequester(
+        provider: provider,
+        messages: messages,
+        tools: tools,
+        temperature: temperature,
+        maxTokens: maxTokens,
+      );
+      final content = completion.choices.firstOrNull?.message.content ?? '';
+      final toolCalls =
+          completion.choices.firstOrNull?.message.toolCalls ?? const [];
+      if (content.isNotEmpty) {
+        _emitEvent(AgentTextDeltaEvent(content));
+      }
+      return _StreamCompletionResult(content: content, toolCalls: toolCalls);
+    }
+
+    // 生产环境流式路径
+    final config = _buildOpenAIConfig(provider);
+    final client = openai.OpenAIClient(config: config);
+
+    try {
+      final request = openai.ChatCompletionCreateRequest(
+        model: provider.model,
+        messages: messages,
+        tools: tools.isEmpty ? null : tools,
+        toolChoice: tools.isEmpty ? openai.ToolChoice.none() : null,
+        parallelToolCalls: false,
+        temperature: temperature,
+        maxTokens: maxTokens,
+      );
+
+      final stream = client.chat.completions.createStream(request);
+      final accumulator = openai.ChatStreamAccumulator();
+
+      await for (final event in stream) {
+        accumulator.add(event);
+
+        final textDelta = event.textDelta;
+        if (textDelta != null && textDelta.isNotEmpty) {
+          _emitEvent(AgentTextDeltaEvent(textDelta));
+        }
+      }
+
+      return _StreamCompletionResult(
+        content: accumulator.content,
+        toolCalls: accumulator.toolCalls,
+      );
+    } finally {
+      client.close();
+    }
+  }
+
   openai.OpenAIConfig _buildOpenAIConfig(AIProviderSettings provider) {
     final headers = Map<String, String>.from(provider.buildHeaders())
       ..removeWhere((key, _) => key.toLowerCase() == 'content-type');
 
+    if (provider.id == 'openrouter' ||
+        provider.apiUrl.contains('openrouter.ai')) {
+      headers['HTTP-Referer'] ??= 'https://thoughtecho.app';
+      headers['X-Title'] ??= 'ThoughtEcho App';
+    }
+
     return openai.OpenAIConfig(
       baseUrl: normalizeOpenAIBaseUrl(provider.apiUrl),
+      authProvider: provider.apiKey.isNotEmpty
+          ? openai.ApiKeyProvider(provider.apiKey)
+          : null,
       defaultHeaders: headers,
-      timeout: const Duration(minutes: 2),
+      timeout: const Duration(minutes: 3),
       retryPolicy: const openai.RetryPolicy(maxRetries: 2),
     );
   }
@@ -600,9 +677,7 @@ $toolDescriptions
       'web_fetch' ||
       'web_search' =>
         _searchToolMaxSingleMessageChars,
-      'get_tags' ||
-      'get_location_weather' =>
-        3000,
+      'get_tags' || 'get_location_weather' => 3000,
       _ => _defaultMaxSingleMessageChars,
     };
   }
@@ -735,4 +810,15 @@ $toolDescriptions
     // 工具结果使用与 noteContext 相同的转义策略
     return _escapeUntrustedContent(content);
   }
+}
+
+/// 流式补全结果（文本内容 + 工具调用列表）
+class _StreamCompletionResult {
+  final String content;
+  final List<openai.ToolCall> toolCalls;
+
+  const _StreamCompletionResult({
+    required this.content,
+    required this.toolCalls,
+  });
 }

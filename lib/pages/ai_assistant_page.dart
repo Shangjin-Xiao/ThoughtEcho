@@ -17,10 +17,11 @@ import '../models/chat_session.dart';
 import '../models/quote_model.dart';
 import '../services/agent_service.dart'
     show
-        AgentEvent,
         AgentErrorEvent,
+        AgentEvent,
         AgentResponseEvent,
         AgentService,
+        AgentTextDeltaEvent,
         AgentThinkingEvent,
         AgentToolCallResultEvent,
         AgentToolCallStartEvent;
@@ -41,6 +42,7 @@ import '../widgets/ai/thinking_widget.dart';
 import '../widgets/ai/tool_progress_panel.dart';
 import '../widgets/session_history_sheet.dart';
 import '../widgets/source_analysis_result_dialog.dart';
+import '../widgets/add_note_dialog.dart';
 import 'note_full_editor_page.dart';
 
 part 'ai_assistant/ai_assistant_page_session.dart';

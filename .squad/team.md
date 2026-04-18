@@ -44,8 +44,8 @@
 ## Current Tasks (ToDo)
 
 ### AI Agent 核心优化
-- [ ] **[紧急] 重构 WebSearchTool**：放弃脆弱的正则爬虫，接入更健壮的搜索解析逻辑（或官方 API）。
-- [ ] **[急切] 补全 Agent 思考流**：在 `AgentService` 中增加 `AgentReasoningEvent`，让 AI 的“内心独白”与工具调用同步显示。
-- [ ] **[进阶] 多模态 Agent 升级**：让 Agent 能够理解上传的图片，实现“看图搜笔记”。
-- [ ] **[修复] 增强 Smart Result 解析**：优化正则表达式，支持更复杂的嵌套格式，确保“一键应用”功能的稳定性。
+- [ ] **[急切] 补全 Agent 思考流**：在 `AgentService` 中增加 `AgentReasoningEvent`，让 AI 的"内心独白"与工具调用同步显示。
+- [ ] **[进阶] 多模态 Agent 升级**：让 Agent 能够理解上传的图片，实现"看图搜笔记"。
 - [ ] **[优化] WebFetch 增强**：探索支持简单动态内容的抓取，或增加抓取失败的友好降级提示。
+- [x] **[完成] Agent 设计规范对齐**：修复 SmartResultCard 元数据按钮、编辑器元数据传递、草稿保存防线、短文本 AddNoteDialog 路由、流式响应 (2026-04-18)
+- [ ] **[紧急] 重构 WebSearchTool**：放弃脆弱的正则爬虫，接入更健壮的搜索解析逻辑（或官方 API）。

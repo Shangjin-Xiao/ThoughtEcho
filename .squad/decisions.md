@@ -220,7 +220,27 @@
 - `LayoutBuilder` + `ConstrainedBox` 包裹消息 — 增加复杂度无实际收益
 - `NotificationListener<ScrollNotification>` 自动隐藏键盘 — 与 `keyboardDismissBehavior` 冲突
 
-**参考实现**: Google AI Gallery (`google-ai-edge/gallery`) 的 `ChatPanel.kt` + `MessageBodyCollapsableProgressPanel.kt`
+**参考实现**: Google AI Gallery
+
+---
+
+## 2026-04-18: Agent 设计规范对齐决策
+
+**决策者**: 上晋 + AUTO
+**类型**: 代码规范修正
+
+**核心变更**:
+1. SmartResultCard 用户可切换 📍/🌤️ 元数据按钮，AI 建议值仅作初始状态
+2. `_openSmartResultAsNewNote` 通过 `initialQuote` 传递完整元数据到编辑器
+3. 编辑器进入 AI 前强制保存草稿（`_hasUnsavedChanges()` + 确认对话框）
+4. 短文本(<200字符/≤2行)走 `AddNoteDialog`，长文本走 `NoteFullEditorPage`
+5. Agent 流式输出：`AgentTextDeltaEvent` + `ChatStreamAccumulator`，逐 token 渲染
+
+**规范冲突修正**:
+- 决策 #4 中原定"Agent 模式非流式"已修正为"流式输出 + 工具调用仍为非流式最终结果"
+- `AgentEvent` 新增子类 `AgentTextDeltaEvent`，与现有 `AgentThinkingEvent`/`AgentToolCallStartEvent` 并行
+
+--- (`google-ai-edge/gallery`) 的 `ChatPanel.kt` + `MessageBodyCollapsableProgressPanel.kt`
 
 **状态字段清单** (仅保留):
 - `_isLoading`, `_isInputFocused`, `_agentListenerAttached`, `_enableThinking`

@@ -3674,5 +3674,10 @@
   "openInEditor": "打开编辑器",
   "saveDirectly": "直接保存",
   "replace": "替换",
-  "append": "追加"
+  "append": "追加",
+  "saveRequired": "保存提示",
+  "saveBeforeAiAssistant": "进入 AI 助手前需先保存当前笔记内容",
+  "saveAndContinue": "保存并继续",
+  "toggleAddLocation": "添加位置",
+  "toggleAddWeather": "添加天气"
 }

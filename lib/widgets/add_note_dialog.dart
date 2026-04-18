@@ -33,6 +33,9 @@ class AddNoteDialog extends StatefulWidget {
   final Map<String, dynamic>? hitokotoData; // 添加一言API返回的完整数据
   final List<NoteCategory> tags;
   final Function(Quote)? onSave; // 保存后的回调
+  final List<String>? prefilledTagIds; // AI 建议的预选标签
+  final bool prefilledIncludeLocation; // AI 建议是否包含位置
+  final bool prefilledIncludeWeather; // AI 建议是否包含天气
 
   const AddNoteDialog({
     super.key,
@@ -43,6 +46,9 @@ class AddNoteDialog extends StatefulWidget {
     this.hitokotoData,
     required this.tags,
     this.onSave,
+    this.prefilledTagIds,
+    this.prefilledIncludeLocation = false,
+    this.prefilledIncludeWeather = false,
   });
 
   @override
