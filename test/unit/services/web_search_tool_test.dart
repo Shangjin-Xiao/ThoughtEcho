@@ -139,15 +139,12 @@ void main() {
       expect(toolWithNull, isNotNull);
     });
 
-    test('Chinese search falls back to auto when bing is empty', () async {
+    test('defaults to auto for Chinese search', () async {
       final calls = <String>[];
       final tool = WebSearchTool(
         _MockSettingsService('zh'),
         (query, {required backend, required region, required maxResults}) async {
           calls.add(backend);
-          if (backend == 'bing') {
-            return <Map<String, dynamic>>[];
-          }
           return _mockResult('回退结果');
         },
       );
@@ -162,7 +159,53 @@ void main() {
 
       expect(result.isError, isFalse);
       expect(result.content, contains('回退结果'));
-      expect(calls, equals(['bing', 'auto']));
+      expect(calls, equals(['auto']));
+    });
+
+    test('backend parameter can force bing search', () async {
+      final calls = <String>[];
+      final tool = WebSearchTool(
+        _MockSettingsService('en'),
+        (query, {required backend, required region, required maxResults}) async {
+          calls.add(backend);
+          return _mockResult('Bing结果');
+        },
+      );
+
+      final result = await tool.execute(
+        ToolCall(
+          id: 'test_agent_backend',
+          name: 'web_search',
+          arguments: const {'query': 'flutter', 'backend': 'bing'},
+        ),
+      );
+
+      expect(result.isError, isFalse);
+      expect(result.content, contains('Bing结果'));
+      expect(calls, equals(['bing']));
+    });
+
+    test('unsupported backend falls back to auto', () async {
+      final calls = <String>[];
+      final tool = WebSearchTool(
+        _MockSettingsService('en'),
+        (query, {required backend, required region, required maxResults}) async {
+          calls.add(backend);
+          return _mockResult('Auto结果');
+        },
+      );
+
+      final result = await tool.execute(
+        ToolCall(
+          id: 'test_backend_default',
+          name: 'web_search',
+          arguments: const {'query': 'flutter', 'backend': 'not-supported'},
+        ),
+      );
+
+      expect(result.isError, isFalse);
+      expect(result.content, contains('Auto结果'));
+      expect(calls, equals(['auto']));
     });
   });
 }

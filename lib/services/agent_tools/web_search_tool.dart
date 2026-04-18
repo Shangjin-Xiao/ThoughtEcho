@@ -56,6 +56,10 @@ class WebSearchTool extends AgentTool {
             'type': 'integer',
             'description': '最大返回结果数（默认 5）',
           },
+          'backend': {
+            'type': 'string',
+            'description': '搜索后端：auto、all、bing、duckduckgo、brave、google、yahoo、yandex、mojeek、wikipedia',
+          },
         },
         'required': ['query'],
       };
@@ -65,6 +69,7 @@ class WebSearchTool extends AgentTool {
     final query = call.getString('query');
     final requestedLimit = call.getInt('limit', defaultValue: _defaultLimit);
     final limit = requestedLimit.clamp(1, _maxLimit);
+    final backendPreference = call.getString('backend').trim().toLowerCase();
 
     if (query.trim().isEmpty) {
       return ToolResult(
@@ -76,9 +81,7 @@ class WebSearchTool extends AgentTool {
 
     try {
       final isChinese = _detectLanguageIsChinese(query);
-
-      // 中文查询优先使用 bing（中文搜索质量更高），否则使用 auto（多引擎）
-      final backend = isChinese ? 'bing' : 'auto';
+      final backend = _normalizeBackend(backendPreference, isChinese);
       final region = isChinese ? 'cn-zh' : 'us-en';
 
       final appLangInfo = _settingsService?.localeCode != null
@@ -94,16 +97,7 @@ class WebSearchTool extends AgentTool {
         maxResults: limit,
       );
 
-      final finalResults = results.isNotEmpty || backend != 'bing'
-          ? results
-          : await _searchExecutor(
-              query,
-              backend: 'auto',
-              region: region,
-              maxResults: limit,
-            );
-
-      if (finalResults.isEmpty) {
+      if (results.isEmpty) {
         return ToolResult(
           toolCallId: call.id,
           content: '未找到与「$query」相关的搜索结果。',
@@ -111,8 +105,8 @@ class WebSearchTool extends AgentTool {
       }
 
       final buffer = StringBuffer('搜索「$query」的结果：\n\n');
-      for (var i = 0; i < finalResults.length; i++) {
-        final result = finalResults[i];
+      for (var i = 0; i < results.length; i++) {
+        final result = results[i];
         final title = result['title']?.toString() ?? '无标题';
         final snippet = result['body']?.toString() ??
             result['description']?.toString() ??
@@ -169,6 +163,27 @@ class WebSearchTool extends AgentTool {
   /// 检查字符串是否包含中文字符
   static bool _containsChinese(String text) {
     return RegExp(r'[\u4e00-\u9fa5]').hasMatch(text);
+  }
+
+  static String _normalizeBackend(String backendPreference, bool isChinese) {
+    const supportedBackends = {
+      'auto',
+      'all',
+      'bing',
+      'duckduckgo',
+      'brave',
+      'google',
+      'yahoo',
+      'yandex',
+      'mojeek',
+      'wikipedia',
+    };
+
+    if (backendPreference.isNotEmpty && supportedBackends.contains(backendPreference)) {
+      return backendPreference;
+    }
+
+    return isChinese ? 'auto' : 'auto';
   }
 
   static Future<List<Map<String, dynamic>>> _defaultSearchExecutor(
