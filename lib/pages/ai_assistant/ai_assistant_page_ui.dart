@@ -172,7 +172,9 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 author: meta['author'] as String?,
                 work: meta['work'] as String?,
                 confidence: meta['confidence'] as String? ?? l10n.unknown,
-                explanation: meta['explanation'] as String? ?? '',
+                explanation: message.content.isNotEmpty
+                    ? message.content
+                    : (meta['explanation'] as String? ?? ''),
                 authorLabel: '${l10n.possibleAuthor} ',
                 workLabel: '${l10n.possibleWork} ',
                 confidenceLabel: '${l10n.confidenceLabel} ',

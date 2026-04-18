@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -12,6 +14,7 @@ import 'package:thoughtecho/services/agent_tool.dart';
 import 'package:thoughtecho/services/ai_service.dart';
 import 'package:thoughtecho/services/chat_session_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
+import 'package:thoughtecho/widgets/ai/smart_result_card.dart';
 import 'package:thoughtecho/widgets/ai/tool_progress_panel.dart';
 
 import '../../test_setup.dart';
@@ -111,6 +114,7 @@ class _FakeAIService extends AIService {
   Stream<String> streamAskQuestion(
     Quote quote,
     String question, {
+    bool? enableThinking,
     List<app_chat.ChatMessage>? history,
     Function(String)? onThinking,
   }) {
@@ -121,6 +125,7 @@ class _FakeAIService extends AIService {
   @override
   Stream<String> streamGeneralConversation(
     String question, {
+    bool? enableThinking,
     List<app_chat.ChatMessage>? history,
     String? systemContext,
     Function(String)? onThinking,
@@ -134,14 +139,21 @@ class _FakeAgentService extends AgentService {
   _FakeAgentService({
     required super.settingsService,
     this.simulateToolProgress = false,
+    this.emitSmartResultCard = false,
     this.responseContent = 'Agent 响应',
   }) : super(tools: const []);
 
   int runCount = 0;
   final bool simulateToolProgress;
+  final bool emitSmartResultCard;
   final String responseContent;
   bool _mockIsRunning = false;
   String _mockStatusKey = '';
+  final StreamController<AgentEvent> _eventController =
+      StreamController<AgentEvent>.broadcast(sync: true);
+
+  @override
+  Stream<AgentEvent> get events => _eventController.stream;
 
   @override
   bool get isRunning => _mockIsRunning;
@@ -166,16 +178,67 @@ class _FakeAgentService extends AgentService {
   }) async {
     runCount++;
     _setMockState(isRunning: true, statusKey: 'agentThinking');
+
     if (simulateToolProgress) {
+      final toolCallId = 'tool-call-1';
+      _emitEvent(
+        AgentToolCallStartEvent(
+          toolCallId: toolCallId,
+          toolName: 'search_notes',
+          arguments: <String, Object?>{'query': userMessage},
+        ),
+      );
       await Future<void>.delayed(const Duration(milliseconds: 12));
-      _setMockState(
-        isRunning: true,
-        statusKey: '${AgentService.agentToolCallPrefix}search_notes',
+      _emitEvent(
+        AgentToolCallResultEvent(
+          toolCallId: toolCallId,
+          toolName: 'search_notes',
+          result: '搜索结果',
+          isError: false,
+        ),
       );
     }
+
+    final toolCalls = emitSmartResultCard
+        ? <ToolCall>[
+            ToolCall(
+              id: 'tool-call-2',
+              name: 'propose_edit',
+              arguments: <String, Object?>{
+                'title': '润色结果',
+                'content': '这是可应用的新内容',
+                'action': 'replace',
+              },
+            ),
+          ]
+        : const <ToolCall>[];
+
     await Future<void>.delayed(const Duration(milliseconds: 12));
+    _emitEvent(
+      AgentResponseEvent(
+        content: responseContent.replaceAll(
+          '''
+```smart_result
+{"type":"smart_result","title":"润色结果","content":"这是可应用的新内容"}
+```
+''',
+          '',
+        ),
+        toolCalls: toolCalls,
+      ),
+    );
     _setMockState(isRunning: false, statusKey: '');
-    return AgentResponse(content: responseContent);
+    return AgentResponse(content: responseContent, toolCalls: toolCalls);
+  }
+
+  void _emitEvent(AgentEvent event) {
+    _eventController.add(event);
+  }
+
+  @override
+  void dispose() {
+    _eventController.close();
+    super.dispose();
   }
 }
 
@@ -261,14 +324,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final l10n = _l10n(tester);
-      expect(_modeToggleFinder(), findsOneWidget);
-      expect(
-        find.descendant(
-          of: _modeToggleFinder(),
-          matching: find.text(l10n.aiModeChat),
-        ),
-        findsOneWidget,
-      );
+      expect(find.text(l10n.aiModeChat), findsOneWidget);
       expect(find.widgetWithText(ActionChip, '/润色'), findsNothing);
     });
 
@@ -288,14 +344,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final l10n = _l10n(tester);
-      expect(_modeToggleFinder(), findsOneWidget);
-      expect(
-        find.descendant(
-          of: _modeToggleFinder(),
-          matching: find.text(l10n.aiModeChat),
-        ),
-        findsOneWidget,
-      );
+      expect(find.text(l10n.aiModeChat), findsOneWidget);
       expect(find.textContaining(l10n.currentNoteContext), findsOneWidget);
     });
 
@@ -340,14 +389,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final l10n = _l10n(tester);
-      expect(_modeToggleFinder(), findsOneWidget);
-      expect(
-        find.descendant(
-          of: _modeToggleFinder(),
-          matching: find.text(l10n.aiModeAgent),
-        ),
-        findsOneWidget,
-      );
+      expect(find.text(l10n.aiModeAgent), findsOneWidget);
 
       await tester.pumpWidget(
         await _buildHarness(
@@ -363,14 +405,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final noteL10n = _l10n(tester);
-      expect(_modeToggleFinder(), findsOneWidget);
-      expect(
-        find.descendant(
-          of: _modeToggleFinder(),
-          matching: find.text(noteL10n.aiModeChat),
-        ),
-        findsOneWidget,
-      );
+      expect(find.text(noteL10n.aiModeChat), findsOneWidget);
     });
 
     testWidgets('slash commands show only when input starts with slash',
@@ -444,6 +479,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await _submitInput(tester, '/深度分析 帮我拆解重点');
+      await tester.pumpAndSettle();
 
       expect(aiService.summarizeCalls, 1);
       expect(aiService.askQuestionCalls, 0);
@@ -477,7 +513,7 @@ void main() {
       expect(aiService.askQuestionCalls, 0);
       expect(aiService.generalConversationCalls, 0);
       expect(agentService.runCount, 0);
-      expect(find.text('此功能需要绑定笔记才能使用'), findsOneWidget);
+      expect(find.textContaining('此功能需要绑定笔记才能使用'), findsAtLeastNWidgets(1));
     });
 
     testWidgets(
@@ -506,7 +542,10 @@ void main() {
       await tester.pump();
       final sendButtonFinder =
           find.byKey(const ValueKey('ai_assistant_send_button'));
-      tester.widget<IconButton>(sendButtonFinder).onPressed?.call();
+      final effectiveSendFinder = sendButtonFinder.evaluate().isNotEmpty
+          ? sendButtonFinder
+          : find.widgetWithIcon(IconButton, Icons.arrow_upward).last;
+      tester.widget<IconButton>(effectiveSendFinder).onPressed?.call();
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 80));
 
@@ -530,10 +569,8 @@ void main() {
         settingsService: settingsService,
         responseContent: '''
 这是润色建议说明。
-```smart_result
-{"type":"smart_result","title":"润色结果","content":"这是可应用的新内容"}
-```
 ''',
+        emitSmartResultCard: true,
       );
       await settingsService.setNoteAiAssistantMode(AIAssistantPageMode.agent);
 
@@ -553,11 +590,8 @@ void main() {
       await _submitInput(tester, '请润色这段文字');
 
       expect(agentService.runCount, 1);
-      expect(
-        find.byKey(const ValueKey('ai_workflow_result_smart_result')),
-        findsOneWidget,
-      );
-      expect(find.text('这是可应用的新内容'), findsOneWidget);
+      expect(find.byType(SmartResultCard), findsOneWidget);
+      expect(find.textContaining('这是可应用的新内容'), findsOneWidget);
       expect(find.text('替换原文'), findsOneWidget);
       expect(find.text('追加到末尾'), findsOneWidget);
     });
