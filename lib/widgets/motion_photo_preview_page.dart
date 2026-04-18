@@ -246,6 +246,7 @@ class _MotionPhotoPreviewPageState extends State<MotionPhotoPreviewPage> {
             right: 10,
             child: _CircleIconButton(
               icon: Icons.close,
+              tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
               onPressed: () => Navigator.of(context).pop(),
             ),
           ),
@@ -328,10 +329,12 @@ class _CircleIconButton extends StatelessWidget {
   const _CircleIconButton({
     required this.icon,
     required this.onPressed,
+    this.tooltip,
   });
 
   final IconData icon;
   final VoidCallback onPressed;
+  final String? tooltip;
 
   @override
   Widget build(BuildContext context) {
@@ -341,6 +344,7 @@ class _CircleIconButton extends StatelessWidget {
       child: IconButton(
         onPressed: onPressed,
         icon: Icon(icon, color: Colors.white),
+        tooltip: tooltip,
       ),
     );
   }
