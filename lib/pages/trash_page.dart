@@ -166,9 +166,12 @@ class _TrashPageState extends State<TrashPage> {
         TimeUtils.formatRelativeDateTimeLocalized(context, date.toLocal()));
   }
 
-  String _remainingDaysText(BuildContext context, Quote quote) {
+  String _remainingDaysText(
+    BuildContext context,
+    Quote quote,
+    int retentionDays,
+  ) {
     final l10n = AppLocalizations.of(context);
-    final retentionDays = context.read<SettingsService>().trashRetentionDays;
     final deletedAt = quote.deletedAt;
     if (deletedAt == null) {
       return l10n.trashRemainingDays(retentionDays);
@@ -180,6 +183,136 @@ class _TrashPageState extends State<TrashPage> {
     final elapsed = DateTime.now().toUtc().difference(deletedTime).inDays;
     final left = (retentionDays - elapsed).clamp(0, retentionDays);
     return l10n.trashRemainingDays(left);
+  }
+
+  Future<void> _showTrashRetentionSelector() async {
+    final l10n = AppLocalizations.of(context);
+    final settingsService = context.read<SettingsService>();
+    final current = settingsService.trashRetentionDays;
+    try {
+      final selected = await showModalBottomSheet<int>(
+        context: context,
+        builder: (context) => SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                title: Text(l10n.trashRetentionOption7Days),
+                trailing: current == 7 ? const Icon(Icons.check) : null,
+                onTap: () => Navigator.of(context).pop(7),
+              ),
+              ListTile(
+                title: Text(l10n.trashRetentionOption30Days),
+                trailing: current == 30 ? const Icon(Icons.check) : null,
+                onTap: () => Navigator.of(context).pop(30),
+              ),
+              ListTile(
+                title: Text(l10n.trashRetentionOption90Days),
+                trailing: current == 90 ? const Icon(Icons.check) : null,
+                onTap: () => Navigator.of(context).pop(90),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (selected == null || selected == current) {
+        return;
+      }
+      await settingsService.setTrashRetentionDays(selected);
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.success),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e, stackTrace) {
+      logError(
+        '设置回收站保留期失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'TrashPage',
+      );
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.error),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  String _retentionLabel(AppLocalizations l10n, int days) {
+    switch (days) {
+      case 7:
+        return l10n.trashRetentionOption7Days;
+      case 90:
+        return l10n.trashRetentionOption90Days;
+      case 30:
+      default:
+        return l10n.trashRetentionOption30Days;
+    }
+  }
+
+  Widget _buildRetentionSelector(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final l10n = AppLocalizations.of(context);
+
+    return Consumer<SettingsService>(
+      builder: (context, settingsService, _) => Material(
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
+          onTap: _showTrashRetentionSelector,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.schedule_outlined,
+                  color: colorScheme.primary,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.trashRetentionPeriod,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _retentionLabel(
+                          l10n,
+                          settingsService.trashRetentionDays,
+                        ),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.chevron_right,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _restoreQuote(String id) async {
@@ -405,6 +538,8 @@ class _TrashPageState extends State<TrashPage> {
                     height: 1.4,
                   ),
                 ),
+                const SizedBox(height: 12),
+                _buildRetentionSelector(context),
               ],
             ),
           ),
@@ -416,6 +551,7 @@ class _TrashPageState extends State<TrashPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final retentionDays = context.watch<SettingsService>().trashRetentionDays;
 
     return Scaffold(
       appBar: AppBar(
@@ -439,48 +575,64 @@ class _TrashPageState extends State<TrashPage> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _loadError
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.error_outline, size: 42),
-                        const SizedBox(height: 12),
-                        Text(
-                          l10n.refreshFailed(_lastLoadErrorMessage ?? '-'),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 12),
-                        FilledButton(
-                          onPressed: () => _loadTrashQuotes(reset: true),
-                          child: Text(l10n.retry),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              : _trashQuotes.isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.delete_outline, size: 42),
-                            const SizedBox(height: 12),
-                            Text(
-                              l10n.trashEmpty,
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              l10n.trashEmptyHint,
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
+              ? Column(
+                  children: [
+                    _buildSummaryCard(context),
+                    Expanded(
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.error_outline, size: 42),
+                              const SizedBox(height: 12),
+                              Text(
+                                l10n.refreshFailed(
+                                    _lastLoadErrorMessage ?? '-'),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 12),
+                              FilledButton(
+                                onPressed: () => _loadTrashQuotes(reset: true),
+                                child: Text(l10n.retry),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
+                    ),
+                  ],
+                )
+              : _trashQuotes.isEmpty
+                  ? Column(
+                      children: [
+                        _buildSummaryCard(context),
+                        Expanded(
+                          child: Center(
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 24),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.delete_outline, size: 42),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    l10n.trashEmpty,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    l10n.trashEmptyHint,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     )
                   : Column(
                       children: [
@@ -510,6 +662,7 @@ class _TrashPageState extends State<TrashPage> {
                                   remainingDaysText: _remainingDaysText(
                                     context,
                                     quote,
+                                    retentionDays,
                                   ),
                                   actionsEnabled: !_isRunningAction &&
                                       !_isLoadingMore &&

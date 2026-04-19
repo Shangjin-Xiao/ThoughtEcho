@@ -16,8 +16,24 @@ import 'package:thoughtecho/widgets/trash_quote_card.dart';
 import '../../test_setup.dart';
 
 class _FakeSettingsService extends ChangeNotifier implements SettingsService {
+  _FakeSettingsService({int trashRetentionDays = 30})
+      : _trashRetentionDays = trashRetentionDays;
+
+  int _trashRetentionDays;
+  int? lastSetTrashRetentionDays;
+
   @override
-  int get trashRetentionDays => 30;
+  int get trashRetentionDays => _trashRetentionDays;
+
+  @override
+  Future<void> setTrashRetentionDays(
+    int days, {
+    DateTime? modifiedAt,
+  }) async {
+    _trashRetentionDays = days;
+    lastSetTrashRetentionDays = days;
+    notifyListeners();
+  }
 
   @override
   bool get prioritizeBoldContentInCollapse => false;
@@ -88,11 +104,22 @@ Quote _buildDeletedRichQuote() {
 }
 
 Widget _buildTestApp({required DatabaseService databaseService}) {
+  final settingsService = _FakeSettingsService();
+  return _buildTestAppWithServices(
+    databaseService: databaseService,
+    settingsService: settingsService,
+  );
+}
+
+Widget _buildTestAppWithServices({
+  required DatabaseService databaseService,
+  required SettingsService settingsService,
+}) {
   return MultiProvider(
     providers: [
       ChangeNotifierProvider<DatabaseService>.value(value: databaseService),
       ChangeNotifierProvider<SettingsService>.value(
-        value: _FakeSettingsService(),
+        value: settingsService,
       ),
     ],
     child: MaterialApp(
@@ -107,6 +134,11 @@ Widget _buildTestApp({required DatabaseService databaseService}) {
       home: const TrashPage(),
     ),
   );
+}
+
+Future<void> _disposeApp(WidgetTester tester) async {
+  await tester.pumpWidget(const SizedBox.shrink());
+  await tester.pump(const Duration(milliseconds: 600));
 }
 
 void main() {
@@ -130,16 +162,58 @@ void main() {
       expect(find.byType(TrashQuoteCard), findsOneWidget);
       expect(find.byType(QuoteContent), findsOneWidget);
       expect(find.byKey(QuoteContent.collapsedWrapperKey), findsNothing);
-      expect(find.byIcon(Icons.more_vert), findsOneWidget);
-
-      await tester.tap(find.byIcon(Icons.more_vert));
-      await tester.pumpAndSettle();
-
-      expect(find.text(l10n.restoreNote), findsOneWidget);
+      expect(find.text(l10n.restore), findsOneWidget);
       expect(find.text(l10n.permanentlyDelete), findsOneWidget);
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(const Duration(milliseconds: 600));
+      await _disposeApp(tester);
+    });
+
+    testWidgets('在回收站页内可调整保留期并立即生效', (tester) async {
+      final settingsService = _FakeSettingsService(trashRetentionDays: 30);
+      final databaseService =
+          _FakeDatabaseService(quotes: [_buildDeletedRichQuote()]);
+
+      await tester.pumpWidget(
+        _buildTestAppWithServices(
+          databaseService: databaseService,
+          settingsService: settingsService,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final context = tester.element(find.byType(TrashPage));
+      final l10n = AppLocalizations.of(context);
+
+      expect(find.text(l10n.trashRetentionPeriod), findsOneWidget);
+      expect(find.text(l10n.trashRetentionOption30Days), findsOneWidget);
+
+      await tester.tap(find.text(l10n.trashRetentionPeriod));
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.trashRetentionOption90Days), findsOneWidget);
+
+      await tester.tap(find.text(l10n.trashRetentionOption90Days));
+      await tester.pumpAndSettle();
+
+      expect(settingsService.lastSetTrashRetentionDays, 90);
+      expect(find.text(l10n.trashRetentionOption90Days), findsOneWidget);
+
+      await _disposeApp(tester);
+    });
+
+    testWidgets('回收站为空时仍显示保留期设置入口', (tester) async {
+      final databaseService = _FakeDatabaseService(quotes: const []);
+
+      await tester.pumpWidget(_buildTestApp(databaseService: databaseService));
+      await tester.pumpAndSettle();
+
+      final context = tester.element(find.byType(TrashPage));
+      final l10n = AppLocalizations.of(context);
+
+      expect(find.text(l10n.trashRetentionPeriod), findsOneWidget);
+      expect(find.text(l10n.trashRetentionOption30Days), findsOneWidget);
+
+      await _disposeApp(tester);
     });
   });
 }

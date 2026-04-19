@@ -863,20 +863,6 @@ class SettingsPageState extends State<SettingsPage> {
                   },
                 ),
                 ListTile(
-                  title: Text(l10n.trashRetentionPeriod),
-                  subtitle: Consumer<SettingsService>(
-                    builder: (context, settingsService, _) => Text(
-                      _retentionLabel(
-                        l10n,
-                        settingsService.trashRetentionDays,
-                      ),
-                    ),
-                  ),
-                  leading: const Icon(Icons.schedule_outlined),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => _showTrashRetentionSelector(),
-                ),
-                ListTile(
                   title: Text(l10n.settingsSync),
                   subtitle: Text(l10n.settingsSyncDesc),
                   leading: const Icon(Icons.sync),
@@ -1119,68 +1105,6 @@ class SettingsPageState extends State<SettingsPage> {
         ],
       ),
     );
-  }
-
-  Future<void> _showTrashRetentionSelector() async {
-    final l10n = AppLocalizations.of(context);
-    final settingsService = context.read<SettingsService>();
-    final current = settingsService.trashRetentionDays;
-    try {
-      final selected = await showModalBottomSheet<int>(
-        context: context,
-        builder: (context) => SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                title: Text(l10n.trashRetentionOption7Days),
-                trailing: current == 7 ? const Icon(Icons.check) : null,
-                onTap: () => Navigator.of(context).pop(7),
-              ),
-              ListTile(
-                title: Text(l10n.trashRetentionOption30Days),
-                trailing: current == 30 ? const Icon(Icons.check) : null,
-                onTap: () => Navigator.of(context).pop(30),
-              ),
-              ListTile(
-                title: Text(l10n.trashRetentionOption90Days),
-                trailing: current == 90 ? const Icon(Icons.check) : null,
-                onTap: () => Navigator.of(context).pop(90),
-              ),
-            ],
-          ),
-        ),
-      );
-      if (selected == null || selected == current) {
-        return;
-      }
-      await settingsService.setTrashRetentionDays(selected);
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.success),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } catch (e, stackTrace) {
-      logError(
-        '设置回收站保留期失败: $e',
-        error: e,
-        stackTrace: stackTrace,
-        source: 'SettingsPage',
-      );
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.error),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
   }
 
   String _retentionLabel(AppLocalizations l10n, int days) {
