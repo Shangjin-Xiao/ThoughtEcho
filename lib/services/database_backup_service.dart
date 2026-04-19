@@ -616,7 +616,6 @@ class DatabaseBackupService {
         reportBuilder.addError('处理分类失败: $e');
       }
     }
-
     await batch.commit(noResult: true);
   }
 
@@ -775,7 +774,6 @@ class DatabaseBackupService {
         reportBuilder.addError('处理笔记失败: $e');
       }
     }
-
     await batch.commit(noResult: true);
   }
 }
