@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import 'package:provider/provider.dart';
+
+import '../extensions/note_category_localization_extension.dart';
 import '../models/quote_model.dart';
 import '../models/note_category.dart';
 import '../theme/app_theme.dart';
@@ -724,7 +726,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                                       ],
                                                     ],
                                                     Text(
-                                                      tag.name,
+                                                      tag.localizedName(l10n),
                                                       style: theme
                                                           .textTheme.bodySmall
                                                           ?.copyWith(

@@ -4,6 +4,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/app_settings.dart';
+import 'package:thoughtecho/services/api_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 import '../../test_setup.dart';
 
@@ -49,6 +50,16 @@ void main() {
       expect(AppSettings.fromJson(const {}).showNoteEditTime, isFalse);
     });
 
+    test('AppSettings should default daily quote provider to hitokoto', () {
+      expect(AppSettings.defaultSettings().dailyQuoteProvider, 'hitokoto');
+      expect(AppSettings.fromJson(const {}).dailyQuoteProvider, 'hitokoto');
+    });
+
+    test('AppSettings should default API Ninjas categories to empty', () {
+      expect(AppSettings.defaultSettings().apiNinjasCategories, isEmpty);
+      expect(AppSettings.fromJson(const {}).apiNinjasCategories, isEmpty);
+    });
+
     test('should persist excerpt intake toggle changes', () async {
       expect(settingsService.excerptIntentEnabled, isTrue);
 
@@ -74,6 +85,40 @@ void main() {
 
       expect(settingsService.showNoteEditTime, isTrue);
       expect(settingsService.appSettings.showNoteEditTime, isTrue);
+    });
+
+    test('should persist daily quote provider changes', () async {
+      expect(settingsService.dailyQuoteProvider, 'hitokoto');
+
+      await settingsService.setDailyQuoteProvider('zenquotes');
+
+      expect(settingsService.dailyQuoteProvider, 'zenquotes');
+      expect(settingsService.appSettings.dailyQuoteProvider, 'zenquotes');
+    });
+
+    test('should persist API Ninjas categories changes', () async {
+      expect(settingsService.apiNinjasCategories, isEmpty);
+
+      await settingsService.setApiNinjasCategories(
+        const ['wisdom', 'success'],
+      );
+
+      expect(settingsService.apiNinjasCategories, ['wisdom', 'success']);
+      expect(
+        settingsService.appSettings.apiNinjasCategories,
+        ['wisdom', 'success'],
+      );
+    });
+
+    test('set locale with region keeps locale-native daily quote provider',
+        () async {
+      await settingsService.setLocale('zh_CN');
+
+      final provider = ApiService.recommendedDailyQuoteProviderForLanguage(
+        settingsService.localeCode,
+      );
+
+      expect(provider, ApiService.hitokotoProvider);
     });
   });
 }

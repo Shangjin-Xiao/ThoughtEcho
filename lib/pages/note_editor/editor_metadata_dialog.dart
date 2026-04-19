@@ -296,9 +296,10 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                         final filteredTags =
                                             widget.allTags!.where((tag) {
                                           return _tagSearchQuery.isEmpty ||
-                                              tag.name.toLowerCase().contains(
-                                                    _tagSearchQuery,
-                                                  );
+                                              tag
+                                                  .localizedName(l10n)
+                                                  .toLowerCase()
+                                                  .contains(_tagSearchQuery);
                                         }).toList();
 
                                         if (filteredTags.isEmpty) {
@@ -324,7 +325,9 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                                 .contains(tag.id);
                                             return FilterChip(
                                               selected: selected,
-                                              label: Text(tag.name),
+                                              label: Text(
+                                                tag.localizedName(l10n),
+                                              ),
                                               avatar: _tagAvatarSmall(
                                                 tag.iconName,
                                               ),
@@ -392,7 +395,7 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                         ),
                                       );
                                       return Chip(
-                                        label: Text(tag.name),
+                                        label: Text(tag.localizedName(l10n)),
                                         avatar: _buildTagIcon(tag),
                                         onDeleted: () {
                                           _updateState(() {

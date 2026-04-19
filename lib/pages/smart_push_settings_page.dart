@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import '../extensions/note_category_localization_extension.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/smart_push_settings.dart';
 import '../models/note_category.dart';
@@ -1004,7 +1006,7 @@ class _SmartPushSettingsPageState extends State<SmartPushSettingsPage>
                               ? Text(tag.icon!,
                                   style: const TextStyle(fontSize: 14))
                               : null,
-                          label: Text(tag.name),
+                          label: Text(tag.localizedName(l10n)),
                           selected: isSelected,
                           onSelected: (selected) {
                             final tagIds =

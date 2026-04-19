@@ -95,23 +95,15 @@ class _WelcomePageViewState extends State<WelcomePageView>
   String _getLanguageLabel(String code) {
     switch (code) {
       case '':
-        return AppLocalizations.of(context).languageFollowSystem;
-      case 'zh':
-        return AppLocalizations.of(context).languageChinese;
-      case 'en':
-        return AppLocalizations.of(context).languageEnglish;
-      case 'ja':
-        return AppLocalizations.of(context).languageJapanese;
-      case 'ko':
-        return AppLocalizations.of(context).languageKorean;
-      case 'es':
-        return AppLocalizations.of(context).languageSpanish;
-      case 'fr':
-        return AppLocalizations.of(context).languageFrench;
-      case 'de':
-        return AppLocalizations.of(context).languageGerman;
+        return OnboardingConfig.languageDisplayLabel(
+          AppLocalizations.of(context),
+          code,
+        );
       default:
-        return code;
+        return OnboardingConfig.languageDisplayLabel(
+          AppLocalizations.of(context),
+          code,
+        );
     }
   }
 

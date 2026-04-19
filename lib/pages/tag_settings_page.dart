@@ -6,6 +6,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+import '../extensions/note_category_localization_extension.dart';
 import '../services/database_service.dart';
 import '../models/note_category.dart'; // 替换 import NoteTag 为 NoteCategory
 import '../utils/icon_utils.dart';
@@ -437,9 +439,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                           // 检查是否是隐藏标签
                           final bool isHiddenTag =
                               tag.id == DatabaseService.hiddenTagId;
-                          // 隐藏标签使用国际化名称
-                          final String displayName =
-                              isHiddenTag ? l10n.hiddenTag : tag.name;
+                          final String displayName = tag.localizedName(l10n);
                           final Widget? subtitleWidget = isHiddenTag
                               ? Text(
                                   l10n.hiddenTagUsageHint,
@@ -586,7 +586,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                             ),
                                             content: Text(
                                               l10n.deleteTagDialogContent(
-                                                tag.name,
+                                                tag.localizedName(l10n),
                                               ),
                                             ),
                                             actions: [

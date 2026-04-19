@@ -10,6 +10,7 @@ import '../utils/app_logger.dart';
 
 class DatabaseHealthService {
   static const int _maxOfflineQuoteLength = 100;
+  static const String dailyQuoteTagId = 'default_hitokoto';
 
   /// 修复：添加查询性能统计
   final Map<String, int> _queryStats = {}; // 查询次数统计
@@ -348,7 +349,7 @@ class DatabaseHealthService {
           ORDER BY RANDOM()
           LIMIT 1
         ''',
-          ['default_hitokoto'],
+          [dailyQuoteTagId],
         );
       } else {
         results = await db.rawQuery('''
@@ -541,9 +542,7 @@ class DatabaseHealthService {
               (quote) => isEligibleOfflineQuoteContent(
                 quote.content,
                 offlineQuoteSource: offlineQuoteSource,
-                requiresHitokotoTag: quote.tagIds.contains(
-                  'default_hitokoto',
-                ),
+                requiresHitokotoTag: quote.tagIds.contains(dailyQuoteTagId),
               ),
             )
             .toList();

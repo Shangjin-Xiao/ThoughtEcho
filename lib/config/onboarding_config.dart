@@ -5,6 +5,31 @@ import '../gen_l10n/app_localizations.dart';
 
 /// 引导页面配置
 class OnboardingConfig {
+  static const Map<String, String> _nativeLanguageLabels = {
+    'zh': '简体中文',
+    'en': 'English',
+    'ja': '日本語',
+    'ko': '한국어',
+    'es': 'Español',
+    'fr': 'Français',
+    'de': 'Deutsch',
+  };
+
+  static String nativeLanguageLabel(String languageCode) {
+    return _nativeLanguageLabels[languageCode] ?? languageCode;
+  }
+
+  static String languageDisplayLabel(
+    AppLocalizations l10n,
+    String languageCode,
+  ) {
+    if (languageCode.isEmpty) {
+      return l10n.languageFollowSystem;
+    }
+
+    return nativeLanguageLabel(languageCode);
+  }
+
   /// 获取引导页面列表（动态国际化）
   static List<OnboardingPageData> getPages(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -86,6 +111,12 @@ class OnboardingConfig {
     BuildContext context,
   ) {
     final l10n = AppLocalizations.of(context);
+    final localeCode = Localizations.localeOf(context).toLanguageTag();
+    final defaultDailyQuoteProvider =
+        ApiService.recommendedDailyQuoteProviderForLanguage(
+      localeCode,
+    );
+
     return [
       // 0. 位置服务（放在最前面）
       OnboardingPreference<bool>(
@@ -96,7 +127,25 @@ class OnboardingConfig {
         type: OnboardingPreferenceType.toggle,
       ),
 
-      // 1. 每日一言类型选择
+      // 1. 每日一言 provider
+      OnboardingPreference<String>(
+        key: 'dailyQuoteProvider',
+        title: l10n.dailyQuoteApi,
+        description: l10n.dailyQuoteApiDesc,
+        defaultValue: defaultDailyQuoteProvider,
+        type: OnboardingPreferenceType.radio,
+        options: ApiService.getDailyQuoteProviders(l10n)
+            .entries
+            .map(
+              (entry) => OnboardingPreferenceOption<String>(
+                value: entry.key,
+                label: entry.value,
+              ),
+            )
+            .toList(),
+      ),
+
+      // 2. 每日一言类型选择
       OnboardingPreference<String>(
         key: 'hitokotoTypes',
         title: l10n.prefDailyQuoteType,
@@ -106,7 +155,7 @@ class OnboardingConfig {
         options: getHitokotoTypeOptions(context),
       ),
 
-      // 2. 默认启动页面
+      // 3. 默认启动页面
       OnboardingPreference<int>(
         key: 'defaultStartPage',
         title: l10n.prefDefaultStartPage,

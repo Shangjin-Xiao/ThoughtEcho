@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../extensions/note_category_localization_extension.dart';
 import '../models/note_category.dart';
 import '../utils/icon_utils.dart'; // Import IconUtils
 import '../services/weather_service.dart'; // Import WeatherService
@@ -325,8 +327,7 @@ class _NoteFilterSortSheetState extends State<NoteFilterSortSheet> {
         tag.iconName,
       ); // getIconData handles null/empty and returns default
 
-      // 隐藏标签使用本地化名称
-      final tagName = isHiddenTag ? l10n.hiddenTag : tag.name;
+      final tagName = tag.localizedName(l10n);
 
       return FilterChip(
         selected: isSelected,

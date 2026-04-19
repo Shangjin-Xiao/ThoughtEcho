@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'dart:async';
 import 'package:provider/provider.dart';
+
+import '../extensions/note_category_localization_extension.dart';
 import '../theme/app_theme.dart';
 import '../models/quote_model.dart';
 import '../services/database_service.dart';
@@ -50,6 +52,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
   bool _insightLoading = false;
   StreamSubscription<String>? _insightSub;
   bool _statsCalculated = false;
+  String? _lastLocaleCode;
 
   @override
   void initState() {
@@ -71,9 +74,12 @@ class _AnnualReportPageState extends State<AnnualReportPage>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_statsCalculated) {
+
+    final currentLocaleCode = Localizations.localeOf(context).toLanguageTag();
+    if (!_statsCalculated || _lastLocaleCode != currentLocaleCode) {
       _calculateStats();
       _statsCalculated = true;
+      _lastLocaleCode = currentLocaleCode;
     }
   }
 
@@ -111,10 +117,12 @@ class _AnnualReportPageState extends State<AnnualReportPage>
 
   Future<AnnualStats> _resolveTagNames(AnnualStats stats) async {
     try {
+      final l10n = AppLocalizations.of(context);
       final databaseService = context.read<DatabaseService>();
       final allCategories = await databaseService.getCategories();
       final tagIdToName = {
-        for (var category in allCategories) category.id: category.name,
+        for (var category in allCategories)
+          category.id: category.localizedName(l10n),
       };
 
       final resolvedTopTags = stats.topTags.map((tagStat) {
