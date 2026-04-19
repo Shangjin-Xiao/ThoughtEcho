@@ -37,5 +37,23 @@ void main() {
 
       expect(settings.dailyQuoteProvider, 'hitokoto');
     });
+
+    test(
+        'falls back to default provider when persisted provider is unsupported',
+        () {
+      final settings = AppSettings.fromJson({
+        'dailyQuoteProvider': 'unknown_provider',
+      });
+
+      expect(settings.dailyQuoteProvider, 'hitokoto');
+    });
+
+    test('filters unsupported api ninjas categories in persisted settings', () {
+      final settings = AppSettings.fromJson({
+        'apiNinjasCategories': ['wisdom', 'retired', 'success', 'invalid'],
+      });
+
+      expect(settings.apiNinjasCategories, ['wisdom', 'success']);
+    });
   });
 }

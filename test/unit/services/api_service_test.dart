@@ -150,7 +150,7 @@ void main() {
         l10n,
         'a',
         provider: 'api_ninjas',
-        apiKeyResolver: (_) async => 'sk_test_12345678901234567890',
+        apiKeyResolver: (_) async => 'api_ninjas_test_key_1234567890',
         httpGet: (
           url, {
           Map<String, String>? headers,
@@ -164,6 +164,31 @@ void main() {
       );
 
       expect(result['type'], 'g');
+    });
+
+    test('api_ninjas tolerates non-list categories payload', () async {
+      final l10n = lookupAppLocalizations(const Locale('zh'));
+
+      final result = await ApiService.getDailyQuote(
+        l10n,
+        'k',
+        provider: 'api_ninjas',
+        apiKeyResolver: (_) async => 'api_ninjas_test_key_1234567890',
+        httpGet: (
+          url, {
+          Map<String, String>? headers,
+          int? timeoutSeconds,
+        }) async {
+          return HttpResponse(
+            '[{"quote":"Be kind","author":"Anon","categories":"wisdom"}]',
+            200,
+          );
+        },
+      );
+
+      expect(result['content'], 'Be kind');
+      expect(result['type'], 'k');
+      expect(result['provider'], 'api_ninjas');
     });
 
     test('api_ninjas provider sends API key and category filters', () async {

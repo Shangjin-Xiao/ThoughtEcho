@@ -1,4 +1,34 @@
 class AppSettings {
+  static const Set<String> _supportedDailyQuoteProviders = {
+    'hitokoto',
+    'zenquotes',
+    'api_ninjas',
+    'meigen',
+    'kadvice',
+  };
+  static const Set<String> _supportedApiNinjasCategories = {
+    'wisdom',
+    'philosophy',
+    'life',
+    'truth',
+    'inspirational',
+    'relationships',
+    'love',
+    'faith',
+    'humor',
+    'success',
+    'courage',
+    'happiness',
+    'art',
+    'writing',
+    'fear',
+    'nature',
+    'time',
+    'freedom',
+    'death',
+    'leadership',
+  };
+
   final String hitokotoType;
   final String dailyQuoteProvider;
   final List<String> apiNinjasCategories;
@@ -114,10 +144,20 @@ class AppSettings {
   }
 
   factory AppSettings.fromJson(Map<String, dynamic> map) {
+    final normalizedProvider =
+        _readString(map['dailyQuoteProvider'], 'hitokoto');
+    final normalizedApiNinjasCategories = _readStringList(
+      map['apiNinjasCategories'],
+    ).where(_supportedApiNinjasCategories.contains).toList(growable: false);
+
     return AppSettings(
       hitokotoType: _readString(map['hitokotoType'], 'a,b,c,d,e,f,g,h,i,j,k'),
-      dailyQuoteProvider: _readString(map['dailyQuoteProvider'], 'hitokoto'),
-      apiNinjasCategories: _readStringList(map['apiNinjasCategories']),
+      dailyQuoteProvider: _supportedDailyQuoteProviders.contains(
+        normalizedProvider,
+      )
+          ? normalizedProvider
+          : 'hitokoto',
+      apiNinjasCategories: normalizedApiNinjasCategories,
       clipboardMonitoringEnabled: map['clipboardMonitoringEnabled'] ?? false,
       defaultStartPage: map['defaultStartPage'] ?? 0,
       hasCompletedOnboarding: map['hasCompletedOnboarding'] ?? false,

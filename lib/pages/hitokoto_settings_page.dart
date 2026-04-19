@@ -10,6 +10,10 @@ import '../services/api_service.dart';
 import '../services/settings_service.dart';
 import '../theme/app_theme.dart';
 
+part 'hitokoto_settings_page_layout_sections.dart';
+part 'hitokoto_settings_page_info_sections.dart';
+part 'hitokoto_settings_page_widgets.dart';
+
 class HitokotoSettingsPage extends StatefulWidget {
   const HitokotoSettingsPage({
     super.key,
@@ -244,8 +248,6 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context);
     final settingsService = context.watch<SettingsService>();
     final providerLabels = ApiService.getDailyQuoteProviders(l10n);
@@ -261,7 +263,7 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
     return FadeTransition(
       opacity: _fadeAnimation,
       child: Scaffold(
-        backgroundColor: colorScheme.surface,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         appBar: AppBar(
           title: Text(l10n.hitokotoSettings),
           centerTitle: true,
@@ -278,162 +280,24 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 头部说明卡片
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      colorScheme.primaryContainer,
-                      colorScheme.primaryContainer.withAlpha(200),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                  boxShadow: AppTheme.lightShadow,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: colorScheme.primary,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            Icons.format_quote_rounded,
-                            color: colorScheme.onPrimary,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                showHitokotoTypeSelection
-                                    ? l10n.hitokotoTypeSettings
-                                    : l10n.dailyQuoteApi,
-                                style: theme.textTheme.titleLarge?.copyWith(
-                                  color: colorScheme.onPrimaryContainer,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                showHitokotoTypeSelection
-                                    ? l10n.selectedCount(_selectedTypes.length)
-                                    : providerLabel,
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: colorScheme.onPrimaryContainer
-                                      .withAlpha(180),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      showHitokotoTypeSelection
-                          ? l10n.hitokotoTypeDesc
-                          : l10n.dailyQuoteApiDesc,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onPrimaryContainer.withAlpha(180),
-                        height: 1.5,
-                      ),
-                    ),
-                  ],
-                ),
+              _buildHeaderCard(
+                context: context,
+                l10n: l10n,
+                showHitokotoTypeSelection: showHitokotoTypeSelection,
+                selectedTypeCount: _selectedTypes.length,
+                providerLabel: providerLabel,
               ),
-
               const SizedBox(height: 24),
-
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                  border: Border.all(
-                    color: colorScheme.outline.withAlpha(50),
-                    width: 1,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.dailyQuoteApi,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      l10n.dailyQuoteApiDesc,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurface.withAlpha(150),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: providerLabels.entries.map((entry) {
-                        return ChoiceChip(
-                          label: Text(entry.value),
-                          selected: _selectedProvider == entry.key,
-                          onSelected: (selected) {
-                            if (selected && _selectedProvider != entry.key) {
-                              unawaited(_saveSelectedProvider(entry.key));
-                            }
-                          },
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      l10n.dailyQuoteProviderTypeSupportHint,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                        height: 1.4,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _buildCapabilityChip(
-                          context: context,
-                          label: l10n.typeSelection,
-                          supported: providerCapabilities.contains('type'),
-                        ),
-                        _buildCapabilityChip(
-                          context: context,
-                          label: l10n.dailyQuoteApiNinjasCategorySelection,
-                          supported: providerCapabilities.contains('category'),
-                        ),
-                        _buildCapabilityChip(
-                          context: context,
-                          label: l10n.dailyQuoteApiNinjasManageApiKey,
-                          supported: providerCapabilities.contains('apiKey'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+              _buildProviderSelectionCard(
+                context: context,
+                l10n: l10n,
+                providerLabels: providerLabels,
+                selectedProvider: _selectedProvider,
+                providerCapabilities: providerCapabilities,
+                onProviderSelected: (provider) {
+                  unawaited(_saveSelectedProvider(provider));
+                },
               ),
-
               if (_selectedProvider == ApiService.apiNinjasProvider) ...[
                 const SizedBox(height: 24),
                 _buildSettingsEntryCard(
@@ -458,431 +322,70 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                   onTap: _openApiNinjasCategorySelection,
                 ),
               ],
-
               if (showHitokotoTypeSelection) ...[
                 const SizedBox(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildActionButton(
-                        context: context,
-                        icon: Icons.select_all_rounded,
-                        label: l10n.selectAll,
-                        onPressed: () {
-                          setState(() {
-                            _selectedTypes.clear();
-                            for (final key in ApiService.getHitokotoTypes(
-                              l10n,
-                            ).keys) {
-                              _selectedTypes.add(key);
-                            }
-                          });
-                          _saveSelectedTypes();
-                        },
-                        isPrimary: false,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildActionButton(
-                        context: context,
-                        icon: Icons.deselect_rounded,
-                        label: l10n.clearAll,
-                        onPressed: () {
-                          setState(() {
-                            _selectedTypes.clear();
-                            _selectedTypes.add('a');
-                          });
-                          _saveSelectedTypes();
-                        },
-                        isPrimary: false,
-                      ),
-                    ),
-                  ],
+                _buildTypeActionsRow(
+                  context: context,
+                  l10n: l10n,
+                  onSelectAll: () {
+                    setState(() {
+                      _selectedTypes
+                        ..clear()
+                        ..addAll(ApiService.getHitokotoTypes(l10n).keys);
+                    });
+                    _saveSelectedTypes();
+                  },
+                  onClearAll: () {
+                    setState(() {
+                      _selectedTypes
+                        ..clear()
+                        ..add('a');
+                    });
+                    _saveSelectedTypes();
+                  },
                 ),
                 const SizedBox(height: 24),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                    border: Border.all(
-                      color: colorScheme.outline.withAlpha(50),
-                      width: 1,
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.typeSelection,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: colorScheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        l10n.typeSelectionHint,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurface.withAlpha(150),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
-                        children:
-                            ApiService.getHitokotoTypes(l10n).entries.map((
-                          entry,
-                        ) {
-                          final isSelected = _selectedTypes.contains(entry.key);
-                          return _buildTypeChip(
-                            context: context,
-                            type: entry.key,
-                            label: entry.value,
-                            isSelected: isSelected,
-                            onSelected: (selected) {
-                              setState(() {
-                                if (selected) {
-                                  _selectedTypes.add(entry.key);
-                                } else {
-                                  _selectedTypes.remove(entry.key);
-                                  if (_selectedTypes.isEmpty) {
-                                    _selectedTypes.add('a');
-                                  }
-                                }
-                              });
-                              _saveSelectedTypes();
-                            },
-                          );
-                        }).toList(),
-                      ),
-                    ],
-                  ),
+                _buildTypeSelectionCard(
+                  context: context,
+                  l10n: l10n,
+                  selectedTypes: _selectedTypes,
+                  onTypeSelected: (type, selected) {
+                    setState(() {
+                      if (selected) {
+                        _selectedTypes.add(type);
+                      } else {
+                        _selectedTypes.remove(type);
+                        if (_selectedTypes.isEmpty) {
+                          _selectedTypes.add('a');
+                        }
+                      }
+                    });
+                    _saveSelectedTypes();
+                  },
                 ),
               ] else ...[
                 const SizedBox(height: 24),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerLow,
-                    borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                    border: Border.all(
-                      color: colorScheme.outline.withAlpha(30),
-                      width: 1,
-                    ),
-                  ),
-                  child: Text(
-                    l10n.dailyQuoteProviderNoTypeSelection,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurfaceVariant,
-                      height: 1.5,
-                    ),
-                  ),
+                _buildNoTypeSelectionCard(
+                  context: context,
+                  l10n: l10n,
                 ),
               ],
               if (showHitokotoTypeSelection)
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHigh,
-                    borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                    border: Border.all(
-                      color: colorScheme.outline.withAlpha(30),
-                      width: 1,
-                    ),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline_rounded,
-                            color: colorScheme.primary,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            l10n.usageInstructions,
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: colorScheme.onSurface,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      ..._buildHelpItems(context, l10n),
-                    ],
-                  ),
+                _buildUsageInstructionsCard(
+                  context: context,
+                  l10n: l10n,
                 ),
-
               const SizedBox(height: 24),
-
-              // 服务提供商归属说明
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                  border: Border.all(
-                    color: colorScheme.outline.withAlpha(30),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline_rounded,
-                      color: colorScheme.primary,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        l10n.dailyQuoteServiceProvider(providerLabel),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurface.withAlpha(150),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+              _buildProviderAttributionCard(
+                context: context,
+                l10n: l10n,
+                providerLabel: providerLabel,
               ),
-
               const SizedBox(height: 32),
             ],
           ),
         ),
       ),
     );
-  }
-
-  Widget _buildActionButton({
-    required BuildContext context,
-    required IconData icon,
-    required String label,
-    required VoidCallback onPressed,
-    bool isPrimary = false,
-  }) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Material(
-      color: isPrimary ? colorScheme.primary : colorScheme.surfaceContainerHigh,
-      borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 18,
-                color: isPrimary
-                    ? colorScheme.onPrimary
-                    : colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: isPrimary
-                      ? colorScheme.onPrimary
-                      : colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTypeChip({
-    required BuildContext context,
-    required String type,
-    required String label,
-    required bool isSelected,
-    required ValueChanged<bool> onSelected,
-  }) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return FilterChip(
-      label: Text(label),
-      selected: isSelected,
-      showCheckmark: false,
-      avatar: isSelected
-          ? Icon(Icons.check_rounded, size: 16, color: colorScheme.onPrimary)
-          : null,
-      labelStyle: TextStyle(
-        color:
-            isSelected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
-        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-        fontSize: 13,
-      ),
-      backgroundColor: colorScheme.surface,
-      selectedColor: colorScheme.primary,
-      side: BorderSide(
-        color: isSelected
-            ? colorScheme.primary
-            : colorScheme.outline.withAlpha(80),
-        width: 1,
-      ),
-      elevation: isSelected ? 2 : 0,
-      shadowColor: colorScheme.shadow.withAlpha(100),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      onSelected: onSelected,
-    );
-  }
-
-  Widget _buildSettingsEntryCard({
-    required BuildContext context,
-    required String title,
-    required String subtitle,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Material(
-      color: colorScheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Row(
-            children: [
-              Icon(icon, color: colorScheme.primary),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: theme.textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: colorScheme.onSurfaceVariant,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCapabilityChip({
-    required BuildContext context,
-    required String label,
-    required bool supported,
-  }) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: supported
-            ? colorScheme.primaryContainer
-            : colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: supported
-              ? colorScheme.primary
-              : colorScheme.outline.withAlpha(80),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            supported ? Icons.check_circle_outline : Icons.block,
-            size: 14,
-            color:
-                supported ? colorScheme.primary : colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            '$label ${supported ? '✓' : '✕'}',
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: supported
-                  ? colorScheme.onPrimaryContainer
-                  : colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  List<Widget> _buildHelpItems(BuildContext context, AppLocalizations l10n) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    final helpItems = [
-      l10n.hitokotoHelpItem1,
-      l10n.hitokotoHelpItem2,
-      l10n.hitokotoHelpItem3,
-    ];
-
-    return helpItems.map((item) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              margin: const EdgeInsets.only(top: 6),
-              width: 4,
-              height: 4,
-              decoration: BoxDecoration(
-                color: colorScheme.primary,
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                item,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurface.withAlpha(180),
-                  height: 1.4,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }).toList();
   }
 }
