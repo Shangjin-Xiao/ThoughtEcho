@@ -90,8 +90,6 @@ extension _HitokotoSettingsPageLayoutSections on _HitokotoSettingsPageState {
     required BuildContext context,
     required AppLocalizations l10n,
     required Map<String, String> providerLabels,
-    required String selectedProvider,
-    required Set<String> providerCapabilities,
     required ValueChanged<String> onProviderSelected,
   }) {
     final theme = Theme.of(context);
@@ -132,44 +130,14 @@ extension _HitokotoSettingsPageLayoutSections on _HitokotoSettingsPageState {
             children: providerLabels.entries.map((entry) {
               return ChoiceChip(
                 label: Text(entry.value),
-                selected: selectedProvider == entry.key,
+                selected: _selectedProvider == entry.key,
                 onSelected: (selected) {
-                  if (selected && selectedProvider != entry.key) {
+                  if (selected && _selectedProvider != entry.key) {
                     onProviderSelected(entry.key);
                   }
                 },
               );
             }).toList(),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            l10n.dailyQuoteProviderTypeSupportHint,
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: colorScheme.onSurfaceVariant,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _buildCapabilityChip(
-                context: context,
-                label: l10n.typeSelection,
-                supported: providerCapabilities.contains('type'),
-              ),
-              _buildCapabilityChip(
-                context: context,
-                label: l10n.dailyQuoteApiNinjasCategorySelection,
-                supported: providerCapabilities.contains('category'),
-              ),
-              _buildCapabilityChip(
-                context: context,
-                label: l10n.dailyQuoteApiNinjasManageApiKey,
-                supported: providerCapabilities.contains('apiKey'),
-              ),
-            ],
           ),
         ],
       ),

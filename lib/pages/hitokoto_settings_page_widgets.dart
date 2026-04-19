@@ -136,51 +136,6 @@ extension _HitokotoSettingsPageWidgets on _HitokotoSettingsPageState {
     );
   }
 
-  Widget _buildCapabilityChip({
-    required BuildContext context,
-    required String label,
-    required bool supported,
-  }) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: supported
-            ? colorScheme.primaryContainer
-            : colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: supported
-              ? colorScheme.primary
-              : colorScheme.outline.withAlpha(80),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            supported ? Icons.check_circle_outline : Icons.block,
-            size: 14,
-            color:
-                supported ? colorScheme.primary : colorScheme.onSurfaceVariant,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            '$label ${supported ? '✓' : '✕'}',
-            style: theme.textTheme.labelSmall?.copyWith(
-              color: supported
-                  ? colorScheme.onPrimaryContainer
-                  : colorScheme.onSurfaceVariant,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   List<Widget> _buildHelpItems(BuildContext context, AppLocalizations l10n) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;

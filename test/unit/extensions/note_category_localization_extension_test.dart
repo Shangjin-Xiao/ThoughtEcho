@@ -17,9 +17,14 @@ void main() {
         id: DatabaseService.defaultCategoryIdAnime,
         name: '动画',
       );
+      final jokeCategory = NoteCategory(
+        id: DatabaseService.defaultCategoryIdJoke,
+        name: '抖机灵',
+      );
 
       expect(quoteCategory.localizedName(l10n), 'Daily Quote');
       expect(animeCategory.localizedName(l10n), 'Anime');
+      expect(jokeCategory.localizedName(l10n), 'Humor');
     });
 
     test('localizes hidden system tag', () {

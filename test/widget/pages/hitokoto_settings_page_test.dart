@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
 import 'package:thoughtecho/models/app_settings.dart';
 import 'package:thoughtecho/pages/hitokoto_settings_page.dart';
+import 'package:thoughtecho/services/api_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
 
 import '../../test_setup.dart';
@@ -104,6 +105,10 @@ void main() {
     expect(find.text(localizations.offlineQuoteSourceTitle), findsNothing);
     expect(find.text(localizations.offlineQuoteSourceTagOnly), findsNothing);
     expect(find.text(localizations.offlineQuoteSourceAll), findsNothing);
+    expect(
+      find.byType(ChoiceChip),
+      findsNWidgets(ApiService.getDailyQuoteProviders(localizations).length),
+    );
   });
 
   testWidgets('切换到其他 provider 时隐藏 Hitokoto 类型筛选', (tester) async {
@@ -141,6 +146,10 @@ void main() {
         findsOneWidget);
     expect(find.text(localizations.dailyQuoteApiNinjasCategorySelection),
         findsOneWidget);
+    expect(
+      find.text(localizations.dailyQuoteProviderNoTypeSelection),
+      findsNothing,
+    );
   });
 
   testWidgets('切换到 API Ninjas 时刷新密钥状态', (tester) async {
@@ -206,5 +215,31 @@ void main() {
       find.text(localizations.saveFailed('Exception: save-failed')),
       findsOneWidget,
     );
+  });
+
+  testWidgets('provider 保存失败时不会提前刷新 API Ninjas 密钥状态', (tester) async {
+    final settings = _TestSettingsService(
+      onSetDailyQuoteProvider: (_) async => throw Exception('save-failed'),
+    );
+    var loadCount = 0;
+    final localizations =
+        await AppLocalizations.delegate.load(const Locale('zh'));
+
+    await pumpPage(
+      tester,
+      settings,
+      apiNinjasApiKeyStatusLoader: () async {
+        loadCount++;
+        return true;
+      },
+    );
+
+    await tester.tap(find.text(localizations.dailyQuoteApiApiNinjas));
+    await tester.pumpAndSettle();
+
+    expect(loadCount, 0);
+    expect(settings.dailyQuoteProvider, 'hitokoto');
+    expect(find.text(localizations.dailyQuoteApiNinjasApiKeyConfigured),
+        findsNothing);
   });
 }

@@ -5,6 +5,31 @@ import '../gen_l10n/app_localizations.dart';
 
 /// 引导页面配置
 class OnboardingConfig {
+  static const Map<String, String> _nativeLanguageLabels = {
+    'zh': '简体中文',
+    'en': 'English',
+    'ja': '日本語',
+    'ko': '한국어',
+    'es': 'Español',
+    'fr': 'Français',
+    'de': 'Deutsch',
+  };
+
+  static String nativeLanguageLabel(String languageCode) {
+    return _nativeLanguageLabels[languageCode] ?? languageCode;
+  }
+
+  static String languageDisplayLabel(
+    AppLocalizations l10n,
+    String languageCode,
+  ) {
+    if (languageCode.isEmpty) {
+      return l10n.languageFollowSystem;
+    }
+
+    return nativeLanguageLabel(languageCode);
+  }
+
   /// 获取引导页面列表（动态国际化）
   static List<OnboardingPageData> getPages(BuildContext context) {
     final l10n = AppLocalizations.of(context);

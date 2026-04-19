@@ -52,6 +52,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
   bool _insightLoading = false;
   StreamSubscription<String>? _insightSub;
   bool _statsCalculated = false;
+  String? _lastLocaleCode;
 
   @override
   void initState() {
@@ -73,9 +74,12 @@ class _AnnualReportPageState extends State<AnnualReportPage>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_statsCalculated) {
+
+    final currentLocaleCode = Localizations.localeOf(context).toLanguageTag();
+    if (!_statsCalculated || _lastLocaleCode != currentLocaleCode) {
       _calculateStats();
       _statsCalculated = true;
+      _lastLocaleCode = currentLocaleCode;
     }
   }
 

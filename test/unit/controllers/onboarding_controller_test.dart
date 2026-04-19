@@ -2,31 +2,40 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/controllers/onboarding_controller.dart';
 import 'package:thoughtecho/services/api_service.dart';
 
+import '../../test_setup.dart';
+
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  late OnboardingController sut;
 
   group('OnboardingController locale preference linkage', () {
+    setUp(() async {
+      await TestSetup.setupUnitTest();
+      sut = OnboardingController();
+    });
+
+    tearDown(() {
+      sut.dispose();
+    });
+
     test('updates daily quote provider when onboarding language changes', () {
-      final controller = OnboardingController();
+      sut.updatePreference('dailyQuoteProvider', ApiService.hitokotoProvider);
 
-      controller.updatePreference(
-          'dailyQuoteProvider', ApiService.hitokotoProvider);
-
-      controller.updatePreference('localeCode', 'ja');
+      sut.updatePreference('localeCode', 'ja');
       expect(
-        controller.state.getPreference<String>('dailyQuoteProvider'),
+        sut.state.getPreference<String>('dailyQuoteProvider'),
         ApiService.meigenProvider,
       );
 
-      controller.updatePreference('localeCode', 'ko');
+      sut.updatePreference('localeCode', 'ko');
       expect(
-        controller.state.getPreference<String>('dailyQuoteProvider'),
+        sut.state.getPreference<String>('dailyQuoteProvider'),
         ApiService.koreanAdviceProvider,
       );
 
-      controller.updatePreference('localeCode', 'en');
+      sut.updatePreference('localeCode', 'en');
       expect(
-        controller.state.getPreference<String>('dailyQuoteProvider'),
+        sut.state.getPreference<String>('dailyQuoteProvider'),
         ApiService.zenQuotesProvider,
       );
     });

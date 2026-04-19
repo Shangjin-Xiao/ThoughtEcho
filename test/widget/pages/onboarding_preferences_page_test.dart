@@ -49,6 +49,9 @@ void main() {
   testWidgets('引导页在类型选择区域展示 API 选择', (
     tester,
   ) async {
+    final localizations =
+        await AppLocalizations.delegate.load(const Locale('zh'));
+
     await tester.pumpWidget(
       MaterialApp(
         locale: const Locale('zh'),
@@ -69,7 +72,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('每日一言类型'), findsOneWidget);
-    expect(find.text('每日一言 API'), findsOneWidget);
+    expect(find.text(localizations.dailyQuoteApi), findsOneWidget);
     expect(find.text('一言 (Hitokoto)'), findsOneWidget);
   });
 }

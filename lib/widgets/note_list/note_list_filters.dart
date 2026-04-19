@@ -20,6 +20,8 @@ extension NoteListFiltersExtension on NoteListViewState {
 
   /// 构建筛选条件的实际内容
   Widget _buildFilterContent(ThemeData theme, double horizontalPadding) {
+    final l10n = AppLocalizations.of(context);
+
     // 收集所有筛选chip
     final List<Widget> allChips = [];
 
@@ -29,7 +31,7 @@ extension NoteListFiltersExtension on NoteListViewState {
         widget.selectedTagIds.map((tagId) {
           final tag = _effectiveTags.firstWhere(
             (tag) => tag.id == tagId,
-            orElse: () => NoteCategory(id: tagId, name: '未知标签'),
+            orElse: () => NoteCategory(id: tagId, name: l10n.unknownTag),
           );
           return TweenAnimationBuilder<double>(
             key: ValueKey('tag_$tagId'),
@@ -47,7 +49,7 @@ extension NoteListFiltersExtension on NoteListViewState {
             },
             child: _buildModernFilterChip(
               theme: theme,
-              label: tag.localizedName(AppLocalizations.of(context)),
+              label: tag.localizedName(l10n),
               icon: IconUtils.isEmoji(tag.iconName)
                   ? IconUtils.getDisplayIcon(tag.iconName)
                   : IconUtils.getIconData(tag.iconName),

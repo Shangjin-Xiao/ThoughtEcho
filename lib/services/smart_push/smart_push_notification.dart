@@ -314,10 +314,20 @@ extension SmartPushNotification on SmartPushService {
 
   AppLocalizations _resolveDailyQuoteLocalizations(AppSettings settings) {
     final localeCode = settings.localeCode;
-    final locale = localeCode == null || localeCode.isEmpty
+    final preferredLocale = localeCode == null || localeCode.isEmpty
         ? WidgetsBinding.instance.platformDispatcher.locale
         : Locale(localeCode);
-    return lookupAppLocalizations(locale);
+
+    final supportedLanguageCodes = AppLocalizations.supportedLocales
+        .map((locale) => locale.languageCode)
+        .toSet();
+    final effectiveLocale = supportedLanguageCodes.contains(
+      preferredLocale.languageCode,
+    )
+        ? preferredLocale
+        : const Locale('en');
+
+    return lookupAppLocalizations(effectiveLocale);
   }
 
   Future<void> _ensureNotificationReady() async {

@@ -31,6 +31,8 @@ extension NoteCategoryLocalizationExtension on NoteCategory {
         return l10n.hitokotoTypeJ;
       case DatabaseService.defaultCategoryIdPhilosophy:
         return l10n.hitokotoTypeK;
+      case DatabaseService.defaultCategoryIdJoke:
+        return l10n.hitokotoTypeJoke;
       default:
         return name;
     }

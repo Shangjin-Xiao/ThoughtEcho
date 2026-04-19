@@ -35,14 +35,6 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
   late Animation<double> _fadeAnimation;
   bool _hasApiNinjasApiKey = false;
 
-  static final Map<String, Set<String>> _providerSupportedCapabilities = {
-    ApiService.hitokotoProvider: {'type'},
-    ApiService.apiNinjasProvider: {'category', 'apiKey'},
-    ApiService.zenQuotesProvider: const {},
-    ApiService.meigenProvider: const {},
-    ApiService.koreanAdviceProvider: const {},
-  };
-
   @override
   void initState() {
     super.initState();
@@ -77,23 +69,28 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
 
   Future<void> _saveSelectedProvider(String provider) async {
     final previousProvider = _selectedProvider;
+    final previousHasApiNinjasApiKey = _hasApiNinjasApiKey;
     setState(() {
       _selectedProvider = provider;
       if (provider != ApiService.apiNinjasProvider) {
         _hasApiNinjasApiKey = false;
       }
     });
-    if (provider == ApiService.apiNinjasProvider) {
-      unawaited(_loadApiNinjasApiKeyStatus());
-    }
+
     try {
       await context.read<SettingsService>().setDailyQuoteProvider(provider);
       if (!mounted) return;
+
+      if (provider == ApiService.apiNinjasProvider) {
+        unawaited(_loadApiNinjasApiKeyStatus());
+      }
+
       _showSavedSnackBar();
     } catch (e) {
       if (!mounted) return;
       setState(() {
         _selectedProvider = previousProvider;
+        _hasApiNinjasApiKey = previousHasApiNinjasApiKey;
       });
       _showSaveFailedSnackBar(e);
     }
@@ -255,10 +252,12 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
     final showHitokotoTypeSelection = ApiService.supportsHitokotoTypeSelection(
       _selectedProvider,
     );
+    final showProviderCategorySelection =
+        ApiService.supportsProviderCategorySelection(
+      _selectedProvider,
+    );
     final providerLabel =
         providerLabels[_selectedProvider] ?? providerLabels.values.first;
-    final providerCapabilities =
-        _providerSupportedCapabilities[_selectedProvider] ?? const {};
 
     return FadeTransition(
       opacity: _fadeAnimation,
@@ -292,8 +291,6 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                 context: context,
                 l10n: l10n,
                 providerLabels: providerLabels,
-                selectedProvider: _selectedProvider,
-                providerCapabilities: providerCapabilities,
                 onProviderSelected: (provider) {
                   unawaited(_saveSelectedProvider(provider));
                 },
@@ -363,7 +360,7 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                     _saveSelectedTypes();
                   },
                 ),
-              ] else ...[
+              ] else if (!showProviderCategorySelection) ...[
                 const SizedBox(height: 24),
                 _buildNoTypeSelectionCard(
                   context: context,
