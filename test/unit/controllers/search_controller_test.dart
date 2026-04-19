@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/controllers/search_controller.dart';
-import 'dart:async';
 
 void main() {
   group('NoteSearchController - setSearchState', () {
