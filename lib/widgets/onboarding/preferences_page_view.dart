@@ -5,6 +5,7 @@ import '../../gen_l10n/app_localizations.dart';
 import '../../models/onboarding_models.dart';
 import '../../config/onboarding_config.dart';
 import '../../services/location_service.dart';
+import '../../services/api_service.dart';
 
 /// 偏好设置页面组件
 class PreferencesPageView extends StatefulWidget {
@@ -32,6 +33,21 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
     return OnboardingConfig.getPreferences(
       context,
     ).where((preference) => preference.key != 'dailyQuoteProvider').toList();
+  }
+
+  OnboardingPreference<String>? _dailyQuoteProviderPreference() {
+    final providerPreference = OnboardingConfig.getPreferences(
+      context,
+    ).where((preference) => preference.key == 'dailyQuoteProvider');
+    if (providerPreference.isEmpty) {
+      return null;
+    }
+
+    final firstPreference = providerPreference.first;
+    if (firstPreference is OnboardingPreference<String>) {
+      return firstPreference;
+    }
+    return null;
   }
 
   @override
@@ -454,6 +470,26 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
         preference.defaultValue as String;
     final selectedValues = value.split(',').where((v) => v.isNotEmpty).toSet();
     final options = preference.options ?? [];
+    final providerPreference = preference.key == 'hitokotoTypes'
+        ? _dailyQuoteProviderPreference()
+        : null;
+    final selectedProvider = widget.state.getPreference<String>(
+          'dailyQuoteProvider',
+        ) ??
+        providerPreference?.defaultValue ??
+        ApiService.hitokotoProvider;
+    final showTypeSelection =
+        ApiService.supportsHitokotoTypeSelection(selectedProvider);
+
+    if (preference.key == 'hitokotoTypes' && !showTypeSelection) {
+      return Card(
+        elevation: 2,
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: _buildDailyQuoteProviderSelector(theme),
+        ),
+      );
+    }
 
     return Card(
       elevation: 2,
@@ -579,12 +615,13 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
   }
 
   Widget _buildDailyQuoteProviderSelector(ThemeData theme) {
-    final providerPreference = OnboardingConfig.getPreferences(
-      context,
-    ).firstWhere((preference) => preference.key == 'dailyQuoteProvider');
+    final providerPreference = _dailyQuoteProviderPreference();
+    if (providerPreference == null) {
+      return const SizedBox.shrink();
+    }
     final options = providerPreference.options ?? [];
     final value = widget.state.getPreference<String>('dailyQuoteProvider') ??
-        providerPreference.defaultValue as String;
+        providerPreference.defaultValue;
 
     return Container(
       width: double.infinity,
@@ -620,7 +657,7 @@ class _PreferencesPageViewState extends State<PreferencesPageView>
             child: Column(
               children: options.map((option) {
                 return RadioListTile<String>(
-                  value: option.value as String,
+                  value: option.value,
                   title: Text(option.label),
                   contentPadding: EdgeInsets.zero,
                   dense: true,

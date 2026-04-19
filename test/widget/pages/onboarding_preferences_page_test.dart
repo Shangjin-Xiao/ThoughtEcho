@@ -75,4 +75,39 @@ void main() {
     expect(find.text(localizations.dailyQuoteApi), findsOneWidget);
     expect(find.text('一言 (Hitokoto)'), findsOneWidget);
   });
+
+  testWidgets('引导页在非 Hitokoto provider 时隐藏类型分类选项', (
+    tester,
+  ) async {
+    final localizations =
+        await AppLocalizations.delegate.load(const Locale('zh'));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh'),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(
+          builder: (context) {
+            return PreferencesPageView(
+              pageData: OnboardingConfig.getPageDataWithContext(context, 2),
+              state: const OnboardingState(
+                preferences: {
+                  'dailyQuoteProvider': ApiService.zenQuotesProvider,
+                },
+              ),
+              onPreferenceChanged: (_, __) {},
+            );
+          },
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.pumpAndSettle();
+
+    expect(find.text(localizations.dailyQuoteApi), findsOneWidget);
+    expect(find.text(localizations.prefDailyQuoteType), findsNothing);
+    expect(find.text(localizations.hitokotoTypeA), findsNothing);
+    expect(find.byType(FilterChip), findsNothing);
+  });
 }
