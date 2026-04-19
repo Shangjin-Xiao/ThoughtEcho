@@ -14,10 +14,13 @@ import '../../test_setup.dart';
 class _TestSettingsService extends ChangeNotifier implements SettingsService {
   AppSettings _appSettings;
   final Future<void> Function(String provider)? onSetDailyQuoteProvider;
+  final Future<void> Function(List<String> categories)?
+      onSetApiNinjasCategories;
 
   _TestSettingsService({
     AppSettings? appSettings,
     this.onSetDailyQuoteProvider,
+    this.onSetApiNinjasCategories,
   }) : _appSettings = appSettings ?? AppSettings();
 
   @override
@@ -46,6 +49,9 @@ class _TestSettingsService extends ChangeNotifier implements SettingsService {
 
   @override
   Future<void> setApiNinjasCategories(List<String> categories) async {
+    if (onSetApiNinjasCategories != null) {
+      await onSetApiNinjasCategories!(categories);
+    }
     _appSettings = _appSettings.copyWith(apiNinjasCategories: categories);
     notifyListeners();
   }
@@ -178,6 +184,26 @@ void main() {
         findsNothing);
   });
 
+  testWidgets('API Ninjas 密钥状态加载失败时降级为未配置状态', (tester) async {
+    final settings = _TestSettingsService();
+    final localizations =
+        await AppLocalizations.delegate.load(const Locale('zh'));
+
+    await pumpPage(
+      tester,
+      settings,
+      apiNinjasApiKeyStatusLoader: () async =>
+          throw Exception('key-status-failed'),
+    );
+
+    await tester.tap(find.text(localizations.dailyQuoteApiApiNinjas));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text(localizations.dailyQuoteApiNinjasApiKeyMissing),
+        findsOneWidget);
+  });
+
   testWidgets('provider 保存完成前不显示保存成功提示', (tester) async {
     final saveCompleter = Completer<void>();
     final settings = _TestSettingsService(
@@ -241,5 +267,47 @@ void main() {
     expect(settings.dailyQuoteProvider, 'hitokoto');
     expect(find.text(localizations.dailyQuoteApiNinjasApiKeyConfigured),
         findsNothing);
+  });
+
+  testWidgets('保存 API Ninjas 分类失败时显示错误提示', (tester) async {
+    var saveAttemptCount = 0;
+    final settings = _TestSettingsService(
+      onSetApiNinjasCategories: (_) async {
+        saveAttemptCount++;
+        throw Exception('categories-failed');
+      },
+    );
+    final localizations =
+        await AppLocalizations.delegate.load(const Locale('zh'));
+
+    await pumpPage(tester, settings);
+
+    await tester.tap(find.text(localizations.dailyQuoteApiApiNinjas));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.text(localizations.dailyQuoteApiNinjasCategorySelection),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester
+        .tap(find.text(localizations.dailyQuoteApiNinjasCategorySelection));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(localizations.dailyQuoteApiNinjasCategorySearchHint),
+      findsOneWidget,
+    );
+
+    final categoryPageContext = tester.element(
+      find.text(localizations.dailyQuoteApiNinjasCategorySearchHint),
+    );
+    Navigator.of(categoryPageContext).pop(const <String>['wisdom']);
+    await tester.pump();
+    await tester.pumpAndSettle();
+
+    expect(saveAttemptCount, 1);
+    expect(settings.apiNinjasCategories, isEmpty);
+    expect(tester.takeException(), isNull);
   });
 }

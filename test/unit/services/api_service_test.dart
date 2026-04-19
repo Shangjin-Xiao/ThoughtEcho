@@ -256,5 +256,31 @@ void main() {
       expect(result['provider'], 'api_ninjas');
       expect(result['type'], 'k');
     });
+
+    test('handles malformed JSON response by falling back to default quote',
+        () async {
+      final l10n = lookupAppLocalizations(const Locale('zh'));
+
+      final result = await ApiService.getDailyQuote(
+        l10n,
+        'a',
+        provider: 'hitokoto',
+        httpGet: (
+          url, {
+          Map<String, String>? headers,
+          int? timeoutSeconds,
+        }) async {
+          return HttpResponse('not-json', 200);
+        },
+      );
+
+      final defaultQuotes = [
+        l10n.defaultQuote1,
+        l10n.defaultQuote2,
+        l10n.defaultQuote3,
+      ];
+      expect(defaultQuotes.contains(result['content']), isTrue);
+      expect(result['provider'], 'default');
+    });
   });
 }

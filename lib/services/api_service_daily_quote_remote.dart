@@ -49,7 +49,13 @@ Future<Map<String, dynamic>?> _fetchFromHitokoto(
     return null;
   }
 
-  final data = json.decode(response.body);
+  dynamic data;
+  try {
+    data = json.decode(response.body);
+  } catch (e) {
+    logDebug('一言API返回数据 JSON 解析失败: $e, 响应体: ${response.body}');
+    return null;
+  }
   if (data is! Map<String, dynamic> || !data.containsKey('hitokoto')) {
     logDebug('一言API返回数据格式错误: $data');
     return null;
@@ -76,7 +82,13 @@ Future<Map<String, dynamic>?> _fetchFromZenQuotes(
     return null;
   }
 
-  final data = json.decode(response.body);
+  dynamic data;
+  try {
+    data = json.decode(response.body);
+  } catch (e) {
+    logDebug('ZenQuotes 返回数据 JSON 解析失败: $e, 响应体: ${response.body}');
+    return null;
+  }
   final quote = data is List && data.isNotEmpty ? data.first : data;
   if (quote is! Map<String, dynamic>) {
     logDebug('ZenQuotes 返回数据格式错误: $data');
@@ -122,7 +134,13 @@ Future<Map<String, dynamic>?> _fetchFromApiNinjas(
     return null;
   }
 
-  final data = json.decode(response.body);
+  dynamic data;
+  try {
+    data = json.decode(response.body);
+  } catch (e) {
+    logDebug('API Ninjas 返回数据 JSON 解析失败: $e, 响应体: ${response.body}');
+    return null;
+  }
   final quote = data is List && data.isNotEmpty ? data.first : data;
   if (quote is! Map<String, dynamic>) {
     logDebug('API Ninjas 返回数据格式错误: $data');
@@ -154,7 +172,13 @@ Future<Map<String, dynamic>?> _fetchFromMeigen(
     return null;
   }
 
-  final data = json.decode(response.body);
+  dynamic data;
+  try {
+    data = json.decode(response.body);
+  } catch (e) {
+    logDebug('名言教えるよ 返回数据 JSON 解析失败: $e, 响应体: ${response.body}');
+    return null;
+  }
   final quote = data is List && data.isNotEmpty ? data.first : data;
   if (quote is! Map<String, dynamic>) {
     logDebug('名言教えるよ 返回数据格式错误: $data');
@@ -183,7 +207,13 @@ Future<Map<String, dynamic>?> _fetchFromKoreanAdvice(
     return null;
   }
 
-  final data = json.decode(response.body);
+  dynamic data;
+  try {
+    data = json.decode(response.body);
+  } catch (e) {
+    logDebug('Korean Advice 返回数据 JSON 解析失败: $e, 响应体: ${response.body}');
+    return null;
+  }
   if (data is! Map<String, dynamic>) {
     logDebug('Korean Advice 返回数据格式错误: $data');
     return null;

@@ -97,17 +97,24 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
   }
 
   Future<void> _loadApiNinjasApiKeyStatus() async {
-    final loader = widget.apiNinjasApiKeyStatusLoader;
-    final hasKey = await (loader != null
-        ? loader()
-        : APIKeyManager().hasValidProviderApiKey(
-            ApiService.apiNinjasProvider,
-          ));
-    if (!mounted) return;
+    try {
+      final loader = widget.apiNinjasApiKeyStatusLoader;
+      final hasKey = await (loader != null
+          ? loader()
+          : APIKeyManager().hasValidProviderApiKey(
+              ApiService.apiNinjasProvider,
+            ));
+      if (!mounted) return;
 
-    setState(() {
-      _hasApiNinjasApiKey = hasKey;
-    });
+      setState(() {
+        _hasApiNinjasApiKey = hasKey;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _hasApiNinjasApiKey = false;
+      });
+    }
   }
 
   Future<void> _configureApiNinjasApiKey() async {
@@ -165,18 +172,23 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
       return;
     }
 
-    if (trimmed.isEmpty) {
-      await apiKeyManager.removeProviderApiKey(ApiService.apiNinjasProvider);
-    } else {
-      await apiKeyManager.saveProviderApiKey(
-        ApiService.apiNinjasProvider,
-        trimmed,
-      );
-    }
+    try {
+      if (trimmed.isEmpty) {
+        await apiKeyManager.removeProviderApiKey(ApiService.apiNinjasProvider);
+      } else {
+        await apiKeyManager.saveProviderApiKey(
+          ApiService.apiNinjasProvider,
+          trimmed,
+        );
+      }
 
-    if (!mounted) return;
-    await _loadApiNinjasApiKeyStatus();
-    _showSavedSnackBar();
+      if (!mounted) return;
+      await _loadApiNinjasApiKeyStatus();
+      _showSavedSnackBar();
+    } catch (e) {
+      if (!mounted) return;
+      _showSaveFailedSnackBar(e);
+    }
   }
 
   Future<void> _openApiNinjasCategorySelection() async {
@@ -190,9 +202,14 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
     );
 
     if (selectedCategories == null) return;
-    await settingsService.setApiNinjasCategories(selectedCategories);
-    if (!mounted) return;
-    _showSavedSnackBar();
+    try {
+      await settingsService.setApiNinjasCategories(selectedCategories);
+      if (!mounted) return;
+      _showSavedSnackBar();
+    } catch (e) {
+      if (!mounted) return;
+      _showSaveFailedSnackBar(e);
+    }
   }
 
   void _showSavedSnackBar() {
