@@ -17,7 +17,8 @@ import 'unit/services/excerpt_intent_service_test.dart'
     as excerpt_intent_service_test;
 import 'unit/services/settings_service_test.dart' as settings_service_test;
 import 'unit/services/weather_service_test.dart' as weather_service_test;
-import 'unit/services/connectivity_service_test.dart' as connectivity_service_test;
+import 'unit/services/connectivity_service_test.dart'
+    as connectivity_service_test;
 import 'unit/services/location_service_test.dart' as location_service_test;
 import 'unit/services/clipboard_service_test.dart' as clipboard_service_test;
 import 'unit/services/ai_analysis_database_service_test.dart'
