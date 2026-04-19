@@ -52,6 +52,9 @@ import 'unit/widgets/motion_photo_preview_page_test.dart'
     as motion_photo_preview_page_test;
 
 // Import widget tests
+// Import controller tests
+import 'unit/controllers/search_controller_test.dart' as search_controller_test;
+
 import 'widget/pages/home_page_test.dart' as home_page_test;
 
 void main() {
@@ -92,6 +95,10 @@ void main() {
       anniversary_animation_overlay_test.main();
       anniversary_notebook_icon_test.main();
       motion_photo_preview_page_test.main();
+    });
+
+    group('Controller Tests', () {
+      search_controller_test.main();
     });
 
     group('Widget Tests', () {
