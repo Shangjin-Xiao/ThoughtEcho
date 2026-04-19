@@ -6,6 +6,7 @@
     <meta name="description" content="心迹 - 你的专属灵感摘录本。让我们一起随心记录，释放AI洞察的力量。">
     <meta name="keywords" content="ThoughtEcho, 心迹, 灵感, 笔记, AI, Flutter, 跨平台, 知识管理, 效率, 写作, 开源, 笔记应用">
     <meta name="author" content="Shangjin Xiao">
+    <meta name="robots" content="index,follow,max-image-preview:large">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="format-detection" content="telephone=no">
@@ -14,18 +15,22 @@
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
-    <link rel="canonical" href="https://shangjin-xiao.github.io/ThoughtEcho/">
+    <link rel="canonical" href="https://note.shangjinyun.cn/">
+    <link rel="alternate" hreflang="zh-CN" href="https://note.shangjinyun.cn/">
+    <link rel="alternate" hreflang="en" href="https://note.shangjinyun.cn/">
+    <link rel="alternate" hreflang="x-default" href="https://note.shangjinyun.cn/">
     
     <!-- Open Graph / Social Media Meta Tags -->
     <meta property="og:title" content="心迹 ThoughtEcho - 你的专属灵感摘录本">
     <meta property="og:description" content="随心记录每一刻灵感，释放AI洞察的力量。本地优先，安全私密。">
-    <meta property="og:image" content="icon.png">
-    <meta property="og:url" content="https://shangjin-xiao.github.io/ThoughtEcho/">
+    <meta property="og:image" content="https://note.shangjinyun.cn/icon.png">
+    <meta property="og:url" content="https://note.shangjinyun.cn/">
     <meta property="og:type" content="website">
     <meta property="og:locale" content="zh_CN">
-    <meta name="twitter:card" content="summary">
+    <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="心迹 ThoughtEcho - 你的专属灵感摘录本">
     <meta name="twitter:description" content="随心记录每一刻灵感，释放AI洞察的力量。本地优先，安全私密。">
+    <meta name="twitter:image" content="https://note.shangjinyun.cn/icon.png">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -35,6 +40,33 @@
     <script type="module" src="https://get.microsoft.com/badge/ms-store-badge.bundled.js"></script>
 
     <link rel="stylesheet" href="style.css">
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "name": "ThoughtEcho",
+            "alternateName": "心迹",
+            "url": "https://note.shangjinyun.cn/"
+          },
+          {
+            "@type": "SoftwareApplication",
+            "name": "ThoughtEcho",
+            "alternateName": "心迹",
+            "applicationCategory": "ProductivityApplication",
+            "operatingSystem": "Android, iOS, Windows",
+            "url": "https://note.shangjinyun.cn/",
+            "downloadUrl": "https://github.com/Shangjin-Xiao/ThoughtEcho/releases",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD"
+            }
+          }
+        ]
+      }
+    </script>
 </head>
 <body class="lang-zh" id="top">
     <a class="skip-link" href="#main">
@@ -57,6 +89,7 @@
                 <li><a href="#features"><span class="content-zh">功能特性</span><span class="content-en">Features</span></a></li>
                 <li><a href="#screenshots"><span class="content-zh">应用截图</span><span class="content-en">Screenshots</span></a></li>
                 <li><a href="#tech"><span class="content-zh">技术栈</span><span class="content-en">Tech Stack</span></a></li>
+                <li><a href="#friend-links"><span class="content-zh">友情链接</span><span class="content-en">Friends</span></a></li>
                 <li><a href="#quickstart"><span class="content-zh">快速开始</span><span class="content-en">Quick Start</span></a></li>
                 <li><a href="user-guide.html"><span class="content-zh">用户指南</span><span class="content-en">User Guide</span></a></li>
                 <li><a href="privacy.html"><span class="content-zh">隐私政策</span><span class="content-en">Privacy</span></a></li>
@@ -835,8 +868,25 @@ cd ThoughtEcho</code></pre>
         </div>
 
         <div class="roadmap-container">
+            <!-- v3.6.0 -->
+            <div class="roadmap-card fade-in" style="border-color: var(--accent-brown); transform: scale(1.02); z-index: 4;">
+                <div class="roadmap-header">
+                    <span class="roadmap-icon">✨</span>
+                    <h3 class="roadmap-title">
+                        <span class="content-zh">v3.6.0 体验升级</span>
+                        <span class="content-en">v3.6.0 Experience Upgrade</span>
+                    </h3>
+                </div>
+                <ul class="roadmap-items">
+                    <li><span class="content-zh">💬 用户反馈：全新专属反馈与联系页面，集成 GitHub Issue 模板与讨论区</span><span class="content-en">Feedback: Dedicated feedback page with GitHub Issue templates and Discussions</span></li>
+                    <li><span class="content-zh">📖 每日一言：支持多服务商配置，提供更丰富灵感源</span><span class="content-en">Daily Quotes: Multi-provider support for richer daily inspirations</span></li>
+                    <li><span class="content-zh">🛡️ 隐私与安全：重新设计纸质风格的隐私政策页面</span><span class="content-en">Privacy: Redesigned privacy policy with formal paper-like aesthetics</span></li>
+                    <li><span class="content-zh">👀 体验细节：实况照片添加语义提示，完善本地离线模式设置</span><span class="content-en">Details: Added tooltips for Live Photos and refined offline mode settings</span></li>
+                </ul>
+            </div>
+
             <!-- v3.5.0 -->
-            <div class="roadmap-card fade-in" style="border-color: var(--accent-brown); transform: scale(1.02); z-index: 3;">
+            <div class="roadmap-card fade-in" style="z-index: 3;">
                 <div class="roadmap-header">
                     <span class="roadmap-icon">🎂</span>
                     <h3 class="roadmap-title">
@@ -1062,6 +1112,49 @@ cd ThoughtEcho</code></pre>
         <!-- small download note removed as requested -->
     </section>
 
+    <section class="section faq-section" id="friend-links">
+        <div class="section-header fade-in">
+            <span class="section-label">
+                <span class="content-zh">🔗 友情链接</span>
+                <span class="content-en">🔗 Friend Links</span>
+            </span>
+            <h2 class="section-title text-gradient">
+                <span class="content-zh">我的其他站点</span>
+                <span class="content-en">My Other Sites</span>
+            </h2>
+            <p class="section-description">
+                <span class="content-zh">访问个人主页与 FrameEcho 项目站点</span>
+                <span class="content-en">Visit my personal homepage and FrameEcho site</span>
+            </p>
+        </div>
+
+        <div class="download-container fade-in">
+            <div class="download-card">
+                <h3 class="download-title">mypage</h3>
+                <p class="download-description">
+                    <span class="content-zh">开发者个人主页，汇总项目与日常创作内容</span>
+                    <span class="content-en">Developer homepage with projects and creative updates</span>
+                </p>
+                <a href="https://shangjinyun.cn/" class="btn-download" target="_blank" rel="noopener noreferrer">
+                    <span class="content-zh">访问主页</span>
+                    <span class="content-en">Visit Homepage</span>
+                </a>
+            </div>
+
+            <div class="download-card">
+                <h3 class="download-title">FrameEcho</h3>
+                <p class="download-description">
+                    <span class="content-zh">高性能视频抽帧应用站点，支持 HDR 与动态照片导出</span>
+                    <span class="content-en">Frame capture app site with HDR and motion photo export</span>
+                </p>
+                <a href="https://frameecho.shangjinyun.cn/" class="btn-download" target="_blank" rel="noopener noreferrer">
+                    <span class="content-zh">访问站点</span>
+                    <span class="content-en">Visit Site</span>
+                </a>
+            </div>
+        </div>
+    </section>
+
     </main>
 
     <!-- Footer -->
@@ -1113,6 +1206,8 @@ cd ThoughtEcho</code></pre>
                         <span class="content-en">Resources</span>
                     </h4>
                     <ul class="footer-links">
+                        <li><a href="https://shangjinyun.cn/" target="_blank" rel="noopener noreferrer"><span class="content-zh">个人主页</span><span class="content-en">mypage</span></a></li>
+                        <li><a href="https://frameecho.shangjinyun.cn/" target="_blank" rel="noopener noreferrer"><span class="content-zh">帧迹 FrameEcho</span><span class="content-en">FrameEcho</span></a></li>
                         <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho"><span class="content-zh">GitHub 仓库</span><span class="content-en">GitHub Repo</span></a></li>
                         <li><a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases"><span class="content-zh">GitHub 下载</span><span class="content-en">GitHub Releases</span></a></li>
                         <li><a href="https://apps.microsoft.com/detail/9NC7GDG6KFMC" target="_blank" rel="noopener noreferrer"><span class="content-zh">微软商店</span><span class="content-en">Microsoft Store</span></a></li>
