@@ -17,6 +17,7 @@ import 'unit/services/excerpt_intent_service_test.dart'
     as excerpt_intent_service_test;
 import 'unit/services/settings_service_test.dart' as settings_service_test;
 import 'unit/services/weather_service_test.dart' as weather_service_test;
+import 'unit/services/connectivity_service_test.dart' as connectivity_service_test;
 import 'unit/services/location_service_test.dart' as location_service_test;
 import 'unit/services/clipboard_service_test.dart' as clipboard_service_test;
 import 'unit/services/ai_analysis_database_service_test.dart'
@@ -71,6 +72,7 @@ void main() {
       excerpt_intent_service_test.main();
       settings_service_test.main();
       weather_service_test.main();
+      connectivity_service_test.main();
       location_service_test.main();
       location_format_test.main();
       clipboard_service_test.main();

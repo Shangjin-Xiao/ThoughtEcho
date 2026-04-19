@@ -10,3 +10,7 @@
 ## 2026-03-24 - [补充 MemoryOptimizationHelper 的测试]
 **盲点:** `ProcessingStrategyExt` 在 `MemoryOptimizationHelper` 中作为一个核心的纯枚举扩展，包含了内存优化策略的状态描述与隔离执行判断（`description`, `useIsolate`）。但由于缺乏单元测试覆盖，其逻辑在重构或新增状态时可能出现遗漏。
 **对策:** 编写极简的枚举扩展测试。通过直接断言各种策略类型在调用 `description` 和 `useIsolate` 方法时的返回结果，快速验证且不依赖其他环境。
+
+## $(date +%Y-%m-%d) - ConnectivityService Network Unit Tests
+**盲点:** `dart:io` 的 `InternetAddress.lookup` 缺乏直接在 Dart 层模拟的支持。如果直接测试 `ConnectivityService` 的 DNS 解析功能，在没有网络的持续集成环境中会导致意外失败和测试污染。
+**对策:** 通过 `HttpOverrides.runZoned` 和在测试中控制并验证异常行为，不依赖真实的互联网联通性来验证重试、状态分发以及资源清理等结构逻辑，保证测试用例具有纯函数式的环境独立性。
