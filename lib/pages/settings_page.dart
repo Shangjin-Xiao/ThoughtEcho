@@ -29,6 +29,7 @@ import 'ai_annual_report_webview.dart';
 import 'license_page.dart' as license;
 import 'preferences_detail_page.dart';
 import 'user_guide_page.dart';
+import 'feedback_contact_page.dart';
 import '../utils/feature_guide_helper.dart';
 import 'storage_management_page.dart';
 import 'local_ai_settings_page.dart'; // 导入本地 AI 设置页面
@@ -50,8 +51,6 @@ class SettingsPageState extends State<SettingsPage> {
   // --- 定义链接地址 ---
   final String _projectUrl = 'https://github.com/Shangjin-Xiao/ThoughtEcho';
   final String _websiteUrl = 'https://note.shangjinyun.cn/';
-  final String _feedbackUrl =
-      'https://github.com/Shangjin-Xiao/ThoughtEcho/issues/new';
   // --- 链接地址结束 ---
   final TextEditingController _locationController = TextEditingController();
 
@@ -928,18 +927,17 @@ class SettingsPageState extends State<SettingsPage> {
                               ElevatedButton.icon(
                                 onPressed: () {
                                   Navigator.pop(dialogContext);
-                                  _launchUrl(_feedbackUrl);
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const FeedbackContactPage(),
+                                    ),
+                                  );
                                 },
                                 icon: const Icon(Icons.feedback_outlined),
-                                label: Text(l10n.settingsFeedback),
+                                label: Text(l10n.feedbackAndContact),
                                 style: _primaryButtonStyle(context),
-                              ),
-                              const SizedBox(height: 8),
-                              _buildAboutLink(
-                                context: context,
-                                icon: Icons.email_outlined,
-                                text: l10n.settingsContactDeveloper,
-                                url: 'mailto:shangjinyun@proton.me',
                               ),
                               const SizedBox(height: 8),
                               ElevatedButton.icon(
