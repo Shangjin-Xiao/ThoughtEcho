@@ -22,14 +22,16 @@ void main() {
   });
 
   group('SmartPushAnalytics.recordAppOpen', () {
-    test('appends new record representing current time to MMKV storage', () async {
+    test('appends new record representing current time to MMKV storage',
+        () async {
       await analytics.recordAppOpen();
 
       final recordsStr = mmkvService.getString('smart_push_app_open_times');
       expect(recordsStr, isNotNull);
       expect(recordsStr, isNotEmpty);
 
-      final records = recordsStr!.split(',').where((s) => s.isNotEmpty).toList();
+      final records =
+          recordsStr!.split(',').where((s) => s.isNotEmpty).toList();
       expect(records.length, 1);
 
       // Should be parseable as DateTime
@@ -41,14 +43,17 @@ void main() {
       final maxRecords = SmartPushAnalytics.maxAppOpenRecords;
 
       // Create max number of fake records
-      final fakeRecords = List.generate(
-          maxRecords, (i) => DateTime(2023, 1, 1).add(Duration(days: i)).toIso8601String());
-      await mmkvService.setString('smart_push_app_open_times', fakeRecords.join(','));
+      final fakeRecords = List.generate(maxRecords,
+          (i) => DateTime(2023, 1, 1).add(Duration(days: i)).toIso8601String());
+      await mmkvService.setString(
+          'smart_push_app_open_times', fakeRecords.join(','));
 
       await analytics.recordAppOpen();
 
-      final updatedRecordsStr = mmkvService.getString('smart_push_app_open_times');
-      final updatedRecords = updatedRecordsStr!.split(',').where((s) => s.isNotEmpty).toList();
+      final updatedRecordsStr =
+          mmkvService.getString('smart_push_app_open_times');
+      final updatedRecords =
+          updatedRecordsStr!.split(',').where((s) => s.isNotEmpty).toList();
 
       expect(updatedRecords.length, maxRecords);
       // The oldest one should be removed (the one from index 0 of fakeRecords)
@@ -62,12 +67,15 @@ void main() {
 
     test('handles corrupted data gracefully by appending anyway', () async {
       // Set corrupted data
-      await mmkvService.setString('smart_push_app_open_times', 'corrupted_data_without_datetime');
+      await mmkvService.setString(
+          'smart_push_app_open_times', 'corrupted_data_without_datetime');
 
       await analytics.recordAppOpen();
 
-      final updatedRecordsStr = mmkvService.getString('smart_push_app_open_times');
-      final updatedRecords = updatedRecordsStr!.split(',').where((s) => s.isNotEmpty).toList();
+      final updatedRecordsStr =
+          mmkvService.getString('smart_push_app_open_times');
+      final updatedRecords =
+          updatedRecordsStr!.split(',').where((s) => s.isNotEmpty).toList();
 
       // Currently, _getAppOpenRecords simply returns the split strings, so 'corrupted_data_without_datetime' will still be there.
       // And the new DateTime string will be added.
