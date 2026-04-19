@@ -1,0 +1,33 @@
+name: Question / 疑问
+description: Ask a question about using ThoughtEcho / 关于 ThoughtEcho 跨平台笔记使用的疑问
+title: "[Question]: "
+labels: ["question", "help wanted"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please consider asking in [Discussions](https://github.com/Shangjin-Xiao/ThoughtEcho/discussions) first if you just want to talk or have a quick question.
+        如果你只是想交流或者有简单的问题，建议先在 [Discussions](https://github.com/Shangjin-Xiao/ThoughtEcho/discussions) 中提问。
+  - type: textarea
+    id: question_details
+    attributes:
+      label: Your Question / 你的问题
+      description: Please describe your question clearly and concisely. / 请清晰简洁地描述你的问题。
+      placeholder: What would you like to know? / 你想了解什么？
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform / 平台 (Optional)
+      description: Which platform are you using? / 你在使用哪个平台？
+      options:
+        - Android
+        - iOS
+        - Windows
+        - macOS
+        - Linux
+        - Web
+        - Multiple/Other (多个/其他)
+    validations:
+      required: false
