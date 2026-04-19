@@ -273,23 +273,61 @@ extension SmartPushNotification on SmartPushService {
       }
     }
 
-    final response = await NetworkService.instance.get(
-      'https://v1.hitokoto.cn/?c=d&c=e&c=i&c=k',
-      timeoutSeconds: 10,
+    final appSettings = _loadStoredAppSettings();
+    final l10n = _resolveDailyQuoteLocalizations(appSettings);
+    final normalizedData = SmartPushService.normalizeDailyQuoteData(
+      await ApiService.getDailyQuote(
+        l10n,
+        appSettings.hitokotoType,
+        useLocalOnly: appSettings.useLocalQuotesOnly,
+        offlineQuoteSource: appSettings.offlineQuoteSource,
+        databaseService: _databaseService,
+        provider: appSettings.dailyQuoteProvider,
+        apiNinjasCategories: appSettings.apiNinjasCategories,
+      ),
     );
-
-    if (response.statusCode != 200) {
-      return null;
-    }
-
-    final data = json.decode(response.body) as Map<String, dynamic>?;
-    final normalizedData = SmartPushService.normalizeDailyQuoteData(data);
     if (normalizedData == null) {
       return null;
     }
 
     _saveDailyQuoteToCache(normalizedData);
     return normalizedData;
+  }
+
+  AppSettings _loadStoredAppSettings() {
+    try {
+      final rawSettings = _mmkv.getString(SmartPushService._appSettingsKey);
+      if (rawSettings == null || rawSettings.isEmpty) {
+        return AppSettings.defaultSettings();
+      }
+
+      final decoded = json.decode(rawSettings);
+      if (decoded is Map<String, dynamic>) {
+        return AppSettings.fromJson(decoded);
+      }
+    } catch (e) {
+      AppLogger.w('读取每日一言设置失败', error: e);
+    }
+
+    return AppSettings.defaultSettings();
+  }
+
+  AppLocalizations _resolveDailyQuoteLocalizations(AppSettings settings) {
+    final localeCode = settings.localeCode;
+    final preferredLocale = localeCode == null || localeCode.isEmpty
+        ? WidgetsBinding.instance.platformDispatcher.locale
+        : Locale(localeCode);
+
+    final supportedLanguageCodes = AppLocalizations.supportedLocales
+        .map((locale) => locale.languageCode)
+        .toSet();
+    final effectiveLocale = supportedLanguageCodes.contains(
+      preferredLocale.languageCode,
+    )
+        ? preferredLocale
+        : const Locale('en');
+
+    return lookupAppLocalizations(effectiveLocale);
   }
 
   Future<void> _ensureNotificationReady() async {

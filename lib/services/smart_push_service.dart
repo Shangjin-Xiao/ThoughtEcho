@@ -12,15 +12,17 @@ import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 
+import '../gen_l10n/app_localizations.dart';
+import '../models/app_settings.dart';
 import '../models/smart_push_settings.dart';
 import '../models/quote_model.dart';
 import '../pages/home_page.dart';
 import '../main.dart' show navigatorKey;
+import 'api_service.dart';
 import 'database_service.dart';
 import 'mmkv_service.dart';
 import 'location_service.dart';
 import 'weather_service.dart';
-import 'network_service.dart';
 import '../utils/app_logger.dart';
 import '../utils/platform_helper.dart';
 import '../utils/string_utils.dart';
@@ -76,6 +78,7 @@ class SmartPushService extends ChangeNotifier {
       'smart_push_daily_quote_pushed_date';
   static const String _inactivityQuoteDateKey =
       'smart_push_inactivity_quote_date';
+  static const String _appSettingsKey = 'app_settings';
 
   /// 今日智能推送是否已执行过（任意内容类型）
   static const String _todayPushedDateKey = 'smart_push_today_pushed_date';
@@ -203,12 +206,14 @@ class SmartPushService extends ChangeNotifier {
         (rawData['from_who'] ?? rawData['author'] ?? '').toString().trim();
     final from = (rawData['from'] ?? rawData['source'] ?? '').toString().trim();
     final type = (rawData['type'] ?? '').toString().trim();
+    final provider = (rawData['provider'] ?? '').toString().trim();
 
     return {
       'hitokoto': content,
       'from_who': fromWho,
       'from': from,
       if (type.isNotEmpty) 'type': type,
+      if (provider.isNotEmpty) 'provider': provider,
     };
   }
 

@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui' show FrameTiming;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
+
+import '../extensions/note_category_localization_extension.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/quote_model.dart';
 import '../models/note_category.dart';

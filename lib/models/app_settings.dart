@@ -1,5 +1,37 @@
 class AppSettings {
+  static const Set<String> _supportedDailyQuoteProviders = {
+    'hitokoto',
+    'zenquotes',
+    'api_ninjas',
+    'meigen',
+    'kadvice',
+  };
+  static const Set<String> _supportedApiNinjasCategories = {
+    'wisdom',
+    'philosophy',
+    'life',
+    'truth',
+    'inspirational',
+    'relationships',
+    'love',
+    'faith',
+    'humor',
+    'success',
+    'courage',
+    'happiness',
+    'art',
+    'writing',
+    'fear',
+    'nature',
+    'time',
+    'freedom',
+    'death',
+    'leadership',
+  };
+
   final String hitokotoType;
+  final String dailyQuoteProvider;
+  final List<String> apiNinjasCategories;
   final bool clipboardMonitoringEnabled; // 添加剪贴板监控设置
   final int defaultStartPage; // 添加默认启动页面设置，0=首页，1=记录页
   final bool hasCompletedOnboarding; // 添加是否完成引导页的标志
@@ -31,6 +63,8 @@ class AppSettings {
 
   AppSettings({
     this.hitokotoType = 'a,b,c,d,e,f,g,h,i,j,k', // 默认全选所有类型
+    this.dailyQuoteProvider = 'hitokoto',
+    this.apiNinjasCategories = const [],
     this.clipboardMonitoringEnabled = false, // 默认不启用剪贴板监控
     this.defaultStartPage = 0, // 默认启动显示首页
     this.hasCompletedOnboarding = false, // 默认未完成引导
@@ -64,6 +98,8 @@ class AppSettings {
   Map<String, dynamic> toJson() {
     return {
       'hitokotoType': hitokotoType,
+      'dailyQuoteProvider': dailyQuoteProvider,
+      'apiNinjasCategories': apiNinjasCategories,
       'clipboardMonitoringEnabled': clipboardMonitoringEnabled,
       'defaultStartPage': defaultStartPage,
       'hasCompletedOnboarding': hasCompletedOnboarding,
@@ -95,9 +131,33 @@ class AppSettings {
     };
   }
 
+  static List<String> _readStringList(dynamic value) {
+    if (value is! List) {
+      return const [];
+    }
+
+    return value.whereType<String>().toList();
+  }
+
+  static String _readString(dynamic value, String fallback) {
+    return value is String ? value : fallback;
+  }
+
   factory AppSettings.fromJson(Map<String, dynamic> map) {
+    final normalizedProvider =
+        _readString(map['dailyQuoteProvider'], 'hitokoto');
+    final normalizedApiNinjasCategories = _readStringList(
+      map['apiNinjasCategories'],
+    ).where(_supportedApiNinjasCategories.contains).toList(growable: false);
+
     return AppSettings(
-      hitokotoType: map['hitokotoType'] ?? 'a,b,c,d,e,f,g,h,i,j,k',
+      hitokotoType: _readString(map['hitokotoType'], 'a,b,c,d,e,f,g,h,i,j,k'),
+      dailyQuoteProvider: _supportedDailyQuoteProviders.contains(
+        normalizedProvider,
+      )
+          ? normalizedProvider
+          : 'hitokoto',
+      apiNinjasCategories: normalizedApiNinjasCategories,
       clipboardMonitoringEnabled: map['clipboardMonitoringEnabled'] ?? false,
       defaultStartPage: map['defaultStartPage'] ?? 0,
       hasCompletedOnboarding: map['hasCompletedOnboarding'] ?? false,
@@ -121,19 +181,20 @@ class AppSettings {
       excerptIntentEnabled: map['excerptIntentEnabled'] ?? true,
       defaultAuthor: map['defaultAuthor'] as String?,
       defaultSource: map['defaultSource'] as String?,
-      defaultTagIds:
-          (map['defaultTagIds'] as List<dynamic>?)?.cast<String>() ?? const [],
+      defaultTagIds: _readStringList(map['defaultTagIds']),
       anniversaryShown: map['anniversaryShown'] ?? false,
       anniversaryAnimationEnabled: map['anniversaryAnimationEnabled'] ?? true,
       trashRetentionDays: map['trashRetentionDays'] ?? 30,
       trashRetentionLastModified: map['trashRetentionLastModified'] as String?,
       skipNonFullscreenEditor: map['skipNonFullscreenEditor'] ?? false,
-      offlineQuoteSource: map['offlineQuoteSource'] ?? 'tagOnly',
+      offlineQuoteSource: _readString(map['offlineQuoteSource'], 'tagOnly'),
     );
   }
 
   factory AppSettings.defaultSettings() => AppSettings(
         hitokotoType: 'a,b,c,d,e,f,g,h,i,j,k',
+        dailyQuoteProvider: 'hitokoto',
+        apiNinjasCategories: const [],
         clipboardMonitoringEnabled: false,
         defaultStartPage: 0,
         hasCompletedOnboarding: false,
@@ -167,6 +228,8 @@ class AppSettings {
   /// 使用特殊标记来区分"未指定"和"设置为null（跟随系统）"
   AppSettings copyWith({
     String? hitokotoType,
+    String? dailyQuoteProvider,
+    List<String>? apiNinjasCategories,
     bool? clipboardMonitoringEnabled,
     int? defaultStartPage,
     bool? hasCompletedOnboarding,
@@ -201,6 +264,8 @@ class AppSettings {
   }) {
     return AppSettings(
       hitokotoType: hitokotoType ?? this.hitokotoType,
+      dailyQuoteProvider: dailyQuoteProvider ?? this.dailyQuoteProvider,
+      apiNinjasCategories: apiNinjasCategories ?? this.apiNinjasCategories,
       clipboardMonitoringEnabled:
           clipboardMonitoringEnabled ?? this.clipboardMonitoringEnabled,
       defaultStartPage: defaultStartPage ?? this.defaultStartPage,

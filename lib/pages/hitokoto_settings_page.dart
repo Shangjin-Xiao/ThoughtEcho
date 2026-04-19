@@ -1,12 +1,26 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import '../services/settings_service.dart';
-import '../services/api_service.dart';
-import '../theme/app_theme.dart';
-import '../gen_l10n/app_localizations.dart';
 import 'package:provider/provider.dart';
 
+import '../gen_l10n/app_localizations.dart';
+import '../pages/api_ninjas_category_selection_page.dart';
+import '../services/api_key_manager.dart';
+import '../services/api_service.dart';
+import '../services/settings_service.dart';
+import '../theme/app_theme.dart';
+
+part 'hitokoto_settings_page_layout_sections.dart';
+part 'hitokoto_settings_page_info_sections.dart';
+part 'hitokoto_settings_page_widgets.dart';
+
 class HitokotoSettingsPage extends StatefulWidget {
-  const HitokotoSettingsPage({super.key});
+  const HitokotoSettingsPage({
+    super.key,
+    this.apiNinjasApiKeyStatusLoader,
+  });
+
+  final Future<bool> Function()? apiNinjasApiKeyStatusLoader;
 
   @override
   State<HitokotoSettingsPage> createState() => _HitokotoSettingsPageState();
@@ -15,9 +29,11 @@ class HitokotoSettingsPage extends StatefulWidget {
 class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
     with TickerProviderStateMixin {
   late String _selectedType;
+  late String _selectedProvider;
   final List<String> _selectedTypes = [];
   late AnimationController _animationController;
   late Animation<double> _fadeAnimation;
+  bool _hasApiNinjasApiKey = false;
 
   @override
   void initState() {
@@ -32,11 +48,16 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
     );
 
     _selectedType = context.read<SettingsService>().appSettings.hitokotoType;
+    _selectedProvider = context.read<SettingsService>().dailyQuoteProvider;
     // 解析当前选择的类型
     if (_selectedType.contains(',')) {
       _selectedTypes.addAll(_selectedType.split(','));
     } else {
       _selectedTypes.add(_selectedType);
+    }
+
+    if (_selectedProvider == ApiService.apiNinjasProvider) {
+      unawaited(_loadApiNinjasApiKeyStatus());
     }
   }
 
@@ -46,18 +67,155 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
     super.dispose();
   }
 
-  // 保存选择的类型
-  void _saveSelectedTypes() {
-    // 确保至少选择一种类型
-    if (_selectedTypes.isEmpty) {
-      _selectedTypes.add('a');
+  Future<void> _saveSelectedProvider(String provider) async {
+    final previousProvider = _selectedProvider;
+    final previousHasApiNinjasApiKey = _hasApiNinjasApiKey;
+    setState(() {
+      _selectedProvider = provider;
+      if (provider != ApiService.apiNinjasProvider) {
+        _hasApiNinjasApiKey = false;
+      }
+    });
+
+    try {
+      await context.read<SettingsService>().setDailyQuoteProvider(provider);
+      if (!mounted) return;
+
+      if (provider == ApiService.apiNinjasProvider) {
+        unawaited(_loadApiNinjasApiKeyStatus());
+      }
+
+      _showSavedSnackBar();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _selectedProvider = previousProvider;
+        _hasApiNinjasApiKey = previousHasApiNinjasApiKey;
+      });
+      _showSaveFailedSnackBar(e);
     }
-    _selectedType = _selectedTypes.join(',');
-    context.read<SettingsService>().updateHitokotoType(_selectedType);
+  }
+
+  Future<void> _loadApiNinjasApiKeyStatus() async {
+    try {
+      final loader = widget.apiNinjasApiKeyStatusLoader;
+      final hasKey = await (loader != null
+          ? loader()
+          : APIKeyManager().hasValidProviderApiKey(
+              ApiService.apiNinjasProvider,
+            ));
+      if (!mounted) return;
+
+      setState(() {
+        _hasApiNinjasApiKey = hasKey;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _hasApiNinjasApiKey = false;
+      });
+    }
+  }
+
+  Future<void> _configureApiNinjasApiKey() async {
+    final l10n = AppLocalizations.of(context);
+    final apiKeyManager = APIKeyManager();
+    final controller = TextEditingController(
+      text: await apiKeyManager.getProviderApiKey(ApiService.apiNinjasProvider),
+    );
+
+    if (!mounted) {
+      controller.dispose();
+      return;
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+    final result = await showDialog<String?>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text(l10n.dailyQuoteApiNinjasManageApiKey),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            obscureText: true,
+            decoration: InputDecoration(
+              hintText: l10n.dailyQuoteApiNinjasApiKeyHint,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(null),
+              child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(''),
+              child: Text(l10n.clear),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(controller.text),
+              child: Text(l10n.add),
+            ),
+          ],
+        );
+      },
+    );
+
+    controller.dispose();
+    if (result == null) return;
+
+    final trimmed = result.trim();
+    if (trimmed.isNotEmpty && !apiKeyManager.isValidApiKeyFormat(trimmed)) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.dailyQuoteApiNinjasApiKeyInvalid)),
+      );
+      return;
+    }
+
+    try {
+      if (trimmed.isEmpty) {
+        await apiKeyManager.removeProviderApiKey(ApiService.apiNinjasProvider);
+      } else {
+        await apiKeyManager.saveProviderApiKey(
+          ApiService.apiNinjasProvider,
+          trimmed,
+        );
+      }
+
+      if (!mounted) return;
+      await _loadApiNinjasApiKeyStatus();
+      _showSavedSnackBar();
+    } catch (e) {
+      if (!mounted) return;
+      _showSaveFailedSnackBar(e);
+    }
+  }
+
+  Future<void> _openApiNinjasCategorySelection() async {
+    final settingsService = context.read<SettingsService>();
+    final selectedCategories = await Navigator.of(context).push<List<String>>(
+      MaterialPageRoute(
+        builder: (_) => ApiNinjasCategorySelectionPage(
+          initialSelectedCategories: settingsService.apiNinjasCategories,
+        ),
+      ),
+    );
+
+    if (selectedCategories == null) return;
+    try {
+      await settingsService.setApiNinjasCategories(selectedCategories);
+      if (!mounted) return;
+      _showSavedSnackBar();
+    } catch (e) {
+      if (!mounted) return;
+      _showSaveFailedSnackBar(e);
+    }
+  }
+
+  void _showSavedSnackBar() {
     final l10n = AppLocalizations.of(context);
 
     ScaffoldMessenger.of(context).showSnackBar(
-      // ignore: prefer_const_constructors
       SnackBar(
         content: Row(
           children: [
@@ -81,16 +239,47 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
     );
   }
 
+  void _showSaveFailedSnackBar(Object error) {
+    final l10n = AppLocalizations.of(context);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(l10n.saveFailed(error.toString())),
+      ),
+    );
+  }
+
+  // 保存选择的类型
+  void _saveSelectedTypes() {
+    // 确保至少选择一种类型
+    if (_selectedTypes.isEmpty) {
+      _selectedTypes.add('a');
+    }
+    _selectedType = _selectedTypes.join(',');
+    context.read<SettingsService>().updateHitokotoType(_selectedType);
+    _showSavedSnackBar();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context);
+    final settingsService = context.watch<SettingsService>();
+    final providerLabels = ApiService.getDailyQuoteProviders(l10n);
+    final apiNinjasCategories = settingsService.apiNinjasCategories;
+    final showHitokotoTypeSelection = ApiService.supportsHitokotoTypeSelection(
+      _selectedProvider,
+    );
+    final showProviderCategorySelection =
+        ApiService.supportsProviderCategorySelection(
+      _selectedProvider,
+    );
+    final providerLabel =
+        providerLabels[_selectedProvider] ?? providerLabels.values.first;
 
     return FadeTransition(
       opacity: _fadeAnimation,
       child: Scaffold(
-        backgroundColor: colorScheme.surface,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         appBar: AppBar(
           title: Text(l10n.hitokotoSettings),
           centerTitle: true,
@@ -107,386 +296,110 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 头部说明卡片
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      colorScheme.primaryContainer,
-                      colorScheme.primaryContainer.withAlpha(200),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                  boxShadow: AppTheme.lightShadow,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: colorScheme.primary,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(
-                            Icons.format_quote_rounded,
-                            color: colorScheme.onPrimary,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                l10n.hitokotoTypeSettings,
-                                style: theme.textTheme.titleLarge?.copyWith(
-                                  color: colorScheme.onPrimaryContainer,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                l10n.selectedCount(_selectedTypes.length),
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: colorScheme.onPrimaryContainer
-                                      .withAlpha(180),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      l10n.hitokotoTypeDesc,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: colorScheme.onPrimaryContainer.withAlpha(180),
-                        height: 1.5,
-                      ),
-                    ),
-                  ],
-                ),
+              _buildHeaderCard(
+                context: context,
+                l10n: l10n,
+                showHitokotoTypeSelection: showHitokotoTypeSelection,
+                selectedTypeCount: _selectedTypes.length,
+                providerLabel: providerLabel,
               ),
-
               const SizedBox(height: 24),
-
-              // 快速操作按钮
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildActionButton(
-                      context: context,
-                      icon: Icons.select_all_rounded,
-                      label: l10n.selectAll,
-                      onPressed: () {
-                        setState(() {
-                          _selectedTypes.clear();
-                          for (final key in ApiService.getHitokotoTypes(
-                            l10n,
-                          ).keys) {
-                            _selectedTypes.add(key);
-                          }
-                        });
-                        _saveSelectedTypes();
-                      },
-                      isPrimary: false,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildActionButton(
-                      context: context,
-                      icon: Icons.deselect_rounded,
-                      label: l10n.clearAll,
-                      onPressed: () {
-                        setState(() {
-                          _selectedTypes.clear();
-                          _selectedTypes.add('a'); // 至少选一个
-                        });
-                        _saveSelectedTypes();
-                      },
-                      isPrimary: false,
-                    ),
-                  ),
-                ],
+              _buildProviderSelectionCard(
+                context: context,
+                l10n: l10n,
+                providerLabels: providerLabels,
+                onProviderSelected: (provider) {
+                  unawaited(_saveSelectedProvider(provider));
+                },
               ),
-
+              if (_selectedProvider == ApiService.apiNinjasProvider) ...[
+                const SizedBox(height: 24),
+                _buildSettingsEntryCard(
+                  context: context,
+                  title: l10n.dailyQuoteApiNinjasManageApiKey,
+                  subtitle: _hasApiNinjasApiKey
+                      ? l10n.dailyQuoteApiNinjasApiKeyConfigured
+                      : l10n.dailyQuoteApiNinjasApiKeyMissing,
+                  icon: Icons.key_rounded,
+                  onTap: _configureApiNinjasApiKey,
+                ),
+                const SizedBox(height: 16),
+                _buildSettingsEntryCard(
+                  context: context,
+                  title: l10n.dailyQuoteApiNinjasCategorySelection,
+                  subtitle: apiNinjasCategories.isEmpty
+                      ? l10n.dailyQuoteApiNinjasAllCategoriesUsed
+                      : l10n.dailyQuoteApiNinjasSelectedCount(
+                          apiNinjasCategories.length,
+                        ),
+                  icon: Icons.tune_rounded,
+                  onTap: _openApiNinjasCategorySelection,
+                ),
+              ],
+              if (showHitokotoTypeSelection) ...[
+                const SizedBox(height: 24),
+                _buildTypeActionsRow(
+                  context: context,
+                  l10n: l10n,
+                  onSelectAll: () {
+                    setState(() {
+                      _selectedTypes
+                        ..clear()
+                        ..addAll(ApiService.getHitokotoTypes(l10n).keys);
+                    });
+                    _saveSelectedTypes();
+                  },
+                  onClearAll: () {
+                    setState(() {
+                      _selectedTypes
+                        ..clear()
+                        ..add('a');
+                    });
+                    _saveSelectedTypes();
+                  },
+                ),
+                const SizedBox(height: 24),
+                _buildTypeSelectionCard(
+                  context: context,
+                  l10n: l10n,
+                  selectedTypes: _selectedTypes,
+                  onTypeSelected: (type, selected) {
+                    setState(() {
+                      if (selected) {
+                        _selectedTypes.add(type);
+                      } else {
+                        _selectedTypes.remove(type);
+                        if (_selectedTypes.isEmpty) {
+                          _selectedTypes.add('a');
+                        }
+                      }
+                    });
+                    _saveSelectedTypes();
+                  },
+                ),
+              ] else if (!showProviderCategorySelection) ...[
+                const SizedBox(height: 24),
+                _buildNoTypeSelectionCard(
+                  context: context,
+                  l10n: l10n,
+                ),
+              ],
+              if (showHitokotoTypeSelection)
+                _buildUsageInstructionsCard(
+                  context: context,
+                  l10n: l10n,
+                ),
               const SizedBox(height: 24),
-
-              // 类型选择卡片
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                  border: Border.all(
-                    color: colorScheme.outline.withAlpha(50),
-                    width: 1,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      l10n.typeSelection,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      l10n.typeSelectionHint,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: colorScheme.onSurface.withAlpha(150),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    // 类型选择网格
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: ApiService.getHitokotoTypes(l10n).entries.map((
-                        entry,
-                      ) {
-                        final isSelected = _selectedTypes.contains(entry.key);
-                        return _buildTypeChip(
-                          context: context,
-                          type: entry.key,
-                          label: entry.value,
-                          isSelected: isSelected,
-                          onSelected: (selected) {
-                            setState(() {
-                              if (selected) {
-                                _selectedTypes.add(entry.key);
-                              } else {
-                                _selectedTypes.remove(entry.key);
-                                // 确保至少选择一种类型
-                                if (_selectedTypes.isEmpty) {
-                                  _selectedTypes.add('a');
-                                }
-                              }
-                            });
-                            _saveSelectedTypes();
-                          },
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                ),
+              _buildProviderAttributionCard(
+                context: context,
+                l10n: l10n,
+                providerLabel: providerLabel,
               ),
-              // 帮助信息卡片
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerHigh,
-                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                  border: Border.all(
-                    color: colorScheme.outline.withAlpha(30),
-                    width: 1,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline_rounded,
-                          color: colorScheme.primary,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          l10n.usageInstructions,
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: colorScheme.onSurface,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    ..._buildHelpItems(context, l10n),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // 服务提供商归属说明
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceContainerLow,
-                  borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-                  border: Border.all(
-                    color: colorScheme.outline.withAlpha(30),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline_rounded,
-                      color: colorScheme.primary,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        l10n.hitokotoServiceProvider,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurface.withAlpha(150),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
               const SizedBox(height: 32),
             ],
           ),
         ),
       ),
     );
-  }
-
-  Widget _buildActionButton({
-    required BuildContext context,
-    required IconData icon,
-    required String label,
-    required VoidCallback onPressed,
-    bool isPrimary = false,
-  }) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Material(
-      color: isPrimary ? colorScheme.primary : colorScheme.surfaceContainerHigh,
-      borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 18,
-                color: isPrimary
-                    ? colorScheme.onPrimary
-                    : colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: isPrimary
-                      ? colorScheme.onPrimary
-                      : colorScheme.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTypeChip({
-    required BuildContext context,
-    required String type,
-    required String label,
-    required bool isSelected,
-    required ValueChanged<bool> onSelected,
-  }) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return FilterChip(
-      label: Text(label),
-      selected: isSelected,
-      showCheckmark: false,
-      avatar: isSelected
-          ? Icon(Icons.check_rounded, size: 16, color: colorScheme.onPrimary)
-          : null,
-      labelStyle: TextStyle(
-        color:
-            isSelected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
-        fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-        fontSize: 13,
-      ),
-      backgroundColor: colorScheme.surface,
-      selectedColor: colorScheme.primary,
-      side: BorderSide(
-        color: isSelected
-            ? colorScheme.primary
-            : colorScheme.outline.withAlpha(80),
-        width: 1,
-      ),
-      elevation: isSelected ? 2 : 0,
-      shadowColor: colorScheme.shadow.withAlpha(100),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      onSelected: onSelected,
-    );
-  }
-
-  List<Widget> _buildHelpItems(BuildContext context, AppLocalizations l10n) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    final helpItems = [
-      l10n.hitokotoHelpItem1,
-      l10n.hitokotoHelpItem2,
-      l10n.hitokotoHelpItem3,
-    ];
-
-    return helpItems.map((item) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 8),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              margin: const EdgeInsets.only(top: 6),
-              width: 4,
-              height: 4,
-              decoration: BoxDecoration(
-                color: colorScheme.primary,
-                shape: BoxShape.circle,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                item,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurface.withAlpha(180),
-                  height: 1.4,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
-    }).toList();
   }
 }

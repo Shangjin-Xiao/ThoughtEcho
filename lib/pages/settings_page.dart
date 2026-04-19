@@ -37,6 +37,7 @@ import '../widgets/anniversary_animation_overlay.dart'; // 导入一周年动画
 import '../widgets/anniversary_notebook_icon.dart';
 import '../utils/anniversary_banner_text_utils.dart';
 import '../utils/anniversary_display_utils.dart';
+import '../extensions/note_category_localization_extension.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -1466,13 +1467,15 @@ class SettingsPageState extends State<SettingsPage> {
 
           // 获取标签信息
           final allCategories = await databaseService.getCategories();
+          if (!mounted) return;
+          final l10n = AppLocalizations.of(context);
           final tagNames = <String>[];
           for (final tagId in tagCounts.keys.take(10)) {
             final category = allCategories.firstWhere(
               (c) => c.id == tagId,
-              orElse: () => NoteCategory(id: tagId, name: '未知标签'),
+              orElse: () => NoteCategory(id: tagId, name: l10n.unknownTag),
             );
-            tagNames.add(category.name);
+            tagNames.add(category.localizedName(l10n));
           }
 
           // 获取时间段分布
