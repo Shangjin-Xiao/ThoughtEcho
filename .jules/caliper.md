@@ -10,3 +10,6 @@
 ## 2026-03-24 - [补充 MemoryOptimizationHelper 的测试]
 **盲点:** `ProcessingStrategyExt` 在 `MemoryOptimizationHelper` 中作为一个核心的纯枚举扩展，包含了内存优化策略的状态描述与隔离执行判断（`description`, `useIsolate`）。但由于缺乏单元测试覆盖，其逻辑在重构或新增状态时可能出现遗漏。
 **对策:** 编写极简的枚举扩展测试。通过直接断言各种策略类型在调用 `description` 和 `useIsolate` 方法时的返回结果，快速验证且不依赖其他环境。
+## 2026-04-21 - [补充 MediaOptimizationUtils 的测试]
+**盲点:** `MediaOptimizationUtils` 中的 `getMimeType` 和 `estimateOptimizedSize` 是进行媒体流式处理和内存管理中核心的纯函数，如果映射关系或估算逻辑变更可能导致优化机制静默失效。但这些函数由于不涉及复杂业务而被遗漏在单元测试之外。
+**对策:** 为 `MediaOptimizationUtils` 补充完全隔离的纯函数测试。通过直接断言各种文件后缀及大小写的返回值，无需 Mock 文件系统或平台 API，保持极简快速的测试风格。
