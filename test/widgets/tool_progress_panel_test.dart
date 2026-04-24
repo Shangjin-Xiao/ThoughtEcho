@@ -8,7 +8,7 @@ import 'package:thoughtecho/widgets/ai/tool_progress_panel.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  Widget _buildTestApp(Widget child) {
+  Widget buildTestApp(Widget child) {
     return MaterialApp(
       localizationsDelegates: const [
         AppLocalizations.delegate,
@@ -32,23 +32,25 @@ void main() {
         (WidgetTester tester) async {
       final items = [
         const ToolProgressItem(
-          toolName: 'test_tool',
+          toolName: '正在搜索笔记...',
           status: ToolProgressStatus.running,
         ),
       ];
 
       await tester.pumpWidget(
-        _buildTestApp(
+        buildTestApp(
           ToolProgressPanel(
             title: '测试标题',
             items: items,
             inProgress: true,
+            thinkingText: '让我先看看最近的记录。',
           ),
         ),
       );
 
-      // 应该显示标题
-      expect(find.text('测试标题'), findsOneWidget);
+      // 执行中时优先显示当前动作与思考说明
+      expect(find.text('正在搜索笔记...'), findsAtLeastNWidgets(1));
+      expect(find.text('让我先看看最近的记录。'), findsOneWidget);
 
       // 应该显示进度指示器
       expect(find.byType(CircularProgressIndicator), findsWidgets);
@@ -64,7 +66,7 @@ void main() {
       ];
 
       await tester.pumpWidget(
-        _buildTestApp(
+        buildTestApp(
           ToolProgressPanel(
             title: '测试标题',
             items: items,
@@ -90,7 +92,7 @@ void main() {
       ];
 
       await tester.pumpWidget(
-        _buildTestApp(
+        buildTestApp(
           ToolProgressPanel(
             title: '测试标题',
             items: items,
@@ -136,7 +138,7 @@ void main() {
       ];
 
       await tester.pumpWidget(
-        _buildTestApp(
+        buildTestApp(
           ToolProgressPanel(
             title: '测试标题',
             items: items,
@@ -149,9 +151,9 @@ void main() {
       await tester.pump();
 
       // 应该显示所有工具名称
-      expect(find.text('pending_tool'), findsOneWidget);
-      expect(find.text('completed_tool'), findsOneWidget);
-      expect(find.text('failed_tool'), findsOneWidget);
+      expect(find.text('pending_tool'), findsAtLeastNWidgets(1));
+      expect(find.text('completed_tool'), findsAtLeastNWidgets(1));
+      expect(find.text('failed_tool'), findsAtLeastNWidgets(1));
     });
 
     testWidgets('displays description and result when provided',
@@ -166,7 +168,7 @@ void main() {
       ];
 
       await tester.pumpWidget(
-        _buildTestApp(
+        buildTestApp(
           ToolProgressPanel(
             title: '测试标题',
             items: items,
@@ -192,7 +194,7 @@ void main() {
       ];
 
       await tester.pumpWidget(
-        _buildTestApp(
+        buildTestApp(
           ToolProgressPanel(
             title: '测试标题',
             items: items,
@@ -216,7 +218,7 @@ void main() {
       ];
 
       await tester.pumpWidget(
-        _buildTestApp(
+        buildTestApp(
           ToolProgressPanel(
             title: '测试标题',
             items: items,
@@ -228,11 +230,11 @@ void main() {
       await tester.pump();
 
       // 进行中时默认展开，应该能看到工具名称
-      expect(find.text('test_tool'), findsOneWidget);
+      expect(find.text('test_tool'), findsAtLeastNWidgets(1));
 
       // 更新状态为完成
       await tester.pumpWidget(
-        _buildTestApp(
+        buildTestApp(
           ToolProgressPanel(
             title: '测试标题',
             items: [

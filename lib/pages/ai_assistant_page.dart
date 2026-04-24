@@ -285,6 +285,9 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
 
   /// Stop the current generation - cancels the stream subscription
   void _stopGenerating() {
+    _agentService.requestStop();
+    _agentEventSubscription?.cancel();
+    _agentEventSubscription = null;
     _streamSubscription?.cancel();
     _streamSubscription = null;
     _agentStatusDismissTimer?.cancel();

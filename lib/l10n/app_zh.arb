@@ -3641,6 +3641,84 @@
   "agentSearchingNotes": "正在搜索笔记...",
   "agentAnalyzingData": "正在分析数据...",
   "agentWebSearching": "正在联网搜索...",
+  "agentReviewingRecentNotes": "正在翻看最近记录...",
+  "agentSearchingNotesForQuery": "正在查找“{query}”相关记录...",
+  "@agentSearchingNotesForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentCollectingTags": "正在整理可用标签...",
+  "agentCheckingLocationWeather": "正在查看当前位置和天气...",
+  "agentSearchingWebForQuery": "正在查找“{query}”的资料...",
+  "@agentSearchingWebForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentReadingWebPage": "正在阅读网页内容...",
+  "agentPreparingNewNoteSuggestion": "正在整理成一条新笔记建议...",
+  "agentPreparingEditSuggestion": "正在整理笔记修改建议...",
+  "agentFoundNoMatchingNotes": "暂时没找到相关记录",
+  "agentFoundMatchingNotes": "已找到 {count} 条相关记录",
+  "@agentFoundMatchingNotes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentFoundMatchingNotesWithMore": "已找到 {count} 条相关记录，可继续往下看",
+  "@agentFoundMatchingNotesWithMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentPreparedTagChoices": "已整理出 {count} 个可用标签",
+  "@agentPreparedTagChoices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentCheckedLocationWeather": "已查看当前位置和天气信息",
+  "agentCheckedLocationWeatherWithDetails": "已确认当前位置 {location}，天气 {weather}",
+  "@agentCheckedLocationWeatherWithDetails": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      },
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "agentFoundWebSources": "已找到 {count} 条联网资料",
+  "@agentFoundWebSources": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentReadWebPageSummary": "已读完网页正文，约 {count} 字",
+  "@agentReadWebPageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentPreparedSuggestionCard": "已整理成一张建议卡",
+  "agentToolStepFinished": "这一步已完成",
+  "agentToolStepDidNotFinish": "这一步没有完成",
   "aiThinking": "正在思考...",
   "thinkingMode": "深度思考",
   "showThinking": "查看思考过程",

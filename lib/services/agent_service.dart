@@ -112,6 +112,9 @@ class AgentService extends ChangeNotifier {
   bool _isRunning = false;
   bool get isRunning => _isRunning;
 
+  bool _stopRequested = false;
+  bool get isStopRequested => _stopRequested;
+
   String _currentStatusKey = '';
   String get currentStatusKey => _currentStatusKey;
 
@@ -125,6 +128,14 @@ class AgentService extends ChangeNotifier {
         _completionRequester = completionRequester,
         _apiKeyResolver = apiKeyResolver;
 
+  void requestStop() {
+    if (!_isRunning) {
+      return;
+    }
+    _stopRequested = true;
+    _setStatus('');
+  }
+
   /// 执行 Agent 任务（流式，基于原生 tool calling 循环）
   Future<AgentResponse> runAgent({
     required String userMessage,
@@ -132,6 +143,7 @@ class AgentService extends ChangeNotifier {
     String? noteContext,
   }) async {
     _isRunning = true;
+    _stopRequested = false;
     _setStatus('agentThinking');
     _emitEvent(AgentThinkingEvent());
     notifyListeners();
@@ -153,6 +165,9 @@ class AgentService extends ChangeNotifier {
       var round = 0;
 
       while (true) {
+        if (_stopRequested) {
+          return AgentResponse(content: '', toolCalls: executedCalls);
+        }
         if (round >= maxToolRounds) {
           _setStatus('');
           final summary = await _requestFinalSummary(
@@ -181,6 +196,10 @@ class AgentService extends ChangeNotifier {
           temperature: provider.temperature,
           maxTokens: 2000,
         );
+
+        if (_stopRequested) {
+          return AgentResponse(content: '', toolCalls: executedCalls);
+        }
 
         if (result.content.trim().isEmpty && result.toolCalls.isEmpty) {
           throw StateError('AI 返回为空响应');
@@ -239,6 +258,7 @@ class AgentService extends ChangeNotifier {
 
         var repliedAnyToolCall = false;
         final seenThisRound = <String>{};
+        final pendingExecutions = <_PendingToolExecution>[];
 
         for (final rawToolCall in rawToolCalls) {
           final parsedToolCall = _tryConvertToolCall(rawToolCall);
@@ -281,31 +301,46 @@ class AgentService extends ChangeNotifier {
             continue;
           }
           seenCallSignatures.add(signature);
-
-          _emitEvent(AgentToolCallStartEvent(
-            toolCallId: parsedToolCall.id,
-            toolName: parsedToolCall.name,
-            arguments: parsedToolCall.arguments,
-          ));
-          final result = await _executeToolSafely(parsedToolCall);
-          _emitEvent(AgentToolCallResultEvent(
-            toolCallId: parsedToolCall.id,
-            toolName: parsedToolCall.name,
-            result: result.content,
-            isError: result.isError,
-          ));
-          executedCalls.add(parsedToolCall);
-          repliedAnyToolCall = true;
-
-          // 转义工具返回内容以防止提示注入攻击
-          final escapedContent = _escapeToolResult(result.content);
-          final maxMessageChars = _toolMessageCharLimit(parsedToolCall.name);
-          messages.add(
-            openai.ChatMessage.tool(
-              toolCallId: rawToolCall.id,
-              content: _truncate(escapedContent, maxMessageChars),
+          pendingExecutions.add(
+            _PendingToolExecution(
+              rawToolCall: rawToolCall,
+              parsedToolCall: parsedToolCall,
             ),
           );
+        }
+
+        if (pendingExecutions.isNotEmpty) {
+          repliedAnyToolCall = true;
+          final executionResults =
+              await _executePendingToolCalls(pendingExecutions);
+
+          if (_stopRequested) {
+            return AgentResponse(content: '', toolCalls: executedCalls);
+          }
+
+          for (final execution in executionResults) {
+            final parsedToolCall = execution.pending.parsedToolCall;
+            final rawToolCall = execution.pending.rawToolCall;
+            final toolResult = execution.result;
+
+            _emitEvent(AgentToolCallResultEvent(
+              toolCallId: parsedToolCall.id,
+              toolName: parsedToolCall.name,
+              result: toolResult.content,
+              isError: toolResult.isError,
+            ));
+            executedCalls.add(parsedToolCall);
+
+            // 转义工具返回内容以防止提示注入攻击
+            final escapedContent = _escapeToolResult(toolResult.content);
+            final maxMessageChars = _toolMessageCharLimit(parsedToolCall.name);
+            messages.add(
+              openai.ChatMessage.tool(
+                toolCallId: rawToolCall.id,
+                content: _truncate(escapedContent, maxMessageChars),
+              ),
+            );
+          }
         }
 
         if (!repliedAnyToolCall) {
@@ -325,6 +360,7 @@ class AgentService extends ChangeNotifier {
       rethrow;
     } finally {
       _isRunning = false;
+      _stopRequested = false;
       _setStatus('');
       notifyListeners();
     }
@@ -385,7 +421,7 @@ class AgentService extends ChangeNotifier {
           messages: messages,
           tools: tools.isEmpty ? null : tools,
           toolChoice: tools.isEmpty ? openai.ToolChoice.none() : null,
-          parallelToolCalls: false,
+          parallelToolCalls: true,
           temperature: temperature,
           maxTokens: maxTokens,
         ),
@@ -417,7 +453,7 @@ class AgentService extends ChangeNotifier {
       final content = completion.choices.firstOrNull?.message.content ?? '';
       final toolCalls =
           completion.choices.firstOrNull?.message.toolCalls ?? const [];
-      if (content.isNotEmpty) {
+      if (!_stopRequested && content.isNotEmpty) {
         _emitEvent(AgentTextDeltaEvent(content));
       }
       return _StreamCompletionResult(content: content, toolCalls: toolCalls);
@@ -433,7 +469,7 @@ class AgentService extends ChangeNotifier {
         messages: messages,
         tools: tools.isEmpty ? null : tools,
         toolChoice: tools.isEmpty ? openai.ToolChoice.none() : null,
-        parallelToolCalls: false,
+        parallelToolCalls: true,
         temperature: temperature,
         maxTokens: maxTokens,
       );
@@ -442,10 +478,13 @@ class AgentService extends ChangeNotifier {
       final accumulator = openai.ChatStreamAccumulator();
 
       await for (final event in stream) {
+        if (_stopRequested) {
+          break;
+        }
         accumulator.add(event);
 
         final textDelta = event.textDelta;
-        if (textDelta != null && textDelta.isNotEmpty) {
+        if (!_stopRequested && textDelta != null && textDelta.isNotEmpty) {
           _emitEvent(AgentTextDeltaEvent(textDelta));
         }
       }
@@ -608,6 +647,46 @@ class AgentService extends ChangeNotifier {
     }
   }
 
+  Future<List<_ToolExecutionResult>> _executePendingToolCalls(
+    List<_PendingToolExecution> pendingExecutions,
+  ) async {
+    if (pendingExecutions.isEmpty) {
+      return const <_ToolExecutionResult>[];
+    }
+
+    final executeInParallel = pendingExecutions.length > 1 &&
+        pendingExecutions.every((pending) {
+          final tool = _findTool(pending.parsedToolCall.name);
+          return tool != null && tool.isReadOnly && tool.isConcurrencySafe;
+        });
+
+    for (final pending in pendingExecutions) {
+      _emitEvent(AgentToolCallStartEvent(
+        toolCallId: pending.parsedToolCall.id,
+        toolName: pending.parsedToolCall.name,
+        arguments: pending.parsedToolCall.arguments,
+      ));
+    }
+
+    if (executeInParallel) {
+      final futures = pendingExecutions.map((pending) async {
+        final result = await _executeToolSafely(pending.parsedToolCall);
+        return _ToolExecutionResult(pending: pending, result: result);
+      }).toList(growable: false);
+      return Future.wait(futures);
+    }
+
+    final results = <_ToolExecutionResult>[];
+    for (final pending in pendingExecutions) {
+      final result = await _executeToolSafely(pending.parsedToolCall);
+      results.add(_ToolExecutionResult(pending: pending, result: result));
+      if (_stopRequested) {
+        break;
+      }
+    }
+    return results;
+  }
+
   /// 构建系统提示词（不包含用户数据）
   String _buildSystemPrompt() {
     final toolDescriptions = _tools.map((tool) {
@@ -661,7 +740,7 @@ $toolDescriptions
 
   String _toolStatusText(String toolName) {
     return switch (toolName) {
-      'explore_notes' => 'agentSearchingNotes',
+      'explore_notes' || 'search_notes' => 'agentSearchingNotes',
       'get_tags' => 'agentToolCall:get_tags',
       'get_location_weather' => 'agentToolCall:get_location_weather',
       'propose_new_note' => 'agentToolCall:propose_new_note',
@@ -674,6 +753,7 @@ $toolDescriptions
   int _toolMessageCharLimit(String toolName) {
     return switch (toolName) {
       'explore_notes' ||
+      'search_notes' ||
       'web_fetch' ||
       'web_search' =>
         _searchToolMaxSingleMessageChars,
@@ -821,4 +901,24 @@ class _StreamCompletionResult {
     required this.content,
     required this.toolCalls,
   });
+}
+
+class _PendingToolExecution {
+  const _PendingToolExecution({
+    required this.rawToolCall,
+    required this.parsedToolCall,
+  });
+
+  final openai.ToolCall rawToolCall;
+  final ToolCall parsedToolCall;
+}
+
+class _ToolExecutionResult {
+  const _ToolExecutionResult({
+    required this.pending,
+    required this.result,
+  });
+
+  final _PendingToolExecution pending;
+  final ToolResult result;
 }

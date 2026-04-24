@@ -137,46 +137,73 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           case 'smart_result':
             final action = meta['action']?.toString();
             final isNewNoteProposal = action == 'create';
+            final noteId = meta['note_id']?.toString().trim() ?? '';
+            final canApplyToExistingNote =
+                !isNewNoteProposal && (_hasBoundNote || noteId.isNotEmpty);
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: SmartResultCard(
                 key: const ValueKey('ai_workflow_result_smart_result'),
                 title: meta['title'] as String? ?? l10n.analysisResult,
                 content: message.content,
-                replaceButtonText:
-                    meta['replaceButtonText'] as String? ?? l10n.applyChanges,
-                appendButtonText:
-                    meta['appendButtonText'] as String? ?? l10n.appendToNote,
+                replaceButtonText: meta['replaceButtonText'] as String? ??
+                    (canApplyToExistingNote
+                        ? l10n.replaceOriginalNote
+                        : l10n.applyChanges),
+                appendButtonText: meta['appendButtonText'] as String? ??
+                    (canApplyToExistingNote
+                        ? l10n.appendToEnd
+                        : l10n.appendToNote),
                 editorSource: isNewNoteProposal ? 'new_note' : 'fullscreen',
                 initialIncludeLocation: meta['include_location'] == true,
                 initialIncludeWeather: meta['include_weather'] == true,
-                onOpenInEditor: (includeLocation, includeWeather) async {
-                  if (isNewNoteProposal) {
-                    final rawTagIds = meta['tag_ids'] as List<dynamic>? ?? const [];
-                    final tagIds = rawTagIds
-                        .map((item) => item.toString().trim())
-                        .where((item) => item.isNotEmpty)
-                        .toList();
-                    await _openSmartResultAsNewNote(
-                      message.content,
-                      tagIds: tagIds,
-                      includeLocation: includeLocation,
-                      includeWeather: includeWeather,
-                    );
-                  } else {
-                    await _openSmartResultInEditor(meta, message.content);
-                  }
-                },
-                onSaveDirectly: (includeLocation, includeWeather) async {
-                  if (isNewNoteProposal) {
-                    final updatedMeta = Map<String, dynamic>.from(meta);
-                    updatedMeta['include_location'] = includeLocation;
-                    updatedMeta['include_weather'] = includeWeather;
-                    await _saveSmartResultAsNewNote(updatedMeta, message.content);
-                  } else {
-                    await _saveSmartResultToExistingNote(meta, message.content);
-                  }
-                },
+                onReplace: canApplyToExistingNote
+                    ? () async {
+                        final updatedMeta = Map<String, dynamic>.from(meta);
+                        updatedMeta['action'] = 'replace';
+                        await _openSmartResultInEditor(
+                          updatedMeta,
+                          message.content,
+                        );
+                      }
+                    : null,
+                onAppend: canApplyToExistingNote
+                    ? () async {
+                        final updatedMeta = Map<String, dynamic>.from(meta);
+                        updatedMeta['action'] = 'append';
+                        await _openSmartResultInEditor(
+                          updatedMeta,
+                          message.content,
+                        );
+                      }
+                    : null,
+                onOpenInEditor: isNewNoteProposal
+                    ? (includeLocation, includeWeather) async {
+                        final rawTagIds =
+                            meta['tag_ids'] as List<dynamic>? ?? const [];
+                        final tagIds = rawTagIds
+                            .map((item) => item.toString().trim())
+                            .where((item) => item.isNotEmpty)
+                            .toList();
+                        await _openSmartResultAsNewNote(
+                          message.content,
+                          tagIds: tagIds,
+                          includeLocation: includeLocation,
+                          includeWeather: includeWeather,
+                        );
+                      }
+                    : null,
+                onSaveDirectly: isNewNoteProposal
+                    ? (includeLocation, includeWeather) async {
+                        final updatedMeta = Map<String, dynamic>.from(meta);
+                        updatedMeta['include_location'] = includeLocation;
+                        updatedMeta['include_weather'] = includeWeather;
+                        await _saveSmartResultAsNewNote(
+                          updatedMeta,
+                          message.content,
+                        );
+                      }
+                    : null,
               ),
             );
           case 'notice':
@@ -266,6 +293,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                     items: progressItems,
                     inProgress: inProgress,
                     accentColor: theme.colorScheme.primary,
+                    thinkingText: meta['thinkingText'] as String?,
                   ),
                 ],
               ),
@@ -738,8 +766,10 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                 ? formattedLocation
                 : (position != null ? LocationService.kAddressPending : null))
             : null,
-        latitude: (includeLocation || includeWeather) ? position?.latitude : null,
-        longitude: (includeLocation || includeWeather) ? position?.longitude : null,
+        latitude:
+            (includeLocation || includeWeather) ? position?.latitude : null,
+        longitude:
+            (includeLocation || includeWeather) ? position?.longitude : null,
         weather: includeWeather ? weatherService.currentWeather : null,
         temperature: includeWeather ? weatherService.temperature : null,
         dayPeriod: TimeUtils.getCurrentDayPeriodKey(),

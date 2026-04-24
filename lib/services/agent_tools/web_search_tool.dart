@@ -45,6 +45,12 @@ class WebSearchTool extends AgentTool {
   String get description => '【只读】通过外部搜索引擎搜索实时信息。此工具仅用于获取信息。';
 
   @override
+  bool get isReadOnly => true;
+
+  @override
+  bool get isConcurrencySafe => true;
+
+  @override
   Map<String, Object?> get parametersSchema => {
         'type': 'object',
         'properties': {
@@ -58,7 +64,8 @@ class WebSearchTool extends AgentTool {
           },
           'backend': {
             'type': 'string',
-            'description': '搜索后端：auto、all、bing、duckduckgo、brave、google、yahoo、yandex、mojeek、wikipedia',
+            'description':
+                '搜索后端：auto、all、bing、duckduckgo、brave、google、yahoo、yandex、mojeek、wikipedia',
           },
         },
         'required': ['query'],
@@ -179,7 +186,8 @@ class WebSearchTool extends AgentTool {
       'wikipedia',
     };
 
-    if (backendPreference.isNotEmpty && supportedBackends.contains(backendPreference)) {
+    if (backendPreference.isNotEmpty &&
+        supportedBackends.contains(backendPreference)) {
       return backendPreference;
     }
 

@@ -21,6 +21,12 @@ class GetTagsTool extends AgentTool {
       '标签较多时可使用 offset 和 limit 分页获取。';
 
   @override
+  bool get isReadOnly => true;
+
+  @override
+  bool get isConcurrencySafe => true;
+
+  @override
   Map<String, Object?> get parametersSchema => const {
         'type': 'object',
         'properties': {
@@ -51,10 +57,10 @@ class GetTagsTool extends AgentTool {
         'available_tags': paged
             .map(
               (tag) => <String, Object?>{
-                    'id': tag.id,
-                    'name': tag.name,
-                    'is_default': tag.isDefault,
-                  },
+                'id': tag.id,
+                'name': tag.name,
+                'is_default': tag.isDefault,
+              },
             )
             .toList(),
         'pagination': {
@@ -99,6 +105,12 @@ class GetLocationWeatherTool extends AgentTool {
       '当你要判断是否建议为笔记附加当前位置/天气时，调用此工具。';
 
   @override
+  bool get isReadOnly => true;
+
+  @override
+  bool get isConcurrencySafe => true;
+
+  @override
   Map<String, Object?> get parametersSchema => const {
         'type': 'object',
         'properties': {},
@@ -120,8 +132,7 @@ class GetLocationWeatherTool extends AgentTool {
 
       final payload = <String, Object?>{
         'location_display': locationDisplay.isNotEmpty ? locationDisplay : null,
-        'location_storage':
-            locationStorage.isNotEmpty ? locationStorage : null,
+        'location_storage': locationStorage.isNotEmpty ? locationStorage : null,
         'weather_key': _weatherService.currentWeather,
         'weather_description': weatherDescription,
         'temperature': temperature,

@@ -16,6 +16,12 @@ class WebFetchTool extends AgentTool {
   String get description => '【只读】抓取指定网页的内容。此工具仅用于获取信息。';
 
   @override
+  bool get isReadOnly => true;
+
+  @override
+  bool get isConcurrencySafe => true;
+
+  @override
   Map<String, Object?> get parametersSchema => {
         'type': 'object',
         'properties': {

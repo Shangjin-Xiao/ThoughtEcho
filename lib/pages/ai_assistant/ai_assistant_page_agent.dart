@@ -23,9 +23,11 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
     final toolItems = <ToolProgressItem>[];
     String? streamingMsgId;
     var streamingText = '';
+    String? toolThinkingText;
 
     try {
-      final eventSub = _agentService.events.listen((event) {
+      await _agentEventSubscription?.cancel();
+      _agentEventSubscription = _agentService.events.listen((event) {
         if (!mounted) return;
         switch (event) {
           case AgentThinkingEvent():
@@ -49,7 +51,8 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             _updateMessage(streamingMsgId!, streamingText, isLoading: true);
 
           case AgentToolCallStartEvent():
-            if (streamingMsgId != null) {
+            if (streamingMsgId != null && streamingText.trim().isNotEmpty) {
+              toolThinkingText = streamingText.trim();
               _setState(() {
                 _messages.removeWhere((m) => m.id == streamingMsgId);
               });
@@ -68,6 +71,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
                   'type': 'tool_progress',
                   'items': [],
                   'inProgress': true,
+                  'thinkingText': toolThinkingText ?? '',
                 }),
               );
               _setState(() => _messages.add(msg));
@@ -76,15 +80,24 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
 
             final newItem = ToolProgressItem(
               toolCallId: event.toolCallId,
-              toolName: event.toolName,
+              toolName: _formatToolLabel(
+                l10n,
+                event.toolName,
+                event.arguments,
+              ),
               status: ToolProgressStatus.running,
-              description: _formatToolArgs(event.toolName, event.arguments),
+              description: _formatToolArgs(
+                l10n,
+                event.toolName,
+                event.arguments,
+              ),
             );
             toolItems.add(newItem);
             _updateToolProgressMessage(
               toolProgressMsgId!,
               toolItems,
               inProgress: true,
+              thinkingText: toolThinkingText,
             );
 
           case AgentToolCallResultEvent():
@@ -96,12 +109,18 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
                 status: event.isError
                     ? ToolProgressStatus.failed
                     : ToolProgressStatus.completed,
-                result: event.result,
+                result: _formatToolResultSummary(
+                  l10n,
+                  event.toolName,
+                  event.result,
+                  isError: event.isError,
+                ),
               );
               _updateToolProgressMessage(
                 toolProgressMsgId!,
                 toolItems,
                 inProgress: true,
+                thinkingText: toolThinkingText,
               );
             }
 
@@ -111,6 +130,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
                 toolProgressMsgId!,
                 toolItems,
                 inProgress: false,
+                thinkingText: toolThinkingText,
               );
             }
 
@@ -127,6 +147,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
                 toolProgressMsgId!,
                 toolItems,
                 inProgress: false,
+                thinkingText: toolThinkingText,
               );
             }
         }
@@ -138,7 +159,8 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
         noteContext: _hasBoundNote ? widget.quote!.content : null,
       );
 
-      await eventSub.cancel();
+      await _agentEventSubscription?.cancel();
+      _agentEventSubscription = null;
 
       if (!mounted) return;
 
@@ -208,12 +230,15 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
         SnackBar(content: Text(l10n.aiResponseError(e.toString()))),
       );
     } finally {
+      await _agentEventSubscription?.cancel();
+      _agentEventSubscription = null;
       if (mounted) {
         if (toolProgressMsgId != null) {
           _updateToolProgressMessage(
             toolProgressMsgId!,
             toolItems,
             inProgress: false,
+            thinkingText: toolThinkingText,
           );
         }
         _finishLoading();
@@ -225,6 +250,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
     String msgId,
     List<ToolProgressItem> items, {
     required bool inProgress,
+    String? thinkingText,
   }) {
     _setState(() {
       final idx = _messages.indexWhere((m) => m.id == msgId);
@@ -243,6 +269,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
                   })
               .toList(),
           'inProgress': inProgress,
+          'thinkingText': thinkingText ?? '',
         }),
       );
       _messages[idx] = updatedMsg;
@@ -256,27 +283,166 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
   }
 
   /// 格式化工具参数为简短摘要
-  String _formatToolArgs(String toolName, Map<String, dynamic> args) {
-    if (toolName == 'explore_notes' && args.containsKey('query')) {
-      return '搜索: ${args['query']}';
+  String _formatToolLabel(
+    AppLocalizations l10n,
+    String toolName,
+    Map<String, Object?> args,
+  ) {
+    final query = _displayQuery(args['query']);
+    return switch (toolName) {
+      'explore_notes' || 'search_notes' => query.isEmpty
+          ? l10n.agentReviewingRecentNotes
+          : l10n.agentSearchingNotesForQuery(query),
+      'get_tags' => l10n.agentCollectingTags,
+      'get_location_weather' => l10n.agentCheckingLocationWeather,
+      'propose_new_note' => l10n.agentPreparingNewNoteSuggestion,
+      'propose_edit' => l10n.agentPreparingEditSuggestion,
+      'web_search' => query.isEmpty
+          ? l10n.agentWebSearching
+          : l10n.agentSearchingWebForQuery(query),
+      'web_fetch' => l10n.agentReadingWebPage,
+      _ => l10n.agentToolCall(toolName),
+    };
+  }
+
+  String _formatToolArgs(
+    AppLocalizations l10n,
+    String toolName,
+    Map<String, Object?> args,
+  ) {
+    if ((toolName == 'explore_notes' || toolName == 'search_notes') &&
+        args.containsKey('query')) {
+      return '';
     }
     if (toolName == 'get_tags') {
-      return '读取标签列表';
+      return '';
     }
     if (toolName == 'get_location_weather') {
-      return '读取位置与天气';
+      return '';
     }
     if (toolName == 'propose_new_note') {
-      return '新建笔记建议: ${args['title'] ?? ''}';
+      return args['title']?.toString() ?? '';
     }
     if (toolName == 'web_search' && args.containsKey('query')) {
-      return '联网搜索: ${args['query']}';
+      return '';
     }
     if (toolName == 'web_fetch' && args.containsKey('url')) {
-      return '抓取网页: ${args['url']}';
+      return args['url'].toString();
     }
     if (args.isEmpty) return '';
     return args.toString();
+  }
+
+  String _displayQuery(Object? rawQuery) {
+    final query = rawQuery?.toString().trim() ?? '';
+    if (query.isEmpty || query.length > 12 || query.contains('\n')) {
+      return '';
+    }
+    return query;
+  }
+
+  String _formatToolResultSummary(
+    AppLocalizations l10n,
+    String toolName,
+    String result, {
+    required bool isError,
+  }) {
+    if (isError) {
+      return l10n.agentToolStepDidNotFinish;
+    }
+
+    final trimmed = result.trim();
+    if (trimmed.isEmpty) {
+      return l10n.agentToolStepFinished;
+    }
+
+    return switch (toolName) {
+      'explore_notes' ||
+      'search_notes' =>
+        _summarizeNoteSearchResult(l10n, trimmed),
+      'get_tags' => _summarizeTagResult(l10n, trimmed),
+      'get_location_weather' => _summarizeLocationWeatherResult(l10n, trimmed),
+      'web_search' => _summarizeWebSearchResult(l10n, trimmed),
+      'web_fetch' => _summarizeWebFetchResult(l10n, trimmed),
+      'propose_new_note' || 'propose_edit' => l10n.agentPreparedSuggestionCard,
+      _ => l10n.agentToolStepFinished,
+    };
+  }
+
+  String _summarizeNoteSearchResult(AppLocalizations l10n, String result) {
+    final payload = _tryParseJsonMap(result);
+    if (payload == null) {
+      return l10n.agentToolStepFinished;
+    }
+
+    final notes = payload['notes'] as List<dynamic>? ?? const [];
+    final pagination = payload['pagination'] as Map<String, dynamic>?;
+    final totalCount = pagination?['total_count'] as int? ?? notes.length;
+    final hasMore = pagination?['has_more'] == true;
+
+    if (totalCount <= 0) {
+      return l10n.agentFoundNoMatchingNotes;
+    }
+    if (hasMore) {
+      return l10n.agentFoundMatchingNotesWithMore(totalCount);
+    }
+    return l10n.agentFoundMatchingNotes(totalCount);
+  }
+
+  String _summarizeTagResult(AppLocalizations l10n, String result) {
+    final payload = _tryParseJsonMap(result);
+    if (payload == null) {
+      return l10n.agentToolStepFinished;
+    }
+
+    final tags = payload['available_tags'] as List<dynamic>? ?? const [];
+    final pagination = payload['pagination'] as Map<String, dynamic>?;
+    final totalCount = pagination?['total_count'] as int? ?? tags.length;
+    return l10n.agentPreparedTagChoices(totalCount);
+  }
+
+  String _summarizeLocationWeatherResult(
+    AppLocalizations l10n,
+    String result,
+  ) {
+    final payload = _tryParseJsonMap(result);
+    if (payload == null) {
+      return l10n.agentCheckedLocationWeather;
+    }
+
+    final location = payload['location_display']?.toString().trim() ?? '';
+    final weather = payload['weather_display']?.toString().trim() ?? '';
+    if (location.isEmpty && weather.isEmpty) {
+      return l10n.agentCheckedLocationWeather;
+    }
+    return l10n.agentCheckedLocationWeatherWithDetails(
+      location.isEmpty ? l10n.unknown : location,
+      weather.isEmpty ? l10n.unknown : weather,
+    );
+  }
+
+  String _summarizeWebSearchResult(AppLocalizations l10n, String result) {
+    final matches = RegExp(r'^\d+\.\s', multiLine: true).allMatches(result);
+    if (matches.isEmpty) {
+      return l10n.agentToolStepFinished;
+    }
+    return l10n.agentFoundWebSources(matches.length);
+  }
+
+  String _summarizeWebFetchResult(AppLocalizations l10n, String result) {
+    return l10n.agentReadWebPageSummary(result.length);
+  }
+
+  Map<String, dynamic>? _tryParseJsonMap(String text) {
+    try {
+      final decoded = jsonDecode(text);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+    } catch (_) {
+      return null;
+    }
+    return null;
   }
 
   /// 解析 Agent 回复中的 Smart Result 代码块或工具调用结果

@@ -3629,6 +3629,84 @@
   "agentSearchingNotes": "Searching notes...",
   "agentAnalyzingData": "Analyzing data...",
   "agentWebSearching": "Searching the web...",
+  "agentReviewingRecentNotes": "Reviewing recent notes...",
+  "agentSearchingNotesForQuery": "Looking for notes about \"{query}\"...",
+  "@agentSearchingNotesForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentCollectingTags": "Gathering available tags...",
+  "agentCheckingLocationWeather": "Checking location and weather...",
+  "agentSearchingWebForQuery": "Looking up sources for \"{query}\"...",
+  "@agentSearchingWebForQuery": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "agentReadingWebPage": "Reading the webpage...",
+  "agentPreparingNewNoteSuggestion": "Preparing a new note suggestion...",
+  "agentPreparingEditSuggestion": "Preparing an edit suggestion...",
+  "agentFoundNoMatchingNotes": "No related notes found yet",
+  "agentFoundMatchingNotes": "Found {count} related notes",
+  "@agentFoundMatchingNotes": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentFoundMatchingNotesWithMore": "Found {count} related notes, and there is more to keep browsing",
+  "@agentFoundMatchingNotesWithMore": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentPreparedTagChoices": "Prepared {count} available tags",
+  "@agentPreparedTagChoices": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentCheckedLocationWeather": "Checked the current location and weather",
+  "agentCheckedLocationWeatherWithDetails": "Confirmed location {location} and weather {weather}",
+  "@agentCheckedLocationWeatherWithDetails": {
+    "placeholders": {
+      "location": {
+        "type": "String"
+      },
+      "weather": {
+        "type": "String"
+      }
+    }
+  },
+  "agentFoundWebSources": "Found {count} web sources",
+  "@agentFoundWebSources": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentReadWebPageSummary": "Read the webpage content, about {count} characters",
+  "@agentReadWebPageSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "agentPreparedSuggestionCard": "Prepared a suggestion card",
+  "agentToolStepFinished": "This step is complete",
+  "agentToolStepDidNotFinish": "This step did not finish",
   "aiThinking": "Thinking...",
   "thinkingMode": "Deep Thinking",
   "showThinking": "Show thinking",

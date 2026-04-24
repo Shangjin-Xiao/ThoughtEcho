@@ -58,6 +58,51 @@ class _CountingTool extends AgentTool {
   }
 }
 
+class _DelayedTool extends AgentTool {
+  _DelayedTool({
+    required this.toolName,
+    required this.delay,
+    this.readOnly = false,
+    this.concurrencySafe = false,
+  });
+
+  final String toolName;
+  final Duration delay;
+  final bool readOnly;
+  final bool concurrencySafe;
+  int executeCount = 0;
+
+  @override
+  String get name => toolName;
+
+  @override
+  String get description => 'delayed test tool';
+
+  @override
+  Map<String, Object?> get parametersSchema => const {
+        'type': 'object',
+        'properties': {
+          'query': {'type': 'string'}
+        },
+      };
+
+  @override
+  bool get isReadOnly => readOnly;
+
+  @override
+  bool get isConcurrencySafe => concurrencySafe;
+
+  @override
+  Future<ToolResult> execute(ToolCall toolCall) async {
+    executeCount++;
+    await Future<void>.delayed(delay);
+    return ToolResult(
+      toolCallId: toolCall.id,
+      content: '$toolName done',
+    );
+  }
+}
+
 openai.ChatCompletion _toolCallCompletion({
   required String callId,
   required String toolName,
@@ -472,6 +517,117 @@ void main() {
       service.dispose();
 
       expect(events.any((e) => e is AgentErrorEvent), isTrue);
+    });
+
+    test('runs read-only concurrency-safe tools in parallel', () async {
+      final provider = const AIProviderSettings(
+        id: 'openai',
+        name: 'OpenAI',
+        apiUrl: 'https://api.openai.com/v1/chat/completions',
+        model: 'gpt-4.1',
+      );
+      final settings = _FakeSettingsService(provider);
+      final firstTool = _DelayedTool(
+        toolName: 'search_notes',
+        delay: const Duration(milliseconds: 120),
+        readOnly: true,
+        concurrencySafe: true,
+      );
+      final secondTool = _DelayedTool(
+        toolName: 'get_tags',
+        delay: const Duration(milliseconds: 120),
+        readOnly: true,
+        concurrencySafe: true,
+      );
+
+      final responses = <openai.ChatCompletion>[
+        _multiToolCallCompletion([
+          _buildToolCall(
+            callId: 'call_1',
+            toolName: 'search_notes',
+            args: const {'query': 'camp'},
+          ),
+          _buildToolCall(
+            callId: 'call_2',
+            toolName: 'get_tags',
+            args: const {'query': 'camp'},
+          ),
+        ]),
+        _textCompletion('done'),
+      ];
+
+      final service = AgentService(
+        settingsService: settings,
+        tools: [firstTool, secondTool],
+        apiKeyResolver: (_) async => 'test-key',
+        completionRequester: ({
+          required provider,
+          required messages,
+          required tools,
+          required temperature,
+          required maxTokens,
+        }) async {
+          return responses.removeAt(0);
+        },
+      );
+
+      final stopwatch = Stopwatch()..start();
+      final response = await service.runAgent(userMessage: 'test');
+      stopwatch.stop();
+
+      expect(response.content, 'done');
+      expect(firstTool.executeCount, 1);
+      expect(secondTool.executeCount, 1);
+      expect(stopwatch.elapsedMilliseconds, lessThan(220));
+    });
+
+    test('requestStop prevents agent from continuing to final response',
+        () async {
+      final provider = const AIProviderSettings(
+        id: 'openai',
+        name: 'OpenAI',
+        apiUrl: 'https://api.openai.com/v1/chat/completions',
+        model: 'gpt-4.1',
+      );
+      final settings = _FakeSettingsService(provider);
+      final tool = _DelayedTool(
+        toolName: 'search_notes',
+        delay: const Duration(milliseconds: 120),
+        readOnly: true,
+        concurrencySafe: true,
+      );
+
+      var requestCount = 0;
+      final service = AgentService(
+        settingsService: settings,
+        tools: [tool],
+        apiKeyResolver: (_) async => 'test-key',
+        completionRequester: ({
+          required provider,
+          required messages,
+          required tools,
+          required temperature,
+          required maxTokens,
+        }) async {
+          requestCount++;
+          if (requestCount == 1) {
+            return _toolCallCompletion(
+              callId: 'call_1',
+              toolName: 'search_notes',
+              args: const {'query': 'camp'},
+            );
+          }
+          return _textCompletion('should not happen');
+        },
+      );
+
+      final future = service.runAgent(userMessage: 'test');
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      service.requestStop();
+      final response = await future;
+
+      expect(response.content, isEmpty);
+      expect(requestCount, 1);
     });
   });
 }

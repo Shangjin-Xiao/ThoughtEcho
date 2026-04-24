@@ -1,7 +1,6 @@
 import 'dart:collection';
 
 import 'package:flutter/foundation.dart';
-import '../utils/app_logger.dart';
 
 abstract class AgentTool {
   const AgentTool();
@@ -9,6 +8,12 @@ abstract class AgentTool {
   String get name;
 
   String get description;
+
+  /// 只读工具只获取信息，不直接产生持久化修改。
+  bool get isReadOnly => false;
+
+  /// 并发安全工具可在同一轮中与其他只读工具并发执行。
+  bool get isConcurrencySafe => false;
 
   Map<String, Object?> get parametersSchema;
 

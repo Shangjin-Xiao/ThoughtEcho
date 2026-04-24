@@ -14,7 +14,6 @@ import 'package:thoughtecho/services/agent_tool.dart';
 import 'package:thoughtecho/services/ai_service.dart';
 import 'package:thoughtecho/services/chat_session_service.dart';
 import 'package:thoughtecho/services/settings_service.dart';
-import 'package:thoughtecho/widgets/ai/smart_result_card.dart';
 import 'package:thoughtecho/widgets/ai/tool_progress_panel.dart';
 
 import '../../test_setup.dart';
@@ -141,14 +140,29 @@ class _FakeAgentService extends AgentService {
     this.simulateToolProgress = false,
     this.emitSmartResultCard = false,
     this.responseContent = 'Agent 响应',
-  }) : super(tools: const []);
+    this.preToolText,
+    this.toolProgressDelay = const Duration(milliseconds: 12),
+    this.toolName = 'search_notes',
+    Map<String, Object?>? toolArguments,
+    this.toolResult = '搜索结果',
+  })  : effectiveToolArguments = Map<String, Object?>.unmodifiable(
+          toolArguments ?? const <String, Object?>{},
+        ),
+        super(tools: const []);
+
+  final Map<String, Object?> effectiveToolArguments;
 
   int runCount = 0;
   final bool simulateToolProgress;
   final bool emitSmartResultCard;
   final String responseContent;
+  final String? preToolText;
+  final Duration toolProgressDelay;
+  final String toolName;
+  final String toolResult;
   bool _mockIsRunning = false;
   String _mockStatusKey = '';
+  bool stopRequested = false;
   final StreamController<AgentEvent> _eventController =
       StreamController<AgentEvent>.broadcast(sync: true);
 
@@ -171,6 +185,12 @@ class _FakeAgentService extends AgentService {
   }
 
   @override
+  void requestStop() {
+    stopRequested = true;
+    _setMockState(isRunning: false, statusKey: '');
+  }
+
+  @override
   Future<AgentResponse> runAgent({
     required String userMessage,
     List<app_chat.ChatMessage>? history,
@@ -180,20 +200,30 @@ class _FakeAgentService extends AgentService {
     _setMockState(isRunning: true, statusKey: 'agentThinking');
 
     if (simulateToolProgress) {
+      _emitEvent(AgentThinkingEvent());
+      if (preToolText != null) {
+        _emitEvent(AgentTextDeltaEvent(preToolText!));
+      }
       final toolCallId = 'tool-call-1';
       _emitEvent(
         AgentToolCallStartEvent(
           toolCallId: toolCallId,
-          toolName: 'search_notes',
-          arguments: <String, Object?>{'query': userMessage},
+          toolName: toolName,
+          arguments: effectiveToolArguments.isEmpty
+              ? <String, Object?>{'query': userMessage}
+              : effectiveToolArguments,
         ),
       );
-      await Future<void>.delayed(const Duration(milliseconds: 12));
+      await Future<void>.delayed(toolProgressDelay);
+      if (stopRequested) {
+        _setMockState(isRunning: false, statusKey: '');
+        return AgentResponse(content: '');
+      }
       _emitEvent(
         AgentToolCallResultEvent(
           toolCallId: toolCallId,
-          toolName: 'search_notes',
-          result: '搜索结果',
+          toolName: toolName,
+          result: toolResult,
           isError: false,
         ),
       );
@@ -214,6 +244,10 @@ class _FakeAgentService extends AgentService {
         : const <ToolCall>[];
 
     await Future<void>.delayed(const Duration(milliseconds: 12));
+    if (stopRequested) {
+      _setMockState(isRunning: false, statusKey: '');
+      return AgentResponse(content: '');
+    }
     _emitEvent(
       AgentResponseEvent(
         content: responseContent.replaceAll(
@@ -288,10 +322,6 @@ Future<void> _submitInput(WidgetTester tester, String text) async {
 
 AppLocalizations _l10n(WidgetTester tester) {
   return AppLocalizations.of(tester.element(find.byType(AIAssistantPage)));
-}
-
-Finder _modeToggleFinder() {
-  return find.byKey(const ValueKey('ai_assistant_mode_toggle'));
 }
 
 void main() {
@@ -563,6 +593,147 @@ void main() {
       expect(completedPanelFinder, findsWidgets);
     });
 
+    testWidgets('agent tool panel keeps pre-tool thinking text inline',
+        (tester) async {
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        simulateToolProgress: true,
+        preToolText: '让我先看看最近的记录。',
+        toolProgressDelay: const Duration(milliseconds: 160),
+      );
+      await settingsService
+          .setExploreAiAssistantMode(AIAssistantPageMode.agent);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: const AIAssistantPage(
+            entrySource: AIAssistantEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '帮我看看我最近都写了什么内容');
+      await tester.pump();
+      final sendButtonFinder =
+          find.byKey(const ValueKey('ai_assistant_send_button'));
+      final effectiveSendFinder = sendButtonFinder.evaluate().isNotEmpty
+          ? sendButtonFinder
+          : find.widgetWithIcon(IconButton, Icons.arrow_upward).last;
+      tester.widget<IconButton>(effectiveSendFinder).onPressed?.call();
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 40));
+
+      final l10n = _l10n(tester);
+      expect(
+          find.text(l10n.agentReviewingRecentNotes), findsAtLeastNWidgets(1));
+      expect(find.text('让我先看看最近的记录。'), findsOneWidget);
+
+      await tester.pump(const Duration(milliseconds: 220));
+      expect(find.textContaining(l10n.executedNOperations(1)), findsOneWidget);
+    });
+
+    testWidgets('agent tool panel shows human summary instead of raw payload',
+        (tester) async {
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        simulateToolProgress: true,
+        toolProgressDelay: const Duration(milliseconds: 160),
+        toolName: 'search_notes',
+        toolArguments: const <String, Object?>{'query': '露营'},
+        toolResult:
+            '{"notes":[{"id":"n1","content_preview":"周末去露营"}],"pagination":{"offset":0,"limit":10,"next_offset":1,"has_more":true,"total_count":2},"summary":"找到 1 条匹配笔记（总计 2 条，可分页查看）"}',
+      );
+      await settingsService
+          .setExploreAiAssistantMode(AIAssistantPageMode.agent);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: const AIAssistantPage(
+            entrySource: AIAssistantEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '帮我找露营记录');
+      await tester.pump();
+      final sendButtonFinder =
+          find.byKey(const ValueKey('ai_assistant_send_button'));
+      final effectiveSendFinder = sendButtonFinder.evaluate().isNotEmpty
+          ? sendButtonFinder
+          : find.widgetWithIcon(IconButton, Icons.arrow_upward).last;
+      tester.widget<IconButton>(effectiveSendFinder).onPressed?.call();
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 40));
+
+      expect(find.text('正在查找“露营”相关记录...'), findsAtLeastNWidgets(1));
+
+      await tester.pump(const Duration(milliseconds: 220));
+
+      final l10n = _l10n(tester);
+      final completedHeaderFinder =
+          find.textContaining(l10n.executedNOperations(1));
+      expect(completedHeaderFinder, findsOneWidget);
+      await tester.tap(completedHeaderFinder);
+      await tester.pumpAndSettle();
+
+      expect(find.text('已找到 2 条相关记录，可继续往下看'), findsOneWidget);
+      expect(find.textContaining('"notes":['), findsNothing);
+      expect(find.textContaining('content_preview'), findsNothing);
+    });
+
+    testWidgets('agent stop button interrupts pending tool run',
+        (tester) async {
+      final agentService = _FakeAgentService(
+        settingsService: settingsService,
+        simulateToolProgress: true,
+        toolProgressDelay: const Duration(milliseconds: 300),
+        responseContent: '这段回复不应该出现',
+      );
+      await settingsService
+          .setExploreAiAssistantMode(AIAssistantPageMode.agent);
+
+      await tester.pumpWidget(
+        await _buildHarness(
+          settingsService: settingsService,
+          chatSessionService: chatSessionService,
+          agentService: agentService,
+          child: const AIAssistantPage(
+            entrySource: AIAssistantEntrySource.explore,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), '帮我看看最近写了什么');
+      await tester.pump();
+      final sendButtonFinder =
+          find.byKey(const ValueKey('ai_assistant_send_button'));
+      final effectiveSendFinder = sendButtonFinder.evaluate().isNotEmpty
+          ? sendButtonFinder
+          : find.widgetWithIcon(IconButton, Icons.arrow_upward).last;
+      tester.widget<IconButton>(effectiveSendFinder).onPressed?.call();
+
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 40));
+      await tester.tap(find.byIcon(Icons.stop).last);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 420));
+
+      expect(agentService.stopRequested, isTrue);
+      expect(find.text('这段回复不应该出现'), findsNothing);
+      expect(find.byIcon(Icons.arrow_upward), findsAtLeastNWidgets(1));
+    });
+
     testWidgets('agent structured smart result renders apply card',
         (tester) async {
       final agentService = _FakeAgentService(
@@ -588,10 +759,20 @@ void main() {
       await tester.pumpAndSettle();
 
       await _submitInput(tester, '请润色这段文字');
+      await tester.runAsync(() async {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      });
+      final smartResultCard =
+          find.byKey(const ValueKey('ai_workflow_result_smart_result'));
+      await tester.pump();
+      await tester.pumpAndSettle();
 
       expect(agentService.runCount, 1);
-      expect(find.byType(SmartResultCard), findsOneWidget);
-      expect(find.textContaining('这是可应用的新内容'), findsOneWidget);
+      expect(smartResultCard, findsOneWidget);
+      expect(
+        find.textContaining('这是可应用的新内容', findRichText: true),
+        findsOneWidget,
+      );
       expect(find.text('替换原文'), findsOneWidget);
       expect(find.text('追加到末尾'), findsOneWidget);
     });

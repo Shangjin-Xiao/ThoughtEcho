@@ -82,6 +82,9 @@ class ToolProgressPanel extends StatefulWidget {
   /// 可选的强调色（用于图标和指示器）
   final Color? accentColor;
 
+  /// 工具调用前的简短思考说明
+  final String? thinkingText;
+
   const ToolProgressPanel({
     super.key,
     required this.title,
@@ -89,6 +92,7 @@ class ToolProgressPanel extends StatefulWidget {
     this.inProgress = false,
     this.doneIcon,
     this.accentColor,
+    this.thinkingText,
   });
 
   @override
@@ -103,16 +107,31 @@ class _ToolProgressPanelState extends State<ToolProgressPanel>
   @override
   void initState() {
     super.initState();
-    _isExpanded = false;
+    _isExpanded = widget.inProgress;
     _rotationController = AnimationController(
       duration: const Duration(milliseconds: 200),
       vsync: this,
     );
+    if (_isExpanded) {
+      _rotationController.value = 1;
+    }
   }
 
   @override
   void didUpdateWidget(ToolProgressPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.inProgress == widget.inProgress) {
+      return;
+    }
+
+    setState(() {
+      _isExpanded = widget.inProgress;
+      if (_isExpanded) {
+        _rotationController.forward();
+      } else {
+        _rotationController.reverse();
+      }
+    });
   }
 
   @override
@@ -135,7 +154,17 @@ class _ToolProgressPanelState extends State<ToolProgressPanel>
   String _getDisplayTitle(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     if (widget.inProgress) {
-      return widget.title;
+      final runningItem = widget.items.lastWhere(
+        (item) => item.status == ToolProgressStatus.running,
+        orElse: () => widget.items.isNotEmpty
+            ? widget.items.last
+            : const ToolProgressItem(
+                toolName: '',
+                status: ToolProgressStatus.pending,
+              ),
+      );
+      final activeTitle = runningItem.toolName.trim();
+      return activeTitle.isNotEmpty ? activeTitle : widget.title;
     } else {
       // 完成后显示"已执行 N 个操作"
       return l10n.executedNOperations(widget.items.length);
@@ -223,6 +252,25 @@ class _ToolProgressPanelState extends State<ToolProgressPanel>
               ),
             ),
           ),
+          if (widget.thinkingText != null &&
+              widget.thinkingText!.trim().isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  widget.thinkingText!.trim(),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ),
           // Collapsable Content
           AnimatedSize(
             duration: const Duration(milliseconds: 300),
@@ -306,7 +354,6 @@ class _ToolProgressPanelState extends State<ToolProgressPanel>
                       item.result!,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
-                        fontFamily: 'monospace',
                       ),
                       maxLines: 5,
                       overflow: TextOverflow.ellipsis,

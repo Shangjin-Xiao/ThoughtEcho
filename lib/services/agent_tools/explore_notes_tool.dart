@@ -22,6 +22,12 @@ class ExploreNotesTool extends AgentTool {
       '【核心工具】像浏览一样探索、筛选和搜索用户笔记。支持多维组合筛选（关键词、标签、日期范围、天气、时段）和分页浏览。';
 
   @override
+  bool get isReadOnly => true;
+
+  @override
+  bool get isConcurrencySafe => true;
+
+  @override
   Map<String, Object?> get parametersSchema => {
         'type': 'object',
         'properties': {
