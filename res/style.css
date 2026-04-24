@@ -1438,6 +1438,42 @@
             white-space: nowrap;
         }
 
+        .official-badge--apkpure {
+            background: #00A86B;
+            color: #ffffff;
+            gap: 0.75rem;
+            padding: 0 1.5rem;
+        }
+
+        .official-badge--apkpure:hover {
+            color: #ffffff;
+            background: #008f5b;
+        }
+
+        .official-badge--apkpure .badge-icon {
+            display: flex;
+            align-items: center;
+        }
+
+        .official-badge--apkpure svg {
+            width: 22px;
+            height: 22px;
+            fill: currentColor;
+        }
+
+        .official-badge--apkpure .badge-label {
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .official-badge--apkpure .badge-text {
+            font-size: 0.9rem;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
         /* ==================== 快速开始 ==================== */
         .quickstart-section {
             background: var(--paper-white);

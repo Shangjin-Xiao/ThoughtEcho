@@ -33,6 +33,8 @@
     <a href="https://www.microsoft.com/store/apps/9NC7GDG6KFMC"><img src="https://get.microsoft.com/images/zh-cn%20dark.svg" width="160" alt="从 Microsoft Store 获取"></a>
     &nbsp;&nbsp;&nbsp;
     <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases"><img src="https://img.shields.io/badge/GitHub_Releases-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Releases"></a>
+    &nbsp;&nbsp;&nbsp;
+    <a href="https://apkpure.com/p/com.shangjin.thoughtecho"><img src="https://img.shields.io/badge/APKPure-00A86B?style=for-the-badge&logo=android&logoColor=white" alt="APKPure"></a>
   </p>
 
   <p>
