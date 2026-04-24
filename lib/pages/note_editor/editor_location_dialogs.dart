@@ -218,92 +218,37 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
     }
   }
 
-  // TODO(low): 位置/天气获取逻辑与 add_note_dialog.dart 大量重复（约 400 行），
-  // 可提取为 LocationWeatherHelper 共享。
+  /// 编辑模式下手动获取位置和天气
   Future<void> _fetchLocationWeather() async {
-    final locationService = Provider.of<LocationService>(
-      context,
-      listen: false,
+    final result = await LocationWeatherHelper.fetch(
+      context: context,
+      includeWeather: true,
+      showPermissionDialog: false, // 权限失败显示 SnackBar
     );
-    final weatherService = Provider.of<WeatherService>(context, listen: false);
 
-    // 检查并请求权限
-    if (!locationService.hasLocationPermission) {
-      bool permissionGranted =
-          await locationService.requestLocationPermission();
-      if (!permissionGranted) {
-        if (mounted && context.mounted) {
-          final l10n = AppLocalizations.of(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(l10n.cannotGetLocationPermissionShort),
-              duration: AppConstants.snackBarDurationError,
-            ),
-          );
-        }
-        return;
-      }
-    }
-
-    final position = await locationService.getCurrentLocation();
-    if (position != null && mounted) {
-      final location = locationService.getFormattedLocation();
-
-      // 优化：将网络请求包装为 Future，避免阻塞主线程
-      try {
-        // 更新位置信息（包括经纬度）
-        _updateState(() {
-          _location = location.isNotEmpty ? location : null;
-          _latitude = position.latitude;
-          _longitude = position.longitude;
-        });
-
-        // 异步获取天气数据，不阻塞UI
-        _fetchWeatherAsync(
-          weatherService,
-          position.latitude,
-          position.longitude,
-        );
-      } catch (e) {
-        logError('获取位置天气失败', error: e, source: 'NoteFullEditorPage');
-      }
-    } else if (mounted && context.mounted) {
-      // 获取位置失败，给出提示
+    if (result.permissionDenied && mounted) {
       final l10n = AppLocalizations.of(context);
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(l10n.cannotGetLocationTitle),
-          content: Text(l10n.cannotGetLocationDesc),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: Text(l10n.iKnow),
-            ),
-          ],
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.cannotGetLocationPermissionShort),
+          duration: AppConstants.snackBarDurationError,
         ),
       );
+      return;
     }
-  }
 
-  // 异步获取天气数据的辅助方法
-  Future<void> _fetchWeatherAsync(
-    WeatherService weatherService,
-    double latitude,
-    double longitude,
-  ) async {
-    try {
-      await weatherService.getWeatherData(latitude, longitude);
-
-      // 优化：仅在组件仍然挂载时更新状态
-      if (mounted) {
-        _updateState(() {
-          _weather = weatherService.currentWeather;
-          _temperature = weatherService.temperature;
-        });
-      }
-    } catch (e) {
-      logError('获取天气数据失败', error: e, source: 'NoteFullEditorPage');
+    if (mounted) {
+      _updateState(() {
+        if (result.hasLocation) {
+          _location = result.address;
+          _latitude = result.latitude;
+          _longitude = result.longitude;
+        }
+        if (result.hasWeather) {
+          _weather = result.weather;
+          _temperature = result.temperature;
+        }
+      });
     }
   }
 }

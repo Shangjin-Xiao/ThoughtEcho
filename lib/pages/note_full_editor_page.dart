@@ -26,6 +26,7 @@ import 'package:flutter/services.dart';
 import 'dart:async';
 import '../utils/app_logger.dart';
 import '../utils/string_utils.dart';
+import '../utils/location_weather_helper.dart';
 import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
 import 'package:flutter/foundation.dart' show kIsWeb, compute;
 

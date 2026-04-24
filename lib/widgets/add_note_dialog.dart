@@ -11,6 +11,7 @@ import '../services/database_service.dart';
 import '../services/location_service.dart';
 import '../services/local_geocoding_service.dart';
 import '../services/weather_service.dart';
+import '../utils/location_weather_helper.dart';
 import '../utils/time_utils.dart'; // 导入时间工具类
 import '../theme/app_theme.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
@@ -235,40 +236,25 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
               // 如果自动勾选了位置，获取位置；天气需要位置坐标，所以在位置获取后处理
               if (autoLocation) {
-                await _fetchLocationForNewNote();
-                // 位置获取后再获取天气
-                if (autoWeather &&
-                    _includeLocation &&
-                    (_newLatitude != null ||
-                        _cachedLocationService?.currentPosition != null)) {
-                  _fetchWeatherForNewNote();
-                } else if (autoWeather && !_includeLocation) {
-                  // 位置获取失败，天气也无法获取，取消天气选中并提示
-                  if (mounted) {
-                    setState(() {
-                      _includeWeather = false;
-                    });
-                    if (context.mounted) {
-                      final l10n = AppLocalizations.of(context);
-                      showDialog(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: Text(l10n.weatherFetchFailedTitle),
-                          content: Text(l10n.locationAndWeatherUnavailable),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: Text(l10n.iKnow),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-                  }
-                }
+                await _fetchLocationWeatherForNewNote(includeWeather: autoWeather);
               } else if (autoWeather) {
                 // 没有勾选位置但勾选了天气，尝试用缓存的位置获取天气
-                _fetchWeatherForNewNote();
+                final result = await LocationWeatherHelper.fetch(
+                  context: context,
+                  includeWeather: true,
+                  showLocationErrorDialog: false, // 自动静默尝试
+                );
+                if (mounted) {
+                  setState(() {
+                    if (result.hasWeather) {
+                      _newLatitude = result.latitude;
+                      _newLongitude = result.longitude;
+                      _includeWeather = true;
+                    } else {
+                      _includeWeather = false;
+                    }
+                  });
+                }
               }
             }
           }
@@ -487,187 +473,28 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     });
   }
 
-  /// 获取新建笔记的实时位置（与全屏编辑器逻辑一致）
-  // TODO(low): 位置/天气获取逻辑与 note_full_editor_page.dart 大量重复，
-  // 可提取为 LocationWeatherHelper 共享。
-  Future<void> _fetchLocationForNewNote() async {
-    final locationService = _cachedLocationService;
-    if (locationService == null) return;
+  /// 获取新建笔记的实时位置和天气
+  Future<void> _fetchLocationWeatherForNewNote({bool includeWeather = true}) async {
+    final result = await LocationWeatherHelper.fetch(
+      context: context,
+      includeWeather: includeWeather,
+      showWeatherErrorDialog: includeWeather, // 如果明确要获取天气，则显示天气错误
+    );
 
-    // 检查并请求权限（与全屏编辑器一致）
-    if (!locationService.hasLocationPermission) {
-      bool permissionGranted =
-          await locationService.requestLocationPermission();
-      if (!permissionGranted) {
-        if (mounted && context.mounted) {
-          final l10n = AppLocalizations.of(context);
-          setState(() {
-            _includeLocation = false;
-          });
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: Text(l10n.cannotGetLocationTitle),
-              content: Text(l10n.cannotGetLocationPermissionShort),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text(l10n.iKnow),
-                ),
-              ],
-            ),
-          );
-        }
-        return;
-      }
-    }
-
-    try {
-      final position = await locationService.getCurrentLocation();
-      if (position != null && mounted) {
-        final location = locationService.getFormattedLocation();
-        setState(() {
-          _newLatitude = position.latitude;
-          _newLongitude = position.longitude;
-          _newLocation = location.isNotEmpty ? location : null;
-        });
-      } else if (mounted) {
-        // 获取位置失败，提示并还原开关状态
-        setState(() {
+    if (mounted) {
+      setState(() {
+        if (result.permissionDenied || !result.hasLocation) {
           _includeLocation = false;
-        });
-        if (context.mounted) {
-          final l10n = AppLocalizations.of(context);
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: Text(l10n.cannotGetLocationTitle),
-              content: Text(l10n.cannotGetLocationDesc),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text(l10n.iKnow),
-                ),
-              ],
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      logDebug('对话框获取位置失败: $e');
-      if (mounted && context.mounted) {
-        final l10n = AppLocalizations.of(context);
-        setState(() {
-          _includeLocation = false;
-        });
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text(l10n.getLocationFailedTitle),
-            content: Text(l10n.getLocationFailedDesc(e.toString())),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: Text(l10n.iKnow),
-              ),
-            ],
-          ),
-        );
-      }
-    }
-  }
-
-  /// 获取新建笔记的天气信息
-  Future<void> _fetchWeatherForNewNote() async {
-    final weatherService = _cachedWeatherService;
-    final locationService = _cachedLocationService;
-    if (weatherService == null) return;
-
-    try {
-      // 天气需要位置坐标
-      double? lat = _newLatitude;
-      double? lon = _newLongitude;
-
-      // 如果还没有坐标，尝试从 locationService 获取
-      if (lat == null || lon == null) {
-        lat = locationService?.currentPosition?.latitude;
-        lon = locationService?.currentPosition?.longitude;
-      }
-
-      if (lat == null || lon == null) {
-        // 没有坐标，无法获取天气
-        if (mounted) {
-          setState(() {
-            _includeWeather = false;
-          });
-          if (context.mounted) {
-            final l10n = AppLocalizations.of(context);
-            showDialog(
-              context: context,
-              builder: (ctx) => AlertDialog(
-                title: Text(l10n.weatherFetchFailedTitle),
-                content: Text(l10n.locationAndWeatherUnavailable),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: Text(l10n.iKnow),
-                  ),
-                ],
-              ),
-            );
+          if (includeWeather) _includeWeather = false;
+        } else {
+          _newLatitude = result.latitude;
+          _newLongitude = result.longitude;
+          _newLocation = result.address;
+          if (includeWeather) {
+            _includeWeather = result.hasWeather;
           }
         }
-        return;
-      }
-
-      // 获取天气
-      await weatherService.getWeatherData(lat, lon);
-
-      if (!weatherService.hasData && mounted) {
-        // 天气获取失败
-        setState(() {
-          _includeWeather = false;
-        });
-        if (context.mounted) {
-          final l10n = AppLocalizations.of(context);
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: Text(l10n.weatherFetchFailedTitle),
-              content: Text(l10n.weatherFetchFailedDesc),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text(l10n.iKnow),
-                ),
-              ],
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      logDebug('对话框获取天气失败: $e');
-      if (mounted) {
-        setState(() {
-          _includeWeather = false;
-        });
-        if (context.mounted) {
-          final l10n = AppLocalizations.of(context);
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: Text(l10n.weatherFetchFailedTitle),
-              content: Text(l10n.weatherFetchFailedDesc),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: Text(l10n.iKnow),
-                ),
-              ],
-            ),
-          );
-        }
-      }
+      });
     }
   }
 
@@ -1065,7 +892,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         _includeWeather = false;
       });
     } else if (result == 'retry') {
-      _fetchWeatherForNewNote();
+      _fetchLocationWeatherForNewNote(includeWeather: true);
     }
   }
 
@@ -1891,7 +1718,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                   if (value &&
                                       _newLocation == null &&
                                       _newLatitude == null) {
-                                    _fetchLocationForNewNote();
+                                    _fetchLocationWeatherForNewNote(includeWeather: _includeWeather);
                                   }
                                   setState(() {
                                     _includeLocation = value;
@@ -1983,7 +1810,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                   _includeWeather = true;
                                 });
                                 // 勾选时获取天气
-                                _fetchWeatherForNewNote();
+                                _fetchLocationWeatherForNewNote(includeWeather: true);
                               } else {
                                 setState(() {
                                   _includeWeather = false;
