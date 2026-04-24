@@ -70,9 +70,10 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
 
     // 标签筛选
     if (tagIds != null && tagIds.isNotEmpty) {
+      // ⚡ Bolt: Multi-tag querying optimized for OR matching
       final tagPlaceholders = tagIds.map((_) => '?').join(',');
       conditions.add(
-        'q.id IN (SELECT quote_id FROM quote_tags WHERE tag_id IN ($tagPlaceholders))',
+        'EXISTS (SELECT 1 FROM quote_tags qt_filter WHERE qt_filter.quote_id = q.id AND qt_filter.tag_id IN ($tagPlaceholders))',
       );
       args.addAll(tagIds);
     }
@@ -341,38 +342,17 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
       List<dynamic> finalArgs = List.from(args);
 
       if (tagIds != null && tagIds.isNotEmpty) {
-        // 使用 INNER JOIN 和 GROUP BY 来进行计数
-        final tagPlaceholders = tagIds.map((_) => '?').join(',');
-
-        String subQuery = '''
-          SELECT 1
-          FROM quotes q
-          INNER JOIN quote_tags qt ON q.id = qt.quote_id
-        ''';
-
-        conditions.add('qt.tag_id IN ($tagPlaceholders)');
-        finalArgs.addAll(tagIds);
-
-        final whereClause =
-            conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
-
-        String havingClause = 'HAVING COUNT(DISTINCT qt.tag_id) = ?';
-        finalArgs.add(tagIds.length);
-
-        query = '''
-          SELECT COUNT(*) FROM (
-            $subQuery
-            $whereClause
-            GROUP BY q.id
-            $havingClause
-          )
-        ''';
-      } else {
-        // 没有标签筛选，使用简单的 COUNT
-        final whereClause =
-            conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
-        query = 'SELECT COUNT(*) as count FROM quotes q $whereClause';
+        // ⚡ Bolt: Use multiple EXISTS for counting multi-tag matching efficiently
+        for (final tagId in tagIds) {
+          conditions.add(
+              "EXISTS (SELECT 1 FROM quote_tags qt_filter WHERE qt_filter.quote_id = q.id AND qt_filter.tag_id = ?)");
+          finalArgs.add(tagId);
+        }
       }
+
+      final whereClause =
+          conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
+      query = 'SELECT COUNT(*) as count FROM quotes q $whereClause';
 
       logDebug('执行计数查询: $query\n参数: $finalArgs');
       final result = await db.rawQuery(query, finalArgs);

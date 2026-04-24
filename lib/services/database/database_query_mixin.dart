@@ -293,8 +293,8 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     /// 修复：优化标签筛选查询，减少复杂度
     /// 关键修复：始终使用独立的 LEFT JOIN 获取所有标签，不受筛选条件影响
     if (tagIds != null && tagIds.isNotEmpty) {
-      if (tagIds.length == 1) {
-        // 单标签查询：使用简单的INNER JOIN筛选，但用另一个JOIN获取所有标签
+      // ⚡ Bolt: Use multiple EXISTS for multi-tag querying instead of GROUP BY + HAVING
+      for (final tagId in tagIds) {
         conditions.add('''
           EXISTS (
             SELECT 1 FROM quote_tags qt_filter
@@ -302,21 +302,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
             AND qt_filter.tag_id = ?
           )
         ''');
-        args.add(tagIds.first);
-      } else {
-        // 多标签查询：使用EXISTS确保所有标签都匹配
-        final tagPlaceholders = tagIds.map((_) => '?').join(',');
-        conditions.add('''
-          EXISTS (
-            SELECT 1 FROM quote_tags qt_filter
-            WHERE qt_filter.quote_id = q.id
-            AND qt_filter.tag_id IN ($tagPlaceholders)
-            GROUP BY qt_filter.quote_id
-            HAVING COUNT(DISTINCT qt_filter.tag_id) = ?
-          )
-        ''');
-        args.addAll(tagIds);
-        args.add(tagIds.length);
+        args.add(tagId);
       }
     }
 
