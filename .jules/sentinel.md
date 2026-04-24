@@ -39,3 +39,7 @@
 ## 2024-06-03 - [Security Enhancement] Parameterize Database Schema Inspection
 **Learning:** SQLite `PRAGMA` statements are generally not parameterized, increasing the risk of SQL injection if user input ever makes it into the schema queries. Using the equivalent SQLite table-valued function `pragma_table_info(?)` allows for safe parameterization.
 **Action:** Replaced hardcoded PRAGMA table_info calls in `lib/services/database_schema_manager.dart` with safe parameterized queries `SELECT name FROM pragma_table_info(?)`.
+## 2026-05-20 - [High] Insecure CORS Configuration on Local Server Fixed
+**Vulnerability:** The `LocalSendServer` (`lib/services/localsend/localsend_server.dart`), which binds to the local network interface (`InternetAddress.anyIPv4`), explicitly added permissive CORS headers (`Access-Control-Allow-Origin: *`) and handled `OPTIONS` preflight requests. This allowed any external malicious website the user visits to bypass the browser's Same-Origin Policy and make direct HTTP requests to the local server via the browser (e.g., DNS rebinding).
+**Learning:** Local network servers must be extremely strict about cross-origin requests. Adding wildcard CORS headers to a local server completely negates the security boundary provided by the browser's Same-Origin Policy.
+**Prevention:** Do not add `Access-Control-Allow-Origin: *` to local servers. Rely on standard Same-Origin Policy to block unauthorized cross-origin access from web browsers.
