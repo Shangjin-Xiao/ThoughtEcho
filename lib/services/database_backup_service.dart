@@ -522,6 +522,8 @@ class DatabaseBackupService {
         (row['name'] as String).toLowerCase(): row,
     };
 
+    final batch = txn.batch();
+
     for (final c in categories) {
       try {
         final categoryData = Map<String, dynamic>.from(
@@ -555,7 +557,7 @@ class DatabaseBackupService {
             remoteTimestamp: categoryData['last_modified'] as String?,
           );
           if (decision.shouldUseRemote) {
-            await txn.update(
+            batch.update(
               'categories',
               categoryData,
               where: 'id = ?',
@@ -589,7 +591,7 @@ class DatabaseBackupService {
                 'is_default': categoryData['is_default'],
                 'last_modified': categoryData['last_modified'],
               });
-            await txn.update(
+            batch.update(
               'categories',
               updateMap,
               where: 'id = ?',
@@ -606,7 +608,7 @@ class DatabaseBackupService {
         }
 
         // 3. 新分类，直接插入
-        await txn.insert('categories', categoryData);
+        batch.insert('categories', categoryData);
         idToRow[remoteId] = categoryData;
         nameLowerToRow[nameKey] = categoryData;
         categoryIdRemap[remoteId] = remoteId;
@@ -615,6 +617,8 @@ class DatabaseBackupService {
         reportBuilder.addError('处理分类失败: $e');
       }
     }
+
+    await batch.commit(noResult: true);
   }
 
   /// 合并笔记数据（LWW策略）
@@ -633,6 +637,17 @@ class DatabaseBackupService {
         .map((r) => r['id'] as String)
         .whereType<String>()
         .toSet();
+
+    // ⚡ Bolt: 预加载本地笔记元数据，避免循环中的 N 次查询
+    final existingQuoteRows = await txn.query(
+      'quotes',
+      columns: ['id', 'last_modified', 'content'],
+    );
+    final Map<String, Map<String, dynamic>> idToQuote = {
+      for (final row in existingQuoteRows) (row['id'] as String): row,
+    };
+
+    final batch = txn.batch();
 
     for (final q in quotes) {
       try {
@@ -706,20 +721,16 @@ class DatabaseBackupService {
         quoteData['last_modified'] ??=
             (quoteData['date'] as String? ?? DateTime.now().toIso8601String());
 
-        // 查询本地是否存在该笔记
-        final existingRows = await txn.query(
-          'quotes',
-          where: 'id = ?',
-          whereArgs: [quoteId],
-        );
-
+        // ⚡ Bolt: 使用预加载的 map 进行匹配，避免重复查询
         bool inserted = false;
-        if (existingRows.isEmpty) {
-          await txn.insert('quotes', quoteData);
+        if (!idToQuote.containsKey(quoteId)) {
+          batch.insert('quotes', quoteData);
           reportBuilder.addInsertedQuote();
           inserted = true;
+          // ⚡ Bolt: 更新本地缓存以处理输入数据中的重复项
+          idToQuote[quoteId] = quoteData;
         } else {
-          final existingQuote = existingRows.first;
+          final existingQuote = idToQuote[quoteId]!;
           final decision = LWWDecisionMaker.makeDecision(
             localTimestamp: existingQuote['last_modified'] as String?,
             remoteTimestamp: quoteData['last_modified'] as String?,
@@ -728,13 +739,15 @@ class DatabaseBackupService {
             checkContentSimilarity: true,
           );
           if (decision.shouldUseRemote) {
-            await txn.update(
+            batch.update(
               'quotes',
               quoteData,
               where: 'id = ?',
               whereArgs: [quoteId],
             );
             reportBuilder.addUpdatedQuote();
+            // ⚡ Bolt: 更新本地缓存以处理输入数据中的重复项
+            idToQuote[quoteId] = quoteData;
           } else if (decision.hasConflict) {
             reportBuilder.addSameTimestampDiffQuote();
           } else {
@@ -746,13 +759,12 @@ class DatabaseBackupService {
         if (remappedTagIds.isNotEmpty) {
           // 如果是更新，先清理旧关联
           if (!inserted) {
-            await txn.delete(
+            batch.delete(
               'quote_tags',
               where: 'quote_id = ?',
               whereArgs: [quoteId],
             );
           }
-          final batch = txn.batch();
           for (final tagId in remappedTagIds) {
             batch.insert(
                 'quote_tags',
@@ -762,11 +774,12 @@ class DatabaseBackupService {
                 },
                 conflictAlgorithm: ConflictAlgorithm.ignore);
           }
-          await batch.commit(noResult: true);
         }
       } catch (e) {
         reportBuilder.addError('处理笔记失败: $e');
       }
     }
+
+    await batch.commit(noResult: true);
   }
 }
