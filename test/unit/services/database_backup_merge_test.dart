@@ -106,13 +106,18 @@ void main() {
     expect(report.updatedQuotes, 1);
     expect(report.insertedQuotes, 1);
 
-    final cat1 = (await db.query('categories', where: 'id = ?', whereArgs: ['cat_1'])).first;
+    final cat1 =
+        (await db.query('categories', where: 'id = ?', whereArgs: ['cat_1']))
+            .first;
     expect(cat1['name'], 'New Category Name');
 
-    final quote1 = (await db.query('quotes', where: 'id = ?', whereArgs: ['quote_1'])).first;
+    final quote1 =
+        (await db.query('quotes', where: 'id = ?', whereArgs: ['quote_1']))
+            .first;
     expect(quote1['content'], 'New Content');
 
-    final tags = await db.query('quote_tags', where: 'quote_id = ?', whereArgs: ['quote_1']);
+    final tags = await db
+        .query('quote_tags', where: 'quote_id = ?', whereArgs: ['quote_1']);
     expect(tags.length, 2);
   });
 }
