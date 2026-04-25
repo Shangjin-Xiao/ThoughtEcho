@@ -5,12 +5,8 @@ import '../../gen_l10n/app_localizations.dart';
 class SmartResultCard extends StatefulWidget {
   final String title;
   final String content;
-  final VoidCallback? onReplace;
-  final VoidCallback? onAppend;
   final void Function(bool includeLocation, bool includeWeather)? onOpenInEditor;
   final void Function(bool includeLocation, bool includeWeather)? onSaveDirectly;
-  final String? replaceButtonText;
-  final String? appendButtonText;
   final String editorSource;
   final bool initialIncludeLocation;
   final bool initialIncludeWeather;
@@ -19,12 +15,8 @@ class SmartResultCard extends StatefulWidget {
     super.key,
     required this.title,
     required this.content,
-    this.onReplace,
-    this.onAppend,
     this.onOpenInEditor,
     this.onSaveDirectly,
-    this.replaceButtonText,
-    this.appendButtonText,
     this.editorSource = 'fullscreen',
     this.initialIncludeLocation = false,
     this.initialIncludeWeather = false,

@@ -86,6 +86,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
           title: l10n.polishResult,
           loadingText: l10n.polishingText,
           command: descriptor.command,
+          action: 'replace',
           stream: _aiService.streamPolishText(widget.quote!.content),
         );
         break;
@@ -94,6 +95,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
           title: l10n.continueResult,
           loadingText: l10n.continuingText,
           command: descriptor.command,
+          action: 'append',
           stream: _aiService.streamContinueText(widget.quote!.content),
         );
         break;
@@ -131,6 +133,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
     required String title,
     required String loadingText,
     required String command,
+    required String action,
     required Stream<String> stream,
   }) async {
     final l10n = AppLocalizations.of(context);
@@ -162,8 +165,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
             'type': 'smart_result',
             'command': command,
             'title': title,
-            'replaceButtonText': l10n.replaceOriginalNote,
-            'appendButtonText': l10n.appendToEnd,
+            'action': action,
           }),
         );
       },
