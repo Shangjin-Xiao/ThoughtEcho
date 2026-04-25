@@ -412,9 +412,14 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
       },
       onDone: () {
         logDebug('[UI] _askBoundNote 完成: $uiChunkCount 个 UI chunk');
+        final finalContent = fullResponse.isNotEmpty
+            ? fullResponse
+            : (thinkingParts.isNotEmpty
+                ? thinkingParts.join('')
+                : l10n.aiMisunderstoodQuestion);
         _updateMessage(
           aiMsgId,
-          fullResponse.isNotEmpty ? fullResponse : l10n.aiMisunderstoodQuestion,
+          finalContent,
           isLoading: false,
           state: MessageState.complete,
           thinkingChunks: thinkingParts.isNotEmpty
@@ -492,9 +497,14 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
       },
       onDone: () {
         logDebug('[UI] _askGeneralChat 完成: $uiChunkCount 个 UI chunk');
+        final finalContent = fullResponse.isNotEmpty
+            ? fullResponse
+            : (thinkingParts.isNotEmpty
+                ? thinkingParts.join('')
+                : l10n.aiMisunderstoodQuestion);
         _updateMessage(
           aiMsgId,
-          fullResponse.isNotEmpty ? fullResponse : l10n.aiMisunderstoodQuestion,
+          finalContent,
           isLoading: false,
           state: MessageState.complete,
           thinkingChunks: thinkingParts.isNotEmpty

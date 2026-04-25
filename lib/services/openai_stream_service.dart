@@ -259,6 +259,10 @@ class OpenAIStreamService extends ChangeNotifier {
           for (final reasoningChunk in reasoningChunks) {
             onThinking(reasoningChunk);
           }
+        } else if (chunks.isEmpty && reasoningChunks.isNotEmpty) {
+          // 没有 onThinking 回调且 content 为空时（如每日提示），
+          // 将 reasoning 作为普通内容输出，避免流完全为空。
+          chunks.addAll(reasoningChunks);
         }
       }
 
@@ -267,13 +271,29 @@ class OpenAIStreamService extends ChangeNotifier {
   }
 
   /// 从 ChatCompletion 响应中提取文本
+  ///
+  /// 某些模型（如 Ollama 上的 minimax-m2.7）会将全部输出放在
+  /// `reasoning` / `reasoning_content` 字段中，而 `content` 为空。
+  /// 此处按 content → reasoning → reasoning_content 的顺序回退，
+  /// 确保非流式请求也能正确拿到模型输出。
   static String extractTextFromCompletion(
     openai.ChatCompletion completion,
   ) {
     if (completion.choices.isEmpty) {
       return '';
     }
-    return completion.choices.first.message.content ?? '';
+    final message = completion.choices.first.message;
+    if (message.content != null && message.content!.isNotEmpty) {
+      return message.content!;
+    }
+    if (message.reasoning != null && message.reasoning!.isNotEmpty) {
+      return message.reasoning!;
+    }
+    if (message.reasoningContent != null &&
+        message.reasoningContent!.isNotEmpty) {
+      return message.reasoningContent!;
+    }
+    return '';
   }
 
   // ========= 私有方法 =========
