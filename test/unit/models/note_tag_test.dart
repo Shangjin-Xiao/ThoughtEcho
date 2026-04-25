@@ -70,16 +70,23 @@ void main() {
       expect(tag.isDefault, isTrue);
     });
 
-    test('should throw ArgumentError in fromMap when id or name is missing',
+    test('should use empty defaults in fromMap when id or name is missing',
         () {
-      expect(
-          () => NoteTag.fromMap({'name': '测试'}), throwsA(isA<ArgumentError>()));
-      expect(
-          () => NoteTag.fromMap({'id': 'test'}), throwsA(isA<ArgumentError>()));
-      expect(() => NoteTag.fromMap({'id': '', 'name': '测试'}),
-          throwsA(isA<ArgumentError>()));
-      expect(() => NoteTag.fromMap({'id': 'test', 'name': ''}),
-          throwsA(isA<ArgumentError>()));
+      final missingId = NoteTag.fromMap({'name': '测试'});
+      expect(missingId.id, equals(''));
+      expect(missingId.name, equals('测试'));
+
+      final missingName = NoteTag.fromMap({'id': 'test'});
+      expect(missingName.id, equals('test'));
+      expect(missingName.name, equals(''));
+
+      final emptyId = NoteTag.fromMap({'id': '', 'name': '测试'});
+      expect(emptyId.id, equals(''));
+      expect(emptyId.name, equals('测试'));
+
+      final emptyName = NoteTag.fromMap({'id': 'test', 'name': ''});
+      expect(emptyName.id, equals('test'));
+      expect(emptyName.name, equals(''));
     });
 
     test('should support copyWith', () {
