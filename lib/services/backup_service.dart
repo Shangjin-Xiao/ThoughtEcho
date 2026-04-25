@@ -311,9 +311,11 @@ class BackupService {
         await Future.delayed(const Duration(milliseconds: 1));
       }
 
+      sink.write(']');
+      sink.write('}');
+
       final tombstones = await _databaseService.getTombstonesForBackup();
-      sink.write('],');
-      sink.write('"tombstones":${jsonEncode(tombstones)}');
+      sink.write(',"tombstones":${jsonEncode(tombstones)}');
 
       final trashSettings = {
         'retention_days': _settingsService.trashRetentionDays,
