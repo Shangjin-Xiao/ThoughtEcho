@@ -10,3 +10,6 @@
 ## 2026-03-24 - [补充 MemoryOptimizationHelper 的测试]
 **盲点:** `ProcessingStrategyExt` 在 `MemoryOptimizationHelper` 中作为一个核心的纯枚举扩展，包含了内存优化策略的状态描述与隔离执行判断（`description`, `useIsolate`）。但由于缺乏单元测试覆盖，其逻辑在重构或新增状态时可能出现遗漏。
 **对策:** 编写极简的枚举扩展测试。通过直接断言各种策略类型在调用 `description` 和 `useIsolate` 方法时的返回结果，快速验证且不依赖其他环境。
+## 2025-01-26 - Add missing unit tests for DailyPromptGenerator
+**盲点:** `DailyPromptGenerator` 内部使用了 `DateTime.now()`，但没有提供依赖注入或使用 `clock` 包的 `clock.now()`，导致测试 `getDefaultPrompt` 的日期特定性逻辑非常困难（只验证了输出集合，没有验证特定日期返回特定提示）。另外，在执行探索性测试时，在项目根目录遗留了 `test_daily_prompt_draft.dart` 的草稿文件。
+**对策:** 在编写依赖当前时间的纯函数/工具类时，如果不方便重构业务代码引入 `clock`，可以通过 `clock` 包提供的 `withClock` 环境包裹测试并在工具类内部使用 `clock.now()` (若可重构) 或在测试中通过验证日期差值索引逻辑的相对正确性（当前已用 `withClock` 及相差天数验证）。严格清理测试草稿，确保工作区干净。
