@@ -967,7 +967,6 @@ class SettingsPageState extends State<SettingsPage> {
                       : const Icon(Icons.chevron_right),
                   onTap: _isCheckingUpdate ? null : () => _checkForUpdates(),
                 ),
-
               ],
             ),
           ),
