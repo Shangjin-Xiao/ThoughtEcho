@@ -44,8 +44,8 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
   @override
   void initState() {
     super.initState();
-    // 默认始终展开，确保思考内容对用户可见
-    _isExpanded = true;
+    // 思考中展开，完成后折叠
+    _isExpanded = widget.inProgress;
 
     // 箭头旋转动画
     _rotationController = AnimationController(
@@ -70,15 +70,20 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
   void didUpdateWidget(ThinkingWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // 保持展开状态，不再自动折叠
-    // 用户需要始终看到思考内容
-
-    // 如果进度状态改变
+    // 如果进度状态改变，自动折叠/展开
     if (oldWidget.inProgress != widget.inProgress) {
       if (widget.inProgress) {
         _pulseController.repeat();
+        if (!_isExpanded) {
+          _isExpanded = true;
+          _rotationController.forward();
+        }
       } else {
         _pulseController.stop();
+        if (_isExpanded) {
+          _isExpanded = false;
+          _rotationController.reverse();
+        }
       }
     }
   }

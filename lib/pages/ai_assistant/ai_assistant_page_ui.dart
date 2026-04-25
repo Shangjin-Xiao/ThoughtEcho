@@ -81,14 +81,23 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
               widget.exploreGuideSummary?.trim().isNotEmpty == true)
             _buildExploreGuideBanner(theme, l10n),
           Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                return _buildMessageBubble(_messages[index], theme, l10n);
+            child: NotificationListener<ScrollUpdateNotification>(
+              onNotification: (notification) {
+                if (notification.dragDetails != null && notification.scrollDelta != null) {
+                  if (_inputFocusNode.hasFocus) {
+                    _inputFocusNode.unfocus();
+                  }
+                }
+                return false;
               },
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+                itemCount: _messages.length,
+                itemBuilder: (context, index) {
+                  return _buildMessageBubble(_messages[index], theme, l10n);
+                },
+              ),
             ),
           ),
           _buildInputArea(theme, l10n),
@@ -305,16 +314,13 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     }
 
     final isUser = message.isUser;
-    final isDark = theme.brightness == Brightness.dark;
 
-    // Colors from AI Gallery Theme.kt
-    final userBubbleColor =
-        isDark ? const Color(0xFF1f3760) : const Color(0xFF32628D);
-    final agentBubbleColor =
-        isDark ? const Color(0xFF1b1c1d) : const Color(0xFFe9eef6);
+    // Material 3 semantic colors
+    final userBubbleColor = theme.colorScheme.primary;
+    final agentBubbleColor = theme.colorScheme.surfaceContainerHigh;
     final bubbleColor = isUser ? userBubbleColor : agentBubbleColor;
 
-    final bubbleTextColor = isUser ? Colors.white : theme.colorScheme.onSurface;
+    final bubbleTextColor = isUser ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface;
 
     final bubbleRadius = const Radius.circular(24);
     final borderRadius = BorderRadius.only(
