@@ -727,16 +727,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
   ) async {
     final modeAction =
         meta['action']?.toString() == 'append' ? 'append' : 'replace';
-    final noteId = meta['note_id']?.toString();
-
-    if (_hasBoundNote) {
-      Navigator.pop(context, {
-        'action': 'edit',
-        'mode': modeAction,
-        'text': content,
-      });
-      return;
-    }
+    final noteId = meta['note_id']?.toString() ??
+        (_hasBoundNote ? widget.quote!.id : null);
 
     if (noteId != null && noteId.isNotEmpty) {
       final db = context.read<DatabaseService>();
@@ -746,11 +738,14 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         return;
       }
       if (note != null) {
+        // 根据润色(replace) / 续写(append) 决定带入编辑器的初始文本
+        final mergedContent =
+            modeAction == 'append' ? '${note.content}\n$content' : content;
         await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => NoteFullEditorPage(
-              initialContent: content,
+              initialContent: mergedContent,
               initialQuote: note,
               allTags: tags,
             ),
@@ -842,16 +837,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     final l10n = AppLocalizations.of(context);
     final modeAction =
         meta['action']?.toString() == 'append' ? 'append' : 'replace';
-    final noteId = meta['note_id']?.toString();
-
-    if (_hasBoundNote) {
-      Navigator.pop(context, {
-        'action': 'save',
-        'mode': modeAction,
-        'text': content,
-      });
-      return;
-    }
+    final noteId = meta['note_id']?.toString() ??
+        (_hasBoundNote ? widget.quote!.id : null);
 
     if (noteId != null && noteId.isNotEmpty) {
       try {
