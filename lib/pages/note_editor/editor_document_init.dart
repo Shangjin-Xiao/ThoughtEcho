@@ -13,8 +13,15 @@ extension _NoteEditorDocumentInit on _NoteFullEditorPageState {
       if (fullQuote != null && mounted) {
         _updateState(() {
           _fullInitialQuote = fullQuote;
-          // 初始化 AI 分析结果
-          _currentAiAnalysis ??= fullQuote.aiAnalysis;
+          // 如果列表页传入的是精简版 Quote，这里的补全不应被算作用户修改。
+          if (_currentAiAnalysis == null && fullQuote.aiAnalysis != null) {
+            final shouldSyncInitialAiAnalysis =
+                _currentAiAnalysis == _initialAiAnalysis;
+            _currentAiAnalysis = fullQuote.aiAnalysis;
+            if (shouldSyncInitialAiAnalysis) {
+              _initialAiAnalysis = fullQuote.aiAnalysis;
+            }
+          }
         });
         logDebug('已获取完整笔记数据，ID: ${fullQuote.id}');
       }

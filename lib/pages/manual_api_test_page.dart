@@ -28,9 +28,10 @@ class _ManualApiKeyTestPageState extends State<ManualApiKeyTestPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context).manualApiTest),
+        title: Text(l10n.manualApiTest),
         backgroundColor: Theme.of(context).colorScheme.primaryContainer,
       ),
       body: Padding(
@@ -38,14 +39,14 @@ class _ManualApiKeyTestPageState extends State<ManualApiKeyTestPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              '手动API密钥测试',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            Text(
+              l10n.manualApiTestTitle,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            const Text(
-              '直接输入API参数进行测试，绕过存储系统检查API密钥是否有效。',
-              style: TextStyle(fontSize: 14, color: Colors.grey),
+            Text(
+              l10n.manualApiTestDesc,
+              style: const TextStyle(fontSize: 14, color: Colors.grey),
             ),
             const SizedBox(height: 24),
             TextField(
@@ -81,13 +82,14 @@ class _ManualApiKeyTestPageState extends State<ManualApiKeyTestPage> {
                       height: 20,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : Text(AppLocalizations.of(context).testApiKey),
+                  : Text(l10n.testApiKey),
             ),
             const SizedBox(height: 24),
             if (_testResult.isNotEmpty) ...[
-              const Text(
-                '测试结果:',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              Text(
+                l10n.testResultLabel,
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Expanded(
@@ -122,7 +124,7 @@ class _ManualApiKeyTestPageState extends State<ManualApiKeyTestPage> {
         _apiUrlController.text.trim().isEmpty ||
         _modelController.text.trim().isEmpty) {
       setState(() {
-        _testResult = '错误: 请填写所有必填字段';
+        _testResult = AppLocalizations.of(context).fillAllFieldsError;
       });
       return;
     }
@@ -132,8 +134,9 @@ class _ManualApiKeyTestPageState extends State<ManualApiKeyTestPage> {
       _testResult = '';
     });
 
+    final l10n = AppLocalizations.of(context);
     final buffer = StringBuffer();
-    buffer.writeln('=== 手动API密钥测试报告 ===');
+    buffer.writeln(l10n.testReportTitle);
     buffer.writeln('时间: ${DateTime.now()}');
     buffer.writeln();
 
@@ -142,7 +145,7 @@ class _ManualApiKeyTestPageState extends State<ManualApiKeyTestPage> {
       final apiUrl = _apiUrlController.text.trim();
       final model = _modelController.text.trim();
 
-      buffer.writeln('测试参数:');
+      buffer.writeln(l10n.testParamsLabel);
       buffer.writeln('  API URL: $apiUrl');
       buffer.writeln('  Model: $model');
       buffer.writeln('  API Key长度: ${apiKey.length}');
@@ -152,7 +155,7 @@ class _ManualApiKeyTestPageState extends State<ManualApiKeyTestPage> {
       buffer.writeln();
 
       // 检查密钥格式
-      buffer.writeln('密钥格式检查:');
+      buffer.writeln(l10n.keyFormatCheckLabel);
       if (apiKey.contains('\n') || apiKey.contains('\r')) {
         buffer.writeln('  ❌ 包含换行符');
       } else {
@@ -204,7 +207,7 @@ class _ManualApiKeyTestPageState extends State<ManualApiKeyTestPage> {
         headers['X-Title'] = 'ThoughtEcho App';
       }
 
-      buffer.writeln('发送请求:');
+      buffer.writeln(l10n.sendRequestLabel);
       buffer.writeln('  Headers: ${headers.keys.join(', ')}');
       buffer.writeln('  Request Body: ${json.encode(requestBody)}');
       buffer.writeln();

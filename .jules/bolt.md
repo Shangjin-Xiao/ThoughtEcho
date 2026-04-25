@@ -13,13 +13,10 @@
 ## 2025-03-27 - [N+1 DB Insert Optimization]
 **Learning:** In Dart/Flutter SQLite (`sqflite`), using a `for` loop to execute `await txn.insert()` causes a significant Platform Channel communication overhead per iteration. This is particularly problematic when saving objects with multiple relationships (like tags).
 **Action:** Always use `txn.batch()` to enqueue commands and execute them together via `await batch.commit(noResult: true)` when inserting or updating multiple related rows in SQLite. This eliminates the N+1 execution overhead.
-<<<<<<< bolt/sqlite-scalar-subquery-optimization-12317187905385071383
-
-## 2025-04-03 - [LEFT JOIN + GROUP BY vs Scalar Subquery in SQLite]
-**Learning:** In SQLite queries containing `LIMIT`/`OFFSET` (e.g., pagination), fetching aggregated related data (like tags) using a `LEFT JOIN` and `GROUP BY` forces SQLite to perform a full table aggregation before applying the limit. This leads to a massive degradation in performance when the table size grows.
-**Action:** Replace `LEFT JOIN` + `GROUP BY` with a scalar subquery in the `SELECT` clause, such as `(SELECT GROUP_CONCAT(tag_id) FROM quote_tags WHERE quote_id = q.id)`. This ensures that the aggregation is only executed on the already filtered/limited result set, transforming an $O(N \times M)$ operation into an $O(L)$ operation, where $L$ is the limit.
-=======
 ## 2026-04-03 - [SQLite Pagination Aggregation Pitfall]
 **Learning:** In SQLite queries with pagination (`LIMIT`/`OFFSET`), fetching aggregated related data (e.g., tags) via `LEFT JOIN` and `GROUP BY` causes severe performance degradation because it aggregates the entire table *before* applying the limit. This affects functions like `_directGetQuotes`.
 **Action:** Use a scalar subquery in the `SELECT` clause (e.g., `(SELECT GROUP_CONCAT(tag_id) FROM quote_tags WHERE quote_id = q.id)`) to only aggregate the limited rows, avoiding full-table aggregation.
->>>>>>> main
+
+## 2026-02-13 - 优化数据库备份合并过程中的批量处理
+**Learning:** 在循环中执行大量的数据库插入或更新操作（N+1 问题）会导致显著的 I/O 等待和事务开销。通过 `txn.batch()` 可以将这些操作合并为一个批次提交。此外，在循环开始前预查元数据并使用内存中的 Map 进行匹配，可以消除循环内的查询开销。需要注意在 batch 提交前手动更新内存中的缓存，以处理同一批次中可能出现的重复条目。
+**Action:** 在 `lib/services/database_backup_service.dart` 的 `_mergeCategories` 和 `_mergeQuotes` 中实现了 `Batch` 操作和元数据预查。

@@ -6,6 +6,7 @@ import 'dart:async';
 import '../gen_l10n/app_localizations.dart';
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
+import '../services/api_service.dart';
 import '../services/database_service.dart';
 import '../services/location_service.dart';
 import '../services/local_geocoding_service.dart';
@@ -105,6 +106,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
   // 一言标签加载状态
   bool _isLoadingHitokotoTags = false;
+  Future<void>? _pendingHitokotoTagTask;
 
   // AI推荐标签相关状态
   // 预留：后续接入本地 embedding/标签推荐时使用
@@ -359,12 +361,25 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
     // 优化：完全异步执行重量级操作，不阻塞 UI
     if (widget.hitokotoData != null) {
-      // 使用 microtask 在下一个事件循环执行，比 Future.delayed 更快
-      Future.microtask(() {
-        if (mounted) {
-          _addDefaultHitokotoTagsAsync();
-        }
+      _pendingHitokotoTagTask = Future.microtask(() async {
+        if (!mounted) return;
+        await _addDefaultHitokotoTagsAsync();
       });
+    }
+  }
+
+  Future<void> _waitForPendingHitokotoTagTask() async {
+    final pendingTask = _pendingHitokotoTagTask;
+    if (pendingTask == null) return;
+
+    try {
+      await pendingTask;
+    } catch (e) {
+      logDebug('等待默认一言标签任务失败: $e');
+    } finally {
+      if (identical(_pendingHitokotoTagTask, pendingTask)) {
+        _pendingHitokotoTagTask = null;
+      }
     }
   }
 
@@ -1119,7 +1134,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
       // 添加一言类型对应的标签
       String? hitokotoType;
-      if (widget.hitokotoData != null) {
+      if (_shouldApplyHitokotoSubtypeTag()) {
         hitokotoType = _getHitokotoTypeFromApiResponse();
         if (hitokotoType != null && hitokotoType.isNotEmpty) {
           String tagName = _convertHitokotoTypeToTagName(hitokotoType);
@@ -1193,6 +1208,14 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       return widget.hitokotoData!['type'].toString();
     }
     return null;
+  }
+
+  bool _shouldApplyHitokotoSubtypeTag() {
+    final provider = widget.hitokotoData?['provider']?.toString();
+    if (provider == null || provider.trim().isEmpty) {
+      return true;
+    }
+    return provider == ApiService.hitokotoProvider;
   }
 
   // 将一言API的类型代码转换为可读标签名称
@@ -1401,11 +1424,19 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   Future<void> _saveAndExit() async {
     // 如果内容为空，直接返回
     if (_contentController.text.isEmpty) {
-      if (context.mounted) {
+      if (mounted) {
         Navigator.pop(context);
       }
       return;
     }
+
+    // Capture context variables before any async operations
+    final db = Provider.of<DatabaseService>(context, listen: false);
+    final l10n = AppLocalizations.of(context);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
+    await _waitForPendingHitokotoTagTask();
 
     // 获取当前时间段
     final String currentDayPeriodKey = TimeUtils.getCurrentDayPeriodKey();
@@ -1464,18 +1495,12 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       deltaContent: widget.initialQuote?.deltaContent,
     );
 
-    final l10n = AppLocalizations.of(context);
-    final messenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-
     try {
-      final db = Provider.of<DatabaseService>(context, listen: false);
-
       if (widget.initialQuote != null) {
         final updateResult = await db.updateQuote(quote);
         if (updateResult != QuoteUpdateResult.updated) {
           if (!mounted) return;
-          messenger.showSnackBar(
+          scaffoldMessenger.showSnackBar(
             SnackBar(
               content: Text(_updateFailureMessage(l10n, updateResult)),
               duration: AppConstants.snackBarDurationError,
@@ -1485,7 +1510,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
           return;
         }
         if (!mounted) return;
-        messenger.showSnackBar(
+        scaffoldMessenger.showSnackBar(
           SnackBar(
             content: Text(l10n.noteUpdated),
             duration: AppConstants.snackBarDurationImportant,
@@ -1494,7 +1519,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       } else {
         await db.addQuote(quote);
         if (!mounted) return;
-        messenger.showSnackBar(
+        scaffoldMessenger.showSnackBar(
           SnackBar(
             content: Text(l10n.noteSaved),
             duration: AppConstants.snackBarDurationImportant,
@@ -1508,17 +1533,21 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       }
 
       // 关闭对话框
-      if (!mounted) return;
-      navigator.pop();
+      if (mounted) {
+        navigator.pop();
+      }
     } catch (e) {
-      if (!mounted) return;
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(l10n.saveFailedWithError(e.toString())),
-          duration: AppConstants.snackBarDurationError,
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              l10n.saveFailedWithError(e.toString()),
+            ),
+            duration: AppConstants.snackBarDurationError,
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -2178,6 +2207,17 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                         ? null
                         : () async {
                             if (_contentController.text.isNotEmpty) {
+                              final db = Provider.of<DatabaseService>(
+                                context,
+                                listen: false,
+                              );
+                              final l10n = AppLocalizations.of(context);
+                              final scaffoldMessenger =
+                                  ScaffoldMessenger.of(context);
+                              final navigator = Navigator.of(context);
+
+                              await _waitForPendingHitokotoTagTask();
+
                               // 获取当前时间段
                               final String currentDayPeriodKey =
                                   TimeUtils.getCurrentDayPeriodKey(); // 使用 Key
@@ -2255,11 +2295,6 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                               final navigator = Navigator.of(context);
 
                               try {
-                                final db = Provider.of<DatabaseService>(
-                                  context,
-                                  listen: false,
-                                );
-
                                 if (widget.initialQuote != null) {
                                   // 更新已有笔记
                                   final updateResult =

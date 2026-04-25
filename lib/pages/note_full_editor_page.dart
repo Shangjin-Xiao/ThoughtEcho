@@ -27,6 +27,8 @@ import '../utils/app_logger.dart';
 import '../utils/string_utils.dart';
 import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
 import 'package:flutter/foundation.dart' show kIsWeb, compute;
+
+import '../extensions/note_category_localization_extension.dart';
 import '../utils/device_memory_manager.dart';
 import '../widgets/quill_enhanced_toolbar_unified.dart';
 import '../widgets/ai_options_menu.dart';
@@ -61,6 +63,7 @@ class NoteFullEditorPage extends StatefulWidget {
   final bool skipDefaultMetadataAutofill;
   final bool isRestoredDraft; // 新增：标记是否为恢复的草稿
   final String? restoredDraftId; // 新增：恢复草稿的原始ID
+  final bool isFromDailyQuote; // 新增：标记是否来自每日一言
 
   const NoteFullEditorPage({
     super.key,
@@ -72,6 +75,7 @@ class NoteFullEditorPage extends StatefulWidget {
     this.skipDefaultMetadataAutofill = false,
     this.isRestoredDraft = false, // 默认为 false
     this.restoredDraftId, // 恢复草稿的原始ID
+    this.isFromDailyQuote = false, // 默认为 false
   });
 
   @override

@@ -189,6 +189,29 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  // 每日一言 provider
+  String get dailyQuoteProvider => _appSettings.dailyQuoteProvider;
+  Future<void> setDailyQuoteProvider(String provider) async {
+    _appSettings = _appSettings.copyWith(dailyQuoteProvider: provider);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  // API Ninjas 分类选择
+  List<String> get apiNinjasCategories => _appSettings.apiNinjasCategories;
+  Future<void> setApiNinjasCategories(List<String> categories) async {
+    _appSettings = _appSettings.copyWith(apiNinjasCategories: categories);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  // 是否显示笔记编辑时间
+  bool get showNoteEditTime => _appSettings.showNoteEditTime;
+  Future<void> setShowNoteEditTime(bool enabled) async {
+    _appSettings = _appSettings.copyWith(showNoteEditTime: enabled);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
   // 无网/离线时的一言回退数据源
   String get offlineQuoteSource => _appSettings.offlineQuoteSource;
   Future<void> setOfflineQuoteSource(String source) async {
@@ -481,6 +504,7 @@ class SettingsService extends ChangeNotifier {
     try {
       // 验证必要字段
       if (settings.hitokotoType.isEmpty) return false;
+      if (settings.dailyQuoteProvider.isEmpty) return false;
 
       // 验证默认起始页面值
       if (settings.defaultStartPage < 0 || settings.defaultStartPage > 2) {

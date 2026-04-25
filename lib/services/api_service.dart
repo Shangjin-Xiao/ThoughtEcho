@@ -1,9 +1,23 @@
 import 'dart:convert';
-import '../services/network_service.dart';
+
+import '../gen_l10n/app_localizations.dart';
+import '../services/api_key_manager.dart';
 import '../services/connectivity_service.dart';
 import '../services/database_service.dart';
+import '../services/network_service.dart';
 import '../utils/app_logger.dart';
-import '../gen_l10n/app_localizations.dart';
+import '../utils/http_response.dart';
+
+part 'api_service_daily_quote_fallback.dart';
+part 'api_service_daily_quote_remote.dart';
+
+typedef DailyQuoteHttpGet = Future<HttpResponse> Function(
+  String url, {
+  Map<String, String>? headers,
+  int? timeoutSeconds,
+});
+
+typedef DailyQuoteApiKeyResolver = Future<String> Function(String providerId);
 
 class Request {
   const Request();
@@ -11,6 +25,40 @@ class Request {
 
 class ApiService {
   static const String baseUrl = 'https://v1.hitokoto.cn/';
+  static const String hitokotoProvider = 'hitokoto';
+  static const String zenQuotesProvider = 'zenquotes';
+  static const String apiNinjasProvider = 'api_ninjas';
+  static const String meigenProvider = 'meigen';
+  static const String koreanAdviceProvider = 'kadvice';
+  static const List<String> supportedDailyQuoteProviders = [
+    hitokotoProvider,
+    zenQuotesProvider,
+    apiNinjasProvider,
+    meigenProvider,
+    koreanAdviceProvider,
+  ];
+  static const List<String> apiNinjasCategoryKeys = [
+    'wisdom',
+    'philosophy',
+    'life',
+    'truth',
+    'inspirational',
+    'relationships',
+    'love',
+    'faith',
+    'humor',
+    'success',
+    'courage',
+    'happiness',
+    'art',
+    'writing',
+    'fear',
+    'nature',
+    'time',
+    'freedom',
+    'death',
+    'leadership',
+  ];
 
   // 一言类型键常量 - 用于不需要本地化的场景（如静态配置）
   static const Map<String, String> hitokotoTypeKeys = {
@@ -44,6 +92,70 @@ class ApiService {
     };
   }
 
+  static Map<String, String> getDailyQuoteProviders(AppLocalizations l10n) {
+    return {
+      hitokotoProvider: l10n.dailyQuoteApiHitokoto,
+      zenQuotesProvider: l10n.dailyQuoteApiZenQuotes,
+      apiNinjasProvider: l10n.dailyQuoteApiApiNinjas,
+      meigenProvider: l10n.dailyQuoteApiMeigen,
+      koreanAdviceProvider: l10n.dailyQuoteApiKoreanAdvice,
+    };
+  }
+
+  static String recommendedDailyQuoteProviderForLanguage(
+    String? languageCode,
+  ) {
+    final normalizedLanguageCode =
+        (languageCode ?? '').toLowerCase().split(RegExp(r'[_-]')).first;
+    switch (normalizedLanguageCode) {
+      case 'zh':
+        return hitokotoProvider;
+      case 'ja':
+        return meigenProvider;
+      case 'ko':
+        return koreanAdviceProvider;
+      default:
+        return zenQuotesProvider;
+    }
+  }
+
+  static Map<String, String> getApiNinjasCategories(AppLocalizations l10n) {
+    return {
+      'wisdom': l10n.dailyQuoteApiNinjasCategoryWisdom,
+      'philosophy': l10n.dailyQuoteApiNinjasCategoryPhilosophy,
+      'life': l10n.dailyQuoteApiNinjasCategoryLife,
+      'truth': l10n.dailyQuoteApiNinjasCategoryTruth,
+      'inspirational': l10n.dailyQuoteApiNinjasCategoryInspirational,
+      'relationships': l10n.dailyQuoteApiNinjasCategoryRelationships,
+      'love': l10n.dailyQuoteApiNinjasCategoryLove,
+      'faith': l10n.dailyQuoteApiNinjasCategoryFaith,
+      'humor': l10n.dailyQuoteApiNinjasCategoryHumor,
+      'success': l10n.dailyQuoteApiNinjasCategorySuccess,
+      'courage': l10n.dailyQuoteApiNinjasCategoryCourage,
+      'happiness': l10n.dailyQuoteApiNinjasCategoryHappiness,
+      'art': l10n.dailyQuoteApiNinjasCategoryArt,
+      'writing': l10n.dailyQuoteApiNinjasCategoryWriting,
+      'fear': l10n.dailyQuoteApiNinjasCategoryFear,
+      'nature': l10n.dailyQuoteApiNinjasCategoryNature,
+      'time': l10n.dailyQuoteApiNinjasCategoryTime,
+      'freedom': l10n.dailyQuoteApiNinjasCategoryFreedom,
+      'death': l10n.dailyQuoteApiNinjasCategoryDeath,
+      'leadership': l10n.dailyQuoteApiNinjasCategoryLeadership,
+    };
+  }
+
+  static bool supportsHitokotoTypeSelection(String provider) {
+    return provider == hitokotoProvider;
+  }
+
+  static bool supportsProviderCategorySelection(String provider) {
+    return provider == apiNinjasProvider;
+  }
+
+  static bool requiresApiKey(String provider) {
+    return provider == apiNinjasProvider;
+  }
+
   // 添加一个常量定义请求超时时间
   static const int _timeoutSeconds = 10;
 
@@ -54,11 +166,15 @@ class ApiService {
     bool useLocalOnly = false,
     String offlineQuoteSource = 'tagOnly',
     DatabaseService? databaseService,
+    String provider = hitokotoProvider,
+    List<String> apiNinjasCategories = const [],
+    DailyQuoteApiKeyResolver? apiKeyResolver,
+    DailyQuoteHttpGet? httpGet,
   }) async {
     try {
       // 如果设置了仅使用本地笔记，直接返回本地一言
       if (useLocalOnly) {
-        return await _getOfflineQuote(
+        return await _getLocalOnlyQuote(
           l10n,
           databaseService,
           offlineQuoteSource,
@@ -79,68 +195,26 @@ class ApiService {
         );
       }
 
-      // 处理多类型选择的情况
-      String apiUrl = 'https://v1.hitokoto.cn/';
-
-      // 如果类型包含逗号，说明是多类型选择
-      if (type.contains(',')) {
-        // 将逗号分隔的类型转换为c=a&c=b&c=d格式
-        final types = type.split(',');
-        final typeParams = types.map((t) => 'c=$t').join('&');
-        apiUrl = '$apiUrl?$typeParams';
-      } else {
-        // 单类型选择
-        apiUrl = '$apiUrl?c=$type';
+      final normalizedProvider = supportedDailyQuoteProviders.contains(provider)
+          ? provider
+          : hitokotoProvider;
+      final fetch = httpGet ?? NetworkService.instance.get;
+      final remoteQuote = await _fetchRemoteQuote(
+        type,
+        provider: normalizedProvider,
+        apiNinjasCategories: apiNinjasCategories,
+        apiKeyResolver: apiKeyResolver ?? _resolveProviderApiKey,
+        httpGet: fetch,
+      );
+      if (remoteQuote != null) {
+        return remoteQuote;
       }
 
-      logDebug('一言API请求URL: $apiUrl');
-      // 使用带超时的HTTP请求
-      final response = await NetworkService.instance
-          .get(apiUrl, timeoutSeconds: _timeoutSeconds)
-          .catchError((error) {
-        logDebug('一言API请求错误: $error');
-        throw error;
-      });
-
-      if (response.statusCode == 200) {
-        try {
-          final data = json.decode(response.body);
-          // 验证返回的数据结构
-          if (data is Map<String, dynamic> && data.containsKey('hitokoto')) {
-            return {
-              'content': data['hitokoto'],
-              'source': data['from'],
-              'author': data['from_who'],
-              'type': data['type'],
-              'from_who': data['from_who'],
-              'from': data['from'],
-            };
-          } else {
-            logDebug('一言API返回数据格式错误: $data');
-            return await _getLocalQuoteOrDefault(
-              l10n,
-              databaseService,
-              offlineQuoteSource: offlineQuoteSource,
-            );
-          }
-        } catch (e) {
-          logDebug(
-              '一言API JSON解析失败: $e, 响应体: ${response.body.length > 50 ? '${response.body.substring(0, 50)}...' : response.body}');
-          return await _getLocalQuoteOrDefault(
-            l10n,
-            databaseService,
-            offlineQuoteSource: offlineQuoteSource,
-          );
-        }
-      } else {
-        logDebug(
-            '一言API请求失败: ${response.statusCode}, 响应体: ${response.body.length > 50 ? '${response.body.substring(0, 50)}...' : response.body}');
-        return await _getLocalQuoteOrDefault(
-          l10n,
-          databaseService,
-          offlineQuoteSource: offlineQuoteSource,
-        );
-      }
+      return await _getLocalQuoteOrDefault(
+        l10n,
+        databaseService,
+        offlineQuoteSource: offlineQuoteSource,
+      );
     } catch (e) {
       logDebug('获取一言异常: $e');
       return await _getLocalQuoteOrDefault(
@@ -150,130 +224,6 @@ class ApiService {
       );
     }
   }
-
-  // 根据 offlineQuoteSource 选择离线数据源
-  static Future<Map<String, dynamic>> _getOfflineQuote(
-    AppLocalizations l10n,
-    DatabaseService? databaseService,
-    String offlineQuoteSource, {
-    bool isOffline = false,
-  }) async {
-    if (offlineQuoteSource == 'allNotes') {
-      return await _getAnyLocalQuote(l10n, databaseService);
-    }
-    return await _getLocalQuoteOrDefault(
-      l10n,
-      databaseService,
-      offlineQuoteSource: offlineQuoteSource,
-      isOffline: isOffline,
-    );
-  }
-
-  // 获取本地一言或默认一言
-  static Future<Map<String, dynamic>> _getLocalQuoteOrDefault(
-    AppLocalizations l10n,
-    DatabaseService? databaseService, {
-    String offlineQuoteSource = 'tagOnly',
-    bool isOffline = false,
-  }) async {
-    try {
-      if (databaseService != null) {
-        final localQuote = await databaseService.getLocalDailyQuote(
-          offlineQuoteSource: offlineQuoteSource,
-        );
-        if (localQuote != null) {
-          logDebug('使用本地笔记作为一言');
-          return localQuote;
-        }
-      }
-    } catch (e) {
-      logDebug('获取本地笔记失败: $e');
-    }
-
-    // 如果是离线状态且没有本地笔记，返回网络错误提示
-    if (isOffline) {
-      return {
-        'content': l10n.noNetworkConnection,
-        'source': '',
-        'author': '',
-        'type': 'offline',
-        'from_who': '',
-        'from': '',
-      };
-    }
-
-    // 如果不是离线状态但本地笔记获取失败，使用默认一言
-    logDebug('使用默认一言');
-    return _getDefaultQuote(l10n);
-  }
-
-  static Future<Map<String, dynamic>> _getAnyLocalQuote(
-    AppLocalizations l10n,
-    DatabaseService? databaseService,
-  ) async {
-    try {
-      if (databaseService != null) {
-        final allQuotes = await databaseService.getAllQuotes();
-        final candidates = allQuotes
-            .where(
-              (quote) =>
-                  quote.content.length <= 150 && !quote.content.contains('\n'),
-            )
-            .toList();
-        if (candidates.isNotEmpty) {
-          candidates.shuffle();
-          final quote = candidates.first;
-          logDebug('使用全部本地笔记作为一言');
-          return {
-            'content': quote.content,
-            'source': quote.sourceWork ?? '',
-            'author': quote.sourceAuthor ?? '',
-            'type': 'local',
-            'from_who': quote.sourceAuthor ?? '',
-            'from': quote.sourceWork ?? '',
-          };
-        }
-      }
-    } catch (e) {
-      logDebug('获取全部本地笔记失败: $e');
-    }
-
-    return _getDefaultQuote(l10n);
-  }
-
-  // 提供默认引言，在网络请求失败时使用
-  static Map<String, dynamic> _getDefaultQuote(AppLocalizations l10n) {
-    // 预设的引言列表
-    final quotes = [
-      {
-        'content': l10n.defaultQuote1,
-        'source': l10n.unknown,
-        'author': l10n.unknown,
-        'type': 'a',
-        'from_who': l10n.unknown,
-        'from': l10n.unknown,
-      },
-      {
-        'content': l10n.defaultQuote2,
-        'source': l10n.unknown,
-        'author': l10n.unknown,
-        'type': 'a',
-        'from_who': l10n.unknown,
-        'from': l10n.unknown,
-      },
-      {
-        'content': l10n.defaultQuote3,
-        'source': l10n.unknown,
-        'author': l10n.unknown,
-        'type': 'a',
-        'from_who': l10n.unknown,
-        'from': l10n.unknown,
-      },
-    ];
-
-    // 随机选择一条引言
-    final random = DateTime.now().millisecondsSinceEpoch % quotes.length;
-    return quotes[random];
   }
 
   void fetchData() {

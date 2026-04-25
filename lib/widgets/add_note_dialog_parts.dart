@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+
+import '../extensions/note_category_localization_extension.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/note_category.dart';
 import '../services/database_service.dart';
@@ -61,9 +63,13 @@ class _TagSelectionSectionState extends State<TagSelectionSection> {
       if (query.isEmpty) {
         _filteredTags = widget.tags;
       } else {
+        final lowerQuery = query.toLowerCase();
+        final l10n = AppLocalizations.of(context);
         _filteredTags = widget.tags
             .where(
-              (tag) => tag.name.toLowerCase().contains(query.toLowerCase()),
+              (tag) => tag.localizedName(l10n).toLowerCase().contains(
+                    lowerQuery,
+                  ),
             )
             .toList();
       }
@@ -238,10 +244,8 @@ class _TagListItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final bool isEmoji = IconUtils.isEmoji(tag.iconName);
-    // 检查是否是隐藏标签
     final bool isHiddenTag = tag.id == DatabaseService.hiddenTagId;
-    // 隐藏标签使用国际化名称
-    final String displayName = isHiddenTag ? l10n.hiddenTag : tag.name;
+    final String displayName = tag.localizedName(l10n);
 
     final Widget leading = isEmoji
         ? Text(
@@ -323,11 +327,7 @@ class SelectedTagsDisplay extends StatelessWidget {
                 (t) => t.id == tagId,
                 orElse: () => NoteCategory(id: tagId, name: l10n.unknownTag),
               );
-              // 检查是否是隐藏标签
-              final bool isHiddenTag = tagId == DatabaseService.hiddenTagId;
-              // 隐藏标签使用国际化名称
-              final String displayName =
-                  isHiddenTag ? l10n.hiddenTag : tag.name;
+              final String displayName = tag.localizedName(l10n);
 
               return Chip(
                 label: IconUtils.isEmoji(tag.iconName)

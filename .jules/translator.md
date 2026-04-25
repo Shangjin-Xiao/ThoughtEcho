@@ -20,3 +20,8 @@
 **规则:**
 - 寻找现存翻译键值复用，例如：`editMetadata`, `savingNote`, `done`, `documentLoadFailed`, `loadingLargeDocument`。
 - 对于缺失项，新增 `noLocationWeatherRecorded` 到各语言 `arb` 文件，并遵循极简规范。
+## 2024-05-25 - [提取手动API密钥测试页面的硬编码中文字符串]
+**发现:** 手动API测试页面存在的多处硬编码文本：「手动API密钥测试」、「直接输入API参数进行测试，绕过存储系统检查API密钥是否有效。」、「错误: 请填写所有必填字段」、「=== 手动API密钥测试报告 ===」、「测试参数:」、「密钥格式检查:」、「发送请求:」、「响应结果:」
+**规则:**
+- 寻找现存翻译键值复用，并遵循极简规范。
+- 对于缺失项，新增 `manualApiTestTitle`, `manualApiTestDesc`, `testResultLabel`, `fillAllFieldsError`, `testReportTitle`, `testParamsLabel`, `keyFormatCheckLabel`, `sendRequestLabel`, `responseResultLabel` 到各语言 `arb` 文件。
