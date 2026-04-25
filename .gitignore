@@ -277,3 +277,14 @@ _flutter/
 .squad/sessions/
 # Squad: SubSquad activation file (local to this machine)
 .squad-workstream
+
+# AI assistant runtime files
+.claude/
+CLAUDE.md
+
+# Node/npm artifacts (Flutter project)
+package-lock.json
+node_modules/
+
+# New store/marketing assets (not yet in repo)
+assets/store/
