@@ -170,6 +170,28 @@ void main() {
       },
     );
 
+    test(
+      'applyIncomingTrashSettings should reject fractional num retention_days',
+      () async {
+        await settingsService.setTrashRetentionDays(
+          30,
+          modifiedAt: DateTime.utc(2026, 3, 28, 10),
+        );
+
+        final applied = await settingsService.applyIncomingTrashSettings({
+          'retention_days': 7.9,
+          'last_modified': '2026-03-29T10:00:00.000Z',
+        });
+
+        expect(applied, isFalse);
+        expect(settingsService.trashRetentionDays, equals(30));
+        expect(
+          settingsService.trashRetentionLastModified,
+          equals('2026-03-28T10:00:00.000Z'),
+        );
+      },
+    );
+
     test('should persist direct fullscreen editor toggle changes', () async {
       expect(settingsService.skipNonFullscreenEditor, isFalse);
 

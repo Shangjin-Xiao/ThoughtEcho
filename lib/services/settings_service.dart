@@ -105,6 +105,13 @@ class SettingsService extends ChangeNotifier {
     if (rawDays is int) {
       parsedDays = rawDays;
     } else if (rawDays is num) {
+      if (rawDays != rawDays.toInt()) {
+        logWarning(
+          '忽略非整数的回收站保留期: $rawDays',
+          source: 'SettingsService',
+        );
+        return false;
+      }
       parsedDays = rawDays.toInt();
     } else if (rawDays is String) {
       parsedDays = int.tryParse(rawDays);
