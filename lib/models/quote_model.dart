@@ -1,4 +1,5 @@
 part 'quote/quote_validation.dart';
+part 'quote/quote_serialization.dart';
 
 class Quote {
   static const Object _noValue = Object();
@@ -148,97 +149,7 @@ class Quote {
 
   factory Quote.fromJson(Map<String, dynamic> json) {
     try {
-      List<String> parseTagIds() {
-        if (json['tag_ids'] == null) return [];
-        if (json['tag_ids'] is String) {
-          final tagString = json['tag_ids'] as String;
-          if (tagString.isEmpty) return [];
-          return tagString
-              .split(',')
-              .map((e) => e.trim())
-              .where((e) => e.isNotEmpty)
-              .toList();
-        }
-        if (json['tag_ids'] is List) {
-          return (json['tag_ids'] as List)
-              .map((e) => e.toString().trim())
-              .where((e) => e.isNotEmpty)
-              .toList();
-        }
-        return [];
-      }
-
-      List<String>? parseKeywords() {
-        if (json['keywords'] == null) return null;
-        if (json['keywords'] is String) {
-          final keywordString = json['keywords'] as String;
-          if (keywordString.isEmpty) return null;
-          return keywordString
-              .split(',')
-              .map((e) => e.trim())
-              .where((e) => e.isNotEmpty)
-              .toList();
-        }
-        if (json['keywords'] is List) {
-          final keywords = (json['keywords'] as List)
-              .map((e) => e.toString().trim())
-              .where((e) => e.isNotEmpty)
-              .toList();
-          return keywords.isEmpty ? null : keywords;
-        }
-        return null;
-      }
-
-      final content = json['content']?.toString() ?? '';
-      final date = json['date']?.toString() ?? '';
-
-      if (content.isEmpty) {
-        throw ArgumentError('笔记内容不能为空');
-      }
-
-      if (date.isEmpty) {
-        throw ArgumentError('日期不能为空');
-      }
-
-      if (!_isValidDate(date)) {
-        throw ArgumentError('日期格式无效: $date');
-      }
-
-      final colorHex = json['color_hex']?.toString();
-      if (colorHex != null && !_isValidColorHex(colorHex)) {
-        throw ArgumentError('颜色格式无效: $colorHex');
-      }
-
-      return Quote(
-        id: json['id']?.toString(),
-        content: content,
-        date: date,
-        aiAnalysis: json['ai_analysis']?.toString(),
-        source: json['source']?.toString(),
-        sourceAuthor: json['source_author']?.toString(),
-        sourceWork: json['source_work']?.toString(),
-        tagIds: parseTagIds(),
-        sentiment: json['sentiment']?.toString(),
-        keywords: parseKeywords(),
-        summary: json['summary']?.toString(),
-        categoryId: json['category_id']?.toString(),
-        colorHex: colorHex,
-        location: json['location']?.toString(),
-        latitude: (json['latitude'] as num?)?.toDouble(),
-        longitude: (json['longitude'] as num?)?.toDouble(),
-        weather: json['weather']?.toString(),
-        temperature: json['temperature']?.toString(),
-        editSource: json['edit_source']?.toString(),
-        deltaContent: json['delta_content']?.toString(),
-        dayPeriod: json['day_period']?.toString(),
-        lastModified: json['last_modified']?.toString(),
-        favoriteCount: (json['favorite_count'] as num?)?.toInt() ?? 0,
-        isDeleted: _parseDeletedFlag(json['is_deleted']),
-        deletedAt: _normalizeDeletedAtForState(
-          isDeleted: _parseDeletedFlag(json['is_deleted']),
-          deletedAt: json['deleted_at']?.toString(),
-        ),
-      );
+      return _quoteFromJson(json);
     } on ArgumentError {
       rethrow;
     } catch (e) {
@@ -246,36 +157,7 @@ class Quote {
     }
   }
 
-  Map<String, dynamic> toJson() {
-    final Map<String, dynamic> json = {
-      'id': id,
-      'content': content,
-      'date': date,
-      'ai_analysis': aiAnalysis,
-      'source': source,
-      'source_author': sourceAuthor,
-      'source_work': sourceWork,
-      'sentiment': sentiment,
-      'keywords': keywords?.join(','),
-      'summary': summary,
-      'category_id': categoryId,
-      'color_hex': colorHex,
-      'location': location,
-      'latitude': latitude,
-      'longitude': longitude,
-      'weather': weather,
-      'temperature': temperature,
-      'edit_source': editSource,
-      'delta_content': deltaContent,
-      'day_period': dayPeriod,
-      'last_modified': lastModified,
-      'favorite_count': favoriteCount,
-      'is_deleted': isDeleted ? 1 : 0,
-      'deleted_at': isDeleted ? deletedAt : null,
-    };
-    json.remove('tag_ids');
-    return json;
-  }
+  Map<String, dynamic> toJson() => _quoteToJson(this);
 
   Quote copyWith({
     String? id,
