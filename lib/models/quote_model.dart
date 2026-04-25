@@ -1,3 +1,5 @@
+part 'quote/quote_validation.dart';
+
 class Quote {
   static const Object _noValue = Object();
 
@@ -15,23 +17,23 @@ class Quote {
   final String? categoryId;
   final String? colorHex;
   final String? location;
-  final double? latitude; // 位置纬度，支持离线存储
-  final double? longitude; // 位置经度，支持离线存储
+  final double? latitude;
+  final double? longitude;
   final String? weather;
   final String? temperature;
-  final String? editSource; // "fullscreen" 或 null
-  final String? deltaContent; // 新增：用于存储富文本格式(Delta JSON)
-  final String? dayPeriod; // 新增：时间段标识(晨曦、午后、黄昏、夜晚等)
+  final String? editSource;
+  final String? deltaContent;
+  final String? dayPeriod;
   final String? lastModified;
-  final int favoriteCount; // 新增：心形点击次数
-  final bool isDeleted; // 回收站标记
-  final String? deletedAt; // 删除时间（ISO 8601）
+  final int favoriteCount;
+  final bool isDeleted;
+  final String? deletedAt;
 
   Quote({
     this.id,
     required this.content,
     required this.date,
-    String? source, // 保持构造函数参数名兼容
+    String? source,
     this.sourceAuthor,
     this.sourceWork,
     this.tagIds = const [],
@@ -47,17 +49,15 @@ class Quote {
     this.weather,
     this.temperature,
     this.editSource,
-    this.deltaContent, // 新增：Delta JSON
-    this.dayPeriod, // 新增：时间段
+    this.deltaContent,
+    this.dayPeriod,
     this.lastModified,
-    this.favoriteCount = 0, // 新增：心形点击次数，默认为0
+    this.favoriteCount = 0,
     this.isDeleted = false,
     String? deletedAt,
   })  : _source = source,
         deletedAt = isDeleted ? _normalizeToUtc(deletedAt) : null;
 
-  /// 获取来源信息 (兼容性 getter)
-  /// 如果 sourceAuthor 和 sourceWork 存在，则优先从它们重建
   String? get source {
     if (sourceAuthor != null &&
         sourceWork != null &&
@@ -72,27 +72,10 @@ class Quote {
     return _source;
   }
 
-  /// 修复：添加数据验证方法
-  static bool isValidDate(String date) {
-    try {
-      DateTime.parse(date);
-      return true;
-    } catch (e) {
-      return false;
-    }
-  }
+  static bool isValidDate(String date) => _isValidDate(date);
+  static bool isValidColorHex(String? colorHex) => _isValidColorHex(colorHex);
+  static bool isValidContent(String content) => _isValidContent(content);
 
-  static bool isValidColorHex(String? colorHex) {
-    if (colorHex == null) return true;
-    final regex = RegExp(r'^#[0-9A-Fa-f]{6}$');
-    return regex.hasMatch(colorHex);
-  }
-
-  static bool isValidContent(String content) {
-    return content.isNotEmpty && content.length <= 10000;
-  }
-
-  /// 修复：创建验证过的Quote实例
   factory Quote.validated({
     String? id,
     required String content,
@@ -115,24 +98,22 @@ class Quote {
     String? editSource,
     String? deltaContent,
     String? dayPeriod,
-    int favoriteCount = 0, // 新增：心形点击次数，默认为0
+    int favoriteCount = 0,
     bool isDeleted = false,
     String? deletedAt,
   }) {
-    // 验证必填字段
-    if (!isValidContent(content)) {
+    if (!_isValidContent(content)) {
       throw ArgumentError('笔记内容无效：内容不能为空且不能超过10000字符');
     }
 
-    if (!isValidDate(date)) {
+    if (!_isValidDate(date)) {
       throw ArgumentError('日期格式无效：$date');
     }
 
-    if (!isValidColorHex(colorHex)) {
+    if (!_isValidColorHex(colorHex)) {
       throw ArgumentError('颜色格式无效：$colorHex，应为#RRGGBB格式');
     }
 
-    // 验证情感分析值
     if (sentiment != null && !sentimentKeyToLabel.containsKey(sentiment)) {
       throw ArgumentError('情感分析值无效：$sentiment');
     }
@@ -159,16 +140,14 @@ class Quote {
       editSource: editSource,
       deltaContent: deltaContent,
       dayPeriod: dayPeriod,
-      favoriteCount: favoriteCount, // 新增：心形点击次数
+      favoriteCount: favoriteCount,
       isDeleted: isDeleted,
       deletedAt: deletedAt,
     );
   }
 
-  /// 修复：从JSON构建Quote对象，增加数据验证和错误处理
   factory Quote.fromJson(Map<String, dynamic> json) {
     try {
-      // 解析tagIds（确保它们是字符串列表）
       List<String> parseTagIds() {
         if (json['tag_ids'] == null) return [];
         if (json['tag_ids'] is String) {
@@ -189,7 +168,6 @@ class Quote {
         return [];
       }
 
-      // 解析keywords（确保它们是字符串列表）
       List<String>? parseKeywords() {
         if (json['keywords'] == null) return null;
         if (json['keywords'] is String) {
@@ -211,7 +189,6 @@ class Quote {
         return null;
       }
 
-      // 验证必填字段
       final content = json['content']?.toString() ?? '';
       final date = json['date']?.toString() ?? '';
 
@@ -223,19 +200,16 @@ class Quote {
         throw ArgumentError('日期不能为空');
       }
 
-      // 验证日期格式
-      if (!isValidDate(date)) {
+      if (!_isValidDate(date)) {
         throw ArgumentError('日期格式无效: $date');
       }
 
-      // 验证颜色格式
       final colorHex = json['color_hex']?.toString();
-      if (colorHex != null && !isValidColorHex(colorHex)) {
+      if (colorHex != null && !_isValidColorHex(colorHex)) {
         throw ArgumentError('颜色格式无效: $colorHex');
       }
 
       return Quote(
-        // 构造函数会做 isDeleted/deletedAt 一致性归一化
         id: json['id']?.toString(),
         content: content,
         date: date,
@@ -258,8 +232,7 @@ class Quote {
         deltaContent: json['delta_content']?.toString(),
         dayPeriod: json['day_period']?.toString(),
         lastModified: json['last_modified']?.toString(),
-        favoriteCount:
-            (json['favorite_count'] as num?)?.toInt() ?? 0, // 新增：心形点击次数
+        favoriteCount: (json['favorite_count'] as num?)?.toInt() ?? 0,
         isDeleted: _parseDeletedFlag(json['is_deleted']),
         deletedAt: _normalizeDeletedAtForState(
           isDeleted: _parseDeletedFlag(json['is_deleted']),
@@ -273,7 +246,6 @@ class Quote {
     }
   }
 
-  // 将Quote对象转换为JSON
   Map<String, dynamic> toJson() {
     final Map<String, dynamic> json = {
       'id': id,
@@ -283,7 +255,6 @@ class Quote {
       'source': source,
       'source_author': sourceAuthor,
       'source_work': sourceWork,
-      // 'tag_ids' 不再直接保存到此表中，它将通过关联表进行管理
       'sentiment': sentiment,
       'keywords': keywords?.join(','),
       'summary': summary,
@@ -295,19 +266,17 @@ class Quote {
       'weather': weather,
       'temperature': temperature,
       'edit_source': editSource,
-      'delta_content': deltaContent, // 新增：Delta JSON
-      'day_period': dayPeriod, // 新增：时间段
+      'delta_content': deltaContent,
+      'day_period': dayPeriod,
       'last_modified': lastModified,
-      'favorite_count': favoriteCount, // 新增：心形点击次数
+      'favorite_count': favoriteCount,
       'is_deleted': isDeleted ? 1 : 0,
       'deleted_at': isDeleted ? deletedAt : null,
     };
-    // 移除tag_ids字段，因为它不再直接存储在quotes表中
     json.remove('tag_ids');
     return json;
   }
 
-  // 复制并修改当前Quote对象
   Quote copyWith({
     String? id,
     String? content,
@@ -328,10 +297,10 @@ class Quote {
     String? weather,
     String? temperature,
     String? editSource,
-    String? deltaContent, // 新增：Delta JSON
-    String? dayPeriod, // 新增：时间段
+    String? deltaContent,
+    String? dayPeriod,
     String? lastModified,
-    int? favoriteCount, // 新增：心形点击次数
+    int? favoriteCount,
     Object? isDeleted = _noValue,
     Object? deletedAt = _noValue,
   }) {
@@ -362,10 +331,10 @@ class Quote {
       weather: weather ?? this.weather,
       temperature: temperature ?? this.temperature,
       editSource: editSource ?? this.editSource,
-      deltaContent: deltaContent ?? this.deltaContent, // 新增：Delta JSON
-      dayPeriod: dayPeriod ?? this.dayPeriod, // 新增：时间段
+      deltaContent: deltaContent ?? this.deltaContent,
+      dayPeriod: dayPeriod ?? this.dayPeriod,
       lastModified: lastModified ?? this.lastModified,
-      favoriteCount: favoriteCount ?? this.favoriteCount, // 新增：心形点击次数
+      favoriteCount: favoriteCount ?? this.favoriteCount,
       isDeleted: nextIsDeleted,
       deletedAt: _normalizeDeletedAtForState(
         isDeleted: nextIsDeleted,
@@ -374,55 +343,9 @@ class Quote {
     );
   }
 
-  static bool _parseDeletedFlag(dynamic raw) {
-    if (raw == null) return false;
-    if (raw is bool) return raw;
-    if (raw is num) return raw != 0;
-    final text = raw.toString().trim().toLowerCase();
-    return text == '1' || text == 'true';
-  }
+  static const Map<String, String> sentimentKeyToLabel = _sentimentKeyToLabel;
+  static const Map<String, String> sourceTypeKeyToLabel = _sourceTypeKeyToLabel;
 
-  /// 将 deletedAt 归一化到 UTC，缺失时生成当前 UTC 时间
-  static String _normalizeToUtc(String? deletedAt) {
-    final trimmed = deletedAt?.trim();
-    if (trimmed != null && trimmed.isNotEmpty && isValidDate(trimmed)) {
-      return DateTime.parse(trimmed).toUtc().toIso8601String();
-    }
-    return DateTime.now().toUtc().toIso8601String();
-  }
-
-  static String? _normalizeDeletedAtForState({
-    required bool isDeleted,
-    required String? deletedAt,
-  }) {
-    if (!isDeleted) {
-      return null;
-    }
-
-    final trimmed = deletedAt?.trim();
-    if (trimmed != null && trimmed.isNotEmpty && isValidDate(trimmed)) {
-      // 统一归一化到 UTC
-      return DateTime.parse(trimmed).toUtc().toIso8601String();
-    }
-
-    // 缺失时生成当前 UTC 时间，而非回退到 quote.date
-    return DateTime.now().toUtc().toIso8601String();
-  }
-
-  // 静态key-label映射
-  static const Map<String, String> sentimentKeyToLabel = {
-    'positive': '积极',
-    'negative': '消极',
-    'neutral': '中性',
-    'mixed': '复杂',
-  };
-  static const Map<String, String> sourceTypeKeyToLabel = {
-    'manual': '手动',
-    'ai': 'AI生成',
-    'import': '导入',
-  };
-
-  /// 修复：添加工具方法
   bool get hasLocation =>
       (location != null && location!.isNotEmpty) || hasCoordinates;
   bool get hasCoordinates => latitude != null && longitude != null;
@@ -431,23 +354,20 @@ class Quote {
   bool get hasTags => tagIds.isNotEmpty;
   bool get hasKeywords => keywords != null && keywords!.isNotEmpty;
 
-  /// 获取情感分析的中文标签
   String? get sentimentLabel =>
       sentiment != null ? sentimentKeyToLabel[sentiment] : null;
 
-  /// 获取完整的来源信息
   String get fullSource {
     final s = source;
     if (s != null && s.isNotEmpty) return s;
     return '未知来源';
   }
 
-  /// 验证Quote对象的完整性
   bool get isValid {
     try {
-      return isValidContent(content) &&
-          isValidDate(date) &&
-          isValidColorHex(colorHex) &&
+      return _isValidContent(content) &&
+          _isValidDate(date) &&
+          _isValidColorHex(colorHex) &&
           (sentiment == null || sentimentKeyToLabel.containsKey(sentiment!));
     } catch (e) {
       return false;
@@ -468,6 +388,3 @@ class Quote {
     return 'Quote(id: $id, content: ${content.length > 50 ? '${content.substring(0, 50)}...' : content}, date: $date)';
   }
 }
-
-// 移除了冗余的QuoteModel类，该类在项目中未被使用
-// 如果将来需要类似功能，可以直接在Quote类中添加相应方法
