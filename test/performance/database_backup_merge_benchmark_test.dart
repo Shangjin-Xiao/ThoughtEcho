@@ -81,7 +81,8 @@ void main() {
       return {
         'id': 'cat_$i',
         'name': 'Category $i',
-        'last_modified': DateTime.now().add(const Duration(minutes: 1)).toIso8601String(),
+        'last_modified':
+            DateTime.now().add(const Duration(minutes: 1)).toIso8601String(),
       };
     });
 
@@ -90,7 +91,8 @@ void main() {
         'id': 'quote_$i',
         'content': 'Updated Content $i',
         'date': DateTime.now().toIso8601String(),
-        'last_modified': DateTime.now().add(const Duration(minutes: 1)).toIso8601String(),
+        'last_modified':
+            DateTime.now().add(const Duration(minutes: 1)).toIso8601String(),
         'tag_ids': i % 5 == 0 ? 'cat_${i % (categoryCount ~/ 2)}' : '',
       };
     });
@@ -105,7 +107,8 @@ void main() {
     final report = await service.importDataWithLWWMerge(db, mergeData);
     stopwatch.stop();
 
-    print('Time taken to merge $categoryCount categories and $quoteCount quotes: ${stopwatch.elapsedMilliseconds} ms');
+    print(
+        'Time taken to merge $categoryCount categories and $quoteCount quotes: ${stopwatch.elapsedMilliseconds} ms');
     print('Report: ${report.summary}');
 
     expect(report.insertedCategories + report.updatedCategories, categoryCount);
