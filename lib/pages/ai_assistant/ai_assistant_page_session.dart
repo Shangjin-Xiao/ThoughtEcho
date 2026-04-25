@@ -33,7 +33,6 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
     final hasUserMessages = _messages.any((msg) => msg.isUser);
 
     if (!hasUserMessages) {
-      // 在后台删除空会话，不阻塞dispose
       unawaited(
         _chatSessionService.deleteSession(_currentSessionId!).catchError(
           (e) {

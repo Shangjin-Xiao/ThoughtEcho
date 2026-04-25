@@ -198,6 +198,9 @@ class ChatSessionService extends ChangeNotifier {
     final db = await _getDatabaseForRead();
     if (db == null) return [];
     try {
+      // 先清理没有消息的会话（防止之前保存失败残留的脏数据）
+      await _cleanupEmptySessions(db);
+
       final rows = await db.query(
         'chat_sessions',
         orderBy: 'is_pinned DESC, last_active_at DESC',
@@ -212,6 +215,27 @@ class ChatSessionService extends ChangeNotifier {
         source: 'ChatSessionService',
       );
       return [];
+    }
+  }
+
+  /// 清理没有消息的会话（修复之前保存失败残留的脏数据）
+  Future<void> _cleanupEmptySessions(Database db) async {
+    try {
+      // 查找没有关联 chat_messages 的 chat_sessions
+      final emptySessions = await db.rawQuery('''
+        SELECT s.id FROM chat_sessions s
+        LEFT JOIN chat_messages m ON s.id = m.session_id
+        WHERE m.id IS NULL
+      ''');
+      for (final row in emptySessions) {
+        final id = row['id'] as String;
+        await db.delete('chat_sessions', where: 'id = ?', whereArgs: [id]);
+      }
+      if (emptySessions.isNotEmpty) {
+        logDebug('清理了 ${emptySessions.length} 个空会话');
+      }
+    } catch (e) {
+      logDebug('清理空会话失败: $e');
     }
   }
 
@@ -422,9 +446,11 @@ class ChatSessionService extends ChangeNotifier {
             );
 
             if (sessions.isNotEmpty) {
-              final sessionIds = sessions.map((s) => s['id'] as String).toList();
+              final sessionIds =
+                  sessions.map((s) => s['id'] as String).toList();
               // 删除这些会话的所有消息
-              final placeholders = List.filled(sessionIds.length, '?').join(',');
+              final placeholders =
+                  List.filled(sessionIds.length, '?').join(',');
               await txn.delete(
                 'chat_messages',
                 where: 'session_id IN ($placeholders)',
@@ -588,7 +614,8 @@ class ChatSessionService extends ChangeNotifier {
 
       // 多标签AND查询
       if (tags != null && tags.isNotEmpty) {
-        query += ' GROUP BY q.id HAVING COUNT(DISTINCT qt.tag_id) = ${tags.length}';
+        query +=
+            ' GROUP BY q.id HAVING COUNT(DISTINCT qt.tag_id) = ${tags.length}';
       }
 
       query += ' ORDER BY q.date DESC LIMIT ?';

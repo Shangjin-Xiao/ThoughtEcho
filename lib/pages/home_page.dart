@@ -225,11 +225,27 @@ class _HomePageState extends State<HomePage>
         onDone: () {
           // Stream finished, update loading state and trim the accumulated text
           if (mounted) {
-            setState(() {
-              _accumulatedPromptText =
-                  _accumulatedPromptText.trim(); // 去除前后空白字符
-              _isGeneratingDailyPrompt = false; // Stop loading on done
-            });
+            final trimmed = _accumulatedPromptText.trim();
+            if (trimmed.isEmpty) {
+              // reasoning-only 模型未输出 content，降级到本地生成
+              final l10n = AppLocalizations.of(context);
+              final fallbackPrompt =
+                  DailyPromptGenerator.generatePromptBasedOnContext(
+                l10n,
+                city: city,
+                weather: weather,
+                temperature: temperature,
+              );
+              setState(() {
+                _accumulatedPromptText = fallbackPrompt;
+                _isGeneratingDailyPrompt = false;
+              });
+            } else {
+              setState(() {
+                _accumulatedPromptText = trimmed;
+                _isGeneratingDailyPrompt = false; // Stop loading on done
+              });
+            }
             // 移除每日思考生成完成的弹窗通知
           }
         },

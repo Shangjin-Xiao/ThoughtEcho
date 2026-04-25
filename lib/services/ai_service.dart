@@ -518,6 +518,9 @@ class AIService extends ChangeNotifier {
           userMessage: userMessage,
           temperature: 1.0,
           maxTokens: 100,
+          // 传空 onThinking 阻止 reasoning 回退到 content，
+          // 避免 reasoning-only 模型把思考过程当作每日提示输出
+          onThinking: (_) {},
         )) {
           if (controller.isClosed) break;
           controller.add(chunk);
@@ -1340,10 +1343,22 @@ class AIService extends ChangeNotifier {
 
           final trimmedTitle = title.trim();
 
-          // 如果生成的标题超长，裁剪
-          return trimmedTitle.length > 50
-              ? trimmedTitle.substring(0, 50) + '...'
-              : trimmedTitle;
+          // 有效性检查：排除 reasoning-only 模型返回的思考过程
+          final lowerTitle = trimmedTitle.toLowerCase();
+          final isValidTitle = trimmedTitle.isNotEmpty &&
+              trimmedTitle.length <= 50 &&
+              !lowerTitle.contains('the user') &&
+              !lowerTitle.contains('first,') &&
+              !lowerTitle.contains('i need to') &&
+              !lowerTitle.contains('let me') &&
+              !lowerTitle.contains('thinking');
+
+          if (isValidTitle) {
+            return trimmedTitle;
+          }
+
+          // 无效标题，降级到本地方法
+          logDebug('AI 生成的标题无效（可能是思考过程），降级到本地方法');
         } catch (e) {
           logDebug('AI 标题生成失败，降级到本地方法: $e');
           // 降级：使用本地方法生成标题

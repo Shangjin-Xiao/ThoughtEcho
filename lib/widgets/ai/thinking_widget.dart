@@ -44,8 +44,8 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
   @override
   void initState() {
     super.initState();
-    // 进行中时默认展开，完成后默认折叠
-    _isExpanded = widget.inProgress;
+    // 默认始终展开，确保思考内容对用户可见
+    _isExpanded = true;
 
     // 箭头旋转动画
     _rotationController = AnimationController(
@@ -70,14 +70,8 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
   void didUpdateWidget(ThinkingWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // 如果从进行中变为完成，自动折叠
-    if (oldWidget.inProgress && !widget.inProgress) {
-      setState(() {
-        _isExpanded = false;
-        _rotationController.reverse();
-        _pulseController.stop();
-      });
-    }
+    // 保持展开状态，不再自动折叠
+    // 用户需要始终看到思考内容
 
     // 如果进度状态改变
     if (oldWidget.inProgress != widget.inProgress) {
@@ -237,9 +231,8 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
                               child: MarkdownBody(
                                 data: widget.thinkingText,
                                 selectable: true,
-                                styleSheet:
-                                    MarkdownStyleSheet.fromTheme(theme)
-                                        .copyWith(
+                                styleSheet: MarkdownStyleSheet.fromTheme(theme)
+                                    .copyWith(
                                   p: theme.textTheme.bodySmall?.copyWith(
                                     color: theme.colorScheme.onSurface,
                                     height: 1.5,
@@ -251,11 +244,12 @@ class _ThinkingWidgetState extends State<ThinkingWidget>
                                   code: theme.textTheme.bodySmall?.copyWith(
                                     fontFamily: 'monospace',
                                     color: theme.colorScheme.onSurfaceVariant,
-                                    backgroundColor: theme.colorScheme
-                                        .surfaceContainerHighest,
+                                    backgroundColor: theme
+                                        .colorScheme.surfaceContainerHighest,
                                   ),
                                   codeblockDecoration: BoxDecoration(
-                                    color: theme.colorScheme.surfaceContainerLow,
+                                    color:
+                                        theme.colorScheme.surfaceContainerLow,
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   blockquote:
