@@ -397,6 +397,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         final updateResult = await db.updateQuote(quote);
         if (updateResult != QuoteUpdateResult.updated) {
           await _rollbackMovedPermanentMediaFiles(movedToPermanentForThisSave);
+          _draftLoaded = true;
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
