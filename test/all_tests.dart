@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 // Import model tests
 import 'unit/models/quote_model_test.dart' as quote_model_test;
 import 'unit/models/note_category_test.dart' as note_category_test;
+import 'unit/models/note_tag_test.dart' as note_tag_test;
 import 'unit/models/weather_data_test.dart' as weather_data_test;
 
 // Import service tests
@@ -62,6 +63,7 @@ void main() {
     group('Model Tests', () {
       quote_model_test.main();
       note_category_test.main();
+      note_tag_test.main();
       weather_data_test.main();
     });
 
