@@ -527,22 +527,72 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
               Padding(
                 padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
                 child: SizedBox(
-                  height: 52,
+                  height: 64,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     itemCount: _selectedMediaFiles.length,
                     itemBuilder: (context, index) {
                       final file = _selectedMediaFiles[index];
+                      final isImage = ['jpg', 'jpeg', 'png', 'webp', 'gif']
+                          .contains(file.extension?.toLowerCase());
+                      
                       return Padding(
-                        padding: const EdgeInsets.only(right: 8),
-                        child: Chip(
-                          label: Text(
-                            file.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                          deleteIcon: const Icon(Icons.close, size: 16),
-                          onDeleted: () => _removeMediaFile(index),
+                        padding: const EdgeInsets.only(right: 12),
+                        child: Stack(
+                          children: [
+                            Container(
+                              width: 60,
+                              height: 60,
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: theme.colorScheme.outlineVariant,
+                                  width: 1,
+                                ),
+                              ),
+                              child: isImage && file.path != null
+                                  ? ClipRRect(
+                                      borderRadius: BorderRadius.circular(11),
+                                      child: Image.file(
+                                        File(file.path!),
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => Icon(
+                                          Icons.image_not_supported_outlined,
+                                          color: theme.colorScheme.onSurfaceVariant,
+                                        ),
+                                      ),
+                                    )
+                                  : Icon(
+                                      Icons.insert_drive_file_outlined,
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                      size: 28,
+                                    ),
+                            ),
+                            Positioned(
+                              top: -4,
+                              right: -4,
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () => _removeMediaFile(index),
+                                  customBorder: const CircleBorder(),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.inverseSurface,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.close,
+                                      size: 14,
+                                      color: theme.colorScheme.onInverseSurface,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       );
                     },
