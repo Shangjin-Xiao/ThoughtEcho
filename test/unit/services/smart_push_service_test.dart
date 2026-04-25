@@ -69,6 +69,21 @@ void main() {
       expect(SmartPushService.notificationSummaryForTest(note), isNull);
     });
 
+    test('notification body includes both author and source work', () {
+      final note = Quote(
+        id: '12345678-1234-1234-1234-1234567890ab',
+        content: '我们终将抵达自己的答案。',
+        date: DateTime(2025, 10, 15, 9, 0).toIso8601String(),
+        sourceAuthor: '博尔赫斯',
+        sourceWork: '小径分岔的花园',
+      );
+
+      expect(
+        SmartPushService.buildNotificationBodyForTest(note),
+        equals('"我们终将抵达自己的答案。"\n—— 博尔赫斯 《小径分岔的花园》'),
+      );
+    });
+
     testWidgets('replaces the full navigation stack for notification routes', (
       WidgetTester tester,
     ) async {

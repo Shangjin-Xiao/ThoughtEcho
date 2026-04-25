@@ -69,6 +69,17 @@ extension _NoteListDataStreamExtension on NoteListViewState {
         .listen(
       (list) {
         if (mounted) {
+          final isPlaceholderInitialEmission =
+              isFirstLoad && list.isEmpty && db.hasMoreQuotes;
+
+          if (isPlaceholderInitialEmission) {
+            logDebug(
+              '忽略首个占位空列表，继续等待真实首批数据',
+              source: 'NoteListView',
+            );
+            return;
+          }
+
           // 修复：在首次加载期间保存滚动位置，避免数据刷新时滚动到顶部
           double? savedScrollOffset;
           if (isFirstLoad &&

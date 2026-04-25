@@ -266,6 +266,35 @@ class SmartPushService extends ChangeNotifier {
   @visibleForTesting
   static String? notificationSummaryForTest(Quote note) => null;
 
+  @visibleForTesting
+  static String buildNotificationBodyForTest(Quote note) {
+    final rawContent = StringUtils.removeObjectReplacementChar(note.content);
+    final content = rawContent.length <= 100
+        ? rawContent
+        : '${rawContent.substring(0, 100)}...';
+    final author = note.sourceAuthor?.trim() ?? '';
+    final work = note.sourceWork?.trim() ?? '';
+    final fallbackSource = note.source?.trim() ?? '';
+
+    if (author.isNotEmpty && work.isNotEmpty) {
+      return '"$content"\n—— $author 《$work》';
+    }
+
+    if (author.isNotEmpty) {
+      return '"$content"\n—— $author';
+    }
+
+    if (work.isNotEmpty) {
+      return '"$content"\n—— 《$work》';
+    }
+
+    if (fallbackSource.isNotEmpty) {
+      return '"$content"\n—— 《$fallbackSource》';
+    }
+
+    return content;
+  }
+
   static void replaceAppStackForNotification<T extends Object?>({
     required NavigatorState navigator,
     required Route<T> route,

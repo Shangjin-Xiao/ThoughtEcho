@@ -438,19 +438,7 @@ extension SmartPushNotification on SmartPushService {
 
   /// 构建通知正文
   String _buildNotificationBody(Quote note) {
-    final rawContent = StringUtils.removeObjectReplacementChar(note.content);
-    final content = _truncateContent(rawContent);
-
-    // 如果有来源信息，添加引用格式
-    if (note.sourceAuthor != null && note.sourceAuthor!.isNotEmpty) {
-      return '"$content"\n—— ${note.sourceAuthor}';
-    }
-
-    if (note.source != null && note.source!.isNotEmpty) {
-      return '"$content"\n—— 《${note.source}》';
-    }
-
-    return content;
+    return SmartPushService.buildNotificationBodyForTest(note);
   }
 
   String? _getNotificationSummary(Quote note) {
