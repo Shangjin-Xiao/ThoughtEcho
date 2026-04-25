@@ -11,6 +11,20 @@ class NoteTag {
     this.iconName,
   });
 
+  NoteTag copyWith({
+    String? id,
+    String? name,
+    bool? isDefault,
+    String? iconName,
+  }) {
+    return NoteTag(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      isDefault: isDefault ?? this.isDefault,
+      iconName: iconName ?? this.iconName,
+    );
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'id': id,
@@ -21,11 +35,35 @@ class NoteTag {
   }
 
   factory NoteTag.fromMap(Map<String, dynamic> map) {
+    final id = map['id'] as String?;
+    final name = map['name'] as String?;
+
+    if (id == null || id.isEmpty) {
+      throw ArgumentError('Tag ID is missing or empty in the map.');
+    }
+    if (name == null || name.isEmpty) {
+      throw ArgumentError('Tag name is missing or empty in the map.');
+    }
+
     return NoteTag(
-      id: map['id'],
-      name: map['name'],
-      isDefault: map['is_default'] == 1,
-      iconName: map['icon_name'],
+      id: id,
+      name: name,
+      isDefault: map['is_default'] == 1 || map['is_default'] == true,
+      iconName: map['icon_name'] as String?,
     );
+  }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is NoteTag && other.id == id;
+  }
+
+  @override
+  int get hashCode => id.hashCode;
+
+  @override
+  String toString() {
+    return 'NoteTag(id: $id, name: $name, isDefault: $isDefault, iconName: $iconName)';
   }
 }
