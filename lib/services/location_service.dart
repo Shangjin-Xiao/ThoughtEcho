@@ -202,12 +202,9 @@ class LocationService extends ChangeNotifier {
 
       // 只检查权限，不自动请求
       if (permission == LocationPermission.denied) {
-        // permission = await Geolocator.requestPermission(); // 移除自动请求
-        // if (permission == LocationPermission.denied) {
         _hasLocationPermission = false;
         notifyListeners();
         return false; // 直接返回 false，表示权限不足
-        // }
       }
 
       if (permission == LocationPermission.deniedForever) {
