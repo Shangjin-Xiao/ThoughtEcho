@@ -741,12 +741,16 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         // 根据润色(replace) / 续写(append) 决定带入编辑器的初始文本
         final mergedContent =
             modeAction == 'append' ? '${note.content}\n$content' : content;
+        // 清空旧 Delta，否则编辑器走 P1 富文本路径会渲染旧内容，
+        // 让用户以为 AI 修改没生效。
+        final noteForEditor =
+            note.copyWith(content: mergedContent, deltaContent: '');
         await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => NoteFullEditorPage(
               initialContent: mergedContent,
-              initialQuote: note,
+              initialQuote: noteForEditor,
               allTags: tags,
             ),
           ),
@@ -854,7 +858,9 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
 
         final updatedNote = existingNote.copyWith(
           content: newContent,
-          deltaContent: existingNote.deltaContent,
+          // 富文本 Delta 与 plain content 不再同步，必须清空旧 Delta，
+          // 否则编辑器仍按旧 deltaContent 渲染，导致看似没保存。
+          deltaContent: '',
           lastModified: DateTime.now().toIso8601String(),
         );
 
