@@ -186,33 +186,45 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                         );
                       }
                     : null,
-                onOpenInEditor: isNewNoteProposal
-                    ? (includeLocation, includeWeather) async {
-                        final rawTagIds =
-                            meta['tag_ids'] as List<dynamic>? ?? const [];
-                        final tagIds = rawTagIds
-                            .map((item) => item.toString().trim())
-                            .where((item) => item.isNotEmpty)
-                            .toList();
-                        await _openSmartResultAsNewNote(
-                          message.content,
-                          tagIds: tagIds,
-                          includeLocation: includeLocation,
-                          includeWeather: includeWeather,
-                        );
-                      }
-                    : null,
-                onSaveDirectly: isNewNoteProposal
-                    ? (includeLocation, includeWeather) async {
-                        final updatedMeta = Map<String, dynamic>.from(meta);
-                        updatedMeta['include_location'] = includeLocation;
-                        updatedMeta['include_weather'] = includeWeather;
-                        await _saveSmartResultAsNewNote(
-                          updatedMeta,
-                          message.content,
-                        );
-                      }
-                    : null,
+                onOpenInEditor: (includeLocation, includeWeather) async {
+                  if (isNewNoteProposal) {
+                    final rawTagIds =
+                        meta['tag_ids'] as List<dynamic>? ?? const [];
+                    final tagIds = rawTagIds
+                        .map((item) => item.toString().trim())
+                        .where((item) => item.isNotEmpty)
+                        .toList();
+                    await _openSmartResultAsNewNote(
+                      message.content,
+                      tagIds: tagIds,
+                      includeLocation: includeLocation,
+                      includeWeather: includeWeather,
+                    );
+                  } else {
+                    final updatedMeta = Map<String, dynamic>.from(meta);
+                    await _openSmartResultInEditor(
+                      updatedMeta,
+                      message.content,
+                    );
+                  }
+                },
+                onSaveDirectly: (includeLocation, includeWeather) async {
+                  if (isNewNoteProposal) {
+                    final updatedMeta = Map<String, dynamic>.from(meta);
+                    updatedMeta['include_location'] = includeLocation;
+                    updatedMeta['include_weather'] = includeWeather;
+                    await _saveSmartResultAsNewNote(
+                      updatedMeta,
+                      message.content,
+                    );
+                  } else {
+                    final updatedMeta = Map<String, dynamic>.from(meta);
+                    await _saveSmartResultToExistingNote(
+                      updatedMeta,
+                      message.content,
+                    );
+                  }
+                },
               ),
             );
           case 'notice':
