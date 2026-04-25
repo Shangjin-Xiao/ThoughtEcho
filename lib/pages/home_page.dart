@@ -97,6 +97,9 @@ class _HomePageState extends State<HomePage>
   String? _lastConsumedExcerptText;
   bool _isHandlingExcerptIntent = false;
   bool _hasConsumedInitialHighlightedNote = false;
+  bool _isConsumingInitialHighlightedNote = false;
+  int _initialHighlightRetryCount = 0;
+  static const int _maxInitialHighlightRetries = 8;
 
   // AI卡片生成服务
   AICardGenerationService? _aiCardService;
@@ -895,7 +898,10 @@ class _HomePageState extends State<HomePage>
   }
 
   void _consumeInitialHighlightedNote() {
-    if (!mounted || _hasConsumedInitialHighlightedNote || _currentIndex != 1) {
+    if (!mounted ||
+        _hasConsumedInitialHighlightedNote ||
+        _isConsumingInitialHighlightedNote ||
+        _currentIndex != 1) {
       return;
     }
 
@@ -915,8 +921,45 @@ class _HomePageState extends State<HomePage>
       return;
     }
 
-    _hasConsumedInitialHighlightedNote = true;
-    noteListState.scrollToQuoteById(noteId);
+    _isConsumingInitialHighlightedNote = true;
+    unawaited(_attemptInitialHighlightedNote(noteListState, noteId));
+  }
+
+  Future<void> _attemptInitialHighlightedNote(
+    NoteListViewState noteListState,
+    String noteId,
+  ) async {
+    final success = await noteListState.scrollToQuoteById(noteId);
+    if (!mounted || widget.initialHighlightedNoteId != noteId) {
+      _isConsumingInitialHighlightedNote = false;
+      return;
+    }
+
+    if (success) {
+      _hasConsumedInitialHighlightedNote = true;
+      _initialHighlightRetryCount = 0;
+      _isConsumingInitialHighlightedNote = false;
+      return;
+    }
+
+    _isConsumingInitialHighlightedNote = false;
+    _initialHighlightRetryCount++;
+    if (_initialHighlightRetryCount >= _maxInitialHighlightRetries) {
+      logDebug(
+        '初始高亮笔记定位失败，已达到最大重试次数: $noteId',
+        source: 'HomePage',
+      );
+      return;
+    }
+
+    Future.delayed(const Duration(milliseconds: 250), () {
+      if (!mounted ||
+          _currentIndex != 1 ||
+          _hasConsumedInitialHighlightedNote) {
+        return;
+      }
+      _consumeInitialHighlightedNote();
+    });
   }
 
   void _scheduleSettingsGuideIfNeeded() {
