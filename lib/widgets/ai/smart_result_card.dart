@@ -62,8 +62,6 @@ class _SmartResultCardState extends State<SmartResultCard> {
     final l10n = AppLocalizations.of(context);
 
     final isNewNote = widget.editorSource == 'new_note' || widget.editorSource == 'addnote_dialog' || widget.editorSource == 'fullscreen';
-    final showReplace = widget.onReplace != null;
-    final showAppend = widget.onAppend != null;
     final showSaveDirectly = widget.onSaveDirectly != null;
 
     return Card(
@@ -149,18 +147,6 @@ class _SmartResultCardState extends State<SmartResultCard> {
               alignment: WrapAlignment.end,
               spacing: 8,
               children: [
-                if (showReplace)
-                  TextButton.icon(
-                    onPressed: widget.onReplace,
-                    icon: const Icon(Icons.find_replace, size: 18),
-                    label: Text(widget.replaceButtonText ?? l10n.applyChanges),
-                  ),
-                if (showAppend)
-                  TextButton.icon(
-                    onPressed: widget.onAppend,
-                    icon: const Icon(Icons.add, size: 18),
-                    label: Text(widget.appendButtonText ?? l10n.appendToNote),
-                  ),
                 if (widget.onOpenInEditor != null)
                   TextButton.icon(
                     onPressed: () =>

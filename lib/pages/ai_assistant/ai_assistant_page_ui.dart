@@ -146,46 +146,15 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           case 'smart_result':
             final action = meta['action']?.toString();
             final isNewNoteProposal = action == 'create';
-            final noteId = meta['note_id']?.toString().trim() ?? '';
-            final canApplyToExistingNote =
-                !isNewNoteProposal && (_hasBoundNote || noteId.isNotEmpty);
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: SmartResultCard(
                 key: const ValueKey('ai_workflow_result_smart_result'),
                 title: meta['title'] as String? ?? l10n.analysisResult,
                 content: message.content,
-                replaceButtonText: meta['replaceButtonText'] as String? ??
-                    (canApplyToExistingNote
-                        ? l10n.replaceOriginalNote
-                        : l10n.applyChanges),
-                appendButtonText: meta['appendButtonText'] as String? ??
-                    (canApplyToExistingNote
-                        ? l10n.appendToEnd
-                        : l10n.appendToNote),
                 editorSource: isNewNoteProposal ? 'new_note' : 'fullscreen',
                 initialIncludeLocation: meta['include_location'] == true,
                 initialIncludeWeather: meta['include_weather'] == true,
-                onReplace: canApplyToExistingNote
-                    ? () async {
-                        final updatedMeta = Map<String, dynamic>.from(meta);
-                        updatedMeta['action'] = 'replace';
-                        await _openSmartResultInEditor(
-                          updatedMeta,
-                          message.content,
-                        );
-                      }
-                    : null,
-                onAppend: canApplyToExistingNote
-                    ? () async {
-                        final updatedMeta = Map<String, dynamic>.from(meta);
-                        updatedMeta['action'] = 'append';
-                        await _openSmartResultInEditor(
-                          updatedMeta,
-                          message.content,
-                        );
-                      }
-                    : null,
                 onOpenInEditor: (includeLocation, includeWeather) async {
                   if (isNewNoteProposal) {
                     final rawTagIds =
