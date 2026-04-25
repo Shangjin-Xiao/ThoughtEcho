@@ -119,18 +119,42 @@ class OpenAIStreamService extends ChangeNotifier {
   /// 注意：openai_dart 的 `ChatCompletionCreateRequest` 不含
   /// `stream` 参数——`createStream()` 方法会自动在请求体中
   /// 注入 `stream: true`。
+  ///
+  /// 对于 OpenRouter 上的混合思考模型（如 qwen3、deepseek-v3.1），
+  /// 当 [enableThinking] 显式指定时，会注入 `reasoning` 参数：
+  /// - `true`  → `reasoning: {effort: "high", exclude: false}`
+  /// - `false` → `reasoning: {effort: "none", exclude: true}`
   static openai.ChatCompletionCreateRequest buildChatRequest({
     required AIProviderSettings provider,
     required List<openai.ChatMessage> messages,
     double? temperature,
     int? maxTokens,
+    bool? enableThinking,
   }) {
+    openai.OpenRouterReasoning? openRouterReasoning;
+
+    final resolvedThinking = enableThinking ?? provider.enableThinking;
+    if (resolvedThinking != null && _isOpenRouterProvider(provider)) {
+      if (resolvedThinking) {
+        openRouterReasoning = const openai.OpenRouterReasoning(
+          effort: 'high',
+          exclude: false,
+        );
+      } else {
+        openRouterReasoning = const openai.OpenRouterReasoning(
+          effort: 'none',
+          exclude: true,
+        );
+      }
+    }
+
     return openai.ChatCompletionCreateRequest(
       model: provider.model,
       messages: messages,
       temperature: temperature ?? provider.temperature,
       maxTokens:
           maxTokens ?? (provider.maxTokens > 0 ? provider.maxTokens : null),
+      openRouterReasoning: openRouterReasoning,
     );
   }
 
@@ -190,17 +214,18 @@ class OpenAIStreamService extends ChangeNotifier {
     required List<openai.ChatMessage> messages,
     double? temperature,
     int? maxTokens,
+    bool? enableThinking,
   }) async {
     final config = buildOpenAIConfig(provider);
     final client = openai.OpenAIClient(config: config);
 
     try {
-      final request = openai.ChatCompletionCreateRequest(
-        model: provider.model,
+      final request = buildChatRequest(
+        provider: provider,
         messages: messages,
-        temperature: temperature ?? provider.temperature,
-        maxTokens:
-            maxTokens ?? (provider.maxTokens > 0 ? provider.maxTokens : null),
+        temperature: temperature,
+        maxTokens: maxTokens,
+        enableThinking: enableThinking,
       );
 
       logDebug(
@@ -326,6 +351,7 @@ class OpenAIStreamService extends ChangeNotifier {
           messages: messages,
           temperature: temperature,
           maxTokens: maxTokens,
+          enableThinking: enableThinking,
         );
 
         final shouldInjectOllamaThinking = _resolveThinkingEnabled(
@@ -478,6 +504,12 @@ class OpenAIStreamService extends ChangeNotifier {
     } finally {
       httpClient.close();
     }
+  }
+
+  /// 判断是否为 OpenRouter 提供商
+  static bool _isOpenRouterProvider(AIProviderSettings provider) {
+    return provider.id == 'openrouter' ||
+        provider.apiUrl.contains('openrouter.ai');
   }
 
   /// 判断是否为 Ollama 提供商

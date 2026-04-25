@@ -309,6 +309,7 @@ class AIService extends ChangeNotifier {
     AIProviderSettings? provider,
     double? temperature,
     int? maxTokens,
+    bool? enableThinking,
   }) async {
     if (!await hasValidApiKeyAsync()) {
       throw Exception('请先在设置中配置 API Key');
@@ -332,6 +333,7 @@ class AIService extends ChangeNotifier {
       temperature: temperature ?? resolvedProvider.temperature,
       maxTokens: maxTokens ??
           (resolvedProvider.maxTokens > 0 ? resolvedProvider.maxTokens : null),
+      enableThinking: enableThinking,
     );
   }
 
@@ -1126,6 +1128,7 @@ class AIService extends ChangeNotifier {
           userMessage: '测试连接',
           temperature: 0.1,
           maxTokens: 50,
+          enableThinking: false,
         );
 
         final preview =
@@ -1150,6 +1153,7 @@ class AIService extends ChangeNotifier {
           userMessage: '测试连接',
           temperature: 0.1,
           maxTokens: 50,
+          enableThinking: false,
         );
         logDebug('多provider连接测试成功: $content');
       },
@@ -1331,6 +1335,7 @@ class AIService extends ChangeNotifier {
             userMessage: truncated,
             temperature: 0.3,
             maxTokens: 30,
+            enableThinking: false,
           );
 
           final trimmedTitle = title.trim();
