@@ -43,7 +43,7 @@ void main() {
       dbPath,
       version: 1,
       onCreate: (db, version) async {
-        await DatabaseSchemaManager.createTables(db);
+        await DatabaseSchemaManager().createTables(db);
       },
     );
     service = DatabaseBackupService();
@@ -81,17 +81,20 @@ void main() {
       return {
         'id': 'cat_$i',
         'name': 'Category $i',
-        'last_modified': DateTime.now().add(const Duration(minutes: 1)).toIso8601String(),
+        'last_modified':
+            DateTime.now().add(const Duration(minutes: 1)).toIso8601String(),
       };
     });
 
     final quotesToMerge = List.generate(quoteCount, (i) {
+      final div = categoryCount ~/ 2;
       return {
         'id': 'quote_$i',
         'content': 'Updated Content $i',
         'date': DateTime.now().toIso8601String(),
-        'last_modified': DateTime.now().add(const Duration(minutes: 1)).toIso8601String(),
-        'tag_ids': i % 5 == 0 ? 'cat_${i % (categoryCount ~/ 2)}' : '',
+        'last_modified':
+            DateTime.now().add(const Duration(minutes: 1)).toIso8601String(),
+        'tag_ids': (i % 5 == 0 && div > 0) ? 'cat_${i % div}' : '',
       };
     });
 
@@ -105,7 +108,8 @@ void main() {
     final report = await service.importDataWithLWWMerge(db, mergeData);
     stopwatch.stop();
 
-    print('Time taken to merge $categoryCount categories and $quoteCount quotes: ${stopwatch.elapsedMilliseconds} ms');
+    print(
+        'Time taken to merge $categoryCount categories and $quoteCount quotes: ${stopwatch.elapsedMilliseconds} ms');
     print('Report: ${report.summary}');
 
     expect(report.insertedCategories + report.updatedCategories, categoryCount);
