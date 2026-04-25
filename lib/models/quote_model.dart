@@ -1,5 +1,7 @@
+part 'quote/quote_copy_with.dart';
+part 'quote/quote_extensions.dart';
+
 class Quote {
-  static const Object _noValue = Object();
 
   final String? id;
   final String content;
@@ -307,107 +309,6 @@ class Quote {
     return json;
   }
 
-  // 复制并修改当前Quote对象
-  Quote copyWith({
-    String? id,
-    String? content,
-    String? date,
-    String? aiAnalysis,
-    String? source,
-    String? sourceAuthor,
-    String? sourceWork,
-    List<String>? tagIds,
-    String? sentiment,
-    List<String>? keywords,
-    String? summary,
-    String? categoryId,
-    String? colorHex,
-    String? location,
-    double? latitude,
-    double? longitude,
-    String? weather,
-    String? temperature,
-    String? editSource,
-    String? deltaContent, // 新增：Delta JSON
-    String? dayPeriod, // 新增：时间段
-    String? lastModified,
-    int? favoriteCount, // 新增：心形点击次数
-    Object? isDeleted = _noValue,
-    Object? deletedAt = _noValue,
-  }) {
-    final nextIsDeleted = identical(isDeleted, _noValue)
-        ? this.isDeleted
-        : (isDeleted is bool ? isDeleted : this.isDeleted);
-    final nextDeletedAt =
-        identical(deletedAt, _noValue) ? this.deletedAt : deletedAt as String?;
-
-    return Quote(
-      id: id ?? this.id,
-      content: content ?? this.content,
-      date: date ?? this.date,
-      aiAnalysis: aiAnalysis ?? this.aiAnalysis,
-      source: source ?? this.source,
-      sourceAuthor: sourceAuthor ?? this.sourceAuthor,
-      sourceWork: sourceWork ?? this.sourceWork,
-      tagIds: tagIds ?? this.tagIds,
-      sentiment: sentiment ?? this.sentiment,
-      keywords: keywords ?? this.keywords,
-      summary: summary ?? this.summary,
-      categoryId: categoryId ?? this.categoryId,
-      colorHex: colorHex ?? this.colorHex,
-      location: location ?? this.location,
-      latitude: latitude ?? this.latitude,
-      longitude: longitude ?? this.longitude,
-      weather: weather ?? this.weather,
-      temperature: temperature ?? this.temperature,
-      editSource: editSource ?? this.editSource,
-      deltaContent: deltaContent ?? this.deltaContent, // 新增：Delta JSON
-      dayPeriod: dayPeriod ?? this.dayPeriod, // 新增：时间段
-      lastModified: lastModified ?? this.lastModified,
-      favoriteCount: favoriteCount ?? this.favoriteCount, // 新增：心形点击次数
-      isDeleted: nextIsDeleted,
-      deletedAt: _normalizeDeletedAtForState(
-        isDeleted: nextIsDeleted,
-        deletedAt: nextDeletedAt,
-      ),
-    );
-  }
-
-  static bool _parseDeletedFlag(dynamic raw) {
-    if (raw == null) return false;
-    if (raw is bool) return raw;
-    if (raw is num) return raw != 0;
-    final text = raw.toString().trim().toLowerCase();
-    return text == '1' || text == 'true';
-  }
-
-  /// 将 deletedAt 归一化到 UTC，缺失时生成当前 UTC 时间
-  static String _normalizeToUtc(String? deletedAt) {
-    final trimmed = deletedAt?.trim();
-    if (trimmed != null && trimmed.isNotEmpty && isValidDate(trimmed)) {
-      return DateTime.parse(trimmed).toUtc().toIso8601String();
-    }
-    return DateTime.now().toUtc().toIso8601String();
-  }
-
-  static String? _normalizeDeletedAtForState({
-    required bool isDeleted,
-    required String? deletedAt,
-  }) {
-    if (!isDeleted) {
-      return null;
-    }
-
-    final trimmed = deletedAt?.trim();
-    if (trimmed != null && trimmed.isNotEmpty && isValidDate(trimmed)) {
-      // 统一归一化到 UTC
-      return DateTime.parse(trimmed).toUtc().toIso8601String();
-    }
-
-    // 缺失时生成当前 UTC 时间，而非回退到 quote.date
-    return DateTime.now().toUtc().toIso8601String();
-  }
-
   // 静态key-label映射
   static const Map<String, String> sentimentKeyToLabel = {
     'positive': '积极',
@@ -420,38 +321,6 @@ class Quote {
     'ai': 'AI生成',
     'import': '导入',
   };
-
-  /// 修复：添加工具方法
-  bool get hasLocation =>
-      (location != null && location!.isNotEmpty) || hasCoordinates;
-  bool get hasCoordinates => latitude != null && longitude != null;
-  bool get hasWeather => weather != null && weather!.isNotEmpty;
-  bool get hasAiAnalysis => aiAnalysis != null && aiAnalysis!.isNotEmpty;
-  bool get hasTags => tagIds.isNotEmpty;
-  bool get hasKeywords => keywords != null && keywords!.isNotEmpty;
-
-  /// 获取情感分析的中文标签
-  String? get sentimentLabel =>
-      sentiment != null ? sentimentKeyToLabel[sentiment] : null;
-
-  /// 获取完整的来源信息
-  String get fullSource {
-    final s = source;
-    if (s != null && s.isNotEmpty) return s;
-    return '未知来源';
-  }
-
-  /// 验证Quote对象的完整性
-  bool get isValid {
-    try {
-      return isValidContent(content) &&
-          isValidDate(date) &&
-          isValidColorHex(colorHex) &&
-          (sentiment == null || sentimentKeyToLabel.containsKey(sentiment!));
-    } catch (e) {
-      return false;
-    }
-  }
 
   @override
   bool operator ==(Object other) {
