@@ -367,14 +367,25 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       return;
     }
 
+    const sqlBatchSize = 500;
+
     final mediaCandidates = <String>{};
     final db = await safeDatabase;
-    final placeholders = List.filled(uniqueIds.length, '?').join(',');
 
-    final quoteRows = await db.rawQuery(
-      'SELECT * FROM quotes WHERE is_deleted = 1 AND id IN ($placeholders)',
-      uniqueIds,
-    );
+    final quoteRows = <Map<String, dynamic>>[];
+    for (var i = 0; i < uniqueIds.length; i += sqlBatchSize) {
+      final batch = uniqueIds.sublist(
+        i,
+        i + sqlBatchSize > uniqueIds.length ? uniqueIds.length : i + sqlBatchSize,
+      );
+      final ph = List.filled(batch.length, '?').join(',');
+      final rows = await db.rawQuery(
+        'SELECT * FROM quotes WHERE is_deleted = 1 AND id IN ($ph)',
+        batch,
+      );
+      quoteRows.addAll(rows);
+    }
+
     final targetDeletedIds = quoteRows
         .map((row) => row['id'])
         .whereType<String>()
@@ -411,10 +422,21 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       var deletedIdsInTxn = <String>[];
 
       await db.transaction((txn) async {
-        final currentDeletedRows = await txn.rawQuery(
-          'SELECT id FROM quotes WHERE is_deleted = 1 AND id IN ($placeholders)',
-          uniqueIds,
-        );
+        final currentDeletedRows = <Map<String, dynamic>>[];
+        for (var i = 0; i < uniqueIds.length; i += sqlBatchSize) {
+          final batch = uniqueIds.sublist(
+            i,
+            i + sqlBatchSize > uniqueIds.length
+                ? uniqueIds.length
+                : i + sqlBatchSize,
+          );
+          final ph = List.filled(batch.length, '?').join(',');
+          final rows = await txn.rawQuery(
+            'SELECT id FROM quotes WHERE is_deleted = 1 AND id IN ($ph)',
+            batch,
+          );
+          currentDeletedRows.addAll(rows);
+        }
         deletedIdsInTxn = currentDeletedRows
             .map((row) => row['id'])
             .whereType<String>()
@@ -438,12 +460,19 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
         }
         await tombstoneBatch.commit(noResult: true);
 
-        final deletePlaceholders =
-            List.filled(deletedIdsInTxn.length, '?').join(',');
-        await txn.rawDelete(
-          'DELETE FROM quotes WHERE is_deleted = 1 AND id IN ($deletePlaceholders)',
-          deletedIdsInTxn,
-        );
+        for (var i = 0; i < deletedIdsInTxn.length; i += sqlBatchSize) {
+          final batch = deletedIdsInTxn.sublist(
+            i,
+            i + sqlBatchSize > deletedIdsInTxn.length
+                ? deletedIdsInTxn.length
+                : i + sqlBatchSize,
+          );
+          final ph = List.filled(batch.length, '?').join(',');
+          await txn.rawDelete(
+            'DELETE FROM quotes WHERE is_deleted = 1 AND id IN ($ph)',
+            batch,
+          );
+        }
       });
 
       if (deletedIdsInTxn.isEmpty) {
@@ -454,7 +483,6 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
         QuoteContent.removeCacheForQuote(id);
       }
 
-      // Convert relative media paths to absolute paths before cleanup
       final appDir = await getApplicationDocumentsDirectory();
       final appPath = normalize(appDir.path);
 
