@@ -43,7 +43,7 @@ void main() {
       dbPath,
       version: 1,
       onCreate: (db, version) async {
-        await DatabaseSchemaManager.createTables(db);
+        await DatabaseSchemaManager().createTables(db);
       },
     );
     service = DatabaseBackupService();
