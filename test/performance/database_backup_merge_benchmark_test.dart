@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path/path.dart';
@@ -6,7 +7,6 @@ import 'package:path_provider_platform_interface/path_provider_platform_interfac
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import 'package:thoughtecho/services/database_backup_service.dart';
 import 'package:thoughtecho/services/database_schema_manager.dart';
-import 'package:uuid/uuid.dart';
 
 class FakePathProviderPlatform extends Fake
     with MockPlatformInterfaceMixin
@@ -87,13 +87,14 @@ void main() {
     });
 
     final quotesToMerge = List.generate(quoteCount, (i) {
+      final int halfCatCount = categoryCount ~/ 2;
       return {
         'id': 'quote_$i',
         'content': 'Updated Content $i',
         'date': DateTime.now().toIso8601String(),
         'last_modified':
             DateTime.now().add(const Duration(minutes: 1)).toIso8601String(),
-        'tag_ids': i % 5 == 0 ? 'cat_${i % (categoryCount ~/ 2)}' : '',
+        'tag_ids': (i % 5 == 0 && halfCatCount > 0) ? 'cat_${i % halfCatCount}' : '',
       };
     });
 
@@ -107,9 +108,9 @@ void main() {
     final report = await service.importDataWithLWWMerge(db, mergeData);
     stopwatch.stop();
 
-    print(
+    debugPrint(
         'Time taken to merge $categoryCount categories and $quoteCount quotes: ${stopwatch.elapsedMilliseconds} ms');
-    print('Report: ${report.summary}');
+    debugPrint('Report: ${report.summary}');
 
     expect(report.insertedCategories + report.updatedCategories, categoryCount);
     expect(report.insertedQuotes + report.updatedQuotes, quoteCount);
