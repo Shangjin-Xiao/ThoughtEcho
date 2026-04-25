@@ -1,0 +1,25 @@
+lib/pages/ai_assistant/ai_assistant_page_ui.dart
+  b94c05000ff4f62a 744,755,797,800,825,832
+lib/pages/note_editor/editor_metadata_dialog.dart
+  b94c05000ff4f62a 297-298,382-383
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "02cec58a71ac29896ef2178a3dacc4c30e45f11c",
+  "prompts": {
+    "b94c05000ff4f62a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_23b10a9e0ffe5EmB6mgPm0AMpv",
+        "model": "opencode-go/kimi-k2.6"
+      },
+      "human_author": "上晋",
+      "messages": [],
+      "total_additions": 11,
+      "total_deletions": 3,
+      "accepted_lines": 10,
+      "overriden_lines": 0
+    }
+  }
+}
