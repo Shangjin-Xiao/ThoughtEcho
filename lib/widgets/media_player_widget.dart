@@ -638,6 +638,7 @@ class _MediaPlayerWidgetState extends State<MediaPlayerWidget> {
               // 播放/暂停按钮
               IconButton(
                 onPressed: _toggleAudioPlayback,
+                tooltip: _isPlaying ? 'Pause' : 'Play',
                 icon: Icon(
                   _isPlaying ? Icons.pause : Icons.play_arrow,
                   color: Theme.of(context).colorScheme.primary,
