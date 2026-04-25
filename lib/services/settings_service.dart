@@ -13,6 +13,9 @@ import '../utils/lww_utils.dart';
 import '../services/mmkv_service.dart';
 import 'excerpt_intent_service.dart';
 
+part 'settings/settings_backup.dart';
+part 'settings/settings_trash.dart';
+
 class SettingsService extends ChangeNotifier {
   static const ExcerptIntentService _excerptIntentService =
       ExcerptIntentService();
@@ -69,97 +72,6 @@ class SettingsService extends ChangeNotifier {
     _appSettings = _appSettings.copyWith(todayThoughtsUseAI: enabled);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
     notifyListeners();
-  }
-
-  int get trashRetentionDays => _appSettings.trashRetentionDays;
-  String? get trashRetentionLastModified =>
-      _appSettings.trashRetentionLastModified;
-
-  Future<void> setTrashRetentionDays(
-    int days, {
-    DateTime? modifiedAt,
-  }) async {
-    final normalizedDays = AppSettings.normalizeTrashRetentionDays(days);
-    final modified = (modifiedAt ?? DateTime.now()).toUtc().toIso8601String();
-    _appSettings = _appSettings.copyWith(
-      trashRetentionDays: normalizedDays,
-      trashRetentionLastModified: modified,
-    );
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
-  }
-
-  Future<bool> applyIncomingTrashSettings(
-    Map<String, dynamic>? incoming,
-  ) async {
-    if (incoming == null) {
-      return false;
-    }
-
-    if (!incoming.containsKey('retention_days')) {
-      return false;
-    }
-
-    final dynamic rawDays = incoming['retention_days'];
-    int? parsedDays;
-    if (rawDays is int) {
-      parsedDays = rawDays;
-    } else if (rawDays is num) {
-      parsedDays = rawDays.toInt();
-    } else if (rawDays is String) {
-      parsedDays = int.tryParse(rawDays);
-    }
-
-    if (parsedDays == null) {
-      return false;
-    }
-
-    final incomingDays = AppSettings.normalizeTrashRetentionDays(parsedDays);
-    final incomingLastModified = incoming['last_modified']?.toString();
-    String? normalizedIncomingTimestamp;
-    if (incomingLastModified != null && incomingLastModified.isNotEmpty) {
-      if (!LWWUtils.isValidTimestamp(incomingLastModified)) {
-        logWarning(
-          '忽略无效的回收站保留期时间戳: $incomingLastModified',
-          source: 'SettingsService',
-        );
-        return false;
-      }
-      normalizedIncomingTimestamp =
-          LWWUtils.normalizeTimestamp(incomingLastModified);
-    } else {
-      // 输入无时间戳：只有本地也无时间戳时才接受（直接赋值），否则跳过
-      final localLastModified = _appSettings.trashRetentionLastModified;
-      final hasLocalTimestamp =
-          localLastModified != null && localLastModified.isNotEmpty;
-      if (hasLocalTimestamp) {
-        // 本地有时间戳，远端无时间戳 → 跳过导入
-        return false;
-      }
-      // 本地也无时间戳 → 直接接受输入值，不设置时间戳
-      _appSettings = _appSettings.copyWith(trashRetentionDays: incomingDays);
-      await _mmkv.setString(
-          _appSettingsKey, json.encode(_appSettings.toJson()));
-      notifyListeners();
-      return true;
-    }
-
-    final decision = LWWDecisionMaker.makeDecision(
-      localTimestamp: _appSettings.trashRetentionLastModified,
-      remoteTimestamp: normalizedIncomingTimestamp,
-    );
-
-    if (!decision.shouldUseRemote) {
-      return false;
-    }
-
-    _appSettings = _appSettings.copyWith(
-      trashRetentionDays: incomingDays,
-      trashRetentionLastModified: normalizedIncomingTimestamp,
-    );
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
-    return true;
   }
 
   // 折叠时优先显示加粗内容
@@ -736,89 +648,6 @@ class SettingsService extends ChangeNotifier {
   /// 更新本地AI设置
   Future<void> updateLocalAISettings(LocalAISettings settings) async {
     await saveLocalAISettings(settings);
-  }
-
-  /// 获取所有设置数据用于备份
-  Map<String, dynamic> getAllSettingsForBackup() {
-    return {
-      'ai_settings': _aiSettings.toJson(),
-      'multi_ai_settings': _multiAISettings.toJson(),
-      'local_ai_settings': _localAISettings.toJson(),
-      'app_settings': _appSettings.toJson(),
-      'theme_mode': _themeMode.index,
-      'device_id': getOrCreateDeviceId(),
-    };
-  }
-
-  /// 从备份数据恢复所有设置
-  Future<void> restoreAllSettingsFromBackup(
-    Map<String, dynamic> backupData,
-  ) async {
-    try {
-      // 恢复AI设置
-      if (backupData.containsKey('ai_settings')) {
-        final aiSettingsJson =
-            backupData['ai_settings'] as Map<String, dynamic>;
-        final aiSettings = AISettings.fromJson(aiSettingsJson);
-        await updateAISettings(aiSettings);
-      }
-
-      // 恢复多provider AI设置
-      if (backupData.containsKey('multi_ai_settings')) {
-        final multiAiSettingsJson =
-            backupData['multi_ai_settings'] as Map<String, dynamic>;
-        final multiAiSettings = MultiAISettings.fromJson(multiAiSettingsJson);
-        await saveMultiAISettings(multiAiSettings);
-      }
-
-      // 恢复本地AI设置
-      if (backupData.containsKey('local_ai_settings')) {
-        final localAiSettingsJson =
-            backupData['local_ai_settings'] as Map<String, dynamic>;
-        final localAiSettings = LocalAISettings.fromJson(localAiSettingsJson);
-        await saveLocalAISettings(localAiSettings);
-      }
-
-      // 恢复应用设置
-      if (backupData.containsKey('app_settings')) {
-        final appSettingsJson =
-            backupData['app_settings'] as Map<String, dynamic>;
-        final appSettings = AppSettings.fromJson(appSettingsJson);
-        await updateAppSettings(appSettings);
-      }
-
-      // 恢复主题模式
-      if (backupData.containsKey('theme_mode')) {
-        final themeModeIndex = backupData['theme_mode'] as int;
-        final themeMode = ThemeMode.values[themeModeIndex];
-        await updateThemeMode(themeMode);
-      }
-
-      // 恢复/记录 device_id（不覆盖本地已有，仅在本地不存在时写入，保持源ID可用于审计）
-      if (backupData.containsKey('device_id')) {
-        final remoteId = backupData['device_id'];
-        if ((_mmkv.getString(_deviceIdKey) ?? '').isEmpty &&
-            remoteId is String &&
-            remoteId.isNotEmpty) {
-          await _mmkv.setString(_deviceIdKey, remoteId);
-        }
-      }
-
-      logDebug('设置数据恢复完成');
-    } catch (e) {
-      AppLogger.e('设置数据恢复失败', error: e, source: 'SettingsService');
-      rethrow;
-    }
-  }
-
-  /// 获取或生成设备唯一ID（持久化）
-  String getOrCreateDeviceId() {
-    final existing = _mmkv.getString(_deviceIdKey);
-    if (existing != null && existing.isNotEmpty) return existing;
-    final newId =
-        '${DateTime.now().millisecondsSinceEpoch}_${UniqueKey().hashCode.toRadixString(16)}';
-    _mmkv.setString(_deviceIdKey, newId);
-    return newId;
   }
 
   /// 获取自定义字符串设置
