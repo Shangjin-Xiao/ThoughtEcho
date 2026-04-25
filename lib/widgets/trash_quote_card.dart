@@ -13,6 +13,8 @@ import '../utils/string_utils.dart';
 import '../utils/time_utils.dart'; // For time formatting
 import 'quote_content_widget.dart';
 
+part 'trash_quote_card/trash_card_helpers.dart';
+
 enum TrashQuoteCardAction { restore, permanentlyDelete }
 
 class TrashQuoteCard extends StatefulWidget {
@@ -38,25 +40,6 @@ class TrashQuoteCard extends StatefulWidget {
 }
 
 class _TrashQuoteCardState extends State<TrashQuoteCard> {
-  // Helper methods from QuoteItemWidget, adapted for TrashQuoteCard
-
-  IconData _getWeatherIcon(String weatherKey) {
-    return WeatherService.getWeatherIconDataByKey(weatherKey);
-  }
-
-  Color _resolveCardColor(ColorScheme colorScheme) {
-    final colorHex = widget.quote.colorHex;
-    if (colorHex == null || colorHex.isEmpty) {
-      return colorScheme.surfaceContainerLowest;
-    }
-
-    try {
-      return Color(int.parse(colorHex.substring(1), radix: 16) | 0xFF000000);
-    } catch (_) {
-      return colorScheme.surfaceContainerLowest;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -130,12 +113,12 @@ class _TrashQuoteCardState extends State<TrashQuoteCard> {
                           spacing: 8,
                           runSpacing: 4,
                           children: [
-                            _MetaChip(
+                            TrashCardMetaChip(
                               icon: Icons.delete_outline,
                               label: widget.deletedAtText,
                               foregroundColor: secondaryTextColor,
                             ),
-                            _MetaChip(
+                            TrashCardMetaChip(
                               icon: Icons.hourglass_bottom_outlined,
                               label: widget.remainingDaysText,
                               foregroundColor: secondaryTextColor,
@@ -373,44 +356,6 @@ class _TrashQuoteCardState extends State<TrashQuoteCard> {
                   ),
                 ),
               ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MetaChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color foregroundColor;
-
-  const _MetaChip({
-    required this.icon,
-    required this.label,
-    required this.foregroundColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: foregroundColor.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 15, color: foregroundColor),
-            const SizedBox(width: 6),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: foregroundColor,
-                  ),
-            ),
           ],
         ),
       ),
