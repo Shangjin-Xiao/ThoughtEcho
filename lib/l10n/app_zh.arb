@@ -3637,12 +3637,12 @@
   "aiModeChat": "对话模式",
   "aiModeAgent": "Agent 模式",
 
-  "agentThinking": "Agent 思考中...",
+  "agentThinking": "正在思考...",
   "agentSearchingNotes": "正在搜索笔记...",
   "agentAnalyzingData": "正在分析数据...",
   "agentWebSearching": "正在联网搜索...",
-  "agentReviewingRecentNotes": "正在翻看最近记录...",
-  "agentSearchingNotesForQuery": "正在查找“{query}”相关记录...",
+  "agentReviewingRecentNotes": "正在查看最近记录...",
+  "agentSearchingNotesForQuery": "正在查找\"{query}\"相关记录...",
   "@agentSearchingNotesForQuery": {
     "placeholders": {
       "query": {
@@ -3650,9 +3650,9 @@
       }
     }
   },
-  "agentCollectingTags": "正在整理可用标签...",
-  "agentCheckingLocationWeather": "正在查看当前位置和天气...",
-  "agentSearchingWebForQuery": "正在查找“{query}”的资料...",
+  "agentCollectingTags": "正在获取标签...",
+  "agentCheckingLocationWeather": "正在获取位置和天气...",
+  "agentSearchingWebForQuery": "正在查找\"{query}\"的资料...",
   "@agentSearchingWebForQuery": {
     "placeholders": {
       "query": {
@@ -3660,11 +3660,11 @@
       }
     }
   },
-  "agentReadingWebPage": "正在阅读网页内容...",
-  "agentPreparingNewNoteSuggestion": "正在整理成一条新笔记建议...",
-  "agentPreparingEditSuggestion": "正在整理笔记修改建议...",
-  "agentFoundNoMatchingNotes": "暂时没找到相关记录",
-  "agentFoundMatchingNotes": "已找到 {count} 条相关记录",
+  "agentReadingWebPage": "正在读取网页...",
+  "agentPreparingNewNoteSuggestion": "正在准备新笔记建议...",
+  "agentPreparingEditSuggestion": "正在准备修改建议...",
+  "agentFoundNoMatchingNotes": "未找到相关记录",
+  "agentFoundMatchingNotes": "找到 {count} 条相关记录",
   "@agentFoundMatchingNotes": {
     "placeholders": {
       "count": {
@@ -3672,7 +3672,7 @@
       }
     }
   },
-  "agentFoundMatchingNotesWithMore": "已找到 {count} 条相关记录，可继续往下看",
+  "agentFoundMatchingNotesWithMore": "找到 {count} 条相关记录，还有更多",
   "@agentFoundMatchingNotesWithMore": {
     "placeholders": {
       "count": {
@@ -3680,7 +3680,7 @@
       }
     }
   },
-  "agentPreparedTagChoices": "已整理出 {count} 个可用标签",
+  "agentPreparedTagChoices": "找到 {count} 个可用标签",
   "@agentPreparedTagChoices": {
     "placeholders": {
       "count": {
@@ -3688,8 +3688,8 @@
       }
     }
   },
-  "agentCheckedLocationWeather": "已查看当前位置和天气信息",
-  "agentCheckedLocationWeatherWithDetails": "已确认当前位置 {location}，天气 {weather}",
+  "agentCheckedLocationWeather": "已获取位置和天气",
+  "agentCheckedLocationWeatherWithDetails": "位置：{location}，天气：{weather}",
   "@agentCheckedLocationWeatherWithDetails": {
     "placeholders": {
       "location": {
@@ -3700,7 +3700,7 @@
       }
     }
   },
-  "agentFoundWebSources": "已找到 {count} 条联网资料",
+  "agentFoundWebSources": "找到 {count} 条网络资料",
   "@agentFoundWebSources": {
     "placeholders": {
       "count": {
@@ -3708,7 +3708,7 @@
       }
     }
   },
-  "agentReadWebPageSummary": "已读完网页正文，约 {count} 字",
+  "agentReadWebPageSummary": "已读取网页，约 {count} 字",
   "@agentReadWebPageSummary": {
     "placeholders": {
       "count": {
@@ -3716,16 +3716,16 @@
       }
     }
   },
-  "agentPreparedSuggestionCard": "已整理成一张建议卡",
-  "agentToolStepFinished": "这一步已完成",
-  "agentToolStepDidNotFinish": "这一步没有完成",
+  "agentPreparedSuggestionCard": "已生成建议",
+  "agentToolStepFinished": "已完成",
+  "agentToolStepDidNotFinish": "未完成",
   "aiThinking": "正在思考...",
   "thinkingMode": "深度思考",
   "showThinking": "查看思考过程",
   "hideThinking": "收起思考过程",
-  "toolExecutionProgress": "工具执行中...",
-  "toolExecutionCompleted": "工具执行完成",
-  "executedNOperations": "已执行 {count} 个操作",
+  "toolExecutionProgress": "正在执行...",
+  "toolExecutionCompleted": "执行完成",
+  "executedNOperations": "执行了 {count} 个操作",
   "@executedNOperations": {
     "placeholders": {
       "count": {
@@ -3733,7 +3733,7 @@
       }
     }
   },
-  "agentToolCall": "调用工具: {toolName}",
+  "agentToolCall": "使用 {toolName}",
   "@agentToolCall": {
     "placeholders": {
       "toolName": {

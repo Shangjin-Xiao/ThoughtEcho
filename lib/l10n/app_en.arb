@@ -3625,11 +3625,11 @@
   "aiModeChat": "Chat Mode",
   "aiModeAgent": "Agent Mode",
 
-  "agentThinking": "Agent is thinking...",
+  "agentThinking": "Thinking...",
   "agentSearchingNotes": "Searching notes...",
   "agentAnalyzingData": "Analyzing data...",
   "agentWebSearching": "Searching the web...",
-  "agentReviewingRecentNotes": "Reviewing recent notes...",
+  "agentReviewingRecentNotes": "Checking recent notes...",
   "agentSearchingNotesForQuery": "Looking for notes about \"{query}\"...",
   "@agentSearchingNotesForQuery": {
     "placeholders": {
@@ -3638,8 +3638,8 @@
       }
     }
   },
-  "agentCollectingTags": "Gathering available tags...",
-  "agentCheckingLocationWeather": "Checking location and weather...",
+  "agentCollectingTags": "Getting tags...",
+  "agentCheckingLocationWeather": "Getting location and weather...",
   "agentSearchingWebForQuery": "Looking up sources for \"{query}\"...",
   "@agentSearchingWebForQuery": {
     "placeholders": {
@@ -3648,10 +3648,10 @@
       }
     }
   },
-  "agentReadingWebPage": "Reading the webpage...",
+  "agentReadingWebPage": "Fetching webpage...",
   "agentPreparingNewNoteSuggestion": "Preparing a new note suggestion...",
   "agentPreparingEditSuggestion": "Preparing an edit suggestion...",
-  "agentFoundNoMatchingNotes": "No related notes found yet",
+  "agentFoundNoMatchingNotes": "No matching notes found",
   "agentFoundMatchingNotes": "Found {count} related notes",
   "@agentFoundMatchingNotes": {
     "placeholders": {
@@ -3660,7 +3660,7 @@
       }
     }
   },
-  "agentFoundMatchingNotesWithMore": "Found {count} related notes, and there is more to keep browsing",
+  "agentFoundMatchingNotesWithMore": "Found {count} related notes, more available",
   "@agentFoundMatchingNotesWithMore": {
     "placeholders": {
       "count": {
@@ -3668,7 +3668,7 @@
       }
     }
   },
-  "agentPreparedTagChoices": "Prepared {count} available tags",
+  "agentPreparedTagChoices": "Found {count} tags",
   "@agentPreparedTagChoices": {
     "placeholders": {
       "count": {
@@ -3676,8 +3676,8 @@
       }
     }
   },
-  "agentCheckedLocationWeather": "Checked the current location and weather",
-  "agentCheckedLocationWeatherWithDetails": "Confirmed location {location} and weather {weather}",
+  "agentCheckedLocationWeather": "Got location and weather",
+  "agentCheckedLocationWeatherWithDetails": "Location: {location}, Weather: {weather}",
   "@agentCheckedLocationWeatherWithDetails": {
     "placeholders": {
       "location": {
@@ -3696,7 +3696,7 @@
       }
     }
   },
-  "agentReadWebPageSummary": "Read the webpage content, about {count} characters",
+  "agentReadWebPageSummary": "Fetched webpage, about {count} chars",
   "@agentReadWebPageSummary": {
     "placeholders": {
       "count": {
@@ -3704,16 +3704,16 @@
       }
     }
   },
-  "agentPreparedSuggestionCard": "Prepared a suggestion card",
-  "agentToolStepFinished": "This step is complete",
-  "agentToolStepDidNotFinish": "This step did not finish",
+  "agentPreparedSuggestionCard": "Suggestion ready",
+  "agentToolStepFinished": "Done",
+  "agentToolStepDidNotFinish": "Failed",
   "aiThinking": "Thinking...",
   "thinkingMode": "Deep Thinking",
   "showThinking": "Show thinking",
   "hideThinking": "Hide thinking",
-  "toolExecutionProgress": "Tool execution in progress...",
-  "toolExecutionCompleted": "Tool execution completed",
-  "executedNOperations": "Executed {count} operations",
+  "toolExecutionProgress": "Working...",
+  "toolExecutionCompleted": "Done",
+  "executedNOperations": "{count} operations done",
   "@executedNOperations": {
     "placeholders": {
       "count": {
@@ -3721,7 +3721,7 @@
       }
     }
   },
-  "agentToolCall": "Tool call: {toolName}",
+  "agentToolCall": "Using {toolName}",
   "@agentToolCall": {
     "placeholders": {
       "toolName": {
