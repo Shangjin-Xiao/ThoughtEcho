@@ -530,9 +530,12 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
             onTap: () => settings.setOfflineQuoteSource(value),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              // ignore: deprecated_member_use
               child: RadioListTile<String>(
                 value: value,
+                // ignore: deprecated_member_use
                 groupValue: settings.offlineQuoteSource,
+                // ignore: deprecated_member_use
                 onChanged: (selectedValue) {
                   if (selectedValue != null) {
                     settings.setOfflineQuoteSource(selectedValue);

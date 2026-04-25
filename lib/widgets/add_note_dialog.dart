@@ -1410,11 +1410,17 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   Future<void> _saveAndExit() async {
     // 如果内容为空，直接返回
     if (_contentController.text.isEmpty) {
-      if (context.mounted) {
+      if (mounted) {
         Navigator.pop(context);
       }
       return;
     }
+
+    // Capture context variables before any async operations
+    final db = Provider.of<DatabaseService>(context, listen: false);
+    final l10n = AppLocalizations.of(context);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
 
     await _waitForPendingHitokotoTagTask();
 
@@ -1476,13 +1482,10 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     );
 
     try {
-      final db = Provider.of<DatabaseService>(context, listen: false);
-      final l10n = AppLocalizations.of(context);
-
       if (widget.initialQuote != null) {
         await db.updateQuote(quote);
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        if (!mounted) return;
+        scaffoldMessenger.showSnackBar(
           SnackBar(
             content: Text(l10n.noteUpdated),
             duration: AppConstants.snackBarDurationImportant,
@@ -1490,8 +1493,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         );
       } else {
         await db.addQuote(quote);
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
+        if (!mounted) return;
+        scaffoldMessenger.showSnackBar(
           SnackBar(
             content: Text(l10n.noteSaved),
             duration: AppConstants.snackBarDurationImportant,
@@ -1505,15 +1508,15 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       }
 
       // 关闭对话框
-      if (context.mounted) {
-        Navigator.pop(context);
+      if (mounted) {
+        navigator.pop();
       }
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+      if (mounted) {
+        scaffoldMessenger.showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context).saveFailedWithError(e.toString()),
+              l10n.saveFailedWithError(e.toString()),
             ),
             duration: AppConstants.snackBarDurationError,
             backgroundColor: Colors.red,
@@ -2179,6 +2182,14 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                         ? null
                         : () async {
                             if (_contentController.text.isNotEmpty) {
+                              final db = Provider.of<DatabaseService>(
+                                context,
+                                listen: false,
+                              );
+                              final l10n = AppLocalizations.of(context);
+                              final scaffoldMessenger = ScaffoldMessenger.of(context);
+                              final navigator = Navigator.of(context);
+
                               await _waitForPendingHitokotoTagTask();
 
                               // 获取当前时间段
@@ -2255,21 +2266,13 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                               );
 
                               try {
-                                final db = Provider.of<DatabaseService>(
-                                  context,
-                                  listen: false,
-                                );
-
                                 if (widget.initialQuote != null) {
                                   // 更新已有笔记
                                   await db.updateQuote(quote);
-                                  if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  if (!mounted) return;
+                                  scaffoldMessenger.showSnackBar(
                                     SnackBar(
-                                      content: Text(
-                                        AppLocalizations.of(context)
-                                            .noteUpdated,
-                                      ),
+                                      content: Text(l10n.noteUpdated),
                                       duration: AppConstants
                                           .snackBarDurationImportant,
                                     ),
@@ -2277,12 +2280,10 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                 } else {
                                   // 添加新笔记
                                   await db.addQuote(quote);
-                                  if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  if (!mounted) return;
+                                  scaffoldMessenger.showSnackBar(
                                     SnackBar(
-                                      content: Text(
-                                        AppLocalizations.of(context).noteSaved,
-                                      ),
+                                      content: Text(l10n.noteSaved),
                                       duration: AppConstants
                                           .snackBarDurationImportant,
                                     ),
@@ -2300,17 +2301,15 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                 }
 
                                 // 关闭对话框
-                                if (this.context.mounted) {
-                                  Navigator.of(context).pop();
+                                if (mounted) {
+                                  navigator.pop();
                                 }
                               } catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                if (mounted) {
+                                  scaffoldMessenger.showSnackBar(
                                     SnackBar(
                                       content: Text(
-                                        AppLocalizations.of(
-                                          context,
-                                        ).saveFailedWithError(e.toString()),
+                                        l10n.saveFailedWithError(e.toString()),
                                       ),
                                       duration:
                                           AppConstants.snackBarDurationError,
