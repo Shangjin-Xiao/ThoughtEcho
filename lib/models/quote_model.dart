@@ -335,10 +335,12 @@ class Quote {
     Object? isDeleted = _noValue,
     Object? deletedAt = _noValue,
   }) {
-    final nextIsDeleted =
-        identical(isDeleted, _noValue) ? this.isDeleted : isDeleted as bool;
-    final nextDeletedAt =
-        identical(deletedAt, _noValue) ? this.deletedAt : deletedAt as String?;
+    final nextIsDeleted = identical(isDeleted, _noValue)
+        ? this.isDeleted
+        : (isDeleted is bool ? isDeleted : this.isDeleted);
+    final nextDeletedAt = identical(deletedAt, _noValue)
+        ? this.deletedAt
+        : (deletedAt as String?);
 
     return Quote(
       id: id ?? this.id,
