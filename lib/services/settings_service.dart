@@ -13,6 +13,9 @@ import '../utils/lww_utils.dart';
 import '../services/mmkv_service.dart';
 import 'excerpt_intent_service.dart';
 
+part 'settings/settings_service_app.dart';
+part 'settings/settings_service_migration.dart';
+
 class SettingsService extends ChangeNotifier {
   static const ExcerptIntentService _excerptIntentService =
       ExcerptIntentService();
@@ -54,22 +57,6 @@ class SettingsService extends ChangeNotifier {
   bool get syncSkipConfirm => _mmkv.getBool(_syncSkipConfirmKey) ?? false;
   bool get syncDefaultIncludeMedia =>
       _mmkv.getBool(_syncDefaultIncludeMediaKey) ?? true;
-
-  // 周期报告洞察是否使用AI（流式）
-  bool get reportInsightsUseAI => _appSettings.reportInsightsUseAI;
-  Future<void> setReportInsightsUseAI(bool enabled) async {
-    _appSettings = _appSettings.copyWith(reportInsightsUseAI: enabled);
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
-  }
-
-  // 今日思考是否使用AI（默认开启）
-  bool get todayThoughtsUseAI => _appSettings.todayThoughtsUseAI;
-  Future<void> setTodayThoughtsUseAI(bool enabled) async {
-    _appSettings = _appSettings.copyWith(todayThoughtsUseAI: enabled);
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
-  }
 
   int get trashRetentionDays => _appSettings.trashRetentionDays;
   String? get trashRetentionLastModified =>
@@ -162,178 +149,6 @@ class SettingsService extends ChangeNotifier {
     return true;
   }
 
-  // 折叠时优先显示加粗内容
-  bool get prioritizeBoldContentInCollapse =>
-      _appSettings.prioritizeBoldContentInCollapse;
-  Future<void> setPrioritizeBoldContentInCollapse(bool enabled) async {
-    _appSettings = _appSettings.copyWith(
-      prioritizeBoldContentInCollapse: enabled,
-    );
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
-  }
-
-  // 是否显示心形按钮
-  bool get showFavoriteButton => _appSettings.showFavoriteButton;
-  Future<void> setShowFavoriteButton(bool enabled) async {
-    _appSettings = _appSettings.copyWith(showFavoriteButton: enabled);
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
-  }
-
-  // 是否仅使用本地笔记作为一言
-  bool get useLocalQuotesOnly => _appSettings.useLocalQuotesOnly;
-  Future<void> setUseLocalQuotesOnly(bool enabled) async {
-    _appSettings = _appSettings.copyWith(useLocalQuotesOnly: enabled);
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
-  }
-
-  // 无网/离线时的一言回退数据源
-  String get offlineQuoteSource => _appSettings.offlineQuoteSource;
-  Future<void> setOfflineQuoteSource(String source) async {
-    _appSettings = _appSettings.copyWith(offlineQuoteSource: source);
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
-  }
-
-  // 是否显示精确时间（时:分）
-  bool get showExactTime => _appSettings.showExactTime;
-  Future<void> setShowExactTime(bool enabled) async {
-    _appSettings = _appSettings.copyWith(showExactTime: enabled);
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
-  }
-
-  // 开发者模式：首次打开后首次滑动卡顿监测开关
-  bool get enableFirstOpenScrollPerfMonitor =>
-      _appSettings.enableFirstOpenScrollPerfMonitor;
-  Future<void> setEnableFirstOpenScrollPerfMonitor(bool enabled) async {
-    _appSettings =
-        _appSettings.copyWith(enableFirstOpenScrollPerfMonitor: enabled);
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
-  }
-
-  // 语言设置：获取当前语言代码（null 表示跟随系统）
-  String? get localeCode => _appSettings.localeCode;
-
-  /// 设置语言代码，null 表示跟随系统
-  Future<void> setLocale(String? localeCode) async {
-    if (localeCode == null) {
-      _appSettings = _appSettings.copyWith(clearLocale: true);
-    } else {
-      _appSettings = _appSettings.copyWith(localeCode: localeCode);
-    }
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
-  }
-
-  // 隐藏笔记功能设置
-  bool get enableHiddenNotes => _appSettings.enableHiddenNotes;
-  Future<void> setEnableHiddenNotes(bool enabled) async {
-    _appSettings = _appSettings.copyWith(enableHiddenNotes: enabled);
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
-  }
-
-  // 访问隐藏笔记是否需要生物识别验证
-  bool get requireBiometricForHidden => _appSettings.requireBiometricForHidden;
-  Future<void> setRequireBiometricForHidden(bool enabled) async {
-    _appSettings = _appSettings.copyWith(requireBiometricForHidden: enabled);
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
-  }
-
-  // 添加笔记时自动勾选位置
-  bool get autoAttachLocation => _appSettings.autoAttachLocation;
-  Future<void> setAutoAttachLocation(bool enabled) async {
-    _appSettings = _appSettings.copyWith(autoAttachLocation: enabled);
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
-  }
-
-  // 添加笔记时自动勾选天气
-  bool get autoAttachWeather => _appSettings.autoAttachWeather;
-  Future<void> setAutoAttachWeather(bool enabled) async {
-    _appSettings = _appSettings.copyWith(autoAttachWeather: enabled);
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
-  }
-
-  // 是否启用从外部文本摘录到应用
-  bool get excerptIntentEnabled => _appSettings.excerptIntentEnabled;
-  Future<void> setExcerptIntentEnabled(bool enabled) async {
-    _appSettings = _appSettings.copyWith(excerptIntentEnabled: enabled);
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    await _syncExcerptIntentEntryPoint();
-    notifyListeners();
-  }
-
-  // 默认作者（自动填充）
-  String? get defaultAuthor => _appSettings.defaultAuthor;
-  Future<void> setDefaultAuthor(String? author) async {
-    if (author == null || author.isEmpty) {
-      _appSettings = _appSettings.copyWith(clearDefaultAuthor: true);
-    } else {
-      _appSettings = _appSettings.copyWith(defaultAuthor: author);
-    }
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
-  }
-
-  // 默认出处（自动填充）
-  String? get defaultSource => _appSettings.defaultSource;
-  Future<void> setDefaultSource(String? source) async {
-    if (source == null || source.isEmpty) {
-      _appSettings = _appSettings.copyWith(clearDefaultSource: true);
-    } else {
-      _appSettings = _appSettings.copyWith(defaultSource: source);
-    }
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
-  }
-
-  // 默认标签 ID 列表（自动填充）
-  List<String> get defaultTagIds => _appSettings.defaultTagIds;
-  Future<void> setDefaultTagIds(List<String> tagIds) async {
-    _appSettings = _appSettings.copyWith(defaultTagIds: tagIds);
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
-  }
-
-  // 一周年庆典动画是否已显示过
-  bool get anniversaryShown => _appSettings.anniversaryShown;
-  Future<void> setAnniversaryShown(bool shown) async {
-    _appSettings = _appSettings.copyWith(anniversaryShown: shown);
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
-  }
-
-  // 一周年庆典动画是否启用（开发者模式控制）
-  bool get anniversaryAnimationEnabled =>
-      _appSettings.anniversaryAnimationEnabled;
-  Future<void> setAnniversaryAnimationEnabled(bool enabled) async {
-    _appSettings = _appSettings.copyWith(anniversaryAnimationEnabled: enabled);
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
-  }
-
-  /// 重置一周年动画已显示标记（开发者模式使用）
-  Future<void> resetAnniversaryShown() async {
-    _appSettings = _appSettings.copyWith(anniversaryShown: false);
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
-  }
-
-  // 跳过非全屏编辑器，直接进入全屏编辑器
-  bool get skipNonFullscreenEditor => _appSettings.skipNonFullscreenEditor;
-  Future<void> setSkipNonFullscreenEditor(bool enabled) async {
-    _appSettings = _appSettings.copyWith(skipNonFullscreenEditor: enabled);
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
-  }
-
   SettingsService(this._prefs);
 
   /// 创建SettingsService实例的静态工厂方法
@@ -412,16 +227,6 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _syncExcerptIntentEntryPoint() async {
-    if (kIsWeb) {
-      return;
-    }
-
-    await _excerptIntentService.syncEntryPointEnabled(
-      _appSettings.excerptIntentEnabled,
-    );
-  }
-
   // 加载AI设置（简化版，主要用于向后兼容）
   Future<void> _loadAISettings() async {
     final String? aiSettingsJson =
@@ -433,74 +238,6 @@ class SettingsService extends ChangeNotifier {
     } else {
       _aiSettings = AISettings.defaultSettings();
       await _mmkv.setString(_aiSettingsKey, json.encode(_aiSettings.toJson()));
-    }
-  }
-
-  /// 修复：加载应用设置，增加数据验证和迁移安全性
-  void _loadAppSettings() {
-    try {
-      final String? appSettingsJson =
-          _mmkv.getString(_appSettingsKey) ?? _prefs.getString(_appSettingsKey);
-
-      if (appSettingsJson != null) {
-        try {
-          final jsonData = json.decode(appSettingsJson);
-          _appSettings = AppSettings.fromJson(jsonData);
-
-          // 验证设置的完整性
-          if (!_validateAppSettings(_appSettings)) {
-            logDebug('应用设置验证失败，重置为默认设置');
-            _appSettings = AppSettings.defaultSettings();
-            _saveAppSettings();
-          } else {
-            // 确保一言类型不为空，如果为空则设置为默认全选
-            if (_appSettings.hitokotoType.isEmpty) {
-              _appSettings = AppSettings.defaultSettings();
-              _saveAppSettings();
-              logDebug('检测到一言类型为空，已重置为默认全选值');
-            }
-          }
-        } catch (e) {
-          logDebug('解析应用设置JSON失败: $e，使用默认设置');
-          _appSettings = AppSettings.defaultSettings();
-          _saveAppSettings();
-        }
-      } else {
-        _appSettings = AppSettings.defaultSettings();
-        _saveAppSettings();
-        logDebug('首次启动，已初始化默认一言类型设置: ${_appSettings.hitokotoType}');
-      }
-    } catch (e) {
-      logDebug('加载应用设置失败: $e，使用默认设置');
-      _appSettings = AppSettings.defaultSettings();
-    }
-  }
-
-  /// 修复：验证应用设置的完整性
-  bool _validateAppSettings(AppSettings settings) {
-    try {
-      // 验证必要字段
-      if (settings.hitokotoType.isEmpty) return false;
-
-      // 验证默认起始页面值
-      if (settings.defaultStartPage < 0 || settings.defaultStartPage > 2) {
-        return false;
-      }
-
-      // 验证其他关键设置
-      return true;
-    } catch (e) {
-      logDebug('验证应用设置时出错: $e');
-      return false;
-    }
-  }
-
-  /// 修复：安全保存应用设置
-  void _saveAppSettings() {
-    try {
-      _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    } catch (e) {
-      logDebug('保存应用设置失败: $e');
     }
   }
 
@@ -526,58 +263,6 @@ class SettingsService extends ChangeNotifier {
     }
   }
 
-  // 将数据从SharedPreferences迁移到MMKV (只在首次升级后执行一次)
-  Future<void> _migrateDataIfNeeded() async {
-    // 检查是否已经完成迁移
-    if (_mmkv.getBool(_migrationCompleteKey) == true) {
-      logDebug('数据迁移已完成，不再重复执行');
-      return;
-    }
-
-    logDebug('开始从SharedPreferences迁移数据到MMKV...');
-
-    try {
-      // 迁移AI设置
-      final aiSettings = _prefs.getString(_aiSettingsKey);
-      if (aiSettings != null) {
-        await _mmkv.setString(_aiSettingsKey, aiSettings);
-        logDebug('AI设置已迁移到MMKV');
-      }
-
-      // 迁移应用设置
-      final appSettings = _prefs.getString(_appSettingsKey);
-      if (appSettings != null) {
-        await _mmkv.setString(_appSettingsKey, appSettings);
-        logDebug('应用设置已迁移到MMKV');
-      }
-
-      // 迁移主题设置
-      final themeMode = _prefs.getString(_themeModeKey);
-      if (themeMode != null) {
-        await _mmkv.setString(_themeModeKey, themeMode);
-        logDebug('主题设置已迁移到MMKV');
-      }
-
-      // 检查旧的数据库迁移Key，如果存在且为true，则设置新的Key，但保留旧Key以保持兼容性
-      if (_mmkv.containsKey(_databaseMigrationCompleteKey)) {
-        final oldMigrationComplete =
-            _mmkv.getBool(_databaseMigrationCompleteKey) ?? false;
-        if (oldMigrationComplete) {
-          await _mmkv.setBool(_initialDatabaseSetupCompleteKey, true);
-          logDebug('已将旧的数据库迁移完成标记同步到新的初始设置完成标记');
-        }
-        // 注意：保留旧Key以保持兼容性，不移除
-      }
-
-      // 标记迁移完成
-      await _mmkv.setBool(_migrationCompleteKey, true);
-      logDebug('所有设置数据已成功迁移到MMKV');
-    } catch (e) {
-      logDebug('迁移数据失败: $e');
-      // 失败不阻塞应用运行，下次启动会重试
-    }
-  }
-
   Future<void> updateAISettings(AISettings settings) async {
     // Security: Ensure we don't persist API key in plaintext in legacy AISettings
     if (settings.apiKey.isNotEmpty) {
@@ -589,84 +274,10 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateAppSettings(AppSettings settings) async {
-    _appSettings = settings;
-    await _mmkv.setString(_appSettingsKey, json.encode(settings.toJson()));
-    notifyListeners();
-  }
-
-  Future<void> updateHitokotoType(String type) async {
-    _appSettings = _appSettings.copyWith(hitokotoType: type);
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
-  }
-
   Future<void> updateThemeMode(ThemeMode mode) async {
     _themeMode = mode;
     await _mmkv.setString(_themeModeKey, mode.name);
     notifyListeners();
-  }
-
-  // 设置应用升级标记，用于触发显示引导页
-  Future<void> setAppUpgraded() async {
-    await _mmkv.setBool(_appUpgradedKey, true);
-  }
-
-  /// 设置初始数据库设置（创建/升级）已完成
-  Future<void> setInitialDatabaseSetupComplete(bool isComplete) async {
-    await _mmkv.setBool(_initialDatabaseSetupCompleteKey, isComplete);
-    logDebug('初始数据库设置完成状态设置为: $isComplete');
-    // notifyListeners(); // 根据需要决定是否通知监听器
-  }
-
-  /// 检查初始数据库设置（创建/升级）是否已完成
-  bool isInitialDatabaseSetupComplete() {
-    // 默认返回 false，确保只有显式设置后才为 true
-    return _mmkv.getBool(_initialDatabaseSetupCompleteKey) ?? false;
-  }
-
-  // 设置数据库迁移是否完成
-  Future<void> setDatabaseMigrationComplete(bool isComplete) async {
-    await _mmkv.setBool(_databaseMigrationCompleteKey, isComplete);
-  }
-
-  // 检查数据库迁移是否已完成
-  bool isDatabaseMigrationComplete() {
-    return _mmkv.getBool(_databaseMigrationCompleteKey) ?? false;
-  }
-
-  // 通过检查应用设置中的引导完成标志判断用户是否完成了引导
-  bool hasCompletedOnboarding() {
-    return _appSettings.hasCompletedOnboarding;
-  }
-
-  // 设置用户是否完成了引导流程
-  Future<void> setHasCompletedOnboarding(bool completed) async {
-    _appSettings = _appSettings.copyWith(hasCompletedOnboarding: completed);
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
-  }
-
-  // 获取AI卡片生成功能是否启用
-  bool get aiCardGenerationEnabled {
-    return _appSettings.aiCardGenerationEnabled;
-  }
-
-  // 设置AI卡片生成功能是否启用
-  Future<void> setAICardGenerationEnabled(bool enabled) async {
-    _appSettings = _appSettings.copyWith(aiCardGenerationEnabled: enabled);
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
-  }
-
-  /// 获取上次记录的版本号
-  String? getAppVersion() {
-    return _mmkv.getString(_lastVersionKey);
-  }
-
-  /// 设置当前版本号
-  Future<void> setAppVersion(String version) async {
-    await _mmkv.setString(_lastVersionKey, version);
   }
 
   // 加载多provider AI设置
@@ -736,152 +347,5 @@ class SettingsService extends ChangeNotifier {
   /// 更新本地AI设置
   Future<void> updateLocalAISettings(LocalAISettings settings) async {
     await saveLocalAISettings(settings);
-  }
-
-  /// 获取所有设置数据用于备份
-  Map<String, dynamic> getAllSettingsForBackup() {
-    return {
-      'ai_settings': _aiSettings.toJson(),
-      'multi_ai_settings': _multiAISettings.toJson(),
-      'local_ai_settings': _localAISettings.toJson(),
-      'app_settings': _appSettings.toJson(),
-      'theme_mode': _themeMode.index,
-      'device_id': getOrCreateDeviceId(),
-    };
-  }
-
-  /// 从备份数据恢复所有设置
-  Future<void> restoreAllSettingsFromBackup(
-    Map<String, dynamic> backupData,
-  ) async {
-    try {
-      // 恢复AI设置
-      if (backupData.containsKey('ai_settings')) {
-        final aiSettingsJson =
-            backupData['ai_settings'] as Map<String, dynamic>;
-        final aiSettings = AISettings.fromJson(aiSettingsJson);
-        await updateAISettings(aiSettings);
-      }
-
-      // 恢复多provider AI设置
-      if (backupData.containsKey('multi_ai_settings')) {
-        final multiAiSettingsJson =
-            backupData['multi_ai_settings'] as Map<String, dynamic>;
-        final multiAiSettings = MultiAISettings.fromJson(multiAiSettingsJson);
-        await saveMultiAISettings(multiAiSettings);
-      }
-
-      // 恢复本地AI设置
-      if (backupData.containsKey('local_ai_settings')) {
-        final localAiSettingsJson =
-            backupData['local_ai_settings'] as Map<String, dynamic>;
-        final localAiSettings = LocalAISettings.fromJson(localAiSettingsJson);
-        await saveLocalAISettings(localAiSettings);
-      }
-
-      // 恢复应用设置
-      if (backupData.containsKey('app_settings')) {
-        final appSettingsJson =
-            backupData['app_settings'] as Map<String, dynamic>;
-        final appSettings = AppSettings.fromJson(appSettingsJson);
-        await updateAppSettings(appSettings);
-      }
-
-      // 恢复主题模式
-      if (backupData.containsKey('theme_mode')) {
-        final themeModeIndex = backupData['theme_mode'] as int;
-        final themeMode = ThemeMode.values[themeModeIndex];
-        await updateThemeMode(themeMode);
-      }
-
-      // 恢复/记录 device_id（不覆盖本地已有，仅在本地不存在时写入，保持源ID可用于审计）
-      if (backupData.containsKey('device_id')) {
-        final remoteId = backupData['device_id'];
-        if ((_mmkv.getString(_deviceIdKey) ?? '').isEmpty &&
-            remoteId is String &&
-            remoteId.isNotEmpty) {
-          await _mmkv.setString(_deviceIdKey, remoteId);
-        }
-      }
-
-      logDebug('设置数据恢复完成');
-    } catch (e) {
-      AppLogger.e('设置数据恢复失败', error: e, source: 'SettingsService');
-      rethrow;
-    }
-  }
-
-  /// 获取或生成设备唯一ID（持久化）
-  String getOrCreateDeviceId() {
-    final existing = _mmkv.getString(_deviceIdKey);
-    if (existing != null && existing.isNotEmpty) return existing;
-    final newId =
-        '${DateTime.now().millisecondsSinceEpoch}_${UniqueKey().hashCode.toRadixString(16)}';
-    _mmkv.setString(_deviceIdKey, newId);
-    return newId;
-  }
-
-  /// 获取自定义字符串设置
-  Future<String?> getCustomString(String key) async {
-    await _mmkv.init();
-    return _mmkv.getString(key);
-  }
-
-  /// 设置自定义字符串设置
-  Future<void> setCustomString(String key, String value) async {
-    await _mmkv.init();
-    await _mmkv.setString(key, value);
-  }
-
-  /// 迁移遗留的明文API密钥到安全存储
-  Future<void> _secureLegacyApiKey() async {
-    if (_aiSettings.apiKey.isEmpty) return;
-
-    bool shouldClear = false;
-
-    // 如果我们有当前选中的服务商
-    if (_multiAISettings.currentProviderId != null) {
-      final apiKeyManager = APIKeyManager();
-      final providerId = _multiAISettings.currentProviderId!;
-
-      try {
-        // 检查安全存储中是否已有密钥
-        final hasSecureKey = await apiKeyManager.hasValidProviderApiKey(
-          providerId,
-        );
-
-        if (hasSecureKey) {
-          // 安全存储中已有密钥，遗留的明文密钥是冗余的，可以直接清除
-          shouldClear = true;
-          logDebug(
-              'Found redundant plaintext API key in AISettings. Clearing.');
-        } else {
-          // 安全存储中没有密钥，尝试迁移
-          await apiKeyManager.saveProviderApiKey(
-            providerId,
-            _aiSettings.apiKey,
-          );
-          shouldClear = true;
-          logDebug(
-            'Migrated legacy plaintext API key to SecureStorage for provider: $providerId',
-          );
-        }
-      } catch (e) {
-        logDebug('Error securing legacy API key: $e');
-        // 出错时不清除，避免数据丢失
-      }
-    } else {
-      // 如果没有选中的服务商，暂时不清除，因为无法确定归属
-      // 但这种情况很少见，因为通常会有默认或已配置的服务商
-      logDebug(
-        'Legacy API key found but no current provider selected. Skipping migration.',
-      );
-    }
-
-    if (shouldClear) {
-      _aiSettings = _aiSettings.copyWith(apiKey: '');
-      await _mmkv.setString(_aiSettingsKey, json.encode(_aiSettings.toJson()));
-      logDebug('Legacy plaintext API key cleared from AISettings.');
-    }
   }
 }
