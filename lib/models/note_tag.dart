@@ -38,12 +38,8 @@ class NoteTag {
     final id = map['id'] as String?;
     final name = map['name'] as String?;
 
-    if (id == null || id.isEmpty) {
-      throw ArgumentError('Tag ID is missing or empty in the map.');
-    }
-    if (name == null || name.isEmpty) {
-      throw ArgumentError('Tag name is missing or empty in the map.');
-    }
+    final resolvedId = id ?? '';
+    final resolvedName = name ?? '';
 
     return NoteTag(
       id: id,
