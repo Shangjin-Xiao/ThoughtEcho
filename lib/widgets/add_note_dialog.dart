@@ -36,6 +36,10 @@ class AddNoteDialog extends StatefulWidget {
   final List<String>? prefilledTagIds; // AI 建议的预选标签
   final bool prefilledIncludeLocation; // AI 建议是否包含位置
   final bool prefilledIncludeWeather; // AI 建议是否包含天气
+  /// 当为 true 时，使用 [prefilledIncludeLocation]/[prefilledIncludeWeather]
+  /// 作为位置/天气勾选状态，并跳过读取 SettingsService 的自动附加偏好，
+  /// 让用户在 AI 智能卡片上的选择真正生效。
+  final bool useAIPrefilledLocationWeather;
 
   const AddNoteDialog({
     super.key,
@@ -49,6 +53,7 @@ class AddNoteDialog extends StatefulWidget {
     this.prefilledTagIds,
     this.prefilledIncludeLocation = false,
     this.prefilledIncludeWeather = false,
+    this.useAIPrefilledLocationWeather = false,
   });
 
   @override
@@ -224,59 +229,86 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
         // 新建笔记时，读取用户偏好并自动勾选位置/天气
         if (widget.initialQuote == null) {
-          final settingsService = _readServiceOrNull<SettingsService>(context);
-          if (settingsService != null) {
-            final autoLocation = settingsService.autoAttachLocation;
-            final autoWeather = settingsService.autoAttachWeather;
-
-            if (autoLocation || autoWeather) {
+          // AI 智能卡片路径：尊重用户在卡片上对位置/天气 chip 的选择，
+          // 跳过 SettingsService 的自动附加偏好，避免偏好覆盖用户意图。
+          if (widget.useAIPrefilledLocationWeather) {
+            final wantLocation = widget.prefilledIncludeLocation;
+            final wantWeather = widget.prefilledIncludeWeather;
+            if (wantLocation || wantWeather) {
               if (mounted) {
                 setState(() {
-                  if (autoLocation) {
-                    _includeLocation = true;
-                  }
-                  if (autoWeather) {
-                    _includeWeather = true;
-                  }
+                  _includeLocation = wantLocation;
+                  _includeWeather = wantWeather;
                 });
               }
-
-              // 如果自动勾选了位置，获取位置；天气需要位置坐标，所以在位置获取后处理
-              if (autoLocation) {
+              if (wantLocation) {
                 await _fetchLocationForNewNote();
-                // 位置获取后再获取天气
-                if (autoWeather &&
+                if (wantWeather &&
                     _includeLocation &&
                     (_newLatitude != null ||
                         _cachedLocationService?.currentPosition != null)) {
                   _fetchWeatherForNewNote();
-                } else if (autoWeather && !_includeLocation) {
-                  // 位置获取失败，天气也无法获取，取消天气选中并提示
-                  if (mounted) {
-                    setState(() {
-                      _includeWeather = false;
-                    });
-                    if (context.mounted) {
-                      final l10n = AppLocalizations.of(context);
-                      showDialog(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: Text(l10n.weatherFetchFailedTitle),
-                          content: Text(l10n.locationAndWeatherUnavailable),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: Text(l10n.iKnow),
-                            ),
-                          ],
-                        ),
-                      );
+                }
+              } else if (wantWeather) {
+                _fetchWeatherForNewNote();
+              }
+            }
+          } else {
+            final settingsService =
+                _readServiceOrNull<SettingsService>(context);
+            if (settingsService != null) {
+              final autoLocation = settingsService.autoAttachLocation;
+              final autoWeather = settingsService.autoAttachWeather;
+
+              if (autoLocation || autoWeather) {
+                if (mounted) {
+                  setState(() {
+                    if (autoLocation) {
+                      _includeLocation = true;
+                    }
+                    if (autoWeather) {
+                      _includeWeather = true;
+                    }
+                  });
+                }
+
+                // 如果自动勾选了位置，获取位置；天气需要位置坐标，所以在位置获取后处理
+                if (autoLocation) {
+                  await _fetchLocationForNewNote();
+                  // 位置获取后再获取天气
+                  if (autoWeather &&
+                      _includeLocation &&
+                      (_newLatitude != null ||
+                          _cachedLocationService?.currentPosition != null)) {
+                    _fetchWeatherForNewNote();
+                  } else if (autoWeather && !_includeLocation) {
+                    // 位置获取失败，天气也无法获取，取消天气选中并提示
+                    if (mounted) {
+                      setState(() {
+                        _includeWeather = false;
+                      });
+                      if (context.mounted) {
+                        final l10n = AppLocalizations.of(context);
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: Text(l10n.weatherFetchFailedTitle),
+                            content: Text(l10n.locationAndWeatherUnavailable),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx),
+                                child: Text(l10n.iKnow),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
                     }
                   }
+                } else if (autoWeather) {
+                  // 没有勾选位置但勾选了天气，尝试用缓存的位置获取天气
+                  _fetchWeatherForNewNote();
                 }
-              } else if (autoWeather) {
-                // 没有勾选位置但勾选了天气，尝试用缓存的位置获取天气
-                _fetchWeatherForNewNote();
               }
             }
           }

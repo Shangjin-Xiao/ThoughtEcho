@@ -83,7 +83,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           Expanded(
             child: NotificationListener<ScrollUpdateNotification>(
               onNotification: (notification) {
-                if (notification.dragDetails != null && notification.scrollDelta != null) {
+                if (notification.dragDetails != null &&
+                    notification.scrollDelta != null) {
                   if (_inputFocusNode.hasFocus) {
                     _inputFocusNode.unfocus();
                   }
@@ -301,7 +302,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     final agentBubbleColor = theme.colorScheme.surfaceContainerHigh;
     final bubbleColor = isUser ? userBubbleColor : agentBubbleColor;
 
-    final bubbleTextColor = isUser ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface;
+    final bubbleTextColor =
+        isUser ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface;
 
     final bubbleRadius = const Radius.circular(24);
     final borderRadius = BorderRadius.only(
@@ -516,7 +518,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                       final file = _selectedMediaFiles[index];
                       final isImage = ['jpg', 'jpeg', 'png', 'webp', 'gif']
                           .contains(file.extension?.toLowerCase());
-                      
+
                       return Padding(
                         padding: const EdgeInsets.only(right: 12),
                         child: Stack(
@@ -525,7 +527,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                               width: 60,
                               height: 60,
                               decoration: BoxDecoration(
-                                color: theme.colorScheme.surfaceContainerHighest,
+                                color:
+                                    theme.colorScheme.surfaceContainerHighest,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
                                   color: theme.colorScheme.outlineVariant,
@@ -540,7 +543,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                                         fit: BoxFit.cover,
                                         errorBuilder: (_, __, ___) => Icon(
                                           Icons.image_not_supported_outlined,
-                                          color: theme.colorScheme.onSurfaceVariant,
+                                          color: theme
+                                              .colorScheme.onSurfaceVariant,
                                         ),
                                       ),
                                     )
@@ -780,6 +784,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           prefilledTagIds: tagIds,
           prefilledIncludeLocation: includeLocation,
           prefilledIncludeWeather: includeWeather,
+          useAIPrefilledLocationWeather: true,
           tags: tags,
           onSave: (_) {},
         ),
