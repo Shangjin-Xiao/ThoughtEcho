@@ -309,7 +309,7 @@ class Quote {
         : (isDeleted is bool ? isDeleted : this.isDeleted);
     final nextDeletedAt = identical(deletedAt, _noValue)
         ? this.deletedAt
-        : (deletedAt as String?);
+        : (deletedAt is String? ? deletedAt : this.deletedAt);
 
     return Quote(
       id: id ?? this.id,
