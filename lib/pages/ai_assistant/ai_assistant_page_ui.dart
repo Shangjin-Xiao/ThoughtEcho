@@ -741,6 +741,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     if (noteId != null && noteId.isNotEmpty) {
       final db = context.read<DatabaseService>();
       final note = await db.getQuoteById(noteId);
+      final tags = await db.getCategories();
       if (!mounted) {
         return;
       }
@@ -751,6 +752,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
             builder: (_) => NoteFullEditorPage(
               initialContent: content,
               initialQuote: note,
+              allTags: tags,
             ),
           ),
         );
@@ -792,8 +794,10 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       return;
     }
 
+    final db = context.read<DatabaseService>();
     final locationService = context.read<LocationService>();
     final weatherService = context.read<WeatherService>();
+    final tags = await db.getCategories();
     final position = locationService.currentPosition;
 
     Quote? initialQuote;
@@ -818,12 +822,14 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       );
     }
 
+    if (!mounted) return;
     await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => NoteFullEditorPage(
           initialContent: content,
           initialQuote: initialQuote,
+          allTags: tags,
         ),
       ),
     );

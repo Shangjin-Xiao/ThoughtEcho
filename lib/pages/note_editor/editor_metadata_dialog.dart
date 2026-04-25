@@ -294,7 +294,8 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                       builder: (context) {
                                         // 过滤标签
                                         final filteredTags =
-                                            widget.allTags!.where((tag) {
+                                            (widget.allTags ?? [])
+                                                .where((tag) {
                                           return _tagSearchQuery.isEmpty ||
                                               tag.name.toLowerCase().contains(
                                                     _tagSearchQuery,
@@ -378,7 +379,8 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                     spacing: 8.0,
                                     runSpacing: 4.0,
                                     children: _selectedTagIds.map((tagId) {
-                                      final tag = widget.allTags!.firstWhere(
+                                      final tag =
+                                          (widget.allTags ?? []).firstWhere(
                                         (t) => t.id == tagId,
                                         orElse: () => NoteCategory(
                                           id: tagId,
