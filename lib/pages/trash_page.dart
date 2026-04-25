@@ -12,11 +12,8 @@ import '../utils/app_logger.dart';
 import '../utils/time_utils.dart';
 import '../widgets/trash_quote_card.dart';
 
-part 'trash/data_loading.dart';
-part 'trash/formatters.dart';
-part 'trash/retention_selector.dart';
-part 'trash/actions.dart';
-part 'trash/ui_builders.dart';
+part 'trash/trash_actions.dart';
+part 'trash/trash_ui.dart';
 
 class TrashPage extends StatefulWidget {
   const TrashPage({super.key});
@@ -72,6 +69,7 @@ class _TrashPageState extends State<TrashPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final retentionDays = context.watch<SettingsService>().trashRetentionDays;
 
     return Scaffold(
       appBar: AppBar(
@@ -92,7 +90,119 @@ class _TrashPageState extends State<TrashPage> {
           ),
         ],
       ),
-      body: buildMainContent(context),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _loadError
+              ? Column(
+                  children: [
+                    buildSummaryCard(context),
+                    Expanded(
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.error_outline, size: 42),
+                              const SizedBox(height: 12),
+                              Text(
+                                l10n.refreshFailed(
+                                    _lastLoadErrorMessage ?? '-'),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 12),
+                              FilledButton(
+                                onPressed: () => loadTrashQuotes(reset: true),
+                                child: Text(l10n.retry),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                )
+              : _trashQuotes.isEmpty
+                  ? Column(
+                      children: [
+                        buildSummaryCard(context),
+                        Expanded(
+                          child: Center(
+                            child: Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 24),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.delete_outline, size: 42),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    l10n.trashEmpty,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    l10n.trashEmptyHint,
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : Column(
+                      children: [
+                        buildSummaryCard(context),
+                        Expanded(
+                          child: RefreshIndicator(
+                            onRefresh: () => loadTrashQuotes(reset: true),
+                            child: ListView.builder(
+                              controller: _scrollController,
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              itemCount: _trashQuotes.length +
+                                  (_isLoadingMore ? 1 : 0),
+                              itemBuilder: (context, index) {
+                                if (index >= _trashQuotes.length) {
+                                  return const Padding(
+                                    padding: EdgeInsets.symmetric(vertical: 16),
+                                    child: Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                  );
+                                }
+                                final quote = _trashQuotes[index];
+                                final id = quote.id;
+                                return TrashQuoteCard(
+                                  quote: quote,
+                                  deletedAtText: deletedAtText(context, quote),
+                                  remainingDaysText: remainingDaysText(
+                                    context,
+                                    quote,
+                                    retentionDays,
+                                  ),
+                                  actionsEnabled: !_isRunningAction &&
+                                      !_isLoadingMore &&
+                                      !_isLoading,
+                                  onActionSelected: id == null
+                                      ? null
+                                      : (action) {
+                                          if (action ==
+                                              TrashQuoteCardAction.restore) {
+                                            restoreQuote(id);
+                                            return;
+                                          }
+                                          permanentlyDelete(id);
+                                        },
+                                  tagMap: _tagMap,
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
     );
   }
 }

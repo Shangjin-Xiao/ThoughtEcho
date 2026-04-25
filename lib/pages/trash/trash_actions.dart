@@ -10,7 +10,7 @@ extension _TrashPageActions on _TrashPageState {
     }
     final position = _scrollController.position;
     if (position.pixels >= position.maxScrollExtent - 200) {
-      _loadMoreTrashQuotes();
+      loadMoreTrashQuotes();
     }
   }
 
