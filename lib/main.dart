@@ -53,80 +53,18 @@ import 'theme/app_theme.dart';
 import 'pages/home_page.dart';
 import 'pages/onboarding_page.dart';
 import 'pages/backup_restore_page.dart';
-import 'widgets/quote_content_widget.dart'; // 用于缓存管理
+import 'widgets/quote_content_widget.dart';
 
-// 超时时间常量 (Timeout constants)
-class TimeoutConstants {
-  // 剪贴板服务初始化超时时间
-  static const Duration clipboardInitTimeoutWindows = Duration(seconds: 2);
-  static const Duration clipboardInitTimeoutDefault = Duration(seconds: 3);
+part 'app/app_initialization.dart';
+part 'app/app_emergency_pages.dart';
 
-  // 数据库初始化超时时间
-  static const Duration databaseInitTimeoutWindows = Duration(seconds: 5);
-  static const Duration databaseInitTimeoutDefault = Duration(seconds: 10);
-
-  // UI初始化延迟时间
-  static const Duration uiInitDelayWindows = Duration(milliseconds: 1000);
-  static const Duration uiInitDelayDefault = Duration(milliseconds: 0);
-}
-
-// 全局标志，确保FFI只初始化一次
-bool _ffiInitialized = false;
-
-Future<void> initializeDatabasePlatform() async {
-  if (!kIsWeb) {
-    if (Platform.isWindows && !_ffiInitialized) {
-      sqfliteFfiInit();
-      databaseFactory = databaseFactoryFfi;
-      _ffiInitialized = true;
-      logInfo('Windows FFI数据库工厂已初始化', source: 'DatabaseInit');
-    }
-
-    try {
-      // Windows 平台使用 Documents/ThoughtEcho 作为默认数据目录
-      // 其他平台继续使用 Documents 根目录
-      String basePath;
-      if (Platform.isWindows) {
-        // 检查并执行旧版数据迁移（从 Documents 根目录迁移到 Documents/ThoughtEcho）
-        await DataDirectoryService.checkAndMigrateLegacyData();
-        basePath = await DataDirectoryService.getCurrentDataDirectory();
-      } else {
-        final appDir = await getApplicationDocumentsDirectory();
-        basePath = appDir.path;
-      }
-
-      final dbPath = join(basePath, 'databases');
-
-      await Directory(dbPath).create(recursive: true);
-
-      final path = join(dbPath, 'thoughtecho.db');
-      if (!await Directory(dirname(path)).exists()) {
-        await Directory(dirname(path)).create(recursive: true);
-      }
-
-      await databaseFactory.setDatabasesPath(dbPath);
-      logInfo('数据库路径设置为: $dbPath', source: 'DatabaseInit');
-    } catch (e) {
-      logError('创建数据库目录失败: $e', error: e, source: 'DatabaseInit');
-      rethrow;
-    }
-  } else {
-    logInfo('Web平台：使用内存数据库', source: 'DatabaseInit');
-    // Web平台无需特殊初始化，SQLite会自动使用内存数据库
-  }
-}
-
-// 全局导航key，用于日志服务在无context时获取context
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-// 添加一个全局标志，表示是否处于紧急模式（数据库损坏等情况）
 bool _isEmergencyMode = false;
 
-// 缓存早期捕获但无法立即记录的错误
 final List<Map<String, dynamic>> _deferredErrors = [];
-const int _maxDeferredErrors = 100; // 修复：设置最大容量防止无限增长
+const int _maxDeferredErrors = 100;
 
-/// 安全添加延迟错误（带容量限制）
 void _addDeferredError(Map<String, dynamic> error) {
   if (_deferredErrors.length >= _maxDeferredErrors) {
     _deferredErrors.removeAt(0);
@@ -135,12 +73,9 @@ void _addDeferredError(Map<String, dynamic> error) {
 }
 
 Future<void> main() async {
-  // 立即设置日志级别为INFO，避免早期verbose日志输出
-  // 这必须在任何其他初始化之前执行，因为logging包默认级别是ALL
   logging.hierarchicalLoggingEnabled = true;
   logging.Logger.root.level = logging.Level.INFO;
 
-  // Windows平台优化：避免错误处理导致的启动卡死
   BindingBase.debugZoneErrorsAreFatal =
       (!kIsWeb && Platform.isWindows) ? false : true;
 
@@ -153,7 +88,6 @@ Future<void> main() async {
             'ThoughtEcho does not support the Web platform.');
       }
 
-      // 初始化后台任务组件
       if (!kIsWeb) {
         try {
           if (Platform.isAndroid) {
@@ -166,15 +100,11 @@ Future<void> main() async {
         }
       }
 
-      // 初始化日志系统
       AppLogger.initialize();
 
-      // 初始化全局异常处理器（补充 isolate 捕获，并声明 platform channel 全局捕获限制）
       GlobalExceptionHandler.initialize();
 
-      // 全局记录未捕获的异步错误 - 所有平台都启用，Windows平台简化处理
       PlatformDispatcher.instance.onError = (error, stack) {
-        // Windows平台使用简化的错误处理，避免复杂操作导致卡死
         if (!kIsWeb && Platform.isWindows) {
           logError(
             '捕获到平台分发器错误: $error',
@@ -189,23 +119,22 @@ Future<void> main() async {
             source: 'PlatformDispatcher',
           );
           logError('堆栈: $stack', source: 'PlatformDispatcher');
-        } // 捕获到错误后再记录到日志系统
+        }
         _addDeferredError({
           'message': '平台分发器错误',
           'error': error,
           'stackTrace':
-              (!kIsWeb && Platform.isWindows) ? null : stack, // Windows平台不记录堆栈
+              (!kIsWeb && Platform.isWindows) ? null : stack,
           'source': 'PlatformDispatcher',
         });
 
-        return true; // 返回true表示错误已处理
-      }; // 捕获Flutter框架异常并写入日志服务 - Windows平台简化
+        return true;
+      };
       FlutterError.onError = (FlutterErrorDetails details) {
         if (kDebugMode) {
           FlutterError.dumpErrorToConsole(details);
         }
 
-        // 在Windows平台简化错误处理，避免复杂的Provider查找导致卡死
         if (!kIsWeb && Platform.isWindows) {
           logError(
             'Flutter异常: ${details.exceptionAsString()}',
@@ -215,7 +144,6 @@ Future<void> main() async {
           return;
         }
 
-        // 非Windows平台保持原有逻辑
         final context = navigatorKey.currentContext;
         try {
           if (context != null) {
@@ -230,7 +158,6 @@ Future<void> main() async {
               source: 'FlutterError',
             );
           } else {
-            // 无法通过context获取LogService时，先保存到全局缓存
             _addDeferredError({
               'message': 'Flutter异常: ${details.exceptionAsString()}',
               'error': details.exception,
@@ -243,7 +170,6 @@ Future<void> main() async {
         }
       };
       try {
-        // 并行初始化无依赖关系的服务，加速启动
         final mmkvService = MMKVService();
         late final SettingsService settingsService;
         late final PackageInfo packageInfo;
@@ -259,27 +185,22 @@ Future<void> main() async {
         final bool hasCompletedOnboarding =
             settingsService.hasCompletedOnboarding();
 
-        // 判断是否需要完整引导或升级引导
         bool showFullOnboarding = !hasCompletedOnboarding;
         bool showUpdateReady =
             hasCompletedOnboarding && (lastVersion != currentVersion);
         if (showUpdateReady) {
-          // 只显示引导最后一页，自动迁移数据，升级完成后写入 lastVersion
           await settingsService.setAppVersion(currentVersion);
         }
         if (showFullOnboarding) {
-          // 完整引导完成后写入 lastVersion
           // 由 OnboardingPage 负责设置 hasCompletedOnboarding 和 lastVersion
         }
 
-        // 创建服务实例但暂不初始化重量级服务
         final databaseService = DatabaseService();
         final locationService = LocationService();
         final weatherService = WeatherService();
-        final clipboardService = ClipboardService(); // 创建统一日志服务
+        final clipboardService = ClipboardService();
         final unifiedLogService = UnifiedLogService.instance;
 
-        // 根据开发者模式设置日志服务的持久化状态
         unifiedLogService
             .setPersistenceEnabled(settingsService.appSettings.developerMode);
 
@@ -287,28 +208,22 @@ Future<void> main() async {
         final connectivityService = ConnectivityService();
         final featureGuideService = FeatureGuideService(SafeMMKV());
 
-        // 创建智能推送服务实例
         final smartPushService = SmartPushService(
           databaseService: databaseService,
           locationService: locationService,
           mmkvService: mmkvService,
         );
 
-        // 不再这里强制设置级别，让UnifiedLogService从用户配置中加载
-
         final appTheme = AppTheme();
 
-        // 初始化主题 - 这是UI显示必须的
         await appTheme.initialize();
 
-        // 使用ValueNotifier跟踪服务初始化状态
         final servicesInitialized = ValueNotifier<bool>(false);
 
         runApp(
           MultiProvider(
             providers: [
               ChangeNotifierProvider(create: (_) => settingsService),
-              // 兼容性说明：DatabaseService现在有dispose方法，但Provider会自动处理
               ChangeNotifierProvider(create: (_) => databaseService),
               ChangeNotifierProvider(create: (_) => locationService),
               ChangeNotifierProvider(create: (_) => weatherService),
@@ -331,8 +246,7 @@ Future<void> main() async {
               ),
               Provider.value(
                 value: mmkvService,
-              ), // 使用 Provider.value 提供 MMKVService
-              // 提供初始化状态的值
+              ),
               Provider<ValueNotifier<bool>>.value(
                 value: servicesInitialized,
               ),
@@ -397,28 +311,22 @@ Future<void> main() async {
           ),
         );
 
-        // 简单预初始化位置服务（异步执行，不阻塞UI）
         Future.microtask(() async {
           try {
-            // 启动时清理旧的 APK 安装包
             if (!kIsWeb && Platform.isAndroid) {
               logDebug('启动清理旧安装包逻辑...');
               await ApkDownloadService.cleanupApkFiles();
             }
 
             logDebug('开始预初始化位置服务...');
-            // 设置语言代码，确保位置显示使用正确的语言
             locationService.currentLocaleCode = settingsService.localeCode;
-            // weatherService 不需要 localeCode（天气 API 通过 l10n 本地化）
             await locationService.init();
             logDebug('位置服务预初始化完成');
 
-            // 初始化智能推送服务
             logDebug('开始初始化智能推送服务...');
             await smartPushService.initialize();
             logDebug('智能推送服务初始化完成');
 
-            // SOTA: 记录 App 打开时间（用于响应性热图分析）
             try {
               await smartPushService.analytics.recordAppOpen();
               logDebug('SOTA: 已记录 App 打开时间');
@@ -428,16 +336,14 @@ Future<void> main() async {
           } catch (e) {
             logDebug('预初始化服务失败: $e');
           }
-        }); // 首屏UI显示后，异步初始化其他服务
-        // Windows平台减少延迟，优先显示UI
+        });
         final initDelay = (!kIsWeb && Platform.isWindows)
-            ? const Duration(milliseconds: 100) // 减少Windows延迟
+            ? const Duration(milliseconds: 100)
             : TimeoutConstants.uiInitDelayDefault;
         Future.delayed(initDelay, () async {
           try {
             logInfo('UI已显示，正在后台初始化服务...', source: 'BackgroundInit');
 
-            // 初始化连接服务
             try {
               await connectivityService.init();
               logInfo('连接服务初始化完成', source: 'BackgroundInit');
@@ -445,14 +351,11 @@ Future<void> main() async {
               logWarning('连接服务初始化失败: $e', source: 'BackgroundInit');
             }
 
-            // Windows平台缩短超时时间，避免长时间等待
             final timeoutDuration = (!kIsWeb && Platform.isWindows)
                 ? TimeoutConstants.clipboardInitTimeoutWindows
                 : TimeoutConstants.clipboardInitTimeoutDefault;
 
-            // Windows平台异步初始化剪贴板服务，避免阻塞
             if (!kIsWeb && Platform.isWindows) {
-              // 异步初始化，不等待完成
               Future.microtask(() async {
                 try {
                   await clipboardService.init().timeout(
@@ -465,7 +368,6 @@ Future<void> main() async {
                 }
               });
             } else {
-              // 非Windows平台保持原有逻辑
               try {
                 await clipboardService.init().timeout(
                       timeoutDuration,
@@ -479,7 +381,6 @@ Future<void> main() async {
               }
             }
 
-            // 检查设置服务中的数据库迁移状态
             final hasMigrated = settingsService.isDatabaseMigrationComplete();
             final hasCompletedOnboarding =
                 settingsService.hasCompletedOnboarding();
@@ -492,11 +393,9 @@ Future<void> main() async {
               source: 'BackgroundInit',
             );
 
-            // 如果已经完成了引导流程，但数据库迁移未完成，则直接在后台初始化数据库
             if (hasCompletedOnboarding && !hasMigrated) {
               logInfo('引导已完成但数据库迁移未完成，开始后台数据库迁移...', source: 'BackgroundInit');
               try {
-                // Windows平台缩短数据库初始化超时时间
                 final dbTimeoutDuration = Platform.isWindows
                     ? TimeoutConstants.databaseInitTimeoutWindows
                     : TimeoutConstants.databaseInitTimeoutDefault;
@@ -507,7 +406,6 @@ Future<void> main() async {
                     throw TimeoutException('数据库初始化超时');
                   },
                 );
-                // 初始化AI分析数据库
                 try {
                   await aiAnalysisDbService.init();
                   logInfo('AI分析数据库初始化完成', source: 'BackgroundInit');
@@ -517,10 +415,8 @@ Future<void> main() async {
                     error: aiDbError,
                     source: 'BackgroundInit',
                   );
-                  // AI分析数据库初始化失败不影响主要功能，继续执行
                 }
 
-                // 标记数据库迁移已完成
                 await settingsService.setDatabaseMigrationComplete(true);
 
                 logInfo('后台数据库迁移完成', source: 'BackgroundInit');
@@ -532,11 +428,9 @@ Future<void> main() async {
                   source: 'BackgroundInit',
                 );
 
-                // 在紧急情况下尝试初始化新数据库
                 try {
                   await databaseService.initializeNewDatabase();
 
-                  // 尝试初始化AI分析数据库
                   try {
                     await aiAnalysisDbService.init();
                     logInfo('紧急恢复：AI分析数据库初始化完成', source: 'BackgroundInit');
@@ -557,7 +451,7 @@ Future<void> main() async {
                     source: 'BackgroundInit',
                   );
                   _isEmergencyMode = true;
-                } // 记录错误但继续执行
+                }
                 logError(
                   '后台数据库迁移失败',
                   error: e,
@@ -566,13 +460,10 @@ Future<void> main() async {
                 );
               }
             } else if (!hasCompletedOnboarding) {
-              // 如果尚未完成引导流程，数据库迁移将在引导流程中处理
               logInfo('等待引导流程中的数据库迁移...', source: 'BackgroundInit');
             } else {
-              // 引导已完成且数据库已迁移，正常初始化
               logInfo('数据库已迁移，执行常规初始化', source: 'BackgroundInit');
 
-              // 初始化AI分析数据库
               try {
                 await aiAnalysisDbService.init();
                 logInfo('AI分析数据库初始化完成', source: 'BackgroundInit');
@@ -582,7 +473,6 @@ Future<void> main() async {
                   error: aiDbError,
                   source: 'BackgroundInit',
                 );
-                // AI分析数据库初始化失败不影响主要功能，继续执行
               }
               try {
                 await _initializeDatabaseNormally(
@@ -600,27 +490,22 @@ Future<void> main() async {
               }
             }
 
-            // 初始化媒体清理服务
             try {
               await MediaCleanupService.initialize();
               logInfo('媒体清理服务初始化完成', source: 'BackgroundInit');
             } catch (e) {
               logError('媒体清理服务初始化失败: $e', error: e, source: 'BackgroundInit');
-              // 媒体清理服务初始化失败不影响主要功能，继续执行
             }
 
-            // 初始化完成，更新状态
             servicesInitialized.value = true;
             logInfo('所有后台服务初始化完成', source: 'BackgroundInit');
 
-            // 启动后台版本检查（静默执行，不影响用户体验）
             VersionCheckService.backgroundCheckForUpdates(
               onUpdateAvailable: (versionInfo) {
                 logInfo(
                   '检测到新版本: ${versionInfo.latestVersion}',
                   source: 'VersionCheck',
                 );
-                // 延迟显示更新对话框，确保UI已完全初始化
                 Future.delayed(const Duration(seconds: 2), () {
                   try {
                     final context = navigatorKey.currentContext;
@@ -632,7 +517,7 @@ Future<void> main() async {
                   }
                 });
               },
-              delay: const Duration(seconds: 5), // 延迟5秒执行
+              delay: const Duration(seconds: 5),
             );
           } catch (e, stackTrace) {
             logError(
@@ -642,9 +527,7 @@ Future<void> main() async {
               source: 'BackgroundInit',
             );
 
-            // 记录错误，不使用 BuildContext
             try {
-              // 将错误信息添加到延迟处理队列
               _addDeferredError({
                 'message': '后台服务初始化失败',
                 'error': e,
@@ -665,7 +548,6 @@ Future<void> main() async {
         );
         logError('堆栈跟踪: $stackTrace', source: 'AppInit');
 
-        // 如果初始化失败，直接运行一个简单的错误应用
         _isEmergencyMode = true;
 
         runApp(
@@ -686,9 +568,7 @@ Future<void> main() async {
       );
       logError('堆栈跟踪: $stackTrace', source: 'runZonedGuarded');
 
-      // 使用非 context 相关访问方式记录错误，避免 use_build_context_synchronously 警告
       try {
-        // 将错误信息添加到延迟处理队列
         _addDeferredError({
           'message': '未捕获异常: $error',
           'error': error,
@@ -724,13 +604,11 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
-    // 注册应用生命周期监听器
     WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
-    // 移除生命周期监听器
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -739,10 +617,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
 
-    // 修复问题3：应用进入后台时清理缓存，释放内存
     if (state == AppLifecycleState.paused) {
       logDebug('应用进入后台，清理富文本缓存', source: 'AppLifecycle');
-      // 使用 Future.microtask 避免在生命周期回调中执行耗时操作
       Future.microtask(() {
         try {
           QuoteContent.resetCaches();
@@ -756,22 +632,16 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    // 获取设置服务实例
     final settingsService = Provider.of<SettingsService>(context);
     final appTheme = Provider.of<AppTheme>(context);
-    // 检查是否需要显示引导页面
     final bool hasCompletedOnboarding =
         settingsService.hasCompletedOnboarding();
 
-    // 获取用户设置的语言，null 表示跟随系统
     final localeCode = settingsService.localeCode;
     final Locale? locale = localeCode != null ? Locale(localeCode) : null;
 
-    // 使用 DynamicColorBuilder 以支持动态取色功能
     return DynamicColorBuilder(
       builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
-        // 更新主题中的动态颜色方案
-        // 直接更新主题中的动态颜色方案，确保MaterialApp构建时能获取到
         appTheme.updateDynamicColorScheme(lightDynamic, darkDynamic);
 
         return MaterialApp(
@@ -792,7 +662,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           home: widget.showUpdateReady
               ? const OnboardingPage(showUpdateReady: true)
               : !hasCompletedOnboarding
-                  ? const OnboardingPage() // 使用新的引导页面
+                  ? const OnboardingPage()
                   : widget.isEmergencyMode
                       ? const EmergencyRecoveryPage()
                       : HomePage(
@@ -809,581 +679,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           supportedLocales: AppLocalizations.supportedLocales,
         );
       },
-    );
-  }
-}
-
-/// 紧急恢复页面，在数据库初始化失败时显示
-class EmergencyRecoveryPage extends StatelessWidget {
-  const EmergencyRecoveryPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.emergencyRecoveryTitle),
-        backgroundColor: Colors.red,
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          // 添加SingleChildScrollView使内容可滚动
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min, // 设置为min以适应内容
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Icon(
-                  Icons.warning_amber_rounded,
-                  size: 64,
-                  color: Colors.red,
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  l10n.emergencyRecoveryHeading,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  l10n.emergencyRecoveryDescription,
-                  style: const TextStyle(fontSize: 16),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 32),
-                FilledButton.icon(
-                  onPressed: () async {
-                    // 标记为 async
-                    // 导航前检查 mounted 状态
-                    if (!context.mounted) return;
-                    await Navigator.push(
-                      // 使用 await
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const BackupRestorePage(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.backup),
-                  label: Text(l10n.emergencyBackupAndRestoreButton),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    padding: const EdgeInsets.symmetric(vertical: 16.0),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                OutlinedButton.icon(
-                  onPressed: () async {
-                    // 尝试重新初始化数据库
-                    try {
-                      final databaseService = DatabaseService();
-                      databaseService.reinitialize();
-                      await databaseService.initializeNewDatabase();
-
-                      if (!context.mounted) return;
-
-                      // 成功后导航到主页
-                      await Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const HomePage(),
-                        ),
-                      );
-                    } catch (e) {
-                      if (!context.mounted) return;
-
-                      // 如果重新初始化失败，显示错误信息
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(l10n.emergencyReinitializeFailed('$e')),
-                          backgroundColor: Colors.red,
-                          duration: const Duration(seconds: 3),
-                        ),
-                      );
-                    }
-                  },
-                  icon: const Icon(Icons.refresh),
-                  label: Text(l10n.emergencyTryRestartAppButton),
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16.0),
-                  ),
-                ),
-                const SizedBox(height: 32),
-                Text(
-                  l10n.emergencyRecoveryHint,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontStyle: FontStyle.italic,
-                    color: Colors.grey,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 极端情况下的应急应用，当初始化完全失败时启动
-class EmergencyApp extends StatelessWidget {
-  final String error;
-  final String stackTrace;
-
-  const EmergencyApp({
-    super.key,
-    required this.error,
-    required this.stackTrace,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'ThoughtEcho Emergency',
-      navigatorKey: navigatorKey, // 使用全局导航键
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
-      builder: (context, child) {
-        final mediaQuery = MediaQuery.of(context);
-        return MediaQuery(
-          data: mediaQuery.copyWith(boldText: false),
-          child: child ?? const SizedBox.shrink(),
-        );
-      },
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.red,
-          brightness: Brightness.light,
-        ),
-      ),
-      home: EmergencyHomePage(error: error, stackTrace: stackTrace),
-      routes: {'/backup_restore': (context) => const BackupRestorePage()},
-    );
-  }
-}
-
-/// 紧急模式下的主页面
-class EmergencyHomePage extends StatelessWidget {
-  final String error;
-  final String stackTrace;
-
-  const EmergencyHomePage({
-    super.key,
-    required this.error,
-    required this.stackTrace,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    // 防御性处理：国际化可能尚未初始化完成，使用 nullable 版本
-    final l10n = Localizations.of<AppLocalizations>(context, AppLocalizations);
-    final emergencyModeTitle = l10n?.emergencyModeTitle ?? 'Emergency Mode';
-    final emergencyAppStartFailedTitle =
-        l10n?.emergencyAppStartFailedTitle ?? 'App Start Failed';
-    final emergencyAppStartFailedDesc = l10n?.emergencyAppStartFailedDesc ??
-        'The app failed to start properly. Please try the recovery options below.';
-    final emergencyErrorLabel = l10n?.emergencyErrorLabel ?? 'Error:';
-    final emergencyTechnicalDetails =
-        l10n?.emergencyTechnicalDetails ?? 'Technical Details';
-    final emergencyBackupAndRestoreButton =
-        l10n?.emergencyBackupAndRestoreButton ?? 'Backup & Restore';
-    final emergencyTryRestartAppButton =
-        l10n?.emergencyTryRestartAppButton ?? 'Try Restart';
-    final emergencyExitAppButton = l10n?.emergencyExitAppButton ?? 'Exit App';
-    final emergencyPersistentIssueHint = l10n?.emergencyPersistentIssueHint ??
-        'If the issue persists, please contact support.';
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(emergencyModeTitle),
-        backgroundColor: Colors.red,
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(
-                emergencyAppStartFailedTitle,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                emergencyAppStartFailedDesc,
-                style: const TextStyle(fontSize: 16),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      emergencyErrorLabel,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(error),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              ExpansionTile(
-                title: Text(emergencyTechnicalDetails),
-                children: [
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
-                      color: Colors.grey.shade100,
-                      child: SelectableText(
-                        stackTrace,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontFamily: 'monospace',
-                          color: Colors.grey.shade800,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const Spacer(),
-              FilledButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const EmergencyBackupPage(),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.backup),
-                label: Text(emergencyBackupAndRestoreButton),
-                style: FilledButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-              ),
-              const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: () {
-                  // 尝试重新启动应用
-                  restartApp();
-                },
-                icon: const Icon(Icons.refresh),
-                label: Text(emergencyTryRestartAppButton),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-              ),
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: () {
-                  // 退出应用
-                  exit(0);
-                },
-                icon: const Icon(Icons.exit_to_app),
-                label: Text(emergencyExitAppButton),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  foregroundColor: Colors.red,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                emergencyPersistentIssueHint,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontStyle: FontStyle.italic,
-                  color: Colors.grey,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void restartApp() {
-    // 重新启动应用的逻辑
-    try {
-      // 清理全局状态
-      _isEmergencyMode = false;
-      _deferredErrors.clear();
-
-      // 重新运行main函数
-      main();
-    } catch (e) {
-      logDebug('重启应用失败: $e');
-      // 如果重启失败，尝试导航到主页
-      if (navigatorKey.currentState != null) {
-        navigatorKey.currentState!.pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => const HomePage()),
-          (route) => false,
-        );
-      }
-    }
-  }
-}
-
-/// 极端情况下的备份恢复页面，即使在数据库完全损坏的情况下也能工作
-class EmergencyBackupPage extends StatefulWidget {
-  const EmergencyBackupPage({super.key});
-
-  @override
-  State<EmergencyBackupPage> createState() => _EmergencyBackupPageState();
-}
-
-class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
-  bool _isLoading = false;
-  String? _statusMessage;
-  bool _hasError = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.emergencyBackupPageTitle),
-        backgroundColor: Colors.orange,
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Icon(Icons.data_saver_on, size: 64, color: Colors.orange),
-              const SizedBox(height: 16),
-              Text(
-                l10n.emergencyBackupToolTitle,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                l10n.emergencyBackupToolDesc,
-                style: const TextStyle(fontSize: 16),
-              ),
-              const SizedBox(height: 32),
-              if (_isLoading)
-                Column(
-                  children: [
-                    const CircularProgressIndicator(),
-                    const SizedBox(height: 16),
-                    Text(_statusMessage ?? l10n.emergencyProcessing),
-                  ],
-                )
-              else
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    FilledButton.icon(
-                      onPressed: _exportDatabaseFile,
-                      icon: const Icon(Icons.folder),
-                      label: Text(l10n.emergencyExportDatabaseButton),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    FilledButton.icon(
-                      onPressed: () {
-                        try {
-                          Navigator.of(context).pushNamed('/backup_restore');
-                        } catch (e) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content:
-                                  Text(l10n.emergencyOpenBackupFailed('$e')),
-                              backgroundColor: Colors.red,
-                              duration: const Duration(seconds: 3),
-                            ),
-                          );
-                        }
-                      },
-                      icon: const Icon(Icons.backup),
-                      label: Text(l10n.emergencyOpenBackupPageButton),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                      ),
-                    ),
-                  ],
-                ),
-              if (_statusMessage != null && !_isLoading)
-                Container(
-                  margin: const EdgeInsets.only(top: 16),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color:
-                        _hasError ? Colors.red.shade100 : Colors.green.shade100,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    _statusMessage!,
-                    style: TextStyle(
-                      color: _hasError
-                          ? Colors.red.shade900
-                          : Colors.green.shade900,
-                    ),
-                  ),
-                ),
-              const Spacer(),
-              Text(
-                l10n.emergencyExportHint,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontStyle: FontStyle.italic,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _exportDatabaseFile() async {
-    final l10n = AppLocalizations.of(this.context);
-    setState(() {
-      _isLoading = true;
-      _statusMessage = l10n.emergencyLocatingDatabase;
-      _hasError = false;
-    });
-
-    try {
-      // 获取数据库文件路径
-      final appDir = await getApplicationDocumentsDirectory();
-      final dbPath = join(appDir.path, 'databases');
-      final dbFile = File(join(dbPath, 'thoughtecho.db'));
-      final oldDbFile = File(join(dbPath, 'mind_trace.db'));
-
-      // 确认文件存在
-      if (!dbFile.existsSync() && !oldDbFile.existsSync()) {
-        setState(() {
-          _isLoading = false;
-          _statusMessage = l10n.emergencyDatabaseNotFound;
-          _hasError = true;
-        });
-        return;
-      }
-
-      // 使用存在的文件
-      final sourceFile = dbFile.existsSync() ? dbFile : oldDbFile;
-
-      setState(() {
-        _statusMessage = l10n.emergencyPreparingExport;
-      });
-
-      // 创建一个导出目录
-      final downloadsDir = Directory(join(appDir.path, 'Downloads'));
-      if (!downloadsDir.existsSync()) {
-        await downloadsDir.create(recursive: true);
-      }
-
-      // 创建导出文件名
-      final now = DateTime.now();
-      final timestamp =
-          '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
-      final exportFileName = 'thoughtecho_emergency_$timestamp.db';
-      final exportFile = File(join(downloadsDir.path, exportFileName));
-
-      // 复制文件
-      setState(() {
-        _statusMessage = l10n.emergencyCopyingFile;
-      });
-
-      await sourceFile.copy(exportFile.path);
-
-      setState(() {
-        _isLoading = false;
-        _statusMessage = l10n.emergencyDatabaseExported(exportFile.path);
-        _hasError = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _statusMessage = l10n.emergencyExportFailed('$e');
-        _hasError = true;
-      });
-    }
-  }
-}
-
-/// 全局方法，让LogService能够获取并处理缓存的早期错误
-List<Map<String, dynamic>> getAndClearDeferredErrors() {
-  final errors = List<Map<String, dynamic>>.from(_deferredErrors);
-  _deferredErrors.clear();
-  return errors;
-}
-
-// 提取常规数据库初始化为独立函数
-Future<void> _initializeDatabaseNormally(
-  DatabaseService databaseService,
-  UnifiedLogService logService,
-) async {
-  try {
-    await databaseService.init().timeout(
-      const Duration(seconds: 5),
-      onTimeout: () {
-        throw TimeoutException('数据库初始化超时');
-      },
-    );
-
-    // 修复：数据库初始化已包含默认分类初始化
-    logDebug('数据库服务初始化完成');
-  } catch (e, stackTrace) {
-    logDebug('数据库初始化失败: $e');
-
-    // 尝试恢复：即使数据库初始化失败，也尝试创建默认标签
-    try {
-      await databaseService.initDefaultHitokotoCategories();
-      logDebug('尝试恢复：虽然数据库初始化可能有问题，但已尝试创建默认标签');
-    } catch (tagError) {
-      logDebug('创建默认标签也失败: $tagError');
-      _isEmergencyMode = true;
-    }
-
-    // 如果还是失败，进入紧急模式
-    if (!databaseService.isInitialized) {
-      _isEmergencyMode = true;
-    }
-
-    // 记录错误但继续执行其他服务初始化
-    logService.error(
-      '数据库初始化失败，但应用将尝试继续运行',
-      error: e,
-      stackTrace: stackTrace,
-      source: 'background_init',
     );
   }
 }
