@@ -61,11 +61,10 @@ class _SmartResultCardState extends State<SmartResultCard> {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
 
-    final isNewNote = widget.editorSource == 'new_note';
-    final showReplace = widget.onReplace != null && widget.editorSource == 'fullscreen';
-    final showAppend = widget.onAppend != null && widget.editorSource == 'fullscreen';
-    final showSaveDirectly = widget.onSaveDirectly != null &&
-        (widget.editorSource == 'addnote_dialog' || widget.editorSource == 'new_note');
+    final isNewNote = widget.editorSource == 'new_note' || widget.editorSource == 'addnote_dialog' || widget.editorSource == 'fullscreen';
+    final showReplace = widget.onReplace != null;
+    final showAppend = widget.onAppend != null;
+    final showSaveDirectly = widget.onSaveDirectly != null;
 
     return Card(
       elevation: 0,

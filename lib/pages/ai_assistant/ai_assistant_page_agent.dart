@@ -52,12 +52,13 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
 
           case AgentToolCallStartEvent():
             if (streamingMsgId != null && streamingText.trim().isNotEmpty) {
-              toolThinkingText = streamingText.trim();
-              _setState(() {
-                _messages.removeWhere((m) => m.id == streamingMsgId);
-              });
+              // 停止将工具执行前的常规文本隐藏起来！
+              // 将其标记为加载完成，并使其作为一个独立且正常的聊天气泡保留在时间流中
+              _updateMessage(streamingMsgId!, streamingText, isLoading: false);
               streamingMsgId = null;
               streamingText = '';
+              // toolThinkingText 留空，工具进度面板不再承载对话文本
+              toolThinkingText = null;
             }
             if (toolProgressMsgId == null) {
               toolProgressMsgId = const Uuid().v4();
