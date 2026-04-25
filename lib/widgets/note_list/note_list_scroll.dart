@@ -398,8 +398,6 @@ extension _NoteListScrollExtension on NoteListViewState {
           _hasMore = db.hasMoreQuotes;
           _isLoading = false; // 加载完成后重置状态
         });
-        // 注意：移除了 jumpTo 双跳 hack，该 hack 会导致偶发卡顿
-        // ListView.builder 会自动处理 itemCount 变化后的滚动范围更新
       }
     } catch (e) {
       // 修复：出错时也要重置加载状态

@@ -2187,7 +2187,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                 listen: false,
                               );
                               final l10n = AppLocalizations.of(context);
-                              final scaffoldMessenger = ScaffoldMessenger.of(context);
+                              final scaffoldMessenger =
+                                  ScaffoldMessenger.of(context);
                               final navigator = Navigator.of(context);
 
                               await _waitForPendingHitokotoTagTask();
