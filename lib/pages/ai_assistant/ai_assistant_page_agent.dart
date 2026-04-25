@@ -24,6 +24,11 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
     String? streamingMsgId;
     var streamingText = '';
     String? toolThinkingText;
+    // 工具组是否仍处于"采集叙述"状态：从首个 AgentToolCallStartEvent 起为 true，
+    // 直到 AgentResponseEvent / AgentErrorEvent / 流程结束，期间所有
+    // AgentTextDeltaEvent 都并入 tool_progress 卡片的 thinkingText，
+    // 而非另起独立聊天气泡，确保"让我看看…"这类叙述与工具调用按时间统一展示。
+    var toolGroupOpen = false;
 
     try {
       await _agentEventSubscription?.cancel();
@@ -34,6 +39,18 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             streamingMsgId = null;
             streamingText = '';
           case AgentTextDeltaEvent():
+            if (toolGroupOpen && toolProgressMsgId != null) {
+              // 工具调用进行中（含工具间隙）：把叙述追加到工具卡片内部，
+              // 与 toolItems 形成按时间排列的统一展示，避免单独跑出来。
+              toolThinkingText = (toolThinkingText ?? '') + event.delta;
+              _updateToolProgressMessage(
+                toolProgressMsgId!,
+                toolItems,
+                inProgress: true,
+                thinkingText: toolThinkingText,
+              );
+              break;
+            }
             if (streamingMsgId == null) {
               streamingMsgId = _uuid.v4();
               _setState(() {
@@ -52,14 +69,17 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
 
           case AgentToolCallStartEvent():
             if (streamingMsgId != null && streamingText.trim().isNotEmpty) {
-              // 停止将工具执行前的常规文本隐藏起来！
-              // 将其标记为加载完成，并使其作为一个独立且正常的聊天气泡保留在时间流中
-              _updateMessage(streamingMsgId!, streamingText, isLoading: false);
+              // 工具调用开始：把工具前的叙述并入 tool_progress 卡片的
+              // thinkingText，并移除原临时气泡，让所有内容时序集中到工具卡片。
+              final pendingId = streamingMsgId!;
+              _setState(() {
+                _messages.removeWhere((m) => m.id == pendingId);
+              });
+              toolThinkingText = (toolThinkingText ?? '') + streamingText;
               streamingMsgId = null;
               streamingText = '';
-              // toolThinkingText 留空，工具进度面板不再承载对话文本
-              toolThinkingText = null;
             }
+            toolGroupOpen = true;
             if (toolProgressMsgId == null) {
               toolProgressMsgId = const Uuid().v4();
               final msg = app_chat.ChatMessage(
@@ -126,6 +146,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             }
 
           case AgentResponseEvent():
+            toolGroupOpen = false;
             if (toolProgressMsgId != null) {
               _updateToolProgressMessage(
                 toolProgressMsgId!,
@@ -136,6 +157,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             }
 
           case AgentErrorEvent():
+            toolGroupOpen = false;
             if (streamingMsgId != null) {
               _setState(() {
                 _messages.removeWhere((m) => m.id == streamingMsgId);
