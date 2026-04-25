@@ -39,6 +39,9 @@ import '../widgets/anniversary_notebook_icon.dart';
 import '../utils/anniversary_banner_text_utils.dart';
 import '../utils/anniversary_display_utils.dart';
 
+part 'settings/settings_page_helpers.dart';
+part 'settings/settings_page_builders.dart';
+
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
 
@@ -134,117 +137,6 @@ class SettingsPageState extends State<SettingsPage> {
   void dispose() {
     _locationController.dispose();
     super.dispose();
-  }
-
-  // --- 辅助函数：启动 URL ---
-  Future<void> _launchUrl(String url) async {
-    final Uri uri = Uri.parse(url);
-    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-      if (!mounted) return;
-      final l10n = AppLocalizations.of(context);
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.showSnackBar(
-        SnackBar(
-          content: Text(l10n.cannotOpenLink(url)),
-          duration: AppConstants.snackBarDurationError,
-        ),
-      );
-    }
-  }
-  // --- 启动 URL 辅助函数结束 ---
-
-  // --- 版本检查方法 ---
-  Future<void> _checkForUpdates({bool showNoUpdateMessage = true}) async {
-    if (_isCheckingUpdate) return;
-
-    setState(() {
-      _isCheckingUpdate = true;
-      _updateCheckMessage = null;
-    });
-
-    try {
-      final versionInfo = await VersionCheckService.checkForUpdates(
-        forceRefresh: true,
-      );
-
-      setState(() {
-        _isCheckingUpdate = false;
-      });
-
-      if (mounted) {
-        await UpdateBottomSheet.show(
-          context,
-          versionInfo,
-          showNoUpdateMessage: showNoUpdateMessage,
-        );
-      }
-    } catch (e) {
-      setState(() {
-        _isCheckingUpdate = false;
-        _updateCheckMessage = e.toString();
-      });
-
-      if (mounted) {
-        final l10n = AppLocalizations.of(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.checkUpdateFailed(e.toString())),
-            backgroundColor: Theme.of(context).colorScheme.error,
-            duration: AppConstants.snackBarDurationError,
-          ),
-        );
-      }
-    }
-  }
-
-  // --- 版本检查方法结束 ---
-
-  // 显示城市搜索对话框
-  void _showCitySearchDialog(BuildContext context) {
-    final locationService = Provider.of<LocationService>(
-      context,
-      listen: false,
-    );
-    final weatherService = Provider.of<WeatherService>(context, listen: false);
-
-    // 创建天气搜索控制器
-    final weatherController = WeatherSearchController(
-      locationService,
-      weatherService,
-    );
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) => ChangeNotifierProvider.value(
-        value: weatherController,
-        child: Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Container(
-            height: MediaQuery.of(context).size.height * 0.7,
-            width: MediaQuery.of(context).size.width * 0.9,
-            padding: const EdgeInsets.all(8.0),
-            child: CitySearchWidget(
-              weatherController: weatherController,
-              initialCity: locationService.city,
-              onSuccess: () {
-                // 刷新设置页面的状态
-                if (mounted) {
-                  setState(() {
-                    _locationController.text =
-                        locationService.getFormattedLocation();
-                  });
-                }
-              },
-            ),
-          ),
-        ),
-      ),
-    ).then((_) {
-      // 对话框关闭后，释放控制器
-      weatherController.dispose();
-    });
   }
 
   @override

@@ -13,7 +13,7 @@ import '../utils/string_utils.dart';
 import '../utils/time_utils.dart';
 import 'quote_content_widget.dart';
 
-part 'trash/trash_meta_chip.dart';
+part 'trash_card/trash_quote_card_helpers.dart';
 
 enum TrashQuoteCardAction { restore, permanentlyDelete }
 
@@ -40,25 +40,6 @@ class TrashQuoteCard extends StatefulWidget {
 }
 
 class _TrashQuoteCardState extends State<TrashQuoteCard> {
-  // Helper methods from QuoteItemWidget, adapted for TrashQuoteCard
-
-  IconData _getWeatherIcon(String weatherKey) {
-    return WeatherService.getWeatherIconDataByKey(weatherKey);
-  }
-
-  Color _resolveCardColor(ColorScheme colorScheme) {
-    final colorHex = widget.quote.colorHex;
-    if (colorHex == null || colorHex.isEmpty) {
-      return colorScheme.surfaceContainerLowest;
-    }
-
-    try {
-      return Color(int.parse(colorHex.substring(1), radix: 16) | 0xFF000000);
-    } catch (_) {
-      return colorScheme.surfaceContainerLowest;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -67,7 +48,7 @@ class _TrashQuoteCardState extends State<TrashQuoteCard> {
     final quote = widget.quote;
 
     // Determine the background color of the card
-    final Color cardColor = _resolveCardColor(colorScheme);
+    final Color cardColor = resolveCardColor(colorScheme);
 
     // 计算卡片背景的亮度，决定内容颜色
     final bool isLightCard =
@@ -182,7 +163,7 @@ class _TrashQuoteCardState extends State<TrashQuoteCard> {
                             const SizedBox(width: 8),
                           if (quote.weather != null) ...[
                             Icon(
-                              _getWeatherIcon(quote.weather!),
+                              getWeatherIcon(quote.weather!),
                               size: 14,
                               color: iconColor,
                             ),
