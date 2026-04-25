@@ -70,8 +70,7 @@ void main() {
       expect(tag.isDefault, isTrue);
     });
 
-    test('should use empty defaults in fromMap when id or name is missing',
-        () {
+    test('should use empty defaults in fromMap when id or name is missing', () {
       final missingId = NoteTag.fromMap({'name': '测试'});
       expect(missingId.id, equals(''));
       expect(missingId.name, equals('测试'));
