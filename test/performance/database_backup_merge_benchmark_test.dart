@@ -94,7 +94,8 @@ void main() {
         'date': DateTime.now().toIso8601String(),
         'last_modified':
             DateTime.now().add(const Duration(minutes: 1)).toIso8601String(),
-        'tag_ids': (i % 5 == 0 && halfCatCount > 0) ? 'cat_${i % halfCatCount}' : '',
+        'tag_ids':
+            (i % 5 == 0 && halfCatCount > 0) ? 'cat_${i % halfCatCount}' : '',
       };
     });
 
