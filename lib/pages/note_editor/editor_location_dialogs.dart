@@ -7,7 +7,8 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
     ThemeData theme,
   ) async {
     final l10n = AppLocalizations.of(context);
-    final hasLocationData = _originalLocation != null ||
+    final hasLocationData =
+        _originalLocation != null ||
         (_originalLatitude != null && _originalLongitude != null);
     final hasCoordinates =
         _originalLatitude != null && _originalLongitude != null;
@@ -78,15 +79,17 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
       try {
         // 获取当前语言设置（在异步操作前获取，避免context跨越异步间隙）
         if (!context.mounted) return;
-        final locationService =
-            Provider.of<LocationService>(context, listen: false);
+        final locationService = Provider.of<LocationService>(
+          context,
+          listen: false,
+        );
         final localeCode = locationService.currentLocaleCode;
         final addressInfo =
             await LocalGeocodingService.getAddressFromCoordinates(
-          _originalLatitude!,
-          _originalLongitude!,
-          localeCode: localeCode,
-        );
+              _originalLatitude!,
+              _originalLongitude!,
+              localeCode: localeCode,
+            );
         if (addressInfo != null && mounted) {
           final formattedAddress = addressInfo['formatted_address'];
           if (formattedAddress != null && formattedAddress.isNotEmpty) {

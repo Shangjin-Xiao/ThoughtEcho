@@ -33,12 +33,15 @@ extension _NoteEditorLocationFetch on _NoteFullEditorPageState {
   /// 新建模式下获取位置和天气，失败时调用回调取消选中
   /// 用于天气按钮点击时的处理
   Future<void> _fetchLocationWeatherWithFailCallback(
-      VoidCallback onFail) async {
+    VoidCallback onFail,
+  ) async {
     final result = await LocationWeatherHelper.fetch(
       context: context,
       includeWeather: true,
       showWeatherErrorDialog: true,
-      locationErrorContent: AppLocalizations.of(context).locationAndWeatherUnavailable,
+      locationErrorContent: AppLocalizations.of(
+        context,
+      ).locationAndWeatherUnavailable,
     );
 
     if (mounted) {
@@ -62,7 +65,8 @@ extension _NoteEditorLocationFetch on _NoteFullEditorPageState {
 
   /// 新建模式下获取位置，失败时调用回调取消选中
   Future<void> _fetchLocationForNewNoteWithFailCallback(
-      VoidCallback onFail) async {
+    VoidCallback onFail,
+  ) async {
     final result = await LocationWeatherHelper.fetch(
       context: context,
       includeWeather: false,

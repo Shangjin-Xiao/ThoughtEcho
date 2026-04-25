@@ -42,12 +42,16 @@ class LocationWeatherHelper {
     String? locationErrorTitle,
     String? locationErrorContent,
   }) async {
-    final locationService = Provider.of<LocationService>(context, listen: false);
+    final locationService = Provider.of<LocationService>(
+      context,
+      listen: false,
+    );
     final l10n = AppLocalizations.of(context);
 
     // 1. Check and Request Permissions
     if (!locationService.hasLocationPermission) {
-      bool permissionGranted = await locationService.requestLocationPermission();
+      bool permissionGranted = await locationService
+          .requestLocationPermission();
       if (!permissionGranted) {
         if (showPermissionDialog && context.mounted) {
           _showErrorDialog(
