@@ -38,12 +38,8 @@ class NoteTag {
     final id = map['id'] as String?;
     final name = map['name'] as String?;
 
-    if (id == null || id.isEmpty) {
-      throw ArgumentError('NoteTag id cannot be null or empty');
-    }
-    if (name == null || name.isEmpty) {
-      throw ArgumentError('NoteTag name cannot be null or empty');
-    }
+    final resolvedId = (id == null || id.isEmpty) ? '' : id;
+    final resolvedName = (name == null || name.isEmpty) ? '' : name;
 
     return NoteTag(
       id: id,
