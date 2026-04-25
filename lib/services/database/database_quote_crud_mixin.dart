@@ -1,6 +1,9 @@
 part of '../database_service.dart';
 
 /// Mixin providing quote CRUD operations for DatabaseService.
+///
+/// TODO: 接入 tostore 向量索引 —— 在 addQuote / updateQuote / deleteQuote
+/// 中同步维护 `note_embeddings` 向量表，供本地语义搜索使用。
 mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
   /// 修复：添加一条引用（笔记），增加数据验证和并发控制
   @override
