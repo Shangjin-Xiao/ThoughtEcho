@@ -175,12 +175,12 @@ class AgentService extends ChangeNotifier {
             messages: messages,
           );
           _emitEvent(AgentResponseEvent(
-            content: '已达到最大执行轮数（$maxToolRounds）。\n\n$summary',
+            content: '已达到最大执行次数（$maxToolRounds）。\n\n$summary',
             toolCalls: executedCalls,
             reachedMaxRounds: true,
           ));
           return AgentResponse(
-            content: '已达到最大执行轮数（$maxToolRounds）。\n\n$summary',
+            content: '已达到最大执行次数（$maxToolRounds）。\n\n$summary',
             toolCalls: executedCalls,
             reachedMaxRounds: true,
           );
@@ -212,7 +212,7 @@ class AgentService extends ChangeNotifier {
           _setStatus('');
           final responseContent = assistantContent.isNotEmpty
               ? assistantContent
-              : '我暂时无法继续推理，请稍后再试。';
+              : '暂时无法处理，请稍后再试。';
           _emitEvent(AgentResponseEvent(
             content: responseContent,
             toolCalls: executedCalls,
@@ -241,7 +241,7 @@ class AgentService extends ChangeNotifier {
         if (currentPatternCount >= _maxRepeatedRoundPattern) {
           final fallback = assistantContent.isNotEmpty
               ? assistantContent
-              : '检测到重复工具调用模式，为避免死循环已停止。';
+              : '检测到重复操作，已自动停止。';
           _emitEvent(AgentResponseEvent(
             content: fallback,
             toolCalls: executedCalls,
@@ -346,7 +346,7 @@ class AgentService extends ChangeNotifier {
         if (!repliedAnyToolCall) {
           final fallback = assistantContent.isNotEmpty
               ? assistantContent
-              : '工具调用未能成功执行，已停止本次任务。';
+              : '操作未能完成，已停止。';
           _emitEvent(AgentResponseEvent(
             content: fallback,
             toolCalls: executedCalls,

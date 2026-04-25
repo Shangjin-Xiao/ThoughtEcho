@@ -75,8 +75,6 @@ class ChatMessage {
       'created_at': timestamp.toIso8601String(),
       'included_in_context': includedInContext ? 1 : 0,
       'meta_json': metaJson,
-      'content_format': contentFormat,
-      'delta_json': deltaJson,
     };
   }
 
