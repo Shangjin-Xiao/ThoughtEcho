@@ -2,6 +2,7 @@ part of '../database_service.dart';
 
 /// Mixin providing recycle-bin operations for DatabaseService.
 mixin _DatabaseTrashMixin on _DatabaseServiceBase {
+  static const int _sqliteInClauseBatchSize = 900;
   // Web平台墓碑记录（内存缓存 + SharedPreferences持久化）
   static Map<String, String>? _webTombstones;
   static const String _webTombstonesKey = 'web_quote_tombstones';
@@ -369,12 +370,15 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
 
     final mediaCandidates = <String>{};
     final db = await safeDatabase;
-    final placeholders = List.filled(uniqueIds.length, '?').join(',');
-
-    final quoteRows = await db.rawQuery(
-      'SELECT * FROM quotes WHERE is_deleted = 1 AND id IN ($placeholders)',
-      uniqueIds,
-    );
+    final quoteRows = <Map<String, Object?>>[];
+    for (final idBatch in _chunkIds(uniqueIds)) {
+      final placeholders = List.filled(idBatch.length, '?').join(',');
+      final rows = await db.rawQuery(
+        'SELECT * FROM quotes WHERE is_deleted = 1 AND id IN ($placeholders)',
+        idBatch,
+      );
+      quoteRows.addAll(rows);
+    }
     final targetDeletedIds = quoteRows
         .map((row) => row['id'])
         .whereType<String>()
@@ -411,10 +415,15 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       var deletedIdsInTxn = <String>[];
 
       await db.transaction((txn) async {
-        final currentDeletedRows = await txn.rawQuery(
-          'SELECT id FROM quotes WHERE is_deleted = 1 AND id IN ($placeholders)',
-          uniqueIds,
-        );
+        final currentDeletedRows = <Map<String, Object?>>[];
+        for (final idBatch in _chunkIds(uniqueIds)) {
+          final placeholders = List.filled(idBatch.length, '?').join(',');
+          final rows = await txn.rawQuery(
+            'SELECT id FROM quotes WHERE is_deleted = 1 AND id IN ($placeholders)',
+            idBatch,
+          );
+          currentDeletedRows.addAll(rows);
+        }
         deletedIdsInTxn = currentDeletedRows
             .map((row) => row['id'])
             .whereType<String>()
@@ -438,12 +447,14 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
         }
         await tombstoneBatch.commit(noResult: true);
 
-        final deletePlaceholders =
-            List.filled(deletedIdsInTxn.length, '?').join(',');
-        await txn.rawDelete(
-          'DELETE FROM quotes WHERE is_deleted = 1 AND id IN ($deletePlaceholders)',
-          deletedIdsInTxn,
-        );
+        for (final deleteBatch in _chunkIds(deletedIdsInTxn)) {
+          final deletePlaceholders =
+              List.filled(deleteBatch.length, '?').join(',');
+          await txn.rawDelete(
+            'DELETE FROM quotes WHERE is_deleted = 1 AND id IN ($deletePlaceholders)',
+            deleteBatch,
+          );
+        }
       });
 
       if (deletedIdsInTxn.isEmpty) {
@@ -478,5 +489,16 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       refreshQuotesStreamForParts();
       notifyListeners();
     });
+  }
+
+  List<List<String>> _chunkIds(List<String> ids) {
+    final batches = <List<String>>[];
+    for (var i = 0; i < ids.length; i += _sqliteInClauseBatchSize) {
+      final end = (i + _sqliteInClauseBatchSize > ids.length)
+          ? ids.length
+          : i + _sqliteInClauseBatchSize;
+      batches.add(ids.sublist(i, end));
+    }
+    return batches;
   }
 }

@@ -320,6 +320,7 @@ class BackupService {
         'last_modified': _settingsService.trashRetentionLastModified,
       };
       sink.write(',"trash_settings":${jsonEncode(trashSettings)}');
+      sink.write('},');
 
       cancelToken?.throwIfCancelled();
       onProgress?.call(0.85);
@@ -327,13 +328,13 @@ class BackupService {
       // 3. 导出设置
       logDebug('正在导出设置数据...');
       final settingsData = _settingsService.getAllSettingsForBackup();
-      sink.write(',"settings":${jsonEncode(settingsData)}');
+      sink.write('"settings":${jsonEncode(settingsData)},');
 
       // 4. 导出AI分析数据
       logDebug('正在导出AI分析数据...');
       // 假设AI分析数据量也不大，或者也可以改为分页查询
       final aiAnalysisData = await _aiAnalysisDbService.exportAnalysesAsList();
-      sink.write(',"ai_analysis":${jsonEncode(aiAnalysisData)}}'); // 结束JSON对象
+      sink.write('"ai_analysis":${jsonEncode(aiAnalysisData)}}'); // 结束JSON对象
 
       await sink.flush();
       onProgress?.call(1.0);

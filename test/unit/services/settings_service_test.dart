@@ -148,6 +148,28 @@ void main() {
       },
     );
 
+    test(
+      'applyIncomingTrashSettings should ignore unsupported retention_days',
+      () async {
+        await settingsService.setTrashRetentionDays(
+          7,
+          modifiedAt: DateTime.utc(2026, 3, 28, 10),
+        );
+
+        final applied = await settingsService.applyIncomingTrashSettings({
+          'retention_days': 999,
+          'last_modified': '2026-03-29T10:00:00.000Z',
+        });
+
+        expect(applied, isFalse);
+        expect(settingsService.trashRetentionDays, equals(7));
+        expect(
+          settingsService.trashRetentionLastModified,
+          equals('2026-03-28T10:00:00.000Z'),
+        );
+      },
+    );
+
     test('should persist direct fullscreen editor toggle changes', () async {
       expect(settingsService.skipNonFullscreenEditor, isFalse);
 

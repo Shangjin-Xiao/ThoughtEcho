@@ -114,6 +114,14 @@ class SettingsService extends ChangeNotifier {
       return false;
     }
 
+    if (!AppSettings.allowedTrashRetentionDays.contains(parsedDays)) {
+      logWarning(
+        '忽略非法的回收站保留期: $parsedDays',
+        source: 'SettingsService',
+      );
+      return false;
+    }
+
     final incomingDays = AppSettings.normalizeTrashRetentionDays(parsedDays);
     final incomingLastModified = incoming['last_modified']?.toString();
     String? normalizedIncomingTimestamp;
