@@ -898,7 +898,15 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     final position = locationService.currentPosition;
 
     // 始终创建 initialQuote，防止编辑器自动应用用户偏好设置
-    final formattedLocation = locationService.getFormattedLocation();
+    var formattedLocation = locationService.getFormattedLocation();
+    // 修复：如果 getFormattedLocation() 为空但 getDisplayLocation() 有值，
+    // 使用显示格式的地址作为 fallback
+    if (formattedLocation.isEmpty && includeLocation) {
+      final displayLocation = locationService.getDisplayLocation();
+      if (displayLocation.isNotEmpty) {
+        formattedLocation = displayLocation;
+      }
+    }
     final initialQuote = Quote(
       content: content,
       date: DateTime.now().toIso8601String(),
@@ -1078,7 +1086,15 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       }
 
       final position = locationService.currentPosition;
-      final formattedLocation = locationService.getFormattedLocation();
+      var formattedLocation = locationService.getFormattedLocation();
+      // 修复：如果 getFormattedLocation() 为空但 getDisplayLocation() 有值，
+      // 使用显示格式的地址作为 fallback，确保预览能显示的位置也能正确保存
+      if (formattedLocation.isEmpty && includeLocation) {
+        final displayLocation = locationService.getDisplayLocation();
+        if (displayLocation.isNotEmpty) {
+          formattedLocation = displayLocation;
+        }
+      }
       final storedLocation = includeLocation
           ? (formattedLocation.isNotEmpty
               ? formattedLocation
