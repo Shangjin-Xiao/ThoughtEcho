@@ -1,0 +1,23 @@
+lib/models/quote_model.dart
+  8364f6e0f6293a3a 389-393,409-413
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "f3df442386120eeda890048e864e87d720f65d50",
+  "prompts": {
+    "8364f6e0f6293a3a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_23b6cfa96ffe8XzlKlYeTXcohv",
+        "model": "github-copilot/gpt-5.3-codex"
+      },
+      "human_author": "上晋",
+      "messages": [],
+      "total_additions": 18,
+      "total_deletions": 9,
+      "accepted_lines": 10,
+      "overriden_lines": 0
+    }
+  }
+}
