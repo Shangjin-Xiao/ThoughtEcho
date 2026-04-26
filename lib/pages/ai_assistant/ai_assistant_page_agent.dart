@@ -26,9 +26,13 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
     String? toolThinkingText;
     // 工具组是否仍处于"采集叙述"状态：从首个 AgentToolCallStartEvent 起为 true，
     // 直到 AgentResponseEvent / AgentErrorEvent / 流程结束，期间所有
-    // AgentTextDeltaEvent 都并入 tool_progress 卡片的 thinkingText，
-    // 而非另起独立聊天气泡，确保"让我看看…"这类叙述与工具调用按时间统一展示。
+    // AgentTextDeltaEvent 都并入 tool_progress 卡片，按时间顺序穿插在工具调用之间，
+    // 而非另起独立聊天气泡。
     var toolGroupOpen = false;
+    // 自上一次 AgentToolCallStartEvent 之后累积的尾部叙述长度。
+    // 在 AgentResponseEvent 触发时需要从最后一项 narrationText（或 thinkingText）
+    // 中删除这段内容，避免最终回答既出现在工具卡片里又出现在主气泡正文中重复。
+    var pendingTailNarration = '';
 
     try {
       await _agentEventSubscription?.cancel();
@@ -40,9 +44,18 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             streamingText = '';
           case AgentTextDeltaEvent():
             if (toolGroupOpen && toolProgressMsgId != null) {
-              // 工具调用进行中（含工具间隙）：把叙述追加到工具卡片内部，
-              // 与 toolItems 形成按时间排列的统一展示，避免单独跑出来。
-              toolThinkingText = (toolThinkingText ?? '') + event.delta;
+              // 工具调用进行中：把叙述按时间穿插进工具卡片。
+              pendingTailNarration += event.delta;
+              if (toolItems.isEmpty) {
+                // 还没产出任何工具，只能并到 thinkingText（首个工具开始前的引子）。
+                toolThinkingText = (toolThinkingText ?? '') + event.delta;
+              } else {
+                // 追加到最后一个工具的 narrationText，让其在该工具下方按时序展示。
+                final last = toolItems.last;
+                final updated = (last.narrationText ?? '') + event.delta;
+                toolItems[toolItems.length - 1] =
+                    last.copyWith(narrationText: updated);
+              }
               _updateToolProgressMessage(
                 toolProgressMsgId!,
                 toolItems,
@@ -80,6 +93,9 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
               streamingText = '';
             }
             toolGroupOpen = true;
+            // 新工具开始 = 之前积累的尾部叙述属于"工具间过渡"，应保留在原位置
+            // （已通过 live update 写入），重置 pending 计数避免后续 ResponseEvent 误删。
+            pendingTailNarration = '';
             if (toolProgressMsgId == null) {
               toolProgressMsgId = const Uuid().v4();
               final msg = app_chat.ChatMessage(
@@ -147,6 +163,25 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
 
           case AgentResponseEvent():
             toolGroupOpen = false;
+            // 把"最后一次工具调用之后到 ResponseEvent 之间的尾部叙述"
+            // 从工具卡片中剥离——那其实是 AI 流式输出的最终回答，
+            // 紧接着会作为独立主气泡呈现，避免重复。
+            if (pendingTailNarration.isNotEmpty) {
+              final stripLen = pendingTailNarration.length;
+              if (toolItems.isNotEmpty) {
+                final last = toolItems.last;
+                final current = last.narrationText ?? '';
+                final cut = current.length >= stripLen
+                    ? current.substring(0, current.length - stripLen)
+                    : '';
+                toolItems[toolItems.length - 1] =
+                    last.copyWith(narrationText: cut);
+              } else if ((toolThinkingText ?? '').length >= stripLen) {
+                final t = toolThinkingText!;
+                toolThinkingText = t.substring(0, t.length - stripLen);
+              }
+              pendingTailNarration = '';
+            }
             if (toolProgressMsgId != null) {
               _updateToolProgressMessage(
                 toolProgressMsgId!,
@@ -158,6 +193,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
 
           case AgentErrorEvent():
             toolGroupOpen = false;
+            pendingTailNarration = '';
             if (streamingMsgId != null) {
               _setState(() {
                 _messages.removeWhere((m) => m.id == streamingMsgId);
@@ -289,6 +325,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
                     'description': i.description ?? '',
                     'status': i.status.name,
                     'result': i.result ?? '',
+                    'narrationText': i.narrationText ?? '',
                   })
               .toList(),
           'inProgress': inProgress,

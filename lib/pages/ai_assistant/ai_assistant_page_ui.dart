@@ -255,6 +255,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                   orElse: () => ToolProgressStatus.pending,
                 ),
                 result: map['result'] as String?,
+                narrationText: map['narrationText'] as String?,
               );
             }).toList();
             return Padding(

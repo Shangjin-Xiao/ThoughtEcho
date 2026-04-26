@@ -50,6 +50,9 @@ class SettingsService extends ChangeNotifier {
   static const String _exploreAiAssistantModeKey =
       'explore_ai_assistant_mode_v1';
   static const String _noteAiAssistantModeKey = 'note_ai_assistant_mode_v1';
+
+  SettingsService(this._prefs);
+
   AISettings get aiSettings => _aiSettings;
   AppSettings get appSettings => _appSettings;
   ThemeMode get themeMode => _themeMode;
@@ -98,6 +101,91 @@ class SettingsService extends ChangeNotifier {
   int get trashRetentionDays => _appSettings.trashRetentionDays;
   String? get trashRetentionLastModified =>
       _appSettings.trashRetentionLastModified;
+
+  Future<void> setTrashRetentionDays(
+    int days, {
+    DateTime? modifiedAt,
+  }) async {
+    final normalizedDays = AppSettings.normalizeTrashRetentionDays(days);
+    final modified = (modifiedAt ?? DateTime.now()).toUtc().toIso8601String();
+    _appSettings = _appSettings.copyWith(
+      trashRetentionDays: normalizedDays,
+      trashRetentionLastModified: modified,
+    );
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  Future<bool> applyIncomingTrashSettings(
+    Map<String, dynamic>? incoming,
+  ) async {
+    if (incoming == null) {
+      return false;
+    }
+
+    if (!incoming.containsKey('retention_days')) {
+      return false;
+    }
+
+    final dynamic rawDays = incoming['retention_days'];
+    int? parsedDays;
+    if (rawDays is int) {
+      parsedDays = rawDays;
+    } else if (rawDays is num) {
+      if (rawDays != rawDays.toInt()) {
+        logWarning(
+          '忽略非整数的回收站保留期: $rawDays',
+          source: 'SettingsService',
+        );
+        return false;
+      }
+      parsedDays = rawDays.toInt();
+    } else if (rawDays is String) {
+      parsedDays = int.tryParse(rawDays);
+    }
+
+    if (parsedDays == null) {
+      return false;
+    }
+
+    if (!AppSettings.allowedTrashRetentionDays.contains(parsedDays)) {
+      logWarning(
+        '忽略非法的回收站保留期: $parsedDays',
+        source: 'SettingsService',
+      );
+      return false;
+    }
+
+    final localDays = trashRetentionDays;
+    final localModified = trashRetentionLastModified;
+    final incomingModified = incoming['last_modified'] as String?;
+
+    if (localModified != null &&
+        incomingModified != null &&
+        incomingModified.isNotEmpty) {
+      final localTime = DateTime.tryParse(localModified);
+      final incomingTime = DateTime.tryParse(incomingModified);
+      if (localTime != null &&
+          incomingTime != null &&
+          incomingTime.isBefore(localTime)) {
+        logDebug(
+          '忽略过期的回收站设置: local=$localDays@$localModified, incoming=$parsedDays@$incomingModified',
+          source: 'SettingsService',
+        );
+        return false;
+      }
+    }
+
+    if (parsedDays != localDays) {
+      await setTrashRetentionDays(parsedDays);
+      logDebug(
+        '应用传入的回收站保留期: $localDays -> $parsedDays',
+        source: 'SettingsService',
+      );
+      return true;
+    }
+
+    return false;
   }
 
   // 折叠时优先显示加粗内容
@@ -295,8 +383,6 @@ class SettingsService extends ChangeNotifier {
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
     notifyListeners();
   }
-
-  SettingsService(this._prefs);
 
   /// 创建SettingsService实例的静态工厂方法
   static Future<SettingsService> create() async {

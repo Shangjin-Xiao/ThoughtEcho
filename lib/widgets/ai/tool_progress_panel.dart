@@ -34,12 +34,17 @@ class ToolProgressItem {
   /// 执行结果摘要
   final String? result;
 
+  /// 该工具调用之后、下一次工具调用之前 AI 输出的过渡叙述文本，
+  /// 用于让"让我看看…"这类描述与工具调用按时间顺序穿插展示。
+  final String? narrationText;
+
   const ToolProgressItem({
     this.toolCallId,
     required this.toolName,
     this.description,
     required this.status,
     this.result,
+    this.narrationText,
   });
 
   ToolProgressItem copyWith({
@@ -48,6 +53,7 @@ class ToolProgressItem {
     String? description,
     ToolProgressStatus? status,
     String? result,
+    String? narrationText,
   }) {
     return ToolProgressItem(
       toolCallId: toolCallId ?? this.toolCallId,
@@ -55,6 +61,7 @@ class ToolProgressItem {
       description: description ?? this.description,
       status: status ?? this.status,
       result: result ?? this.result,
+      narrationText: narrationText ?? this.narrationText,
     );
   }
 }
@@ -287,9 +294,33 @@ class _ToolProgressPanelState extends State<ToolProgressPanel>
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          children: widget.items.map((item) {
-                            return _buildToolItem(context, item);
-                          }).toList(),
+                          children: [
+                            for (final item in widget.items) ...[
+                              _buildToolItem(context, item),
+                              if (item.narrationText != null &&
+                                  item.narrationText!.trim().isNotEmpty)
+                                Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color:
+                                          theme.colorScheme.surfaceContainerLow,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      item.narrationText!.trim(),
+                                      style:
+                                          theme.textTheme.bodySmall?.copyWith(
+                                        color:
+                                            theme.colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ],
                         ),
                       ),
                     ],

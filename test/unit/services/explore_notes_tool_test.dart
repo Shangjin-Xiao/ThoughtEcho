@@ -33,6 +33,7 @@ class _TestDatabaseService extends DatabaseService {
     bool excludeHiddenNotes = true,
     String? dateStart,
     String? dateEnd,
+    bool includeDeleted = false,
   }) async {
     return _filteredAndSorted(searchQuery: searchQuery).length;
   }
@@ -50,6 +51,7 @@ class _TestDatabaseService extends DatabaseService {
     bool excludeHiddenNotes = true,
     String? dateStart,
     String? dateEnd,
+    bool includeDeleted = false,
   }) async {
     final rows = _filteredAndSorted(searchQuery: searchQuery);
     if (offset >= rows.length) {
@@ -60,7 +62,7 @@ class _TestDatabaseService extends DatabaseService {
   }
 
   @override
-  Future<Quote?> getQuoteById(String id) async {
+  Future<Quote?> getQuoteById(String id, {bool includeDeleted = false}) async {
     for (final quote in _quotes) {
       if (quote.id == id) {
         return quote;
