@@ -5,23 +5,23 @@ import '../gen_l10n/app_localizations.dart';
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
 import '../services/location_service.dart';
-import '../services/settings_service.dart'; // For showExactTime
+import '../services/settings_service.dart';
 import '../services/weather_service.dart';
 import '../theme/app_theme.dart';
-import '../utils/icon_utils.dart'; // For tag icons
 import '../utils/string_utils.dart';
-import '../utils/time_utils.dart'; // For time formatting
+import '../utils/time_utils.dart';
+import 'quote_card_helpers.dart';
 import 'quote_content_widget.dart';
 
 enum TrashQuoteCardAction { restore, permanentlyDelete }
 
-class TrashQuoteCard extends StatefulWidget {
+class TrashQuoteCard extends StatelessWidget {
   final Quote quote;
   final String deletedAtText;
   final String remainingDaysText;
   final bool actionsEnabled;
   final ValueChanged<TrashQuoteCardAction>? onActionSelected;
-  final Map<String, NoteCategory> tagMap; // Assume tagMap is passed in
+  final Map<String, NoteCategory> tagMap;
 
   const TrashQuoteCard({
     super.key,
@@ -34,49 +34,14 @@ class TrashQuoteCard extends StatefulWidget {
   });
 
   @override
-  State<TrashQuoteCard> createState() => _TrashQuoteCardState();
-}
-
-class _TrashQuoteCardState extends State<TrashQuoteCard> {
-  // Helper methods from QuoteItemWidget, adapted for TrashQuoteCard
-
-  IconData _getWeatherIcon(String weatherKey) {
-    return WeatherService.getWeatherIconDataByKey(weatherKey);
-  }
-
-  Color _resolveCardColor(ColorScheme colorScheme) {
-    final colorHex = widget.quote.colorHex;
-    if (colorHex == null || colorHex.isEmpty) {
-      return colorScheme.surfaceContainerLowest;
-    }
-
-    try {
-      return Color(int.parse(colorHex.substring(1), radix: 16) | 0xFF000000);
-    } catch (_) {
-      return colorScheme.surfaceContainerLowest;
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final l10n = AppLocalizations.of(context);
-    final quote = widget.quote;
 
-    // Determine the background color of the card
-    final Color cardColor = _resolveCardColor(colorScheme);
+    final colors = QuoteCardColors.fromHex(quote.colorHex, colorScheme);
+    final cardColor = colors.cardColor;
 
-    // 计算卡片背景的亮度，决定内容颜色
-    final bool isLightCard =
-        ThemeData.estimateBrightnessForColor(cardColor) == Brightness.light;
-    final Color baseContentColor = isLightCard ? Colors.black : Colors.white;
-
-    final Color primaryTextColor = baseContentColor.withValues(alpha: 0.9);
-    final Color secondaryTextColor = baseContentColor.withValues(alpha: 0.7);
-    final Color iconColor = baseContentColor.withValues(alpha: 0.65);
-
-    // Formatted date and time (from QuoteItemWidget)
     final DateTime quoteDate = DateTime.parse(quote.date);
     final showExactTime = context.select<SettingsService, bool>(
       (s) => s.showExactTime,
@@ -92,7 +57,7 @@ class _TrashQuoteCardState extends State<TrashQuoteCard> {
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        boxShadow: AppTheme.defaultShadow, // Use default shadow for consistency
+        boxShadow: AppTheme.defaultShadow,
         gradient: quote.colorHex != null && quote.colorHex!.isNotEmpty
             ? LinearGradient(
                 begin: Alignment.topLeft,
@@ -109,7 +74,6 @@ class _TrashQuoteCardState extends State<TrashQuoteCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header: Date, Weather, Location, Deleted Info
             Padding(
               padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
               child: Row(
@@ -122,7 +86,7 @@ class _TrashQuoteCardState extends State<TrashQuoteCard> {
                         Text(
                           formattedDate,
                           style: theme.textTheme.bodySmall?.copyWith(
-                            color: secondaryTextColor,
+                            color: colors.secondaryTextColor,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -132,13 +96,13 @@ class _TrashQuoteCardState extends State<TrashQuoteCard> {
                           children: [
                             _MetaChip(
                               icon: Icons.delete_outline,
-                              label: widget.deletedAtText,
-                              foregroundColor: secondaryTextColor,
+                              label: deletedAtText,
+                              foregroundColor: colors.secondaryTextColor,
                             ),
                             _MetaChip(
                               icon: Icons.hourglass_bottom_outlined,
-                              label: widget.remainingDaysText,
-                              foregroundColor: secondaryTextColor,
+                              label: remainingDaysText,
+                              foregroundColor: colors.secondaryTextColor,
                             ),
                           ],
                         ),
@@ -151,7 +115,8 @@ class _TrashQuoteCardState extends State<TrashQuoteCard> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (quote.hasLocation) ...[
-                            Icon(Icons.location_on, size: 14, color: iconColor),
+                            Icon(Icons.location_on,
+                                size: 14, color: colors.iconColor),
                             const SizedBox(width: 2),
                             Flexible(
                               child: Text(
@@ -168,7 +133,7 @@ class _TrashQuoteCardState extends State<TrashQuoteCard> {
                                         quote.longitude,
                                       ),
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  color: secondaryTextColor,
+                                  color: colors.secondaryTextColor,
                                   fontSize: 12,
                                 ),
                                 overflow: TextOverflow.ellipsis,
@@ -180,15 +145,16 @@ class _TrashQuoteCardState extends State<TrashQuoteCard> {
                             const SizedBox(width: 8),
                           if (quote.weather != null) ...[
                             Icon(
-                              _getWeatherIcon(quote.weather!),
+                              WeatherService.getWeatherIconDataByKey(
+                                  quote.weather!),
                               size: 14,
-                              color: iconColor,
+                              color: colors.iconColor,
                             ),
                             const SizedBox(width: 2),
                             Text(
                               '${WeatherService.getLocalizedWeatherDescription(l10n, quote.weather!)}${quote.temperature != null ? ' ${quote.temperature}' : ''}',
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: secondaryTextColor,
+                                color: colors.secondaryTextColor,
                                 fontSize: 12,
                               ),
                             ),
@@ -200,23 +166,22 @@ class _TrashQuoteCardState extends State<TrashQuoteCard> {
               ),
             ),
 
-            // Quote Content
             Padding(
               padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
               child: QuoteContent(
                 quote: quote,
-                showFullContent: true, // Always show full content in trash
+                showFullContent: true,
                 style: theme.textTheme.bodyLarge?.copyWith(
-                  color: primaryTextColor,
+                  color: colors.primaryTextColor,
                   height: 1.5,
                 ),
               ),
             ),
 
-            // Source Information
             if ((quote.sourceAuthor != null &&
                     quote.sourceAuthor!.isNotEmpty) ||
-                (quote.sourceWork != null && quote.sourceWork!.isNotEmpty)) ...[
+                (quote.sourceWork != null &&
+                    quote.sourceWork!.isNotEmpty)) ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
                 child: Text(
@@ -225,7 +190,7 @@ class _TrashQuoteCardState extends State<TrashQuoteCard> {
                     quote.sourceWork,
                   ),
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: secondaryTextColor,
+                    color: colors.secondaryTextColor,
                     fontStyle: FontStyle.italic,
                   ),
                 ),
@@ -236,20 +201,20 @@ class _TrashQuoteCardState extends State<TrashQuoteCard> {
                 child: Text(
                   quote.source!,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: secondaryTextColor,
+                    color: colors.secondaryTextColor,
                     fontStyle: FontStyle.italic,
                   ),
                 ),
               ),
             ],
 
-            // Tags (mimicking QuoteItemWidget)
             if (quote.tagIds.isNotEmpty) ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
                 child: Row(
                   children: [
-                    Icon(Icons.label_outline, size: 16, color: iconColor),
+                    Icon(Icons.label_outline,
+                        size: 16, color: colors.iconColor),
                     const SizedBox(width: 6),
                     Expanded(
                       child: SingleChildScrollView(
@@ -260,76 +225,24 @@ class _TrashQuoteCardState extends State<TrashQuoteCard> {
                             for (int index = 0;
                                 index < quote.tagIds.length;
                                 index++)
-                              () {
-                                final tagId = quote.tagIds[index];
-                                final tag = widget.tagMap[tagId] ??
-                                    NoteCategory(
-                                      id: tagId,
-                                      name: l10n.unknownTag,
-                                    );
-
-                                return Container(
-                                  margin: EdgeInsets.only(
-                                    right:
-                                        index < quote.tagIds.length - 1 ? 8 : 0,
-                                  ),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 4,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: baseContentColor.withValues(
-                                          alpha: 0.08),
-                                      borderRadius: BorderRadius.circular(14),
-                                      border: Border.all(
-                                        color: baseContentColor.withValues(
-                                            alpha: 0.15),
-                                        width: 0.5,
+                              Container(
+                                margin: EdgeInsets.only(
+                                  right: index < quote.tagIds.length - 1
+                                      ? 8
+                                      : 0,
+                                ),
+                                child: QuoteTagChip(
+                                  tag: tagMap[quote.tagIds[index]] ??
+                                      NoteCategory(
+                                        id: quote.tagIds[index],
+                                        name: l10n.unknownTag,
                                       ),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        if (tag.iconName?.isNotEmpty ==
-                                            true) ...[
-                                          if (IconUtils.isEmoji(
-                                            tag.iconName!,
-                                          )) ...[
-                                            Text(
-                                              IconUtils.getDisplayIcon(
-                                                tag.iconName!,
-                                              ),
-                                              style: const TextStyle(
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 3),
-                                          ] else ...[
-                                            Icon(
-                                              IconUtils.getIconData(
-                                                tag.iconName!,
-                                              ),
-                                              size: 12,
-                                              color: secondaryTextColor,
-                                            ),
-                                            const SizedBox(width: 3),
-                                          ],
-                                        ],
-                                        Text(
-                                          tag.name,
-                                          style: theme.textTheme.bodySmall
-                                              ?.copyWith(
-                                            color: secondaryTextColor,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              }(),
+                                  secondaryTextColor:
+                                      colors.secondaryTextColor,
+                                  baseContentColor:
+                                      colors.baseContentColor,
+                                ),
+                              ),
                           ],
                         ),
                       ),
@@ -339,20 +252,19 @@ class _TrashQuoteCardState extends State<TrashQuoteCard> {
               ),
             ],
 
-            // Actions: Restore and Permanently Delete (explicit buttons)
-            if (widget.onActionSelected != null)
+            if (onActionSelected != null)
               Align(
                 alignment: Alignment.bottomRight,
                 child: AbsorbPointer(
-                  absorbing: !widget.actionsEnabled,
+                  absorbing: !actionsEnabled,
                   child: Opacity(
-                    opacity: widget.actionsEnabled ? 1.0 : 0.5,
+                    opacity: actionsEnabled ? 1.0 : 0.5,
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         TextButton(
-                          onPressed: () => widget
-                              .onActionSelected!(TrashQuoteCardAction.restore),
+                          onPressed: () => onActionSelected!(
+                              TrashQuoteCardAction.restore),
                           style: TextButton.styleFrom(
                             foregroundColor: colorScheme.primary,
                           ),
@@ -360,7 +272,7 @@ class _TrashQuoteCardState extends State<TrashQuoteCard> {
                         ),
                         const SizedBox(width: 8),
                         OutlinedButton(
-                          onPressed: () => widget.onActionSelected!(
+                          onPressed: () => onActionSelected!(
                               TrashQuoteCardAction.permanentlyDelete),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: colorScheme.error,
