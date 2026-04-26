@@ -1,0 +1,31 @@
+test/unit/services/explore_notes_tool_test.dart
+  f1ce1ff3e5144c73 36,54,65
+lib/widgets/ai/tool_progress_panel.dart
+  f1ce1ff3e5144c73 37-40,47,56,64,297-323
+test/sync_integration_test.mocks.dart
+  f1ce1ff3e5144c73 351-352,366-367,415-416,427-428
+lib/pages/ai_assistant/ai_assistant_page_agent.dart
+  f1ce1ff3e5144c73 29-30,32-35,47-58,96-98,166-184,196,328
+lib/services/settings_service.dart
+  f1ce1ff3e5144c73 53-55,104-188
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "5a0deb31ed430f4c51f576ee412ac2aa0f9e7f58",
+  "prompts": {
+    "f1ce1ff3e5144c73": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_23860e5cdffezMlKPq5C4XyEO9",
+        "model": "opencode-go/kimi-k2.6"
+      },
+      "human_author": "上晋",
+      "messages": [],
+      "total_additions": 186,
+      "total_deletions": 22,
+      "accepted_lines": 230,
+      "overriden_lines": 0
+    }
+  }
+}
