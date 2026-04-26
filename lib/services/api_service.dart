@@ -217,13 +217,6 @@ class ApiService {
       );
     } catch (e) {
       logDebug('获取一言异常: $e');
-      if (useLocalOnly) {
-        return await _getLocalOnlyQuote(
-          l10n,
-          databaseService,
-          offlineQuoteSource,
-        );
-      }
       return await _getLocalQuoteOrDefault(
         l10n,
         databaseService,

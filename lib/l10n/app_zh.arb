@@ -375,6 +375,8 @@
   "deleteNote": "删除笔记",
   "deleteNoteConfirmation": "确定要删除这条笔记吗？此操作无法撤销。",
   "noteDeleted": "笔记已删除",
+  "noteNotFound": "笔记不存在",
+  "noteUpdateSkippedDeleted": "笔记已删除，更新已跳过",
   "favorited": "已珍藏 ({count})",
   "@favorited": {
     "placeholders": {
@@ -1935,8 +1937,6 @@
   "containsHtmlTagsLabel": "包含HTML标签：{status}",
   "first100CharsLabel": "前100字符：",
   "testFailedEmptyContent": "测试失败：AI返回了空内容",
-  "testFailedApiKey": "测试失败：请先在AI设置中配置有效的API Key",
-  "testFailedNetwork": "测试失败：网络连接异常",
   "formattedDate": "{month}月{day}日",
   "@formattedDate": {
     "placeholders": {
@@ -2008,7 +2008,6 @@
     }
   },
   "generatingAiReport": "正在生成AI年度报告...",
-  "testFailedEmptyContent": "测试失败：AI返回了空内容",
   "includeMediaFilesHint": "勾选后将备份图片、音频等媒体文件（文件更大但更完整）",
   "overwriteImport": "覆盖导入 (清空现有数据)",
   "overwriteImportDesc": "删除当前所有数据，以备份内容替换",
@@ -2827,6 +2826,8 @@
   "guideSettingsStartupDesc": "可以设置应用启动时默认打开的页面",
   "guideSettingsThemeTitle": "主题设置",
   "guideSettingsThemeDesc": "这里可以自定义应用的主题颜色和外观",
+  "guideTrashLocationTitle": "回收站位置",
+  "guideTrashLocationDesc": "笔记已移到回收站\n可在「设置」中找到回收站并恢复",
   "apkDownloadTitle": "下载APK",
   "apkDownloading": "正在下载 ThoughtEcho {version}...",
   "@apkDownloading": {
@@ -3160,15 +3161,23 @@
   "locationDisplayFormat": "{city}{suffix}",
   "@locationDisplayFormat": {
     "placeholders": {
-      "city": {"type": "String"},
-      "suffix": {"type": "String"}
+      "city": {
+        "type": "String"
+      },
+      "suffix": {
+        "type": "String"
+      }
     }
   },
   "locationDisplayWithDistrict": "{city}·{district}",
   "@locationDisplayWithDistrict": {
     "placeholders": {
-      "city": {"type": "String"},
-      "district": {"type": "String"}
+      "city": {
+        "type": "String"
+      },
+      "district": {
+        "type": "String"
+      }
     }
   },
   "noLocationInfo": "无位置信息",
@@ -3264,18 +3273,15 @@
   "continueEditing": "继续编辑",
   "discardChanges": "放弃更改",
   "saveAndExit": "保存并退出",
-
   "localAiFeatures": "本地 AI 功能",
   "localAiFeaturesPreview": "预览版",
   "localAiFeaturesDesc": "使用设备端 AI 能力增强笔记体验",
   "enableLocalAi": "启用本地 AI",
   "enableLocalAiDesc": "开启后将启用设备端 AI 功能",
   "localAiPreviewNote": "此功能目前处于预览阶段，部分功能可能不稳定",
-
   "inputEnhancement": "输入增强",
   "searchAndDiscovery": "搜索与发现",
   "contentAnalysis": "内容分析",
-
   "speechToText": "语音转文字",
   "speechToTextDesc": "长按录音按钮，将语音实时转换为文字",
   "ocrRecognition": "OCR 文字识别",
@@ -3284,19 +3290,16 @@
   "aiCorrectionDesc": "智能修复语音和 OCR 识别中的错误",
   "sourceRecognition": "智能识别来源",
   "sourceRecognitionDesc": "自动提取文本中的作者和作品信息",
-
   "aiSearch": "AI 语义搜索",
   "aiSearchDesc": "使用 AI 理解搜索意图，找到语义相关的笔记",
   "relatedNotes": "相关笔记推荐",
   "relatedNotesDesc": "基于内容相似度推荐相关笔记",
-
   "smartTags": "智能标签推荐",
   "smartTagsDesc": "保存笔记时智能推荐合适的标签",
   "noteClassification": "笔记类型分类",
   "noteClassificationDesc": "自动识别笔记类型（感悟、摘录、日记等）",
   "emotionDetection": "情绪检测",
   "emotionDetectionDesc": "分析笔记内容的情感倾向",
-
   "swipeUpForOcr": "上划进入 OCR",
   "listening": "正在聆听...",
   "recording": "录音中",
@@ -3308,27 +3311,23 @@
   "correctionComplete": "纠错完成",
   "recognizing": "正在识别...",
   "recognitionComplete": "识别完成",
-
   "voiceInputTitle": "语音输入",
   "voiceResultTitle": "语音识别结果",
   "ocrCaptureTitle": "OCR 文字识别",
-  "ocrResultTitle": "识别结果",
+  "ocrResultTitle": "OCR 识别结果",
   "selectTextRegions": "选择要提取的文字区域",
   "takeAnotherPhoto": "再拍一张",
   "finishSelection": "完成选择",
   "noTextDetected": "未检测到文字",
   "tapToSelectRegion": "点击选择文字区域",
-
-  "aiSearchMode": "AI 搜索模式",
-  "normalSearchMode": "普通搜索模式",
+  "aiSearchMode": "AI 搜索",
+  "normalSearchMode": "普通搜索",
   "switchToAiSearch": "切换到 AI 语义搜索",
   "switchToNormalSearch": "切换到普通搜索",
-
   "recommendedTags": "推荐标签",
   "noteType": "笔记类型",
   "emotionAnalysis": "情感分析",
   "viewRelatedNotes": "查看相关笔记",
-
   "localAiNotEnabled": "本地 AI 功能未启用",
   "enableInSettings": "请在设置中启用",
   "featureNotAvailable": "功能暂不可用",
@@ -3363,7 +3362,6 @@
   "voiceRecordingHint": "松开结束，上滑进入 OCR",
   "voiceProcessing": "处理中...",
   "voiceTranscribing": "转写中...",
-  "voiceResultTitle": "语音识别结果",
   "voiceEditResult": "编辑识别结果",
   "voiceApplyCorrection": "AI 纠错",
   "voiceRecognizeSource": "识别来源",
@@ -3373,10 +3371,7 @@
   "ocrSelectRegion": "选择文字区域",
   "ocrSelectRegionHint": "点击要识别的文字区域",
   "ocrProcessing": "识别中...",
-  "ocrResultTitle": "OCR 识别结果",
   "ocrNoTextDetected": "未检测到文字",
-  "aiSearchMode": "AI 搜索",
-  "normalSearchMode": "普通搜索",
   "aiSearching": "AI 搜索中...",
   "aiCorrectionApplied": "已应用 AI 纠错",
   "aiSourceRecognized": "已识别来源",
@@ -3403,7 +3398,6 @@
   "biometricNotAvailable": "设备不支持生物识别验证",
   "biometricNotSetup": "请先在系统设置中设置指纹或面容识别",
   "privacyAndSecurity": "隐私与安全",
-
   "smartPushTitle": "智能推送",
   "smartPushTitlePreview": "智能推送 (Preview)",
   "smartPushDesc": "定时推送过去的笔记和每日一言",
@@ -3500,7 +3494,6 @@
   "tileLoading": "加载中...",
   "tileNoWeather": "无天气",
   "tileCachedSuffix": "缓存",
-
   "noteAutoFillSection": "笔记默认填充",
   "noteAutoFillSectionDesc": "新建笔记时自动填充作者、出处和标签",
   "defaultAuthor": "默认作者",
@@ -3528,7 +3521,6 @@
   "defaultValueCleared": "默认值已清除",
   "excerptIntentEnabled": "摘录到心迹",
   "excerptIntentEnabledDesc": "允许从浏览器或其他应用选中文本后直接跳转到心迹，并打开非全屏编辑器",
-
   "citySelectedWeatherUpdated": "已选择城市：{cityName}，天气已更新",
   "@citySelectedWeatherUpdated": {
     "placeholders": {
@@ -3580,29 +3572,8 @@
   "responseResultLabel": "响应结果:",
   "testApiKey": "测试API密钥",
   "aiReturnedEmptyContent": "AI返回了空内容，请重试",
-  "askNote": "问笔记",
   "chatWithAiAssistant": "与AI助手对话，深入探讨笔记内容",
-  "codeCopiedToClipboard": "代码已复制到剪贴板",
-  "locationPermissionDenied": "位置权限被拒绝，无法启用位置服务",
-  "copyMessage": "复制消息",
   "messageCopied": "消息已复制到剪贴板",
-  "shareMessage": "分享消息",
-  "shareFeatureInDevelopment": "分享功能开发中",
-  "insertMediaFailed": "插入{mediaType}失败: {error}",
-  "@insertMediaFailed": {
-    "placeholders": {
-      "mediaType": {
-        "type": "String"
-      },
-      "error": {
-        "type": "String"
-      }
-    }
-  },
-  "mediaTypeImage": "图片",
-  "mediaTypeVideo": "视频",
-  "mediaTypeAudio": "音频",
-  "mediaTypeMedia": "媒体",
   "anniversaryTitle": "心迹 · ThoughtEcho",
   "anniversarySubtitle": "感恩有你，一路同行",
   "anniversaryEnterApp": "进入应用",
@@ -3617,12 +3588,61 @@
   "developerAnniversaryResetDesc": "重置后下次进入应用将再次播放动画",
   "developerAnniversaryResetDone": "已重置，下次进入应用将播放动画",
   "developerAnniversaryPreview": "立即预览动画",
-  "developerAnniversaryPreviewDesc": "点击立即播放一周年庆典动画"
-   ,"insertImage": "插入图片",
-   "insertVideo": "插入视频",
-   "insertAudio": "插入音频",
-   "mediaPlayerPlay": "播放",
-   "mediaPlayerPause": "暂停",
+  "developerAnniversaryPreviewDesc": "点击立即播放一周年庆典动画",
+  "trash": "回收站",
+  "trashEmpty": "回收站为空",
+  "trashEmptyHint": "误删的内容会先暂存在这里，包含图片、音频和视频，也都可以一起恢复。",
+  "trashRetentionHint": "最近删除的记录和附件会在这里暂存，超过保留期后自动清理。",
+  "moveNoteToTrashTitle": "移至回收站",
+  "moveNoteToTrashConfirmation": "确定要将此笔记移至回收站？您可在 {days} 天内恢复它。",
+  "@moveNoteToTrashConfirmation": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "trashRemainingDays": "剩余 {days} 天",
+  "@trashRemainingDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "restoreNote": "恢复",
+  "permanentlyDelete": "永久删除",
+  "permanentlyDeleteConfirmation": "警告：此操作无法撤销，笔记将被永久删除且无法恢复。",
+  "emptyTrash": "清空回收站",
+  "emptyTrashConfirmation": "确定要清空整个回收站吗？所有笔记将被永久删除且无法恢复。",
+  "noteMovedToTrash": "笔记已移至回收站，可在回收站恢复",
+  "noteRestored": "笔记已恢复",
+  "trashEmptied": "回收站已清空",
+  "deletedAt": "删除于 {date}",
+  "@deletedAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "trashCount": "回收站 ({count})",
+  "@trashCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trashRetentionPeriod": "回收站保留时间",
+  "trashRetentionOption7Days": "7 天",
+  "trashRetentionOption30Days": "30 天",
+  "trashRetentionOption90Days": "90 天",
+  "insertImage": "插入图片",
+  "insertVideo": "插入视频",
+  "insertAudio": "插入音频",
+  "mediaPlayerPlay": "播放",
+  "mediaPlayerPause": "暂停",
   "clipboardFoundHint": "发现剪贴板内容，点击添加为笔记",
   "operationFailedSimple": "操作失败",
   "skipNonFullscreenEditor": "直接进入全屏编辑器",

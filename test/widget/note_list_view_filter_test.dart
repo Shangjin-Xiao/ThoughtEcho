@@ -242,11 +242,13 @@ class _WatchQuotesCall {
   final List<String>? tagIds;
   final List<String>? selectedWeathers;
   final List<String>? selectedDayPeriods;
+  final bool includeDeleted;
 
   const _WatchQuotesCall({
     required this.tagIds,
     required this.selectedWeathers,
     required this.selectedDayPeriods,
+    required this.includeDeleted,
   });
 }
 
@@ -272,6 +274,7 @@ class _FakeDatabaseService extends DatabaseService {
     String? searchQuery,
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
+    bool includeDeleted = false,
   }) {
     watchCalls.add(
       _WatchQuotesCall(
@@ -282,6 +285,7 @@ class _FakeDatabaseService extends DatabaseService {
         selectedDayPeriods: selectedDayPeriods == null
             ? null
             : List<String>.from(selectedDayPeriods),
+        includeDeleted: includeDeleted,
       ),
     );
     return Stream<List<Quote>>.value(quotesToEmit);
@@ -294,6 +298,7 @@ class _FakeDatabaseService extends DatabaseService {
     String? searchQuery,
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
+    bool? includeDeleted,
   }) async {}
 
   @override
@@ -317,6 +322,7 @@ class _DelayedFakeDatabaseService extends _FakeDatabaseService {
     String? searchQuery,
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
+    bool includeDeleted = false,
   }) {
     watchCalls.add(
       _WatchQuotesCall(
@@ -327,6 +333,7 @@ class _DelayedFakeDatabaseService extends _FakeDatabaseService {
         selectedDayPeriods: selectedDayPeriods == null
             ? null
             : List<String>.from(selectedDayPeriods),
+        includeDeleted: includeDeleted,
       ),
     );
     return _controller.stream;

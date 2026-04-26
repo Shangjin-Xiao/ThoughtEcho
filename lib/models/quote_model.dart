@@ -1,4 +1,6 @@
 class Quote {
+  static const Object _noValue = Object();
+
   final String? id;
   final String content;
   final String date;
@@ -22,8 +24,10 @@ class Quote {
   final String? dayPeriod; // 新增：时间段标识(晨曦、午后、黄昏、夜晚等)
   final String? lastModified;
   final int favoriteCount; // 新增：心形点击次数
+  final bool isDeleted; // 回收站标记
+  final String? deletedAt; // 删除时间（ISO 8601）
 
-  const Quote({
+  Quote({
     this.id,
     required this.content,
     required this.date,
@@ -47,7 +51,10 @@ class Quote {
     this.dayPeriod, // 新增：时间段
     this.lastModified,
     this.favoriteCount = 0, // 新增：心形点击次数，默认为0
-  }) : _source = source;
+    this.isDeleted = false,
+    String? deletedAt,
+  })  : _source = source,
+        deletedAt = isDeleted ? _normalizeToUtc(deletedAt) : null;
 
   /// 获取来源信息 (兼容性 getter)
   /// 如果 sourceAuthor 和 sourceWork 存在，则优先从它们重建
@@ -109,6 +116,8 @@ class Quote {
     String? deltaContent,
     String? dayPeriod,
     int favoriteCount = 0, // 新增：心形点击次数，默认为0
+    bool isDeleted = false,
+    String? deletedAt,
   }) {
     // 验证必填字段
     if (!isValidContent(content)) {
@@ -151,6 +160,8 @@ class Quote {
       deltaContent: deltaContent,
       dayPeriod: dayPeriod,
       favoriteCount: favoriteCount, // 新增：心形点击次数
+      isDeleted: isDeleted,
+      deletedAt: deletedAt,
     );
   }
 
@@ -224,6 +235,7 @@ class Quote {
       }
 
       return Quote(
+        // 构造函数会做 isDeleted/deletedAt 一致性归一化
         id: json['id']?.toString(),
         content: content,
         date: date,
@@ -248,6 +260,11 @@ class Quote {
         lastModified: json['last_modified']?.toString(),
         favoriteCount:
             (json['favorite_count'] as num?)?.toInt() ?? 0, // 新增：心形点击次数
+        isDeleted: _parseDeletedFlag(json['is_deleted']),
+        deletedAt: _normalizeDeletedAtForState(
+          isDeleted: _parseDeletedFlag(json['is_deleted']),
+          deletedAt: json['deleted_at']?.toString(),
+        ),
       );
     } on ArgumentError {
       rethrow;
@@ -282,6 +299,8 @@ class Quote {
       'day_period': dayPeriod, // 新增：时间段
       'last_modified': lastModified,
       'favorite_count': favoriteCount, // 新增：心形点击次数
+      'is_deleted': isDeleted ? 1 : 0,
+      'deleted_at': isDeleted ? deletedAt : null,
     };
     // 移除tag_ids字段，因为它不再直接存储在quotes表中
     json.remove('tag_ids');
@@ -313,7 +332,16 @@ class Quote {
     String? dayPeriod, // 新增：时间段
     String? lastModified,
     int? favoriteCount, // 新增：心形点击次数
+    Object? isDeleted = _noValue,
+    Object? deletedAt = _noValue,
   }) {
+    final nextIsDeleted = identical(isDeleted, _noValue)
+        ? this.isDeleted
+        : (isDeleted is bool ? isDeleted : this.isDeleted);
+    final nextDeletedAt = identical(deletedAt, _noValue)
+        ? this.deletedAt
+        : (deletedAt is String? ? deletedAt : this.deletedAt);
+
     return Quote(
       id: id ?? this.id,
       content: content ?? this.content,
@@ -338,7 +366,55 @@ class Quote {
       dayPeriod: dayPeriod ?? this.dayPeriod, // 新增：时间段
       lastModified: lastModified ?? this.lastModified,
       favoriteCount: favoriteCount ?? this.favoriteCount, // 新增：心形点击次数
+      isDeleted: nextIsDeleted,
+      deletedAt: _normalizeDeletedAtForState(
+        isDeleted: nextIsDeleted,
+        deletedAt: nextDeletedAt,
+      ),
     );
+  }
+
+  static bool _parseDeletedFlag(dynamic raw) {
+    if (raw == null) return false;
+    if (raw is bool) return raw;
+    if (raw is num) return raw != 0;
+    final text = raw.toString().trim().toLowerCase();
+    return text == '1' || text == 'true';
+  }
+
+  /// 将 deletedAt 归一化到 UTC，缺失时生成当前 UTC 时间
+  static String _normalizeToUtc(String? deletedAt) {
+    final trimmed = deletedAt?.trim();
+    if (trimmed != null && trimmed.isNotEmpty && isValidDate(trimmed)) {
+      // 若已是 UTC 格式（以 Z 结尾），直接保留原字符串，避免
+      // DateTime.toIso8601String() 强制补出毫秒导致与测试预期不符。
+      if (trimmed.endsWith('Z')) {
+        return trimmed;
+      }
+      return DateTime.parse(trimmed).toUtc().toIso8601String();
+    }
+    return DateTime.now().toUtc().toIso8601String();
+  }
+
+  static String? _normalizeDeletedAtForState({
+    required bool isDeleted,
+    required String? deletedAt,
+  }) {
+    if (!isDeleted) {
+      return null;
+    }
+
+    final trimmed = deletedAt?.trim();
+    if (trimmed != null && trimmed.isNotEmpty && isValidDate(trimmed)) {
+      // 若已是 UTC 格式（以 Z 结尾），直接保留原字符串，避免
+      // DateTime.toIso8601String() 强制补出毫秒导致与测试预期不符。
+      if (trimmed.endsWith('Z')) {
+        return trimmed;
+      }
+      return DateTime.parse(trimmed).toUtc().toIso8601String();
+    }
+    // 缺失时生成当前 UTC 时间，而非回退到 quote.date
+    return DateTime.now().toUtc().toIso8601String();
   }
 
   // 静态key-label映射

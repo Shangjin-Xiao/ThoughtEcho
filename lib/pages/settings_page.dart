@@ -17,6 +17,7 @@ import '../widgets/update_dialog.dart';
 import '../constants/app_constants.dart';
 import 'backup_restore_page.dart';
 import 'note_sync_page.dart';
+import 'trash_page.dart';
 import '../widgets/city_search_widget.dart';
 import '../controllers/weather_search_controller.dart';
 import 'category_settings_page.dart';
@@ -789,6 +790,27 @@ class SettingsPageState extends State<SettingsPage> {
                   },
                 ),
                 ListTile(
+                  title: Text(l10n.trash),
+                  subtitle: Consumer<SettingsService>(
+                    builder: (context, settingsService, _) => Text(
+                      _retentionLabel(
+                        l10n,
+                        settingsService.trashRetentionDays,
+                      ),
+                    ),
+                  ),
+                  leading: const Icon(Icons.delete_outline),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const TrashPage(),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
                   title: Text(l10n.settingsSync),
                   subtitle: Text(l10n.settingsSyncDesc),
                   leading: const Icon(Icons.sync),
@@ -1043,6 +1065,18 @@ class SettingsPageState extends State<SettingsPage> {
         ],
       ),
     );
+  }
+
+  String _retentionLabel(AppLocalizations l10n, int days) {
+    switch (days) {
+      case 7:
+        return l10n.trashRetentionOption7Days;
+      case 90:
+        return l10n.trashRetentionOption90Days;
+      case 30:
+      default:
+        return l10n.trashRetentionOption30Days;
+    }
   }
 
   // --- 处理 Logo 三击激活开发者模式 ---

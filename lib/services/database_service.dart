@@ -1,19 +1,24 @@
 // ignore_for_file: unused_element, unused_field
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 // 仅在 Windows 平台下使用 sqflite_common_ffi，其它平台直接使用 sqflite 默认实现
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
+import '../models/app_settings.dart';
 import 'package:uuid/uuid.dart';
 import '../utils/app_logger.dart';
 import '../utils/database_platform_init.dart';
 import 'large_file_manager.dart';
 import 'media_reference_service.dart';
+import 'mmkv_service.dart';
+import 'unified_log_service.dart';
 import '../models/merge_report.dart';
 import '../widgets/quote_content_widget.dart'; // 用于缓存清理
 import 'database_schema_manager.dart';
@@ -28,9 +33,16 @@ part 'database/database_favorite_mixin.dart';
 part 'database/database_category_mixin.dart';
 part 'database/database_category_init_mixin.dart';
 part 'database/database_hidden_tag_mixin.dart';
+part 'database/database_trash_mixin.dart';
 part 'database/database_pagination_mixin.dart';
 part 'database/database_import_export_mixin.dart';
 part 'database/database_migration_mixin.dart';
+
+enum QuoteUpdateResult {
+  updated,
+  skippedDeleted,
+  notFound,
+}
 
 abstract class _DatabaseServiceBase extends ChangeNotifier {
   _DatabaseServiceBase._internal();
@@ -58,11 +70,17 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   static const String hiddenTagIconName = '🔒';
 
   Future<void> addQuote(Quote quote);
-  Future<Quote?> getQuoteById(String id);
-  Future<List<Quote>> getAllQuotes({bool excludeHiddenNotes = true});
+  Future<Quote?> getQuoteById(String id, {bool includeDeleted = false});
+  Future<List<Quote>> getAllQuotes({
+    bool excludeHiddenNotes = true,
+    bool includeDeleted = false,
+  });
   Future<void> deleteQuote(String id);
-  Future<List<Quote>> searchQuotesByContent(String query);
-  Future<void> updateQuote(Quote quote);
+  Future<List<Quote>> searchQuotesByContent(
+    String query, {
+    bool includeDeleted = false,
+  });
+  Future<QuoteUpdateResult> updateQuote(Quote quote);
 
   Future<List<Quote>> getUserQuotes({
     List<String>? tagIds,
@@ -74,10 +92,12 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
     bool excludeHiddenNotes = true,
+    bool includeDeleted = false,
   });
   Future<List<Quote>> getQuotesForSmartPush({
     int limit = 200,
     String orderBy = 'q.date DESC',
+    bool includeDeleted = false,
   });
   Future<int> getQuotesCount({
     List<String>? tagIds,
@@ -86,7 +106,33 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
     bool excludeHiddenNotes = true,
+    bool includeDeleted = false,
   });
+
+  /// 获取回收站中的已删除笔记列表，支持分页
+  Future<List<Quote>> getDeletedQuotes({
+    int offset = 0,
+    int limit = 20,
+    String orderBy = 'deleted_at DESC',
+  });
+
+  /// 获取回收站中已删除笔记的总数
+  Future<int> getDeletedQuotesCount();
+
+  /// 获取墓碑记录用于备份同步（永久删除的笔记 ID 列表）
+  Future<List<Map<String, dynamic>>> getTombstonesForBackup();
+
+  /// 从回收站恢复指定笔记
+  Future<void> restoreQuote(String id);
+
+  /// 永久删除指定笔记（不可恢复）
+  Future<void> permanentlyDeleteQuote(String id);
+
+  /// 清空回收站（永久删除所有已删除笔记）
+  Future<void> emptyTrash();
+
+  /// 自动清理超过保留期限的已删除笔记，返回清理数量
+  Future<int> autoCleanupExpiredTrash({required int retentionDays});
 
   Future<void> incrementFavoriteCount(String quoteId);
   Future<void> resetFavoriteCount(String quoteId);
@@ -117,6 +163,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     String? searchQuery,
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
+    bool includeDeleted = false,
   });
   Future<void> loadMoreQuotes({
     List<String>? tagIds,
@@ -124,6 +171,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     String? searchQuery,
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
+    bool? includeDeleted,
   });
 
   Future<Map<String, dynamic>> exportDataAsMap();
@@ -164,6 +212,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     String? searchQuery,
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
+    bool includeDeleted = false,
   });
 
   /// 修复：验证排序参数，防止 SQL 注入
@@ -183,6 +232,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       'day_period',
       'last_modified',
       'color_hex',
+      'deleted_at',
     ];
 
     final validTerms = <String>[];
@@ -311,6 +361,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
 
   // 添加存储时间段筛选条件的变量
   List<String>? _watchSelectedDayPeriods;
+  bool _watchIncludeDeleted = false;
 
   // 添加初始化状态标志
   bool _isInitialized = false;
@@ -463,50 +514,17 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     _initCompleter = Completer<void>();
 
     if (kIsWeb) {
-      // Web平台特定的初始化
-      logDebug('在Web平台初始化内存存储');
-      // 添加足够的示例数据以便Web平台测试分页功能
-      if (_memoryStore.isEmpty) {
-        final now = DateTime.now();
-        for (int i = 0; i < 25; i++) {
-          final quote = Quote(
-            id: _uuid.v4(),
-            content: '这是第${i + 1}条示例笔记 - Web版测试数据',
-            date: now.subtract(Duration(hours: i)).toIso8601String(),
-            source: '示例来源${i + 1}',
-            aiAnalysis: '这是第${i + 1}条Web平台示例笔记的AI分析',
-          );
-          _memoryStore.add(quote);
-          logDebug(
-            '生成示例数据${i + 1}: id=${quote.id?.substring(0, 8)}, content=${quote.content}',
-          );
-        }
-        logDebug('Web平台已生成${_memoryStore.length}条示例数据');
-      }
-
-      if (_categoryStore.isEmpty) {
-        _categoryStore.add(
-          NoteCategory(
-            id: _uuid.v4(),
-            name: '默认分类',
-            isDefault: true,
-            iconName: 'bookmark',
-          ),
-        );
-      }
-
-      // 隐藏标签：系统标签，始终确保存在（Web内存存储）
-      await getOrCreateHiddenTag();
-
-      // 触发更新
-      _categoriesController.add(_categoryStore);
-      _isInitialized = true; // 标记为已初始化
+      _isInitialized = true;
       _isInitializing = false;
       if (_initCompleter != null && !_initCompleter!.isCompleted) {
         _initCompleter!.complete();
       }
       _initCompleter = null;
-      notifyListeners();
+      logInfo('Web平台使用内存模式，DatabaseService 初始化完成', source: 'DatabaseService');
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (!_isDisposed) notifyListeners();
+      });
+      _scheduleTrashAutoCleanup();
       return;
     }
 
@@ -593,6 +611,8 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       // 新增：执行数据库健康检查
       await _performStartupHealthCheck();
 
+      _scheduleTrashAutoCleanup();
+
       // 延迟通知监听者，让UI知道数据库已准备好
       SchedulerBinding.instance.addPostFrameCallback((_) {
         if (!_isDisposed) notifyListeners();
@@ -620,7 +640,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   Future<Database> _initDatabase(String path) async {
     return await openDatabase(
       path,
-      version: 19, // 版本号升级至19，添加latitude/longitude字段支持离线位置存储
+      version: 20,
       onCreate: (db, version) async {
         await _schemaManager.createTables(db);
       },
@@ -732,6 +752,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
         searchQuery: null,
         selectedWeathers: null,
         selectedDayPeriods: null,
+        includeDeleted: false,
       );
 
       _currentQuotes = quotes;
@@ -847,6 +868,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     _quotesCache = [];
     _watchOffset = 0;
     _watchHasMore = true;
+    _watchIncludeDeleted = false;
     _isLoading = false;
 
     logDebug('DatabaseService 单例状态已重置');
@@ -866,6 +888,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       _quotesCache = [];
       _watchOffset = 0;
       _watchHasMore = true;
+      _watchIncludeDeleted = false;
       _isLoading = false;
 
       // 清理缓存
@@ -875,6 +898,79 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
     } catch (e) {
       logDebug('数据库恢复失败: $e');
       rethrow;
+    }
+  }
+
+  void _scheduleTrashAutoCleanup() {
+    Future<void>.microtask(() async {
+      if (_isDisposed) {
+        return;
+      }
+      try {
+        final retentionDays = await _resolveTrashRetentionDays();
+        if (retentionDays == null) {
+          logWarning(
+            '读取回收站保留期失败，跳过启动自动清理',
+            source: 'DatabaseService',
+          );
+          return;
+        }
+        final cleanedCount =
+            await autoCleanupExpiredTrash(retentionDays: retentionDays);
+        if (cleanedCount > 0) {
+          logInfo(
+            '回收站自动清理完成: 删除 $cleanedCount 条过期笔记 (保留 $retentionDays 天)',
+            source: 'DatabaseService',
+          );
+        }
+      } catch (e, stackTrace) {
+        logError(
+          '回收站自动清理失败: $e',
+          error: e,
+          stackTrace: stackTrace,
+          source: 'DatabaseService',
+        );
+        await _runBestEffortCleanupFailureHealthCheck();
+      }
+    });
+  }
+
+  Future<int?> _resolveTrashRetentionDays() async {
+    try {
+      final mmkv = MMKVService();
+      await mmkv.init();
+      var appSettingsJson = mmkv.getString('app_settings');
+      if (appSettingsJson == null || appSettingsJson.isEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        appSettingsJson = prefs.getString('app_settings');
+      }
+      if (appSettingsJson == null || appSettingsJson.isEmpty) {
+        return 30;
+      }
+
+      final map = json.decode(appSettingsJson) as Map<String, dynamic>;
+      return AppSettings.fromJson(map).trashRetentionDays;
+    } catch (e, stackTrace) {
+      logError(
+        '读取回收站保留期失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'DatabaseService',
+      );
+      return null;
+    }
+  }
+
+  Future<void> _runBestEffortCleanupFailureHealthCheck() async {
+    try {
+      await _performStartupHealthCheck();
+    } catch (e, stackTrace) {
+      logError(
+        '自动清理失败后的健康检查执行失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'DatabaseService',
+      );
     }
   }
 }
@@ -889,6 +985,7 @@ class DatabaseService extends _DatabaseServiceBase
         _DatabaseCategoryMixin,
         _DatabaseCategoryInitMixin,
         _DatabaseHiddenTagMixin,
+        _DatabaseTrashMixin,
         _DatabasePaginationMixin,
         _DatabaseImportExportMixin,
         _DatabaseMigrationMixin {

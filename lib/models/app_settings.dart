@@ -1,4 +1,5 @@
 class AppSettings {
+  static const Set<int> allowedTrashRetentionDays = {7, 30, 90};
   static const Set<String> _supportedDailyQuoteProviders = {
     'hitokoto',
     'zenquotes',
@@ -89,11 +90,18 @@ class AppSettings {
     this.defaultTagIds = const [], // 默认无自动填充标签
     this.anniversaryShown = false, // 默认未显示过
     this.anniversaryAnimationEnabled = true, // 默认启用庆典动画
-    this.trashRetentionDays = 30,
+    int? trashRetentionDays, // 回收站保留天数（7/30/90）
     this.trashRetentionLastModified,
     this.skipNonFullscreenEditor = false, // 默认不跳过非全屏编辑器
     this.offlineQuoteSource = 'tagOnly', // 默认仅展示带每日一言标签的笔记
-  });
+  }) : trashRetentionDays = normalizeTrashRetentionDays(trashRetentionDays);
+
+  static int normalizeTrashRetentionDays(int? days) {
+    if (days == null) {
+      return 30;
+    }
+    return allowedTrashRetentionDays.contains(days) ? days : 30;
+  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -144,6 +152,18 @@ class AppSettings {
   }
 
   factory AppSettings.fromJson(Map<String, dynamic> map) {
+    final dynamic rawRetentionDays = map['trashRetentionDays'];
+    int? parsedRetentionDays;
+    if (rawRetentionDays is int) {
+      parsedRetentionDays = rawRetentionDays;
+    } else if (rawRetentionDays is num) {
+      parsedRetentionDays = rawRetentionDays == rawRetentionDays.roundToDouble()
+          ? rawRetentionDays.toInt()
+          : null;
+    } else if (rawRetentionDays is String) {
+      parsedRetentionDays = int.tryParse(rawRetentionDays);
+    }
+
     final normalizedProvider =
         _readString(map['dailyQuoteProvider'], 'hitokoto');
     final normalizedApiNinjasCategories = _readStringList(
@@ -184,7 +204,7 @@ class AppSettings {
       defaultTagIds: _readStringList(map['defaultTagIds']),
       anniversaryShown: map['anniversaryShown'] ?? false,
       anniversaryAnimationEnabled: map['anniversaryAnimationEnabled'] ?? true,
-      trashRetentionDays: map['trashRetentionDays'] ?? 30,
+      trashRetentionDays: normalizeTrashRetentionDays(parsedRetentionDays),
       trashRetentionLastModified: map['trashRetentionLastModified'] as String?,
       skipNonFullscreenEditor: map['skipNonFullscreenEditor'] ?? false,
       offlineQuoteSource: _readString(map['offlineQuoteSource'], 'tagOnly'),
@@ -259,6 +279,7 @@ class AppSettings {
     bool? anniversaryAnimationEnabled,
     int? trashRetentionDays,
     String? trashRetentionLastModified,
+    bool clearTrashRetentionLastModified = false,
     bool? skipNonFullscreenEditor,
     String? offlineQuoteSource,
   }) {
@@ -299,9 +320,12 @@ class AppSettings {
       anniversaryShown: anniversaryShown ?? this.anniversaryShown,
       anniversaryAnimationEnabled:
           anniversaryAnimationEnabled ?? this.anniversaryAnimationEnabled,
-      trashRetentionDays: trashRetentionDays ?? this.trashRetentionDays,
-      trashRetentionLastModified:
-          trashRetentionLastModified ?? this.trashRetentionLastModified,
+      trashRetentionDays: normalizeTrashRetentionDays(
+        trashRetentionDays ?? this.trashRetentionDays,
+      ),
+      trashRetentionLastModified: clearTrashRetentionLastModified
+          ? null
+          : (trashRetentionLastModified ?? this.trashRetentionLastModified),
       skipNonFullscreenEditor:
           skipNonFullscreenEditor ?? this.skipNonFullscreenEditor,
       offlineQuoteSource: offlineQuoteSource ?? this.offlineQuoteSource,

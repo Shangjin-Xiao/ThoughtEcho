@@ -39,7 +39,7 @@ class _TestDatabaseService extends ChangeNotifier implements DatabaseService {
   int getQuoteByIdCallCount = 0;
 
   @override
-  Future<Quote?> getQuoteById(String id) async {
+  Future<Quote?> getQuoteById(String id, {bool includeDeleted = false}) async {
     getQuoteByIdCallCount += 1;
     return fullQuote;
   }
@@ -63,7 +63,7 @@ void main() {
   setUp(() async {
     draftService = DraftService();
     databaseService = _TestDatabaseService(
-      fullQuote: const Quote(
+      fullQuote: Quote(
         id: 'quote-1',
         content: 'Body',
         date: '2026-03-29T00:00:00.000Z',
@@ -90,7 +90,7 @@ void main() {
           FlutterQuillLocalizations.delegate,
         ],
         supportedLocales: AppLocalizations.supportedLocales,
-        home: const NoteFullEditorPage(
+        home: NoteFullEditorPage(
           initialContent: '',
           initialQuote: Quote(
             content: '',
@@ -130,7 +130,7 @@ void main() {
   testWidgets('back exits cleanly after full quote hydration without edits', (
     tester,
   ) async {
-    const partialQuote = Quote(
+    final partialQuote = Quote(
       id: 'quote-1',
       content: 'Body',
       date: '2026-03-29T00:00:00.000Z',

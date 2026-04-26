@@ -12,7 +12,7 @@ class DatabaseSchemaManager {
   Future<Database> _initDatabase(String path) async {
     return await openDatabase(
       path,
-      version: 19, // 版本号升级至19，添加latitude/longitude字段支持离线位置存储
+      version: 20,
       onCreate: (db, version) async {
         await createTables(db);
       },
@@ -67,7 +67,9 @@ class DatabaseSchemaManager {
         delta_content TEXT,
         day_period TEXT,
         last_modified TEXT,
-        favorite_count INTEGER DEFAULT 0
+        favorite_count INTEGER DEFAULT 0,
+        is_deleted INTEGER DEFAULT 0,
+        deleted_at TEXT
       )
     ''');
 
@@ -104,6 +106,12 @@ class DatabaseSchemaManager {
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_quotes_favorite_count ON quotes(favorite_count)',
     );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_quotes_is_deleted ON quotes(is_deleted)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_quotes_deleted_at ON quotes(deleted_at)',
+    );
 
     // 创建新的 quote_tags 关联表
     await db.execute('''
@@ -115,6 +123,17 @@ class DatabaseSchemaManager {
         FOREIGN KEY (tag_id) REFERENCES categories(id) ON DELETE CASCADE
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS quote_tombstones(
+        quote_id TEXT PRIMARY KEY,
+        deleted_at TEXT NOT NULL,
+        device_id TEXT
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_quote_tombstones_deleted_at ON quote_tombstones(deleted_at)',
+    );
 
     /// 修复：优化quote_tags表的索引
     await db.execute(
@@ -629,6 +648,69 @@ class DatabaseSchemaManager {
         );
       }
     }
+
+    if (oldVersion < 20) {
+      logDebug('数据库升级：从版本 $oldVersion 升级到版本 $newVersion，添加回收站相关字段');
+      final columns = await txn.rawQuery('PRAGMA table_info(quotes)');
+
+      try {
+        final hasIsDeleted = columns.any((col) => col['name'] == 'is_deleted');
+        if (!hasIsDeleted) {
+          await txn.execute(
+            'ALTER TABLE quotes ADD COLUMN is_deleted INTEGER DEFAULT 0',
+          );
+        }
+
+        final hasDeletedAt = columns.any((col) => col['name'] == 'deleted_at');
+        if (!hasDeletedAt) {
+          await txn.execute('ALTER TABLE quotes ADD COLUMN deleted_at TEXT');
+        }
+
+        await txn.execute(
+          'CREATE INDEX IF NOT EXISTS idx_quotes_is_deleted ON quotes(is_deleted)',
+        );
+        await txn.execute(
+          'CREATE INDEX IF NOT EXISTS idx_quotes_deleted_at ON quotes(deleted_at)',
+        );
+
+        await txn.execute('''
+          CREATE TABLE IF NOT EXISTS quote_tombstones(
+            quote_id TEXT PRIMARY KEY,
+            deleted_at TEXT NOT NULL,
+            device_id TEXT
+          )
+        ''');
+        await txn.execute(
+          'CREATE INDEX IF NOT EXISTS idx_quote_tombstones_deleted_at ON quote_tombstones(deleted_at)',
+        );
+      } catch (e) {
+        logError(
+          '回收站结构升级失败: $e',
+          error: e,
+          source: 'DatabaseUpgrade',
+        );
+        rethrow;
+      }
+
+      try {
+        // 修复：补充历史数据的 deleted_at 时间戳
+        // 对于 is_deleted=1 但 deleted_at=NULL 的记录，使用 last_modified 作为删除时间
+        final fixedCount = await txn.rawUpdate('''
+          UPDATE quotes
+          SET deleted_at = COALESCE(last_modified, date)
+          WHERE is_deleted = 1 AND deleted_at IS NULL
+        ''');
+        if (fixedCount > 0) {
+          logDebug('数据库升级：已修复 $fixedCount 条缺失 deleted_at 的历史删除记录');
+        }
+      } catch (e) {
+        logError(
+          '回收站历史数据回填失败: $e',
+          error: e,
+          source: 'DatabaseUpgrade',
+        );
+      }
+    }
   }
 
   /// 修复：验证升级结果
@@ -821,24 +903,55 @@ class DatabaseSchemaManager {
           delta_content TEXT,
           day_period TEXT,
           last_modified TEXT,
-          favorite_count INTEGER DEFAULT 0
+          favorite_count INTEGER DEFAULT 0,
+          is_deleted INTEGER DEFAULT 0,
+          deleted_at TEXT
         )
       ''');
 
-      // 2. 复制数据（排除tag_ids列，保留favorite_count和latitude/longitude）
+      final hasColumn = <String>{
+        for (final col in tableInfo)
+          if (col['name'] is String) col['name'] as String,
+      };
+
+      String expr(String column, {required String fallback}) {
+        return hasColumn.contains(column) ? column : fallback;
+      }
+
+      // 2. 复制数据（排除tag_ids列，缺失字段使用安全默认值）
       await txn.execute('''
         INSERT INTO quotes_new (
           id, content, date, source, source_author, source_work,
           ai_analysis, sentiment, keywords, summary, category_id,
           color_hex, location, latitude, longitude, weather, temperature, edit_source,
-          delta_content, day_period, last_modified, favorite_count
+          delta_content, day_period, last_modified, favorite_count, is_deleted,
+          deleted_at
         )
         SELECT
-          id, content, date, source, source_author, source_work,
-          ai_analysis, sentiment, keywords, summary, category_id,
-          color_hex, location, latitude, longitude, weather, temperature, edit_source,
-          delta_content, day_period, last_modified,
-          COALESCE(favorite_count, 0) as favorite_count
+          ${expr('id', fallback: "''")},
+          ${expr('content', fallback: "''")},
+          ${expr('date', fallback: "''")},
+          ${expr('source', fallback: 'NULL')},
+          ${expr('source_author', fallback: 'NULL')},
+          ${expr('source_work', fallback: 'NULL')},
+          ${expr('ai_analysis', fallback: 'NULL')},
+          ${expr('sentiment', fallback: 'NULL')},
+          ${expr('keywords', fallback: 'NULL')},
+          ${expr('summary', fallback: 'NULL')},
+          ${expr('category_id', fallback: "''")},
+          ${expr('color_hex', fallback: 'NULL')},
+          ${expr('location', fallback: 'NULL')},
+          ${expr('latitude', fallback: 'NULL')},
+          ${expr('longitude', fallback: 'NULL')},
+          ${expr('weather', fallback: 'NULL')},
+          ${expr('temperature', fallback: 'NULL')},
+          ${expr('edit_source', fallback: 'NULL')},
+          ${expr('delta_content', fallback: 'NULL')},
+          ${expr('day_period', fallback: 'NULL')},
+          ${expr('last_modified', fallback: 'NULL')},
+          COALESCE(${expr('favorite_count', fallback: '0')}, 0),
+          COALESCE(${expr('is_deleted', fallback: '0')}, 0),
+          ${expr('deleted_at', fallback: 'NULL')}
         FROM quotes
       ''');
 
@@ -875,6 +988,12 @@ class DatabaseSchemaManager {
       );
       await txn.execute(
         'CREATE INDEX IF NOT EXISTS idx_quotes_last_modified ON quotes(last_modified)',
+      );
+      await txn.execute(
+        'CREATE INDEX IF NOT EXISTS idx_quotes_is_deleted ON quotes(is_deleted)',
+      );
+      await txn.execute(
+        'CREATE INDEX IF NOT EXISTS idx_quotes_deleted_at ON quotes(deleted_at)',
       );
 
       logDebug('tag_ids列删除完成，favorite_count字段已保留');
@@ -1002,16 +1121,34 @@ class DatabaseSchemaManager {
         'edit_source',
         'delta_content',
         'day_period', // 添加时间段字段
+        'is_deleted',
+        'deleted_at',
       };
       final missingColumns = requiredColumns.difference(columnNames);
 
       if (missingColumns.isNotEmpty) {
         logDebug('检测到缺少列: $missingColumns，正在添加...');
 
+        const textColumns = {
+          'location',
+          'weather',
+          'temperature',
+          'edit_source',
+          'delta_content',
+          'day_period',
+          'deleted_at',
+        };
+
         // 添加缺少的列
         for (final column in missingColumns) {
           try {
-            await db.execute('ALTER TABLE quotes ADD COLUMN $column TEXT');
+            if (column == 'is_deleted') {
+              await db.execute(
+                'ALTER TABLE quotes ADD COLUMN is_deleted INTEGER DEFAULT 0',
+              );
+            } else if (textColumns.contains(column)) {
+              await db.execute('ALTER TABLE quotes ADD COLUMN $column TEXT');
+            }
             logDebug('成功添加列: $column');
           } catch (e) {
             logDebug('添加列 $column 时出错: $e');
@@ -1023,6 +1160,18 @@ class DatabaseSchemaManager {
 
       // 修复：检查并创建必要的索引
       await _ensureRequiredIndexes(db);
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS quote_tombstones(
+          quote_id TEXT PRIMARY KEY,
+          deleted_at TEXT NOT NULL,
+          device_id TEXT
+        )
+      ''');
+
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_quote_tombstones_deleted_at ON quote_tombstones(deleted_at)',
+      );
     } catch (e) {
       logDebug('检查数据库结构时出错: $e');
     }
@@ -1040,6 +1189,10 @@ class DatabaseSchemaManager {
             'CREATE INDEX IF NOT EXISTS idx_quotes_weather ON quotes(weather)',
         'idx_quotes_day_period':
             'CREATE INDEX IF NOT EXISTS idx_quotes_day_period ON quotes(day_period)',
+        'idx_quotes_is_deleted':
+            'CREATE INDEX IF NOT EXISTS idx_quotes_is_deleted ON quotes(is_deleted)',
+        'idx_quotes_deleted_at':
+            'CREATE INDEX IF NOT EXISTS idx_quotes_deleted_at ON quotes(deleted_at)',
       };
 
       // 获取当前存在的索引
