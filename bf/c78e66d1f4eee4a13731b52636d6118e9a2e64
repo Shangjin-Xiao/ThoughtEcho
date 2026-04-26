@@ -1,0 +1,25 @@
+AGENT_FRAMEWORK_ANALYSIS.md
+  ff985257a1605687 1-991
+THOUGHTECHO_AGENT_IMPROVEMENTS_REPORT.md
+  ff985257a1605687 1-219
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "bfc78e66d1f4eee4a13731b52636d6118e9a2e64",
+  "prompts": {
+    "ff985257a1605687": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2389e512effefKWU8q541P4tla",
+        "model": "opencode-go/kimi-k2.6"
+      },
+      "human_author": "上晋",
+      "messages": [],
+      "total_additions": 1348,
+      "total_deletions": 0,
+      "accepted_lines": 1348,
+      "overriden_lines": 0
+    }
+  }
+}
