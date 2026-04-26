@@ -1,0 +1,27 @@
+lib/services/database/database_trash_mixin.dart
+  8364f6e0f6293a3a 392,420-433
+lib/services/database_backup_service.dart
+  8364f6e0f6293a3a 241-245,321,323-325
+test/widget/pages/trash_page_test.dart
+  8364f6e0f6293a3a 53-54,72-85,220-271
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "c9d9df766bfd33d1e8bbd4bcdb7eaac0b1d49b5e",
+  "prompts": {
+    "8364f6e0f6293a3a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_23b6cfa96ffe8XzlKlYeTXcohv",
+        "model": "github-copilot/gpt-5.3-codex"
+      },
+      "human_author": "上晋",
+      "messages": [],
+      "total_additions": 101,
+      "total_deletions": 20,
+      "accepted_lines": 92,
+      "overriden_lines": 0
+    }
+  }
+}
