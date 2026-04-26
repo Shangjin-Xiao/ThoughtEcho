@@ -227,6 +227,7 @@ class SettingsService extends ChangeNotifier {
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
     notifyListeners();
   }
+
   // 无网/离线时的一言回退数据源
   String get offlineQuoteSource => _appSettings.offlineQuoteSource;
   Future<void> setOfflineQuoteSource(String source) async {

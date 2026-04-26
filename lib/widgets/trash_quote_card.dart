@@ -165,7 +165,6 @@ class TrashQuoteCard extends StatelessWidget {
                 ],
               ),
             ),
-
             Padding(
               padding: const EdgeInsets.fromLTRB(4, 8, 4, 8),
               child: QuoteContent(
@@ -177,11 +176,9 @@ class TrashQuoteCard extends StatelessWidget {
                 ),
               ),
             ),
-
             if ((quote.sourceAuthor != null &&
                     quote.sourceAuthor!.isNotEmpty) ||
-                (quote.sourceWork != null &&
-                    quote.sourceWork!.isNotEmpty)) ...[
+                (quote.sourceWork != null && quote.sourceWork!.isNotEmpty)) ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
                 child: Text(
@@ -207,7 +204,6 @@ class TrashQuoteCard extends StatelessWidget {
                 ),
               ),
             ],
-
             if (quote.tagIds.isNotEmpty) ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(4, 0, 4, 4),
@@ -227,9 +223,8 @@ class TrashQuoteCard extends StatelessWidget {
                                 index++)
                               Container(
                                 margin: EdgeInsets.only(
-                                  right: index < quote.tagIds.length - 1
-                                      ? 8
-                                      : 0,
+                                  right:
+                                      index < quote.tagIds.length - 1 ? 8 : 0,
                                 ),
                                 child: QuoteTagChip(
                                   tag: tagMap[quote.tagIds[index]] ??
@@ -237,10 +232,8 @@ class TrashQuoteCard extends StatelessWidget {
                                         id: quote.tagIds[index],
                                         name: l10n.unknownTag,
                                       ),
-                                  secondaryTextColor:
-                                      colors.secondaryTextColor,
-                                  baseContentColor:
-                                      colors.baseContentColor,
+                                  secondaryTextColor: colors.secondaryTextColor,
+                                  baseContentColor: colors.baseContentColor,
                                 ),
                               ),
                           ],
@@ -251,7 +244,6 @@ class TrashQuoteCard extends StatelessWidget {
                 ),
               ),
             ],
-
             if (onActionSelected != null)
               Align(
                 alignment: Alignment.bottomRight,
@@ -263,8 +255,8 @@ class TrashQuoteCard extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         TextButton(
-                          onPressed: () => onActionSelected!(
-                              TrashQuoteCardAction.restore),
+                          onPressed: () =>
+                              onActionSelected!(TrashQuoteCardAction.restore),
                           style: TextButton.styleFrom(
                             foregroundColor: colorScheme.primary,
                           ),

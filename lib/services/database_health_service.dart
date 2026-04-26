@@ -587,21 +587,23 @@ class DatabaseHealthService {
       if (offlineQuoteSource == 'tagOnly') {
         candidates = memoryStore
             .where(
-              (quote) => isEligibleOfflineQuoteContent(
-                quote.content,
-                offlineQuoteSource: offlineQuoteSource,
-                requiresHitokotoTag: quote.tagIds.contains(dailyQuoteTagId),
-              ) &&
+              (quote) =>
+                  isEligibleOfflineQuoteContent(
+                    quote.content,
+                    offlineQuoteSource: offlineQuoteSource,
+                    requiresHitokotoTag: quote.tagIds.contains(dailyQuoteTagId),
+                  ) &&
                   !quote.isDeleted,
             )
             .toList();
       } else {
         candidates = memoryStore
             .where(
-              (quote) => isEligibleOfflineQuoteContent(
-                quote.content,
-                offlineQuoteSource: offlineQuoteSource,
-              ) &&
+              (quote) =>
+                  isEligibleOfflineQuoteContent(
+                    quote.content,
+                    offlineQuoteSource: offlineQuoteSource,
+                  ) &&
                   !quote.isDeleted,
             )
             .toList();

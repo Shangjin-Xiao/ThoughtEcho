@@ -374,8 +374,7 @@ class DatabaseBackupService {
           final Map<String, String> localTombstoneMap = {
             for (final r in existingTombstoneRows)
               if (r['quote_id'] != null)
-                r['quote_id'] as String:
-                    r['deleted_at']?.toString() ?? '',
+                r['quote_id'] as String: r['deleted_at']?.toString() ?? '',
           };
 
           final tombstoneBatch = txn.batch();
@@ -446,7 +445,8 @@ class DatabaseBackupService {
                 continue;
               }
 
-              final localLastModified = quoteRows.first['last_modified']?.toString();
+              final localLastModified =
+                  quoteRows.first['last_modified']?.toString();
               final localTombstone = await txn.query(
                 'quote_tombstones',
                 columns: ['deleted_at'],
@@ -598,7 +598,7 @@ class DatabaseBackupService {
     Database db,
     Map<String, dynamic> data, {
     String? sourceDevice,
-  }  ) async {
+  }) async {
     final reportBuilder = MergeReportBuilder(sourceDevice: sourceDevice);
     // 分类ID重映射：用于处理不同设备上相同名称分类(标签)导致的ID不一致与重复问题
     final Map<String, String> categoryIdRemap = {}; // remoteId -> localId
@@ -645,7 +645,8 @@ class DatabaseBackupService {
               isAbsolute(mediaPath) ? mediaPath : join(appPath, mediaPath),
             );
             if (candidatePath != appPath &&
-                !candidatePath.startsWith('$appPath${Platform.pathSeparator}')) {
+                !candidatePath
+                    .startsWith('$appPath${Platform.pathSeparator}')) {
               continue;
             }
             await MediaReferenceService.quickCheckAndDeleteIfOrphan(

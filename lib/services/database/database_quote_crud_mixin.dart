@@ -321,12 +321,12 @@ mixin _DatabaseQuoteCrudMixin on _DatabaseServiceBase {
         return QuoteUpdateResult.skippedDeleted;
       }
       _memoryStore[index] = quote;
-      
+
       // 修复：Web平台也需要清除缓存并刷新流
       QuoteContent.removeCacheForQuote(quote.id!);
       clearAllCacheForParts();
       refreshQuotesStreamForParts();
-      
+
       notifyListeners();
       return QuoteUpdateResult.updated;
     }

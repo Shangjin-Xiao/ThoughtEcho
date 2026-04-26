@@ -476,8 +476,6 @@ class BackupService {
           backupData['categories'] is List) {
         notesData = <String, dynamic>{
           'categories': backupData['categories'] ?? <dynamic>[],
-      notesData = <String, dynamic>{
-          'categories': backupData['categories'] ?? <dynamic>[],
           'quotes': backupData['quotes'] ?? <dynamic>[],
           if (backupData['tombstones'] is List)
             'tombstones': backupData['tombstones'],
@@ -999,9 +997,8 @@ class BackupService {
       final rawTrashSettings = notesData is Map<String, dynamic>
           ? notesData['trash_settings']
           : null;
-      final incomingTrashSettings = rawTrashSettings is Map<String, dynamic>
-          ? rawTrashSettings
-          : null;
+      final incomingTrashSettings =
+          rawTrashSettings is Map<String, dynamic> ? rawTrashSettings : null;
 
       // 使用LWW策略合并数据
       final report = await _databaseService.importDataWithLWWMerge(
