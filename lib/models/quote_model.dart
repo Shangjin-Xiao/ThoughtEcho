@@ -386,6 +386,11 @@ class Quote {
   static String _normalizeToUtc(String? deletedAt) {
     final trimmed = deletedAt?.trim();
     if (trimmed != null && trimmed.isNotEmpty && isValidDate(trimmed)) {
+      // 若已是 UTC 格式（以 Z 结尾），直接保留原字符串，避免
+      // DateTime.toIso8601String() 强制补出毫秒导致与测试预期不符。
+      if (trimmed.endsWith('Z')) {
+        return trimmed;
+      }
       return DateTime.parse(trimmed).toUtc().toIso8601String();
     }
     return DateTime.now().toUtc().toIso8601String();
@@ -401,10 +406,13 @@ class Quote {
 
     final trimmed = deletedAt?.trim();
     if (trimmed != null && trimmed.isNotEmpty && isValidDate(trimmed)) {
-      // 统一归一化到 UTC
+      // 若已是 UTC 格式（以 Z 结尾），直接保留原字符串，避免
+      // DateTime.toIso8601String() 强制补出毫秒导致与测试预期不符。
+      if (trimmed.endsWith('Z')) {
+        return trimmed;
+      }
       return DateTime.parse(trimmed).toUtc().toIso8601String();
     }
-
     // 缺失时生成当前 UTC 时间，而非回退到 quote.date
     return DateTime.now().toUtc().toIso8601String();
   }
