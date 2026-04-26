@@ -204,7 +204,7 @@ class AppSettings {
       defaultTagIds: _readStringList(map['defaultTagIds']),
       anniversaryShown: map['anniversaryShown'] ?? false,
       anniversaryAnimationEnabled: map['anniversaryAnimationEnabled'] ?? true,
-      trashRetentionDays: normalizeTrashRetentionDays(parsedRetentionDays),
+      trashRetentionDays: parsedRetentionDays,
       trashRetentionLastModified: map['trashRetentionLastModified'] as String?,
       skipNonFullscreenEditor: map['skipNonFullscreenEditor'] ?? false,
       offlineQuoteSource: _readString(map['offlineQuoteSource'], 'tagOnly'),
