@@ -6,8 +6,10 @@ import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
 import '../models/merge_report.dart';
+import '../models/quote_model.dart';
 import '../utils/app_logger.dart';
 import '../utils/lww_utils.dart';
+import 'media_reference_service.dart';
 import 'large_file_manager.dart';
 
 class DatabaseBackupService {
@@ -366,6 +368,7 @@ class DatabaseBackupService {
 
         final tombstones = data['tombstones'];
         if (tombstones is List) {
+          final affectedQuoteIds = <String>{};
           final tombstoneBatch = txn.batch();
           final tombstoneRows = <Map<String, dynamic>>[];
           for (final row in tombstones) {
@@ -374,15 +377,21 @@ class DatabaseBackupService {
             }
             final quoteId = row['quote_id']?.toString();
             final deletedAt = row['deleted_at']?.toString();
-            if (quoteId == null || quoteId.isEmpty || deletedAt == null) {
+            if (quoteId == null ||
+                quoteId.isEmpty ||
+                deletedAt == null ||
+                deletedAt.isEmpty ||
+                !LWWUtils.isValidTimestamp(deletedAt)) {
               continue;
             }
+            final normalizedDeletedAt = LWWUtils.normalizeTimestamp(deletedAt);
             final tombstoneData = {
               'quote_id': quoteId,
-              'deleted_at': deletedAt,
+              'deleted_at': normalizedDeletedAt,
               'device_id': row['device_id']?.toString(),
             };
             tombstoneRows.add(tombstoneData);
+            affectedQuoteIds.add(quoteId);
             tombstoneBatch.insert(
               'quote_tombstones',
               tombstoneData,
@@ -402,6 +411,51 @@ class DatabaseBackupService {
                 );
               } catch (e2) {
                 logDebug('插入单条tombstone失败: ${tombstoneData['quote_id']}');
+              }
+            }
+          }
+
+          if (!clearExisting && affectedQuoteIds.isNotEmpty) {
+            for (final quoteId in affectedQuoteIds) {
+              final quoteRows = await txn.query(
+                'quotes',
+                columns: ['id', 'last_modified'],
+                where: 'id = ?',
+                whereArgs: [quoteId],
+                limit: 1,
+              );
+              if (quoteRows.isEmpty) {
+                continue;
+              }
+
+              final localLastModified = quoteRows.first['last_modified']?.toString();
+              final localTombstone = await txn.query(
+                'quote_tombstones',
+                columns: ['deleted_at'],
+                where: 'quote_id = ?',
+                whereArgs: [quoteId],
+                limit: 1,
+              );
+              if (localTombstone.isEmpty) {
+                continue;
+              }
+              final tombstoneDeletedAt =
+                  localTombstone.first['deleted_at']?.toString();
+              if (localLastModified == null || localLastModified.isEmpty) {
+                await txn.delete(
+                  'quotes',
+                  where: 'id = ?',
+                  whereArgs: [quoteId],
+                );
+                continue;
+              }
+
+              if (_compareIsoTime(tombstoneDeletedAt, localLastModified) >= 0) {
+                await txn.delete(
+                  'quotes',
+                  where: 'id = ?',
+                  whereArgs: [quoteId],
+                );
               }
             }
           }
@@ -526,10 +580,11 @@ class DatabaseBackupService {
     Database db,
     Map<String, dynamic> data, {
     String? sourceDevice,
-  }) async {
+  }  ) async {
     final reportBuilder = MergeReportBuilder(sourceDevice: sourceDevice);
     // 分类ID重映射：用于处理不同设备上相同名称分类(标签)导致的ID不一致与重复问题
     final Map<String, String> categoryIdRemap = {}; // remoteId -> localId
+    final mediaCleanupCandidates = <String>{};
 
     try {
       // 验证数据格式
@@ -554,9 +609,33 @@ class DatabaseBackupService {
 
         final tombstones = data['tombstones'];
         if (tombstones is List) {
-          await _applyTombstones(txn, tombstones, reportBuilder);
+          await _applyTombstones(
+            txn,
+            tombstones,
+            reportBuilder,
+            mediaCleanupCandidates,
+          );
         }
       });
+
+      if (mediaCleanupCandidates.isNotEmpty) {
+        final appDir = await getApplicationDocumentsDirectory();
+        final appPath = normalize(appDir.path);
+        for (final mediaPath in mediaCleanupCandidates) {
+          try {
+            var absolutePath = mediaPath;
+            if (!isAbsolute(absolutePath)) {
+              absolutePath = join(appPath, mediaPath);
+            }
+            await MediaReferenceService.quickCheckAndDeleteIfOrphan(
+              absolutePath,
+              cachedAppPath: appPath,
+            );
+          } catch (cleanupErr) {
+            reportBuilder.addError('清理墓碑删除后媒体文件失败: $cleanupErr');
+          }
+        }
+      }
 
       logInfo('LWW合并完成: ${reportBuilder.build().summary}');
     } catch (e) {
@@ -890,6 +969,7 @@ class DatabaseBackupService {
     Transaction txn,
     List tombstones,
     MergeReportBuilder reportBuilder,
+    Set<String> mediaCleanupCandidates,
   ) async {
     for (final item in tombstones) {
       try {
@@ -899,7 +979,11 @@ class DatabaseBackupService {
 
         final quoteId = item['quote_id']?.toString();
         final incomingDeletedAt = item['deleted_at']?.toString();
-        if (quoteId == null || quoteId.isEmpty || incomingDeletedAt == null) {
+        if (quoteId == null ||
+            quoteId.isEmpty ||
+            incomingDeletedAt == null ||
+            incomingDeletedAt.isEmpty ||
+            !LWWUtils.isValidTimestamp(incomingDeletedAt)) {
           continue;
         }
 
@@ -922,15 +1006,42 @@ class DatabaseBackupService {
 
         final quoteRows = await txn.query(
           'quotes',
-          columns: ['last_modified'],
+          columns: ['last_modified', 'delta_content', 'content'],
           where: 'id = ?',
           whereArgs: [quoteId],
           limit: 1,
         );
 
         if (quoteRows.isNotEmpty) {
-          final quoteLastModified =
-              quoteRows.first['last_modified']?.toString();
+          final quoteRow = quoteRows.first;
+          final quoteDeltaContent = quoteRow['delta_content']?.toString();
+          final quoteContent = quoteRow['content']?.toString() ?? '';
+
+          final tempQuote = Quote(
+            content: quoteContent,
+            date: DateTime.now().toIso8601String(),
+            deltaContent: quoteDeltaContent,
+          );
+          final extracted =
+              await MediaReferenceService.extractMediaPathsFromQuote(
+            tempQuote,
+          );
+          mediaCleanupCandidates.addAll(extracted);
+
+          final refRows = await txn.query(
+            'media_references',
+            columns: ['file_path'],
+            where: 'quote_id = ?',
+            whereArgs: [quoteId],
+          );
+          for (final refRow in refRows) {
+            final fp = refRow['file_path']?.toString();
+            if (fp != null && fp.isNotEmpty) {
+              mediaCleanupCandidates.add(fp);
+            }
+          }
+
+          final quoteLastModified = quoteRow['last_modified']?.toString();
           if (quoteLastModified == null || quoteLastModified.isEmpty) {
             await txn.delete(
               'quotes',

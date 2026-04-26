@@ -1468,57 +1468,79 @@ class _HomePageState extends State<HomePage>
 
     showDialog(
       context: pageContext,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.moveNoteToTrashTitle),
-        content: Text(l10n.moveNoteToTrashConfirmation(retentionDays)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(l10n.cancel),
+      builder: (dialogContext) {
+        var isDeleting = false;
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) => AlertDialog(
+            title: Text(l10n.moveNoteToTrashTitle),
+            content: Text(l10n.moveNoteToTrashConfirmation(retentionDays)),
+            actions: [
+              TextButton(
+                onPressed: isDeleting
+                    ? null
+                    : () {
+                        Navigator.pop(dialogContext);
+                      },
+                child: Text(l10n.cancel),
+              ),
+              TextButton(
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                onPressed: isDeleting
+                    ? null
+                    : () async {
+                        setDialogState(() {
+                          isDeleting = true;
+                        });
+                        final db = Provider.of<DatabaseService>(
+                          pageContext,
+                          listen: false,
+                        );
+                        try {
+                          await db.deleteQuote(quote.id!);
+                          if (!dialogContext.mounted || !pageContext.mounted) {
+                            return;
+                          }
+                          Navigator.pop(dialogContext);
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(l10n.noteMovedToTrash),
+                              duration: const Duration(seconds: 1),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          // 显示回收站位置引导（仅第一次删除笔记时）
+                          _scheduleTrashLocationGuide();
+                        } catch (e, stackTrace) {
+                          logError(
+                            '移动笔记到回收站失败: $e',
+                            error: e,
+                            stackTrace: stackTrace,
+                            source: 'HomePage',
+                          );
+                          if (!dialogContext.mounted || !pageContext.mounted) {
+                            return;
+                          }
+                          Navigator.pop(dialogContext);
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(l10n.deleteFailed(e.toString())),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      },
+                child: isDeleting
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(l10n.delete),
+              ),
+            ],
           ),
-          TextButton(
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            onPressed: () async {
-              final db =
-                  Provider.of<DatabaseService>(pageContext, listen: false);
-              try {
-                await db.deleteQuote(quote.id!);
-                if (!dialogContext.mounted || !pageContext.mounted) {
-                  return;
-                }
-                Navigator.pop(dialogContext);
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text(l10n.noteMovedToTrash),
-                    duration: const Duration(seconds: 1),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-                // 显示回收站位置引导（仅第一次删除笔记时）
-                _scheduleTrashLocationGuide();
-              } catch (e, stackTrace) {
-                logError(
-                  '移动笔记到回收站失败: $e',
-                  error: e,
-                  stackTrace: stackTrace,
-                  source: 'HomePage',
-                );
-                if (!dialogContext.mounted || !pageContext.mounted) {
-                  return;
-                }
-                Navigator.pop(dialogContext);
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text(l10n.deleteFailed(e.toString())),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              }
-            },
-            child: Text(l10n.delete),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

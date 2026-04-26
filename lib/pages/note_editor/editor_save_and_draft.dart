@@ -403,6 +403,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         final updateResult = await db.updateQuote(quote);
         if (updateResult != QuoteUpdateResult.updated) {
           await _rollbackMovedPermanentMediaFiles(movedToPermanentForThisSave);
+          _draftLoaded = true;
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -504,12 +505,20 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
               logDebug('因保存失败，回滚删除永久媒体文件: $p');
             }
           } catch (itemErr) {
-            logDebug('单个媒体文件回滚删除失败: $p, $itemErr');
+            logError(
+              '单个媒体文件回滚删除失败: $p',
+              error: itemErr,
+              source: 'NoteFullEditorPage',
+            );
           }
         }),
       );
     } catch (rollbackErr) {
-      logDebug('保存失败后的媒体回滚删除出错: $rollbackErr');
+      logError(
+        '保存失败后的媒体回滚删除出错',
+        error: rollbackErr,
+        source: 'NoteFullEditorPage',
+      );
     }
   }
 

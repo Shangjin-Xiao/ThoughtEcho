@@ -110,11 +110,13 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
     final sanitizedOrderBy = sanitizeOrderBy(orderBy, prefix: 'q');
     final maps = await db.rawQuery(
       '''
-      SELECT q.*, GROUP_CONCAT(qt.tag_id) as tag_ids
+      SELECT q.*, (
+        SELECT GROUP_CONCAT(tag_id)
+        FROM quote_tags
+        WHERE quote_id = q.id
+      ) as tag_ids
       FROM quotes q
-      LEFT JOIN quote_tags qt ON q.id = qt.quote_id
       WHERE q.is_deleted = 1
-      GROUP BY q.id
       ORDER BY $sanitizedOrderBy
       LIMIT ? OFFSET ?
       ''',
@@ -300,7 +302,8 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       "SELECT id FROM quotes "
       "WHERE is_deleted = 1 "
       "AND deleted_at IS NOT NULL "
-      "AND julianday(deleted_at) <= julianday('now', '-$retentionDays days')",
+      "AND julianday(deleted_at) <= julianday('now', '-' || ? || ' days')",
+      [retentionDays],
     );
 
     if (rows.isEmpty) {

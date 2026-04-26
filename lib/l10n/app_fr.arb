@@ -3512,8 +3512,8 @@
   "trashRetentionPeriod": "Période de rétention de la corbeille",
   "trashRetentionOption7Days": "7 jours",
   "trashRetentionOption30Days": "30 jours",
-  "trashRetentionOption90Days": "90 jours"
-  ,"insertImage": "Insérer une image",
+  "trashRetentionOption90Days": "90 jours",
+  "insertImage": "Insérer une image",
   "insertVideo": "Insérer une vidéo",
   "insertAudio": "Insérer un audio",
   "clipboardFoundHint": "Contenu du presse-papiers trouvé, appuyez pour ajouter comme note",
