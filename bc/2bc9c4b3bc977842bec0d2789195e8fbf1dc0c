@@ -1,0 +1,39 @@
+lib/widgets/trash_quote_card.dart
+  8364f6e0f6293a3a 181,226-227,235-236,258-259
+lib/services/database/database_quote_crud_mixin.dart
+  8364f6e0f6293a3a 324,329
+lib/services/settings_service.dart
+  8364f6e0f6293a3a 230
+lib/models/quote_model.dart
+  8364f6e0f6293a3a 341-343
+lib/services/database_backup_service.dart
+  8364f6e0f6293a3a 377,448-449,601,648-649
+lib/widgets/add_note_dialog.dart
+  8364f6e0f6293a3a 2208-2214
+lib/models/app_settings.dart
+  8364f6e0f6293a3a 160-162
+lib/services/database_health_service.dart
+  8364f6e0f6293a3a 590-595,602-606
+lib/services/backup_service.dart
+  8364f6e0f6293a3a 1000-1001
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "bc2bc9c4b3bc977842bec0d2789195e8fbf1dc0c",
+  "prompts": {
+    "8364f6e0f6293a3a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_23b6cfa96ffe8XzlKlYeTXcohv",
+        "model": "github-copilot/gpt-5.3-codex"
+      },
+      "human_author": "上晋",
+      "messages": [],
+      "total_additions": 42,
+      "total_deletions": 49,
+      "accepted_lines": 42,
+      "overriden_lines": 0
+    }
+  }
+}
