@@ -855,6 +855,46 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     final locationService = context.read<LocationService>();
     final weatherService = context.read<WeatherService>();
     final tags = await db.getCategories();
+    final l10n = AppLocalizations.of(context);
+
+    // 预获取位置/天气数据，确保传入编辑器的 initialQuote 包含真实数据
+    if (includeLocation) {
+      if (!locationService.hasLocationPermission) {
+        final granted = await locationService.requestLocationPermission();
+        if (!granted) {
+          if (mounted) {
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: Text(l10n.cannotGetLocationTitle),
+                content: Text(l10n.cannotGetLocationPermissionShort),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text(l10n.iKnow),
+                  ),
+                ],
+              ),
+            );
+          }
+        }
+      }
+      if (locationService.hasLocationPermission) {
+        await locationService.getCurrentLocation();
+      }
+    }
+
+    if (includeWeather) {
+      final pos = locationService.currentPosition;
+      if (pos != null) {
+        try {
+          await weatherService.getWeatherData(pos.latitude, pos.longitude);
+        } catch (e) {
+          logDebug('AI 打开编辑器获取天气失败: $e');
+        }
+      }
+    }
+
     final position = locationService.currentPosition;
 
     // 始终创建 initialQuote，防止编辑器自动应用用户偏好设置
@@ -966,8 +1006,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       final db = context.read<DatabaseService>();
       final locationService = context.read<LocationService>();
       final weatherService = context.read<WeatherService>();
-      final includeLocation = meta['include_location'] == true;
-      final includeWeather = meta['include_weather'] == true;
+      var includeLocation = meta['include_location'] == true;
+      var includeWeather = meta['include_weather'] == true;
       final rawTagIds = meta['tag_ids'] as List<dynamic>? ?? const [];
       final tagIds = rawTagIds
           .map((item) => item.toString().trim())
@@ -975,6 +1015,67 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           .toList();
       final author = meta['author']?.toString();
       final source = meta['source']?.toString();
+
+      // 主动获取位置/天气数据（直接保存时必须触发获取，不能依赖缓存）
+      if (includeLocation) {
+        if (!locationService.hasLocationPermission) {
+          final granted = await locationService.requestLocationPermission();
+          if (!granted) {
+            includeLocation = false;
+            includeWeather = false;
+            if (mounted) {
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: Text(l10n.cannotGetLocationTitle),
+                  content: Text(l10n.cannotGetLocationPermissionShort),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: Text(l10n.iKnow),
+                    ),
+                  ],
+                ),
+              );
+            }
+          }
+        }
+        if (includeLocation) {
+          await locationService.getCurrentLocation();
+        }
+      }
+
+      if (includeWeather) {
+        final pos = locationService.currentPosition;
+        if (pos != null) {
+          try {
+            await weatherService.getWeatherData(
+              pos.latitude,
+              pos.longitude,
+            );
+          } catch (e) {
+            logDebug('AI 直接保存获取天气失败: $e');
+            includeWeather = false;
+          }
+        } else {
+          includeWeather = false;
+          if (mounted) {
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: Text(l10n.weatherFetchFailedTitle),
+                content: Text(l10n.locationAndWeatherUnavailable),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text(l10n.iKnow),
+                  ),
+                ],
+              ),
+            );
+          }
+        }
+      }
 
       final position = locationService.currentPosition;
       final formattedLocation = locationService.getFormattedLocation();
@@ -991,7 +1092,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         sourceAuthor: author,
         sourceWork: source,
         location: storedLocation,
-        // 修复：只有勾选位置时才保存坐标，避免仅勾选天气时显示坐标
+        // 只有勾选位置时才保存坐标，避免仅勾选天气时显示坐标
         latitude: includeLocation ? position?.latitude : null,
         longitude: includeLocation ? position?.longitude : null,
         weather: includeWeather ? weatherService.currentWeather : null,
