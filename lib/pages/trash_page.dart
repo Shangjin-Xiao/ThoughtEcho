@@ -329,6 +329,7 @@ class _TrashPageState extends State<TrashPage> {
       }
       setState(() {
         _trashQuotes = _trashQuotes.where((quote) => quote.id != id).toList();
+        _trashTotalCount = (_trashTotalCount - 1).clamp(0, _trashTotalCount);
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -398,6 +399,7 @@ class _TrashPageState extends State<TrashPage> {
       }
       setState(() {
         _trashQuotes = _trashQuotes.where((quote) => quote.id != id).toList();
+        _trashTotalCount = (_trashTotalCount - 1).clamp(0, _trashTotalCount);
       });
       await _loadTrashQuotes(reset: true);
     } catch (e, stackTrace) {
