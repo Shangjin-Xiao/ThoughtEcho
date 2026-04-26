@@ -641,12 +641,15 @@ class DatabaseBackupService {
         final appPath = normalize(appDir.path);
         for (final mediaPath in mediaCleanupCandidates) {
           try {
-            var absolutePath = mediaPath;
-            if (!isAbsolute(absolutePath)) {
-              absolutePath = join(appPath, mediaPath);
+            final candidatePath = normalize(
+              isAbsolute(mediaPath) ? mediaPath : join(appPath, mediaPath),
+            );
+            if (candidatePath != appPath &&
+                !candidatePath.startsWith('$appPath${Platform.pathSeparator}')) {
+              continue;
             }
             await MediaReferenceService.quickCheckAndDeleteIfOrphan(
-              absolutePath,
+              candidatePath,
               cachedAppPath: appPath,
             );
           } catch (cleanupErr) {
