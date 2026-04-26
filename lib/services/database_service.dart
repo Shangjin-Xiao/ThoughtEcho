@@ -524,37 +524,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       SchedulerBinding.instance.addPostFrameCallback((_) {
         if (!_isDisposed) notifyListeners();
       });
-      // 修复：Web平台也需要执行回收站自动清理
-      Future<void>.microtask(() async {
-        if (_isDisposed) {
-          return;
-        }
-        try {
-          final retentionDays = await _resolveTrashRetentionDays();
-          if (retentionDays == null) {
-            logWarning(
-              '读取回收站保留期失败，跳过启动自动清理',
-              source: 'DatabaseService',
-            );
-            return;
-          }
-          final cleanedCount =
-              await autoCleanupExpiredTrash(retentionDays: retentionDays);
-          if (cleanedCount > 0) {
-            logInfo(
-              '回收站自动清理完成: 删除 $cleanedCount 条过期笔记 (保留 $retentionDays 天)',
-              source: 'DatabaseService',
-            );
-          }
-        } catch (e, stackTrace) {
-          logError(
-            '回收站自动清理失败: $e',
-            error: e,
-            stackTrace: stackTrace,
-            source: 'DatabaseService',
-          );
-        }
-      });
+      _scheduleTrashAutoCleanup();
       return;
     }
 
@@ -641,37 +611,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       // 新增：执行数据库健康检查
       await _performStartupHealthCheck();
 
-      Future<void>.microtask(() async {
-        if (_isDisposed) {
-          return;
-        }
-        try {
-          final retentionDays = await _resolveTrashRetentionDays();
-          if (retentionDays == null) {
-            logWarning(
-              '读取回收站保留期失败，跳过启动自动清理',
-              source: 'DatabaseService',
-            );
-            return;
-          }
-          final cleanedCount =
-              await autoCleanupExpiredTrash(retentionDays: retentionDays);
-          if (cleanedCount > 0) {
-            logInfo(
-              '回收站自动清理完成: 删除 $cleanedCount 条过期笔记 (保留 $retentionDays 天)',
-              source: 'DatabaseService',
-            );
-          }
-        } catch (e, stackTrace) {
-          logError(
-            '回收站自动清理失败: $e',
-            error: e,
-            stackTrace: stackTrace,
-            source: 'DatabaseService',
-          );
-          await _runBestEffortCleanupFailureHealthCheck();
-        }
-      });
+      _scheduleTrashAutoCleanup();
 
       // 延迟通知监听者，让UI知道数据库已准备好
       SchedulerBinding.instance.addPostFrameCallback((_) {
@@ -959,6 +899,40 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       logDebug('数据库恢复失败: $e');
       rethrow;
     }
+  }
+
+  void _scheduleTrashAutoCleanup() {
+    Future<void>.microtask(() async {
+      if (_isDisposed) {
+        return;
+      }
+      try {
+        final retentionDays = await _resolveTrashRetentionDays();
+        if (retentionDays == null) {
+          logWarning(
+            '读取回收站保留期失败，跳过启动自动清理',
+            source: 'DatabaseService',
+          );
+          return;
+        }
+        final cleanedCount =
+            await autoCleanupExpiredTrash(retentionDays: retentionDays);
+        if (cleanedCount > 0) {
+          logInfo(
+            '回收站自动清理完成: 删除 $cleanedCount 条过期笔记 (保留 $retentionDays 天)',
+            source: 'DatabaseService',
+          );
+        }
+      } catch (e, stackTrace) {
+        logError(
+          '回收站自动清理失败: $e',
+          error: e,
+          stackTrace: stackTrace,
+          source: 'DatabaseService',
+        );
+        await _runBestEffortCleanupFailureHealthCheck();
+      }
+    });
   }
 
   Future<int?> _resolveTrashRetentionDays() async {
