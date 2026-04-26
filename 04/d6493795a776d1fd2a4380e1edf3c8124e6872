@@ -1,0 +1,133 @@
+lib/services/database_health_service.dart
+  8364f6e0f6293a3a 139-167,187-190,209,368-376,386,393,398,512-513,515-519,536-539,563-564,590-596,602-607
+lib/services/database/database_hidden_tag_mixin.dart
+  8364f6e0f6293a3a 185-189,196-204
+lib/services/database/database_import_export_mixin.dart
+  8364f6e0f6293a3a 89
+lib/services/database/database_favorite_mixin.dart
+  8364f6e0f6293a3a 15-17,60-79,142-144,175-194,243,246-248,250-252,263-264
+lib/services/database_service.dart
+  8364f6e0f6293a3a 3,7,14,20-21,36,41-46,73-77,79-83,95,100,109-116,119-136,166,174,215,235,364,517,523-527,614-615,643,755,871,891,903-975,988
+test/unit/services/smart_push_security_test.dart
+  8364f6e0f6293a3a 4,7-9,39-40,103-119
+lib/services/database/database_pagination_mixin.dart
+  8364f6e0f6293a3a 57,148-152,215,259,291,299,322
+test/unit/utils/backup_progress_update_gate_test.dart
+  8364f6e0f6293a3a 3,6-9
+lib/utils/platform_io_stub.dart
+  8364f6e0f6293a3a 1-78
+test/unit/services/database_trash_flow_test.dart
+  8364f6e0f6293a3a 1-169
+test/widget/pages/trash_page_test.dart
+  8364f6e0f6293a3a 1-287
+lib/services/database/database_trash_mixin.dart
+  8364f6e0f6293a3a 1-504
+lib/services/database_backup_service.dart
+  8364f6e0f6293a3a 9,12,36,45,104,218-219,234-246,297-300,313-326,390-502,627,649-658,661-683,854-855,910-948,1011-1154
+test/widget/pages/note_editor_draft_behavior_test.dart
+  8364f6e0f6293a3a 42,66,93,133
+lib/widgets/quote_card_helpers.dart
+  8364f6e0f6293a3a 1-108
+lib/pages/trash_page.dart
+  8364f6e0f6293a3a 1-690
+test/lww_merge_report_test.dart
+  8364f6e0f6293a3a 10,20,29
+test/performance/add_note_dialog_optimized_test.dart
+  8364f6e0f6293a3a 166-168
+lib/services/settings_service.dart
+  8364f6e0f6293a3a 11,74-179,239-242
+lib/services/database/database_quote_crud_mixin.dart
+  8364f6e0f6293a3a 107-110,113-115,130,148-151,154-156,168-188,193,196-197,215-225,227,235-239,242-244,253,256-259,267-270,272,279-282,286-289,292,301,313-314,316-331,337-338,373,376,379-404,436-439,481-484
+lib/l10n/app_zh.arb
+  8364f6e0f6293a3a 378-379,2829-2830,3164-3169,3175-3180,3317,3323-3324,3591-3645
+lib/services/database_schema_manager.dart
+  8364f6e0f6293a3a 15,70-72,109-114,127-137,651-713,906-908,912-921,927-928,931-954,992-997,1124-1125,1132-1141,1145-1151,1163-1174,1192-1195
+test/simple_sync_test.dart
+  8364f6e0f6293a3a 129-132
+lib/pages/hitokoto_settings_page.dart
+  8364f6e0f6293a3a 315-383
+test/sync_integration_test.mocks.dart
+  8364f6e0f6293a3a 351,364,391-394,396-399,411,421,434-435,437-441,466-467,471,482,494,503,590
+lib/widgets/add_note_dialog.dart
+  8364f6e0f6293a3a 132-145,1500-1511,1534-1537,2212
+lib/models/quote_model.dart
+  8364f6e0f6293a3a 2-3,27-28,30,54-57,119-120,163-164,238,263-267,302-303,335-336,338-344,369-373,377-417
+lib/l10n/app_ko.arb
+  8364f6e0f6293a3a 2752-2753,3480-3529
+lib/pages/note_editor/editor_save_and_draft.dart
+  8364f6e0f6293a3a 259,264,403-417,420-422,430,437-439,447,451,465-470,483-524
+lib/l10n/app_fr.arb
+  8364f6e0f6293a3a 2738-2739,3466-3518
+lib/models/app_settings.dart
+  8364f6e0f6293a3a 2,93,97-104,155-166,207,282,323-328
+lib/l10n/app_en.arb
+  8364f6e0f6293a3a 378-379,2823-2824,3221-3223,3592-3645
+lib/models/merge_report.dart
+  8364f6e0f6293a3a 4,18-19,42-43,81-94,136-137,153-155,172-176,202-205,243-244,276-277,298-299,327-334,362-363
+lib/services/media_cleanup_service.dart
+  8364f6e0f6293a3a 237-240
+lib/services/database/database_query_mixin.dart
+  8364f6e0f6293a3a 17,52-55,146,250,276-279,353
+lib/widgets/trash_quote_card.dart
+  8364f6e0f6293a3a 1-323
+lib/services/database/database_query_helpers_mixin.dart
+  8364f6e0f6293a3a 16,20-23,75-78,172,185-187,211-213,223,253,263,272-275,335-336
+test/performance/add_note_dialog_performance_test.dart
+  8364f6e0f6293a3a 196,198
+test/sync_integration_test.dart
+  8364f6e0f6293a3a 104,109,111,117
+lib/services/media_reference_service.dart
+  8364f6e0f6293a3a 3,194-239,497-500,549,681,683-686,1065
+lib/pages/settings_page.dart
+  8364f6e0f6293a3a 20,792-812,1070-1079
+README.md
+  8364f6e0f6293a3a 165,425
+test/test_setup.dart
+  8364f6e0f6293a3a 143-144
+test/unit/models/app_settings_test.dart
+  8364f6e0f6293a3a 8-40
+test/unit/models/quote_model_test.dart
+  8364f6e0f6293a3a 6,9-12,47,53-54,62-63,75-76,85-176
+test/unit/services/database_optimization_test.dart
+  8364f6e0f6293a3a 44-46,76-82,130-252
+test/unit/services/settings_service_test.dart
+  8364f6e0f6293a3a 72-194
+lib/utils/backup_progress_update_gate.dart
+  8364f6e0f6293a3a 3-5,31-35
+lib/widgets/quote_item_widget.dart
+  8364f6e0f6293a3a 14,16,246-251
+lib/l10n/app_ja.arb
+  8364f6e0f6293a3a 2752-2753,3481-3529
+lib/services/backup_service.dart
+  8364f6e0f6293a3a 248,258,314-323,471-485,996-1002,1004,1008-1025
+test/widget/note_list_view_filter_test.dart
+  8364f6e0f6293a3a 245,251,277,288,301,325,336
+lib/main.dart
+  8364f6e0f6293a3a 2-3,151-155,948,950-956,989-1005,1008,1020,1029,1044,1054,1084,1097,1109,1117
+lib/services/database/database_migration_mixin.dart
+  8364f6e0f6293a3a 57-59,70
+lib/models/feature_guide.dart
+  8364f6e0f6293a3a 87-90,121-122,156-157
+lib/pages/home_page.dart
+  8364f6e0f6293a3a 92,98,403-414,1008-1031,1469-1473,1475-1545,1547-1548,2479
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "04d6493795a776d1fd2a4380e1edf3c8124e6872",
+  "prompts": {
+    "8364f6e0f6293a3a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_23b6cfa96ffe8XzlKlYeTXcohv",
+        "model": "github-copilot/gpt-5.3-codex"
+      },
+      "human_author": "上晋",
+      "messages": [],
+      "total_additions": 4719,
+      "total_deletions": 588,
+      "accepted_lines": 4719,
+      "overriden_lines": 0
+    }
+  }
+}
