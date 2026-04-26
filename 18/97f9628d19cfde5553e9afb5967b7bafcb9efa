@@ -1,0 +1,23 @@
+lib/pages/ai_assistant/ai_assistant_page_ui.dart
+  3aa1c2734246bdc0 901-909,1089-1097
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "1897f9628d19cfde5553e9afb5967b7bafcb9efa",
+  "prompts": {
+    "3aa1c2734246bdc0": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_2381efef7ffe5uCwtuStX6D6Pm",
+        "model": "opencode-go/kimi-k2.6"
+      },
+      "human_author": "上晋",
+      "messages": [],
+      "total_additions": 18,
+      "total_deletions": 2,
+      "accepted_lines": 18,
+      "overriden_lines": 0
+    }
+  }
+}
