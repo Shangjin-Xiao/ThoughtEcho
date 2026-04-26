@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/models/note_category.dart';
 import 'package:thoughtecho/services/agent_tool.dart';
 import 'package:thoughtecho/services/agent_tools/get_app_context_tool.dart';
+import 'package:thoughtecho/services/agent_tools/propose_edit_tool.dart';
 import 'package:thoughtecho/services/agent_tools/propose_new_note_tool.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
@@ -110,6 +111,45 @@ void main() {
       expect(payload['reason'], '整理成单独笔记更方便回顾。');
     });
 
+    test('returns smart result payload with author and source', () async {
+      final tool = ProposeNewNoteTool(
+        _TestDatabaseService(
+          [
+            NoteCategory(id: 'tag_lit', name: '文学'),
+          ],
+        ),
+      );
+
+      final result = await tool.execute(
+        ToolCall(
+          id: 'call_author',
+          name: 'propose_new_note',
+          arguments: const {
+            'title': '读书笔记',
+            'content': '这是一段读书笔记内容。',
+            'author': '王小波',
+            'source': '《黄金时代》',
+            'tag_ids': ['tag_lit'],
+            'include_location': false,
+            'include_weather': false,
+          },
+        ),
+      );
+
+      expect(result.isError, isFalse);
+      final match = RegExp(
+        r'```smart_result\s*([\s\S]*?)\s*```',
+      ).firstMatch(result.content);
+      expect(match, isNotNull);
+
+      final payload = jsonDecode(match!.group(1)!) as Map<String, dynamic>;
+      expect(payload['author'], '王小波');
+      expect(payload['source'], '《黄金时代》');
+      expect(payload['tag_ids'], ['tag_lit']);
+      expect(payload['include_location'], isFalse);
+      expect(payload['include_weather'], isFalse);
+    });
+
     test('rejects tag ids that do not exist in app categories', () async {
       final tool = ProposeNewNoteTool(
         _TestDatabaseService(
@@ -195,6 +235,80 @@ void main() {
       final pagination = payload['pagination'] as Map<String, dynamic>;
       expect(pagination['total_count'], 5);
       expect(pagination['has_more'], isTrue);
+    });
+  });
+
+  group('ProposeEditTool', () {
+    test('returns smart result payload with new fields', () async {
+      const tool = ProposeEditTool();
+
+      final result = await tool.execute(
+        ToolCall(
+          id: 'call_edit_1',
+          name: 'propose_edit',
+          arguments: const {
+            'title': '润色建议',
+            'content': '润色后的内容',
+            'action': 'replace',
+            'note_id': 'note_123',
+            'tag_ids': ['tag_1', 'tag_2'],
+            'author': '鲁迅',
+            'source': '《呐喊》',
+            'include_location': true,
+            'include_weather': false,
+            'reason': '优化表达',
+          },
+        ),
+      );
+
+      expect(result.isError, isFalse);
+      final match = RegExp(
+        r'```smart_result\s*([\s\S]*?)\s*```',
+      ).firstMatch(result.content);
+      expect(match, isNotNull);
+
+      final payload = jsonDecode(match!.group(1)!) as Map<String, dynamic>;
+      expect(payload['type'], 'smart_result');
+      expect(payload['title'], '润色建议');
+      expect(payload['content'], '润色后的内容');
+      expect(payload['action'], 'replace');
+      expect(payload['note_id'], 'note_123');
+      expect(payload['tag_ids'], ['tag_1', 'tag_2']);
+      expect(payload['author'], '鲁迅');
+      expect(payload['source'], '《呐喊》');
+      expect(payload['include_location'], isTrue);
+      expect(payload['include_weather'], isFalse);
+      expect(payload['reason'], '优化表达');
+    });
+
+    test('returns smart result payload without optional fields', () async {
+      const tool = ProposeEditTool();
+
+      final result = await tool.execute(
+        ToolCall(
+          id: 'call_edit_2',
+          name: 'propose_edit',
+          arguments: const {
+            'title': '续写建议',
+            'content': '续写内容',
+            'action': 'append',
+          },
+        ),
+      );
+
+      expect(result.isError, isFalse);
+      final match = RegExp(
+        r'```smart_result\s*([\s\S]*?)\s*```',
+      ).firstMatch(result.content);
+      expect(match, isNotNull);
+
+      final payload = jsonDecode(match!.group(1)!) as Map<String, dynamic>;
+      expect(payload['action'], 'append');
+      expect(payload.containsKey('tag_ids'), isFalse);
+      expect(payload.containsKey('author'), isFalse);
+      expect(payload.containsKey('source'), isFalse);
+      expect(payload['include_location'], isFalse);
+      expect(payload['include_weather'], isFalse);
     });
   });
 

@@ -262,6 +262,25 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
       }
 
       if (parsed.smartResult != null) {
+        // 解析标签 ID 为可读名称，供 SmartResultCard 同步展示
+        List<String> tagNames = [];
+        final tagIds = parsed.smartResult!.tagIds;
+        if (tagIds != null && tagIds.isNotEmpty) {
+          try {
+            final db = context.read<DatabaseService>();
+            final allTags = await db.getCategories();
+            final tagMap = <String, String>{
+              for (final t in allTags) t.id: t.name,
+            };
+            tagNames = tagIds
+                .map((id) => tagMap[id] ?? id)
+                .where((name) => name.isNotEmpty)
+                .toList();
+          } catch (_) {
+            tagNames = tagIds;
+          }
+        }
+
         final cardMsg = app_chat.ChatMessage(
           id: _uuid.v4(),
           role: 'assistant',
@@ -274,6 +293,9 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             'note_id': parsed.smartResult!.noteId,
             'action': parsed.smartResult!.action,
             'tag_ids': parsed.smartResult!.tagIds,
+            'tag_names': tagNames,
+            'author': parsed.smartResult!.author,
+            'source': parsed.smartResult!.source,
             'include_location': parsed.smartResult!.includeLocation,
             'include_weather': parsed.smartResult!.includeWeather,
           }),
@@ -529,6 +551,8 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
             tagIds: (call.arguments['tag_ids'] as List?)
                 ?.map((item) => item.toString())
                 .toList(),
+            author: call.arguments['author']?.toString(),
+            source: call.arguments['source']?.toString(),
             includeLocation: call.arguments['include_location'] == true,
             includeWeather: call.arguments['include_weather'] == true,
           ),
@@ -568,6 +592,8 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
           tagIds: (data['tag_ids'] as List?)
               ?.map((item) => item.toString())
               .toList(),
+          author: data['author']?.toString(),
+          source: data['source']?.toString(),
           includeLocation: data['include_location'] == true,
           includeWeather: data['include_weather'] == true,
         ),
@@ -595,6 +621,8 @@ class _AgentSmartResultPayload {
     this.noteId,
     this.action,
     this.tagIds,
+    this.author,
+    this.source,
     this.includeLocation = false,
     this.includeWeather = false,
   });
@@ -604,6 +632,8 @@ class _AgentSmartResultPayload {
   final String? noteId;
   final String? action;
   final List<String>? tagIds;
+  final String? author;
+  final String? source;
   final bool includeLocation;
   final bool includeWeather;
 }

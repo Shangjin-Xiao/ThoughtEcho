@@ -36,6 +36,27 @@ class ProposeEditTool extends AgentTool {
             'type': 'string',
             'description': '可选：如果是对特定已有笔记的修改，请务必提供该笔记 ID',
           },
+          'tag_ids': {
+            'type': 'array',
+            'items': {'type': 'string'},
+            'description': '可选：修改后的标签 ID 列表（仅使用 get_tags 返回的现有标签 ID）',
+          },
+          'author': {
+            'type': 'string',
+            'description': '可选：修改后的作者名称',
+          },
+          'source': {
+            'type': 'string',
+            'description': '可选：修改后的出处/作品名称',
+          },
+          'include_location': {
+            'type': 'boolean',
+            'description': '是否建议由程序附加当前位置（新建时有效）',
+          },
+          'include_weather': {
+            'type': 'boolean',
+            'description': '是否建议由程序附加当前天气（新建时有效）',
+          },
           'reason': {
             'type': 'string',
             'description': '可选：为什么要这样修改的简短理由',
@@ -50,7 +71,11 @@ class ProposeEditTool extends AgentTool {
     final content = call.getString('content');
     final action = call.getString('action');
     final noteId = call.getString('note_id');
+    final author = call.getString('author');
+    final source = call.getString('source');
     final reason = call.getString('reason');
+    final includeLocation = call.arguments['include_location'] == true;
+    final includeWeather = call.arguments['include_weather'] == true;
 
     if (title.isEmpty || content.isEmpty) {
       return ToolResult(
@@ -59,6 +84,14 @@ class ProposeEditTool extends AgentTool {
         isError: true,
       );
     }
+
+    final rawTagIds = call.arguments['tag_ids'];
+    final tagIds = rawTagIds is List
+        ? rawTagIds
+            .map((item) => item?.toString().trim() ?? '')
+            .where((item) => item.isNotEmpty)
+            .toList()
+        : <String>[];
 
     try {
       final payload = <String, dynamic>{
@@ -71,6 +104,21 @@ class ProposeEditTool extends AgentTool {
       if (noteId.isNotEmpty) {
         payload['note_id'] = noteId;
       }
+
+      if (tagIds.isNotEmpty) {
+        payload['tag_ids'] = tagIds;
+      }
+
+      if (author.isNotEmpty) {
+        payload['author'] = author;
+      }
+
+      if (source.isNotEmpty) {
+        payload['source'] = source;
+      }
+
+      payload['include_location'] = includeLocation;
+      payload['include_weather'] = includeWeather;
 
       if (reason.isNotEmpty) {
         payload['reason'] = reason;

@@ -23,11 +23,19 @@ class ProposeNewNoteTool extends AgentTool {
         'properties': {
           'title': {
             'type': 'string',
-            'description': '建议卡片标题，例如“新笔记草稿”',
+            'description': '建议卡片标题，例如"新笔记草稿"',
           },
           'content': {
             'type': 'string',
             'description': '新笔记正文内容',
+          },
+          'author': {
+            'type': 'string',
+            'description': '可选：作者名称',
+          },
+          'source': {
+            'type': 'string',
+            'description': '可选：出处/作品名称',
           },
           'tag_ids': {
             'type': 'array',
@@ -54,6 +62,8 @@ class ProposeNewNoteTool extends AgentTool {
   Future<ToolResult> execute(ToolCall call) async {
     final title = call.getString('title');
     final content = call.getString('content');
+    final author = call.getString('author');
+    final source = call.getString('source');
     final reason = call.getString('reason');
     final includeLocation = call.arguments['include_location'] == true;
     final includeWeather = call.arguments['include_weather'] == true;
@@ -97,6 +107,12 @@ class ProposeNewNoteTool extends AgentTool {
       'include_location': includeLocation,
       'include_weather': includeWeather,
     };
+    if (author.isNotEmpty) {
+      payload['author'] = author;
+    }
+    if (source.isNotEmpty) {
+      payload['source'] = source;
+    }
     if (reason.isNotEmpty) {
       payload['reason'] = reason;
     }

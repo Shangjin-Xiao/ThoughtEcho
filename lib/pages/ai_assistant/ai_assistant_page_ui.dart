@@ -147,12 +147,32 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           case 'smart_result':
             final action = meta['action']?.toString();
             final isNewNoteProposal = action == 'create';
+            final rawTagNames = meta['tag_names'] as List<dynamic>? ?? const [];
+            final tagNames = rawTagNames
+                .map((item) => item.toString().trim())
+                .where((item) => item.isNotEmpty)
+                .toList();
+            final locationService = context.read<LocationService>();
+            final weatherService = context.read<WeatherService>();
+            final locationPreview =
+                locationService.getDisplayLocation().isNotEmpty
+                    ? locationService.getDisplayLocation()
+                    : null;
+            final weatherKey = weatherService.currentWeather;
+            final weatherPreview = weatherKey != null
+                ? '${WeatherCodeMapper.getLocalizedDescription(l10n, weatherKey)}${weatherService.temperature != null ? ' ${weatherService.temperature}' : ''}'
+                : null;
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
               child: SmartResultCard(
                 key: const ValueKey('ai_workflow_result_smart_result'),
                 title: meta['title'] as String? ?? l10n.analysisResult,
                 content: message.content,
+                author: meta['author']?.toString(),
+                source: meta['source']?.toString(),
+                tagNames: tagNames,
+                locationPreview: locationPreview,
+                weatherPreview: weatherPreview,
                 editorSource: isNewNoteProposal ? 'new_note' : 'fullscreen',
                 initialIncludeLocation: meta['include_location'] == true,
                 initialIncludeWeather: meta['include_weather'] == true,
@@ -167,6 +187,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                     await _openSmartResultAsNewNote(
                       message.content,
                       tagIds: tagIds,
+                      author: meta['author']?.toString(),
+                      source: meta['source']?.toString(),
                       includeLocation: includeLocation,
                       includeWeather: includeWeather,
                     );
@@ -742,10 +764,27 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         // 根据润色(replace) / 续写(append) 决定带入编辑器的初始文本
         final mergedContent =
             modeAction == 'append' ? '${note.content}\n$content' : content;
+
+        // 合并 Agent 建议的元数据（标签、作者、出处）
+        final rawSuggestedTagIds = meta['tag_ids'] as List<dynamic>?;
+        final suggestedTagIds = rawSuggestedTagIds != null
+            ? rawSuggestedTagIds
+                .map((item) => item.toString().trim())
+                .where((item) => item.isNotEmpty)
+                .toList()
+            : null;
+        final suggestedAuthor = meta['author']?.toString();
+        final suggestedSource = meta['source']?.toString();
+
         // 清空旧 Delta，否则编辑器走 P1 富文本路径会渲染旧内容，
         // 让用户以为 AI 修改没生效。
-        final noteForEditor =
-            note.copyWith(content: mergedContent, deltaContent: '');
+        final noteForEditor = note.copyWith(
+          content: mergedContent,
+          deltaContent: '',
+          tagIds: suggestedTagIds ?? note.tagIds,
+          sourceAuthor: suggestedAuthor ?? note.sourceAuthor,
+          sourceWork: suggestedSource ?? note.sourceWork,
+        );
         await Navigator.push(
           context,
           MaterialPageRoute(
@@ -753,6 +792,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
               initialContent: mergedContent,
               initialQuote: noteForEditor,
               allTags: tags,
+              skipDefaultMetadataAutofill: true,
             ),
           ),
         );
@@ -760,7 +800,20 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
       }
     }
 
-    await _openSmartResultAsNewNote(content);
+    // 没有 note_id 或找不到笔记时，fallback 为新建笔记
+    final rawTagIds = meta['tag_ids'] as List<dynamic>? ?? const [];
+    final tagIds = rawTagIds
+        .map((item) => item.toString().trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+    await _openSmartResultAsNewNote(
+      content,
+      tagIds: tagIds,
+      author: meta['author']?.toString(),
+      source: meta['source']?.toString(),
+      includeLocation: meta['include_location'] == true,
+      includeWeather: meta['include_weather'] == true,
+    );
   }
 
   bool _isShortContent(String content) {
@@ -770,6 +823,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
   Future<void> _openSmartResultAsNewNote(
     String content, {
     List<String>? tagIds,
+    String? author,
+    String? source,
     bool includeLocation = false,
     bool includeWeather = false,
   }) async {
@@ -784,6 +839,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         builder: (_) => AddNoteDialog(
           prefilledContent: content,
           prefilledTagIds: tagIds,
+          prefilledAuthor: author,
+          prefilledWork: source,
           prefilledIncludeLocation: includeLocation,
           prefilledIncludeWeather: includeWeather,
           useAIPrefilledLocationWeather: true,
@@ -800,27 +857,26 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
     final tags = await db.getCategories();
     final position = locationService.currentPosition;
 
-    Quote? initialQuote;
-    if (tagIds != null || includeLocation || includeWeather) {
-      final formattedLocation = locationService.getFormattedLocation();
-      initialQuote = Quote(
-        content: content,
-        date: DateTime.now().toIso8601String(),
-        tagIds: tagIds ?? [],
-        location: includeLocation
-            ? (formattedLocation.isNotEmpty
-                ? formattedLocation
-                : (position != null ? LocationService.kAddressPending : null))
-            : null,
-        latitude:
-            (includeLocation || includeWeather) ? position?.latitude : null,
-        longitude:
-            (includeLocation || includeWeather) ? position?.longitude : null,
-        weather: includeWeather ? weatherService.currentWeather : null,
-        temperature: includeWeather ? weatherService.temperature : null,
-        dayPeriod: TimeUtils.getCurrentDayPeriodKey(),
-      );
-    }
+    // 始终创建 initialQuote，防止编辑器自动应用用户偏好设置
+    final formattedLocation = locationService.getFormattedLocation();
+    final initialQuote = Quote(
+      content: content,
+      date: DateTime.now().toIso8601String(),
+      tagIds: tagIds ?? [],
+      sourceAuthor: author,
+      sourceWork: source,
+      location: includeLocation
+          ? (formattedLocation.isNotEmpty
+              ? formattedLocation
+              : (position != null ? LocationService.kAddressPending : null))
+          : null,
+      // 修复：只有勾选位置时才保存坐标，避免仅勾选天气时显示坐标
+      latitude: includeLocation ? position?.latitude : null,
+      longitude: includeLocation ? position?.longitude : null,
+      weather: includeWeather ? weatherService.currentWeather : null,
+      temperature: includeWeather ? weatherService.temperature : null,
+      dayPeriod: TimeUtils.getCurrentDayPeriodKey(),
+    );
 
     if (!mounted) return;
     await Navigator.push(
@@ -830,6 +886,7 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           initialContent: content,
           initialQuote: initialQuote,
           allTags: tags,
+          skipDefaultMetadataAutofill: true,
         ),
       ),
     );
@@ -857,11 +914,25 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
             ? '${existingNote.content}\n$content'
             : content;
 
+        // 合并 Agent 建议的元数据（标签、作者、出处）
+        final rawSuggestedTagIds = meta['tag_ids'] as List<dynamic>?;
+        final suggestedTagIds = rawSuggestedTagIds != null
+            ? rawSuggestedTagIds
+                .map((item) => item.toString().trim())
+                .where((item) => item.isNotEmpty)
+                .toList()
+            : null;
+        final suggestedAuthor = meta['author']?.toString();
+        final suggestedSource = meta['source']?.toString();
+
         final updatedNote = existingNote.copyWith(
           content: newContent,
           // 富文本 Delta 与 plain content 不再同步，必须清空旧 Delta，
           // 否则编辑器仍按旧 deltaContent 渲染，导致看似没保存。
           deltaContent: '',
+          tagIds: suggestedTagIds ?? existingNote.tagIds,
+          sourceAuthor: suggestedAuthor ?? existingNote.sourceAuthor,
+          sourceWork: suggestedSource ?? existingNote.sourceWork,
           lastModified: DateTime.now().toIso8601String(),
         );
 
@@ -902,6 +973,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
           .map((item) => item.toString().trim())
           .where((item) => item.isNotEmpty)
           .toList();
+      final author = meta['author']?.toString();
+      final source = meta['source']?.toString();
 
       final position = locationService.currentPosition;
       final formattedLocation = locationService.getFormattedLocation();
@@ -915,11 +988,12 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
         content: content,
         date: DateTime.now().toIso8601String(),
         tagIds: tagIds,
+        sourceAuthor: author,
+        sourceWork: source,
         location: storedLocation,
-        latitude:
-            (includeLocation || includeWeather) ? position?.latitude : null,
-        longitude:
-            (includeLocation || includeWeather) ? position?.longitude : null,
+        // 修复：只有勾选位置时才保存坐标，避免仅勾选天气时显示坐标
+        latitude: includeLocation ? position?.latitude : null,
+        longitude: includeLocation ? position?.longitude : null,
         weather: includeWeather ? weatherService.currentWeather : null,
         temperature: includeWeather ? weatherService.temperature : null,
         dayPeriod: TimeUtils.getCurrentDayPeriodKey(),

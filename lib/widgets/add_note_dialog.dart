@@ -193,27 +193,34 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       text: widget.initialQuote?.sourceWork ?? widget.prefilledWork ?? '',
     );
 
+    // 应用 AI 建议的预选标签
+    if (widget.prefilledTagIds != null && widget.prefilledTagIds!.isNotEmpty) {
+      _selectedTagIds.addAll(widget.prefilledTagIds!);
+    }
+
     // 优化：初始化内部标签列表
     _availableTags = List.from(widget.tags);
     _filteredTags = _availableTags;
     _lastSearchQuery = '';
 
     // 新建笔记时，自动填充默认作者、出处和标签
+    // 注意：仅在没有预填充值时才使用默认值，AI 填写的作者/出处/标签不会被覆盖
     if (widget.initialQuote == null && !isHitokotoQuickAdd) {
       final settingsService = _readServiceOrNull<SettingsService>(context);
       if (settingsService != null) {
-        // 仅在没有预填充值时使用默认值
+        // 仅在没有预填充值时使用默认作者
         if (_authorController.text.isEmpty &&
             settingsService.defaultAuthor != null &&
             settingsService.defaultAuthor!.isNotEmpty) {
           _authorController.text = settingsService.defaultAuthor!;
         }
+        // 仅在没有预填充值时使用默认出处
         if (_workController.text.isEmpty &&
             settingsService.defaultSource != null &&
             settingsService.defaultSource!.isNotEmpty) {
           _workController.text = settingsService.defaultSource!;
         }
-        // 自动添加默认标签
+        // 仅在没有预选标签时才添加默认标签
         if (_selectedTagIds.isEmpty &&
             settingsService.defaultTagIds.isNotEmpty) {
           _selectedTagIds.addAll(settingsService.defaultTagIds);
