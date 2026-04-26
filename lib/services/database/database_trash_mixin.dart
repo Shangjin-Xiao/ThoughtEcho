@@ -186,7 +186,7 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       return;
     }
 
-    await _executeWithLock('restoreQuote_$id', () async {
+    await _executeWithLock('hardDeleteQuotes', () async {
       final db = await safeDatabase;
 
       // 修复：检查笔记是否已被永久删除（tombstone存在）
