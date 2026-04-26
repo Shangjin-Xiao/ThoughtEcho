@@ -994,8 +994,11 @@ class BackupService {
       }
 
       final notesData = backupData['notes'];
-      final incomingTrashSettings = notesData is Map<String, dynamic>
-          ? notesData['trash_settings'] as Map<String, dynamic>?
+      final rawTrashSettings = notesData is Map<String, dynamic>
+          ? notesData['trash_settings']
+          : null;
+      final incomingTrashSettings = rawTrashSettings is Map<String, dynamic>
+          ? rawTrashSettings
           : null;
 
       // 使用LWW策略合并数据
