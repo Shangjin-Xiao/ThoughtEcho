@@ -255,13 +255,13 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
   }
 
   Future<void> _saveContent() async {
-    // 立即取消草稿保存定时器，防止在保存过程中再次触发草稿保存
     _draftSaveTimer?.cancel();
-    _draftLoaded = false; // 标记草稿已处理，防止后续监听再次开启定时器
+    _draftLoaded = false;
 
     final db = Provider.of<DatabaseService>(context, listen: false);
 
     final l10n = AppLocalizations.of(context);
+    bool saveSucceeded = false;
     logDebug('开始保存笔记内容...');
     if (mounted) {
       _updateState(() {
@@ -417,8 +417,9 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
         }
         _draftSaveTimer?.cancel();
         await _clearDraft();
-        _didSaveSuccessfully = true; // 标记保存成功，避免会话级清理
-        _isRestoredFromDraft = false; // 保存成功后，不再视为恢复的草稿
+        _didSaveSuccessfully = true;
+        _isRestoredFromDraft = false;
+        saveSucceeded = true;
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -426,17 +427,16 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
               duration: AppConstants.snackBarDurationImportant,
             ),
           );
-          // 成功更新后，关闭页面并返回
-          Navigator.of(context).pop(true); // 返回true表示更新成功
+          Navigator.of(context).pop(true);
         }
       } else {
-        // 添加新笔记（初始Quote为null或无ID时）
         logDebug('添加新笔记');
         await db.addQuote(quote);
         _draftSaveTimer?.cancel();
         await _clearDraft();
-        _didSaveSuccessfully = true; // 标记保存成功，避免会话级清理
-        _isRestoredFromDraft = false; // 保存成功后，不再视为恢复的草稿
+        _didSaveSuccessfully = true;
+        _isRestoredFromDraft = false;
+        saveSucceeded = true;
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -444,8 +444,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
               duration: AppConstants.snackBarDurationImportant,
             ),
           );
-          // 成功添加后，关闭页面并返回
-          Navigator.of(context).pop(true); // 返回true表示保存成功
+          Navigator.of(context).pop(true);
         }
       }
     } catch (e) {
@@ -463,8 +462,12 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     } finally {
       if (mounted) {
         _updateState(() {
-          _saveProgress = 1.0;
-          _saveStatus = l10n.saveComplete;
+          if (saveSucceeded) {
+            _saveProgress = 1.0;
+            _saveStatus = l10n.saveComplete;
+          } else {
+            _saveProgress = 0.0;
+          }
         });
         Future.delayed(const Duration(milliseconds: 320), () {
           if (mounted) {

@@ -95,6 +95,7 @@ class _HomePageState extends State<HomePage>
   bool _homeGuidePending = false;
   bool _noteGuidePending = false;
   bool _settingsGuidePending = false;
+  bool _trashGuideScheduled = false;
   String? _lastConsumedExcerptText;
   bool _isHandlingExcerptIntent = false;
   bool _hasConsumedInitialHighlightedNote = false;
@@ -1004,23 +1005,27 @@ class _HomePageState extends State<HomePage>
     });
   }
 
-  /// 显示回收站位置引导（删除笔记后）
   void _scheduleTrashLocationGuide() {
     if (!mounted) return;
+    if (_trashGuideScheduled) return;
     if (FeatureGuideHelper.hasShown(context, 'trash_location_guide')) {
       return;
     }
 
-    // 等待 SnackBar 显示完成后再显示引导气泡
+    _trashGuideScheduled = true;
     Future.delayed(const Duration(milliseconds: 1200), () {
-      if (!mounted) return;
+      if (!mounted) {
+        _trashGuideScheduled = false;
+        return;
+      }
       FeatureGuideHelper.show(
         context: context,
         guideId: 'trash_location_guide',
         targetKey: _settingsTabGuideKey,
-        autoDismissDuration: const Duration(milliseconds: 3000), // 稍长一点，让用户看清
+        autoDismissDuration: const Duration(milliseconds: 3000),
         shouldShow: () => mounted,
       );
+      _trashGuideScheduled = false;
     });
   }
 
