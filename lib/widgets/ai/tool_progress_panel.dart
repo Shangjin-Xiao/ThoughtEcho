@@ -279,7 +279,7 @@ class _ToolProgressPanelState extends State<ToolProgressPanel>
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              widget.thinkingText!.trim(),
+                              '💡 ${widget.thinkingText!.trim()}',
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),
@@ -310,7 +310,7 @@ class _ToolProgressPanelState extends State<ToolProgressPanel>
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: Text(
-                                      item.narrationText!.trim(),
+                                      '💬 ${item.narrationText!.trim()}',
                                       style:
                                           theme.textTheme.bodySmall?.copyWith(
                                         color:
