@@ -476,6 +476,8 @@ class BackupService {
           backupData['categories'] is List) {
         notesData = <String, dynamic>{
           'categories': backupData['categories'] ?? <dynamic>[],
+      notesData = <String, dynamic>{
+          'categories': backupData['categories'] ?? <dynamic>[],
           'quotes': backupData['quotes'] ?? <dynamic>[],
           if (backupData['tombstones'] is List)
             'tombstones': backupData['tombstones'],
