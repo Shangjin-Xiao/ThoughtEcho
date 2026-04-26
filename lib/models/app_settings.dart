@@ -157,7 +157,10 @@ class AppSettings {
     if (rawRetentionDays is int) {
       parsedRetentionDays = rawRetentionDays;
     } else if (rawRetentionDays is num) {
-      parsedRetentionDays = rawRetentionDays.toInt();
+      parsedRetentionDays =
+          rawRetentionDays == rawRetentionDays.roundToDouble()
+              ? rawRetentionDays.toInt()
+              : null;
     } else if (rawRetentionDays is String) {
       parsedRetentionDays = int.tryParse(rawRetentionDays);
     }
