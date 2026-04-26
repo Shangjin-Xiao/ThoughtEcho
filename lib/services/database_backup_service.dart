@@ -234,6 +234,14 @@ class DatabaseBackupService {
           quoteData['is_deleted'] = _parseDeletedFlag(quoteData['is_deleted']);
           quoteData['deleted_at'] = quoteData['deleted_at']?.toString();
 
+          // 修复：回填缺失的 deleted_at，确保软删除记录能被 autoCleanupExpiredTrash 清理
+          if ((quoteData['is_deleted'] as int) == 1 &&
+              (quoteData['deleted_at'] == null ||
+                  (quoteData['deleted_at'] as String).isEmpty)) {
+            quoteData['deleted_at'] = quoteData['last_modified']?.toString() ??
+                DateTime.now().toUtc().toIso8601String();
+          }
+
           // 收集标签信息（稍后批量插入）
           if (tagIdsString != null && tagIdsString.isNotEmpty) {
             final quoteId = quoteData['id'] as String;
@@ -302,6 +310,15 @@ class DatabaseBackupService {
             quoteData['is_deleted'] =
                 _parseDeletedFlag(quoteData['is_deleted']);
             quoteData['deleted_at'] = quoteData['deleted_at']?.toString();
+
+            // 修复：回填缺失的 deleted_at，确保软删除记录能被 autoCleanupExpiredTrash 清理
+            if ((quoteData['is_deleted'] as int) == 1 &&
+                (quoteData['deleted_at'] == null ||
+                    (quoteData['deleted_at'] as String).isEmpty)) {
+              quoteData['deleted_at'] =
+                  quoteData['last_modified']?.toString() ??
+                      DateTime.now().toUtc().toIso8601String();
+            }
 
             try {
               await txn.insert(

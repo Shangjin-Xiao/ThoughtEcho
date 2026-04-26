@@ -371,54 +371,15 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       return;
     }
 
-    final mediaCandidates = <String>{};
-    final db = await safeDatabase;
-    final quoteRows = <Map<String, Object?>>[];
-    for (final idBatch in _chunkIds(uniqueIds)) {
-      final placeholders = List.filled(idBatch.length, '?').join(',');
-      final rows = await db.rawQuery(
-        'SELECT * FROM quotes WHERE is_deleted = 1 AND id IN ($placeholders)',
-        idBatch,
-      );
-      quoteRows.addAll(rows);
-    }
-    final targetDeletedIds = quoteRows
-        .map((row) => row['id'])
-        .whereType<String>()
-        .toSet()
-        .toList(growable: false);
-    if (targetDeletedIds.isEmpty) {
-      return;
-    }
-    for (final row in quoteRows) {
-      try {
-        final quote = Quote.fromJson(row);
-        final extracted =
-            await MediaReferenceService.extractMediaPathsFromQuote(
-          quote,
-        );
-        mediaCandidates.addAll(extracted);
-      } catch (e, stack) {
-        UnifiedLogService.instance
-            .error('提取已删除笔记媒体路径失败', error: e, stackTrace: stack);
-      }
-    }
-
-    final referencedByQuote =
-        await MediaReferenceService.getReferencedFilesBatch(
-      targetDeletedIds,
-    );
-    for (final files in referencedByQuote.values) {
-      mediaCandidates.addAll(files);
-    }
-
     await _executeWithLock('hardDeleteQuotes', () async {
       final db = await safeDatabase;
       final now = DateTime.now().toUtc().toIso8601String();
+      final mediaCandidates = <String>{};
       var deletedIdsInTxn = <String>[];
 
       await db.transaction((txn) async {
         final currentDeletedRows = <Map<String, Object?>>[];
+        final currentQuoteRows = <Map<String, Object?>>[];
         for (final idBatch in _chunkIds(uniqueIds)) {
           final placeholders = List.filled(idBatch.length, '?').join(',');
           final rows = await txn.rawQuery(
@@ -426,6 +387,12 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
             idBatch,
           );
           currentDeletedRows.addAll(rows);
+
+          final fullRows = await txn.rawQuery(
+            'SELECT id, delta_content, content FROM quotes WHERE is_deleted = 1 AND id IN ($placeholders)',
+            idBatch,
+          );
+          currentQuoteRows.addAll(fullRows);
         }
         deletedIdsInTxn = currentDeletedRows
             .map((row) => row['id'])
@@ -434,6 +401,28 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
             .toList(growable: false);
         if (deletedIdsInTxn.isEmpty) {
           return;
+        }
+
+        for (final row in currentQuoteRows) {
+          try {
+            final quote = Quote.fromJson(row);
+            final extracted =
+                await MediaReferenceService.extractMediaPathsFromQuote(
+              quote,
+            );
+            mediaCandidates.addAll(extracted);
+          } catch (e, stack) {
+            UnifiedLogService.instance
+                .error('提取已删除笔记媒体路径失败', error: e, stackTrace: stack);
+          }
+        }
+
+        final referencedByQuote =
+            await MediaReferenceService.getReferencedFilesBatch(
+          deletedIdsInTxn,
+        );
+        for (final files in referencedByQuote.values) {
+          mediaCandidates.addAll(files);
         }
 
         final tombstoneBatch = txn.batch();
