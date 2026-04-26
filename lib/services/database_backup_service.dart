@@ -238,8 +238,11 @@ class DatabaseBackupService {
           if ((quoteData['is_deleted'] as int) == 1 &&
               (quoteData['deleted_at'] == null ||
                   (quoteData['deleted_at'] as String).isEmpty)) {
-            quoteData['deleted_at'] = quoteData['last_modified']?.toString() ??
-                DateTime.now().toUtc().toIso8601String();
+            final lastModified = quoteData['last_modified']?.toString();
+            quoteData['deleted_at'] =
+                (lastModified != null && lastModified.isNotEmpty)
+                    ? lastModified
+                    : DateTime.now().toUtc().toIso8601String();
           }
 
           // 收集标签信息（稍后批量插入）
@@ -315,9 +318,11 @@ class DatabaseBackupService {
             if ((quoteData['is_deleted'] as int) == 1 &&
                 (quoteData['deleted_at'] == null ||
                     (quoteData['deleted_at'] as String).isEmpty)) {
+              final lastModified = quoteData['last_modified']?.toString();
               quoteData['deleted_at'] =
-                  quoteData['last_modified']?.toString() ??
-                      DateTime.now().toUtc().toIso8601String();
+                  (lastModified != null && lastModified.isNotEmpty)
+                      ? lastModified
+                      : DateTime.now().toUtc().toIso8601String();
             }
 
             try {

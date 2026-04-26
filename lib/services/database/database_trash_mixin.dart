@@ -389,7 +389,7 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
           currentDeletedRows.addAll(rows);
 
           final fullRows = await txn.rawQuery(
-            'SELECT id, delta_content, content FROM quotes WHERE is_deleted = 1 AND id IN ($placeholders)',
+            'SELECT id, delta_content, content, date FROM quotes WHERE is_deleted = 1 AND id IN ($placeholders)',
             idBatch,
           );
           currentQuoteRows.addAll(fullRows);
@@ -417,12 +417,20 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
           }
         }
 
-        final referencedByQuote =
-            await MediaReferenceService.getReferencedFilesBatch(
-          deletedIdsInTxn,
-        );
-        for (final files in referencedByQuote.values) {
-          mediaCandidates.addAll(files);
+        for (final idBatch in _chunkIds(deletedIdsInTxn)) {
+          final placeholders = List.filled(idBatch.length, '?').join(',');
+          final refRows = await txn.query(
+            'media_references',
+            columns: ['file_path'],
+            where: 'quote_id IN ($placeholders)',
+            whereArgs: idBatch,
+          );
+          for (final refRow in refRows) {
+            final fp = refRow['file_path']?.toString();
+            if (fp != null && fp.isNotEmpty) {
+              mediaCandidates.add(fp);
+            }
+          }
         }
 
         final tombstoneBatch = txn.batch();
