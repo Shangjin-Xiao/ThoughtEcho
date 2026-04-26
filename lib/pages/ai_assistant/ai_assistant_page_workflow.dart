@@ -154,9 +154,10 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
     _streamSubscription = stream.listen(
       (chunk) {
         fullResponse += chunk;
-        _updateMessage(aiMsgId, fullResponse, isLoading: true);
+        _scheduleStreamUpdate(aiMsgId, fullResponse, isLoading: true);
       },
       onDone: () {
+        _cancelStreamUpdate();
         _updateMessage(
           aiMsgId,
           fullResponse,
@@ -170,6 +171,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
         );
       },
       onError: (error) {
+        _cancelStreamUpdate();
         _updateMessage(aiMsgId, l10n.aiResponseError(error.toString()),
             isLoading: false);
       },
@@ -199,9 +201,10 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
     _streamSubscription = stream.listen(
       (chunk) {
         fullResponse += chunk;
-        _updateMessage(aiMsgId, fullResponse, isLoading: true);
+        _scheduleStreamUpdate(aiMsgId, fullResponse, isLoading: true);
       },
       onDone: () {
+        _cancelStreamUpdate();
         _updateMessage(
           aiMsgId,
           fullResponse.isNotEmpty ? fullResponse : l10n.aiMisunderstoodQuestion,
@@ -213,6 +216,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
         );
       },
       onError: (error) {
+        _cancelStreamUpdate();
         _updateMessage(aiMsgId, l10n.aiResponseError(error.toString()),
             isLoading: false);
       },
@@ -240,9 +244,10 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
     _streamSubscription = stream.listen(
       (chunk) {
         fullResponse += chunk;
-        _updateMessage(aiMsgId, fullResponse, isLoading: true);
+        _scheduleStreamUpdate(aiMsgId, fullResponse, isLoading: true);
       },
       onDone: () {
+        _cancelStreamUpdate();
         try {
           final sourceData =
               SourceAnalysisResultDialog.parseResult(fullResponse);
@@ -272,6 +277,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
         }
       },
       onError: (error) {
+        _cancelStreamUpdate();
         _updateMessage(aiMsgId, l10n.aiResponseError(error.toString()),
             isLoading: false);
       },
@@ -402,7 +408,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
       (chunk) {
         uiChunkCount++;
         fullResponse += chunk;
-        _updateMessage(
+        _scheduleStreamUpdate(
           aiMsgId,
           fullResponse,
           isLoading: true,
@@ -413,6 +419,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
         );
       },
       onDone: () {
+        _cancelStreamUpdate();
         logDebug('[UI] _askBoundNote 完成: $uiChunkCount 个 UI chunk');
         final finalContent = fullResponse.isNotEmpty
             ? fullResponse
@@ -430,6 +437,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
         );
       },
       onError: (error) {
+        _cancelStreamUpdate();
         _updateMessage(
           aiMsgId,
           l10n.aiResponseError(error.toString()),
@@ -487,7 +495,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
       (chunk) {
         uiChunkCount++;
         fullResponse += chunk;
-        _updateMessage(
+        _scheduleStreamUpdate(
           aiMsgId,
           fullResponse,
           isLoading: true,
@@ -498,6 +506,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
         );
       },
       onDone: () {
+        _cancelStreamUpdate();
         logDebug('[UI] _askGeneralChat 完成: $uiChunkCount 个 UI chunk');
         final finalContent = fullResponse.isNotEmpty
             ? fullResponse
@@ -515,6 +524,7 @@ extension _AIAssistantPageWorkflow on _AIAssistantPageState {
         );
       },
       onError: (error) {
+        _cancelStreamUpdate();
         _updateMessage(
           aiMsgId,
           l10n.aiResponseError(error.toString()),

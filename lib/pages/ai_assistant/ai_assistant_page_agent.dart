@@ -74,7 +74,7 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
                   toolItems[toolItems.length - 1] =
                       last.copyWith(narrationText: updated);
                 }
-                _updateToolProgressMessage(
+                _scheduleToolProgressUpdate(
                   toolProgressMsgId!,
                   toolItems,
                   inProgress: true,
@@ -97,7 +97,11 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
               });
             }
             streamingText += event.delta;
-            _updateMessage(streamingMsgId!, streamingText, isLoading: true);
+            _scheduleStreamUpdate(
+              streamingMsgId!,
+              streamingText,
+              isLoading: true,
+            );
 
           case AgentToolCallStartEvent():
             final wasToolProgressNull = toolProgressMsgId == null;
@@ -352,6 +356,9 @@ extension _AIAssistantPageAgent on _AIAssistantPageState {
     } finally {
       await _agentEventSubscription?.cancel();
       _agentEventSubscription = null;
+      // 确保 flush 所有 pending 的节流更新
+      _cancelStreamUpdate();
+      _cancelToolProgressUpdate();
       if (mounted) {
         if (toolProgressMsgId != null) {
           _updateToolProgressMessage(

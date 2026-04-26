@@ -21,6 +21,11 @@ extension _AIAssistantPageSession on _AIAssistantPageState {
     _textController.dispose();
     _scrollController.dispose();
 
+    // 清理性能优化相关的 Timer
+    _cancelStreamUpdate();
+    _cancelToolProgressUpdate();
+    _scrollThrottleTimer?.cancel();
+
     // 清理空会话：如果当前会话没有任何消息，就删除它
     _cleanupEmptySession();
   }

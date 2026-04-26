@@ -99,6 +99,116 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   final List<PlatformFile> _selectedMediaFiles = [];
   StreamSubscription<AgentEvent>? _agentEventSubscription;
 
+  // ==================== 性能优化：流式 UI 更新节流 ====================
+  /// 限制流式文本 UI 刷新频率（每 50ms 最多一次），避免逐字符 setState 导致全页重建
+  Timer? _streamThrottleTimer;
+  String? _pendingUpdateId;
+  String _pendingContent = '';
+  bool _pendingIsLoading = false;
+  String? _pendingMetaJson;
+  app_chat.MessageState? _pendingState;
+  List<String>? _pendingThinkingChunks;
+
+  void _scheduleStreamUpdate(
+    String id,
+    String content, {
+    required bool isLoading,
+    String? metaJson,
+    app_chat.MessageState? state,
+    List<String>? thinkingChunks,
+  }) {
+    _pendingUpdateId = id;
+    _pendingContent = content;
+    _pendingIsLoading = isLoading;
+    _pendingMetaJson = metaJson;
+    _pendingState = state;
+    _pendingThinkingChunks = thinkingChunks;
+
+    if (_streamThrottleTimer?.isActive ?? false) return;
+
+    _streamThrottleTimer = Timer(const Duration(milliseconds: 50), () {
+      _flushStreamUpdate();
+    });
+  }
+
+  void _flushStreamUpdate() {
+    final id = _pendingUpdateId;
+    if (id == null) return;
+    _updateMessage(
+      id,
+      _pendingContent,
+      isLoading: _pendingIsLoading,
+      metaJson: _pendingMetaJson,
+      state: _pendingState,
+      thinkingChunks: _pendingThinkingChunks,
+    );
+    _streamThrottleTimer = null;
+  }
+
+  void _cancelStreamUpdate() {
+    _streamThrottleTimer?.cancel();
+    _streamThrottleTimer = null;
+    _pendingUpdateId = null;
+  }
+  // ==================== 性能优化结束 ====================
+
+  // ==================== 性能优化：Agent 工具进度更新节流 ====================
+  Timer? _toolProgressThrottleTimer;
+  String? _pendingToolProgressMsgId;
+  List<ToolProgressItem>? _pendingToolItems;
+  bool _pendingToolProgressInProgress = false;
+  String? _pendingToolProgressThinkingText;
+
+  void _scheduleToolProgressUpdate(
+    String msgId,
+    List<ToolProgressItem> items, {
+    required bool inProgress,
+    String? thinkingText,
+  }) {
+    _pendingToolProgressMsgId = msgId;
+    _pendingToolItems = items;
+    _pendingToolProgressInProgress = inProgress;
+    _pendingToolProgressThinkingText = thinkingText;
+
+    if (_toolProgressThrottleTimer?.isActive ?? false) return;
+
+    _toolProgressThrottleTimer = Timer(const Duration(milliseconds: 50), () {
+      _flushToolProgressUpdate();
+    });
+  }
+
+  void _flushToolProgressUpdate() {
+    final msgId = _pendingToolProgressMsgId;
+    if (msgId == null || _pendingToolItems == null) return;
+    _updateToolProgressMessage(
+      msgId,
+      _pendingToolItems!,
+      inProgress: _pendingToolProgressInProgress,
+      thinkingText: _pendingToolProgressThinkingText,
+    );
+    _toolProgressThrottleTimer = null;
+  }
+
+  void _cancelToolProgressUpdate() {
+    _toolProgressThrottleTimer?.cancel();
+    _toolProgressThrottleTimer = null;
+    _pendingToolProgressMsgId = null;
+  }
+  // ==================== 性能优化结束 ====================
+
+  // ==================== 性能优化：_scrollToBottom 节流 ====================
+  Timer? _scrollThrottleTimer;
+  // ==================== 性能优化结束 ====================
+
+  // ==================== 性能优化：MarkdownStyleSheet 缓存 ====================
+  MarkdownStyleSheet? _cachedMarkdownStyleSheet;
+  ThemeData? _cachedMarkdownTheme;
+  // ==================== 性能优化结束 ====================
+
+  // ==================== 性能优化：WorkflowDescriptors 缓存 ====================
+  List<AIWorkflowDescriptor>? _cachedWorkflowDescriptors;
+  // ==================== 性能优化结束 ====================
+
   AIAssistantEntrySource get _entrySource =>
       widget.entrySource ??
       (widget.quote != null
@@ -129,7 +239,7 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   List<AIWorkflowDescriptor> _buildWorkflowDescriptors(
     AppLocalizations l10n,
   ) {
-    return [
+    return _cachedWorkflowDescriptors ??= [
       AIWorkflowDescriptor(
         id: AIWorkflowId.polish,
         command: '/润色',
@@ -285,6 +395,36 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
     setState(fn);
   }
 
+  /// 性能优化：缓存 MarkdownStyleSheet，避免每帧重建
+  MarkdownStyleSheet _getMarkdownStyleSheet(
+    ThemeData theme,
+    Color bubbleTextColor,
+  ) {
+    if (_cachedMarkdownStyleSheet != null && _cachedMarkdownTheme == theme) {
+      return _cachedMarkdownStyleSheet!;
+    }
+    _cachedMarkdownTheme = theme;
+    _cachedMarkdownStyleSheet = MarkdownStyleSheet.fromTheme(theme).copyWith(
+      p: theme.textTheme.bodyMedium?.copyWith(
+        color: bubbleTextColor,
+        height: 1.6,
+      ),
+      listBullet: theme.textTheme.bodyMedium?.copyWith(
+        color: bubbleTextColor,
+      ),
+      code: theme.textTheme.bodySmall?.copyWith(
+        color: theme.colorScheme.onSurfaceVariant,
+        fontFamily: 'monospace',
+        backgroundColor: theme.colorScheme.surfaceContainerHighest,
+      ),
+      codeblockDecoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(8),
+      ),
+    );
+    return _cachedMarkdownStyleSheet!;
+  }
+
   /// Stop the current generation - cancels the stream subscription
   void _stopGenerating() {
     _agentService.requestStop();
@@ -297,6 +437,9 @@ class _AIAssistantPageState extends State<AIAssistantPage> {
   }
 
   void _scrollToBottom() {
+    if (_scrollThrottleTimer?.isActive ?? false) return;
+    _scrollThrottleTimer = Timer(const Duration(milliseconds: 200), () {});
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(

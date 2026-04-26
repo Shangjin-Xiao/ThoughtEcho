@@ -369,17 +369,22 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
             ),
           ),
           // 思考内容显示（仅当有思考且非用户消息时）
-          if (!isUser &&
-              message.thinkingChunks.isNotEmpty &&
-              message.thinkingChunks.join('').isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: ThinkingWidget(
-                key: ValueKey('thinking_${message.id}'),
-                thinkingText: message.thinkingChunks.join(''),
-                inProgress: message.state == MessageState.thinking,
-                accentColor: theme.colorScheme.primary,
-              ),
+          // 性能优化：只 join 一次，避免重复字符串拼接
+          if (!isUser && message.thinkingChunks.isNotEmpty)
+            Builder(
+              builder: (context) {
+                final thinkingText = message.thinkingChunks.join('');
+                if (thinkingText.isEmpty) return const SizedBox.shrink();
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: ThinkingWidget(
+                    key: ValueKey('thinking_${message.id}'),
+                    thinkingText: thinkingText,
+                    inProgress: message.state == MessageState.thinking,
+                    accentColor: theme.colorScheme.primary,
+                  ),
+                );
+              },
             ),
           // Main Content Bubble
           Container(
@@ -401,25 +406,8 @@ extension _AIAssistantPageUI on _AIAssistantPageState {
                         ? l10n.thinkingInProgress
                         : message.content,
                     selectable: true,
-                    styleSheet: MarkdownStyleSheet.fromTheme(theme).copyWith(
-                      p: theme.textTheme.bodyMedium?.copyWith(
-                        color: bubbleTextColor,
-                        height: 1.6,
-                      ),
-                      listBullet: theme.textTheme.bodyMedium?.copyWith(
-                        color: bubbleTextColor,
-                      ),
-                      code: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                        fontFamily: 'monospace',
-                        backgroundColor:
-                            theme.colorScheme.surfaceContainerHighest,
-                      ),
-                      codeblockDecoration: BoxDecoration(
-                        color: theme.colorScheme.surfaceContainerLow,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
+                    // 性能优化：缓存 MarkdownStyleSheet，避免每帧重建
+                    styleSheet: _getMarkdownStyleSheet(theme, bubbleTextColor),
                   ),
           ),
         ],
