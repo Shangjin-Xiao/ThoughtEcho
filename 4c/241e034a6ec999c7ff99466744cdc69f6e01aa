@@ -1,0 +1,285 @@
+lib/models/app_settings.dart
+  f1ce1ff3e5144c73 2-32,34-35,67-68,93,97-104,109-110,142-153,155-172,174-180,204,207,210,216-217,251-252,282,288-289,323-328
+test/unit/services/database_backup_merge_test.dart
+  f1ce1ff3e5144c73 1-123
+lib/pages/home_page.dart
+  f1ce1ff3e5144c73 94,100,104-106,421-432,931-934,954-992,1026-1049,1487,1489-1500,1503-1504,1506-1512,1516-1580,1582-1583,2519
+lib/models/feature_guide.dart
+  f1ce1ff3e5144c73 87-90,121-122,156-157
+lib/services/database_service.dart
+  f1ce1ff3e5144c73 3,7,14,20-21,36,41-46,73-77,79-83,97,102,113-120,123-140,170,178,219,239,368,521,527-531,618-619,759,875,895,907-979,992
+res/sitemap.xml
+  f1ce1ff3e5144c73 1-21
+lib/services/api_service_daily_quote_remote.dart
+  f1ce1ff3e5144c73 1-286
+lib/services/network_service.dart
+  f1ce1ff3e5144c73 116-118,148-150,394-396,437-439
+lib/services/smart_push/smart_push_notification.dart
+  f1ce1ff3e5144c73 276-287,297-332,441
+test/lww_merge_report_test.dart
+  f1ce1ff3e5144c73 10,20,29
+test/unit/services/smart_push_security_test.dart
+  f1ce1ff3e5144c73 4,7-9,39-40,103-119
+lib/services/database/database_migration_mixin.dart
+  f1ce1ff3e5144c73 57-59,70
+lib/services/media_reference_service.dart
+  f1ce1ff3e5144c73 3,194-239,497-500,549,681,683-686,1065
+lib/services/settings_service.dart
+  f1ce1ff3e5144c73 12,98-102,130-141,162-169,446
+lib/widgets/quote_item_widget.dart
+  f1ce1ff3e5144c73 4-5,14,16,246-251,725
+test/unit/controllers/onboarding_controller_test.dart
+  f1ce1ff3e5144c73 1-43
+lib/services/database/database_hidden_tag_mixin.dart
+  f1ce1ff3e5144c73 185-189,196-204
+lib/services/database/database_pagination_mixin.dart
+  f1ce1ff3e5144c73 57,148-152,215,259,291,299,322
+lib/widgets/daily_quote_view.dart
+  f1ce1ff3e5144c73 72-74,76-78,115-116,174-175
+lib/widgets/onboarding/preferences_page_view.dart
+  f1ce1ff3e5144c73 8,30-51,61-76,79,100,135,473-492,514-518,617-670
+lib/pages/note_editor/editor_metadata_dialog.dart
+  f1ce1ff3e5144c73 300-303,329-331,400
+test/unit/services/database_optimization_test.dart
+  f1ce1ff3e5144c73 44-46,76-82,130-252
+lib/controllers/onboarding_controller.dart
+  f1ce1ff3e5144c73 10,24,56,58,73,76,86-100,257
+lib/pages/smart_push_settings_page.dart
+  f1ce1ff3e5144c73 3-4,1009
+lib/services/database/database_import_export_mixin.dart
+  f1ce1ff3e5144c73 89
+lib/pages/hitokoto_settings_page_layout_sections.dart
+  f1ce1ff3e5144c73 1-262
+res/user-guide.html
+  f1ce1ff3e5144c73 6-7,10-18
+.jules/sentinel.md
+  f1ce1ff3e5144c73 38-45
+lib/models/quote_model.dart
+  f1ce1ff3e5144c73 2-3,28-29,31,56-59,122-123,167-168,242,268-272,308-309,342-343,345-351,377-381,385-425
+lib/models/merge_report.dart
+  f1ce1ff3e5144c73 4,18-19,42-43,81-94,136-137,153-155,172-176,202-205,243-244,276-277,298-299,327-334,362-363
+lib/utils/backup_progress_update_gate.dart
+  f1ce1ff3e5144c73 3-5,31-35
+test/widget/pages/api_ninjas_category_selection_page_test.dart
+  f1ce1ff3e5144c73 1-64
+lib/services/smart_push_service.dart
+  f1ce1ff3e5144c73 15-16,21,81,209,216,269-296
+test/unit/services/settings_service_test.dart
+  f1ce1ff3e5144c73 7,53-62,72-194,212-244
+res/privacy.html
+  f1ce1ff3e5144c73 7-8,10-18,26,30-41,45-51,61-64,68-81,88-90,94,96,107-109,113-114,119,124-126,128,130-131,136-137,141,144-145,147-149,155,160,164-166,171-172,176-180,184,188-192,197-199,203,207-208,212,216,219-224,227-228,234-237,241,243,246,250-253,267,269-270,280-281,287-296,298-303,305,307-311,313-318,323-331,333-335,337-340,342-343,345-348,351-363,367-368,370-373,378-379,381-383,386-388,395,399,411
+lib/services/database_backup_service.dart
+  f1ce1ff3e5144c73 9,12,36,45,104,218-219,234-246,297-300,313-326,390-502,627,649-658,661-683,710-711,745,779,796,805-806,826-836,854-855,910-911,913-915,917,919-948,950,952-953,956-957,959,968,975-976,988,1008-1153
+test/all_tests.dart
+  f1ce1ff3e5144c73 10,49-51,60-62,70,101-102,108-109
+test/unit/services/smart_push_service_test.dart
+  f1ce1ff3e5144c73 25-35,72-84
+lib/pages/annual_report_page.dart
+  f1ce1ff3e5144c73 7-8,55,77-79,82,120,124-125
+lib/widgets/note_list/note_list_filters.dart
+  f1ce1ff3e5144c73 23-24,34,52
+test/unit/utils/memory_optimization_helper_test.dart
+  f1ce1ff3e5144c73 1-20
+lib/l10n/app_ko.arb
+  f1ce1ff3e5144c73 586-592,968,2427,2752-2753,3480-3529
+lib/services/media_cleanup_service.dart
+  f1ce1ff3e5144c73 237-240
+lib/l10n/app_fr.arb
+  f1ce1ff3e5144c73 961,2420,2738-2739,3466-3518
+lib/widgets/add_note_dialog_parts.dart
+  f1ce1ff3e5144c73 2-3,66-67,70-72,248,330
+test/sync_integration_test.dart
+  f1ce1ff3e5144c73 104,109,111,117
+lib/pages/manual_api_test_page.dart
+  f1ce1ff3e5144c73 31,34,42-44,47-49,85,89-92,127,137,139,148,158,210
+test/unit/services/api_service_test.dart
+  f1ce1ff3e5144c73 5,10-54,90-283
+.jules/wenji.md
+  f1ce1ff3e5144c73 8-10
+test/performance/add_note_dialog_performance_test.dart
+  f1ce1ff3e5144c73 196,198
+lib/models/note_tag.dart
+  f1ce1ff3e5144c73 14-27,38-40,42-45,48-60
+test/unit/models/app_settings_test.dart
+  f1ce1ff3e5144c73 1-91
+test/test_setup.dart
+  f1ce1ff3e5144c73 143-144
+lib/l10n/app_es.arb
+  f1ce1ff3e5144c73 12-13,56-71
+lib/utils/platform_io_stub.dart
+  f1ce1ff3e5144c73 1-78
+lib/services/database/database_query_mixin.dart
+  f1ce1ff3e5144c73 19,54-57,172,278,304-307,391
+test/unit/controllers/search_controller_test.dart
+  f1ce1ff3e5144c73 1-44
+lib/pages/hitokoto_settings_page_widgets.dart
+  f1ce1ff3e5144c73 1-179
+lib/services/database_schema_manager.dart
+  f1ce1ff3e5144c73 90-92,112,129-134,147-157,234-237,476-479,489-493,518-521,546-549,582-585,618-621,695-698,797-859,940-943,1033-1036,1078-1080,1084-1093,1099-1100,1103-1127,1171-1176,1189-1192,1287-1290,1303-1304,1311-1320,1324-1330,1342-1353,1371-1374,1777-1780
+res/index.html
+  f1ce1ff3e5144c73 9,18,23-24,27,30,40-66,867-883,885,1079-1080,1086-1087,1090-1091,1093,1105-1115,1173-1174
+test/widget/pages/hitokoto_settings_page_test.dart
+  f1ce1ff3e5144c73 1-2,9,12-13,16-18,22-23,29-31,38-58,66-73,80-83,88-102,108,114-311
+.gitignore
+  f1ce1ff3e5144c73 280-290
+lib/pages/note_editor/editor_save_and_draft.dart
+  f1ce1ff3e5144c73 263,268,408-422,425-427,435,442-444,452,456,470-475,488-529
+test/unit/services/database_trash_flow_test.dart
+  f1ce1ff3e5144c73 1-169
+test/widget/pages/trash_page_test.dart
+  f1ce1ff3e5144c73 1-287
+lib/services/api_service.dart
+  f1ce1ff3e5144c73 2-4,7,9-20,28-61,95-158,169-172,198-210,213-217,220-224
+lib/pages/note_sync_page.dart
+  f1ce1ff3e5144c73 8,211-217,332-338,342-348,370-376,466-472,598-604,1389-1395
+lib/pages/api_ninjas_category_selection_page.dart
+  f1ce1ff3e5144c73 1-183
+lib/services/database/database_trash_mixin.dart
+  f1ce1ff3e5144c73 1-504
+lib/services/database/database_query_helpers_mixin.dart
+  f1ce1ff3e5144c73 16,20-23,75-78,172,185-187,211-213,223,255,265,274-277,359-360
+lib/services/database/database_quote_crud_mixin.dart
+  f1ce1ff3e5144c73 4-6,107-110,113-115,130,148-151,154-156,168-188,193,196-197,215-225,227,235-239,242-244,253,256-259,267-270,272,279-282,286-289,292,301,313-314,316-331,337-338,373,376,379-404,436-439,481-484
+test/performance/database_backup_merge_benchmark_test.dart
+  f1ce1ff3e5144c73 1-119
+test/unit/utils/lww_decision_maker_test.dart
+  f1ce1ff3e5144c73 1-54
+lib/extensions/note_category_localization_extension.dart
+  f1ce1ff3e5144c73 1-40
+lib/pages/hitokoto_settings_page.dart
+  f1ce1ff3e5144c73 1-2,4-8,10,12-15,18-23,32,36,51,58-61,70-95,97-215,242-262,266-277,282,299-304,307-313,316-328,331-332,335-336,341-378,381-382,384-393,395-402,404-405,407-459,461-465,467
+.agents/skills/karpathy-guidelines/SKILL.md
+  f1ce1ff3e5144c73 1-67
+lib/l10n/app_en.arb
+  f1ce1ff3e5144c73 139-149,378-379,602-645,650,653-660,1030,2503,2838-2839,3236-3238,3579-3587,3607-3655,3659-3660
+lib/widgets/quill_enhanced_toolbar_unified.dart
+  f1ce1ff3e5144c73 48,50,52,54,56,58,60,62,64,66,68,75-240,275-277,344-349
+res/style.css
+  f1ce1ff3e5144c73 1441-1473
+test/unit/extensions/note_category_localization_extension_test.dart
+  f1ce1ff3e5144c73 1-45
+docs/USER_MANUAL.md
+  f1ce1ff3e5144c73 32,521-537,547-551,555-556,558-559,611-617,718,1211-1226,1237-1241,1245-1249,1301-1306
+lib/pages/preferences_detail_page.dart
+  f1ce1ff3e5144c73 4,533,536,538,838-839,930
+.github/ISSUE_TEMPLATE/question.yml
+  f1ce1ff3e5144c73 1-33
+lib/services/database_health_service.dart
+  f1ce1ff3e5144c73 13,139-167,187-190,209,368-376,386,390,393,398,512-513,515-519,536-539,563-564,590-596,602-607
+test/widget/note_list_view_filter_test.dart
+  f1ce1ff3e5144c73 3-4,87-131,139,142,146,180,245,251,277,288,301,307-355
+lib/widgets/trash_quote_card.dart
+  f1ce1ff3e5144c73 1-323
+test/widget/pages/note_editor_draft_behavior_test.dart
+  f1ce1ff3e5144c73 42,66,93,133
+lib/pages/feedback_contact_page.dart
+  f1ce1ff3e5144c73 1-125
+lib/widgets/note_list/note_list_data_stream.dart
+  f1ce1ff3e5144c73 72-82
+.jules/palette.md
+  f1ce1ff3e5144c73 7-12
+.jules/translator.md
+  f1ce1ff3e5144c73 23-27
+test/unit/models/quote_model_test.dart
+  f1ce1ff3e5144c73 6,9-12,47,53-54,62-63,75-76,85-176
+lib/services/database/database_favorite_mixin.dart
+  f1ce1ff3e5144c73 15-17,60-79,142-144,175-194,243,246-248,250-252,263-264
+lib/widgets/motion_photo_preview_page.dart
+  f1ce1ff3e5144c73 249,332,337,347
+lib/widgets/media_player_widget.dart
+  f1ce1ff3e5144c73 641-643
+res/robots.txt
+  f1ce1ff3e5144c73 1-4
+lib/services/backup_service.dart
+  f1ce1ff3e5144c73 248,258,314-323,471-485,996-1002,1004,1008-1025
+lib/main.dart
+  f1ce1ff3e5144c73 2-3,185-189,1033,1035-1041,1074-1090,1093,1105,1114,1129,1139,1169,1182,1194,1202
+lib/pages/hitokoto_settings_page_info_sections.dart
+  f1ce1ff3e5144c73 1-88
+lib/pages/settings_page.dart
+  f1ce1ff3e5144c73 20,27,792-812,898-904,907,1070-1079
+test/simple_sync_test.dart
+  f1ce1ff3e5144c73 129-132
+.squad/agents/auto/history.md
+  f1ce1ff3e5144c73 29-30
+lib/utils/dio_network_utils.dart
+  f1ce1ff3e5144c73 737-738,740-746
+test/widget/pages/onboarding_preferences_page_test.dart
+  f1ce1ff3e5144c73 1-113
+lib/services/api_service_daily_quote_fallback.dart
+  f1ce1ff3e5144c73 1-116
+.github/ISSUE_TEMPLATE/feature_request.yml
+  f1ce1ff3e5144c73 1-52
+test/unit/utils/i18n_language_test.dart
+  f1ce1ff3e5144c73 1-107
+.jules/blackbox.md
+  f1ce1ff3e5144c73 14-21
+.jules/bolt.md
+  f1ce1ff3e5144c73 19-22
+.squad/agents/m-o/history.md
+  f1ce1ff3e5144c73 25-32
+test/unit/services/smart_push_analytics_test.dart
+  f1ce1ff3e5144c73 1-89
+test/unit/utils/backup_progress_update_gate_test.dart
+  f1ce1ff3e5144c73 3,6-9
+.jules/caliper.md
+  f1ce1ff3e5144c73 7-12
+lib/widgets/note_list_view.dart
+  f1ce1ff3e5144c73 4,9-10,442-443,458,461,477,502,508,518,530
+lib/widgets/add_note_dialog.dart
+  f1ce1ff3e5144c73 9,146-159,1231,1307-1314,1521,1527-1532,1597-1610,1618-1619,1631-1636,1639-1640,1643,2309
+lib/widgets/onboarding/page_views.dart
+  f1ce1ff3e5144c73 98-101,103-106
+lib/config/onboarding_config.dart
+  f1ce1ff3e5144c73 8-32,114-119,130-148,158
+lib/widgets/quote_card_helpers.dart
+  f1ce1ff3e5144c73 1-108
+lib/l10n/app_ja.arb
+  f1ce1ff3e5144c73 586-592,968,2427,2752-2753,3481-3529
+lib/pages/tag_settings_page.dart
+  f1ce1ff3e5144c73 9-10,442,589
+test/sync_integration_test.mocks.dart
+  f1ce1ff3e5144c73 351,364,391-394,396-399,411,421,434-435,437-441,466-467,471,482,494,503,590
+lib/pages/trash_page.dart
+  f1ce1ff3e5144c73 1-692
+.github/ISSUE_TEMPLATE/bug_report.yml
+  f1ce1ff3e5144c73 1-74
+lib/pages/category_settings_page.dart
+  f1ce1ff3e5144c73 3-4,655,762-764
+lib/pages/note_full_editor_page.dart
+  f1ce1ff3e5144c73 31-32
+test/unit/models/note_tag_test.dart
+  f1ce1ff3e5144c73 1-115
+test/performance/add_note_dialog_optimized_test.dart
+  f1ce1ff3e5144c73 166-168
+.github/ISSUE_TEMPLATE/config.yml
+  f1ce1ff3e5144c73 1-5
+lib/l10n/app_zh.arb
+  f1ce1ff3e5144c73 139-149,378-379,602-645,650,653-660,1030,2509,2844-2845,3179-3184,3190-3195,3332,3338-3339,3579-3587,3606-3656,3659-3660
+lib/l10n/app_de.arb
+  f1ce1ff3e5144c73 12-15,56-71
+lib/widgets/note_filter_sort_sheet.dart
+  f1ce1ff3e5144c73 2-3,330
+README.md
+  f1ce1ff3e5144c73 36-37,165,269-273,425,532-536,540
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "4c241e034a6ec999c7ff99466744cdc69f6e01aa",
+  "prompts": {
+    "f1ce1ff3e5144c73": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_23860e5cdffezMlKPq5C4XyEO9",
+        "model": "opencode-go/kimi-k2.6"
+      },
+      "human_author": "上晋",
+      "messages": [],
+      "total_additions": 10173,
+      "total_deletions": 2416,
+      "accepted_lines": 9967,
+      "overriden_lines": 1
+    }
+  }
+}
