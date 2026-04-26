@@ -518,8 +518,8 @@ class AIService extends ChangeNotifier {
           userMessage: userMessage,
           temperature: 1.0,
           maxTokens: 100,
-          // 传空 onThinking 阻止 reasoning 回退到 content，
-          // 避免 reasoning-only 模型把思考过程当作每日提示输出
+          // 传空 onThinking 将 reasoning 内容导向空回调丢弃，
+          // 避免 reasoning-only 模型的思考过程被当作普通内容混入每日提示。
           onThinking: (_) {},
         )) {
           if (controller.isClosed) break;

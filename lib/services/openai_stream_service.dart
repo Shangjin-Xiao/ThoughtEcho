@@ -513,11 +513,13 @@ class OpenAIStreamService extends ChangeNotifier {
   }
 
   /// 判断是否为 Ollama 提供商
+  ///
+  /// 注意：只匹配本地 Ollama（localhost/127.0.0.1）或显式 id 为 ollama 的提供商。
+  /// 远程服务如 ollama.com 上的模型不应被误判为 Ollama。
   static bool _isOllamaProvider(AIProviderSettings provider) {
     return provider.id == 'ollama' ||
         provider.apiUrl.contains('localhost:11434') ||
-        provider.apiUrl.contains('127.0.0.1:11434') ||
-        provider.apiUrl.contains('ollama');
+        provider.apiUrl.contains('127.0.0.1:11434');
   }
 
   static bool _resolveThinkingEnabled({
