@@ -338,33 +338,39 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                       ],
                     ),
                   ),
-                  if (quote.hasLocation || quote.weather != null)
+                  if (quote.hasLocation ||
+                      quote.hasPoiName ||
+                      quote.weather != null)
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (quote.hasLocation) ...[
+                        if (quote.hasLocation || quote.hasPoiName) ...[
                           Icon(Icons.location_on, size: 14, color: iconColor),
                           const SizedBox(width: 2),
                           Text(
-                            // 优先显示文字位置，没有文字位置时显示坐标
-                            (quote.location != null &&
-                                    LocationService.formatLocationForDisplay(
-                                      quote.location,
-                                    ).isNotEmpty)
-                                ? LocationService.formatLocationForDisplay(
-                                    quote.location,
-                                  )
-                                : LocationService.formatCoordinates(
-                                    quote.latitude,
-                                    quote.longitude,
-                                  ),
+                            // 显示优先级：poiName > formatLocationForDisplay > coordinates
+                            quote.hasPoiName
+                                ? quote.poiName!
+                                : (quote.location != null &&
+                                        LocationService
+                                            .formatLocationForDisplay(
+                                          quote.location,
+                                        ).isNotEmpty)
+                                    ? LocationService.formatLocationForDisplay(
+                                        quote.location,
+                                      )
+                                    : LocationService.formatCoordinates(
+                                        quote.latitude,
+                                        quote.longitude,
+                                      ),
                             style: theme.textTheme.bodySmall?.copyWith(
                               color: secondaryTextColor,
                               fontSize: 12,
                             ),
                           ),
                         ],
-                        if (quote.hasLocation && quote.weather != null)
+                        if ((quote.hasLocation || quote.hasPoiName) &&
+                            quote.weather != null)
                           const SizedBox(width: 8),
                         if (quote.weather != null) ...[
                           Icon(

@@ -25,21 +25,22 @@ class MultiAISettings {
   List<AIProviderSettings> get availableProviders => providers;
   factory MultiAISettings.fromJson(Map<String, dynamic> json) {
     return MultiAISettings(
-      providers: (json['providers'] as List<dynamic>?)
-              ?.map(
-                (e) => AIProviderSettings.fromJson(e as Map<String, dynamic>),
-              )
-              .toList() ??
-          (json['availableProviders'] as List<dynamic>?)
-              ?.map(
-                (e) => AIProviderSettings.fromJson(e as Map<String, dynamic>),
-              )
-              .toList() ??
-          [],
+      providers: _parseProviders(json),
       currentProviderId: json['currentProviderId'] as String? ??
           _extractCurrentProviderIdFromLegacy(json),
       enableFailover: json['enableFailover'] ?? true,
     );
+  }
+
+  static List<AIProviderSettings> _parseProviders(Map<String, dynamic> json) {
+    final providers = json['providers'] as List<dynamic>? ??
+        json['availableProviders'] as List<dynamic>?;
+    if (providers == null) {
+      return [];
+    }
+    return providers
+        .map((e) => AIProviderSettings.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 
   // 辅助方法：从旧版本的 currentProvider 对象中提取 ID

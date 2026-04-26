@@ -54,55 +54,65 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                     Expanded(
                       child: Stack(
                         children: [
-                          FilterChip(
-                            key: const ValueKey('full_editor_location_chip'),
-                            avatar: Icon(
-                              Icons.location_on,
-                              color: _showLocation
-                                  ? theme.colorScheme.primary
-                                  : Colors.grey,
-                              size: 18,
-                            ),
-                            label: Text(l10n.locationLabel),
-                            selected: _showLocation,
-                            onSelected: (value) async {
-                              // 编辑模式下统一弹对话框（只有已保存的笔记才是编辑模式）
-                              if (widget.initialQuote?.id != null) {
-                                // 编辑模式：使用完整对话框（包含移除、更新地址等选项）
-                                await _showLocationDialogInEditor(
-                                  context,
-                                  theme,
-                                );
-                                // 刷新 BottomSheet 内的 UI
+                          Tooltip(
+                            message: l10n.longPressForMapPicker,
+                            child: GestureDetector(
+                              onLongPress: () async {
+                                await _openMapLocationPicker();
                                 setDialogState(() {});
-                                return;
-                              }
-                              // 新建模式
-                              if (value &&
-                                  _location == null &&
-                                  _latitude == null) {
-                                // 先设置为选中，获取失败后会在回调中取消
-                                _updateState(() {
-                                  _showLocation = true;
-                                });
-                                setDialogState(() {});
-                                await _fetchLocationForNewNoteWithFailCallback(
-                                  () {
-                                    // 失败回调：取消选中
+                              },
+                              child: FilterChip(
+                                key:
+                                    const ValueKey('full_editor_location_chip'),
+                                avatar: Icon(
+                                  Icons.location_on,
+                                  color: _showLocation
+                                      ? theme.colorScheme.primary
+                                      : Colors.grey,
+                                  size: 18,
+                                ),
+                                label: Text(l10n.locationLabel),
+                                selected: _showLocation,
+                                onSelected: (value) async {
+                                  // 编辑模式下统一弹对话框（只有已保存的笔记才是编辑模式）
+                                  if (widget.initialQuote?.id != null) {
+                                    // 编辑模式：使用完整对话框（包含移除、更新地址等选项）
+                                    await _showLocationDialogInEditor(
+                                      context,
+                                      theme,
+                                    );
+                                    // 刷新 BottomSheet 内的 UI
+                                    setDialogState(() {});
+                                    return;
+                                  }
+                                  // 新建模式
+                                  if (value &&
+                                      _location == null &&
+                                      _latitude == null) {
+                                    // 先设置为选中，获取失败后会在回调中取消
                                     _updateState(() {
-                                      _showLocation = false;
+                                      _showLocation = true;
                                     });
                                     setDialogState(() {});
-                                  },
-                                );
-                              } else {
-                                _updateState(() {
-                                  _showLocation = value;
-                                });
-                                setDialogState(() {});
-                              }
-                            },
-                            selectedColor: theme.colorScheme.primaryContainer,
+                                    await _fetchLocationForNewNoteWithFailCallback(
+                                        () {
+                                      // 失败回调：取消选中
+                                      _updateState(() {
+                                        _showLocation = false;
+                                      });
+                                      setDialogState(() {});
+                                    });
+                                  } else {
+                                    _updateState(() {
+                                      _showLocation = value;
+                                    });
+                                    setDialogState(() {});
+                                  }
+                                },
+                                selectedColor:
+                                    theme.colorScheme.primaryContainer,
+                              ),
+                            ),
                           ),
                           // 小红点：有坐标但没地址时提示可更新（仅已保存笔记）
                           if (widget.initialQuote?.id != null &&
@@ -227,16 +237,7 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                         Expanded(
                           child: Text(
                             // 优先显示地址，没有地址时显示坐标
-                            (_location != null &&
-                                    LocationService.formatLocationForDisplay(
-                                      _location,
-                                    ).isNotEmpty)
-                                ? LocationService.formatLocationForDisplay(
-                                    _location,
-                                  )
-                                : ((_latitude != null && _longitude != null)
-                                    ? '📍 ${LocationService.formatCoordinates(_latitude, _longitude)}'
-                                    : l10n.gettingLocationHint),
+                            _buildLocationDisplayText(l10n),
                             style: TextStyle(
                               fontSize: 14,
                               color: theme.colorScheme.onSurfaceVariant,
@@ -285,7 +286,7 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
                   _originalWeather == null) ...[
                 const SizedBox(height: 8),
                 Text(
-                  l10n.noLocationWeatherRecorded,
+                  l10n.noteNoLocationWeatherInfo,
                   style: TextStyle(
                     fontSize: 12,
                     color: theme.colorScheme.onSurfaceVariant,
@@ -298,5 +299,50 @@ extension _NoteEditorMetadataLocationSection on _NoteFullEditorPageState {
         ),
       ],
     );
+  }
+
+  String _buildLocationDisplayText(AppLocalizations l10n) {
+    if (_poiName != null && _poiName!.trim().isNotEmpty) {
+      return _poiName!.trim();
+    }
+
+    final formattedLocation =
+        LocationService.formatLocationForDisplay(_location);
+    if (formattedLocation.isNotEmpty) {
+      return formattedLocation;
+    }
+
+    if (_latitude != null && _longitude != null) {
+      return LocationService.formatCoordinates(_latitude, _longitude);
+    }
+
+    return l10n.gettingLocationHint;
+  }
+
+  Future<void> _openMapLocationPicker() async {
+    final locationService =
+        Provider.of<LocationService>(context, listen: false);
+    final currentPosition = locationService.currentPosition;
+    final initialLat = _latitude ?? currentPosition?.latitude;
+    final initialLon = _longitude ?? currentPosition?.longitude;
+
+    final result = await Navigator.of(context).push<MapPickerResult>(
+      MaterialPageRoute(
+        builder: (_) => MapLocationPickerPage(
+          initialLatitude: initialLat,
+          initialLongitude: initialLon,
+        ),
+      ),
+    );
+
+    if (!mounted || result == null) return;
+
+    _updateState(() {
+      _showLocation = true;
+      _latitude = result.latitude;
+      _longitude = result.longitude;
+      _location = result.location;
+      _poiName = result.poiName;
+    });
   }
 }

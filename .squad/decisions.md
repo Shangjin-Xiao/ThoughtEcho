@@ -127,3 +127,124 @@
 **结论**: 商店运营已成熟，应拓展到主流应用商店并完善本地化
 
 ---
+
+## 2026-04-06 09:27: AI 与地图重构分支紧急指令
+
+**决策者**: 上晋  
+**类型**: 重构指令 + 规范
+
+**背景**: 上晋对当前 AI/Map 重构分支的实现现状表示强烈不满
+
+**核心问题**:
+1. **编译与 l10n** — 国际化缺失键导致构建失败
+2. **功能回退** — 丢失原有的数据概览、每日提示、对话历史、Agent 模式、润色替换等
+3. **UI 设计缺陷** — 页面布局失衡（大量空白）、不符合现代设计（参考 Gemini/ChatGPT/Claude）
+4. **工具调用** — 搜索工具精度差、Agent 无法生成建议、文档 UI 尚未完善
+
+**修复优先级**:
+| 优先级 | 任务 | 预期 |
+|--------|------|------|
+| P0 | 修复 l10n 缺失键 | 分支可编译 |
+| P1 | 恢复丢失功能 | 数据概览、每日提示、对话历史、Agent、润色替换、搜索 |
+| P2 | UI 现代化 | 探索页、AI 助手页、地图、对话页面 |
+| P3 | 新功能实现 | 混合思考切换、工具调用展示、Agent 代码建议模式 |
+
+**设计决策**:
+- **数据概览**: 复用现有 `InsightsPage`，不重写
+- **探索页**: 使用 `Icons.auto_awesome`（星星图标）
+- **斜杠命令**: 仅在输入 `/` 时显示菜单，不默认展示
+- **AI 停止**: 补充生成中断按钮
+- **Agent 编辑**: 生成代码块建议 → 用户确认应用（不直接编辑笔记）
+- **UI 参考**: Gemini, ChatGPT, Claude, Google AI Gallery, OpenCode, GeminiCLI
+
+**团队响应** (2026-04-06 09:30):
+- AUTO: 负责 l10n 键值完整性检查与修复
+- EVE: 负责 AI 对话页面与地图 UI 研究（参考业界先进设计）
+
+**GOPHER 紧急分析结果** (2026-04-06 09:35):
+
+| 问题 | 状态 | 关键发现 |
+|------|------|----------|
+| l10n缺失键 | ❓需验证 | AppLocalizations存在，需flutter build验证 |
+| 数据概览 | ⚠️**未复用** | ExplorePage自己写了`_buildStatsSection`，违背要求 |
+| 每日提示 | ✅功能存在 | HomePage有`_fetchDailyPrompt()` |
+| 对话历史 | ✅功能存在 | SessionHistorySheet在AIAssistantPage中 |
+| 深度分析bug | ❓需检查 | editor_ai_features.dart调用AIAssistantPage |
+| 斜杠命令 | ⚠️**确认问题** | ActionChip直接渲染，不符合"仅输入/时显示" |
+
+**关键代码问题**:
+- 斜杠命令: `AIAssistantPage:1141-1154` ActionChip直接显示
+- Stats重写: `ExplorePage:179-278` 未复用InsightsPage
+
+**任务分配更新**:
+- AUTO: P0编译验证、P1-1复用InsightsPage、P1-4深度分析bug、P3-4Agent代码建议
+- EVE: P2-1探索页布局、P2-2 AI对话现代化、P2-4斜杠命令菜单
+
+---
+
+## 2026-04-12: Agent 工具调用内联显示架构决策
+
+**决策者**: 上晋 + Amp  
+**类型**: 架构决策 + 代码规范
+
+**背景**: Agent 界面多次被其他 AI 代理改烂，需要明确记录正确架构。
+
+**核心架构决策**:
+
+### 1. 工具调用必须内联显示到消息列表（非独立面板）
+- 工具调用进度作为 `tool_progress` 类型的 `ChatMessage` 插入 `_messages` 列表
+- 在 `_buildMessageBubble` 的 `metaJson` switch 中渲染 `ToolProgressPanel`
+- **禁止**: 在输入框区域或底部独立面板中显示工具调用
+- **禁止**: 使用 `_buildAgentStatusIndicator` 等独立组件
+- 工具调用完成后永久保留在对话流中（不自动消失）
+
+### 2. AgentService 事件流架构
+- `AgentService` 使用 `StreamController<AgentEvent>.broadcast()` 持久控制器
+- 事件类型: `AgentThinkingEvent` / `AgentToolCallStartEvent` / `AgentToolCallResultEvent` / `AgentResponseEvent` / `AgentErrorEvent`
+- UI 层在 `_askAgent` 中订阅事件流，每个事件更新 `_messages` 中的内联 tool_progress 消息
+- `runAgent()` 返回类型保持 `Future<AgentResponse>` 不变
+
+### 3. 输入框布局规范
+- 输入框使用 `SafeArea` 包裹，**禁止**手动添加 `keyboardHeight` padding
+- **禁止** `AnimatedContainer` + `MediaQuery.viewInsets.bottom` 手动处理键盘高度
+- Flutter 的 `Scaffold` + `resizeToAvoidBottomInset` 已自动处理键盘避让
+
+### 4. 流式传输规范
+- chat/noteChat 模式：直接 `_updateMessage` + `setState`，**禁止**防抖
+- Agent 模式：非流式（`runAgent` 是 `Future`），通过事件流实时更新工具进度
+
+### 5. 禁止添加的代码
+- `_debouncedStreamUpdate` / `_flushPendingStreamUpdate` — 会破坏流式实时性
+- `_buildTextEnhancementProposalCard` / `_openNoteEditorForEnhancement` / `_directlySaveEnhancement` / `_executeNoteSave` — 过度工程化
+- `AnimatedIconButton` / `_LoadingIndicatorWidget` — 不必要的 Widget 拆分
+- `LayoutBuilder` + `ConstrainedBox` 包裹消息 — 增加复杂度无实际收益
+- `NotificationListener<ScrollNotification>` 自动隐藏键盘 — 与 `keyboardDismissBehavior` 冲突
+
+**参考实现**: Google AI Gallery
+
+---
+
+## 2026-04-18: Agent 设计规范对齐决策
+
+**决策者**: 上晋 + AUTO
+**类型**: 代码规范修正
+
+**核心变更**:
+1. SmartResultCard 用户可切换 📍/🌤️ 元数据按钮，AI 建议值仅作初始状态
+2. `_openSmartResultAsNewNote` 通过 `initialQuote` 传递完整元数据到编辑器
+3. 编辑器进入 AI 前强制保存草稿（`_hasUnsavedChanges()` + 确认对话框）
+4. 短文本(<200字符/≤2行)走 `AddNoteDialog`，长文本走 `NoteFullEditorPage`
+5. Agent 流式输出：`AgentTextDeltaEvent` + `ChatStreamAccumulator`，逐 token 渲染
+
+**规范冲突修正**:
+- 决策 #4 中原定"Agent 模式非流式"已修正为"流式输出 + 工具调用仍为非流式最终结果"
+- `AgentEvent` 新增子类 `AgentTextDeltaEvent`，与现有 `AgentThinkingEvent`/`AgentToolCallStartEvent` 并行
+
+--- (`google-ai-edge/gallery`) 的 `ChatPanel.kt` + `MessageBodyCollapsableProgressPanel.kt`
+
+**状态字段清单** (仅保留):
+- `_isLoading`, `_isInputFocused`, `_agentListenerAttached`, `_enableThinking`
+- `_agentStatusDismissTimer`, `_selectedMediaFiles`
+- **已删除**: `_thinkingText`, `_isThinking`, `_toolProgressItems`, `_isToolInProgress`, `_showAgentStatusPanel`, `_lastAgentStatusKey`, `_lastAgentRunning`, `_streamUpdateDebounce`, `_pendingStreamingMessageId`, `_accumulatedStreamContent`
+
+---

@@ -29,6 +29,10 @@ import 'unit/services/log_service_adapter_test.dart'
     as log_service_adapter_test;
 import 'unit/services/smart_push_security_test.dart'
     as smart_push_security_test;
+import 'unit/services/openai_stream_service_test.dart'
+    as openai_stream_service_test;
+import 'unit/services/ai_service_streaming_test.dart'
+    as ai_service_streaming_test;
 import 'storage_management_test.dart' as storage_management_test;
 import 'performance/day_period_patch_test.dart' as day_period_patch_test;
 
@@ -80,6 +84,8 @@ void main() {
       database_health_security_test.main();
       log_service_adapter_test.main();
       smart_push_security_test.main();
+      openai_stream_service_test.main();
+      ai_service_streaming_test.main();
       storage_management_test.main();
       day_period_patch_test.main();
     });

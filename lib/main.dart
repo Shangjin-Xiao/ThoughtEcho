@@ -24,6 +24,7 @@ import 'package:logging/logging.dart' as logging;
 import 'package:thoughtecho/services/ai_analysis_database_service.dart';
 import 'package:thoughtecho/services/note_sync_service.dart';
 import 'package:thoughtecho/services/ai_service.dart';
+import 'package:thoughtecho/services/openai_stream_service.dart';
 import 'package:thoughtecho/services/backup_service.dart';
 import 'package:thoughtecho/services/database_service.dart';
 import 'package:thoughtecho/services/location_service.dart';
@@ -43,7 +44,18 @@ import 'package:thoughtecho/services/data_directory_service.dart';
 import 'package:thoughtecho/utils/mmkv_ffi_fix.dart';
 import 'package:thoughtecho/utils/update_dialog_helper.dart';
 import 'package:thoughtecho/services/smart_push_service.dart';
+import 'package:thoughtecho/services/chat_session_service.dart';
+import 'package:thoughtecho/services/place_search_service.dart';
+import 'package:thoughtecho/services/agent_service.dart';
+import 'package:thoughtecho/services/agent_tool.dart';
+import 'package:thoughtecho/services/agent_tools/explore_notes_tool.dart';
+import 'package:thoughtecho/services/agent_tools/get_app_context_tool.dart';
+import 'package:thoughtecho/services/agent_tools/propose_new_note_tool.dart';
+import 'package:thoughtecho/services/agent_tools/web_fetch_tool.dart';
+import 'package:thoughtecho/services/agent_tools/web_search_tool.dart';
+import 'package:thoughtecho/services/agent_tools/propose_edit_tool.dart';
 import 'package:thoughtecho/services/background_push_handler.dart';
+import 'package:thoughtecho/services/web_fetch_service.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'controllers/search_controller.dart';
@@ -132,6 +144,28 @@ void _addDeferredError(Map<String, dynamic> error) {
     _deferredErrors.removeAt(0);
   }
   _deferredErrors.add(error);
+}
+
+/// 构建 Agent 工具列表
+List<AgentTool> _buildAgentTools(
+  SettingsService settingsService,
+  DatabaseService db,
+  ChatSessionService chatSessionService,
+  LocationService locationService,
+  WeatherService weatherService,
+) {
+  return [
+    ExploreNotesTool(db),
+    GetTagsTool(db),
+    GetLocationWeatherTool(
+      locationService: locationService,
+      weatherService: weatherService,
+    ),
+    WebSearchTool(settingsService),
+    WebFetchTool(WebFetchService()),
+    const ProposeEditTool(),
+    ProposeNewNoteTool(db),
+  ];
 }
 
 Future<void> main() async {
@@ -287,6 +321,9 @@ Future<void> main() async {
         final connectivityService = ConnectivityService();
         final featureGuideService = FeatureGuideService(SafeMMKV());
 
+        final chatSessionService = ChatSessionService();
+        final placeSearchService = NominatimPlaceSearchService();
+
         // 创建智能推送服务实例
         final smartPushService = SmartPushService(
           databaseService: databaseService,
@@ -319,6 +356,10 @@ Future<void> main() async {
               ChangeNotifierProvider(create: (_) => connectivityService),
               ChangeNotifierProvider(create: (_) => featureGuideService),
               ChangeNotifierProvider(create: (_) => smartPushService),
+              ChangeNotifierProvider(create: (_) => chatSessionService),
+              ChangeNotifierProvider<NominatimPlaceSearchService>(
+                create: (_) => placeSearchService,
+              ),
               ChangeNotifierProvider(create: (_) => NoteSearchController()),
               ChangeNotifierProxyProvider<SettingsService,
                   InsightHistoryService>(
@@ -342,6 +383,47 @@ Future<void> main() async {
                     AIService(settingsService: context.read<SettingsService>()),
                 update: (context, settings, previous) =>
                     previous ?? AIService(settingsService: settings),
+              ),
+              ChangeNotifierProvider<OpenAIStreamService>(
+                create: (_) => OpenAIStreamService(),
+              ),
+              ChangeNotifierProxyProvider5<
+                  SettingsService,
+                  DatabaseService,
+                  ChatSessionService,
+                  LocationService,
+                  WeatherService,
+                  AgentService>(
+                create: (context) => AgentService(
+                  settingsService: context.read<SettingsService>(),
+                  tools: _buildAgentTools(
+                    context.read<SettingsService>(),
+                    context.read<DatabaseService>(),
+                    context.read<ChatSessionService>(),
+                    context.read<LocationService>(),
+                    context.read<WeatherService>(),
+                  ),
+                ),
+                update: (
+                  context,
+                  settings,
+                  db,
+                  chatSession,
+                  locationService,
+                  weatherService,
+                  previous,
+                ) =>
+                    previous ??
+                    AgentService(
+                      settingsService: settings,
+                      tools: _buildAgentTools(
+                        settings,
+                        db,
+                        chatSession,
+                        locationService,
+                        weatherService,
+                      ),
+                    ),
               ),
               ProxyProvider3<DatabaseService, SettingsService,
                   AIAnalysisDatabaseService, BackupService>(
@@ -608,6 +690,9 @@ Future<void> main() async {
               logError('媒体清理服务初始化失败: $e', error: e, source: 'BackgroundInit');
               // 媒体清理服务初始化失败不影响主要功能，继续执行
             }
+
+            // 注入数据库到聊天会话服务
+            chatSessionService.setDatabase(databaseService.database);
 
             // 初始化完成，更新状态
             servicesInitialized.value = true;

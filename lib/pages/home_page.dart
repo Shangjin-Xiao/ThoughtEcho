@@ -13,6 +13,7 @@ import '../services/clipboard_service.dart';
 import '../services/connectivity_service.dart';
 import '../services/excerpt_intent_service.dart';
 import '../controllers/search_controller.dart'; // 导入搜索控制器
+import '../models/ai_assistant_entry.dart';
 import '../models/note_category.dart';
 import '../models/quote_model.dart';
 import '../widgets/daily_quote_view.dart';
@@ -21,13 +22,14 @@ import '../widgets/add_note_dialog.dart';
 import '../widgets/local_ai/ocr_capture_page.dart';
 import '../widgets/local_ai/ocr_result_sheet.dart';
 import '../widgets/local_ai/voice_input_overlay.dart';
-import 'ai_features_page.dart';
+import 'ai_periodic_report_page.dart';
 import 'settings_page.dart';
-import 'note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
+import 'ai_assistant_page.dart'; // 添加问笔记聊天页面导入
 import '../theme/app_theme.dart';
 import 'note_full_editor_page.dart'; // 添加全屏编辑页面导入
 import '../services/settings_service.dart'; // Import SettingsService
 import '../services/insight_history_service.dart'; // Import InsightHistoryService
+import '../services/chat_session_service.dart';
 import '../constants/app_constants.dart';
 import '../utils/app_logger.dart';
 import '../utils/color_utils.dart';
@@ -228,11 +230,27 @@ class _HomePageState extends State<HomePage>
         onDone: () {
           // Stream finished, update loading state and trim the accumulated text
           if (mounted) {
-            setState(() {
-              _accumulatedPromptText =
-                  _accumulatedPromptText.trim(); // 去除前后空白字符
-              _isGeneratingDailyPrompt = false; // Stop loading on done
-            });
+            final trimmed = _accumulatedPromptText.trim();
+            if (trimmed.isEmpty) {
+              // reasoning-only 模型未输出 content，降级到本地生成
+              final l10n = AppLocalizations.of(context);
+              final fallbackPrompt =
+                  DailyPromptGenerator.generatePromptBasedOnContext(
+                l10n,
+                city: city,
+                weather: weather,
+                temperature: temperature,
+              );
+              setState(() {
+                _accumulatedPromptText = fallbackPrompt;
+                _isGeneratingDailyPrompt = false;
+              });
+            } else {
+              setState(() {
+                _accumulatedPromptText = trimmed;
+                _isGeneratingDailyPrompt = false; // Stop loading on done
+              });
+            }
             // 移除每日思考生成完成的弹窗通知
           }
         },
@@ -1465,11 +1483,24 @@ class _HomePageState extends State<HomePage>
   }
 
   // 显示删除确认对话框
-  void _showDeleteConfirmDialog(Quote quote) {
+  Future<void> _showDeleteConfirmDialog(Quote quote) async {
     final pageContext = context;
     final l10n = AppLocalizations.of(context);
     final retentionDays = context.read<SettingsService>().trashRetentionDays;
     final messenger = ScaffoldMessenger.of(pageContext);
+
+    final noteId = quote.id;
+    List<dynamic> sessions = [];
+    if (noteId != null && noteId.isNotEmpty) {
+      final sessionService = Provider.of<ChatSessionService>(
+        pageContext,
+        listen: false,
+      );
+      sessions = await sessionService.getSessionsForNote(noteId);
+    }
+    final hasLinkedChats = sessions.isNotEmpty;
+
+    if (!pageContext.mounted) return;
 
     showDialog(
       context: pageContext,
@@ -1478,7 +1509,11 @@ class _HomePageState extends State<HomePage>
         return StatefulBuilder(
           builder: (dialogContext, setDialogState) => AlertDialog(
             title: Text(l10n.moveNoteToTrashTitle),
-            content: Text(l10n.moveNoteToTrashConfirmation(retentionDays)),
+            content: Text(
+              hasLinkedChats
+                  ? '${l10n.moveNoteToTrashConfirmation(retentionDays)}\n\n${l10n.deleteNoteWithChatsConfirmation(sessions.length)}'
+                  : l10n.moveNoteToTrashConfirmation(retentionDays),
+            ),
             actions: [
               TextButton(
                 onPressed: isDeleting
@@ -1656,7 +1691,12 @@ class _HomePageState extends State<HomePage>
   // 显示AI问答聊天界面
   void _showAIQuestionDialog(Quote quote) {
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => NoteQAChatPage(quote: quote)),
+      MaterialPageRoute(
+        builder: (context) => AIAssistantPage(
+          entrySource: AIAssistantEntrySource.note,
+          quote: quote,
+        ),
+      ),
     );
   }
 
@@ -2399,8 +2439,8 @@ class _HomePageState extends State<HomePage>
                 );
               },
             ),
-            // AI页
-            const AIFeaturesPage(),
+            // 探索页
+            const AIPeriodicReportPage(),
             // 设置页
             SettingsPage(key: _settingsPageKey),
           ],
@@ -2473,7 +2513,7 @@ class _HomePageState extends State<HomePage>
                       Icons.auto_awesome,
                       color: theme.colorScheme.primary,
                     ),
-                    label: AppLocalizations.of(context).navInsights,
+                    label: l10n.explore,
                   ),
                   NavigationDestination(
                     key: _settingsTabGuideKey, // 功能引导 key

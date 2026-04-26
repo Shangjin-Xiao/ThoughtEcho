@@ -34,6 +34,13 @@ class AddNoteDialog extends StatefulWidget {
   final Map<String, dynamic>? hitokotoData; // 添加一言API返回的完整数据
   final List<NoteCategory> tags;
   final Function(Quote)? onSave; // 保存后的回调
+  final List<String>? prefilledTagIds; // AI 建议的预选标签
+  final bool prefilledIncludeLocation; // AI 建议是否包含位置
+  final bool prefilledIncludeWeather; // AI 建议是否包含天气
+  /// 当为 true 时，使用 [prefilledIncludeLocation]/[prefilledIncludeWeather]
+  /// 作为位置/天气勾选状态，并跳过读取 SettingsService 的自动附加偏好，
+  /// 让用户在 AI 智能卡片上的选择真正生效。
+  final bool useAIPrefilledLocationWeather;
 
   const AddNoteDialog({
     super.key,
@@ -44,6 +51,10 @@ class AddNoteDialog extends StatefulWidget {
     this.hitokotoData,
     required this.tags,
     this.onSave,
+    this.prefilledTagIds,
+    this.prefilledIncludeLocation = false,
+    this.prefilledIncludeWeather = false,
+    this.useAIPrefilledLocationWeather = false,
   });
 
   @override
@@ -58,6 +69,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
   final GlobalKey _tagGuideKey = GlobalKey(); // 标签功能引导 Key
   final List<String> _selectedTagIds = [];
   String? _aiSummary;
+  String? _aiPolishedContent; // AI润色后的内容
+  String? _aiPolishTitle; // AI润色结果标题
   Quote? _fullInitialQuote;
   bool _isLoadingFullQuote = false;
 
@@ -81,6 +94,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
   // 新建笔记时的实时位置信息
   String? _newLocation;
+  String? _newPoiName;
   double? _newLatitude;
   double? _newLongitude;
   // 颜色选择
@@ -179,27 +193,34 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       text: widget.initialQuote?.sourceWork ?? widget.prefilledWork ?? '',
     );
 
+    // 应用 AI 建议的预选标签
+    if (widget.prefilledTagIds != null && widget.prefilledTagIds!.isNotEmpty) {
+      _selectedTagIds.addAll(widget.prefilledTagIds!);
+    }
+
     // 优化：初始化内部标签列表
     _availableTags = List.from(widget.tags);
     _filteredTags = _availableTags;
     _lastSearchQuery = '';
 
     // 新建笔记时，自动填充默认作者、出处和标签
+    // 注意：仅在没有预填充值时才使用默认值，AI 填写的作者/出处/标签不会被覆盖
     if (widget.initialQuote == null && !isHitokotoQuickAdd) {
       final settingsService = _readServiceOrNull<SettingsService>(context);
       if (settingsService != null) {
-        // 仅在没有预填充值时使用默认值
+        // 仅在没有预填充值时使用默认作者
         if (_authorController.text.isEmpty &&
             settingsService.defaultAuthor != null &&
             settingsService.defaultAuthor!.isNotEmpty) {
           _authorController.text = settingsService.defaultAuthor!;
         }
+        // 仅在没有预填充值时使用默认出处
         if (_workController.text.isEmpty &&
             settingsService.defaultSource != null &&
             settingsService.defaultSource!.isNotEmpty) {
           _workController.text = settingsService.defaultSource!;
         }
-        // 自动添加默认标签
+        // 仅在没有预选标签时才添加默认标签
         if (_selectedTagIds.isEmpty &&
             settingsService.defaultTagIds.isNotEmpty) {
           _selectedTagIds.addAll(settingsService.defaultTagIds);
@@ -230,59 +251,86 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
         // 新建笔记时，读取用户偏好并自动勾选位置/天气
         if (widget.initialQuote == null) {
-          final settingsService = _readServiceOrNull<SettingsService>(context);
-          if (settingsService != null) {
-            final autoLocation = settingsService.autoAttachLocation;
-            final autoWeather = settingsService.autoAttachWeather;
-
-            if (autoLocation || autoWeather) {
+          // AI 智能卡片路径：尊重用户在卡片上对位置/天气 chip 的选择，
+          // 跳过 SettingsService 的自动附加偏好，避免偏好覆盖用户意图。
+          if (widget.useAIPrefilledLocationWeather) {
+            final wantLocation = widget.prefilledIncludeLocation;
+            final wantWeather = widget.prefilledIncludeWeather;
+            if (wantLocation || wantWeather) {
               if (mounted) {
                 setState(() {
-                  if (autoLocation) {
-                    _includeLocation = true;
-                  }
-                  if (autoWeather) {
-                    _includeWeather = true;
-                  }
+                  _includeLocation = wantLocation;
+                  _includeWeather = wantWeather;
                 });
               }
-
-              // 如果自动勾选了位置，获取位置；天气需要位置坐标，所以在位置获取后处理
-              if (autoLocation) {
+              if (wantLocation) {
                 await _fetchLocationForNewNote();
-                // 位置获取后再获取天气
-                if (autoWeather &&
+                if (wantWeather &&
                     _includeLocation &&
                     (_newLatitude != null ||
                         _cachedLocationService?.currentPosition != null)) {
                   _fetchWeatherForNewNote();
-                } else if (autoWeather && !_includeLocation) {
-                  // 位置获取失败，天气也无法获取，取消天气选中并提示
-                  if (mounted) {
-                    setState(() {
-                      _includeWeather = false;
-                    });
-                    if (context.mounted) {
-                      final l10n = AppLocalizations.of(context);
-                      showDialog(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: Text(l10n.weatherFetchFailedTitle),
-                          content: Text(l10n.locationAndWeatherUnavailable),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx),
-                              child: Text(l10n.iKnow),
-                            ),
-                          ],
-                        ),
-                      );
+                }
+              } else if (wantWeather) {
+                _fetchWeatherForNewNote();
+              }
+            }
+          } else {
+            final settingsService =
+                _readServiceOrNull<SettingsService>(context);
+            if (settingsService != null) {
+              final autoLocation = settingsService.autoAttachLocation;
+              final autoWeather = settingsService.autoAttachWeather;
+
+              if (autoLocation || autoWeather) {
+                if (mounted) {
+                  setState(() {
+                    if (autoLocation) {
+                      _includeLocation = true;
+                    }
+                    if (autoWeather) {
+                      _includeWeather = true;
+                    }
+                  });
+                }
+
+                // 如果自动勾选了位置，获取位置；天气需要位置坐标，所以在位置获取后处理
+                if (autoLocation) {
+                  await _fetchLocationForNewNote();
+                  // 位置获取后再获取天气
+                  if (autoWeather &&
+                      _includeLocation &&
+                      (_newLatitude != null ||
+                          _cachedLocationService?.currentPosition != null)) {
+                    _fetchWeatherForNewNote();
+                  } else if (autoWeather && !_includeLocation) {
+                    // 位置获取失败，天气也无法获取，取消天气选中并提示
+                    if (mounted) {
+                      setState(() {
+                        _includeWeather = false;
+                      });
+                      if (context.mounted) {
+                        final l10n = AppLocalizations.of(context);
+                        showDialog(
+                          context: context,
+                          builder: (ctx) => AlertDialog(
+                            title: Text(l10n.weatherFetchFailedTitle),
+                            content: Text(l10n.locationAndWeatherUnavailable),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(ctx),
+                                child: Text(l10n.iKnow),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
                     }
                   }
+                } else if (autoWeather) {
+                  // 没有勾选位置但勾选了天气，尝试用缓存的位置获取天气
+                  _fetchWeatherForNewNote();
                 }
-              } else if (autoWeather) {
-                // 没有勾选位置但勾选了天气，尝试用缓存的位置获取天气
-                _fetchWeatherForNewNote();
               }
             }
           }
@@ -318,6 +366,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
       // 保存原始的位置和天气信息
       _originalLocation = widget.initialQuote!.location;
+      _newPoiName = widget.initialQuote!.poiName;
       _originalLatitude = widget.initialQuote!.latitude;
       _originalLongitude = widget.initialQuote!.longitude;
       _originalWeather = widget.initialQuote!.weather;
@@ -453,14 +502,66 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     });
   }
 
-  /// 显示功能引导序列
-  void _showGuides() {
-    FeatureGuideHelper.showSequence(
+  /// 处理AI润色结果
+  void _handleAiPolishedResult({
+    required String title,
+    required String content,
+  }) {
+    setState(() {
+      _aiPolishTitle = title;
+      _aiPolishedContent = content;
+    });
+    logDebug('接收AI润色结果: $title');
+  }
+
+  /// 应用AI润色结果到编辑器
+  void _applyAiPolishedContent() {
+    if (_aiPolishedContent == null || _aiPolishedContent!.isEmpty) return;
+
+    setState(() {
+      _contentController.text = _aiPolishedContent!;
+      _aiPolishedContent = null; // 清除已应用的润色结果
+      _aiPolishTitle = null;
+    });
+
+    logDebug('应用AI润色内容到编辑器');
+  }
+
+  /// 追加AI润色结果到现有内容
+  void _appendAiPolishedContent() {
+    if (_aiPolishedContent == null || _aiPolishedContent!.isEmpty) return;
+
+    setState(() {
+      if (_contentController.text.isNotEmpty &&
+          !_contentController.text.endsWith('\n')) {
+        _contentController.text += '\n\n';
+      }
+      _contentController.text += _aiPolishedContent!;
+      _aiPolishedContent = null; // 清除已应用的润色结果
+      _aiPolishTitle = null;
+    });
+
+    logDebug('追加AI润色内容到编辑器');
+  }
+
+  /// 丢弃AI润色结果
+  void _discardAiPolishedContent() {
+    setState(() {
+      _aiPolishedContent = null;
+      _aiPolishTitle = null;
+    });
+    logDebug('已丢弃AI润色结果');
+  }
+
+  /// 显示功能引导
+  Future<void> _showGuides() async {
+    await FeatureGuideHelper.showSequence(
       context: context,
       guides: [
         ('add_note_fullscreen_button', _fullscreenButtonKey),
         ('add_note_tag_hidden', _tagGuideKey),
       ],
+      shouldShow: () => mounted,
     );
   }
 
@@ -1474,6 +1575,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                   return loc;
                 }())
           : null,
+      poiName: _includeLocation
+          ? (isEditing ? (_newPoiName ?? baseQuote?.poiName) : _newPoiName)
+          : null,
       latitude: (_includeLocation || _includeWeather)
           ? (isEditing ? _originalLatitude : _newLatitude)
           : null,
@@ -1729,7 +1833,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                         weatherService.temperature;
                                   }
 
-                                  // 创建包含当前所有元数据的临时Quote对象
+// 创建包含当前所有元数据的临时Quote对象
                                   // 获取经纬度（编辑时用原始值，新建时用实时获取的值）
                                   final currentLat = widget.initialQuote != null
                                       ? _originalLatitude

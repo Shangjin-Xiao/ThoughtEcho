@@ -3531,5 +3531,41 @@
   "insertVideo": "동영상 삽입",
   "insertAudio": "오디오 삽입",
   "clipboardFoundHint": "클립보드 내용 발견, 탭하여 노트로 추가",
-  "operationFailed": "작업 실패"
+  "operationFailedSimple": "작업 실패",
+  "deleteNoteWithChatsConfirmation": "Are you sure you want to delete this note? This action cannot be undone.\n\n{count} chat conversations linked to this note will also be deleted.",
+  "@deleteNoteWithChatsConfirmation": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "chatHistory": "Chat History",
+  "newChat": "New Chat",
+  "deleteChat": "Delete Chat",
+  "deleteChatConfirm": "Delete this conversation? All messages will be removed.",
+  "noChats": "No conversations yet",
+  "mapPickerTitle": "Select Location",
+  "mapPickerCurrentLocation": "Current Location",
+  "mapPickerConfirm": "Confirm Selection",
+  "longPressForMapPicker": "Long press for precise location",
+  "poiNameLabel": "Precise Location",
+  "explore": "Explore",
+  "exploreMapMemory": "Map Memories",
+  "exploreMapMemoryDesc": "Browse your notes on a map",
+  "aiChat": "AI Chat",
+  "aiAgent": "AI Agent",
+  "agentThinking": "Agent is thinking...",
+  "agentToolCall": "Calling tool: {toolName}",
+  "@agentToolCall": {
+    "placeholders": {
+      "toolName": {
+        "type": "String"
+      }
+    }
+  },
+  "agentSearchingNotes": "Searching notes...",
+  "agentAnalyzingData": "Analyzing data...",
+  "agentWebSearching": "Searching the web...",
+  "favoriteNotes": "Favorite Notes"
 }

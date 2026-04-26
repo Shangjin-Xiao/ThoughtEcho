@@ -12,6 +12,7 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
     final hasCoordinates =
         _originalLatitude != null && _originalLongitude != null;
     final hasOnlyCoordinates = _originalLocation == null && hasCoordinates;
+    final hasPoiName = _poiName != null && _poiName!.trim().isNotEmpty;
 
     String title;
     String content;
@@ -30,7 +31,7 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
     } else {
       // 有位置数据
       title = l10n.locationInfo;
-      content = hasOnlyCoordinates
+      final locationInfoText = hasOnlyCoordinates
           ? l10n.locationUpdateHint(
               LocationService.formatCoordinates(
                 _originalLatitude,
@@ -42,11 +43,19 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
                 _originalLocation ?? _location,
               ),
             );
+      content = hasPoiName
+          ? '${l10n.poiNameLabel}: ${_poiName!.trim()}\n\n$locationInfoText\n\n${l10n.longPressForMapPicker}'
+          : '$locationInfoText\n\n${l10n.longPressForMapPicker}';
       actions = [
         if (_showLocation)
           TextButton(
             onPressed: () => Navigator.pop(context, 'remove'),
             child: Text(l10n.remove),
+          ),
+        if (hasPoiName)
+          TextButton(
+            onPressed: () => Navigator.pop(context, 'clear_poi'),
+            child: Text('${l10n.clear} ${l10n.poiNameLabel}'),
           ),
         if (hasOnlyCoordinates)
           TextButton(
@@ -151,6 +160,10 @@ extension _NoteEditorLocationDialogs on _NoteFullEditorPageState {
     } else if (result == 'remove') {
       _updateState(() {
         _showLocation = false;
+      });
+    } else if (result == 'clear_poi') {
+      _updateState(() {
+        _poiName = null;
       });
     }
   }

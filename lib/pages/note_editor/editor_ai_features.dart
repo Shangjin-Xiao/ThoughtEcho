@@ -103,128 +103,14 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
     }
   }
 
-  // 润色文本 (使用流式传输)
+  // 润色文本
   Future<void> _polishText() async {
-    final plainText = StringUtils.removeObjectReplacementChar(
-      _controller.document.toPlainText(),
-    ).trim();
-    if (plainText.isEmpty) {
-      if (mounted) {
-        final l10n = AppLocalizations.of(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.pleaseInputContent),
-            duration: AppConstants.snackBarDurationError,
-          ),
-        );
-      }
-      return;
-    }
-
-    final aiService = Provider.of<AIService>(context, listen: false);
-    final polishInput = QuillAiApplyUtils.buildPolishInputText(
-      _controller.document,
-    );
-
-    // 显示流式文本对话框
-    // 注意：这里await showDialog会等待对话框关闭并返回结果
-    final l10n = AppLocalizations.of(context);
-    String? finalResult = await showDialog<String?>(
-      context: context,
-      barrierDismissible: false, // 不允许点击外部关闭
-      builder: (dialogContext) {
-        return StreamingTextDialog(
-          title: l10n.polishingText,
-          textStream: aiService.streamPolishText(
-            polishInput,
-          ), // 调用流式方法，使用正确的参数名
-          displayTextTransformer: QuillAiApplyUtils.stripMediaMarkersForDisplay,
-          applyButtonText: '应用更改', // 应用按钮文本
-          onApply: (fullText) {
-            // 用户点击"应用更改"时调用
-            // 返回结果给showDialog的await调用
-            Navigator.of(dialogContext).pop(fullText); // 通过pop将结果返回
-          },
-          onCancel: () {
-            // 用户点击"取消"时调用
-            Navigator.of(dialogContext).pop(null); // 返回null表示取消
-          },
-          // StreamingTextDialog 内部处理 onError 和 onComplete
-        );
-      },
-    );
-
-    // 如果showDialog返回了结果 (用户点击了应用)，更新编辑器内容
-    if (finalResult != null && mounted) {
-      _updateState(() {
-        _controller.document = QuillAiApplyUtils.applyPolishedText(
-          originalDocument: _controller.document,
-          polishedText: finalResult,
-        );
-      });
-    }
+    await _openAiAssistant('/润色');
   }
 
-  // 续写文本 (使用流式传输)
+  // 续写文本
   Future<void> _continueText() async {
-    final plainText = StringUtils.removeObjectReplacementChar(
-      _controller.document.toPlainText(),
-    ).trim();
-    if (plainText.isEmpty) {
-      if (mounted) {
-        final l10n = AppLocalizations.of(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.pleaseInputContent),
-            duration: AppConstants.snackBarDurationError,
-          ),
-        );
-      }
-      return;
-    }
-
-    final aiService = Provider.of<AIService>(context, listen: false);
-
-    // 显示流式文本对话框
-    final l10n = AppLocalizations.of(context);
-    String? finalResult = await showDialog<String?>(
-      context: context,
-      barrierDismissible: false, // 不允许点击外部关闭
-      builder: (dialogContext) {
-        return StreamingTextDialog(
-          title: l10n.continuingText,
-          textStream: aiService.streamContinueText(
-            plainText,
-          ), // 调用流式方法，使用正确的参数名
-          applyButtonText: '附加到原文', // 应用按钮文本
-          onApply: (fullText) {
-            // 用户点击"附加到原文"时调用
-            // 返回结果给showDialog的await调用
-            Navigator.of(dialogContext).pop(fullText); // 通过pop将结果返回
-          },
-          onCancel: () {
-            // 用户点击"取消"时调用
-            Navigator.of(dialogContext).pop(null); // 返回null表示取消
-          },
-          // StreamingTextDialog 内部处理 onError 和 onComplete
-        );
-      },
-    );
-
-    // 如果showDialog返回了结果 (用户点击了应用)，附加到编辑器内容
-    if (finalResult != null && mounted) {
-      // Quill 文档的 length 包含末尾换行符，所以需要在 length - 1 位置插入
-      // 这样可以在原文末尾（换行符之前）插入续写内容
-      final int insertPosition = _controller.document.length - 1;
-      if (insertPosition >= 0) {
-        _controller.document.insert(insertPosition, '\n\n$finalResult');
-      }
-      // 移动光标到文档末尾
-      _controller.updateSelection(
-        TextSelection.collapsed(offset: _controller.document.length - 1),
-        quill.ChangeSource.local,
-      );
-    }
+    await _openAiAssistant('/续写');
   }
 
   // 深度分析内容 (使用流式传输，保存结果到 _currentAiAnalysis)
@@ -320,31 +206,103 @@ extension _NoteEditorAIFeatures on _NoteFullEditorPageState {
 
   // 问笔记功能
   Future<void> _askNoteQuestion() async {
+    await _openAiAssistant(null);
+  }
+
+  Future<void> _openAiAssistant(String? initialQuestion) async {
     final plainText = StringUtils.removeObjectReplacementChar(
       _controller.document.toPlainText(),
     ).trim();
     if (plainText.isEmpty) {
-      final l10n = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(l10n.pleaseInputContent),
-          duration: AppConstants.snackBarDurationError,
-        ),
-      );
+      if (mounted) {
+        final l10n = AppLocalizations.of(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.pleaseInputContent),
+            duration: AppConstants.snackBarDurationError,
+          ),
+        );
+      }
       return;
     }
 
-    // 创建临时Quote对象用于问答
+    if (_hasUnsavedChanges()) {
+      final l10n = AppLocalizations.of(context);
+      final shouldSave = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.saveRequired),
+          content: Text(l10n.saveBeforeAiAssistant),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: Text(l10n.cancel),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(l10n.saveAndContinue),
+            ),
+          ],
+        ),
+      );
+      if (shouldSave != true) return;
+      await _saveContent();
+      if (!mounted) return;
+    }
+
     final tempQuote = Quote(
-      id: widget.initialQuote?.id ?? '',
+      id: widget.initialQuote?.id,
       content: plainText,
-      date: DateTime.now().toIso8601String(),
+      date: widget.initialQuote?.date ?? DateTime.now().toIso8601String(),
       dayPeriod: widget.initialQuote?.dayPeriod,
     );
 
-    // 导航到聊天页面
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => NoteQAChatPage(quote: tempQuote)),
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => AIAssistantPage(
+          entrySource: AIAssistantEntrySource.note,
+          quote: tempQuote,
+          initialQuestion: initialQuestion,
+        ),
+      ),
     );
+
+    if (result != null && result is Map<String, dynamic> && mounted) {
+      final action = result['action'];
+      final mode =
+          result['mode'] ?? (action == 'append' ? 'append' : 'replace');
+      final text = (result['text'] as Object?)?.toString().trim();
+      if (text == null || text.isEmpty) {
+        return;
+      }
+
+      // 执行应用逻辑
+      void applyChanges() {
+        if (mode == 'replace') {
+          _controller.document = QuillAiApplyUtils.applyPolishedText(
+            originalDocument: _controller.document,
+            polishedText: text,
+          );
+        } else if (mode == 'append') {
+          final int insertPosition = _controller.document.length - 1;
+          if (insertPosition >= 0) {
+            _controller.document.insert(insertPosition, '\n\n$text');
+          }
+          _controller.updateSelection(
+            TextSelection.collapsed(offset: _controller.document.length - 1),
+            quill.ChangeSource.local,
+          );
+        }
+      }
+
+      if (action == 'replace' || action == 'append' || action == 'edit') {
+        _updateState(applyChanges);
+      } else if (action == 'save') {
+        _updateState(applyChanges);
+        // 自动保存到数据库
+        await _saveContent();
+      }
+    }
   }
 }

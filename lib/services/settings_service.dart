@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/ai_settings.dart';
+import '../models/ai_assistant_entry.dart';
 import '../models/app_settings.dart';
 import '../models/multi_ai_settings.dart'; // 新增 MultiAISettings 导入
 import '../models/local_ai_settings.dart'; // 新增 LocalAISettings 导入
@@ -46,6 +47,12 @@ class SettingsService extends ChangeNotifier {
   static const String _syncSkipConfirmKey = 'sync_skip_confirm';
   static const String _syncDefaultIncludeMediaKey =
       'sync_default_include_media';
+  static const String _exploreAiAssistantModeKey =
+      'explore_ai_assistant_mode_v1';
+  static const String _noteAiAssistantModeKey = 'note_ai_assistant_mode_v1';
+
+  SettingsService(this._prefs);
+
   AISettings get aiSettings => _aiSettings;
   AppSettings get appSettings => _appSettings;
   ThemeMode get themeMode => _themeMode;
@@ -54,6 +61,16 @@ class SettingsService extends ChangeNotifier {
   bool get syncSkipConfirm => _mmkv.getBool(_syncSkipConfirmKey) ?? false;
   bool get syncDefaultIncludeMedia =>
       _mmkv.getBool(_syncDefaultIncludeMediaKey) ?? true;
+  AIAssistantPageMode get exploreAiAssistantMode =>
+      AIAssistantPageModeStorage.fromStorage(
+        _mmkv.getString(_exploreAiAssistantModeKey),
+      ) ??
+      AIAssistantPageMode.chat;
+  AIAssistantPageMode get noteAiAssistantMode =>
+      AIAssistantPageModeStorage.fromStorage(
+        _mmkv.getString(_noteAiAssistantModeKey),
+      ) ??
+      AIAssistantPageMode.noteChat;
 
   // 周期报告洞察是否使用AI（流式）
   bool get reportInsightsUseAI => _appSettings.reportInsightsUseAI;
@@ -68,6 +85,16 @@ class SettingsService extends ChangeNotifier {
   Future<void> setTodayThoughtsUseAI(bool enabled) async {
     _appSettings = _appSettings.copyWith(todayThoughtsUseAI: enabled);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  Future<void> setExploreAiAssistantMode(AIAssistantPageMode mode) async {
+    await _mmkv.setString(_exploreAiAssistantModeKey, mode.storageValue);
+    notifyListeners();
+  }
+
+  Future<void> setNoteAiAssistantMode(AIAssistantPageMode mode) async {
+    await _mmkv.setString(_noteAiAssistantModeKey, mode.storageValue);
     notifyListeners();
   }
 
@@ -129,52 +156,36 @@ class SettingsService extends ChangeNotifier {
       return false;
     }
 
-    final incomingDays = AppSettings.normalizeTrashRetentionDays(parsedDays);
-    final incomingLastModified = incoming['last_modified']?.toString();
-    String? normalizedIncomingTimestamp;
-    if (incomingLastModified != null && incomingLastModified.isNotEmpty) {
-      if (!LWWUtils.isValidTimestamp(incomingLastModified)) {
-        logWarning(
-          '忽略无效的回收站保留期时间戳: $incomingLastModified',
+    final localDays = trashRetentionDays;
+    final localModified = trashRetentionLastModified;
+    final incomingModified = incoming['last_modified'] as String?;
+
+    if (localModified != null &&
+        incomingModified != null &&
+        incomingModified.isNotEmpty) {
+      final localTime = DateTime.tryParse(localModified);
+      final incomingTime = DateTime.tryParse(incomingModified);
+      if (localTime != null &&
+          incomingTime != null &&
+          incomingTime.isBefore(localTime)) {
+        logDebug(
+          '忽略过期的回收站设置: local=$localDays@$localModified, incoming=$parsedDays@$incomingModified',
           source: 'SettingsService',
         );
         return false;
       }
-      normalizedIncomingTimestamp =
-          LWWUtils.normalizeTimestamp(incomingLastModified);
-    } else {
-      // 输入无时间戳：只有本地也无时间戳时才接受（直接赋值），否则跳过
-      final localLastModified = _appSettings.trashRetentionLastModified;
-      final hasLocalTimestamp =
-          localLastModified != null && localLastModified.isNotEmpty;
-      if (hasLocalTimestamp) {
-        // 本地有时间戳，远端无时间戳 → 跳过导入
-        return false;
-      }
-      // 本地也无时间戳 → 直接接受输入值，不设置时间戳
-      _appSettings = _appSettings.copyWith(trashRetentionDays: incomingDays);
-      await _mmkv.setString(
-          _appSettingsKey, json.encode(_appSettings.toJson()));
-      notifyListeners();
+    }
+
+    if (parsedDays != localDays) {
+      await setTrashRetentionDays(parsedDays);
+      logDebug(
+        '应用传入的回收站保留期: $localDays -> $parsedDays',
+        source: 'SettingsService',
+      );
       return true;
     }
 
-    final decision = LWWDecisionMaker.makeDecision(
-      localTimestamp: _appSettings.trashRetentionLastModified,
-      remoteTimestamp: normalizedIncomingTimestamp,
-    );
-
-    if (!decision.shouldUseRemote) {
-      return false;
-    }
-
-    _appSettings = _appSettings.copyWith(
-      trashRetentionDays: incomingDays,
-      trashRetentionLastModified: normalizedIncomingTimestamp,
-    );
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
-    return true;
+    return false;
   }
 
   // 折叠时优先显示加粗内容
@@ -372,8 +383,6 @@ class SettingsService extends ChangeNotifier {
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
     notifyListeners();
   }
-
-  SettingsService(this._prefs);
 
   /// 创建SettingsService实例的静态工厂方法
   static Future<SettingsService> create() async {

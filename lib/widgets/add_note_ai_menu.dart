@@ -1,12 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../models/ai_assistant_entry.dart';
 import '../services/ai_service.dart';
 import '../models/quote_model.dart';
 import '../widgets/streaming_text_dialog.dart';
 import '../widgets/ai_options_menu.dart';
 import '../widgets/source_analysis_result_dialog.dart';
-import '../pages/note_qa_chat_page.dart'; // 添加问笔记聊天页面导入
+import '../pages/ai_assistant_page.dart'; // 添加问笔记聊天页面导入
 import '../constants/app_constants.dart';
 import '../gen_l10n/app_localizations.dart';
 
@@ -333,7 +334,12 @@ class _AddNoteAIMenuState extends State<AddNoteAIMenu> {
 
     // 导航到聊天页面
     Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => NoteQAChatPage(quote: tempQuote)),
+      MaterialPageRoute(
+        builder: (context) => AIAssistantPage(
+          entrySource: AIAssistantEntrySource.note,
+          quote: tempQuote,
+        ),
+      ),
     );
   }
 
