@@ -369,6 +369,15 @@ class DatabaseBackupService {
         final tombstones = data['tombstones'];
         if (tombstones is List) {
           final affectedQuoteIds = <String>{};
+
+          final existingTombstoneRows = await txn.query('quote_tombstones');
+          final Map<String, String> localTombstoneMap = {
+            for (final r in existingTombstoneRows)
+              if (r['quote_id'] != null)
+                r['quote_id'] as String:
+                    r['deleted_at']?.toString() ?? '',
+          };
+
           final tombstoneBatch = txn.batch();
           final tombstoneRows = <Map<String, dynamic>>[];
           for (final row in tombstones) {
@@ -385,6 +394,14 @@ class DatabaseBackupService {
               continue;
             }
             final normalizedDeletedAt = LWWUtils.normalizeTimestamp(deletedAt);
+
+            final localDeletedAt = localTombstoneMap[quoteId];
+            if (localDeletedAt != null &&
+                localDeletedAt.isNotEmpty &&
+                _compareIsoTime(localDeletedAt, normalizedDeletedAt) >= 0) {
+              continue;
+            }
+
             final tombstoneData = {
               'quote_id': quoteId,
               'deleted_at': normalizedDeletedAt,
@@ -392,6 +409,7 @@ class DatabaseBackupService {
             };
             tombstoneRows.add(tombstoneData);
             affectedQuoteIds.add(quoteId);
+            localTombstoneMap[quoteId] = normalizedDeletedAt;
             tombstoneBatch.insert(
               'quote_tombstones',
               tombstoneData,
