@@ -255,13 +255,13 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
   }
 
   Future<void> _saveContent() async {
-    // 立即取消草稿保存定时器，防止在保存过程中再次触发草稿保存
     _draftSaveTimer?.cancel();
-    _draftLoaded = false; // 标记草稿已处理，防止后续监听再次开启定时器
+    _draftLoaded = false;
 
     final db = Provider.of<DatabaseService>(context, listen: false);
 
     final l10n = AppLocalizations.of(context);
+    bool saveSucceeded = false;
     logDebug('开始保存笔记内容...');
     if (mounted) {
       _updateState(() {
@@ -400,11 +400,26 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       if (widget.initialQuote != null && widget.initialQuote?.id != null) {
         // 只有当initialQuote存在且有ID时，才更新现有笔记
         logDebug('更新现有笔记，ID: ${quote.id}');
-        await db.updateQuote(quote);
+        final updateResult = await db.updateQuote(quote);
+        if (updateResult != QuoteUpdateResult.updated) {
+          await _rollbackMovedPermanentMediaFiles(movedToPermanentForThisSave);
+          _draftLoaded = true;
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(_updateFailureMessage(l10n, updateResult)),
+                backgroundColor: Colors.orange,
+                duration: AppConstants.snackBarDurationError,
+              ),
+            );
+          }
+          return;
+        }
         _draftSaveTimer?.cancel();
         await _clearDraft();
-        _didSaveSuccessfully = true; // 标记保存成功，避免会话级清理
-        _isRestoredFromDraft = false; // 保存成功后，不再视为恢复的草稿
+        _didSaveSuccessfully = true;
+        _isRestoredFromDraft = false;
+        saveSucceeded = true;
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -412,17 +427,16 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
               duration: AppConstants.snackBarDurationImportant,
             ),
           );
-          // 成功更新后，关闭页面并返回
-          Navigator.of(context).pop(true); // 返回true表示更新成功
+          Navigator.of(context).pop(true);
         }
       } else {
-        // 添加新笔记（初始Quote为null或无ID时）
         logDebug('添加新笔记');
         await db.addQuote(quote);
         _draftSaveTimer?.cancel();
         await _clearDraft();
-        _didSaveSuccessfully = true; // 标记保存成功，避免会话级清理
-        _isRestoredFromDraft = false; // 保存成功后，不再视为恢复的草稿
+        _didSaveSuccessfully = true;
+        _isRestoredFromDraft = false;
+        saveSucceeded = true;
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -430,29 +444,11 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
               duration: AppConstants.snackBarDurationImportant,
             ),
           );
-          // 成功添加后，关闭页面并返回
-          Navigator.of(context).pop(true); // 返回true表示保存成功
+          Navigator.of(context).pop(true);
         }
       }
     } catch (e) {
-      // 数据库保存失败，回滚本次移动到永久目录的媒体文件，避免产生孤儿
-      try {
-        await Future.wait(
-          movedToPermanentForThisSave.map((p) async {
-            try {
-              final f = File(p);
-              if (await f.exists()) {
-                await f.delete();
-                logDebug('因保存失败，回滚删除永久媒体文件: $p');
-              }
-            } catch (itemErr) {
-              logDebug('单个媒体文件回滚删除失败: $p, $itemErr');
-            }
-          }),
-        );
-      } catch (rollbackErr) {
-        logDebug('保存失败后的媒体回滚删除出错: $rollbackErr');
-      }
+      await _rollbackMovedPermanentMediaFiles(movedToPermanentForThisSave);
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -466,8 +462,12 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
     } finally {
       if (mounted) {
         _updateState(() {
-          _saveProgress = 1.0;
-          _saveStatus = l10n.saveComplete;
+          if (saveSucceeded) {
+            _saveProgress = 1.0;
+            _saveStatus = l10n.saveComplete;
+          } else {
+            _saveProgress = 0.0;
+          }
         });
         Future.delayed(const Duration(milliseconds: 320), () {
           if (mounted) {
@@ -477,6 +477,51 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
           }
         });
       }
+    }
+  }
+
+  String _updateFailureMessage(
+    AppLocalizations l10n,
+    QuoteUpdateResult result,
+  ) {
+    switch (result) {
+      case QuoteUpdateResult.notFound:
+        return l10n.noteNotFound;
+      case QuoteUpdateResult.skippedDeleted:
+        return l10n.noteUpdateSkippedDeleted;
+      case QuoteUpdateResult.updated:
+        return l10n.noteUpdated;
+    }
+  }
+
+  Future<void> _rollbackMovedPermanentMediaFiles(
+      List<String> movedPaths) async {
+    if (movedPaths.isEmpty) {
+      return;
+    }
+    try {
+      await Future.wait(
+        movedPaths.map((p) async {
+          try {
+            final deleted = await MediaFileService.deleteMediaFile(p);
+            if (deleted) {
+              logDebug('因保存失败，回滚删除永久媒体文件: $p');
+            }
+          } catch (itemErr) {
+            logError(
+              '单个媒体文件回滚删除失败: $p',
+              error: itemErr,
+              source: 'NoteFullEditorPage',
+            );
+          }
+        }),
+      );
+    } catch (rollbackErr) {
+      logError(
+        '保存失败后的媒体回滚删除出错',
+        error: rollbackErr,
+        source: 'NoteFullEditorPage',
+      );
     }
   }
 

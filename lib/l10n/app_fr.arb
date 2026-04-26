@@ -2735,6 +2735,8 @@
   "guideSettingsStartupDesc": "Définir la page par défaut à ouvrir lors du lancement de l'application",
   "guideSettingsThemeTitle": "Paramètres du thème",
   "guideSettingsThemeDesc": "Personnalisez les couleurs et l'apparence du thème de l'application ici",
+  "guideTrashLocationTitle": "Emplacement de la corbeille",
+  "guideTrashLocationDesc": "La note a été déplacée vers la corbeille\nOuvrez la corbeille dans Paramètres pour la restaurer",
   "apkDownloadTitle": "Télécharger l'APK",
   "apkDownloading": "Téléchargement de ThoughtEcho {version}...",
   "@apkDownloading": {
@@ -3461,10 +3463,59 @@
   "jsonFormatLabel": "Format JSON : {status}",
   "containsHtmlTagsLabel": "Contient des balises HTML : {status}",
   "viewNoteInfo": "Afficher les informations sur les notes",
-  "first100CharsLabel": "100 premiers caractères :"
-  ,"insertImage": "Insert Image",
-  "insertVideo": "Insert Video",
-  "insertAudio": "Insert Audio",
+  "first100CharsLabel": "100 premiers caractères :",
+  "trash": "Corbeille",
+  "trashEmpty": "La corbeille est vide",
+  "trashEmptyHint": "Les notes supprimées par erreur restent d'abord ici, y compris les photos, l'audio et la vidéo, afin que vous puissiez tout restaurer ensemble.",
+  "trashRetentionHint": "Les notes et pièces jointes récemment supprimées restent ici jusqu'à la fin de la période de rétention, puis sont supprimées automatiquement.",
+  "moveNoteToTrashTitle": "Déplacer vers la corbeille",
+  "moveNoteToTrashConfirmation": "Déplacer cette note dans la corbeille ? Vous pourrez la restaurer pendant {days} jours.",
+  "@moveNoteToTrashConfirmation": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "trashRemainingDays": "{days, plural, =0 {Aucun jour restant} one {1 jour restant} other {{days} jours restants}}",
+  "@trashRemainingDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "restoreNote": "Restaurer",
+  "permanentlyDelete": "Supprimer définitivement",
+  "permanentlyDeleteConfirmation": "Cette action est irréversible. La note sera supprimée définitivement.",
+  "emptyTrash": "Vider la corbeille",
+  "emptyTrashConfirmation": "Supprimer définitivement toutes les notes de la corbeille ? Cette action est irréversible.",
+  "noteMovedToTrash": "Note déplacée dans la corbeille. Vous pouvez la restaurer depuis la corbeille",
+  "noteRestored": "Note restaurée",
+  "trashEmptied": "Corbeille vidée",
+  "deletedAt": "Supprimée le {date}",
+  "@deletedAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "trashCount": "Corbeille ({count})",
+  "@trashCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trashRetentionPeriod": "Période de rétention de la corbeille",
+  "trashRetentionOption7Days": "7 jours",
+  "trashRetentionOption30Days": "30 jours",
+  "trashRetentionOption90Days": "90 jours",
+  "insertImage": "Insérer une image",
+  "insertVideo": "Insérer une vidéo",
+  "insertAudio": "Insérer un audio",
   "clipboardFoundHint": "Contenu du presse-papiers trouvé, appuyez pour ajouter comme note",
   "operationFailedSimple": "L'opération a échoué"
 }

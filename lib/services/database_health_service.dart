@@ -136,6 +136,35 @@ class DatabaseHealthService {
     }
   }
 
+  int _readCount(Map<String, Object?> row, String key) {
+    return (row[key] as num?)?.toInt() ?? 0;
+  }
+
+  Future<({int total, int active, int deleted})> _getQuoteCounts(
+    Database db,
+  ) async {
+    final hasDeletedColumn =
+        await checkColumnExists(db, 'quotes', 'is_deleted');
+    if (!hasDeletedColumn) {
+      final result = await db.rawQuery('SELECT COUNT(*) as total FROM quotes');
+      final total = _readCount(result.first, 'total');
+      return (total: total, active: total, deleted: 0);
+    }
+
+    final result = await db.rawQuery('''
+      SELECT
+        COUNT(*) as total,
+        SUM(CASE WHEN is_deleted = 0 OR is_deleted IS NULL THEN 1 ELSE 0 END) as active,
+        SUM(CASE WHEN is_deleted = 1 THEN 1 ELSE 0 END) as deleted
+      FROM quotes
+    ''');
+    return (
+      total: _readCount(result.first, 'total'),
+      active: _readCount(result.first, 'active'),
+      deleted: _readCount(result.first, 'deleted'),
+    );
+  }
+
   /// 启动时执行数据库健康检查
   Future<void> performStartupHealthCheck(Database db) async {
     if (kIsWeb) {
@@ -155,10 +184,10 @@ class DatabaseHealthService {
       final dbVersion = await db.getVersion();
 
       // 3. 获取基本统计
-      final quoteCountResult = await db.rawQuery(
-        'SELECT COUNT(*) as count FROM quotes',
-      );
-      final quoteCount = quoteCountResult.first['count'] as int;
+      final quoteCounts = await _getQuoteCounts(db);
+      final quoteCount = quoteCounts.total;
+      final activeQuoteCount = quoteCounts.active;
+      final deletedQuoteCount = quoteCounts.deleted;
 
       final categoryCountResult = await db.rawQuery(
         'SELECT COUNT(*) as count FROM categories',
@@ -177,7 +206,7 @@ class DatabaseHealthService {
 ========================================
 版本: v$dbVersion
 外键约束: ${foreignKeysEnabled ? '✅ 已启用' : '⚠️ 未启用'}
-笔记数量: $quoteCount
+笔记数量: $quoteCount (活跃 $activeQuoteCount / 回收站 $deletedQuoteCount)
 分类数量: $categoryCount
 标签关联: $tagRelationCount
 ========================================
@@ -336,6 +365,15 @@ class DatabaseHealthService {
 
       List<Map<String, dynamic>> results = [];
 
+      // 兼容迁移前/半迁移状态：先检查 is_deleted 列是否存在
+      final hasDeletedColumn =
+          await checkColumnExists(db, 'quotes', 'is_deleted');
+      final deletedFilter = hasDeletedColumn
+          ? 'AND (q.is_deleted = 0 OR q.is_deleted IS NULL)'
+          : '';
+      final deletedFilterSimple =
+          hasDeletedColumn ? 'AND (is_deleted = 0 OR is_deleted IS NULL)' : '';
+
       if (offlineQuoteSource == 'tagOnly') {
         // 简化查询：直接用 tag_id 匹配，跳过 categories 表 JOIN
         // 这样更快且避免了潜在的 categories 表数据不一致问题
@@ -345,18 +383,19 @@ class DatabaseHealthService {
           INNER JOIN quote_tags qt ON q.id = qt.quote_id
           WHERE qt.tag_id = ?
             AND length(q.content) <= $_maxOfflineQuoteLength
-            AND (q.is_deleted = 0 OR q.is_deleted IS NULL)
+            $deletedFilter
           ORDER BY RANDOM()
           LIMIT 1
         ''',
           [dailyQuoteTagId],
         );
       } else {
+        // allNotes 模式：全局随机抽取
         results = await db.rawQuery('''
           SELECT * FROM quotes
           WHERE length(content) <= $_maxOfflineQuoteLength
             AND content NOT LIKE '%\n%'
-            AND (is_deleted = 0 OR is_deleted IS NULL)
+            $deletedFilterSimple
           ORDER BY RANDOM()
           LIMIT 1
         ''');
@@ -470,7 +509,14 @@ class DatabaseHealthService {
         'platform': 'web',
         'db_size_mb': 0.0,
         'quote_count': webQuoteCount,
+        'active_quote_count': webQuoteCount,
+        'deleted_quote_count': 0,
         'category_count': webCategoryCount,
+        'tag_relation_count': 0,
+        'foreign_keys_enabled': false,
+        'journal_mode': 'memory',
+        'cache_hit_rate': _totalQueries > 0 ? _cacheHits / _totalQueries : 0.0,
+        'total_queries': _totalQueries,
       };
     }
 
@@ -487,10 +533,10 @@ class DatabaseHealthService {
       }
 
       // 获取记录数量
-      final quoteCountResult = await db.rawQuery(
-        'SELECT COUNT(*) as count FROM quotes',
-      );
-      final quoteCount = quoteCountResult.first['count'] as int;
+      final quoteCounts = await _getQuoteCounts(db);
+      final quoteCount = quoteCounts.total;
+      final activeQuoteCount = quoteCounts.active;
+      final deletedQuoteCount = quoteCounts.deleted;
 
       final categoryCountResult = await db.rawQuery(
         'SELECT COUNT(*) as count FROM categories',
@@ -514,6 +560,8 @@ class DatabaseHealthService {
         'platform': Platform.operatingSystem,
         'db_size_mb': dbSizeMb,
         'quote_count': quoteCount,
+        'active_quote_count': activeQuoteCount,
+        'deleted_quote_count': deletedQuoteCount,
         'category_count': categoryCount,
         'tag_relation_count': tagRelationCount,
         'foreign_keys_enabled': foreignKeysEnabled,
@@ -539,20 +587,24 @@ class DatabaseHealthService {
       if (offlineQuoteSource == 'tagOnly') {
         candidates = memoryStore
             .where(
-              (quote) => isEligibleOfflineQuoteContent(
-                quote.content,
-                offlineQuoteSource: offlineQuoteSource,
-                requiresHitokotoTag: quote.tagIds.contains(dailyQuoteTagId),
-              ),
+              (quote) =>
+                  isEligibleOfflineQuoteContent(
+                    quote.content,
+                    offlineQuoteSource: offlineQuoteSource,
+                    requiresHitokotoTag: quote.tagIds.contains(dailyQuoteTagId),
+                  ) &&
+                  !quote.isDeleted,
             )
             .toList();
       } else {
         candidates = memoryStore
             .where(
-              (quote) => isEligibleOfflineQuoteContent(
-                quote.content,
-                offlineQuoteSource: offlineQuoteSource,
-              ),
+              (quote) =>
+                  isEligibleOfflineQuoteContent(
+                    quote.content,
+                    offlineQuoteSource: offlineQuoteSource,
+                  ) &&
+                  !quote.isDeleted,
             )
             .toList();
       }

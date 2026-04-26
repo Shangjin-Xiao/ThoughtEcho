@@ -8,6 +8,7 @@ import '../models/multi_ai_settings.dart'; // 新增 MultiAISettings 导入
 import '../models/local_ai_settings.dart'; // 新增 LocalAISettings 导入
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/services/api_key_manager.dart';
+import '../utils/lww_utils.dart';
 
 import '../services/mmkv_service.dart';
 import 'excerpt_intent_service.dart';
@@ -70,6 +71,112 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  int get trashRetentionDays => _appSettings.trashRetentionDays;
+  String? get trashRetentionLastModified =>
+      _appSettings.trashRetentionLastModified;
+
+  Future<void> setTrashRetentionDays(
+    int days, {
+    DateTime? modifiedAt,
+  }) async {
+    final normalizedDays = AppSettings.normalizeTrashRetentionDays(days);
+    final modified = (modifiedAt ?? DateTime.now()).toUtc().toIso8601String();
+    _appSettings = _appSettings.copyWith(
+      trashRetentionDays: normalizedDays,
+      trashRetentionLastModified: modified,
+    );
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  Future<bool> applyIncomingTrashSettings(
+    Map<String, dynamic>? incoming,
+  ) async {
+    if (incoming == null) {
+      return false;
+    }
+
+    if (!incoming.containsKey('retention_days')) {
+      return false;
+    }
+
+    final dynamic rawDays = incoming['retention_days'];
+    int? parsedDays;
+    if (rawDays is int) {
+      parsedDays = rawDays;
+    } else if (rawDays is num) {
+      if (rawDays != rawDays.toInt()) {
+        logWarning(
+          '忽略非整数的回收站保留期: $rawDays',
+          source: 'SettingsService',
+        );
+        return false;
+      }
+      parsedDays = rawDays.toInt();
+    } else if (rawDays is String) {
+      parsedDays = int.tryParse(rawDays);
+    }
+
+    if (parsedDays == null) {
+      return false;
+    }
+
+    if (!AppSettings.allowedTrashRetentionDays.contains(parsedDays)) {
+      logWarning(
+        '忽略非法的回收站保留期: $parsedDays',
+        source: 'SettingsService',
+      );
+      return false;
+    }
+
+    final incomingDays = AppSettings.normalizeTrashRetentionDays(parsedDays);
+    final incomingLastModified = incoming['last_modified']?.toString();
+    String? normalizedIncomingTimestamp;
+    if (incomingLastModified != null && incomingLastModified.isNotEmpty) {
+      if (!LWWUtils.isValidTimestamp(incomingLastModified)) {
+        logWarning(
+          '忽略无效的回收站保留期时间戳: $incomingLastModified',
+          source: 'SettingsService',
+        );
+        return false;
+      }
+      normalizedIncomingTimestamp =
+          LWWUtils.normalizeTimestamp(incomingLastModified);
+    } else {
+      // 输入无时间戳：只有本地也无时间戳时才接受（直接赋值），否则跳过
+      final localLastModified = _appSettings.trashRetentionLastModified;
+      final hasLocalTimestamp =
+          localLastModified != null && localLastModified.isNotEmpty;
+      if (hasLocalTimestamp) {
+        // 本地有时间戳，远端无时间戳 → 跳过导入
+        return false;
+      }
+      // 本地也无时间戳 → 直接接受输入值，不设置时间戳
+      _appSettings = _appSettings.copyWith(trashRetentionDays: incomingDays);
+      await _mmkv.setString(
+          _appSettingsKey, json.encode(_appSettings.toJson()));
+      notifyListeners();
+      return true;
+    }
+
+    final decision = LWWDecisionMaker.makeDecision(
+      localTimestamp: _appSettings.trashRetentionLastModified,
+      remoteTimestamp: normalizedIncomingTimestamp,
+    );
+
+    if (!decision.shouldUseRemote) {
+      return false;
+    }
+
+    _appSettings = _appSettings.copyWith(
+      trashRetentionDays: incomingDays,
+      trashRetentionLastModified: normalizedIncomingTimestamp,
+    );
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+    return true;
+  }
+
   // 折叠时优先显示加粗内容
   bool get prioritizeBoldContentInCollapse =>
       _appSettings.prioritizeBoldContentInCollapse;
@@ -113,14 +220,6 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // 是否显示精确时间（时:分）
-  bool get showExactTime => _appSettings.showExactTime;
-  Future<void> setShowExactTime(bool enabled) async {
-    _appSettings = _appSettings.copyWith(showExactTime: enabled);
-    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
-    notifyListeners();
-  }
-
   // 是否显示笔记编辑时间
   bool get showNoteEditTime => _appSettings.showNoteEditTime;
   Future<void> setShowNoteEditTime(bool enabled) async {
@@ -133,6 +232,14 @@ class SettingsService extends ChangeNotifier {
   String get offlineQuoteSource => _appSettings.offlineQuoteSource;
   Future<void> setOfflineQuoteSource(String source) async {
     _appSettings = _appSettings.copyWith(offlineQuoteSource: source);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  // 是否显示精确时间（时:分）
+  bool get showExactTime => _appSettings.showExactTime;
+  Future<void> setShowExactTime(bool enabled) async {
+    _appSettings = _appSettings.copyWith(showExactTime: enabled);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
     notifyListeners();
   }

@@ -1,11 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:thoughtecho/services/database_service.dart';
+import '../../test_setup.dart';
 
 void main() {
-  TestWidgetsFlutterBinding.ensureInitialized();
-  sqfliteFfiInit();
-  databaseFactory = databaseFactoryFfi;
+  setUpAll(() async {
+    await setupTestEnvironment();
+  });
 
   group('getQuotesForSmartPush Security Tests', () {
     late DatabaseService databaseService;
@@ -35,6 +36,8 @@ void main() {
           day_period TEXT,
           last_modified TEXT,
           favorite_count INTEGER,
+          is_deleted INTEGER DEFAULT 0,
+          deleted_at TEXT,
           delta_content TEXT,
           ai_analysis TEXT,
           summary TEXT,
@@ -96,6 +99,24 @@ void main() {
 
       expect(results.length, 1);
       expect(results.first.id, '1');
+    });
+
+    test('includeDeleted should preserve deleted metadata', () async {
+      await db.insert('quotes', {
+        'id': '3',
+        'content': 'Deleted quote',
+        'date': '2023-01-03T00:00:00Z',
+        'is_deleted': 1,
+        'deleted_at': '2023-01-04T00:00:00Z',
+      });
+
+      final results = await databaseService.getQuotesForSmartPush(
+        limit: 10,
+        includeDeleted: true,
+      );
+      final deletedQuote = results.firstWhere((quote) => quote.id == '3');
+      expect(deletedQuote.isDeleted, isTrue);
+      expect(deletedQuote.deletedAt, '2023-01-04T00:00:00Z');
     });
   });
 }

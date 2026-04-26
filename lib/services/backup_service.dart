@@ -245,6 +245,7 @@ class BackupService {
       // 先获取总数用于进度计算
       final allQuotesCount = await _databaseService.getQuotesCount(
         excludeHiddenNotes: false,
+        includeDeleted: true,
       );
 
       while (true) {
@@ -254,6 +255,7 @@ class BackupService {
           offset: offset,
           limit: pageSize,
           excludeHiddenNotes: false, // 备份包含隐藏笔记
+          includeDeleted: true,
         );
 
         if (quotes.isEmpty) break;
@@ -309,7 +311,16 @@ class BackupService {
         await Future.delayed(const Duration(milliseconds: 1));
       }
 
-      sink.write(']},'); // 关闭 quotes 数组和 notes 对象
+      final tombstones = await _databaseService.getTombstonesForBackup();
+      sink.write('],');
+      sink.write('"tombstones":${jsonEncode(tombstones)}');
+
+      final trashSettings = {
+        'retention_days': _settingsService.trashRetentionDays,
+        'last_modified': _settingsService.trashRetentionLastModified,
+      };
+      sink.write(',"trash_settings":${jsonEncode(trashSettings)}');
+      sink.write('},');
 
       cancelToken?.throwIfCancelled();
       onProgress?.call(0.85);
@@ -457,9 +468,22 @@ class BackupService {
       cancelToken?.throwIfCancelled();
 
       // 恢复笔记数据
-      if (backupData.containsKey('notes')) {
+      Map<String, dynamic>? notesData;
+      final rawNotes = backupData['notes'];
+      if (rawNotes is Map && rawNotes.isNotEmpty) {
+        notesData = Map<String, dynamic>.from(rawNotes);
+      } else if (backupData['quotes'] is List ||
+          backupData['categories'] is List) {
+        notesData = <String, dynamic>{
+          'categories': backupData['categories'] ?? <dynamic>[],
+          'quotes': backupData['quotes'] ?? <dynamic>[],
+          if (backupData['tombstones'] is List)
+            'tombstones': backupData['tombstones'],
+        };
+      }
+
+      if (notesData != null) {
         logDebug('恢复笔记数据...');
-        var notesData = Map<String, dynamic>.from(backupData['notes']);
 
         // 检查是否包含媒体文件
         final hasMediaFiles = await _checkBackupHasMediaFiles(backupData);
@@ -969,11 +993,36 @@ class BackupService {
         }
       }
 
+      final notesData = backupData['notes'];
+      final rawTrashSettings = notesData is Map<String, dynamic>
+          ? notesData['trash_settings']
+          : null;
+      final incomingTrashSettings =
+          rawTrashSettings is Map<String, dynamic> ? rawTrashSettings : null;
+
       // 使用LWW策略合并数据
-      return await _databaseService.importDataWithLWWMerge(
+      final report = await _databaseService.importDataWithLWWMerge(
         backupData.containsKey('notes') ? backupData['notes'] : backupData,
         sourceDevice: sourceDevice,
       );
+
+      // 数据库合并成功后，尝试应用设置
+      // 设置应用失败不应阻止整体导入成功，仅记录警告
+      if (incomingTrashSettings != null) {
+        try {
+          await _settingsService
+              .applyIncomingTrashSettings(incomingTrashSettings);
+        } catch (settingsError, settingsStackTrace) {
+          logError(
+            '应用回收站设置失败（数据已成功导入）: $settingsError',
+            error: settingsError,
+            stackTrace: settingsStackTrace,
+            source: 'BackupService',
+          );
+          // 不添加错误到报告，因为核心数据已成功导入
+        }
+      }
+      return report;
     } catch (e) {
       logError('LWW导入过程出错: $e', error: e, source: 'BackupService');
       final report = MergeReport.start(sourceDevice: sourceDevice);

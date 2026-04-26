@@ -182,18 +182,26 @@ mixin _DatabaseHiddenTagMixin on _DatabaseServiceBase {
     try {
       if (kIsWeb) {
         return _memoryStore
-            .where((q) => q.tagIds.contains(_DatabaseServiceBase.hiddenTagId))
+            .where(
+              (q) =>
+                  !q.isDeleted &&
+                  q.tagIds.contains(_DatabaseServiceBase.hiddenTagId),
+            )
             .map((q) => q.id ?? '')
             .where((id) => id.isNotEmpty)
             .toList();
       }
 
       final db = database;
-      final result = await db.query(
-        'quote_tags',
-        columns: ['quote_id'],
-        where: 'tag_id = ?',
-        whereArgs: [_DatabaseServiceBase.hiddenTagId],
+      final result = await db.rawQuery(
+        '''
+        SELECT qt.quote_id
+        FROM quote_tags qt
+        INNER JOIN quotes q ON qt.quote_id = q.id
+        WHERE qt.tag_id = ?
+          AND (q.is_deleted = 0 OR q.is_deleted IS NULL)
+        ''',
+        [_DatabaseServiceBase.hiddenTagId],
       );
       return result.map((row) => row['quote_id'] as String).toList();
     } catch (e) {

@@ -1,5 +1,8 @@
 import 'package:thoughtecho/services/backup_service.dart';
 
+/// 备份进度阶段常量。
+///
+/// 每个阶段对应 [BackupService] 中的进度边界值。
 class BackupProgressStages {
   static const String collect = 'collect';
   static const String note = 'note';
@@ -25,6 +28,11 @@ String resolveBackupStageKey(int progressPercent) {
   return BackupProgressStages.verify;
 }
 
+/// 备份进度更新节流门控。
+///
+/// **注意**：此类是有状态的工具类，保留在 `lib/utils/` 是因为它是专门用于
+/// 备份进度回调的节流辅助，不包含业务逻辑，只负责决定是否应该发送 UI 更新。
+/// 每次备份操作应创建新实例或调用 [reset] 方法。
 class BackupProgressUpdateGate {
   BackupProgressUpdateGate({
     this.minUpdateInterval = const Duration(milliseconds: 80),

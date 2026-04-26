@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:meta/meta.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
@@ -187,6 +188,52 @@ class MediaReferenceService {
     } catch (e) {
       logDebug('获取笔记引用的媒体文件失败: $e');
       return [];
+    }
+  }
+
+  /// 批量获取多个笔记引用的媒体文件
+  static Future<Map<String, List<String>>> getReferencedFilesBatch(
+    Iterable<String> quoteIds,
+  ) async {
+    const int maxChunkSize = 900;
+    final uniqueIds = quoteIds.where((id) => id.isNotEmpty).toSet().toList();
+    if (uniqueIds.isEmpty) {
+      return {};
+    }
+
+    try {
+      final db = await database;
+      final grouped = <String, List<String>>{};
+
+      for (var start = 0; start < uniqueIds.length; start += maxChunkSize) {
+        final end = math.min(start + maxChunkSize, uniqueIds.length);
+        final chunk = uniqueIds.sublist(start, end);
+        final placeholders = List.filled(chunk.length, '?').join(',');
+        final result = await db.query(
+          _tableName,
+          columns: ['quote_id', 'file_path'],
+          where: 'quote_id IN ($placeholders)',
+          whereArgs: chunk,
+        );
+
+        for (final row in result) {
+          final quoteId = row['quote_id'] as String?;
+          final filePath = row['file_path'] as String?;
+          if (quoteId == null || filePath == null) {
+            continue;
+          }
+          grouped.putIfAbsent(quoteId, () => <String>[]).add(filePath);
+        }
+      }
+      return grouped;
+    } catch (e, stackTrace) {
+      logError(
+        '批量获取笔记引用的媒体文件失败: $e',
+        error: e,
+        stackTrace: stackTrace,
+        source: 'MediaReferenceService',
+      );
+      rethrow;
     }
   }
 
@@ -447,8 +494,10 @@ class MediaReferenceService {
       _collectQuoteReferenceIndex() async {
     final databaseService = DatabaseService();
     // 媒体引用索引需要包含所有笔记（包括隐藏笔记）
-    final quotes =
-        await databaseService.getAllQuotes(excludeHiddenNotes: false);
+    final quotes = await databaseService.getAllQuotes(
+      excludeHiddenNotes: false,
+      includeDeleted: true,
+    );
 
     final index = <String, Map<String, Set<String>>>{};
 
@@ -497,6 +546,7 @@ class MediaReferenceService {
         offset: offset,
         limit: pageSize,
         excludeHiddenNotes: false,
+        includeDeleted: true,
       );
       if (quotes.isEmpty) break;
 
@@ -628,9 +678,12 @@ class MediaReferenceService {
 
       // 2. 二次确认：即使引用表说没有，也从笔记内容中全文搜索一次（防止引用表损坏/不同步导致的误删）
       // 注意：这步对于数据安全至关重要
+      // 修复：搜索所有笔记（含回收站），避免误删仍可恢复笔记引用的媒体
       final dbService = DatabaseService();
-      final quotesWithFile =
-          await dbService.searchQuotesByContent(normalizedPath);
+      final quotesWithFile = await dbService.searchQuotesByContent(
+        normalizedPath,
+        includeDeleted: true,
+      );
 
       if (quotesWithFile.isNotEmpty) {
         logDebug(
@@ -1009,6 +1062,7 @@ class MediaReferenceService {
           offset: offset,
           limit: pageSize,
           excludeHiddenNotes: false,
+          includeDeleted: true,
         );
         if (quotes.isEmpty) break;
 

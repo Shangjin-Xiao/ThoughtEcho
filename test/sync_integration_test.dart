@@ -101,20 +101,20 @@ void main() {
       // Mock数据库服务
       when(mockDatabaseService.getAllQuotes()).thenAnswer(
         (_) async => [
-          const Quote(
+          Quote(
             id: 'quote1',
             content: 'Test quote 1',
             date: '2024-01-01T00:00:00.000Z',
             categoryId: 'cat1',
-            tagIds: [],
+            tagIds: const [],
           ),
-          const Quote(
+          Quote(
             id: 'quote2',
             content: 'Test quote 1', // 重复内容
             // 使用固定时间避免时间依赖 (早于 quote1 的 2024-01-01T00:00:00.000Z)
             date: '2023-12-31T23:59:59.000Z',
             categoryId: 'cat1',
-            tagIds: [],
+            tagIds: const [],
           ),
         ],
       );

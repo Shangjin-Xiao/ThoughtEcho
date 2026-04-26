@@ -162,7 +162,7 @@
     </tr>
     <tr>
       <td align="center"><b>平台适配</b></td>
-      <td>Windows、Android、iOS全平台支持</td>
+      <td>Windows、Android、iOS全平台支持（不支持 Web）</td>
     </tr>
   </table>
 </div>
@@ -422,7 +422,7 @@
     </tr>
     <tr>
       <td align="center"><b>Platform Support</b></td>
-      <td>Windows, Android, iOS full platform support</td>
+      <td>Supports Windows, Android, and iOS (Web is not supported)</td>
     </tr>
   </table>
 </div>

@@ -89,11 +89,13 @@ class _HomePageState extends State<HomePage>
   final GlobalKey _noteFavoriteGuideKey = GlobalKey();
   final GlobalKey _noteMoreGuideKey = GlobalKey(); // 功能引导：更多按钮 Key
   final GlobalKey _noteFoldGuideKey = GlobalKey();
+  final GlobalKey _settingsTabGuideKey = GlobalKey(); // 功能引导：设置标签 Key（用于回收站引导）
   final GlobalKey<SettingsPageState> _settingsPageKey =
       GlobalKey<SettingsPageState>();
   bool _homeGuidePending = false;
   bool _noteGuidePending = false;
   bool _settingsGuidePending = false;
+  bool _trashGuideScheduled = false;
   String? _lastConsumedExcerptText;
   bool _isHandlingExcerptIntent = false;
   bool _hasConsumedInitialHighlightedNote = false;
@@ -398,8 +400,18 @@ class _HomePageState extends State<HomePage>
             final updatedQuote = quote.copyWith(
               location: resolvedAddress,
             );
-            await dbService.updateQuote(updatedQuote);
-            updatedCount++;
+            final updateResult = await dbService.updateQuote(updatedQuote);
+            switch (updateResult) {
+              case QuoteUpdateResult.updated:
+                updatedCount++;
+                break;
+              case QuoteUpdateResult.notFound:
+                logWarning('回溯更新离线笔记位置时笔记不存在: ${quote.id}');
+                break;
+              case QuoteUpdateResult.skippedDeleted:
+                logWarning('回溯更新离线笔记位置时笔记已删除: ${quote.id}');
+                break;
+            }
           }
         }
 
@@ -993,6 +1005,30 @@ class _HomePageState extends State<HomePage>
     });
   }
 
+  void _scheduleTrashLocationGuide() {
+    if (!mounted) return;
+    if (_trashGuideScheduled) return;
+    if (FeatureGuideHelper.hasShown(context, 'trash_location_guide')) {
+      return;
+    }
+
+    _trashGuideScheduled = true;
+    Future.delayed(const Duration(milliseconds: 1200), () {
+      if (!mounted) {
+        _trashGuideScheduled = false;
+        return;
+      }
+      FeatureGuideHelper.show(
+        context: context,
+        guideId: 'trash_location_guide',
+        targetKey: _settingsTabGuideKey,
+        autoDismissDuration: const Duration(milliseconds: 3000),
+        shouldShow: () => mounted,
+      );
+      _trashGuideScheduled = false;
+    });
+  }
+
   /// 显示首页功能引导
   Future<void> _showHomePageGuides() {
     return FeatureGuideHelper.show(
@@ -1430,34 +1466,86 @@ class _HomePageState extends State<HomePage>
 
   // 显示删除确认对话框
   void _showDeleteConfirmDialog(Quote quote) {
+    final pageContext = context;
+    final l10n = AppLocalizations.of(context);
+    final retentionDays = context.read<SettingsService>().trashRetentionDays;
+    final messenger = ScaffoldMessenger.of(pageContext);
+
     showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(AppLocalizations.of(context).deleteNote),
-        content: Text(AppLocalizations.of(context).deleteNoteConfirmation),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(AppLocalizations.of(context).cancel),
+      context: pageContext,
+      builder: (dialogContext) {
+        var isDeleting = false;
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) => AlertDialog(
+            title: Text(l10n.moveNoteToTrashTitle),
+            content: Text(l10n.moveNoteToTrashConfirmation(retentionDays)),
+            actions: [
+              TextButton(
+                onPressed: isDeleting
+                    ? null
+                    : () {
+                        Navigator.pop(dialogContext);
+                      },
+                child: Text(l10n.cancel),
+              ),
+              TextButton(
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                onPressed: isDeleting
+                    ? null
+                    : () async {
+                        setDialogState(() {
+                          isDeleting = true;
+                        });
+                        final db = Provider.of<DatabaseService>(
+                          pageContext,
+                          listen: false,
+                        );
+                        try {
+                          await db.deleteQuote(quote.id!);
+                          if (!dialogContext.mounted || !pageContext.mounted) {
+                            return;
+                          }
+                          Navigator.pop(dialogContext);
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(l10n.noteMovedToTrash),
+                              duration: const Duration(seconds: 1),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          // 显示回收站位置引导（仅第一次删除笔记时）
+                          _scheduleTrashLocationGuide();
+                        } catch (e, stackTrace) {
+                          logError(
+                            '移动笔记到回收站失败: $e',
+                            error: e,
+                            stackTrace: stackTrace,
+                            source: 'HomePage',
+                          );
+                          if (!dialogContext.mounted || !pageContext.mounted) {
+                            return;
+                          }
+                          Navigator.pop(dialogContext);
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(l10n.deleteFailed(e.toString())),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      },
+                child: isDeleting
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(l10n.delete),
+              ),
+            ],
           ),
-          TextButton(
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            onPressed: () {
-              final db = Provider.of<DatabaseService>(context, listen: false);
-              db.deleteQuote(quote.id!);
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(AppLocalizations.of(context).noteDeleted),
-                  duration: const Duration(seconds: 1),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-            child: Text(AppLocalizations.of(context).delete),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -2388,6 +2476,7 @@ class _HomePageState extends State<HomePage>
                     label: AppLocalizations.of(context).navInsights,
                   ),
                   NavigationDestination(
+                    key: _settingsTabGuideKey, // 功能引导 key
                     icon: const Icon(Icons.settings_outlined),
                     selectedIcon: Icon(
                       Icons.settings,

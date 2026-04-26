@@ -84,6 +84,10 @@ class FeatureGuide {
       placement: FeatureGuidePlacement.right,
       offset: Offset(-30, 10), // 右侧偏下一点
     ),
+    'trash_location_guide': FeatureGuideConfig(
+      placement: FeatureGuidePlacement.above,
+      offset: Offset(0, -10), // 上方偏移一点
+    ),
   };
 
   /// 获取指定 guideId 的本地化标题
@@ -114,6 +118,8 @@ class FeatureGuide {
         return l10n.guideSettingsStartupTitle;
       case 'settings_theme':
         return l10n.guideSettingsThemeTitle;
+      case 'trash_location_guide':
+        return l10n.guideTrashLocationTitle;
       default:
         return '';
     }
@@ -147,6 +153,8 @@ class FeatureGuide {
         return l10n.guideSettingsStartupDesc;
       case 'settings_theme':
         return l10n.guideSettingsThemeDesc;
+      case 'trash_location_guide':
+        return l10n.guideTrashLocationDesc;
       default:
         return '';
     }

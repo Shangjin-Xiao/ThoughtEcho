@@ -1,7 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/utils/backup_progress_update_gate.dart';
+import '../../test_setup.dart';
 
 void main() {
+  setUp(() async {
+    await setupTestEnvironment();
+  });
+
   group('BackupProgressUpdateGate', () {
     test('always allows first progress update', () {
       final gate = BackupProgressUpdateGate(
