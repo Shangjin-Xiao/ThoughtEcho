@@ -2205,7 +2205,11 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                         ),
                       ),
                     ),
-                    onPressed: _isLoadingFullQuote ? null : _saveAndExit,
+                    onPressed: _isLoadingFullQuote ? null : () async {
+                      if (_contentController.text.isNotEmpty) {
+                        await _saveAndExit();
+                      }
+                    },
                     child: _isLoadingFullQuote
                         ? const SizedBox(
                             width: 20,
