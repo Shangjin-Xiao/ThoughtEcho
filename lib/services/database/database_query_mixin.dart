@@ -16,6 +16,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     bool excludeHiddenNotes = true, // 默认排除隐藏笔记
     String? dateStart,
     String? dateEnd,
+    bool includeDeleted = false,
   }) async {
     try {
       // 修复：确保数据库已完全初始化
@@ -48,6 +49,10 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
                 (q) => !q.tagIds.contains(_DatabaseServiceBase.hiddenTagId),
               )
               .toList();
+        }
+
+        if (!includeDeleted) {
+          filtered = filtered.where((q) => !q.isDeleted).toList();
         }
 
         if (tagIds != null && tagIds.isNotEmpty) {
@@ -164,6 +169,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
           excludeHiddenNotes: shouldExcludeHidden,
           dateStart: dateStart,
           dateEnd: dateEnd,
+          includeDeleted: includeDeleted,
         );
       });
     } catch (e) {
@@ -269,6 +275,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
     bool excludeHiddenNotes = true,
     String? dateStart,
     String? dateEnd,
+    bool includeDeleted = false,
   }) async {
     // 修复：添加数据库连接状态检查
     if (!db.isOpen) {
@@ -292,6 +299,10 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
         )
       ''');
       args.add(_DatabaseServiceBase.hiddenTagId);
+    }
+
+    if (!includeDeleted) {
+      conditions.add('(q.is_deleted = 0 OR q.is_deleted IS NULL)');
     }
 
     // 分类筛选
@@ -377,7 +388,7 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
         q.id, q.content, q.date, q.source, q.source_author, q.source_work,
         q.category_id, q.color_hex, q.location, q.latitude, q.longitude,
         q.weather, q.temperature, q.edit_source, q.delta_content, q.day_period,
-        q.last_modified, q.favorite_count,
+        q.last_modified, q.favorite_count, q.is_deleted, q.deleted_at,
         (SELECT GROUP_CONCAT(tag_id) FROM quote_tags WHERE quote_id = q.id) as tag_ids
       $fromClause
       $joinClause

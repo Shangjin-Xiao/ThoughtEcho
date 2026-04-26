@@ -7,6 +7,7 @@ void main() {
     final done = start
         .addInsertedQuote()
         .addUpdatedQuote()
+        .addDeletedQuote()
         .addSkippedQuote()
         .addSameTimestampDiffQuote()
         .addInsertedCategory()
@@ -16,6 +17,7 @@ void main() {
 
     expect(done.insertedQuotes, 1);
     expect(done.updatedQuotes, 1);
+    expect(done.deletedQuotes, 1);
     expect(done.skippedQuotes, 1);
     expect(done.sameTimestampDiffQuotes, 1);
     expect(done.insertedCategories, 1);
@@ -24,5 +26,6 @@ void main() {
     expect(done.appliedQuotes, 2); // inserted + updated
     expect(done.appliedCategories, 2); // inserted + updated
     expect(done.totalApplied, 4);
+    expect(done.totalProcessedQuotes, 5);
   });
 }

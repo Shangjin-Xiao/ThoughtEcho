@@ -69,12 +69,13 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
     Map<String, dynamic> quoteData,
   ) {
     return {
-      'content': quoteData['hitokoto'] ?? '',
-      'source': quoteData['from'] ?? '',
-      'author': quoteData['from_who'] ?? '',
+      'content': quoteData['hitokoto'] ?? quoteData['content'] ?? '',
+      'source': quoteData['from'] ?? quoteData['source'] ?? '',
+      'author': quoteData['from_who'] ?? quoteData['author'] ?? '',
       'type': quoteData['type'] ?? 'a',
-      'from_who': quoteData['from_who'] ?? '',
-      'from': quoteData['from'] ?? '',
+      'from_who': quoteData['from_who'] ?? quoteData['author'] ?? '',
+      'from': quoteData['from'] ?? quoteData['source'] ?? '',
+      'provider': quoteData['provider'] ?? '',
     };
   }
 
@@ -111,6 +112,8 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
       );
 
       final hitokotoType = settingsService.appSettings.hitokotoType;
+      final dailyQuoteProvider = settingsService.dailyQuoteProvider;
+      final apiNinjasCategories = settingsService.apiNinjasCategories;
       final useLocalOnly = settingsService.appSettings.useLocalQuotesOnly;
       final offlineQuoteSource = settingsService.offlineQuoteSource;
       final isConnected = connectivityService.isConnected;
@@ -168,6 +171,8 @@ class DailyQuoteViewState extends State<DailyQuoteView> {
         useLocalOnly: useLocalOnly,
         offlineQuoteSource: offlineQuoteSource,
         databaseService: databaseService,
+        provider: dailyQuoteProvider,
+        apiNinjasCategories: apiNinjasCategories,
       );
 
       if (mounted) {

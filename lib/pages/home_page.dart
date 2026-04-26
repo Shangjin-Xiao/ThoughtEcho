@@ -91,14 +91,19 @@ class _HomePageState extends State<HomePage>
   final GlobalKey _noteFavoriteGuideKey = GlobalKey();
   final GlobalKey _noteMoreGuideKey = GlobalKey(); // 功能引导：更多按钮 Key
   final GlobalKey _noteFoldGuideKey = GlobalKey();
+  final GlobalKey _settingsTabGuideKey = GlobalKey(); // 功能引导：设置标签 Key（用于回收站引导）
   final GlobalKey<SettingsPageState> _settingsPageKey =
       GlobalKey<SettingsPageState>();
   bool _homeGuidePending = false;
   bool _noteGuidePending = false;
   bool _settingsGuidePending = false;
+  bool _trashGuideScheduled = false;
   String? _lastConsumedExcerptText;
   bool _isHandlingExcerptIntent = false;
   bool _hasConsumedInitialHighlightedNote = false;
+  bool _isConsumingInitialHighlightedNote = false;
+  int _initialHighlightRetryCount = 0;
+  static const int _maxInitialHighlightRetries = 8;
 
   // AI卡片生成服务
   AICardGenerationService? _aiCardService;
@@ -413,8 +418,18 @@ class _HomePageState extends State<HomePage>
             final updatedQuote = quote.copyWith(
               location: resolvedAddress,
             );
-            await dbService.updateQuote(updatedQuote);
-            updatedCount++;
+            final updateResult = await dbService.updateQuote(updatedQuote);
+            switch (updateResult) {
+              case QuoteUpdateResult.updated:
+                updatedCount++;
+                break;
+              case QuoteUpdateResult.notFound:
+                logWarning('回溯更新离线笔记位置时笔记不存在: ${quote.id}');
+                break;
+              case QuoteUpdateResult.skippedDeleted:
+                logWarning('回溯更新离线笔记位置时笔记已删除: ${quote.id}');
+                break;
+            }
           }
         }
 
@@ -913,7 +928,10 @@ class _HomePageState extends State<HomePage>
   }
 
   void _consumeInitialHighlightedNote() {
-    if (!mounted || _hasConsumedInitialHighlightedNote || _currentIndex != 1) {
+    if (!mounted ||
+        _hasConsumedInitialHighlightedNote ||
+        _isConsumingInitialHighlightedNote ||
+        _currentIndex != 1) {
       return;
     }
 
@@ -933,8 +951,45 @@ class _HomePageState extends State<HomePage>
       return;
     }
 
-    _hasConsumedInitialHighlightedNote = true;
-    noteListState.scrollToQuoteById(noteId);
+    _isConsumingInitialHighlightedNote = true;
+    unawaited(_attemptInitialHighlightedNote(noteListState, noteId));
+  }
+
+  Future<void> _attemptInitialHighlightedNote(
+    NoteListViewState noteListState,
+    String noteId,
+  ) async {
+    final success = await noteListState.scrollToQuoteById(noteId);
+    if (!mounted || widget.initialHighlightedNoteId != noteId) {
+      _isConsumingInitialHighlightedNote = false;
+      return;
+    }
+
+    if (success) {
+      _hasConsumedInitialHighlightedNote = true;
+      _initialHighlightRetryCount = 0;
+      _isConsumingInitialHighlightedNote = false;
+      return;
+    }
+
+    _isConsumingInitialHighlightedNote = false;
+    _initialHighlightRetryCount++;
+    if (_initialHighlightRetryCount >= _maxInitialHighlightRetries) {
+      logDebug(
+        '初始高亮笔记定位失败，已达到最大重试次数: $noteId',
+        source: 'HomePage',
+      );
+      return;
+    }
+
+    Future.delayed(const Duration(milliseconds: 250), () {
+      if (!mounted ||
+          _currentIndex != 1 ||
+          _hasConsumedInitialHighlightedNote) {
+        return;
+      }
+      _consumeInitialHighlightedNote();
+    });
   }
 
   void _scheduleSettingsGuideIfNeeded() {
@@ -965,6 +1020,30 @@ class _HomePageState extends State<HomePage>
         shouldShow: () => mounted && _currentIndex == 3,
       );
       _settingsGuidePending = false;
+    });
+  }
+
+  void _scheduleTrashLocationGuide() {
+    if (!mounted) return;
+    if (_trashGuideScheduled) return;
+    if (FeatureGuideHelper.hasShown(context, 'trash_location_guide')) {
+      return;
+    }
+
+    _trashGuideScheduled = true;
+    Future.delayed(const Duration(milliseconds: 1200), () {
+      if (!mounted) {
+        _trashGuideScheduled = false;
+        return;
+      }
+      FeatureGuideHelper.show(
+        context: context,
+        guideId: 'trash_location_guide',
+        targetKey: _settingsTabGuideKey,
+        autoDismissDuration: const Duration(milliseconds: 3000),
+        shouldShow: () => mounted,
+      );
+      _trashGuideScheduled = false;
     });
   }
 
@@ -1405,70 +1484,103 @@ class _HomePageState extends State<HomePage>
 
   // 显示删除确认对话框
   Future<void> _showDeleteConfirmDialog(Quote quote) async {
-    final noteId = quote.id;
-    if (noteId == null || noteId.isEmpty) return;
-
-    final sessionService = Provider.of<ChatSessionService>(
-      context,
-      listen: false,
-    );
-    final sessions = await sessionService.getSessionsForNote(noteId);
-    if (!mounted) return;
-
+    final pageContext = context;
     final l10n = AppLocalizations.of(context);
+    final retentionDays = context.read<SettingsService>().trashRetentionDays;
+    final messenger = ScaffoldMessenger.of(pageContext);
+
+    final noteId = quote.id;
+    List<dynamic> sessions = [];
+    if (noteId != null && noteId.isNotEmpty) {
+      final sessionService = Provider.of<ChatSessionService>(
+        pageContext,
+        listen: false,
+      );
+      sessions = await sessionService.getSessionsForNote(noteId);
+    }
     final hasLinkedChats = sessions.isNotEmpty;
 
+    if (!pageContext.mounted) return;
+
     showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(l10n.deleteNote),
-        content: Text(
-          hasLinkedChats
-              ? l10n.deleteNoteWithChatsConfirmation(sessions.length)
-              : l10n.deleteNoteConfirmation,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(l10n.cancel),
+      context: pageContext,
+      builder: (dialogContext) {
+        var isDeleting = false;
+        return StatefulBuilder(
+          builder: (dialogContext, setDialogState) => AlertDialog(
+            title: Text(l10n.moveNoteToTrashTitle),
+            content: Text(
+              hasLinkedChats
+                  ? '${l10n.moveNoteToTrashConfirmation(retentionDays)}\n\n${l10n.deleteNoteWithChatsConfirmation(sessions.length)}'
+                  : l10n.moveNoteToTrashConfirmation(retentionDays),
+            ),
+            actions: [
+              TextButton(
+                onPressed: isDeleting
+                    ? null
+                    : () {
+                        Navigator.pop(dialogContext);
+                      },
+                child: Text(l10n.cancel),
+              ),
+              TextButton(
+                style: TextButton.styleFrom(foregroundColor: Colors.red),
+                onPressed: isDeleting
+                    ? null
+                    : () async {
+                        setDialogState(() {
+                          isDeleting = true;
+                        });
+                        final db = Provider.of<DatabaseService>(
+                          pageContext,
+                          listen: false,
+                        );
+                        try {
+                          await db.deleteQuote(quote.id!);
+                          if (!dialogContext.mounted || !pageContext.mounted) {
+                            return;
+                          }
+                          Navigator.pop(dialogContext);
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(l10n.noteMovedToTrash),
+                              duration: const Duration(seconds: 1),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                          // 显示回收站位置引导（仅第一次删除笔记时）
+                          _scheduleTrashLocationGuide();
+                        } catch (e, stackTrace) {
+                          logError(
+                            '移动笔记到回收站失败: $e',
+                            error: e,
+                            stackTrace: stackTrace,
+                            source: 'HomePage',
+                          );
+                          if (!dialogContext.mounted || !pageContext.mounted) {
+                            return;
+                          }
+                          Navigator.pop(dialogContext);
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(l10n.deleteFailed(e.toString())),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        }
+                      },
+                child: isDeleting
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(l10n.delete),
+              ),
+            ],
           ),
-          TextButton(
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            onPressed: () async {
-              // 先关闭对话框，再执行删除操作
-              Navigator.pop(context);
-              // 使用父级 context（this.context）而非对话框 context
-              if (!mounted) return;
-              try {
-                final db = Provider.of<DatabaseService>(
-                  this.context,
-                  listen: false,
-                );
-                await db.deleteQuote(noteId);
-                if (!mounted) return;
-                ScaffoldMessenger.of(this.context).showSnackBar(
-                  SnackBar(
-                    content: Text(l10n.noteDeleted),
-                    duration: const Duration(seconds: 1),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              } catch (e, stack) {
-                logError('HomePage.deleteQuote', error: e, stackTrace: stack);
-                if (!mounted) return;
-                ScaffoldMessenger.of(this.context).showSnackBar(
-                  SnackBar(
-                    content: Text(l10n.operationFailedSimple),
-                    duration: const Duration(seconds: 2),
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
-              }
-            },
-            child: Text(l10n.delete),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -2404,6 +2516,7 @@ class _HomePageState extends State<HomePage>
                     label: l10n.explore,
                   ),
                   NavigationDestination(
+                    key: _settingsTabGuideKey, // 功能引导 key
                     icon: const Icon(Icons.settings_outlined),
                     selectedIcon: Icon(
                       Icons.settings,

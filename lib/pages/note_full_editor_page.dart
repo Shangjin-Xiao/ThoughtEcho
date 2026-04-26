@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
@@ -29,6 +28,8 @@ import '../utils/app_logger.dart';
 import '../utils/string_utils.dart';
 import 'ai_assistant_page.dart'; // 添加问笔记聊天页面导入
 import 'package:flutter/foundation.dart' show kIsWeb, compute;
+
+import '../extensions/note_category_localization_extension.dart';
 import '../utils/device_memory_manager.dart';
 import '../widgets/quill_enhanced_toolbar_unified.dart';
 import '../widgets/ai_options_menu.dart';

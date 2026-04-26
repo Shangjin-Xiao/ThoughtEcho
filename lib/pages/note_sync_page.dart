@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'package:thoughtecho/services/note_sync_service.dart';
 import 'package:thoughtecho/services/localsend/models/device.dart';
 import 'package:thoughtecho/services/device_identity_manager.dart';
+import 'package:thoughtecho/utils/app_logger.dart';
 import '../gen_l10n/app_localizations.dart';
 
 class _AutoScrollText extends StatefulWidget {
@@ -207,8 +208,13 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           }
         });
       }
-    } catch (e) {
-      debugPrint('启动同步服务失败: $e');
+    } catch (e, stack) {
+      AppLogger.e(
+        '启动同步服务失败',
+        error: e,
+        stackTrace: stack,
+        source: 'NoteSyncPage',
+      );
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         setState(() {
@@ -323,13 +329,23 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
             debugPrint('使用context获取的引用停止同步服务...');
             await syncService.stopServer();
           }
-        } catch (e) {
-          debugPrint('通过context停止同步服务失败: $e');
+        } catch (e, stack) {
+          AppLogger.e(
+            '通过context停止同步服务失败',
+            error: e,
+            stackTrace: stack,
+            source: 'NoteSyncPage',
+          );
         }
       }
       debugPrint('同步服务已停止');
-    } catch (e) {
-      debugPrint('停止同步服务失败: $e');
+    } catch (e, stack) {
+      AppLogger.e(
+        '停止同步服务失败',
+        error: e,
+        stackTrace: stack,
+        source: 'NoteSyncPage',
+      );
     } finally {
       _syncService = null; // 清理引用
     }
@@ -351,8 +367,13 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
       NoteSyncService? syncService;
       try {
         syncService = context.read<NoteSyncService>();
-      } catch (e) {
-        debugPrint('获取NoteSyncService失败: $e');
+      } catch (e, stack) {
+        AppLogger.e(
+          '获取NoteSyncService失败',
+          error: e,
+          stackTrace: stack,
+          source: 'NoteSyncPage',
+        );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -442,8 +463,13 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           }
         });
       });
-    } catch (e) {
-      debugPrint('设备发现失败: $e');
+    } catch (e, stack) {
+      AppLogger.e(
+        '设备发现失败',
+        error: e,
+        stackTrace: stack,
+        source: 'NoteSyncPage',
+      );
       if (mounted) {
         final l10n = AppLocalizations.of(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -569,8 +595,13 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           duration: const Duration(seconds: 3),
         ),
       );
-    } catch (e) {
-      debugPrint('发送笔记失败: $e');
+    } catch (e, stack) {
+      AppLogger.e(
+        '发送笔记失败',
+        error: e,
+        stackTrace: stack,
+        source: 'NoteSyncPage',
+      );
       if (mounted) {
         messenger.showSnackBar(
           SnackBar(
@@ -1355,8 +1386,13 @@ class _NoteSyncPageState extends State<NoteSyncPage> {
           ),
         );
       }
-    } catch (e) {
-      debugPrint('[NoteSyncPage._copyIpPort] clipboard copy failed: $e');
+    } catch (e, stack) {
+      AppLogger.e(
+        'clipboard copy failed',
+        error: e,
+        stackTrace: stack,
+        source: 'NoteSyncPage',
+      );
     }
   }
 

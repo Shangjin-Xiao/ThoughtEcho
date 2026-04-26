@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../extensions/note_category_localization_extension.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/note_category.dart';
 import '../services/biometric_service.dart';
@@ -529,9 +530,12 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
             onTap: () => settings.setOfflineQuoteSource(value),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              // ignore: deprecated_member_use
               child: RadioListTile<String>(
                 value: value,
+                // ignore: deprecated_member_use
                 groupValue: settings.offlineQuoteSource,
+                // ignore: deprecated_member_use
                 onChanged: (selectedValue) {
                   if (selectedValue != null) {
                     settings.setOfflineQuoteSource(selectedValue);
@@ -831,7 +835,8 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
           builder: (ctx, setDialogState) {
             final List<NoteCategory> filteredCategories = categories
                 .where(
-                  (tag) => tag.name
+                  (tag) => tag
+                      .localizedName(l10n)
                       .toLowerCase()
                       .contains(searchQuery.toLowerCase().trim()),
                 )
@@ -922,7 +927,7 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                                             tag.iconName,
                                           ),
                                           title: Text(
-                                            tag.name,
+                                            tag.localizedName(l10n),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                           ),

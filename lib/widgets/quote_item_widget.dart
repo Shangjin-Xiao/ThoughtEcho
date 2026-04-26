@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import 'package:provider/provider.dart';
+
+import '../extensions/note_category_localization_extension.dart';
 import '../models/quote_model.dart';
 import '../models/note_category.dart';
 import '../theme/app_theme.dart';
@@ -9,8 +11,9 @@ import '../services/weather_service.dart';
 import '../services/location_service.dart';
 import '../services/settings_service.dart';
 import '../utils/time_utils.dart';
-import '../utils/icon_utils.dart'; // 添加 IconUtils 导入
+import '../utils/icon_utils.dart';
 import '../gen_l10n/app_localizations.dart';
+import 'quote_card_helpers.dart';
 
 /// 优化：使用StatefulWidget以支持双击反馈动画，数据变化通过父组件管理
 class QuoteItemWidget extends StatefulWidget {
@@ -240,23 +243,12 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
     final quote = widget.quote;
     final isExpanded = widget.isExpanded;
 
-    // Determine the background color of the card
-    // If the quote has a color, use it, otherwise use theme color
-    final Color cardColor = quote.colorHex != null && quote.colorHex!.isNotEmpty
-        ? Color(
-            int.parse(quote.colorHex!.substring(1), radix: 16) | 0xFF000000,
-          ) // Ensure alpha for hex string
-        : theme.colorScheme.surfaceContainerLowest;
-
-    // 修复深色模式下自定义颜色卡片的对比度问题
-    // 计算卡片背景的亮度，决定内容颜色
-    final bool isLightCard =
-        ThemeData.estimateBrightnessForColor(cardColor) == Brightness.light;
-    final Color baseContentColor = isLightCard ? Colors.black : Colors.white;
-
-    final Color primaryTextColor = baseContentColor.withValues(alpha: 0.9);
-    final Color secondaryTextColor = baseContentColor.withValues(alpha: 0.7);
-    final Color iconColor = baseContentColor.withValues(alpha: 0.65);
+    final colors = QuoteCardColors.fromHex(quote.colorHex, theme.colorScheme);
+    final Color cardColor = colors.cardColor;
+    final Color baseContentColor = colors.baseContentColor;
+    final Color primaryTextColor = colors.primaryTextColor;
+    final Color secondaryTextColor = colors.secondaryTextColor;
+    final Color iconColor = colors.iconColor;
 
     // Determine the text color based on the card color
 
@@ -730,7 +722,7 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                                                       ],
                                                     ],
                                                     Text(
-                                                      tag.name,
+                                                      tag.localizedName(l10n),
                                                       style: theme
                                                           .textTheme.bodySmall
                                                           ?.copyWith(

@@ -35,3 +35,11 @@
 **Vulnerability:** Cross-Site Scripting (XSS) vulnerability due to rendering raw `widget.htmlContent` (potentially containing AI-generated or user-provided malicious scripts) in `AIAnnualReportWebView`. Furthermore, `ContentSanitizer.injectCsp` could be bypassed by an attacker providing their own permissive CSP meta tag.
 **Learning:** Raw HTML content must always be properly sanitized *before* initial use, rather than only at export/share time. Regex-based stripping of scripts should be combined with strict Content-Security-Policy injection for defense-in-depth against XSS.
 **Prevention:** Ensured `_sanitizedHtmlContent` is instantiated securely in `initState` and propagated to all file read/write/share and rendering contexts. Updated `ContentSanitizer` to aggressively strip existing CSP meta tags and `<script>` blocks before applying the safe, default CSP.
+
+## 2024-06-03 - [Security Enhancement] Parameterize Database Schema Inspection
+**Learning:** SQLite `PRAGMA` statements are generally not parameterized, increasing the risk of SQL injection if user input ever makes it into the schema queries. Using the equivalent SQLite table-valued function `pragma_table_info(?)` allows for safe parameterization.
+**Action:** Replaced hardcoded PRAGMA table_info calls in `lib/services/database_schema_manager.dart` with safe parameterized queries `SELECT name FROM pragma_table_info(?)`.
+## 2026-04-24 - [High] Insecure CORS Configuration on Local Server Fixed
+**Vulnerability:** The `LocalSendServer` (`lib/services/localsend/localsend_server.dart`), which binds to the local network interface (`InternetAddress.anyIPv4`), explicitly added permissive CORS headers (`Access-Control-Allow-Origin: *`) and handled `OPTIONS` preflight requests. This allowed any external malicious website the user visits to bypass the browser's Same-Origin Policy and make direct HTTP requests to the local server via the browser (e.g., DNS rebinding).
+**Learning:** Local network servers must be extremely strict about cross-origin requests. Adding wildcard CORS headers to a local server completely negates the security boundary provided by the browser's Same-Origin Policy.
+**Prevention:** Do not add `Access-Control-Allow-Origin: *` to local servers. Rely on standard Same-Origin Policy to block unauthorized cross-origin access from web browsers.

@@ -193,8 +193,9 @@ class MockDatabaseService extends DatabaseService {
   }
 
   @override
-  Future<void> updateQuote(quote) async {
+  Future<QuoteUpdateResult> updateQuote(quote) async {
     // 模拟更新操作，不执行实际数据库操作
+    return QuoteUpdateResult.updated;
   }
 
   @override

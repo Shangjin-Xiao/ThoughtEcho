@@ -26,3 +26,5 @@
 - 2026-04-16: AI 助手页当前输入区未提供测试约定 key（`ai_assistant_mode_toggle` / `ai_assistant_send_button`），导致 `test/widget/pages/ai_assistant_page_test.dart` 多例 `Bad state: No element`；回归时需先保证这两个稳定选择器存在。路径：`lib/pages/ai_assistant/ai_assistant_page_ui.dart`。
 - 2026-04-16: 思考过程显示链路已接通（`onThinking -> thinkingChunks -> ThinkingWidget`），但 `_enableThinking` 目前只切换 UI 状态未透传请求层，属于“可见但不可控”风险。路径：`lib/pages/ai_assistant/ai_assistant_page_workflow.dart`、`lib/pages/ai_assistant/ai_assistant_page_ui.dart`。
 - 2026-04-16: AI endpoint 语义统一采用 `AIProviderSettings.resolveRequestUrl`：OpenAI 兼容 provider 若仅配置 `/v1` 会自动补全 `/chat/completions`，Anthropic `/v1/messages` 保持原样，实际请求由 `AINetworkManager` 统一解析；路径：`lib/models/ai_provider_settings.dart`、`lib/utils/ai_network_manager.dart`。
+- 2026-04-10: Daily Quote provider 切换到 API Ninjas 时需要即时刷新 API Key 状态，建议在 provider 变更入口主动触发状态加载以避免 UI 显示陈旧状态。
+- 2026-04-11: 设置持久化来自存储的字段需做类型安全反序列化（尤其 String/List），避免历史脏数据触发运行时类型异常并在请求层再次过滤非法枚举值。

@@ -13,10 +13,14 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
     String? searchQuery,
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
+    bool includeDeleted = false,
   }) async {
     if (kIsWeb) {
       // Web平台的完整筛选逻辑
-      var filtered = _memoryStore;
+      var filtered = List<Quote>.from(_memoryStore);
+      if (!includeDeleted) {
+        filtered = filtered.where((q) => !q.isDeleted).toList();
+      }
       if (tagIds != null && tagIds.isNotEmpty) {
         filtered = filtered
             .where((q) => q.tagIds.any((tag) => tagIds.contains(tag)))
@@ -67,6 +71,10 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
     // 构建查询条件
     final conditions = <String>[];
     final args = <dynamic>[];
+
+    if (!includeDeleted) {
+      conditions.add('(q.is_deleted = 0 OR q.is_deleted IS NULL)');
+    }
 
     // 标签筛选
     if (tagIds != null && tagIds.isNotEmpty) {
@@ -161,6 +169,7 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
   Future<List<Quote>> getQuotesForSmartPush({
     int limit = 200,
     String orderBy = 'q.date DESC',
+    bool includeDeleted = false,
   }) async {
     try {
       if (!_isInitialized) {
@@ -173,7 +182,9 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
 
       if (kIsWeb) {
         // Web 平台降级：使用内存存储
-        var filtered = _memoryStore;
+        var filtered = includeDeleted
+            ? List<Quote>.from(_memoryStore)
+            : _memoryStore.where((q) => !q.isDeleted).toList();
         filtered.sort((a, b) {
           final dateA = DateTime.tryParse(a.date) ?? DateTime.now();
           final dateB = DateTime.tryParse(b.date) ?? DateTime.now();
@@ -197,6 +208,9 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
       ''');
       args.add(_DatabaseServiceBase.hiddenTagId);
 
+      if (!includeDeleted) {
+        conditions.add('(q.is_deleted = 0 OR q.is_deleted IS NULL)');
+      }
       final where =
           conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
 
@@ -206,7 +220,7 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
         SELECT q.id, q.content, q.date, q.source, q.source_author, q.source_work,
                q.category_id, q.color_hex, q.location, q.latitude, q.longitude,
                q.weather, q.temperature, q.edit_source, q.day_period,
-               q.last_modified, q.favorite_count
+               q.last_modified, q.favorite_count, q.is_deleted, q.deleted_at
         FROM quotes q
         $where
         ORDER BY $sanitizedOrderBy
@@ -238,6 +252,7 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
     bool excludeHiddenNotes = true,
     String? dateStart,
     String? dateEnd,
+    bool includeDeleted = false,
   }) async {
     // 判断是否正在查询隐藏标签
     final isQueryingHiddenTag =
@@ -247,13 +262,17 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
 
     if (kIsWeb) {
       // 优化：Web平台直接在内存中应用筛选逻辑计算数量，避免加载大量数据
-      var filtered = _memoryStore;
+      var filtered = List<Quote>.from(_memoryStore);
 
       // 排除隐藏笔记
       if (shouldExcludeHidden) {
         filtered = filtered
             .where((q) => !q.tagIds.contains(_DatabaseServiceBase.hiddenTagId))
             .toList();
+      }
+
+      if (!includeDeleted) {
+        filtered = filtered.where((q) => !q.isDeleted).toList();
       }
 
       if (tagIds != null && tagIds.isNotEmpty) {
@@ -335,6 +354,10 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
           )
         ''');
         args.add(_DatabaseServiceBase.hiddenTagId);
+      }
+
+      if (!includeDeleted) {
+        conditions.add('(q.is_deleted = 0 OR q.is_deleted IS NULL)');
       }
 
       // 分类筛选

@@ -140,3 +140,5 @@ class TestSetup {
     }
   }
 }
+
+Future<void> setupTestEnvironment() => TestSetup.setupAll();

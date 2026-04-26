@@ -22,3 +22,11 @@
 - 关键排查路径：`lib/pages/home_page.dart`（每日提示触发）、`lib/services/ai_service.dart`（streamGenerateDailyPrompt）、`lib/services/agent_service.dart`（normalizeOpenAIBaseUrl）、`lib/utils/ai_network_manager.dart`（实际 POST）。
 - 当前定向回归现状：`streaming_text_dialog_test.dart` 通过；`ai_assistant_page_test.dart` 多例 `Bad state: No element`；`agent_service_loop_test.dart` 有 1 例长 payload 保留断言失败。
 - AgentService 仅接受 OpenAI Chat Completions 语义并显式拦截 Anthropic（`provider.id == 'anthropic'` 或 URL 含 `/v1/messages`），说明“OpenAI 兼容”并不能覆盖全部 Agent 能力场景。
+- Widget 测试涉及本地化或插件依赖时，应统一在 `setUpAll`/`setUp` 调用
+  `TestSetup.setupWidgetTest()`（`test/test_setup.dart`），避免遗漏
+  `SharedPreferences` 与 `path_provider` mock 初始化。
+- PR 评论要求初始化测试环境时，优先在具体 Widget 测试文件 `setUpAll` 中接入
+  `TestSetup.setupWidgetTest()`，并通过最小目标测试文件验证通过后再提交。
+- Model 单测若收到初始化一致性反馈，也应按仓库统一模式引入
+  `../../test_setup.dart` 并在 `setUpAll` 调用 `TestSetup.setupUnitTest()`，
+  以确保基础测试绑定与 mock 初始化行为一致。

@@ -1,5 +1,38 @@
 class AppSettings {
+  static const Set<int> allowedTrashRetentionDays = {7, 30, 90};
+  static const Set<String> _supportedDailyQuoteProviders = {
+    'hitokoto',
+    'zenquotes',
+    'api_ninjas',
+    'meigen',
+    'kadvice',
+  };
+  static const Set<String> _supportedApiNinjasCategories = {
+    'wisdom',
+    'philosophy',
+    'life',
+    'truth',
+    'inspirational',
+    'relationships',
+    'love',
+    'faith',
+    'humor',
+    'success',
+    'courage',
+    'happiness',
+    'art',
+    'writing',
+    'fear',
+    'nature',
+    'time',
+    'freedom',
+    'death',
+    'leadership',
+  };
+
   final String hitokotoType;
+  final String dailyQuoteProvider;
+  final List<String> apiNinjasCategories;
   final bool clipboardMonitoringEnabled; // 添加剪贴板监控设置
   final int defaultStartPage; // 添加默认启动页面设置，0=首页，1=记录页
   final bool hasCompletedOnboarding; // 添加是否完成引导页的标志
@@ -31,6 +64,8 @@ class AppSettings {
 
   AppSettings({
     this.hitokotoType = 'a,b,c,d,e,f,g,h,i,j,k', // 默认全选所有类型
+    this.dailyQuoteProvider = 'hitokoto',
+    this.apiNinjasCategories = const [],
     this.clipboardMonitoringEnabled = false, // 默认不启用剪贴板监控
     this.defaultStartPage = 0, // 默认启动显示首页
     this.hasCompletedOnboarding = false, // 默认未完成引导
@@ -55,15 +90,24 @@ class AppSettings {
     this.defaultTagIds = const [], // 默认无自动填充标签
     this.anniversaryShown = false, // 默认未显示过
     this.anniversaryAnimationEnabled = true, // 默认启用庆典动画
-    this.trashRetentionDays = 30,
+    int? trashRetentionDays, // 回收站保留天数（7/30/90）
     this.trashRetentionLastModified,
     this.skipNonFullscreenEditor = false, // 默认不跳过非全屏编辑器
     this.offlineQuoteSource = 'tagOnly', // 默认仅展示带每日一言标签的笔记
-  });
+  }) : trashRetentionDays = normalizeTrashRetentionDays(trashRetentionDays);
+
+  static int normalizeTrashRetentionDays(int? days) {
+    if (days == null) {
+      return 30;
+    }
+    return allowedTrashRetentionDays.contains(days) ? days : 30;
+  }
 
   Map<String, dynamic> toJson() {
     return {
       'hitokotoType': hitokotoType,
+      'dailyQuoteProvider': dailyQuoteProvider,
+      'apiNinjasCategories': apiNinjasCategories,
       'clipboardMonitoringEnabled': clipboardMonitoringEnabled,
       'defaultStartPage': defaultStartPage,
       'hasCompletedOnboarding': hasCompletedOnboarding,
@@ -95,9 +139,45 @@ class AppSettings {
     };
   }
 
+  static List<String> _readStringList(dynamic value) {
+    if (value is! List) {
+      return const [];
+    }
+
+    return value.whereType<String>().toList();
+  }
+
+  static String _readString(dynamic value, String fallback) {
+    return value is String ? value : fallback;
+  }
+
   factory AppSettings.fromJson(Map<String, dynamic> map) {
+    final dynamic rawRetentionDays = map['trashRetentionDays'];
+    int? parsedRetentionDays;
+    if (rawRetentionDays is int) {
+      parsedRetentionDays = rawRetentionDays;
+    } else if (rawRetentionDays is num) {
+      parsedRetentionDays = rawRetentionDays == rawRetentionDays.roundToDouble()
+          ? rawRetentionDays.toInt()
+          : null;
+    } else if (rawRetentionDays is String) {
+      parsedRetentionDays = int.tryParse(rawRetentionDays);
+    }
+
+    final normalizedProvider =
+        _readString(map['dailyQuoteProvider'], 'hitokoto');
+    final normalizedApiNinjasCategories = _readStringList(
+      map['apiNinjasCategories'],
+    ).where(_supportedApiNinjasCategories.contains).toList(growable: false);
+
     return AppSettings(
-      hitokotoType: map['hitokotoType'] ?? 'a,b,c,d,e,f,g,h,i,j,k',
+      hitokotoType: _readString(map['hitokotoType'], 'a,b,c,d,e,f,g,h,i,j,k'),
+      dailyQuoteProvider: _supportedDailyQuoteProviders.contains(
+        normalizedProvider,
+      )
+          ? normalizedProvider
+          : 'hitokoto',
+      apiNinjasCategories: normalizedApiNinjasCategories,
       clipboardMonitoringEnabled: map['clipboardMonitoringEnabled'] ?? false,
       defaultStartPage: map['defaultStartPage'] ?? 0,
       hasCompletedOnboarding: map['hasCompletedOnboarding'] ?? false,
@@ -121,19 +201,20 @@ class AppSettings {
       excerptIntentEnabled: map['excerptIntentEnabled'] ?? true,
       defaultAuthor: map['defaultAuthor'] as String?,
       defaultSource: map['defaultSource'] as String?,
-      defaultTagIds:
-          (map['defaultTagIds'] as List<dynamic>?)?.cast<String>() ?? const [],
+      defaultTagIds: _readStringList(map['defaultTagIds']),
       anniversaryShown: map['anniversaryShown'] ?? false,
       anniversaryAnimationEnabled: map['anniversaryAnimationEnabled'] ?? true,
-      trashRetentionDays: map['trashRetentionDays'] ?? 30,
+      trashRetentionDays: parsedRetentionDays,
       trashRetentionLastModified: map['trashRetentionLastModified'] as String?,
       skipNonFullscreenEditor: map['skipNonFullscreenEditor'] ?? false,
-      offlineQuoteSource: map['offlineQuoteSource'] ?? 'tagOnly',
+      offlineQuoteSource: _readString(map['offlineQuoteSource'], 'tagOnly'),
     );
   }
 
   factory AppSettings.defaultSettings() => AppSettings(
         hitokotoType: 'a,b,c,d,e,f,g,h,i,j,k',
+        dailyQuoteProvider: 'hitokoto',
+        apiNinjasCategories: const [],
         clipboardMonitoringEnabled: false,
         defaultStartPage: 0,
         hasCompletedOnboarding: false,
@@ -167,6 +248,8 @@ class AppSettings {
   /// 使用特殊标记来区分"未指定"和"设置为null（跟随系统）"
   AppSettings copyWith({
     String? hitokotoType,
+    String? dailyQuoteProvider,
+    List<String>? apiNinjasCategories,
     bool? clipboardMonitoringEnabled,
     int? defaultStartPage,
     bool? hasCompletedOnboarding,
@@ -196,11 +279,14 @@ class AppSettings {
     bool? anniversaryAnimationEnabled,
     int? trashRetentionDays,
     String? trashRetentionLastModified,
+    bool clearTrashRetentionLastModified = false,
     bool? skipNonFullscreenEditor,
     String? offlineQuoteSource,
   }) {
     return AppSettings(
       hitokotoType: hitokotoType ?? this.hitokotoType,
+      dailyQuoteProvider: dailyQuoteProvider ?? this.dailyQuoteProvider,
+      apiNinjasCategories: apiNinjasCategories ?? this.apiNinjasCategories,
       clipboardMonitoringEnabled:
           clipboardMonitoringEnabled ?? this.clipboardMonitoringEnabled,
       defaultStartPage: defaultStartPage ?? this.defaultStartPage,
@@ -234,9 +320,12 @@ class AppSettings {
       anniversaryShown: anniversaryShown ?? this.anniversaryShown,
       anniversaryAnimationEnabled:
           anniversaryAnimationEnabled ?? this.anniversaryAnimationEnabled,
-      trashRetentionDays: trashRetentionDays ?? this.trashRetentionDays,
-      trashRetentionLastModified:
-          trashRetentionLastModified ?? this.trashRetentionLastModified,
+      trashRetentionDays: normalizeTrashRetentionDays(
+        trashRetentionDays ?? this.trashRetentionDays,
+      ),
+      trashRetentionLastModified: clearTrashRetentionLastModified
+          ? null
+          : (trashRetentionLastModified ?? this.trashRetentionLastModified),
       skipNonFullscreenEditor:
           skipNonFullscreenEditor ?? this.skipNonFullscreenEditor,
       offlineQuoteSource: offlineQuoteSource ?? this.offlineQuoteSource,

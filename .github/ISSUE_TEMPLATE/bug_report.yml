@@ -1,0 +1,74 @@
+name: Bug 报告 / Bug Report
+description: 报告问题以帮助我们改进 / Report a problem to help us improve
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢你报告问题！请填写以下信息，帮助我们快速定位和修复。
+        Thanks for reporting! Please fill in the details below to help us fix it quickly.
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述 / Bug Description
+      description: 清楚地描述遇到了什么问题 / A clear description of what the bug is
+      placeholder: 我在...时遇到了...
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤 / Steps to Reproduce
+      description: 请提供详细的复现步骤 / Steps to reproduce the behavior
+      placeholder: |
+        1. 打开应用...
+        2. 点击...
+        3. 然后出现...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期望行为 / Expected Behavior
+      description: 你期望发生什么？/ What did you expect to happen?
+      placeholder: 我期望...
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为 / Actual Behavior
+      description: 实际发生了什么？/ What actually happened?
+      placeholder: 实际上...
+    validations:
+      required: true
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: 截图 / Screenshots
+      description: 如果有截图能帮助说明问题，请附加 / Add screenshots if applicable
+  - type: input
+    id: app-version
+    attributes:
+      label: 应用版本 / App Version
+      description: 在 设置 → 关于 中查看版本号 / Find version in Settings → About
+      placeholder: "e.g. 1.2.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: platform
+    attributes:
+      label: 平台 / Platform
+      description: 你使用的是哪个平台？/ Which platform are you using?
+      options:
+        - Android
+        - iOS
+        - Windows
+    validations:
+      required: true
+  - type: textarea
+    id: additional
+    attributes:
+      label: 补充信息 / Additional Context
+      description: 任何其他有助于定位问题的信息 / Any other context about the problem

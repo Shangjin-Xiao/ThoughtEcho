@@ -12,6 +12,9 @@ mixin _DatabaseFavoriteMixin on _DatabaseServiceBase {
     if (kIsWeb) {
       final index = _memoryStore.indexWhere((q) => q.id == quoteId);
       if (index != -1) {
+        if (_memoryStore[index].isDeleted) {
+          throw StateError('已删除的笔记不能收藏');
+        }
         final oldCount = _memoryStore[index].favoriteCount;
         _memoryStore[index] = _memoryStore[index].copyWith(
           favoriteCount: oldCount + 1,
@@ -54,6 +57,26 @@ mixin _DatabaseFavoriteMixin on _DatabaseServiceBase {
 
         final db = await safeDatabase;
         await db.transaction((txn) async {
+          final existing = await txn.query(
+            'quotes',
+            columns: ['id', 'is_deleted'],
+            where: 'id = ?',
+            whereArgs: [quoteId],
+            limit: 1,
+          );
+
+          if (existing.isEmpty) {
+            throw StateError('笔记不存在，无法收藏');
+          }
+
+          final isDeletedValue = existing.first['is_deleted'];
+          final isDeleted =
+              (isDeletedValue is num && isDeletedValue.toInt() == 1) ||
+                  (isDeletedValue is bool && isDeletedValue);
+          if (isDeleted) {
+            throw StateError('已删除的笔记不能收藏');
+          }
+
           // 原子性地增加计数
           final updateCount = await txn.rawUpdate(
             'UPDATE quotes SET favorite_count = favorite_count + 1, last_modified = ? WHERE id = ?',
@@ -116,6 +139,9 @@ mixin _DatabaseFavoriteMixin on _DatabaseServiceBase {
     if (kIsWeb) {
       final index = _memoryStore.indexWhere((q) => q.id == quoteId);
       if (index != -1) {
+        if (_memoryStore[index].isDeleted) {
+          throw StateError('已删除的笔记不能清除收藏');
+        }
         _memoryStore[index] = _memoryStore[index].copyWith(favoriteCount: 0);
         logDebug('Web平台清除收藏: quoteId=$quoteId', source: 'ResetFavorite');
       }
@@ -146,6 +172,26 @@ mixin _DatabaseFavoriteMixin on _DatabaseServiceBase {
 
         final db = await safeDatabase;
         await db.transaction((txn) async {
+          final existing = await txn.query(
+            'quotes',
+            columns: ['id', 'is_deleted'],
+            where: 'id = ?',
+            whereArgs: [quoteId],
+            limit: 1,
+          );
+
+          if (existing.isEmpty) {
+            throw StateError('笔记不存在，无法清除收藏');
+          }
+
+          final isDeletedValue = existing.first['is_deleted'];
+          final isDeleted =
+              (isDeletedValue is num && isDeletedValue.toInt() == 1) ||
+                  (isDeletedValue is bool && isDeletedValue);
+          if (isDeleted) {
+            throw StateError('已删除的笔记不能清除收藏');
+          }
+
           final updateCount = await txn.rawUpdate(
             'UPDATE quotes SET favorite_count = 0, last_modified = ? WHERE id = ?',
             [DateTime.now().toUtc().toIso8601String(), quoteId],
@@ -194,14 +240,16 @@ mixin _DatabaseFavoriteMixin on _DatabaseServiceBase {
       final weekStart = now.subtract(Duration(days: now.weekday - 1));
       final weekStartString = weekStart.toIso8601String().substring(0, 10);
 
-      return _memoryStore
+      final filtered = _memoryStore
           .where(
             (q) =>
-                q.date.compareTo(weekStartString) >= 0 && q.favoriteCount > 0,
+                q.date.compareTo(weekStartString) >= 0 &&
+                q.favoriteCount > 0 &&
+                !q.isDeleted,
           )
-          .toList()
-        ..sort((a, b) => b.favoriteCount.compareTo(a.favoriteCount))
-        ..take(limit).toList();
+          .toList();
+      filtered.sort((a, b) => b.favoriteCount.compareTo(a.favoriteCount));
+      return filtered.take(limit).toList();
     }
 
     try {
@@ -212,7 +260,8 @@ mixin _DatabaseFavoriteMixin on _DatabaseServiceBase {
 
       final List<Map<String, dynamic>> results = await db.query(
         'quotes',
-        where: 'date >= ? AND favorite_count > 0',
+        where:
+            'date >= ? AND favorite_count > 0 AND (is_deleted = 0 OR is_deleted IS NULL)',
         whereArgs: [weekStartString],
         orderBy: 'favorite_count DESC, date DESC',
         limit: limit,

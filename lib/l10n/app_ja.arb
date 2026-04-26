@@ -583,6 +583,13 @@
   "hitokotoSettings": "一言設定",
   "hitokotoTypeSettings": "種類の選択",
   "hitokotoTypeDesc": "1つ以上のタイプを選択してください。選択したタイプからランダムに表示されます。",
+  "dailyQuoteApiDesc": "ホーム画面の毎日の文言に使用するサービス提供元を選択します。",
+  "dailyQuoteProviderNoTypeSelection": "この取得元はカテゴリ絞り込みに対応していません。",
+  "dailyQuoteApiHitokoto": "Hitokoto",
+  "dailyQuoteApiZenQuotes": "ZenQuotes",
+  "dailyQuoteApiApiNinjas": "API Ninjas",
+  "dailyQuoteApiMeigen": "名言教えるよ",
+  "dailyQuoteApiKoreanAdvice": "Korean Advice",
   "selectAll": "すべて選択",
   "clearAll": "すべて解除",
   "typeSelection": "タイプ選択",
@@ -958,6 +965,7 @@
   "hitokotoTypeI": "詩",
   "hitokotoTypeJ": "Netease Music",
   "hitokotoTypeK": "哲学",
+  "hitokotoTypeJoke": "ユーモア",
   "noNetworkConnection": "ネットワーク未接続",
   "unknown": "不明",
   "defaultQuote1": "人生は、今ここにあるものだけでなく、詩と遠方でもある。",
@@ -2416,7 +2424,7 @@
   "serviceApiAcknowledgements": "API：",
   "weatherData": "天気データ",
   "geocodingApi": "ジオコーディングAPI",
-  "dailyQuoteApi": "一言API",
+  "dailyQuoteApi": "毎日の一言サービス提供元",
   "viewFullDependencyList": "全リストを表示",
   "thankOpenSourceContributors": "すべての貢献者に感謝します。",
   "lottieFilesCredits": "LottieFilesのアニメーションを使用：",
@@ -2741,6 +2749,8 @@
   "guideSettingsStartupDesc": "デフォルトページ設定",
   "guideSettingsThemeTitle": "テーマ",
   "guideSettingsThemeDesc": "色変更",
+  "guideTrashLocationTitle": "ゴミ箱の場所",
+  "guideTrashLocationDesc": "ノートをゴミ箱に移動しました\n「設定」からゴミ箱を開いて復元できます",
   "apkDownloadTitle": "APKダウンロード",
   "apkDownloading": "ダウンロード中 {version}...",
   "@apkDownloading": {
@@ -3468,6 +3478,55 @@
   "containsHtmlTagsLabel": "HTMLタグを含む：{status}",
   "viewNoteInfo": "ノート情報を表示",
   "first100CharsLabel": "最初の100文字：",
+  "trash": "ゴミ箱",
+  "trashEmpty": "ゴミ箱は空です",
+  "trashEmptyHint": "誤って削除した内容はここに一時保存され、画像・音声・動画もまとめて復元できます。",
+  "trashRetentionHint": "最近削除したノートと添付ファイルはここに一時保存され、保持期間を過ぎると自動で削除されます。",
+  "moveNoteToTrashTitle": "ゴミ箱に移動",
+  "moveNoteToTrashConfirmation": "このノートをゴミ箱に移動しますか？{days}日以内なら復元できます。",
+  "@moveNoteToTrashConfirmation": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "trashRemainingDays": "残り {days} 日",
+  "@trashRemainingDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "restoreNote": "復元",
+  "permanentlyDelete": "完全に削除",
+  "permanentlyDeleteConfirmation": "この操作は取り消せません。ノートは完全に削除されます。",
+  "emptyTrash": "ゴミ箱を空にする",
+  "emptyTrashConfirmation": "ゴミ箱内のすべてのノートを完全に削除しますか？この操作は取り消せません。",
+  "noteMovedToTrash": "ノートをゴミ箱に移動しました。ゴミ箱から復元できます",
+  "noteRestored": "ノートを復元しました",
+  "trashEmptied": "ゴミ箱を空にしました",
+  "deletedAt": "削除日: {date}",
+  "@deletedAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "trashCount": "ゴミ箱 ({count})",
+  "@trashCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "trashRetentionPeriod": "ゴミ箱の保持期間",
+  "trashRetentionOption7Days": "7日",
+  "trashRetentionOption30Days": "30日",
+  "trashRetentionOption90Days": "90日",
   "insertImage": "画像を挿入",
   "insertVideo": "動画を挿入",
   "insertAudio": "音声を挿入",

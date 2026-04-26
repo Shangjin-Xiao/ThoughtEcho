@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui' show FrameTiming;
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
+
+import '../extensions/note_category_localization_extension.dart';
 import '../gen_l10n/app_localizations.dart';
 import '../models/quote_model.dart';
 import '../models/note_category.dart';
@@ -436,8 +439,8 @@ class NoteListViewState extends State<NoteListView> {
     _loadMore();
   }
 
-  Future<void> scrollToQuoteById(String quoteId) async {
-    if (!mounted || quoteId.isEmpty) return;
+  Future<bool> scrollToQuoteById(String quoteId) async {
+    if (!mounted || quoteId.isEmpty) return false;
 
     // ── 阶段 1: 事件驱动等待首批数据（取代忙等轮询）──
     if (!_initialDataLoaded) {
@@ -452,10 +455,10 @@ class NoteListViewState extends State<NoteListView> {
             'scrollToQuoteById 放弃：首次数据加载超时',
             source: 'NoteListView',
           );
-          return;
+          return false;
         }
       }
-      if (!mounted || !_initialDataLoaded) return;
+      if (!mounted || !_initialDataLoaded) return false;
     }
 
     // ── 阶段 2: 在分页数据中查找目标笔记 ──
@@ -471,7 +474,7 @@ class NoteListViewState extends State<NoteListView> {
         }
 
         await Future.delayed(const Duration(milliseconds: 80));
-        if (!mounted) return;
+        if (!mounted) return false;
 
         _autoScrollEnabled = true;
         _isInitializing = false;
@@ -496,13 +499,13 @@ class NoteListViewState extends State<NoteListView> {
           await Future.delayed(
             Duration(milliseconds: renderDelay),
           );
-          if (!mounted) return;
+          if (!mounted) return false;
           // 让出一帧给框架完成 layout
           await WidgetsBinding.instance.endOfFrame;
           final key = _itemKeys[quoteId];
           if (key != null && key.currentContext != null) {
             _scrollToItem(quoteId, index, forceAlignToTop: true);
-            return;
+            return true;
           }
           renderDelay = (renderDelay * 1.5).toInt().clamp(30, 200);
         }
@@ -512,7 +515,7 @@ class NoteListViewState extends State<NoteListView> {
           if (!mounted) return;
           _scrollToItem(quoteId, index, forceAlignToTop: true);
         });
-        return;
+        return true;
       }
 
       // 目标不在已加载范围内，等待或加载更多
@@ -524,6 +527,7 @@ class NoteListViewState extends State<NoteListView> {
     }
 
     logDebug('未能在列表中定位笔记: $quoteId', source: 'NoteListView');
+    return false;
   }
 
   /// 动态估算列表项高度：从已渲染的 item 中采样。

@@ -9,6 +9,7 @@ import '../models/multi_ai_settings.dart'; // 新增 MultiAISettings 导入
 import '../models/local_ai_settings.dart'; // 新增 LocalAISettings 导入
 import 'package:thoughtecho/utils/app_logger.dart';
 import 'package:thoughtecho/services/api_key_manager.dart';
+import '../utils/lww_utils.dart';
 
 import '../services/mmkv_service.dart';
 import 'excerpt_intent_service.dart';
@@ -94,6 +95,11 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
+  int get trashRetentionDays => _appSettings.trashRetentionDays;
+  String? get trashRetentionLastModified =>
+      _appSettings.trashRetentionLastModified;
+  }
+
   // 折叠时优先显示加粗内容
   bool get prioritizeBoldContentInCollapse =>
       _appSettings.prioritizeBoldContentInCollapse;
@@ -121,10 +127,18 @@ class SettingsService extends ChangeNotifier {
     notifyListeners();
   }
 
-  // 是否显示精确时间（时:分）
-  bool get showExactTime => _appSettings.showExactTime;
-  Future<void> setShowExactTime(bool enabled) async {
-    _appSettings = _appSettings.copyWith(showExactTime: enabled);
+  // 每日一言 provider
+  String get dailyQuoteProvider => _appSettings.dailyQuoteProvider;
+  Future<void> setDailyQuoteProvider(String provider) async {
+    _appSettings = _appSettings.copyWith(dailyQuoteProvider: provider);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  // API Ninjas 分类选择
+  List<String> get apiNinjasCategories => _appSettings.apiNinjasCategories;
+  Future<void> setApiNinjasCategories(List<String> categories) async {
+    _appSettings = _appSettings.copyWith(apiNinjasCategories: categories);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
     notifyListeners();
   }
@@ -141,6 +155,14 @@ class SettingsService extends ChangeNotifier {
   String get offlineQuoteSource => _appSettings.offlineQuoteSource;
   Future<void> setOfflineQuoteSource(String source) async {
     _appSettings = _appSettings.copyWith(offlineQuoteSource: source);
+    await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
+    notifyListeners();
+  }
+
+  // 是否显示精确时间（时:分）
+  bool get showExactTime => _appSettings.showExactTime;
+  Future<void> setShowExactTime(bool enabled) async {
+    _appSettings = _appSettings.copyWith(showExactTime: enabled);
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
     notifyListeners();
   }
@@ -421,6 +443,7 @@ class SettingsService extends ChangeNotifier {
     try {
       // 验证必要字段
       if (settings.hitokotoType.isEmpty) return false;
+      if (settings.dailyQuoteProvider.isEmpty) return false;
 
       // 验证默认起始页面值
       if (settings.defaultStartPage < 0 || settings.defaultStartPage > 2) {

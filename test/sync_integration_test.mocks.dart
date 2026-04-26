@@ -348,8 +348,7 @@ class MockDatabaseService extends _i1.Mock implements _i12.DatabaseService {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
     bool excludeHiddenNotes = true,
-    String? dateStart,
-    String? dateEnd,
+    bool includeDeleted = false,
   }) =>
       (super.noSuchMethod(
         Invocation.method(#getUserQuotes, [], {
@@ -362,8 +361,7 @@ class MockDatabaseService extends _i1.Mock implements _i12.DatabaseService {
           #selectedWeathers: selectedWeathers,
           #selectedDayPeriods: selectedDayPeriods,
           #excludeHiddenNotes: excludeHiddenNotes,
-          #dateStart: dateStart,
-          #dateEnd: dateEnd,
+          #includeDeleted: includeDeleted,
         }),
         returnValue: _i9.Future<List<_i14.Quote>>.value(<_i14.Quote>[]),
       ) as _i9.Future<List<_i14.Quote>>);
@@ -390,10 +388,15 @@ class MockDatabaseService extends _i1.Mock implements _i12.DatabaseService {
       ) as _i9.Future<bool>);
 
   @override
-  _i9.Future<List<_i14.Quote>> getAllQuotes({bool excludeHiddenNotes = true}) =>
+  _i9.Future<List<_i14.Quote>> getAllQuotes({
+    bool excludeHiddenNotes = true,
+    bool includeDeleted = false,
+  }) =>
       (super.noSuchMethod(
-        Invocation.method(
-            #getAllQuotes, [], {#excludeHiddenNotes: excludeHiddenNotes}),
+        Invocation.method(#getAllQuotes, [], {
+          #excludeHiddenNotes: excludeHiddenNotes,
+          #includeDeleted: includeDeleted,
+        }),
         returnValue: _i9.Future<List<_i14.Quote>>.value(<_i14.Quote>[]),
       ) as _i9.Future<List<_i14.Quote>>);
 
@@ -405,8 +408,7 @@ class MockDatabaseService extends _i1.Mock implements _i12.DatabaseService {
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
     bool excludeHiddenNotes = true,
-    String? dateStart,
-    String? dateEnd,
+    bool includeDeleted = false,
   }) =>
       (super.noSuchMethod(
         Invocation.method(#getQuotesCount, [], {
@@ -416,8 +418,7 @@ class MockDatabaseService extends _i1.Mock implements _i12.DatabaseService {
           #selectedWeathers: selectedWeathers,
           #selectedDayPeriods: selectedDayPeriods,
           #excludeHiddenNotes: excludeHiddenNotes,
-          #dateStart: dateStart,
-          #dateEnd: dateEnd,
+          #includeDeleted: includeDeleted,
         }),
         returnValue: _i9.Future<int>.value(0),
       ) as _i9.Future<int>);
@@ -430,11 +431,14 @@ class MockDatabaseService extends _i1.Mock implements _i12.DatabaseService {
       ) as _i9.Future<void>);
 
   @override
-  _i9.Future<void> updateQuote(_i14.Quote? quote) => (super.noSuchMethod(
+  _i9.Future<_i12.QuoteUpdateResult> updateQuote(_i14.Quote? quote) =>
+      (super.noSuchMethod(
         Invocation.method(#updateQuote, [quote]),
-        returnValue: _i9.Future<void>.value(),
-        returnValueForMissingStub: _i9.Future<void>.value(),
-      ) as _i9.Future<void>);
+        returnValue: _i9.Future<_i12.QuoteUpdateResult>.value(
+            _i12.QuoteUpdateResult.updated),
+        returnValueForMissingStub: _i9.Future<_i12.QuoteUpdateResult>.value(
+            _i12.QuoteUpdateResult.updated),
+      ) as _i9.Future<_i12.QuoteUpdateResult>);
 
   @override
   _i9.Future<void> incrementFavoriteCount(String? quoteId) =>
@@ -459,11 +463,12 @@ class MockDatabaseService extends _i1.Mock implements _i12.DatabaseService {
   _i9.Stream<List<_i14.Quote>> watchQuotes({
     List<String>? tagIds,
     String? categoryId,
-    int? limit = 20,
-    String? orderBy = 'date DESC',
+    int limit = 20,
+    String orderBy = 'date DESC',
     String? searchQuery,
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
+    bool includeDeleted = false,
   }) =>
       (super.noSuchMethod(
         Invocation.method(#watchQuotes, [], {
@@ -474,6 +479,7 @@ class MockDatabaseService extends _i1.Mock implements _i12.DatabaseService {
           #searchQuery: searchQuery,
           #selectedWeathers: selectedWeathers,
           #selectedDayPeriods: selectedDayPeriods,
+          #includeDeleted: includeDeleted,
         }),
         returnValue: _i9.Stream<List<_i14.Quote>>.empty(),
       ) as _i9.Stream<List<_i14.Quote>>);
@@ -485,6 +491,7 @@ class MockDatabaseService extends _i1.Mock implements _i12.DatabaseService {
     String? searchQuery,
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
+    bool? includeDeleted,
   }) =>
       (super.noSuchMethod(
         Invocation.method(#loadMoreQuotes, [], {
@@ -493,6 +500,7 @@ class MockDatabaseService extends _i1.Mock implements _i12.DatabaseService {
           #searchQuery: searchQuery,
           #selectedWeathers: selectedWeathers,
           #selectedDayPeriods: selectedDayPeriods,
+          #includeDeleted: includeDeleted,
         }),
         returnValue: _i9.Future<void>.value(),
         returnValueForMissingStub: _i9.Future<void>.value(),
@@ -579,7 +587,7 @@ class MockDatabaseService extends _i1.Mock implements _i12.DatabaseService {
 
   @override
   _i9.Future<Map<String, dynamic>?> getLocalDailyQuote({
-    String? offlineQuoteSource,
+    String offlineQuoteSource = 'tagOnly',
   }) =>
       (super.noSuchMethod(
         Invocation.method(#getLocalDailyQuote, [], {

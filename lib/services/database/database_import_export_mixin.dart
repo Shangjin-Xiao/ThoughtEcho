@@ -86,6 +86,7 @@ mixin _DatabaseImportExportMixin on _DatabaseServiceBase {
       sourceDevice: sourceDevice,
     );
     await MediaReferenceService.migrateExistingQuotes();
+    await updateCategoriesStreamForParts();
     clearAllCacheForParts();
     notifyListeners();
     refreshQuotesStreamForParts();

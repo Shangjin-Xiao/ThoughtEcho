@@ -1,0 +1,52 @@
+name: 功能建议 / Feature Request
+description: 建议新功能或改进 / Suggest a new feature or improvement
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢你的建议！请详细描述你希望的功能。
+        Thanks for your suggestion! Please describe the feature you'd like in detail.
+  - type: textarea
+    id: problem
+    attributes:
+      label: 你的需求 / Problem or Motivation
+      description: |
+        这个功能要解决什么问题？你遇到了什么不方便的地方？
+        What problem does this feature solve? What inconvenience have you encountered?
+      placeholder: 我经常需要...但是目前无法...
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: 期望的解决方案 / Proposed Solution
+      description: 你希望这个功能怎么工作？/ How would you like this feature to work?
+      placeholder: 我希望能...
+    validations:
+      required: true
+  - type: dropdown
+    id: category
+    attributes:
+      label: 功能类别 / Feature Category
+      description: 这个建议属于哪个类别？/ Which category does this belong to?
+      options:
+        - 编辑器 / Editor
+        - AI 功能 / AI Features
+        - 同步与备份 / Sync & Backup
+        - 界面与主题 / UI & Theme
+        - 数据管理 / Data Management
+        - 其他 / Other
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 替代方案 / Alternatives Considered
+      description: 你是否考虑过其他替代方式？/ Have you considered any alternative solutions?
+  - type: textarea
+    id: additional
+    attributes:
+      label: 补充信息 / Additional Context
+      description: 任何其他有助于理解这个建议的信息 / Any other context

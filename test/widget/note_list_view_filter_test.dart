@@ -1,5 +1,7 @@
 library;
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -82,6 +84,51 @@ void main() {
         await tester.pump(const Duration(seconds: 2));
       },
     );
+
+    testWidgets(
+      'scrollToQuoteById waits for real first batch after placeholder empty list',
+      (tester) async {
+        final databaseService = _DelayedFakeDatabaseService();
+        final settingsService = _FakeSettingsService();
+        final noteListKey = GlobalKey<NoteListViewState>();
+
+        await tester.pumpWidget(
+          _TestApp(
+            key: const ValueKey('delayed-test-app'),
+            databaseService: databaseService,
+            settingsService: settingsService,
+            noteListKey: noteListKey,
+          ),
+        );
+
+        await tester.pump();
+        databaseService.emitPlaceholder();
+        await tester.pump();
+
+        final scrollFuture = noteListKey.currentState!.scrollToQuoteById(
+          'quote-1',
+        );
+
+        await tester.pump(const Duration(milliseconds: 4200));
+
+        databaseService.emitQuotes([
+          Quote(
+            id: 'quote-1',
+            content: '延迟到达的目标笔记',
+            date: DateTime(2026, 4, 25, 8, 0).toIso8601String(),
+          ),
+        ]);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+
+        expect(await scrollFuture, isTrue);
+        expect(find.text('延迟到达的目标笔记'), findsOneWidget);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 2));
+        await databaseService.disposeStream();
+      },
+    );
   });
 }
 
@@ -89,11 +136,14 @@ class _TestApp extends StatefulWidget {
   final _FakeDatabaseService databaseService;
   final _FakeSettingsService settingsService;
   final List<NoteCategory> tags;
+  final GlobalKey<NoteListViewState>? noteListKey;
 
   _TestApp({
+    super.key,
     required this.databaseService,
     required this.settingsService,
     List<NoteCategory>? tags,
+    this.noteListKey,
   }) : tags = tags ?? _defaultTags;
 
   static final List<NoteCategory> _defaultTags = [
@@ -127,6 +177,7 @@ class _TestAppState extends State<_TestApp> {
         locale: const Locale('zh'),
         home: Material(
           child: NoteListView(
+            key: widget.noteListKey,
             tags: widget.tags,
             selectedTagIds: _selectedTagIds,
             onTagSelectionChanged: (tagIds) {
@@ -191,11 +242,13 @@ class _WatchQuotesCall {
   final List<String>? tagIds;
   final List<String>? selectedWeathers;
   final List<String>? selectedDayPeriods;
+  final bool includeDeleted;
 
   const _WatchQuotesCall({
     required this.tagIds,
     required this.selectedWeathers,
     required this.selectedDayPeriods,
+    required this.includeDeleted,
   });
 }
 
@@ -221,6 +274,7 @@ class _FakeDatabaseService extends DatabaseService {
     String? searchQuery,
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
+    bool includeDeleted = false,
   }) {
     watchCalls.add(
       _WatchQuotesCall(
@@ -231,6 +285,7 @@ class _FakeDatabaseService extends DatabaseService {
         selectedDayPeriods: selectedDayPeriods == null
             ? null
             : List<String>.from(selectedDayPeriods),
+        includeDeleted: includeDeleted,
       ),
     );
     return Stream<List<Quote>>.value(quotesToEmit);
@@ -243,8 +298,59 @@ class _FakeDatabaseService extends DatabaseService {
     String? searchQuery,
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
+    bool? includeDeleted,
   }) async {}
 
   @override
   Future<List<NoteCategory>> getCategories() async => categoriesToReturn;
+}
+
+class _DelayedFakeDatabaseService extends _FakeDatabaseService {
+  final StreamController<List<Quote>> _controller =
+      StreamController<List<Quote>>.broadcast();
+  bool _hasMoreQuotes = true;
+
+  @override
+  bool get hasMoreQuotes => _hasMoreQuotes;
+
+  @override
+  Stream<List<Quote>> watchQuotes({
+    List<String>? tagIds,
+    String? categoryId,
+    int limit = 20,
+    String orderBy = 'date DESC',
+    String? searchQuery,
+    List<String>? selectedWeathers,
+    List<String>? selectedDayPeriods,
+    bool includeDeleted = false,
+  }) {
+    watchCalls.add(
+      _WatchQuotesCall(
+        tagIds: tagIds == null ? null : List<String>.from(tagIds),
+        selectedWeathers: selectedWeathers == null
+            ? null
+            : List<String>.from(selectedWeathers),
+        selectedDayPeriods: selectedDayPeriods == null
+            ? null
+            : List<String>.from(selectedDayPeriods),
+        includeDeleted: includeDeleted,
+      ),
+    );
+    return _controller.stream;
+  }
+
+  void emitPlaceholder() {
+    _hasMoreQuotes = true;
+    _controller.add(const []);
+  }
+
+  void emitQuotes(List<Quote> quotes) {
+    quotesToEmit = quotes;
+    _hasMoreQuotes = false;
+    _controller.add(quotes);
+  }
+
+  Future<void> disposeStream() async {
+    await _controller.close();
+  }
 }

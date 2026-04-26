@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'dart:io';
+import 'package:thoughtecho/utils/platform_io_stub.dart'
+    if (dart.library.io) 'dart:io';
 
 // Flutter核心库
 import 'package:flutter/foundation.dart';
@@ -180,6 +181,11 @@ Future<void> main() async {
   await runZonedGuarded<Future<void>>(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
+
+      if (kIsWeb) {
+        throw UnsupportedError(
+            'ThoughtEcho does not support the Web platform.');
+      }
 
       // 初始化后台任务组件
       if (!kIsWeb) {
@@ -1023,10 +1029,16 @@ class EmergencyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
     return MaterialApp(
-      title: l10n.emergencyAppTitle,
+      title: 'ThoughtEcho Emergency',
       navigatorKey: navigatorKey, // 使用全局导航键
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
       builder: (context, child) {
         final mediaQuery = MediaQuery.of(context);
         return MediaQuery(
@@ -1059,10 +1071,26 @@ class EmergencyHomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
+    // 防御性处理：国际化可能尚未初始化完成，使用 nullable 版本
+    final l10n = Localizations.of<AppLocalizations>(context, AppLocalizations);
+    final emergencyModeTitle = l10n?.emergencyModeTitle ?? 'Emergency Mode';
+    final emergencyAppStartFailedTitle =
+        l10n?.emergencyAppStartFailedTitle ?? 'App Start Failed';
+    final emergencyAppStartFailedDesc = l10n?.emergencyAppStartFailedDesc ??
+        'The app failed to start properly. Please try the recovery options below.';
+    final emergencyErrorLabel = l10n?.emergencyErrorLabel ?? 'Error:';
+    final emergencyTechnicalDetails =
+        l10n?.emergencyTechnicalDetails ?? 'Technical Details';
+    final emergencyBackupAndRestoreButton =
+        l10n?.emergencyBackupAndRestoreButton ?? 'Backup & Restore';
+    final emergencyTryRestartAppButton =
+        l10n?.emergencyTryRestartAppButton ?? 'Try Restart';
+    final emergencyExitAppButton = l10n?.emergencyExitAppButton ?? 'Exit App';
+    final emergencyPersistentIssueHint = l10n?.emergencyPersistentIssueHint ??
+        'If the issue persists, please contact support.';
     return Scaffold(
       appBar: AppBar(
-        title: Text(l10n.emergencyModeTitle),
+        title: Text(emergencyModeTitle),
         backgroundColor: Colors.red,
       ),
       body: SafeArea(
@@ -1074,7 +1102,7 @@ class EmergencyHomePage extends StatelessWidget {
               const Icon(Icons.error_outline, size: 64, color: Colors.red),
               const SizedBox(height: 16),
               Text(
-                l10n.emergencyAppStartFailedTitle,
+                emergencyAppStartFailedTitle,
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
@@ -1083,7 +1111,7 @@ class EmergencyHomePage extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                l10n.emergencyAppStartFailedDesc,
+                emergencyAppStartFailedDesc,
                 style: const TextStyle(fontSize: 16),
                 textAlign: TextAlign.center,
               ),
@@ -1098,7 +1126,7 @@ class EmergencyHomePage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      l10n.emergencyErrorLabel,
+                      emergencyErrorLabel,
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 4),
@@ -1108,7 +1136,7 @@ class EmergencyHomePage extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               ExpansionTile(
-                title: Text(l10n.emergencyTechnicalDetails),
+                title: Text(emergencyTechnicalDetails),
                 children: [
                   SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
@@ -1138,7 +1166,7 @@ class EmergencyHomePage extends StatelessWidget {
                   );
                 },
                 icon: const Icon(Icons.backup),
-                label: Text(l10n.emergencyBackupAndRestoreButton),
+                label: Text(emergencyBackupAndRestoreButton),
                 style: FilledButton.styleFrom(
                   backgroundColor: Colors.orange,
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -1151,7 +1179,7 @@ class EmergencyHomePage extends StatelessWidget {
                   restartApp();
                 },
                 icon: const Icon(Icons.refresh),
-                label: Text(l10n.emergencyTryRestartAppButton),
+                label: Text(emergencyTryRestartAppButton),
                 style: FilledButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
@@ -1163,7 +1191,7 @@ class EmergencyHomePage extends StatelessWidget {
                   exit(0);
                 },
                 icon: const Icon(Icons.exit_to_app),
-                label: Text(l10n.emergencyExitAppButton),
+                label: Text(emergencyExitAppButton),
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   foregroundColor: Colors.red,
@@ -1171,7 +1199,7 @@ class EmergencyHomePage extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                l10n.emergencyPersistentIssueHint,
+                emergencyPersistentIssueHint,
                 style: const TextStyle(
                   fontSize: 14,
                   fontStyle: FontStyle.italic,

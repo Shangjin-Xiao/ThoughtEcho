@@ -4,7 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="心迹 ThoughtEcho 隐私政策 - 我们重视您的隐私，不收集任何个人数据，不进行遥测">
+    <meta name="robots" content="index,follow">
+    <meta name="theme-color" content="#a67c52">
     <title>隐私政策 - 心迹 ThoughtEcho</title>
+    <link rel="canonical" href="https://note.shangjinyun.cn/privacy.html">
+
+    <!-- Open Graph / Social Media -->
+    <meta property="og:title" content="隐私政策 - 心迹 ThoughtEcho">
+    <meta property="og:description" content="心迹秉承本地优先与隐私透明原则，不收集个人数据，不进行遥测追踪。你的数据完全由你掌控。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://note.shangjinyun.cn/privacy.html">
+    <meta property="og:locale" content="zh_CN">
+    <meta name="twitter:card" content="summary">
     <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png">
@@ -12,29 +23,32 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=Noto+Sans:wght@300;400;500;700&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            --bg-color: #f8f9fa;
-            --card-bg: #ffffff;
-            --text-main: #212529;
-            --text-muted: #6c757d;
-            --primary: #2c3e50;
-            --accent: #3498db;
-            --border: #dee2e6;
-            --highlight: #fdfdfe;
+            --paper-white: #fefdfb;
+            --paper-cream: #f9f6f0;
+            --paper-yellow: #fff9e6;
+            --line-color: #d4c5b9;
+            --ink-dark: #2c2416;
+            --ink-medium: #5a4a3a;
+            --ink-light: #8b7355;
+            --accent-brown: #a67c52;
+            --accent-orange: #d4895b;
+            --accent-green: #7ca982;
+            --shadow-soft: rgba(0, 0, 0, 0.08);
+            --shadow-medium: rgba(0, 0, 0, 0.12);
         }
 
         [data-theme="dark"] {
-            --bg-color: #121212;
-            --card-bg: #1e1e1e;
-            --text-main: #e9ecef;
-            --text-muted: #adb5bd;
-            --primary: #90caf9;
-            --accent: #64b5f6;
-            --border: #333333;
-            --highlight: #2c2c2c;
+            --paper-white: #2a2520;
+            --paper-cream: #342e28;
+            --paper-yellow: #3d3630;
+            --line-color: #4a4037;
+            --ink-dark: #e8dfd5;
+            --ink-medium: #d4c5b9;
+            --ink-light: #b8a99a;
         }
 
         * {
@@ -44,11 +58,25 @@
         }
 
         body {
-            font-family: 'Noto Sans SC', 'Noto Sans', sans-serif;
-            background: var(--bg-color);
-            color: var(--text-main);
-            line-height: 1.6;
+            font-family: 'Noto Sans SC', 'Noto Sans', serif;
+            background: var(--paper-cream);
+            color: var(--ink-dark);
+            line-height: 1.8;
             transition: background 0.3s ease, color 0.3s ease;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                repeating-linear-gradient(0deg, transparent, transparent 32px, var(--line-color) 32px, var(--line-color) 33px);
+            opacity: 0.35;
+            z-index: -1;
+            pointer-events: none;
         }
 
         nav {
@@ -57,15 +85,15 @@
             left: 0;
             right: 0;
             z-index: 1000;
-            background: var(--card-bg);
-            border-bottom: 1px solid var(--border);
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            background: var(--paper-white);
+            border-bottom: 3px solid var(--accent-brown);
+            box-shadow: 0 3px 12px var(--shadow-soft);
         }
 
         .nav-container {
-            max-width: 1000px;
+            max-width: 1200px;
             margin: 0 auto;
-            padding: 0.75rem 1.5rem;
+            padding: 0.8rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -76,153 +104,153 @@
             align-items: center;
             gap: 0.75rem;
             text-decoration: none;
-            color: var(--text-main);
-            font-weight: 700;
-            font-size: 1.25rem;
+            color: var(--ink-dark);
+            font-family: 'ZCOOL XiaoWei', serif;
+            font-size: 1.5rem;
         }
 
         .nav-logo {
-            width: 32px;
-            height: 32px;
+            width: 38px;
+            height: 38px;
         }
 
         .nav-actions {
             display: flex;
-            gap: 0.75rem;
+            gap: 0.8rem;
             align-items: center;
         }
 
         .btn-toggle {
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text-main);
+            background: var(--paper-yellow);
+            border: 2px solid var(--accent-brown);
+            color: var(--accent-brown);
             padding: 0.4rem 0.8rem;
-            border-radius: 4px;
+            border-radius: 6px;
             cursor: pointer;
-            font-size: 0.875rem;
-            font-weight: 500;
+            font-size: 0.85rem;
+            font-weight: 600;
             transition: all 0.2s ease;
         }
 
         .btn-toggle:hover {
-            background: var(--bg-color);
-            border-color: var(--text-muted);
+            transform: translateY(-2px);
+            box-shadow: 2px 2px 0 var(--accent-brown);
         }
 
         .btn-back {
-            background: var(--primary);
+            background: var(--accent-brown);
             color: white;
             border: none;
-            padding: 0.4rem 1rem;
-            border-radius: 4px;
+            padding: 0.4rem 1.2rem;
+            border-radius: 6px;
             text-decoration: none;
-            font-size: 0.875rem;
-            font-weight: 500;
-        }
-
-        [data-theme="dark"] .btn-back {
-            color: #121212;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 3px 3px 0 rgba(0,0,0,0.1);
         }
 
         .container {
             max-width: 900px;
             margin: 0 auto;
-            padding: 6rem 1.5rem 4rem;
+            padding: 8rem 1.5rem 4rem;
         }
 
         header {
             text-align: center;
-            margin-bottom: 3rem;
+            margin-bottom: 4rem;
         }
 
         header h1 {
-            font-size: 2.25rem;
+            font-size: 2.8rem;
+            font-family: 'ZCOOL XiaoWei', serif;
+            color: var(--ink-dark);
             margin-bottom: 0.5rem;
-            color: var(--primary);
         }
 
         .last-updated {
-            color: var(--text-muted);
-            font-size: 0.875rem;
+            color: var(--ink-light);
+            font-size: 0.9rem;
         }
 
         .content-card {
-            background: var(--card-bg);
-            border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 2.5rem;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            background: var(--paper-white);
+            border: 3px solid var(--accent-brown);
+            border-radius: 12px;
+            padding: 3rem;
+            box-shadow: 10px 10px 0 var(--paper-yellow);
         }
 
         section {
-            margin-bottom: 2.5rem;
+            margin-bottom: 3rem;
         }
 
         h2 {
-            font-size: 1.5rem;
-            margin-bottom: 1.25rem;
+            font-size: 1.8rem;
+            font-family: 'ZCOOL XiaoWei', serif;
+            color: var(--accent-brown);
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--line-color);
             padding-bottom: 0.5rem;
-            border-bottom: 2px solid var(--border);
-            color: var(--primary);
         }
 
         h3 {
-            font-size: 1.15rem;
-            margin: 1.5rem 0 0.75rem;
-            color: var(--text-main);
+            font-size: 1.3rem;
+            margin: 2rem 0 1rem;
+            color: var(--ink-dark);
         }
 
         p {
-            margin-bottom: 1rem;
+            margin-bottom: 1.2rem;
         }
 
         ul {
-            margin-left: 1.5rem;
-            margin-bottom: 1rem;
+            margin-left: 1.8rem;
+            margin-bottom: 1.2rem;
         }
 
         li {
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.7rem;
         }
 
         strong {
-            color: var(--text-main);
+            color: var(--accent-brown);
         }
 
-        .alert-box {
-            background: var(--bg-color);
-            border-left: 4px solid var(--accent);
-            padding: 1rem 1.5rem;
-            margin: 1.5rem 0;
-            font-size: 0.95rem;
+        .highlight-box {
+            background: var(--paper-yellow);
+            border-left: 5px solid var(--accent-green);
+            padding: 1.5rem;
+            margin: 2rem 0;
+            border-radius: 4px;
         }
 
-        .alert-box.warning {
-            border-left-color: #f39c12;
+        .highlight-box.warning {
+            border-left-color: var(--accent-orange);
         }
 
         footer {
             text-align: center;
             margin-top: 4rem;
-            padding: 2rem;
-            color: var(--text-muted);
-            font-size: 0.875rem;
-            border-top: 1px solid var(--border);
+            padding: 3rem;
+            color: var(--ink-light);
+            border-top: 3px solid var(--accent-brown);
+            background: var(--paper-white);
         }
 
         footer a {
-            color: var(--accent);
+            color: var(--accent-brown);
             text-decoration: none;
+            font-weight: 600;
         }
 
-        /* Language Switching Logic */
+        /* Language Switching */
         body.lang-zh .content-en { display: none; }
         body.lang-en .content-zh { display: none; }
 
-        @media (max-width: 600px) {
-            .container { padding-top: 5rem; }
-            .content-card { padding: 1.5rem; }
-            header h1 { font-size: 1.75rem; }
+        @media (max-width: 768px) {
+            .container { padding-top: 7rem; }
+            .content-card { padding: 2rem 1.5rem; }
+            header h1 { font-size: 2.2rem; }
             .nav-title { display: none; }
         }
     </style>
@@ -236,10 +264,10 @@
                 <span class="nav-title content-en">ThoughtEcho</span>
             </a>
             <div class="nav-actions">
-                <button class="btn-toggle" id="themeToggle">Mode</button>
+                <button class="btn-toggle" id="themeToggle">🌙 / ☀️</button>
                 <button class="btn-toggle" id="langToggle">English</button>
-                <a href="index.html" class="btn-back content-zh">返回</a>
-                <a href="index.html" class="btn-back content-en">Back</a>
+                <a href="index.html" class="btn-back content-zh">返回首页</a>
+                <a href="index.html" class="btn-back content-en">Back Home</a>
             </div>
         </div>
     </nav>
@@ -249,129 +277,127 @@
             <h1 class="content-zh">隐私政策</h1>
             <h1 class="content-en">Privacy Policy</h1>
             <p class="last-updated">
-                <span class="content-zh">最后更新：2025年10月</span>
-                <span class="content-en">Last Updated: October 2025</span>
+                <span class="content-zh">最后更新于：2025年10月</span>
+                <span class="content-en">Last updated: October 2025</span>
             </p>
         </header>
 
         <div class="content-card">
             <section>
-                <h2 class="content-zh">隐私承诺</h2>
-                <h2 class="content-en">Privacy Commitment</h2>
+                <h2 class="content-zh">隐私核心原则</h2>
+                <h2 class="content-en">Privacy Principles</h2>
+                <div class="highlight-box">
+                    <p class="content-zh">
+                        心迹（ThoughtEcho）秉承<strong>本地优先（Local-first）</strong>与<strong>隐私透明</strong>的设计理念。我们的核心目标是为您提供一个纯净、安全的灵感记录空间。
+                    </p>
+                    <p class="content-en">
+                        ThoughtEcho adheres to the design philosophy of <strong>Local-first</strong> and <strong>Privacy Transparency</strong>. Our core mission is to provide you with a clean and secure space for capturing inspirations.
+                    </p>
+                </div>
+                <ul>
+                    <li class="content-zh"><strong>不主动收集</strong>：我们不主动收集您的个人识别信息（PII）。</li>
+                    <li class="content-en"><strong>No Proactive Collection</strong>: We do not proactively collect your Personally Identifiable Information (PII).</li>
+                    <li class="content-zh"><strong>不进行遥测</strong>：应用内不包含任何分析、遥测或用户行为追踪代码。</li>
+                    <li class="content-en"><strong>No Telemetry</strong>: The app contains no analytics, telemetry, or behavioral tracking code.</li>
+                    <li class="content-zh"><strong>完全本地运行</strong>：应用的所有核心功能均可在无网络环境下完全本地运行。</li>
+                    <li class="content-en"><strong>Fully Local Operation</strong>: All core features of the app can operate entirely locally without an internet connection.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="content-zh">数据存储说明</h2>
+                <h2 class="content-en">Data Storage</h2>
+                <p class="content-zh">您的所有数据资产（笔记、图片、音视频等）默认均加密存储在您的设备本地空间中：</p>
+                <p class="content-en">All your data assets (notes, images, audio, etc.) are stored locally on your device by default:</p>
+                <ul>
+                    <li class="content-zh"><strong>数据库</strong>：使用本地 SQLite 数据库保存文本与元数据。</li>
+                    <li class="content-en"><strong>Database</strong>: Uses a local SQLite database for text and metadata.</li>
+                    <li class="content-zh"><strong>密钥安全</strong>：第三方 AI 服务的 API 密钥通过系统原生加密（如 Android KeyStore / iOS Keychain）保护。</li>
+                    <li class="content-en"><strong>Key Security</strong>: API keys for third-party AI services are protected via system-native encryption.</li>
+                    <li class="content-zh"><strong>备份控制</strong>：备份文件以 ZIP 格式导出，存储位置完全由您控制。</li>
+                    <li class="content-en"><strong>Backup Control</strong>: Backups are exported as ZIP files, with storage locations fully controlled by you.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="content-zh">第三方服务与数据传输</h2>
+                <h2 class="content-en">Third-Party Services & Data Transfer</h2>
+                <p class="content-zh">应用仅在您明确触发特定功能时，才会通过加密连接与以下第三方 API 交互：</p>
+                <p class="content-en">The app interacts with the following third-party APIs via encrypted connections only when you explicitly trigger specific features:</p>
+
+                <h3 class="content-zh">1. AI 智能助手 (由用户配置)</h3>
+                <h3 class="content-en">1. AI Assistants (User-Configured)</h3>
+                <p class="content-zh">当您使用智能问答或内容分析功能时，选定的笔记上下文将发送至您配置的服务商：</p>
+                <p class="content-en">When using AI features, selected note contexts are sent to your configured providers:</p>
+                <ul>
+                    <li><a href="https://openai.com/privacy/" target="_blank">OpenAI Privacy Policy</a></li>
+                    <li><a href="https://www.anthropic.com/legal/privacy" target="_blank">Anthropic Privacy Policy</a></li>
+                    <li><a href="https://www.deepseek.com/privacy" target="_blank">DeepSeek Privacy Policy</a></li>
+                </ul>
+                <div class="highlight-box warning">
+                    <p class="content-zh"><strong>内容声明</strong>：AI 生成的所有内容均由第三方服务商提供。心迹不对 AI 生成内容的准确性、完整性或合法性负责。</p>
+                    <p class="content-en"><strong>Content Disclaimer</strong>: All AI-generated content is provided by third-party providers. ThoughtEcho is not responsible for the accuracy, completeness, or legality of AI-generated content.</p>
+                </div>
+
+                <h3 class="content-zh">2. 地理环境服务</h3>
+                <h3 class="content-en">2. Environmental Services</h3>
+                <ul>
+                    <li class="content-zh"><strong>Open-Meteo</strong>：发送坐标以获取当前气象信息。</li>
+                    <li class="content-en"><strong>Open-Meteo</strong>: Sends coordinates to fetch weather data.</li>
+                    <li class="content-zh"><strong>Nominatim</strong>：用于地理编码解析，其服务受 <a href="https://osmfoundation.org/wiki/Privacy_Policy" target="_blank">OSM 隐私政策</a> 约束。</li>
+                    <li class="content-en"><strong>Nominatim</strong>: Used for geocoding, subject to <a href="https://osmfoundation.org/wiki/Privacy_Policy" target="_blank">OSM Privacy Policy</a>.</li>
+                </ul>
+
+                <h3 class="content-zh">3. 每日灵感 (Daily Inspiration) API</h3>
+                <h3 class="content-en">3. Daily Inspiration API</h3>
+                <p class="content-zh">应用首页的“每日一言”等功能会从第三方服务（如 <a href="https://hitokoto.cn" target="_blank">Hitokoto</a> 等）获取随机句子。此过程仅涉及公开内容的获取，不发送任何个人数据。</p>
+                <p class="content-en">The "Daily Quote" and similar features fetch random sentences from third-party services (such as <a href="https://hitokoto.cn" target="_blank">Hitokoto</a>, etc.). This process only involves fetching public content and does not send any personal data.</p>
+                <div class="highlight-box warning">
+                    <p class="content-zh"><strong>内容声明</strong>：每日灵感内容由第三方 API 提供，心迹不对其内容的性质、观点或准确性负责。</p>
+                    <p class="content-en"><strong>Content Disclaimer</strong>: Daily inspirations are provided by third-party APIs. ThoughtEcho is not responsible for the nature, viewpoints, or accuracy of such content.</p>
+                </div>
+
+                <h3 class="content-zh">4. 内容同步 (LocalSend)</h3>
+                <h3 class="content-en">4. Sync via LocalSend</h3>
+                <p class="content-zh">应用支持局域网内的<strong>端到端点对点</strong>同步。此过程不经过任何外部服务器，数据不会离开您的私有局域网。</p>
+                <p class="content-en">The app supports <strong>end-to-end peer-to-peer</strong> sync within a local network. Data does not leave your private local network.</p>
+            </section>
+
+            <section>
+                <h2 class="content-zh">用户权利</h2>
+                <h2 class="content-en">User Rights</h2>
+                <ul>
+                    <li class="content-zh"><strong>权限撤回</strong>：您可以随时在系统设置中撤回位置、相机、麦克风等授权。</li>
+                    <li class="content-en"><strong>Permission Revocation</strong>: You can revoke access to location, camera, and microphone at any time.</li>
+                    <li class="content-zh"><strong>数据抹除</strong>：您可以通过卸载应用来永久删除所有本地存储的数据。</li>
+                    <li class="content-en"><strong>Data Eradication</strong>: You can permanently delete all locally stored data by uninstalling the app.</li>
+                </ul>
+            </section>
+
+            <section>
+                <h2 class="content-zh">联系与反馈</h2>
+                <h2 class="content-en">Contact & Feedback</h2>
                 <p class="content-zh">
-                    心迹（ThoughtEcho）是一款<strong>本地优先</strong>的笔记应用。我们始终坚持最小化数据收集原则，绝大部分功能均在用户本地设备上完成。我们不收集、不存储、不向我们的服务器传输您的任何笔记内容或个人识别信息。
+                    如果您对隐私保护有任何疑问，请通过以下渠道联系：<br>
+                    电子邮箱：<a href="mailto:shangjinyun@proton.me">shangjinyun@proton.me</a><br>
+                    开源代码仓库：<a href="https://github.com/Shangjin-Xiao/ThoughtEcho" target="_blank">GitHub Repository</a>
                 </p>
                 <p class="content-en">
-                    ThoughtEcho is a <strong>local-first</strong> note-taking application. We strictly adhere to the principle of data minimization. Most features are executed locally on your device. We do not collect, store, or transmit any of your note content or personally identifiable information to our servers.
-                </p>
-            </section>
-
-            <section>
-                <h2 class="content-zh">数据存储与处理</h2>
-                <h2 class="content-en">Data Storage and Processing</h2>
-                <h3 class="content-zh">1. 本地存储</h3>
-                <h3 class="content-en">1. Local Storage</h3>
-                <ul>
-                    <li class="content-zh"><strong>笔记与媒体</strong>：存储于设备本地 SQLite 数据库中。</li>
-                    <li class="content-en"><strong>Notes & Media</strong>: Stored in a local SQLite database on your device.</li>
-                    <li class="content-zh"><strong>配置信息</strong>：通过 MMKV 或 SharedPreferences 存储于本地。</li>
-                    <li class="content-en"><strong>Configurations</strong>: Stored locally via MMKV or SharedPreferences.</li>
-                    <li class="content-zh"><strong>加密存储</strong>：AI 服务的 API 密钥通过系统级加密方案（flutter_secure_storage）保护。</li>
-                    <li class="content-en"><strong>Encrypted Storage</strong>: API keys for AI services are protected using system-level encryption (flutter_secure_storage).</li>
-                </ul>
-
-                <h3 class="content-zh">2. 不收集的信息</h3>
-                <h3 class="content-en">2. Information We Do Not Collect</h3>
-                <p class="content-zh">我们明确声明不收集以下信息：</p>
-                <p class="content-en">We explicitly declare that we do not collect:</p>
-                <ul>
-                    <li class="content-zh">用户个人身份信息（姓名、邮箱、电话等）。</li>
-                    <li class="content-en">Personally Identifiable Information (name, email, phone, etc.).</li>
-                    <li class="content-zh">应用遥测、分析或使用行为追踪数据。</li>
-                    <li class="content-en">App telemetry, analytics, or usage tracking data.</li>
-                    <li class="content-zh">设备标识符（IMEI、MAC 地址等）。</li>
-                    <li class="content-en">Device identifiers (IMEI, MAC address, etc.).</li>
-                </ul>
-            </section>
-
-            <section>
-                <h2 class="content-zh">第三方服务与 API</h2>
-                <h2 class="content-en">Third-Party Services and APIs</h2>
-                <p class="content-zh">为了提供特定功能，应用可能会调用以下第三方服务，这可能涉及数据传输：</p>
-                <p class="content-en">To provide specific features, the app may call the following third-party services, which involves data transfer:</p>
-
-                <h3 class="content-zh">1. AI 服务（OpenAI, Anthropic, DeepSeek 等）</h3>
-                <h3 class="content-en">1. AI Services (OpenAI, Anthropic, DeepSeek, etc.)</h3>
-                <ul>
-                    <li class="content-zh"><strong>触发机制</strong>：仅在用户主动发起 AI 请求时触发。</li>
-                    <li class="content-en"><strong>Trigger</strong>: Only activated when the user explicitly initiates an AI request.</li>
-                    <li class="content-zh"><strong>数据传输</strong>：相关的笔记上下文会通过加密连接发送至您配置的服务商。</li>
-                    <li class="content-en"><strong>Data Transfer</strong>: Relevant note context is sent via an encrypted connection to your configured provider.</li>
-                    <li class="content-zh"><strong>隐私约束</strong>：此类数据处理受各服务商自身隐私政策约束。</li>
-                    <li class="content-en"><strong>Privacy Terms</strong>: Such data processing is subject to the respective provider's privacy policy.</li>
-                </ul>
-
-                <h3 class="content-zh">2. 地理位置与天气服务</h3>
-                <h3 class="content-en">2. Location and Weather Services</h3>
-                <ul>
-                    <li class="content-zh"><strong>Open-Meteo</strong>：用于获取当前天气信息，涉及发送地理坐标。</li>
-                    <li class="content-en"><strong>Open-Meteo</strong>: Used to fetch weather info, involves sending geographical coordinates.</li>
-                    <li class="content-zh"><strong>OpenStreetMap Nominatim</strong>：用于将坐标转换为地址描述或搜索城市。</li>
-                    <li class="content-en"><strong>OpenStreetMap Nominatim</strong>: Used for reverse geocoding or city searching.</li>
-                </ul>
-
-                <h3 class="content-zh">3. 内容同步 (LocalSend 协议)</h3>
-                <h3 class="content-en">3. Content Sync (LocalSend Protocol)</h3>
-                <ul>
-                    <li class="content-zh">应用支持通过局域网在设备间同步数据。该过程为<strong>点对点传输</strong>，不经过任何云端服务器。</li>
-                    <li class="content-en">The app supports data sync between devices via local network. This is a <strong>peer-to-peer</strong> transfer and does not pass through any cloud servers.</li>
-                </ul>
-            </section>
-
-            <section>
-                <h2 class="content-zh">您的控制权</h2>
-                <h2 class="content-en">Your Control</h2>
-                <ul>
-                    <li class="content-zh"><strong>权限管理</strong>：您可以随时在系统设置中撤回位置、相机等权限授权。</li>
-                    <li class="content-en"><strong>Permissions</strong>: You can revoke permissions (location, camera, etc.) at any time in system settings.</li>
-                    <li class="content-zh"><strong>数据导出与删除</strong>：您可以随时导出本地备份，或通过清除应用数据来永久删除所有内容。</li>
-                    <li class="content-en"><strong>Data Management</strong>: You can export local backups or permanently delete all content by clearing app data.</li>
-                </ul>
-            </section>
-
-            <section>
-                <h2 class="content-zh">儿童隐私</h2>
-                <h2 class="content-en">Children's Privacy</h2>
-                <p class="content-zh">本应用不针对 13 岁以下的儿童，我们不会主动收集此类人群的任何信息。</p>
-                <p class="content-en">This app is not directed at children under 13, and we do not knowingly collect information from them.</p>
-            </section>
-
-            <section>
-                <h2 class="content-zh">联系方式</h2>
-                <h2 class="content-en">Contact</h2>
-                <p class="content-zh">
-                    如有疑问，请通过以下方式联系：<br>
-                    Email: <a href="mailto:support@shangjinyun.cn">support@shangjinyun.cn</a><br>
-                    GitHub: <a href="https://github.com/Shangjin-Xiao/ThoughtEcho" target="_blank">Shangjin-Xiao/ThoughtEcho</a>
-                </p>
-                <p class="content-en">
-                    For questions, please contact:<br>
-                    Email: <a href="mailto:support@shangjinyun.cn">support@shangjinyun.cn</a><br>
-                    GitHub: <a href="https://github.com/Shangjin-Xiao/ThoughtEcho" target="_blank">Shangjin-Xiao/ThoughtEcho</a>
+                    If you have any questions regarding privacy, please contact us via:<br>
+                    Email: <a href="mailto:shangjinyun@proton.me">shangjinyun@proton.me</a><br>
+                    Repository: <a href="https://github.com/Shangjin-Xiao/ThoughtEcho" target="_blank">GitHub Repository</a>
                 </p>
             </section>
         </div>
     </div>
 
     <footer>
-        <p>&copy; 2025 ThoughtEcho. Licensed under MIT.</p>
+        <p>&copy; 2025 <a href="https://github.com/Shangjin-Xiao/ThoughtEcho">ThoughtEcho</a>. Open Source under MIT License.</p>
     </footer>
 
     <script>
+        // Theme logic
         const html = document.documentElement;
-        const body = document.body;
-
-        // Theme Toggle
         const themeBtn = document.getElementById('themeToggle');
         let currentTheme = localStorage.getItem('theme') || 'light';
         html.setAttribute('data-theme', currentTheme);
@@ -382,7 +408,8 @@
             localStorage.setItem('theme', currentTheme);
         });
 
-        // Language Toggle
+        // Language logic
+        const body = document.body;
         const langBtn = document.getElementById('langToggle');
         let currentLang = localStorage.getItem('lang') || 'zh';
         body.className = `lang-${currentLang}`;

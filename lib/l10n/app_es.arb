@@ -9,8 +9,8 @@
   "languageKorean": "한국어",
   "languageSpanish": "Español",
   "languageFrench": "Français",
-  "languageGerman": "Deutsch"
-  ,  "insertImage": "Insert Image",
+  "languageGerman": "Deutsch",
+  "insertImage": "Insertar imagen",
   "insertVideo": "Insert Video",
   "insertAudio": "Insert Audio",
   "aiGenerating": "IA generando...",
@@ -53,5 +53,20 @@
   "agentAnalyzingData": "Analyzing data...",
   "agentWebSearching": "Searching the web...",
   "favoriteNotes": "Favorite Notes",
-  "clear": "Clear"
+  "clear": "Clear",
+  "dailyQuoteApiDesc": "Elige el proveedor de servicio para el texto diario de la pantalla principal.",
+  "dailyQuoteProviderNoTypeSelection": "Este proveedor no admite filtrado por categoría.",
+  "dailyQuoteApiHitokoto": "Hitokoto",
+  "dailyQuoteApiZenQuotes": "ZenQuotes",
+  "dailyQuoteApiApiNinjas": "API Ninjas",
+  "dailyQuoteApiMeigen": "Meigen Oshieruyo",
+  "dailyQuoteApiKoreanAdvice": "Korean Advice",
+  "featureDailyQuote": "Cita diaria",
+  "hitokotoTypeJoke": "Humor",
+  "dailyQuoteApiNinjasManageApiKey": "Configurar clave del servicio",
+  "dailyQuoteApiNinjasApiKeyHint": "Introduce la clave de servicio X-Api-Key de API Ninjas",
+  "dailyQuoteApiNinjasApiKeyConfigured": "Clave de servicio configurada",
+  "dailyQuoteApiNinjasApiKeyMissing": "Aún no hay una clave de servicio configurada",
+  "dailyQuoteApiNinjasApiKeyInvalid": "El formato de la clave de servicio parece inválido",
+  "dailyQuoteApi": "Proveedor de cita diaria"
 }

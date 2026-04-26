@@ -33,6 +33,8 @@
     <a href="https://www.microsoft.com/store/apps/9NC7GDG6KFMC"><img src="https://get.microsoft.com/images/zh-cn%20dark.svg" width="160" alt="从 Microsoft Store 获取"></a>
     &nbsp;&nbsp;&nbsp;
     <a href="https://github.com/Shangjin-Xiao/ThoughtEcho/releases"><img src="https://img.shields.io/badge/GitHub_Releases-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Releases"></a>
+    &nbsp;&nbsp;&nbsp;
+    <a href="https://apkpure.com/p/com.shangjin.thoughtecho"><img src="https://img.shields.io/badge/APKPure-00A86B?style=for-the-badge&logo=android&logoColor=white" alt="APKPure"></a>
   </p>
 
   <p>
@@ -160,7 +162,7 @@
     </tr>
     <tr>
       <td align="center"><b>平台适配</b></td>
-      <td>Windows、Android、iOS全平台支持</td>
+      <td>Windows、Android、iOS全平台支持（不支持 Web）</td>
     </tr>
   </table>
 </div>
@@ -264,7 +266,11 @@
 感谢以下开源项目与服务提供商的支持：
 - [Flutter](https://flutter.dev/) - UI 框架
 - [LocalSend](https://github.com/localsend/localsend) - 局域网同步协议集成
-- [一言（Hitokoto）](https://hitokoto.cn/) - 提供每日一言服务
+- [一言（Hitokoto）](https://hitokoto.cn/) - 每日一言服务商之一（支持类型筛选）
+- [ZenQuotes](https://zenquotes.io/) - 每日一言英文服务商
+- [API Ninjas Quotes API](https://api-ninjas.com/api/quotes) - 每日一言分类服务商（支持分类筛选）
+- [名言教えるよ](https://meigen.doodlenote.net/) - 每日一言日文服务商
+- [Korean Advice](https://korean-advice-open-api.vercel.app/) - 每日一言韩文服务商
 - [Open-Meteo](https://open-meteo.com/) - 提供天气数据服务
 - [OpenStreetMap Nominatim](https://nominatim.openstreetmap.org/) - 提供地理编码服务
 
@@ -416,7 +422,7 @@
     </tr>
     <tr>
       <td align="center"><b>Platform Support</b></td>
-      <td>Windows, Android, iOS full platform support</td>
+      <td>Supports Windows, Android, and iOS (Web is not supported)</td>
     </tr>
   </table>
 </div>
@@ -523,7 +529,11 @@ This project is licensed under the [MIT License](LICENSE) - feel free to use, mo
 Thanks to the following open-source projects and service providers:
 - [Flutter](https://flutter.dev/) - UI framework
 - [LocalSend](https://github.com/localsend/localsend) - Local network sync integration
-- [Hitokoto](https://hitokoto.cn/) - Daily quote service
+- [Hitokoto](https://hitokoto.cn/) - One of the daily quote providers (supports type filtering)
+- [ZenQuotes](https://zenquotes.io/) - English daily quote provider
+- [API Ninjas Quotes API](https://api-ninjas.com/api/quotes) - Category-based daily quote provider
+- [Meigen Oshieruyo](https://meigen.doodlenote.net/) - Japanese daily quote provider
+- [Korean Advice](https://korean-advice-open-api.vercel.app/) - Korean daily quote provider
 - [Open-Meteo](https://open-meteo.com/) - Weather data service
 - [OpenStreetMap Nominatim](https://nominatim.openstreetmap.org/) - Geocoding service
 
