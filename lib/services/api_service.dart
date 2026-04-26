@@ -224,7 +224,6 @@ class ApiService {
       );
     }
   }
-  }
 
   void fetchData() {
     const req = Request();

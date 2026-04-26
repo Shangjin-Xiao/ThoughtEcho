@@ -315,6 +315,8 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
               const SizedBox(height: 24),
               Consumer<SettingsService>(
                 builder: (context, settings, _) {
+                  final theme = Theme.of(context);
+                  final colorScheme = theme.colorScheme;
                   return Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(24),

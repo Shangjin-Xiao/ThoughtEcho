@@ -322,6 +322,7 @@ class _DelayedFakeDatabaseService extends _FakeDatabaseService {
     String? searchQuery,
     List<String>? selectedWeathers,
     List<String>? selectedDayPeriods,
+    bool includeDeleted = false,
   }) {
     watchCalls.add(
       _WatchQuotesCall(
@@ -332,6 +333,7 @@ class _DelayedFakeDatabaseService extends _FakeDatabaseService {
         selectedDayPeriods: selectedDayPeriods == null
             ? null
             : List<String>.from(selectedDayPeriods),
+        includeDeleted: includeDeleted,
       ),
     );
     return _controller.stream;

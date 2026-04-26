@@ -2212,8 +2212,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                 listen: false,
                               );
                               final l10n = AppLocalizations.of(context);
-                              final scaffoldMessenger =
-                                  ScaffoldMessenger.of(context);
+                              final messenger = ScaffoldMessenger.of(context);
                               final navigator = Navigator.of(context);
 
                               await _waitForPendingHitokotoTagTask();
@@ -2289,10 +2288,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                     widget.initialQuote?.editSource, // 保证兼容
                                 deltaContent:
                                     widget.initialQuote?.deltaContent, // 保证兼容
-                              );
-                              final l10n = AppLocalizations.of(context);
-                              final messenger = ScaffoldMessenger.of(context);
-                              final navigator = Navigator.of(context);
+                               );
 
                               try {
                                 if (widget.initialQuote != null) {
