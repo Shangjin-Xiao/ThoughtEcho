@@ -201,7 +201,8 @@ class _TrashPageState extends State<TrashPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                   child: Text(
                     l10n.trashRetentionPeriod,
                     style: theme.textTheme.titleLarge?.copyWith(
@@ -213,21 +214,30 @@ class _TrashPageState extends State<TrashPage> {
                   contentPadding: const EdgeInsets.symmetric(horizontal: 24),
                   leading: const Icon(Icons.history_toggle_off_rounded),
                   title: Text(l10n.trashRetentionOption7Days),
-                  trailing: current == 7 ? Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary) : null,
+                  trailing: current == 7
+                      ? Icon(Icons.check_circle_rounded,
+                          color: theme.colorScheme.primary)
+                      : null,
                   onTap: () => Navigator.of(context).pop(7),
                 ),
                 ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 24),
                   leading: const Icon(Icons.history_toggle_off_rounded),
                   title: Text(l10n.trashRetentionOption30Days),
-                  trailing: current == 30 ? Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary) : null,
+                  trailing: current == 30
+                      ? Icon(Icons.check_circle_rounded,
+                          color: theme.colorScheme.primary)
+                      : null,
                   onTap: () => Navigator.of(context).pop(30),
                 ),
                 ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 24),
                   leading: const Icon(Icons.history_toggle_off_rounded),
                   title: Text(l10n.trashRetentionOption90Days),
-                  trailing: current == 90 ? Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary) : null,
+                  trailing: current == 90
+                      ? Icon(Icons.check_circle_rounded,
+                          color: theme.colorScheme.primary)
+                      : null,
                   onTap: () => Navigator.of(context).pop(90),
                 ),
               ],
@@ -495,7 +505,8 @@ class _TrashPageState extends State<TrashPage> {
                         physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.only(bottom: 32),
                         // +1 for the info banner at the top
-                        itemCount: _trashQuotes.length + 1 + (_isLoadingMore ? 1 : 0),
+                        itemCount:
+                            _trashQuotes.length + 1 + (_isLoadingMore ? 1 : 0),
                         itemBuilder: (context, index) {
                           if (index == 0) {
                             return _buildInfoBanner(l10n, theme, colorScheme);
@@ -514,12 +525,16 @@ class _TrashPageState extends State<TrashPage> {
                           return TrashQuoteCard(
                             quote: quote,
                             deletedAtText: _deletedAtText(context, quote),
-                            remainingDaysText: _remainingDaysText(context, quote, retentionDays),
-                            actionsEnabled: !_isRunningAction && !_isLoadingMore && !_isLoading,
+                            remainingDaysText: _remainingDaysText(
+                                context, quote, retentionDays),
+                            actionsEnabled: !_isRunningAction &&
+                                !_isLoadingMore &&
+                                !_isLoading,
                             onActionSelected: id == null
                                 ? null
                                 : (action) {
-                                    if (action == TrashQuoteCardAction.restore) {
+                                    if (action ==
+                                        TrashQuoteCardAction.restore) {
                                       _restoreQuote(id);
                                     } else {
                                       _permanentlyDelete(id);
@@ -533,7 +548,8 @@ class _TrashPageState extends State<TrashPage> {
     );
   }
 
-  Widget _buildInfoBanner(AppLocalizations l10n, ThemeData theme, ColorScheme colorScheme) {
+  Widget _buildInfoBanner(
+      AppLocalizations l10n, ThemeData theme, ColorScheme colorScheme) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(32, 12, 32, 20),
       child: Text(
@@ -547,7 +563,8 @@ class _TrashPageState extends State<TrashPage> {
     );
   }
 
-  Widget _buildEmptyState(AppLocalizations l10n, ColorScheme colorScheme, ThemeData theme) {
+  Widget _buildEmptyState(
+      AppLocalizations l10n, ColorScheme colorScheme, ThemeData theme) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 48),

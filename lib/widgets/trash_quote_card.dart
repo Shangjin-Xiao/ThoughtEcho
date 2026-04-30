@@ -41,7 +41,7 @@ class TrashQuoteCard extends StatelessWidget {
     final colors = QuoteCardColors.fromHex(quote.colorHex, colorScheme);
     // Subtle desaturated background
     final isCustomColor = quote.colorHex != null && quote.colorHex!.isNotEmpty;
-    final cardColor = isCustomColor 
+    final cardColor = isCustomColor
         ? colors.cardColor.withValues(alpha: 0.15)
         : colorScheme.surfaceContainerLow;
 
@@ -63,9 +63,9 @@ class TrashQuoteCard extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: isCustomColor 
-            ? colors.cardColor.withValues(alpha: 0.3)
-            : colorScheme.outlineVariant.withValues(alpha: 0.5),
+          color: isCustomColor
+              ? colors.cardColor.withValues(alpha: 0.3)
+              : colorScheme.outlineVariant.withValues(alpha: 0.5),
         ),
       ),
       clipBehavior: Clip.antiAlias,
@@ -104,7 +104,7 @@ class TrashQuoteCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              
+
               // --- Original Metadata Row ---
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -122,14 +122,20 @@ class TrashQuoteCard extends StatelessWidget {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         if (quote.hasLocation) ...[
-                          Icon(Icons.location_on_outlined, size: 14, color: colors.iconColor),
+                          Icon(Icons.location_on_outlined,
+                              size: 14, color: colors.iconColor),
                           const SizedBox(width: 2),
                           Container(
                             constraints: const BoxConstraints(maxWidth: 90),
                             child: Text(
-                              (quote.location != null && LocationService.formatLocationForDisplay(quote.location).isNotEmpty)
-                                  ? LocationService.formatLocationForDisplay(quote.location)
-                                  : LocationService.formatCoordinates(quote.latitude, quote.longitude),
+                              (quote.location != null &&
+                                      LocationService.formatLocationForDisplay(
+                                              quote.location)
+                                          .isNotEmpty)
+                                  ? LocationService.formatLocationForDisplay(
+                                      quote.location)
+                                  : LocationService.formatCoordinates(
+                                      quote.latitude, quote.longitude),
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: colors.secondaryTextColor,
                                 fontSize: 12,
@@ -143,7 +149,8 @@ class TrashQuoteCard extends StatelessWidget {
                           const SizedBox(width: 8),
                         if (quote.weather != null) ...[
                           Icon(
-                            WeatherService.getWeatherIconDataByKey(quote.weather!),
+                            WeatherService.getWeatherIconDataByKey(
+                                quote.weather!),
                             size: 14,
                             color: colors.iconColor,
                           ),
@@ -161,7 +168,7 @@ class TrashQuoteCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 12),
-              
+
               // --- Content ---
               Opacity(
                 opacity: 0.9,
@@ -174,15 +181,18 @@ class TrashQuoteCard extends StatelessWidget {
                   ),
                 ),
               ),
-              
+
               // --- Source ---
-              if ((quote.sourceAuthor != null && quote.sourceAuthor!.isNotEmpty) ||
-                  (quote.sourceWork != null && quote.sourceWork!.isNotEmpty)) ...[
+              if ((quote.sourceAuthor != null &&
+                      quote.sourceAuthor!.isNotEmpty) ||
+                  (quote.sourceWork != null &&
+                      quote.sourceWork!.isNotEmpty)) ...[
                 const SizedBox(height: 8),
                 Opacity(
                   opacity: 0.9,
                   child: Text(
-                    StringUtils.formatSource(quote.sourceAuthor, quote.sourceWork),
+                    StringUtils.formatSource(
+                        quote.sourceAuthor, quote.sourceWork),
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: colors.secondaryTextColor,
                       fontStyle: FontStyle.italic,
@@ -213,7 +223,8 @@ class TrashQuoteCard extends StatelessWidget {
                       return Padding(
                         padding: const EdgeInsets.only(right: 6),
                         child: QuoteTagChip(
-                          tag: tagMap[tagId] ?? NoteCategory(id: tagId, name: l10n.unknownTag),
+                          tag: tagMap[tagId] ??
+                              NoteCategory(id: tagId, name: l10n.unknownTag),
                           secondaryTextColor: colors.secondaryTextColor,
                           baseContentColor: colors.baseContentColor,
                         ),
@@ -222,7 +233,7 @@ class TrashQuoteCard extends StatelessWidget {
                   ),
                 ),
               ],
-              
+
               // --- Actions ---
               if (onActionSelected != null) ...[
                 const SizedBox(height: 16),
@@ -230,7 +241,10 @@ class TrashQuoteCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
-                      onPressed: actionsEnabled ? () => onActionSelected!(TrashQuoteCardAction.permanentlyDelete) : null,
+                      onPressed: actionsEnabled
+                          ? () => onActionSelected!(
+                              TrashQuoteCardAction.permanentlyDelete)
+                          : null,
                       style: TextButton.styleFrom(
                         foregroundColor: colorScheme.error,
                         padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -239,7 +253,10 @@ class TrashQuoteCard extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     FilledButton.tonal(
-                      onPressed: actionsEnabled ? () => onActionSelected!(TrashQuoteCardAction.restore) : null,
+                      onPressed: actionsEnabled
+                          ? () =>
+                              onActionSelected!(TrashQuoteCardAction.restore)
+                          : null,
                       style: FilledButton.styleFrom(
                         backgroundColor: colorScheme.secondaryContainer,
                         foregroundColor: colorScheme.onSecondaryContainer,
