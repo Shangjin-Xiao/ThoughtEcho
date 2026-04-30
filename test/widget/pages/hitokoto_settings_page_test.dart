@@ -57,6 +57,15 @@ class _TestSettingsService extends ChangeNotifier implements SettingsService {
   }
 
   @override
+  String get offlineQuoteSource => _appSettings.offlineQuoteSource;
+
+  @override
+  Future<void> setOfflineQuoteSource(String source) async {
+    _appSettings = _appSettings.copyWith(offlineQuoteSource: source);
+    notifyListeners();
+  }
+
+  @override
   noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
@@ -100,7 +109,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('一言设置页不显示离线一言数据源选项', (tester) async {
+  testWidgets('一言设置页显示离线一言数据源选项', (tester) async {
     final settings = _TestSettingsService();
     final localizations =
         await AppLocalizations.delegate.load(const Locale('zh'));
@@ -108,9 +117,15 @@ void main() {
     await pumpPage(tester, settings);
 
     expect(find.text(localizations.hitokotoSettings), findsOneWidget);
-    expect(find.text(localizations.offlineQuoteSourceTitle), findsNothing);
-    expect(find.text(localizations.offlineQuoteSourceTagOnly), findsNothing);
-    expect(find.text(localizations.offlineQuoteSourceAll), findsNothing);
+    // 滚动到底部以确保离线一言选项可见
+    await tester.scrollUntilVisible(
+      find.text(localizations.offlineQuoteSourceTitle),
+      50,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text(localizations.offlineQuoteSourceTitle), findsOneWidget);
+    expect(find.text(localizations.offlineQuoteSourceTagOnly), findsOneWidget);
+    expect(find.text(localizations.offlineQuoteSourceAll), findsOneWidget);
     expect(
       find.byType(ChoiceChip),
       findsNWidgets(ApiService.getDailyQuoteProviders(localizations).length),
