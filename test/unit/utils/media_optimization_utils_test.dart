@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:thoughtecho/utils/media_optimization_utils.dart';
 
 void main() {
-  group('MediaOptimizationUtils pure functions test', () {
+  group('MediaOptimizationUtils', () {
     group('getMimeType', () {
       test('should return correct MIME types for known extensions', () {
         expect(MediaOptimizationUtils.getMimeType('image.jpg'), 'image/jpeg');
