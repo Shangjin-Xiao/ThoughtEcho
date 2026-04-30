@@ -51,22 +51,35 @@ class QuoteContent extends StatelessWidget {
 
   static void resetCaches() {
     _QuoteDocumentCache.clear();
+    _QuoteHeightEstimateCache.clear();
     _QuoteContentControllerCache.clear();
   }
 
-  /// 预热 Document 缓存：在数据加载后、用户滚动前，分批异步预解析富文本 JSON
-  /// 使用 Timer.run 将每批任务推入 event queue，确保让出主线程给渲染帧
-  static void prewarmDocumentCache(List<Quote> quotes) {
+  /// 预热 Document 缓存：只预热首屏附近内容，且滚动中不抢占主线程。
+  static void prewarmDocumentCache(
+    List<Quote> quotes, {
+    int maxItems = 6,
+    Duration delay = const Duration(milliseconds: 500),
+  }) {
     final richQuotes = quotes
         .where(
           (q) => q.deltaContent != null && q.editSource == 'fullscreen',
         )
+        .take(maxItems)
         .toList();
     if (richQuotes.isEmpty) return;
 
-    const batchSize = 3;
+    const batchSize = 1;
     void processBatch(int startIndex) {
       if (startIndex >= richQuotes.length) return;
+      if (isListScrolling.value) {
+        Timer(
+          const Duration(milliseconds: 240),
+          () => processBatch(startIndex),
+        );
+        return;
+      }
+
       final end = (startIndex + batchSize).clamp(0, richQuotes.length);
       for (int i = startIndex; i < end; i++) {
         final deltaContent = richQuotes[i].deltaContent!;
@@ -81,7 +94,7 @@ class QuoteContent extends StatelessWidget {
       }
     }
 
-    Timer.run(() => processBatch(0));
+    Timer(delay, () => processBatch(0));
   }
 
   /// 静态版本的 Document 构建，供预热缓存使用
@@ -115,6 +128,7 @@ class QuoteContent extends StatelessWidget {
   @visibleForTesting
   static Map<String, dynamic> debugCacheStats() => {
         'document': _QuoteDocumentCache.stats,
+        'heightEstimate': _QuoteHeightEstimateCache.stats,
         'controller': _QuoteContentControllerCache.stats,
       };
 
@@ -202,7 +216,11 @@ class QuoteContent extends StatelessWidget {
   }
 
   static bool exceedsCollapsedHeight(Quote quote) {
-    return _estimateRenderedHeight(quote) > collapsedContentMaxHeight;
+    return _QuoteHeightEstimateCache.getOrCreate(
+          quote: quote,
+          builder: () => _estimateRenderedHeight(quote),
+        ) >
+        collapsedContentMaxHeight;
   }
 
   static double _estimateRenderedHeight(Quote quote) {
@@ -465,6 +483,115 @@ class _CollapsedContentWrapper extends StatelessWidget {
         );
       },
     );
+  }
+}
+
+class _QuoteHeightEstimateCache {
+  static final LinkedHashMap<_HeightEstimateCacheKey, _HeightEstimateCacheEntry>
+      _cache =
+      LinkedHashMap<_HeightEstimateCacheKey, _HeightEstimateCacheEntry>();
+
+  static const int _maxCacheSize = 300;
+  static const int _pruneBatchSize = 50;
+
+  static int _hitCount = 0;
+  static int _missCount = 0;
+
+  static double getOrCreate({
+    required Quote quote,
+    required double Function() builder,
+  }) {
+    final key = _HeightEstimateCacheKey.fromQuote(quote);
+    final existing = _cache.remove(key);
+    if (existing != null) {
+      _hitCount++;
+      existing.touch();
+      _cache[key] = existing;
+      return existing.height;
+    }
+
+    _missCount++;
+    if (_cache.length >= _maxCacheSize) {
+      _pruneOldest();
+    }
+
+    final height = builder();
+    _cache[key] = _HeightEstimateCacheEntry(height: height);
+    return height;
+  }
+
+  static void clear() {
+    _cache.clear();
+    _hitCount = 0;
+    _missCount = 0;
+  }
+
+  static Map<String, dynamic> get stats {
+    final total = _hitCount + _missCount;
+    final double hitRate = total == 0 ? 0 : _hitCount / total;
+    return {
+      'cacheSize': _cache.length,
+      'maxSize': _maxCacheSize,
+      'hitCount': _hitCount,
+      'missCount': _missCount,
+      'hitRate': hitRate,
+    };
+  }
+
+  static void _pruneOldest() {
+    if (_cache.isEmpty) {
+      return;
+    }
+
+    final entries = _cache.entries.toList()
+      ..sort((a, b) => a.value.lastAccess.compareTo(b.value.lastAccess));
+
+    for (final entry in entries.take(_pruneBatchSize)) {
+      _cache.remove(entry.key);
+    }
+  }
+}
+
+class _HeightEstimateCacheKey {
+  const _HeightEstimateCacheKey({
+    required this.contentSignature,
+    required this.isRichText,
+  });
+
+  factory _HeightEstimateCacheKey.fromQuote(Quote quote) {
+    final richContent =
+        quote.deltaContent != null && quote.editSource == 'fullscreen';
+    final content = richContent ? quote.deltaContent! : quote.content;
+    return _HeightEstimateCacheKey(
+      contentSignature: Object.hash(content.hashCode, content.length),
+      isRichText: richContent,
+    );
+  }
+
+  final int contentSignature;
+  final bool isRichText;
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is _HeightEstimateCacheKey &&
+        other.contentSignature == contentSignature &&
+        other.isRichText == isRichText;
+  }
+
+  @override
+  int get hashCode => Object.hash(contentSignature, isRichText);
+}
+
+class _HeightEstimateCacheEntry {
+  _HeightEstimateCacheEntry({required this.height})
+      : lastAccess = DateTime.now();
+
+  final double height;
+  DateTime lastAccess;
+
+  void touch() {
+    lastAccess = DateTime.now();
   }
 }
 
