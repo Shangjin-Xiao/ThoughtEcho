@@ -364,31 +364,22 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
       List<dynamic> finalArgs = List.from(args);
 
       if (tagIds != null && tagIds.isNotEmpty) {
-        // 使用 INNER JOIN 和 GROUP BY 来进行计数
-        final tagPlaceholders = tagIds.map((_) => '?').join(',');
-
-        String subQuery = '''
-          SELECT 1
-          FROM quotes q
-          INNER JOIN quote_tags qt ON q.id = qt.quote_id
-        ''';
-
-        conditions.add('qt.tag_id IN ($tagPlaceholders)');
-        finalArgs.addAll(tagIds);
+        // 多标签计数：使用多个 INNER JOIN（由于是 COUNT 查询，无需标量子查询，直接 JOIN 性能更好）
+        String joinClauses = '';
+        for (var i = 0; i < tagIds.length; i++) {
+          joinClauses +=
+              ' INNER JOIN quote_tags qt$i ON q.id = qt$i.quote_id AND qt$i.tag_id = ?';
+          finalArgs.add(tagIds[i]);
+        }
 
         final whereClause =
             conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
 
-        String havingClause = 'HAVING COUNT(DISTINCT qt.tag_id) = ?';
-        finalArgs.add(tagIds.length);
-
         query = '''
-          SELECT COUNT(*) FROM (
-            $subQuery
-            $whereClause
-            GROUP BY q.id
-            $havingClause
-          )
+          SELECT COUNT(*) as count
+          FROM quotes q
+          $joinClauses
+          $whereClause
         ''';
       } else {
         // 没有标签筛选，使用简单的 COUNT
