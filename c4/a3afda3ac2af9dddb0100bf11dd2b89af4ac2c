@@ -1,0 +1,23 @@
+test/widget/pages/hitokoto_settings_page_test.dart
+  0af02e36981bc083 60-67,112,120-128
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "c4a3afda3ac2af9dddb0100bf11dd2b89af4ac2c",
+  "prompts": {
+    "0af02e36981bc083": {
+      "agent_id": {
+        "tool": "gemini",
+        "id": "0fffb5c0-99d3-4c98-9851-fb68fea5ee47",
+        "model": "unknown"
+      },
+      "human_author": "上晋",
+      "messages": [],
+      "total_additions": 19,
+      "total_deletions": 4,
+      "accepted_lines": 19,
+      "overriden_lines": 0
+    }
+  }
+}
