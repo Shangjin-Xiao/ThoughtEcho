@@ -15,7 +15,12 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
       ),
       builder: (context) {
         return StatefulBuilder(
-          builder: (context, setState) {
+          builder: (context, setDialogState) {
+            void updateMetadataDialogState(VoidCallback fn) {
+              setDialogState(fn);
+              _updateState(() {});
+            }
+
             return DraggableScrollableSheet(
               initialChildSize: 0.6,
               minChildSize: 0.4,
@@ -192,7 +197,7 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                 await _showCustomColorPicker(context);
                                 // 强制刷新对话框UI以显示新选的颜色
                                 if (mounted) {
-                                  _updateState(() {});
+                                  updateMetadataDialogState(() {});
                                 }
                               },
                             ),
@@ -202,14 +207,14 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                           _buildMetadataLocationWeatherSection(
                             theme,
                             l10n,
-                            setState,
+                            updateMetadataDialogState,
                           ),
                           const SizedBox(height: 24),
                           // AI 分析结果（如有）
                           _buildMetadataAiAnalysisSection(
                             theme,
                             l10n,
-                            setState,
+                            updateMetadataDialogState,
                           ),
                           if (_currentAiAnalysis != null &&
                               _currentAiAnalysis!.isNotEmpty)
@@ -279,7 +284,7 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                     ),
                                   ),
                                   onChanged: (value) {
-                                    _updateState(() {
+                                    updateMetadataDialogState(() {
                                       _tagSearchQuery = value.toLowerCase();
                                     });
                                   },
@@ -332,12 +337,18 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                                 tag.iconName,
                                               ),
                                               onSelected: (bool value) {
-                                                _updateState(() {
+                                                updateMetadataDialogState(() {
                                                   if (value) {
-                                                    _selectedTagIds.add(tag.id);
+                                                    if (!_selectedTagIds
+                                                        .contains(tag.id)) {
+                                                      _selectedTagIds.add(
+                                                        tag.id,
+                                                      );
+                                                    }
                                                   } else {
-                                                    _selectedTagIds.remove(
-                                                      tag.id,
+                                                    _selectedTagIds.removeWhere(
+                                                      (tagId) =>
+                                                          tagId == tag.id,
                                                     );
                                                   }
                                                 });
@@ -398,8 +409,11 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                         label: Text(tag.localizedName(l10n)),
                                         avatar: _buildTagIcon(tag),
                                         onDeleted: () {
-                                          _updateState(() {
-                                            _selectedTagIds.remove(tagId);
+                                          updateMetadataDialogState(() {
+                                            _selectedTagIds.removeWhere(
+                                              (selectedTagId) =>
+                                                  selectedTagId == tagId,
+                                            );
                                           });
                                         },
                                       );

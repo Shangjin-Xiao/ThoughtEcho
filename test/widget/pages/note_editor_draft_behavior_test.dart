@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_quill/flutter_quill.dart';
 import 'package:provider/provider.dart';
 import 'package:thoughtecho/gen_l10n/app_localizations.dart';
+import 'package:thoughtecho/models/note_category.dart';
 import 'package:thoughtecho/models/quote_model.dart';
 import 'package:thoughtecho/pages/note_full_editor_page.dart';
 import 'package:thoughtecho/services/database_service.dart';
@@ -183,5 +184,59 @@ void main() {
     expect(find.byType(AlertDialog), findsNothing);
     expect(find.byType(NoteFullEditorPage), findsNothing);
     expect(find.text('Open editor'), findsOneWidget);
+  });
+
+  testWidgets('metadata tag taps update the sheet immediately', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(800, 1200);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(MultiProvider(
+      providers: [
+        ChangeNotifierProvider<SettingsService>.value(
+          value: _TestSettingsService(),
+        ),
+      ],
+      child: MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: const [
+          ...AppLocalizations.localizationsDelegates,
+          FlutterQuillLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: NoteFullEditorPage(
+          initialContent: '',
+          allTags: [
+            NoteCategory(
+              id: 'tag-1',
+              name: 'Mood',
+              iconName: 'label',
+            ),
+          ],
+          skipDefaultMetadataAutofill: true,
+        ),
+      ),
+    ));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Edit Metadata'));
+    await tester.pumpAndSettle();
+    expect(find.text('Edit Metadata'), findsOneWidget);
+
+    final selectTagsTile = find.text('Select Tags', skipOffstage: false);
+    await tester.ensureVisible(selectTagsTile);
+    await tester.tap(selectTagsTile);
+    await tester.pumpAndSettle();
+
+    expect(find.text('0 tags selected'), findsOneWidget);
+
+    await tester.tap(find.widgetWithText(FilterChip, 'Mood'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('1 tags selected'), findsOneWidget);
+    expect(find.text('Mood'), findsNWidgets(2));
   });
 }
