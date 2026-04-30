@@ -44,6 +44,8 @@ import 'unit/utils/quill_ai_apply_utils_test.dart' as quill_ai_apply_utils_test;
 import 'unit/utils/http_utils_test.dart' as http_utils_test;
 import 'unit/utils/memory_optimization_helper_test.dart'
     as memory_optimization_helper_test;
+import 'unit/utils/media_optimization_utils_test.dart'
+    as media_optimization_utils_test;
 import 'unit/utils/lww_decision_maker_test.dart' as lww_decision_maker_test;
 import 'unit/widgets/anniversary_animation_overlay_test.dart'
     as anniversary_animation_overlay_test;
@@ -93,6 +95,7 @@ void main() {
       quill_ai_apply_utils_test.main();
       http_utils_test.main();
       memory_optimization_helper_test.main();
+      media_optimization_utils_test.main();
       lww_decision_maker_test.main();
       anniversary_animation_overlay_test.main();
       anniversary_notebook_icon_test.main();
