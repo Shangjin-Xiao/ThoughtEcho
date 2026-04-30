@@ -189,29 +189,49 @@ class _TrashPageState extends State<TrashPage> {
     final l10n = AppLocalizations.of(context);
     final settingsService = context.read<SettingsService>();
     final current = settingsService.trashRetentionDays;
+    final theme = Theme.of(context);
     try {
       final selected = await showModalBottomSheet<int>(
         context: context,
         builder: (context) => SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                title: Text(l10n.trashRetentionOption7Days),
-                trailing: current == 7 ? const Icon(Icons.check) : null,
-                onTap: () => Navigator.of(context).pop(7),
-              ),
-              ListTile(
-                title: Text(l10n.trashRetentionOption30Days),
-                trailing: current == 30 ? const Icon(Icons.check) : null,
-                onTap: () => Navigator.of(context).pop(30),
-              ),
-              ListTile(
-                title: Text(l10n.trashRetentionOption90Days),
-                trailing: current == 90 ? const Icon(Icons.check) : null,
-                onTap: () => Navigator.of(context).pop(90),
-              ),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  child: Text(
+                    l10n.trashRetentionPeriod,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+                  leading: const Icon(Icons.history_toggle_off_rounded),
+                  title: Text(l10n.trashRetentionOption7Days),
+                  trailing: current == 7 ? Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary) : null,
+                  onTap: () => Navigator.of(context).pop(7),
+                ),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+                  leading: const Icon(Icons.history_toggle_off_rounded),
+                  title: Text(l10n.trashRetentionOption30Days),
+                  trailing: current == 30 ? Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary) : null,
+                  onTap: () => Navigator.of(context).pop(30),
+                ),
+                ListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+                  leading: const Icon(Icons.history_toggle_off_rounded),
+                  title: Text(l10n.trashRetentionOption90Days),
+                  trailing: current == 90 ? Icon(Icons.check_circle_rounded, color: theme.colorScheme.primary) : null,
+                  onTap: () => Navigator.of(context).pop(90),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -245,74 +265,6 @@ class _TrashPageState extends State<TrashPage> {
         ),
       );
     }
-  }
-
-  String _retentionLabel(AppLocalizations l10n, int days) {
-    switch (days) {
-      case 7:
-        return l10n.trashRetentionOption7Days;
-      case 90:
-        return l10n.trashRetentionOption90Days;
-      case 30:
-      default:
-        return l10n.trashRetentionOption30Days;
-    }
-  }
-
-  Widget _buildRetentionSelector(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final l10n = AppLocalizations.of(context);
-
-    return Consumer<SettingsService>(
-      builder: (context, settingsService, _) => Material(
-        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: _showTrashRetentionSelector,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.schedule_outlined,
-                  color: colorScheme.primary,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.trashRetentionPeriod,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        _retentionLabel(
-                          l10n,
-                          settingsService.trashRetentionDays,
-                        ),
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.chevron_right,
-                  color: colorScheme.onSurfaceVariant,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 
   Future<void> _restoreQuote(String id) async {
@@ -501,58 +453,11 @@ class _TrashPageState extends State<TrashPage> {
     }
   }
 
-  Widget _buildSummaryCard(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final l10n = AppLocalizations.of(context);
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(12, 12, 12, 6),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.45),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(
-            Icons.auto_delete_outlined,
-            color: colorScheme.primary,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.trashCount(_displayTrashCount),
-                  style: theme.textTheme.titleMedium,
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  l10n.trashRetentionHint,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: colorScheme.onSurfaceVariant,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                _buildRetentionSelector(context),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final retentionDays = context.watch<SettingsService>().trashRetentionDays;
 
     return Scaffold(
@@ -563,130 +468,142 @@ class _TrashPageState extends State<TrashPage> {
               : l10n.trashCount(_displayTrashCount),
         ),
         actions: [
-          TextButton(
-            onPressed: (_trashQuotes.isEmpty ||
-                    _isLoadingMore ||
-                    _isLoading ||
-                    _isRunningAction)
-                ? null
-                : _emptyTrash,
-            child: Text(l10n.emptyTrash),
+          IconButton(
+            icon: const Icon(Icons.settings_outlined),
+            onPressed: _showTrashRetentionSelector,
+            tooltip: l10n.trashRetentionPeriod,
           ),
+          if (_trashQuotes.isNotEmpty)
+            TextButton(
+              onPressed: (_isLoadingMore || _isLoading || _isRunningAction)
+                  ? null
+                  : _emptyTrash,
+              child: Text(l10n.emptyTrash),
+            ),
         ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _loadError
-              ? Column(
-                  children: [
-                    _buildSummaryCard(context),
-                    Expanded(
-                      child: Center(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.error_outline, size: 42),
-                              const SizedBox(height: 12),
-                              Text(
-                                l10n.refreshFailed(
-                                    _lastLoadErrorMessage ?? '-'),
-                                textAlign: TextAlign.center,
+              ? _buildErrorState(l10n)
+              : _trashQuotes.isEmpty
+                  ? _buildEmptyState(l10n, colorScheme, theme)
+                  : RefreshIndicator(
+                      onRefresh: () => _loadTrashQuotes(reset: true),
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.only(bottom: 32),
+                        // +1 for the info banner at the top
+                        itemCount: _trashQuotes.length + 1 + (_isLoadingMore ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          if (index == 0) {
+                            return _buildInfoBanner(l10n, theme, colorScheme);
+                          }
+                          final itemIndex = index - 1;
+                          if (itemIndex >= _trashQuotes.length) {
+                            return const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              child: Center(
+                                child: CircularProgressIndicator(),
                               ),
-                              const SizedBox(height: 12),
-                              FilledButton(
-                                onPressed: () => _loadTrashQuotes(reset: true),
-                                child: Text(l10n.retry),
-                              ),
-                            ],
-                          ),
-                        ),
+                            );
+                          }
+                          final quote = _trashQuotes[itemIndex];
+                          final id = quote.id;
+                          return TrashQuoteCard(
+                            quote: quote,
+                            deletedAtText: _deletedAtText(context, quote),
+                            remainingDaysText: _remainingDaysText(context, quote, retentionDays),
+                            actionsEnabled: !_isRunningAction && !_isLoadingMore && !_isLoading,
+                            onActionSelected: id == null
+                                ? null
+                                : (action) {
+                                    if (action == TrashQuoteCardAction.restore) {
+                                      _restoreQuote(id);
+                                    } else {
+                                      _permanentlyDelete(id);
+                                    }
+                                  },
+                            tagMap: _tagMap,
+                          );
+                        },
                       ),
                     ),
-                  ],
-                )
-              : _trashQuotes.isEmpty
-                  ? Column(
-                      children: [
-                        _buildSummaryCard(context),
-                        Expanded(
-                          child: Center(
-                            child: Padding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 24),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.delete_outline, size: 42),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    l10n.trashEmpty,
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    l10n.trashEmptyHint,
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  : Column(
-                      children: [
-                        _buildSummaryCard(context),
-                        Expanded(
-                          child: RefreshIndicator(
-                            onRefresh: () => _loadTrashQuotes(reset: true),
-                            child: ListView.builder(
-                              controller: _scrollController,
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              itemCount: _trashQuotes.length +
-                                  (_isLoadingMore ? 1 : 0),
-                              itemBuilder: (context, index) {
-                                if (index >= _trashQuotes.length) {
-                                  return const Padding(
-                                    padding: EdgeInsets.symmetric(vertical: 16),
-                                    child: Center(
-                                      child: CircularProgressIndicator(),
-                                    ),
-                                  );
-                                }
-                                final quote = _trashQuotes[index];
-                                final id = quote.id;
-                                return TrashQuoteCard(
-                                  quote: quote,
-                                  deletedAtText: _deletedAtText(context, quote),
-                                  remainingDaysText: _remainingDaysText(
-                                    context,
-                                    quote,
-                                    retentionDays,
-                                  ),
-                                  actionsEnabled: !_isRunningAction &&
-                                      !_isLoadingMore &&
-                                      !_isLoading,
-                                  onActionSelected: id == null
-                                      ? null
-                                      : (action) {
-                                          if (action ==
-                                              TrashQuoteCardAction.restore) {
-                                            _restoreQuote(id);
-                                            return;
-                                          }
-                                          _permanentlyDelete(id);
-                                        },
-                                  tagMap: _tagMap,
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+    );
+  }
+
+  Widget _buildInfoBanner(AppLocalizations l10n, ThemeData theme, ColorScheme colorScheme) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(32, 12, 32, 20),
+      child: Text(
+        l10n.trashRetentionHint,
+        textAlign: TextAlign.center,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: colorScheme.onSurfaceVariant,
+          height: 1.5,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(AppLocalizations l10n, ColorScheme colorScheme, ThemeData theme) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 48),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.delete_outline_rounded,
+              size: 72,
+              color: colorScheme.surfaceContainerHighest,
+            ),
+            const SizedBox(height: 24),
+            Text(
+              l10n.trashEmpty,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: colorScheme.onSurface,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              l10n.trashEmptyHint,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(AppLocalizations l10n) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, size: 48),
+            const SizedBox(height: 16),
+            Text(
+              l10n.refreshFailed(_lastLoadErrorMessage ?? '-'),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: () => _loadTrashQuotes(reset: true),
+              child: Text(l10n.retry),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
