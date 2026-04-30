@@ -146,7 +146,7 @@ extension _NoteListDataStreamExtension on NoteListViewState {
             });
             // 冷启动保护期：设置较长的保护期，避免首次进入时的滚动冲突
             _lastUserScrollTime = DateTime.now();
-            // 预热 Document 缓存：在用户滚动前异步解析所有已加载笔记的富文本 JSON
+            // 只预热首屏附近富文本，避免首滑前后集中解析所有 Delta JSON。
             QuoteContent.prewarmDocumentCache(list);
             logDebug('首次数据加载完成', source: 'NoteListView');
           }
@@ -308,9 +308,6 @@ extension _NoteListDataStreamExtension on NoteListViewState {
             _pruneExpansionControllers();
           });
           _scheduleExpandableQuoteCheck();
-
-          // 预热新加载数据的 Document 缓存
-          QuoteContent.prewarmDocumentCache(list);
 
           if (widget.onGuideTargetsReady != null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
