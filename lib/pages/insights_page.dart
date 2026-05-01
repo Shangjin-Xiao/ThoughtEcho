@@ -618,6 +618,7 @@ class _InsightsPageState extends State<InsightsPage> {
               // 返回按钮
               IconButton(
                 icon: const Icon(Icons.arrow_back),
+                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
                 onPressed: () {
                   setState(() {
                     _showAnalysisSelection = true;

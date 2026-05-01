@@ -410,6 +410,7 @@ class _UserGuidePageState extends State<UserGuidePage> {
                               ? [
                                   IconButton(
                                     icon: const Icon(Icons.clear),
+                                    tooltip: l10n.clear,
                                     onPressed: () => _searchController.clear(),
                                   )
                                 ]

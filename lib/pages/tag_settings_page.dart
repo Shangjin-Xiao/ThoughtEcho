@@ -49,6 +49,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
         scrolledUnderElevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
@@ -190,6 +191,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                         ),
                         child: IconButton(
                           onPressed: () => _showIconSelector(context, l10n),
+                          tooltip: l10n.iconLabel,
                           icon: _selectedIconName != null
                               ? (IconUtils.isEmoji(_selectedIconName!)
                                   ? Text(
@@ -553,6 +555,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                         Icons.delete_outline_rounded,
                                         color: colorScheme.error,
                                       ),
+                                      tooltip: l10n.delete,
                                       onPressed: () async {
                                         // 在异步操作前获取上下文的参数和服务
                                         final scaffoldMessenger =
@@ -758,6 +761,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                       suffixIcon: emojiSearchController.text.isNotEmpty
                           ? IconButton(
                               icon: const Icon(Icons.clear),
+                              tooltip: l10n.clear,
                               onPressed: () {
                                 emojiSearchController.clear();
                                 dialogSetState(() => searchQuery = '');
