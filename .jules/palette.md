@@ -10,3 +10,6 @@
 ## 2026-05-18 - Tooltips for Dynamic Icons
 **Learning:** For dynamic icon buttons (like play/pause toggles), assigning a dynamic tooltip is crucial. While localized strings are ideal, a hardcoded English fallback (e.g., 'Pause' / 'Play') significantly improves screen reader comprehension over an unlabeled icon that changes. Avoid redundant `Semantics` wrappers around `Icon` and `Text` widgets, as `Text` is already read and `Icon` without a semantic label is ignored.
 **Action:** When working on media controls or toggle buttons, ensure the `tooltip` property updates dynamically alongside the icon state. Do not shuffle structural `Semantics` tags without a proven need.
+## 2026-05-01 - [Tooltip on icon-only buttons]
+**Learning:** Icon-only buttons used throughout the application (such as the app bar action buttons and the input clear fields) may be missing tooltips, making it difficult for screen readers to explain what those buttons do.
+**Action:** When creating or modifying `IconButton` components, always verify that a `tooltip` attribute containing localized strings from `AppLocalizations` is present, especially when it is icon-only.

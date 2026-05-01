@@ -94,17 +94,17 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                             ),
                             child: _selectedIconName != null
                                 ? (IconUtils.isEmoji(_selectedIconName)
-                                    ? Text(
-                                        IconUtils.getDisplayIcon(
-                                          _selectedIconName!,
-                                        ),
-                                        style: const TextStyle(fontSize: 20),
-                                      )
-                                    : Icon(
-                                        IconUtils.getIconData(
-                                          _selectedIconName,
-                                        ),
-                                      ))
+                                      ? Text(
+                                          IconUtils.getDisplayIcon(
+                                            _selectedIconName!,
+                                          ),
+                                          style: const TextStyle(fontSize: 20),
+                                        )
+                                      : Icon(
+                                          IconUtils.getIconData(
+                                            _selectedIconName,
+                                          ),
+                                        ))
                                 : const Icon(Icons.add_circle_outline),
                           ),
                         ),
@@ -321,6 +321,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                       prefixIcon: const Icon(Icons.search),
                       suffixIcon: emojiSearchController.text.isNotEmpty
                           ? IconButton(
+                              tooltip: l10n.clear,
                               icon: const Icon(Icons.clear),
                               onPressed: () {
                                 emojiSearchController.clear();
@@ -424,13 +425,13 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                             decoration: BoxDecoration(
                                               color: isSelected
                                                   ? Theme.of(context)
-                                                      .colorScheme
-                                                      .primaryContainer
+                                                        .colorScheme
+                                                        .primaryContainer
                                                   : Colors.transparent,
                                               borderRadius:
                                                   BorderRadius.circular(
-                                                AppTheme.cardRadius,
-                                              ),
+                                                    AppTheme.cardRadius,
+                                                  ),
                                               border: Border.all(
                                                 color: isSelected
                                                     ? Theme.of(
@@ -516,13 +517,13 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                             decoration: BoxDecoration(
                                               color: isSelected
                                                   ? Theme.of(context)
-                                                      .colorScheme
-                                                      .primaryContainer
+                                                        .colorScheme
+                                                        .primaryContainer
                                                   : Colors.transparent,
                                               borderRadius:
                                                   BorderRadius.circular(
-                                                AppTheme.cardRadius,
-                                              ),
+                                                    AppTheme.cardRadius,
+                                                  ),
                                               border: Border.all(
                                                 color: isSelected
                                                     ? Theme.of(
@@ -720,8 +721,8 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                     isHiddenTag
                         ? l10n.hiddenTagUsageHint
                         : (isDefault
-                            ? l10n.systemDefaultTag
-                            : l10n.tapToEditLongPressToDelete),
+                              ? l10n.systemDefaultTag
+                              : l10n.tapToEditLongPressToDelete),
                     style: TextStyle(
                       fontSize: 11,
                       color: isDefault || isHiddenTag
@@ -759,9 +760,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.confirmDelete),
-        content: Text(
-          l10n.deleteTagConfirmation(category.localizedName(l10n)),
-        ),
+        content: Text(l10n.deleteTagConfirmation(category.localizedName(l10n))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -869,6 +868,7 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _emojiSearchController.text.isNotEmpty
                     ? IconButton(
+                        tooltip: l10n.clear,
                         icon: const Icon(Icons.clear),
                         onPressed: () {
                           _emojiSearchController.clear();
