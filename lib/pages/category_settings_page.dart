@@ -94,17 +94,17 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                             ),
                             child: _selectedIconName != null
                                 ? (IconUtils.isEmoji(_selectedIconName)
-                                      ? Text(
-                                          IconUtils.getDisplayIcon(
-                                            _selectedIconName!,
-                                          ),
-                                          style: const TextStyle(fontSize: 20),
-                                        )
-                                      : Icon(
-                                          IconUtils.getIconData(
-                                            _selectedIconName,
-                                          ),
-                                        ))
+                                    ? Text(
+                                        IconUtils.getDisplayIcon(
+                                          _selectedIconName!,
+                                        ),
+                                        style: const TextStyle(fontSize: 20),
+                                      )
+                                    : Icon(
+                                        IconUtils.getIconData(
+                                          _selectedIconName,
+                                        ),
+                                      ))
                                 : const Icon(Icons.add_circle_outline),
                           ),
                         ),
@@ -425,13 +425,13 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                             decoration: BoxDecoration(
                                               color: isSelected
                                                   ? Theme.of(context)
-                                                        .colorScheme
-                                                        .primaryContainer
+                                                      .colorScheme
+                                                      .primaryContainer
                                                   : Colors.transparent,
                                               borderRadius:
                                                   BorderRadius.circular(
-                                                    AppTheme.cardRadius,
-                                                  ),
+                                                AppTheme.cardRadius,
+                                              ),
                                               border: Border.all(
                                                 color: isSelected
                                                     ? Theme.of(
@@ -517,13 +517,13 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                                             decoration: BoxDecoration(
                                               color: isSelected
                                                   ? Theme.of(context)
-                                                        .colorScheme
-                                                        .primaryContainer
+                                                      .colorScheme
+                                                      .primaryContainer
                                                   : Colors.transparent,
                                               borderRadius:
                                                   BorderRadius.circular(
-                                                    AppTheme.cardRadius,
-                                                  ),
+                                                AppTheme.cardRadius,
+                                              ),
                                               border: Border.all(
                                                 color: isSelected
                                                     ? Theme.of(
@@ -721,8 +721,8 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                     isHiddenTag
                         ? l10n.hiddenTagUsageHint
                         : (isDefault
-                              ? l10n.systemDefaultTag
-                              : l10n.tapToEditLongPressToDelete),
+                            ? l10n.systemDefaultTag
+                            : l10n.tapToEditLongPressToDelete),
                     style: TextStyle(
                       fontSize: 11,
                       color: isDefault || isHiddenTag
