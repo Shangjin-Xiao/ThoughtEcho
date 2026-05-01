@@ -321,6 +321,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                       prefixIcon: const Icon(Icons.search),
                       suffixIcon: emojiSearchController.text.isNotEmpty
                           ? IconButton(
+                              tooltip: l10n.clear,
                               icon: const Icon(Icons.clear),
                               onPressed: () {
                                 emojiSearchController.clear();
@@ -759,9 +760,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(l10n.confirmDelete),
-        content: Text(
-          l10n.deleteTagConfirmation(category.localizedName(l10n)),
-        ),
+        content: Text(l10n.deleteTagConfirmation(category.localizedName(l10n))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -869,6 +868,7 @@ class _IconSelectorDialogState extends State<_IconSelectorDialog> {
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: _emojiSearchController.text.isNotEmpty
                     ? IconButton(
+                        tooltip: l10n.clear,
                         icon: const Icon(Icons.clear),
                         onPressed: () {
                           _emojiSearchController.clear();
