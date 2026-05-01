@@ -364,32 +364,21 @@ mixin _DatabaseQueryHelpersMixin on _DatabaseServiceBase {
       List<dynamic> finalArgs = List.from(args);
 
       if (tagIds != null && tagIds.isNotEmpty) {
-        // 使用 INNER JOIN 和 GROUP BY 来进行计数
-        final tagPlaceholders = tagIds.map((_) => '?').join(',');
+        // ⚡ Bolt: 使用多个 INNER JOIN 替代 GROUP BY + HAVING，避免全表聚合的性能瓶颈
+        String joins = '';
+        for (int i = 0; i < tagIds.length; i++) {
+          final alias = 'qt$i';
+          joins +=
+              ' INNER JOIN quote_tags $alias ON q.id = $alias.quote_id AND $alias.tag_id = ?';
+        }
 
-        String subQuery = '''
-          SELECT 1
-          FROM quotes q
-          INNER JOIN quote_tags qt ON q.id = qt.quote_id
-        ''';
-
-        conditions.add('qt.tag_id IN ($tagPlaceholders)');
-        finalArgs.addAll(tagIds);
+        finalArgs.insertAll(0, tagIds);
 
         final whereClause =
             conditions.isNotEmpty ? 'WHERE ${conditions.join(' AND ')}' : '';
 
-        String havingClause = 'HAVING COUNT(DISTINCT qt.tag_id) = ?';
-        finalArgs.add(tagIds.length);
-
-        query = '''
-          SELECT COUNT(*) FROM (
-            $subQuery
-            $whereClause
-            GROUP BY q.id
-            $havingClause
-          )
-        ''';
+        query =
+            'SELECT COUNT(DISTINCT q.id) as count FROM quotes q$joins $whereClause';
       } else {
         // 没有标签筛选，使用简单的 COUNT
         final whereClause =
