@@ -210,7 +210,6 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                                   Icons.add_photo_alternate_outlined,
                                   color: colorScheme.onSurfaceVariant,
                                 ),
-                          tooltip: l10n.selectIcon,
                         ),
                       ),
                       const SizedBox(width: 12),
