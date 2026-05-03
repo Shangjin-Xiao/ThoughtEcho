@@ -65,7 +65,7 @@ void main() {
         () async {
           attemptCount++;
           if (attemptCount < 2) {
-             throw Exception('Temporary failure');
+            throw Exception('Temporary failure');
           }
           return 'success_after_retry';
         },
@@ -106,7 +106,10 @@ void main() {
       } catch (_) {}
 
       final stats = errorRecoveryManager.getErrorStatistics();
-      expect(stats['FormatException'], equals(2)); // FormatException is likely caught as Exception or its runtime type
+      expect(
+          stats['FormatException'],
+          equals(
+              2)); // FormatException is likely caught as Exception or its runtime type
       expect(stats['TimeoutException'], equals(1));
     });
   });
