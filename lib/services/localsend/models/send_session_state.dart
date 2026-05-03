@@ -1,7 +1,6 @@
 import 'device.dart';
 import 'session_status.dart';
 import 'sending_file.dart';
-// import 'receive_session_state.dart'; // Removed - not needed
 
 class SendSessionState {
   final String sessionId;
