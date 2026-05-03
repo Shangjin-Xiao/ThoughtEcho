@@ -1,0 +1,43 @@
+lib/controllers/AGENTS.md
+  54b049da54833eac 3,5-9,14-16,20-21
+lib/services/database/AGENTS.md
+  54b049da54833eac 3,6-9
+test/AGENTS.md
+  54b049da54833eac 3,5,7-10,12,15-24,26,28-30
+lib/pages/AGENTS.md
+  54b049da54833eac 3-5,7-8,11-15,18
+lib/services/localsend/AGENTS.md
+  54b049da54833eac 1,3,5-11
+lib/pages/note_editor/AGENTS.md
+  54b049da54833eac 1-27
+lib/constants/AGENTS.md
+  54b049da54833eac 1-19
+lib/utils/AGENTS.md
+  54b049da54833eac 3,5,7-15,18-21,24-27,30
+lib/models/AGENTS.md
+  54b049da54833eac 3-17
+lib/widgets/AGENTS.md
+  54b049da54833eac 3,5-6,9-15
+lib/services/AGENTS.md
+  54b049da54833eac 3,7-11,13,15-18,24,43-44,54-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "e7ff01c83ebeee16a7e0b4187ed8cd573c32e0d8",
+  "prompts": {
+    "54b049da54833eac": {
+      "agent_id": {
+        "tool": "droid",
+        "id": "4f48340d-756a-462f-aff7-7618f221bebd",
+        "model": "custom:opencode-glm-5.1-3"
+      },
+      "human_author": "上晋",
+      "messages": [],
+      "total_additions": 170,
+      "total_deletions": 917,
+      "accepted_lines": 170,
+      "overriden_lines": 0
+    }
+  }
+}
