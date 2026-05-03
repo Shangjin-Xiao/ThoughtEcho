@@ -1,0 +1,25 @@
+THOUGHTECHO_OPTIMIZATION_PLAN.md
+  54b049da54833eac 1-47
+docs/Release_3.6.0.md
+  54b049da54833eac 1-91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "05c58c17fce8de8d60f3ea35ed2803b618e50b23",
+  "prompts": {
+    "54b049da54833eac": {
+      "agent_id": {
+        "tool": "droid",
+        "id": "4f48340d-756a-462f-aff7-7618f221bebd",
+        "model": "custom:opencode-glm-5.1-3"
+      },
+      "human_author": "上晋",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 0,
+      "accepted_lines": 138,
+      "overriden_lines": 0
+    }
+  }
+}
