@@ -293,7 +293,8 @@ void main() {
         final countAll = await service.getQuotesCount();
         final listAll = await service.getUserQuotes(limit: 100);
         final countEmptyTags = await service.getQuotesCount(tagIds: []);
-        final listEmptyTags = await service.getUserQuotes(tagIds: [], limit: 100);
+        final listEmptyTags =
+            await service.getUserQuotes(tagIds: [], limit: 100);
 
         expect(countEmptyTags, equals(countAll));
         expect(listEmptyTags.length, equals(listAll.length));

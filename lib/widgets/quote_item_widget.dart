@@ -37,6 +37,12 @@ class QuoteItemWidget extends StatefulWidget {
 
   /// 当前筛选的标签ID列表，用于优先显示匹配的标签
   final List<String> selectedTagIds;
+  final bool isTrashMode;
+  final String? trashDeletedAtText;
+  final String? trashRemainingDaysText;
+  final VoidCallback? onRestore;
+  final VoidCallback? onPermanentlyDelete;
+  final bool trashActionsEnabled;
 
   const QuoteItemWidget({
     super.key,
@@ -56,6 +62,12 @@ class QuoteItemWidget extends StatefulWidget {
     this.foldToggleGuideKey,
     this.moreButtonGuideKey,
     this.selectedTagIds = const [],
+    this.isTrashMode = false,
+    this.trashDeletedAtText,
+    this.trashRemainingDaysText,
+    this.onRestore,
+    this.onPermanentlyDelete,
+    this.trashActionsEnabled = true,
   });
 
   @override
@@ -311,6 +323,36 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // --- Trash Metadata Row ---
+            if (widget.isTrashMode)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.auto_delete_outlined,
+                      size: 16,
+                      color: theme.colorScheme.error,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      widget.trashRemainingDaysText ?? '',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.error,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      widget.trashDeletedAtText ?? '',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: secondaryTextColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
             // 头部日期显示
             Padding(
               padding: EdgeInsets.fromLTRB(
@@ -747,8 +789,32 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                     const Expanded(child: SizedBox.shrink()),
                   ],
 
+                  if (widget.isTrashMode) ...[
+                    TextButton(
+                      onPressed: widget.trashActionsEnabled
+                          ? widget.onPermanentlyDelete
+                          : null,
+                      style: TextButton.styleFrom(
+                        foregroundColor: theme.colorScheme.error,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                      ),
+                      child: Text(l10n.permanentlyDelete),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton.tonal(
+                      onPressed:
+                          widget.trashActionsEnabled ? widget.onRestore : null,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: theme.colorScheme.secondaryContainer,
+                        foregroundColor: theme.colorScheme.onSecondaryContainer,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                      ),
+                      child: Text(l10n.restore),
+                    ),
+                  ],
+
                   // 心形按钮（如果启用）
-                  if (widget.onFavorite != null) ...[
+                  if (!widget.isTrashMode && widget.onFavorite != null) ...[
                     Tooltip(
                       message: l10n.actionFavorite,
                       child: Semantics(
@@ -824,77 +890,80 @@ class _QuoteItemWidgetState extends State<QuoteItemWidget>
                   ],
 
                   // 更多操作按钮
-                  PopupMenuButton<String>(
-                    tooltip: l10n.moreOptions,
-                    key: widget.moreButtonGuideKey, // 功能引导 key
-                    icon: Icon(Icons.more_vert, color: iconColor),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    onSelected: (value) {
-                      if (value == 'ask') {
-                        widget.onAskAI();
-                      } else if (value == 'edit') {
-                        widget.onEdit();
-                      } else if (value == 'generate_card') {
-                        widget.onGenerateCard?.call();
-                      } else if (value == 'delete') {
-                        widget.onDelete();
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      PopupMenuItem<String>(
-                        value: 'edit',
-                        child: Row(
-                          children: [
-                            Icon(Icons.edit, color: theme.colorScheme.primary),
-                            const SizedBox(width: 8),
-                            Text(l10n.editNoteMenu),
-                          ],
-                        ),
+                  if (!widget.isTrashMode)
+                    PopupMenuButton<String>(
+                      tooltip: l10n.moreOptions,
+                      key: widget.moreButtonGuideKey, // 功能引导 key
+                      icon: Icon(Icons.more_vert, color: iconColor),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      PopupMenuItem<String>(
-                        value: 'ask',
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.question_answer,
-                              color: theme.colorScheme.primary,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(l10n.askAIMenu),
-                          ],
-                        ),
-                      ),
-                      if (widget.onGenerateCard != null)
+                      onSelected: (value) {
+                        if (value == 'ask') {
+                          widget.onAskAI();
+                        } else if (value == 'edit') {
+                          widget.onEdit();
+                        } else if (value == 'generate_card') {
+                          widget.onGenerateCard?.call();
+                        } else if (value == 'delete') {
+                          widget.onDelete();
+                        }
+                      },
+                      itemBuilder: (context) => [
                         PopupMenuItem<String>(
-                          value: 'generate_card',
+                          value: 'edit',
                           child: Row(
                             children: [
-                              Icon(
-                                Icons.auto_awesome,
-                                color: theme.colorScheme.primary,
-                              ),
+                              Icon(Icons.edit,
+                                  color: theme.colorScheme.primary),
                               const SizedBox(width: 8),
-                              Text(l10n.generateCardShareMenu),
+                              Text(l10n.editNoteMenu),
                             ],
                           ),
                         ),
-                      PopupMenuItem<String>(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            const Icon(Icons.delete, color: Colors.red),
-                            const SizedBox(width: 8),
-                            Text(
-                              l10n.deleteNoteMenu,
-                              style: TextStyle(color: theme.colorScheme.error),
-                            ),
-                          ],
+                        PopupMenuItem<String>(
+                          value: 'ask',
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.question_answer,
+                                color: theme.colorScheme.primary,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(l10n.askAIMenu),
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
+                        if (widget.onGenerateCard != null)
+                          PopupMenuItem<String>(
+                            value: 'generate_card',
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.auto_awesome,
+                                  color: theme.colorScheme.primary,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(l10n.generateCardShareMenu),
+                              ],
+                            ),
+                          ),
+                        PopupMenuItem<String>(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              const Icon(Icons.delete, color: Colors.red),
+                              const SizedBox(width: 8),
+                              Text(
+                                l10n.deleteNoteMenu,
+                                style:
+                                    TextStyle(color: theme.colorScheme.error),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ),
