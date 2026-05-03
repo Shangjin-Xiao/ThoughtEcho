@@ -176,11 +176,22 @@ class _LazyQuillImage extends StatefulWidget {
 class _LazyQuillImageState extends State<_LazyQuillImage>
     with AutomaticKeepAliveClientMixin {
   static final LinkedHashSet<String> _loadedSources = LinkedHashSet<String>();
+  static final LinkedHashMap<String, double> _aspectRatioCache =
+      LinkedHashMap<String, double>();
   static const int _maxCachedSources = 200;
+  static const int _maxCachedAspectRatios = 200;
+  static const double _fallbackAspectRatio = 4 / 3;
 
   bool _shouldLoad = false;
   bool _hasError = false;
   bool _isLoaded = false;
+  bool _isResolvingImage = false;
+  double? _aspectRatio;
+  double? _lastDisplayWidth;
+  int? _lastCacheWidth;
+  ImageProvider? _resolvedProvider;
+  ImageStream? _imageStream;
+  ImageStreamListener? _imageStreamListener;
   Timer? _deferredLoadTimer;
 
   @override
@@ -189,6 +200,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
   @override
   void initState() {
     super.initState();
+    _aspectRatio = _aspectRatioCache[widget.source];
     if (_loadedSources.contains(widget.source)) {
       _shouldLoad = true;
       _isLoaded = true;
@@ -200,6 +212,10 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
     super.didUpdateWidget(oldWidget);
     if (oldWidget.source != widget.source) {
       _hasError = false;
+      _isResolvingImage = false;
+      _aspectRatio = _aspectRatioCache[widget.source];
+      _resolvedProvider = null;
+      _detachImageStreamListener();
       final bool previouslyLoaded = _loadedSources.contains(widget.source);
       _shouldLoad = previouslyLoaded;
       _isLoaded = previouslyLoaded;
@@ -251,14 +267,90 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
       return;
     }
 
-    setState(() {
-      _shouldLoad = true;
-    });
+    _resolveImageBeforeDisplay();
+  }
+
+  void _resolveImageBeforeDisplay() {
+    if (!mounted || _shouldLoad || _isResolvingImage) {
+      return;
+    }
+
+    final provider = createOptimizedImageProvider(
+      widget.source,
+      cacheWidth: _lastCacheWidth,
+    );
+
+    if (provider == null) {
+      logDebug(
+        '图片Provider创建失败: ${widget.source}',
+        source: 'OptimizedImageEmbed',
+      );
+      setState(() {
+        _hasError = true;
+      });
+      return;
+    }
+
+    _resolvedProvider = provider;
+    _isResolvingImage = true;
+    _detachImageStreamListener();
+
+    final stream = provider.resolve(
+      createLocalImageConfiguration(
+        context,
+        size:
+            _lastDisplayWidth != null ? Size.square(_lastDisplayWidth!) : null,
+      ),
+    );
+    _imageStream = stream;
+    _imageStreamListener = ImageStreamListener(
+      (imageInfo, _) {
+        final image = imageInfo.image;
+        final ratio = image.height == 0
+            ? null
+            : image.width.toDouble() / image.height.toDouble();
+
+        if (ratio != null && ratio.isFinite && ratio > 0) {
+          _rememberAspectRatio(widget.source, ratio);
+          _aspectRatio = ratio;
+        }
+
+        if (!mounted) {
+          return;
+        }
+
+        setState(() {
+          _isResolvingImage = false;
+          _shouldLoad = true;
+        });
+        _detachImageStreamListener();
+      },
+      onError: (error, stackTrace) {
+        logError(
+          '图片尺寸解析失败: ${widget.source}',
+          error: error,
+          stackTrace: stackTrace,
+          source: 'OptimizedImageEmbed',
+        );
+
+        if (!mounted) {
+          return;
+        }
+
+        setState(() {
+          _isResolvingImage = false;
+          _hasError = true;
+        });
+        _detachImageStreamListener();
+      },
+    );
+    stream.addListener(_imageStreamListener!);
   }
 
   @override
   void dispose() {
     _deferredLoadTimer?.cancel();
+    _detachImageStreamListener();
     super.dispose();
   }
 
@@ -300,6 +392,8 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
           displayWidth,
           devicePixelRatio,
         );
+        _lastDisplayWidth = displayWidth;
+        _lastCacheWidth = targetCacheWidth;
 
         return RepaintBoundary(
           child: VisibilityDetector(
@@ -345,10 +439,11 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
       return _buildErrorPlaceholder(context, width);
     }
 
-    final provider = createOptimizedImageProvider(
-      widget.source,
-      cacheWidth: _shouldLoad ? cacheWidth : null,
-    );
+    final provider = _resolvedProvider ??
+        createOptimizedImageProvider(
+          widget.source,
+          cacheWidth: _shouldLoad ? cacheWidth : null,
+        );
 
     if (provider == null) {
       logDebug(
@@ -358,7 +453,7 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
       return _buildErrorPlaceholder(context, width);
     }
 
-    return Semantics(
+    final image = Semantics(
       button: true,
       label: AppLocalizations.of(context).viewImage,
       child: GestureDetector(
@@ -457,6 +552,17 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
         ),
       ),
     );
+
+    final reservedHeight = _reservedHeightForWidth(width);
+    if (reservedHeight == null) {
+      return image;
+    }
+
+    return SizedBox(
+      width: width,
+      height: reservedHeight,
+      child: image,
+    );
   }
 
   void _rememberSource(String source) {
@@ -468,6 +574,27 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
       final oldest = _loadedSources.first;
       _loadedSources.remove(oldest);
     }
+  }
+
+  void _rememberAspectRatio(String source, double aspectRatio) {
+    if (_aspectRatioCache.containsKey(source)) {
+      _aspectRatioCache.remove(source);
+    }
+    _aspectRatioCache[source] = aspectRatio;
+    if (_aspectRatioCache.length > _maxCachedAspectRatios) {
+      final oldest = _aspectRatioCache.keys.first;
+      _aspectRatioCache.remove(oldest);
+    }
+  }
+
+  void _detachImageStreamListener() {
+    final listener = _imageStreamListener;
+    final stream = _imageStream;
+    if (listener != null && stream != null) {
+      stream.removeListener(listener);
+    }
+    _imageStreamListener = null;
+    _imageStream = null;
   }
 
   Future<void> _openImagePreview(BuildContext context) async {
@@ -498,46 +625,69 @@ class _LazyQuillImageState extends State<_LazyQuillImage>
 
   Widget _buildImagePlaceholder(BuildContext context, double width) {
     final theme = Theme.of(context);
-    return Container(
+    return SizedBox(
       width: width,
-      constraints: const BoxConstraints(minHeight: 80),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.3),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      alignment: Alignment.center,
-      child: Icon(
-        Icons.image_outlined,
-        color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
-        size: 32,
+      height: _reservedHeightForWidth(width) ?? 160,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceContainerHigh.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Center(
+          child: Icon(
+            Icons.image_outlined,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.2),
+            size: 32,
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildErrorPlaceholder(BuildContext context, double width) {
     final theme = Theme.of(context);
-    return Container(
+    return SizedBox(
       width: width,
-      constraints: const BoxConstraints(minHeight: 120),
-      color: theme.colorScheme.errorContainer.withValues(alpha: 0.4),
-      alignment: Alignment.center,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.broken_image_outlined,
-            color: theme.colorScheme.error,
-            size: 28,
+      height: _reservedHeightForWidth(width) ?? 160,
+      child: ColoredBox(
+        color: theme.colorScheme.errorContainer.withValues(alpha: 0.4),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.broken_image_outlined,
+                color: theme.colorScheme.error,
+                size: 28,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '图片加载失败',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            '图片加载失败',
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: theme.colorScheme.error,
-            ),
-          ),
-        ],
+        ),
       ),
     );
+  }
+
+  double? _reservedHeightForWidth(double width) {
+    if (!width.isFinite || width <= 0) {
+      return null;
+    }
+
+    final specifiedHeight = widget.specifiedHeight;
+    if (specifiedHeight != null && specifiedHeight > 0) {
+      return specifiedHeight.clamp(80.0, 4096.0).toDouble();
+    }
+
+    final ratio = _aspectRatio ?? _aspectRatioCache[widget.source];
+    final effectiveRatio = ratio != null && ratio.isFinite && ratio > 0
+        ? ratio
+        : _fallbackAspectRatio;
+    return (width / effectiveRatio).clamp(120.0, 4096.0).toDouble();
   }
 }
