@@ -50,6 +50,6 @@ class XxxService extends ChangeNotifier {
 | 硬编码 API 密钥 | `APIKeyManager` + flutter_secure_storage |
 | 忽略 `notifyListeners()` | 每次写操作后调用 |
 
-## 废弃 API
-- `AIService.generateDailyPrompt` → `streamGenerateDailyPrompt`
-- `NoteSyncService.receiveAndMerge` → 已废弃
+## 已删除 API
+- `AIService.generateDailyPrompt` → 已删除，改用 `streamGenerateDailyPrompt`
+- `NoteSyncService.receiveAndMerge` → 已删除

@@ -7,7 +7,7 @@
 
 | 文件 | 行数 | 说明 |
 |------|------|------|
-| `card_templates.dart` | **75k+** | 卡片模板定义，极复杂。修改前必须完整阅读相关模板 |
+| `card_templates.dart` | ~2000 行 | 卡片模板定义，极复杂。修改前必须完整阅读相关模板 |
 | `ai_card_prompts.dart` | 7k+ | AI 卡片生成的 Prompt 模板 |
 | `app_constants.dart` | 3k | 全局常量（URL、默认值、阈值等） |
 

@@ -11,7 +11,7 @@
 ```
 ThoughtEcho/
 ├── lib/
-│   ├── main.dart           # 入口 + Provider 注入 + 紧急恢复 (1354 行)
+│   ├── main.dart           # 入口 + Provider 注入 + 紧急恢复
 │   ├── controllers/        # UI 控制器 → 见子目录 AGENTS.md
 │   ├── models/             # 数据模型 → 见子目录 AGENTS.md
 │   ├── pages/              # 页面组件 → 见子目录 AGENTS.md
@@ -197,17 +197,21 @@ class XxxService extends ChangeNotifier {
 
 ## 复杂度热点 (修改前必读)
 
-| 文件 | 行数 | 说明 |
-|------|------|------|
-| `lib/services/database_service.dart` | 5820+ | God class，通过 part/mixin 拆分为 12 个 mixin 文件 |
-| `lib/pages/home_page.dart` | 89000+ | 主页面，包含大量交互逻辑 |
-| `lib/widgets/add_note_dialog.dart` | 88000+ | 最大 Widget 文件 |
-| `lib/pages/settings_page.dart` | 57000+ | 设置中心 |
-| `lib/pages/note_sync_page.dart` | 54000+ | 设备同步 |
-| `lib/pages/note_full_editor_page.dart` | 12000+ | 富文本编辑器，拆分有 `note_editor/` 子目录 (10 个) |
-| `lib/pages/ai_periodic_report_page.dart` | 5500+ | 报告页，拆分有 `ai_report/` 子目录 |
-| `lib/services/smart_push_service.dart` | 21000+ | 拆分有 `smart_push/` 子目录 (6 个) |
-| `lib/widgets/note_list_view.dart` | 21000+ | 拆分有 `note_list/` 子目录 (5 个) |
+以下文件体积较大或逻辑复杂，修改前需仔细阅读相关子目录拆分：
+
+| 文件 | 说明 |
+|------|------|
+| `lib/services/database_service.dart` | God class，通过 part/mixin 拆分为 12 个 mixin 文件 + `database_schema_manager.dart` |
+| `lib/pages/home_page.dart` | 主页面，包含大量交互逻辑 |
+| `lib/widgets/add_note_dialog.dart` | 最大 Widget 文件 |
+| `lib/pages/settings_page.dart` | 设置中心 |
+| `lib/pages/note_sync_page.dart` | 设备同步 |
+| `lib/pages/annual_report_page.dart` | 年度报告 |
+| `lib/pages/note_full_editor_page.dart` | 富文本编辑器，拆分有 `note_editor/` 子目录 (10 个) |
+| `lib/pages/ai_periodic_report_page.dart` | 报告页，拆分有 `ai_report/` 子目录 |
+| `lib/services/smart_push_service.dart` | 拆分有 `smart_push/` 子目录 (6 个) |
+| `lib/widgets/note_list_view.dart` | 拆分有 `note_list/` 子目录 (5 个) |
+| `lib/constants/card_templates.dart` | 卡片模板定义，极复杂 |
 
 ---
 
@@ -253,11 +257,11 @@ MultiAISettings → AIProviderSettings → AINetworkManager → APIKeyManager
 
 ---
 
-## 废弃 API (禁止使用)
+## 已删除 API (禁止重新实现)
 
-- `AIService.generateDailyPrompt` → 改用 `streamGenerateDailyPrompt`
-- `TimeUtils.formatTime` → 改用 `formatRelativeDateTime` 或 `formatQuoteTime`
-- `NoteSyncService.receiveAndMerge` → 已废弃的同步逻辑
+- `AIService.generateDailyPrompt` → 已删除，改用 `streamGenerateDailyPrompt`
+- `TimeUtils.formatTime` → 已删除，改用 `formatRelativeDateTime` 或 `formatQuoteTime`
+- `NoteSyncService.receiveAndMerge` → 已删除
 
 ---
 
