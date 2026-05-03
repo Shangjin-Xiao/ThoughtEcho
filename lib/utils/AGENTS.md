@@ -26,5 +26,5 @@
 | 持有 BuildContext 为成员变量 | 作为方法参数传入 |
 | 直接 `print()` | `logDebug()` |
 
-## 废弃 API
-- `TimeUtils.formatTime` → `formatRelativeDateTime` 或 `formatQuoteTime`
+## 已删除 API
+- `TimeUtils.formatTime` → 已删除，改用 `formatRelativeDateTime` 或 `formatQuoteTime`
