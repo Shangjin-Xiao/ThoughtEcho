@@ -3,7 +3,6 @@ part of '../note_list_view.dart';
 /// List building, search, and item rendering for NoteListViewState.
 extension _NoteListItemsExtension on NoteListViewState {
   Widget _buildNoteListView(BuildContext context) {
-    final db = Provider.of<DatabaseService>(context);
     final searchController = Provider.of<NoteSearchController>(context);
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context);
@@ -221,7 +220,7 @@ extension _NoteListItemsExtension on NoteListViewState {
                             child: child,
                           );
                         },
-                        child: _buildNoteList(db, theme),
+                        child: _buildNoteList(theme),
                       ),
                     ),
                   ),
@@ -234,7 +233,7 @@ extension _NoteListItemsExtension on NoteListViewState {
     );
   }
 
-  Widget _buildNoteList(DatabaseService db, ThemeData theme) {
+  Widget _buildNoteList(ThemeData theme) {
     final l10n = AppLocalizations.of(context);
     // 为 AnimatedSwitcher 提供唯一 key，确保筛选变化时能触发动画
     final listKey = ValueKey(
