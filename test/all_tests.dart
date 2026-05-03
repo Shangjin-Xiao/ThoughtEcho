@@ -24,6 +24,8 @@ import 'unit/services/ai_analysis_database_service_test.dart'
     as ai_analysis_service_test;
 import 'unit/services/database_health_security_test.dart'
     as database_health_security_test;
+import 'unit/services/database_multi_tag_filter_test.dart'
+    as database_multi_tag_filter_test;
 import 'unit/services/location_format_test.dart' as location_format_test;
 import 'unit/services/log_service_adapter_test.dart'
     as log_service_adapter_test;
@@ -82,6 +84,7 @@ void main() {
       clipboard_service_test.main();
       ai_analysis_service_test.main();
       database_health_security_test.main();
+      database_multi_tag_filter_test.main();
       log_service_adapter_test.main();
       smart_push_security_test.main();
       error_recovery_manager_test.main();

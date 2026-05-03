@@ -191,7 +191,7 @@ class _TagSettingsPageState extends State<TagSettingsPage> {
                         ),
                         child: IconButton(
                           onPressed: () => _showIconSelector(context, l10n),
-                          tooltip: l10n.iconLabel,
+                          tooltip: l10n.selectIcon,
                           icon: _selectedIconName != null
                               ? (IconUtils.isEmoji(_selectedIconName!)
                                   ? Text(
