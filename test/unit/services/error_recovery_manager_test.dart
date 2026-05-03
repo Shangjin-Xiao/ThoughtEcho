@@ -14,12 +14,6 @@ void main() {
       errorRecoveryManager.clearErrorHistory();
     });
 
-    test('should initialize and register default strategies', () {
-      errorRecoveryManager.initialize();
-      // Since _recoveryStrategies is private, we can verify by triggering errors
-      // and checking if they attempt recovery via the default strategies.
-    });
-
     test('executeWithRecovery successful operation', () async {
       errorRecoveryManager.initialize();
       final result = await errorRecoveryManager.executeWithRecovery(
@@ -34,8 +28,8 @@ void main() {
       errorRecoveryManager.initialize();
       int attemptCount = 0;
 
-      try {
-        await errorRecoveryManager.executeWithRecovery(
+      await expectLater(
+        () => errorRecoveryManager.executeWithRecovery(
           'fail_test',
           () async {
             attemptCount++;
@@ -43,13 +37,11 @@ void main() {
           },
           maxRetries: 2,
           retryDelay: const Duration(milliseconds: 10),
-        );
-        // We expect it to throw, so we shouldn't fail if we reach the catch block.
-        // We shouldn't put fail() right after the operation because it will be considered dead code due to the guaranteed throw from max retries being exhausted.
-      } catch (e) {
-        expect(attemptCount, equals(3)); // 1 initial + 2 retries
-        expect(e.toString(), contains('Test failure'));
-      }
+        ),
+        throwsA(isA<Exception>()
+            .having((e) => e.toString(), 'message', contains('Test failure'))),
+      );
+      expect(attemptCount, equals(3)); // 1 initial + 2 retries
 
       final history = errorRecoveryManager.getErrorHistory();
       expect(history.length, equals(3));
