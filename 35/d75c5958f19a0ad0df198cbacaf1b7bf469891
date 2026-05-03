@@ -1,0 +1,23 @@
+lib/services/database_health_service.dart
+  d74d06239a0e3393 378-389,394,400,598-602,609-610
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "35d75c5958f19a0ad0df198cbacaf1b7bf469891",
+  "prompts": {
+    "d74d06239a0e3393": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_212c28968ffe2EBigGC6dW6zFv",
+        "model": "opencode-go/kimi-k2.6"
+      },
+      "human_author": "上晋",
+      "messages": [],
+      "total_additions": 27,
+      "total_deletions": 11,
+      "accepted_lines": 23,
+      "overriden_lines": 2
+    }
+  }
+}
