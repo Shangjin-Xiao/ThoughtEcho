@@ -1,30 +1,60 @@
 # WIDGETS 模块
 
 ## 概览
-可复用 UI 组件层（40+ 文件），包含原子组件和复合业务组件。
+可复用 UI 组件层（50+ 文件），包含原子组件和复合业务组件。
 
 ## 核心组件
 
 | 文件 | 说明 |
 |------|------|
-| `note_list_view.dart` | **核心笔记列表（2100+ 行）**，支持多布局、筛选、滑动操作 |
-| `quote_card.dart` | 笔记卡片标准展示，支持卡片模板和颜色 |
-| `quote_item_widget.dart` | 列表中的单条笔记条目 |
+| `note_list_view.dart` | **核心笔记列表（20k+ 行）**，支持多布局、筛选、滑动操作 |
+| `add_note_dialog.dart` | 快速添加笔记弹窗（88k+ 行，最大 Widget 文件） |
+| `add_note_dialog_parts.dart` | 添加笔记弹窗拆分部分 |
+| `quote_item_widget.dart` | 列表中的单条笔记条目（40k+ 行） |
+| `quote_content_widget.dart` | 笔记内容渲染（25k+ 行） |
+| `quote_card.dart` | 笔记卡片标准展示 |
+| `quote_card_helpers.dart` | 卡片辅助方法 |
 | `streaming_text_dialog.dart` | AI 流式响应弹窗容器 |
 | `quill_enhanced_toolbar_unified.dart` | 富文本编辑器工具栏 |
-| `add_note_dialog.dart` | 快速添加笔记弹窗 |
 | `hitokoto_widget.dart` | 首页每日一言展示 |
+| `daily_quote_view.dart` | 每日一言视图 |
 | `weather_widget.dart` | 天气信息展示 |
 | `media_player_widget.dart` | 视频/音频播放器 |
 | `motion_photo_preview_page.dart` | 动态照片预览 |
 | `unified_media_import_dialog.dart` | 统一媒体导入弹窗 |
 | `app_snackbar.dart` | 统一 SnackBar 样式封装 |
+| `app_empty_view.dart` | 空状态组件 |
+| `app_error_view.dart` | 错误状态组件 |
+| `app_loading_view.dart` | 加载状态组件 |
+| `app_success_view.dart` | 成功状态组件 |
+| `feature_guide_popover.dart` | 功能引导气泡 |
+| `ai_options_menu.dart` | AI 功能菜单 |
+| `add_note_ai_menu.dart` | 添加笔记 AI 菜单 |
+| `note_filter_sort_sheet.dart` | 笔记筛选排序底部表单 |
+| `city_search_widget.dart` | 城市搜索组件 |
+| `enhanced_markdown_widgets.dart` | 增强 Markdown 组件 |
+| `markdown_message_bubble.dart` | Markdown 消息气泡 |
+| `chat_input_suggestions.dart` | 聊天输入建议 |
+| `typing_indicator_bubble.dart` | 打字指示气泡 |
+| `sliding_card.dart` | 滑动卡片 |
+| `svg_card_widget.dart` | SVG 卡片组件 |
+| `trash_quote_card.dart` | 回收站笔记卡片 |
+| `source_analysis_result_dialog.dart` | 来源分析结果弹窗 |
+| `accessible_color_grid.dart` | 无障碍颜色网格 |
+| `ask_note_widgets.dart` | 问答笔记组件 |
+| `anniversary_animation_overlay.dart` | 纪念日动画覆盖层 |
+| `anniversary_notebook_icon.dart` | 纪念日笔记本图标 |
+| `update_dialog.dart` | 更新提示弹窗 |
+| `lottie_loading_widget.dart` | Lottie 加载组件 |
+| `pulse_animation.dart` | 脉冲动画 |
+| `enhanced_ai_loading_dialog.dart` | AI 加载弹窗 |
+| `enhanced_loading_widget.dart` | 增强加载组件 |
 
 ## 拆分子目录
 
 | 子目录 | 说明 |
 |--------|------|
-| `note_list/` | NoteListView 拆分：data_stream / filters / items / scroll |
+| `note_list/` | NoteListView 拆分：data_stream / filters / items / scroll / scroll_alignment |
 | `common/` | 基础通用组件（`lottie_animation_widget.dart`） |
 | `local_ai/` | 本地 AI 特化组件 |
 | `onboarding/` | 引导页专用（page_views / preferences_page_view） |
@@ -84,3 +114,6 @@ Consumer<DatabaseService>(
   builder: (context, db, child) => ...,
 )
 ```
+
+## 测试
+- `test/widgets/quote_item_widget_test.dart` — quote_item_widget 的 Widget 测试
