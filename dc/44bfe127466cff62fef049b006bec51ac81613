@@ -1,0 +1,27 @@
+lib/pages/tag_settings_page.dart
+  deb0aa38833d2bc6 194
+test/unit/services/database_multi_tag_filter_test.dart
+  deb0aa38833d2bc6 1-366
+test/all_tests.dart
+  deb0aa38833d2bc6 27-28,85
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "dc44bfe127466cff62fef049b006bec51ac81613",
+  "prompts": {
+    "deb0aa38833d2bc6": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_212e69696ffeQbutywzSlJFqdg",
+        "model": "opencode-go/kimi-k2.6"
+      },
+      "human_author": "上晋",
+      "messages": [],
+      "total_additions": 508,
+      "total_deletions": 42,
+      "accepted_lines": 508,
+      "overriden_lines": 0
+    }
+  }
+}
