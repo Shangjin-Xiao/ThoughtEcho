@@ -90,7 +90,8 @@ void main() {
         // Trigger a search that will start a 500ms debounce timer
         controller.updateSearch('delayed query');
 
-        expect(controller.searchQuery, ''); // Query hasn't updated yet due to debounce
+        expect(controller.searchQuery,
+            ''); // Query hasn't updated yet due to debounce
 
         // Check that isSearching was set to true immediately by updateSearch
         expect(controller.isSearching, true);
