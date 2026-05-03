@@ -13,7 +13,5 @@
 ## 2026-04-28 - [补充 MediaOptimizationUtils 的测试]
 **盲点:** `MediaOptimizationUtils` 中的 `getMimeType` 和 `estimateOptimizedSize` 等纯函数负责媒体类型识别与大小估算，但长期缺乏单元测试覆盖。这容易在添加新的文件类型支持或调整大小估算逻辑时引入无法预料的错误。
 **对策:** 为此类明确的输入输出映射纯函数编写了极简的单元测试。覆盖了正常情况（如常见的图片、视频、音频扩展名与大小映射）、边界条件（如未知文件类型、空字符串）及容错情况（大写扩展名）。测试完全隔离并只断言基本逻辑。
-
-## 2024-05-27 - 补充 SearchController 的测试
-**盲点:** `NoteSearchController` 的 `clearSearch` 方法未经过充分测试，且其内部处理未被防抖定时器延迟的空查询清空逻辑时存在未完整重置状态的 bug。
+## 2026-05-03 - 补充 SearchController 的测试
 **对策:** 添加了针对 `clearSearch` 方法的单元测试。利用 `fake_async` 模拟防抖延时并确保方法能正确取消进行中的定时器。同时修复了代码中的 bug，确保当 `_isSearching` 为 true 时（不论 `_searchQuery` 是否为空），清除逻辑也能正确重置搜索状态并触发状态更新。
