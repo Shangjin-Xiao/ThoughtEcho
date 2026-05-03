@@ -383,10 +383,8 @@ extension _NoteListScrollExtension on NoteListViewState {
       return;
     }
 
-    // 修复：立即设置加载状态，防止并发调用
-    _updateState(() {
-      _isLoading = true;
-    });
+    // 仅作为并发保护；非首屏加载时 _isLoading 不改变可见 UI，避免多一次列表重建。
+    _isLoading = true;
 
     try {
       logDebug('触发加载更多，当前有${_quotes.length}条数据', source: 'NoteListView');
