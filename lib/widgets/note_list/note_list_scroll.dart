@@ -389,13 +389,10 @@ extension _NoteListScrollExtension on NoteListViewState {
     try {
       logDebug('触发加载更多，当前有${_quotes.length}条数据', source: 'NoteListView');
       await db.loadMoreQuotes();
-
-      // 强制检查状态更新
+      // 成功路径由 watchQuotes 的流回调统一更新 _quotes/_hasMore/_isLoading，
+      // 避免加载更多时在滚动中多触发一次整列表重建。
       if (mounted) {
-        _updateState(() {
-          _hasMore = db.hasMoreQuotes;
-          _isLoading = false; // 加载完成后重置状态
-        });
+        _isLoading = false;
       }
     } catch (e) {
       // 修复：出错时也要重置加载状态
