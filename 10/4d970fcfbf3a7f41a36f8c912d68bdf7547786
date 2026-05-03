@@ -1,0 +1,21 @@
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "104d970fcfbf3a7f41a36f8c912d68bdf7547786",
+  "prompts": {
+    "b6f7c59561cd069d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_212466d4effeNRndJrkiqQFUU8",
+        "model": "opencode-go/kimi-k2.6"
+      },
+      "human_author": "上晋",
+      "messages": [],
+      "total_additions": 0,
+      "total_deletions": 384,
+      "accepted_lines": 0,
+      "overriden_lines": 0
+    }
+  }
+}
