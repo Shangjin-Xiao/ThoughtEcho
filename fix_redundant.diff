@@ -1,0 +1,41 @@
+--- lib/services/database_schema_manager.dart
++++ lib/services/database_schema_manager.dart
+@@ -140,8 +140,6 @@
+       'CREATE INDEX idx_quote_tags_quote_id ON quote_tags(quote_id)',
+     );
+     await db.execute(
+-      'CREATE INDEX idx_quote_tags_tag_id ON quote_tags(tag_id)',
+-    );
+-    await db.execute(
+       'CREATE INDEX idx_quote_tags_composite ON quote_tags(tag_id, quote_id)',
+     );
+
+@@ -755,9 +753,6 @@
+         await txn.execute(
+           'CREATE INDEX IF NOT EXISTS idx_quote_tags_quote_id ON quote_tags(quote_id)',
+         );
+-        await txn.execute(
+-          'CREATE INDEX IF NOT EXISTS idx_quote_tags_tag_id ON quote_tags(tag_id)',
+-        );
+         await txn.execute(
+           'CREATE INDEX IF NOT EXISTS idx_quote_tags_composite ON quote_tags(tag_id, quote_id)',
+         );
+@@ -1057,9 +1052,6 @@
+       await txn.execute(
+         'CREATE INDEX IF NOT EXISTS idx_quote_tags_quote_id ON quote_tags(quote_id)',
+       );
+-      await txn.execute(
+-        'CREATE INDEX IF NOT EXISTS idx_quote_tags_tag_id ON quote_tags(tag_id)',
+-      );
+       await txn.execute(
+         'CREATE INDEX IF NOT EXISTS idx_quote_tags_composite ON quote_tags(tag_id, quote_id)',
+       );
+@@ -1201,8 +1193,6 @@
+             'CREATE INDEX IF NOT EXISTS idx_quotes_deleted_at ON quotes(deleted_at)',
+         'idx_quote_tags_quote_id':
+             'CREATE INDEX IF NOT EXISTS idx_quote_tags_quote_id ON quote_tags(quote_id)',
+-        'idx_quote_tags_tag_id':
+-            'CREATE INDEX IF NOT EXISTS idx_quote_tags_tag_id ON quote_tags(tag_id)',
+         'idx_quote_tags_composite':
+             'CREATE INDEX IF NOT EXISTS idx_quote_tags_composite ON quote_tags(tag_id, quote_id)',
+       };
