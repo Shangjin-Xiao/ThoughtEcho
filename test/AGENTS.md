@@ -11,19 +11,27 @@ test/
 ├── test_setup.dart             # 平台 Mock 统一配置（必读）
 ├── test_setup.mocks.dart       # 生成的 Mock（禁止手动编辑）
 ├── test_helpers.dart           # 通用测试辅助函数
+├── test_helpers.mocks.dart     # 辅助函数 Mock（生成）
 ├── test_config.dart            # 测试配置常量
+├── test_database_fix.dart      # 数据库测试修复
 │
 ├── unit/                       # 单元测试
-│   ├── models/                 # quote_model_test.dart / note_category_test.dart
-│   ├── services/               # database_service_test / settings_service_test
-│   │                           # weather_service_test / clipboard_service_test
-│   │                           # ai_analysis_database_service_test / ...
-│   ├── utils/                  # time_utils_test / motion_photo_utils_test
-│   └── widgets/                # motion_photo_preview_page_test
+│   ├── models/                 # quote_model / note_category / note_tag / app_settings / feature_guide / smart_push_settings / weather_data
+│   ├── services/               # database (CRUD/health/security/backup/trash/multi_tag_filter/optimization)
+│   │                           # settings / api / draft / location / weather / clipboard / media / secure_storage
+│   │                           # smart_push (service/analytics/computation/security/time_window)
+│   │                           # excerpt_intent / log_service_adapter
+│   ├── controllers/            # search_controller / onboarding_controller
+│   ├── utils/                  # ai_prompt_manager / time / color / string / icon / lww
+│   │                           # content_sanitizer / path_security / backup_progress
+│   │                           / media_optimization / motion_photo / quill_ai
+│   │                           / anniversary / http / i18n / lottie / memory
+│   │                           / optimized_image_loader
+│   └── widgets/                # motion_photo_preview_page
 │
 ├── widget/                     # Widget 测试
 │   ├── pages/                  # home_page_test.dart
-│   └── note_sync_page_test.dart
+│   └── quote_item_widget_test.dart
 │
 ├── integration/                # 集成测试
 │   └── app_flow_test.dart
@@ -33,6 +41,14 @@ test/
 │   ├── ai_analysis_import_benchmark_test.dart
 │   ├── tag_migration_benchmark_test.dart
 │   └── ui_performance_benchmark.dart
+│
+├── unit/                       # 单元测试（根级别）
+│   ├── backup_file_validation_test.dart
+│   ├── cache_fix_verification_test.dart
+│   ├── encoding_fix_test.dart
+│   ├── large_file_manager_test.dart
+│   ├── memory_optimization_test.dart
+│   └── quote_content_cache_test.dart
 │
 ├── bug_fixes/                  # Bug 修复验证
 └── debug/                      # 调试用临时测试
@@ -149,7 +165,19 @@ testWidgets('描述 Widget 行为', (tester) async {
 });
 ```
 
+## 当前测试覆盖的重点模块
+
+| 模块 | 测试文件 |
+|------|----------|
+| Model | quote_model, note_category, note_tag, app_settings, feature_guide, weather_data, smart_push_settings |
+| Database | CRUD, health, security, backup merge, trash, multi-tag filter, optimization |
+| Service | settings, api, draft, location, weather, clipboard, smart_push (各子模块) |
+| Controller | search_controller, onboarding_controller |
+| Utils | ai_prompt_manager, time, color, string, icon, lww, path_security, content_sanitizer |
+| Widget | quote_item_widget |
+
 ## 注意事项
 - 集成测试和数据库测试在 CI 中可能导致挂起，本地运行时注意超时设置
 - 性能测试文件仅在需要基准对比时运行，不纳入日常 CI
 - `bug_fixes/` 和 `debug/` 中的文件需要在 `all_tests.dart` 中注册才会被 CI 执行
+- `test_setup.dart` 中的 Mock 配置修改后需重新运行 `build_runner`

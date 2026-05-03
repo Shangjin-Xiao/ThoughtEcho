@@ -1,7 +1,7 @@
 # MODELS 模块
 
 ## 概览
-数据模型层，定义应用中所有核心数据结构、序列化逻辑和状态对象。模型为纯 Dart 类，**不依赖 Flutter 框架**。
+数据模型层（25 个文件），定义应用核心数据结构、序列化逻辑和状态对象。模型为纯 Dart 类，**不依赖 Flutter 框架**。
 
 ## 核心模型
 
@@ -12,11 +12,23 @@
 | `note_tag.dart` | 标签，通过关联表管理（不在 Quote.toMap 中序列化） |
 | `ai_provider_settings.dart` | AI 服务商配置，含 `getPresetProviders()` 预设列表 |
 | `multi_ai_settings.dart` | 多 AI Provider 聚合配置 |
-| `chat_message.dart` / `chat_session.dart` | AI 对话记录 |
-| `weather_data.dart` | 天气信息 |
+| `ai_settings.dart` | AI 全局设置 |
+| `ai_config.dart` | AI 配置详情 |
+| `ai_analysis_model.dart` | AI 分析结果模型 |
+| `chat_message.dart` | AI 对话消息 |
+| `chat_session.dart` | AI 对话会话 |
+| `app_settings.dart` | 全局应用设置（15k+ 行，功能设置集中管理） |
 | `smart_push_settings.dart` | 智能推送配置 |
-| `app_settings.dart` | 全局应用设置 |
+| `weather_data.dart` | 天气信息与城市数据 |
 | `merge_report.dart` | LWW 同步合并结果报告 |
+| `merge_report_simple.dart` | 简化版合并报告 |
+| `feature_guide.dart` | 功能引导状态 |
+| `generated_card.dart` | AI 生成卡片模型 |
+| `local_ai_settings.dart` | 本地 AI 设置 |
+| `onboarding_models.dart` | 引导流程模型 |
+| `localsend_file_status.dart` | LocalSend 文件传输状态 |
+| `localsend_file_type.dart` | LocalSend 文件类型枚举 |
+| `localsend_session_status.dart` | LocalSend 会话状态 |
 
 ## 规范
 

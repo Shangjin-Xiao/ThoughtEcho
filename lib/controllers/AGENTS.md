@@ -1,13 +1,13 @@
 # CONTROLLERS 模块
 
 ## 概览
-UI 控制器层，桥接页面 UI 与 Service 层业务逻辑。控制器专注于 UI 状态管理（防抖、加载态、错误态），复杂业务下沉到 Service。
+UI 控制器层（3 个文件），桥接页面 UI 与 Service 层业务逻辑。控制器专注于 UI 状态管理（防抖、加载态、错误态），复杂业务下沉到 Service。
 
 ## 文件清单
 
 | 文件 | 职责 |
 |------|------|
-| `onboarding_controller.dart` | 引导流程步骤控制、完成状态 |
+| `onboarding_controller.dart` | 引导流程步骤控制、完成状态持久化 |
 | `search_controller.dart` | 全局搜索：防抖 500ms、版本号防竞态、5s 超时保护 |
 | `weather_search_controller.dart` | 天气城市搜索与缓存 |
 
@@ -65,3 +65,7 @@ final ctrl = context.watch<XxxController>();
 // 或
 Consumer<XxxController>(builder: (ctx, ctrl, _) => ...)
 ```
+
+## 测试
+- `test/unit/controllers/search_controller_test.dart` — SearchController 单元测试
+- `test/unit/controllers/onboarding_controller_test.dart` — OnboardingController 单元测试
