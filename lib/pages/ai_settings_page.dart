@@ -993,6 +993,7 @@ class _AISettingsPageState extends State<AISettingsPage> {
                       ),
                       onPressed: () =>
                           setState(() => _obscureApiKey = !_obscureApiKey),
+                      tooltip: _obscureApiKey ? l10n.show : l10n.hide,
                     ),
                   ),
                   obscureText: _obscureApiKey,

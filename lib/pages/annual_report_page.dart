@@ -403,6 +403,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                     Icons.close,
                     color: isDark ? Colors.white : Colors.black54,
                   ),
+                  tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
                 ),
                 Text(
                   '${_currentPage + 1} / 7',
@@ -418,6 +419,7 @@ class _AnnualReportPageState extends State<AnnualReportPage>
                     Icons.share,
                     color: isDark ? Colors.white : Colors.black54,
                   ),
+                  tooltip: AppLocalizations.of(context).shareBtn,
                 ),
               ],
             ),
