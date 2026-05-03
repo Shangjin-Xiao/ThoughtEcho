@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:meta/meta.dart';
 import 'package:open_file/open_file.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -10,6 +11,13 @@ import '../utils/app_logger.dart';
 
 /// APK下载和安装服务
 class ApkDownloadService {
+  @visibleForTesting
+  static void setDio(Dio dio) => _dio = dio;
+
+  @visibleForTesting
+  static void setNotificationsPlugin(FlutterLocalNotificationsPlugin plugin) =>
+      _notificationsPlugin = plugin;
+
   static const String _notificationChannelId = 'apk_download_channel';
   static const String _notificationChannelName = 'APK Download';
   static const String _notificationChannelDescription =
@@ -245,6 +253,15 @@ class ApkDownloadService {
   }
 
   /// 开始下载
+  @visibleForTesting
+  static Future<void> startDownloadForTesting(
+    BuildContext context,
+    String apkUrl,
+    String filePath,
+    String version,
+  ) => _startDownload(context, apkUrl, filePath, version);
+
+  /// 开始下载
   static Future<void> _startDownload(
     BuildContext context,
     String apkUrl,
@@ -375,7 +392,8 @@ class ApkDownloadService {
 
     await notificationsPlugin
         .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(androidChannel);
   }
 
