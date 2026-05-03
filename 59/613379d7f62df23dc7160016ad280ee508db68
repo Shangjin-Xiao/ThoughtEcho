@@ -1,0 +1,33 @@
+AGENTS.md
+  54b049da54833eac 14,200-214,260,262-264
+lib/models/AGENTS.md
+  54b049da54833eac 13
+lib/services/AGENTS.md
+  54b049da54833eac 53-55
+lib/utils/AGENTS.md
+  54b049da54833eac 29-30
+lib/constants/AGENTS.md
+  54b049da54833eac 10
+lib/services/database/AGENTS.md
+  54b049da54833eac 8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "59613379d7f62df23dc7160016ad280ee508db68",
+  "prompts": {
+    "54b049da54833eac": {
+      "agent_id": {
+        "tool": "droid",
+        "id": "4f48340d-756a-462f-aff7-7618f221bebd",
+        "model": "custom:opencode-glm-5.1-3"
+      },
+      "human_author": "上晋",
+      "messages": [],
+      "total_additions": 28,
+      "total_deletions": 24,
+      "accepted_lines": 28,
+      "overriden_lines": 0
+    }
+  }
+}
