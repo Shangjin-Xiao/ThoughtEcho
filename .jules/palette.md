@@ -13,3 +13,6 @@
 ## 2026-05-01 - [Tooltip on icon-only buttons]
 **Learning:** Icon-only buttons used throughout the application (such as the app bar action buttons and the input clear fields) may be missing tooltips, making it difficult for screen readers to explain what those buttons do.
 **Action:** When creating or modifying `IconButton` components, always verify that a `tooltip` attribute containing localized strings from `AppLocalizations` is present, especially when it is icon-only.
+## 2024-05-24 - Missing Tooltips on IconButtons
+**Learning:** Found multiple instances where `IconButton` widgets were missing `tooltip` properties. This affects accessibility for screen readers and tooltips on web/desktop.
+**Action:** Added semantic string tooltips or translated string references across the settings and subpages. The Python script was improved to find these, but `IconButton` wrappers can mask these errors from naive regex tools.

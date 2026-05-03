@@ -70,6 +70,7 @@ class _ApiNinjasCategorySelectionPageState
           title: Text(l10n.dailyQuoteApiNinjasCategorySelection),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back_ios_new_rounded),
+            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
             onPressed: _popWithSelection,
           ),
           actions: [
@@ -106,6 +107,7 @@ class _ApiNinjasCategorySelectionPageState
                             });
                           },
                           icon: const Icon(Icons.close_rounded),
+                          tooltip: AppLocalizations.of(context).clear,
                         ),
                 ),
               ),

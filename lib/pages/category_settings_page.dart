@@ -596,6 +596,7 @@ class _CategorySettingsPageState extends State<CategorySettingsPage> {
                   Text(l10n.iconLabel),
                   IconButton(
                     icon: IconUtils.getCategoryIcon(selectedIcon),
+                    tooltip: l10n.iconLabel,
                     onPressed: () async {
                       final BuildContext currentContext = dialogContext;
                       if (!context.mounted) return;

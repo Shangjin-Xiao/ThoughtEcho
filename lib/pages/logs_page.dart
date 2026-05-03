@@ -590,6 +590,7 @@ class _LogsPageState extends State<LogsPage> {
                   suffixIcon: _searchQuery != null && _searchQuery!.isNotEmpty
                       ? IconButton(
                           icon: const Icon(Icons.clear),
+                          tooltip: l10n.clear,
                           onPressed: () {
                             _searchDebounceTimer?.cancel();
                             _searchController.clear();
