@@ -10,7 +10,7 @@
 ## 关键约束
 - **Quote 双存储**：`content`（纯文本，搜索/摘要/AI）+ `deltaContent`（Quill Delta JSON，富文本渲染），保存时必须同步
 - **fromMap 容错**：可选字段用 `map['key'] as String? ?? ''`，禁止抛异常导致列表加载失败
-- **字段新增**→在 `DatabaseService` 添加迁移 + bump `_databaseVersion`
+- **字段新增**→在 `database_migration_mixin.dart` 添加迁移 + 在 `database_schema_manager.dart` bump 版本号
 - **字段删除**→先全局搜索 UI 使用处，确认无依赖后再删
 - **禁止** `import 'package:flutter/...'` — 纯 Dart 层
 - **禁止** 模型持有 Service 引用 — 防循环依赖
