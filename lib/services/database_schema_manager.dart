@@ -139,10 +139,7 @@ class DatabaseSchemaManager {
     await db.execute(
       'CREATE INDEX idx_quote_tags_quote_id ON quote_tags(quote_id)',
     );
-    await db.execute(
-      'CREATE INDEX idx_quote_tags_tag_id ON quote_tags(tag_id)',
-    );
-    // 复合索引优化JOIN查询
+    // 复合索引优化JOIN查询 (且最左前缀覆盖单列 tag_id 查询)
     await db.execute(
       'CREATE INDEX idx_quote_tags_composite ON quote_tags(tag_id, quote_id)',
     );
@@ -755,8 +752,9 @@ class DatabaseSchemaManager {
         await txn.execute(
           'CREATE INDEX IF NOT EXISTS idx_quote_tags_quote_id ON quote_tags(quote_id)',
         );
+        // 复合索引优化JOIN查询 (且最左前缀覆盖单列 tag_id 查询)
         await txn.execute(
-          'CREATE INDEX IF NOT EXISTS idx_quote_tags_tag_id ON quote_tags(tag_id)',
+          'CREATE INDEX IF NOT EXISTS idx_quote_tags_composite ON quote_tags(tag_id, quote_id)',
         );
 
         // 3. 安全迁移数据
@@ -1054,8 +1052,9 @@ class DatabaseSchemaManager {
       await txn.execute(
         'CREATE INDEX IF NOT EXISTS idx_quote_tags_quote_id ON quote_tags(quote_id)',
       );
+      // 复合索引优化JOIN查询 (且最左前缀覆盖单列 tag_id 查询)
       await txn.execute(
-        'CREATE INDEX IF NOT EXISTS idx_quote_tags_tag_id ON quote_tags(tag_id)',
+        'CREATE INDEX IF NOT EXISTS idx_quote_tags_composite ON quote_tags(tag_id, quote_id)',
       );
 
       // 3. 安全迁移数据
@@ -1193,11 +1192,15 @@ class DatabaseSchemaManager {
             'CREATE INDEX IF NOT EXISTS idx_quotes_is_deleted ON quotes(is_deleted)',
         'idx_quotes_deleted_at':
             'CREATE INDEX IF NOT EXISTS idx_quotes_deleted_at ON quotes(deleted_at)',
+        'idx_quote_tags_quote_id':
+            'CREATE INDEX IF NOT EXISTS idx_quote_tags_quote_id ON quote_tags(quote_id)',
+        'idx_quote_tags_composite':
+            'CREATE INDEX IF NOT EXISTS idx_quote_tags_composite ON quote_tags(tag_id, quote_id)',
       };
 
       // 获取当前存在的索引
       final existingIndexes = await db.rawQuery(
-        "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='quotes'",
+        "SELECT name FROM sqlite_master WHERE type='index' AND (tbl_name='quotes' OR tbl_name='quote_tags')",
       );
       final existingIndexNames = existingIndexes
           .map((idx) => idx['name'] as String)

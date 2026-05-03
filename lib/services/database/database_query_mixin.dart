@@ -315,19 +315,17 @@ mixin _DatabaseQueryMixin on _DatabaseServiceBase {
         ''');
         args.add(tagIds.first);
       } else {
-        // 多标签查询：使用EXISTS确保所有标签都匹配
-        final tagPlaceholders = tagIds.map((_) => '?').join(',');
-        conditions.add('''
-          EXISTS (
-            SELECT 1 FROM quote_tags qt_filter
-            WHERE qt_filter.quote_id = q.id
-            AND qt_filter.tag_id IN ($tagPlaceholders)
-            GROUP BY qt_filter.quote_id
-            HAVING COUNT(DISTINCT qt_filter.tag_id) = ?
-          )
-        ''');
-        args.addAll(tagIds);
-        args.add(tagIds.length);
+        // 多标签查询：使用多个 EXISTS 子查询替代 GROUP BY + HAVING，利用索引实现快速点查和提前返回
+        for (final tagId in tagIds) {
+          conditions.add('''
+            EXISTS (
+              SELECT 1 FROM quote_tags qt_filter
+              WHERE qt_filter.quote_id = q.id
+              AND qt_filter.tag_id = ?
+            )
+          ''');
+          args.add(tagId);
+        }
       }
     }
 
