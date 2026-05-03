@@ -1,0 +1,23 @@
+lib/utils/quill_editor_extensions.dart
+  b6f7c59561cd069d 179-180,182-183,188-194,203,215-218,270-347,353,395-396,442-446,456,555-565,579-599,628,630-642,649,651-670,672,676-691
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "3284d0f7c7c361772595d7528dbb0bbc80772240",
+  "prompts": {
+    "b6f7c59561cd069d": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_212466d4effeNRndJrkiqQFUU8",
+        "model": "opencode-go/kimi-k2.6"
+      },
+      "human_author": "上晋",
+      "messages": [],
+      "total_additions": 188,
+      "total_deletions": 38,
+      "accepted_lines": 188,
+      "overriden_lines": 0
+    }
+  }
+}
