@@ -758,6 +758,9 @@ class DatabaseSchemaManager {
         await txn.execute(
           'CREATE INDEX IF NOT EXISTS idx_quote_tags_tag_id ON quote_tags(tag_id)',
         );
+        await txn.execute(
+          'CREATE INDEX IF NOT EXISTS idx_quote_tags_composite ON quote_tags(tag_id, quote_id)',
+        );
 
         // 3. 安全迁移数据
         await _migrateTagDataSafely(txn);
@@ -1057,6 +1060,9 @@ class DatabaseSchemaManager {
       await txn.execute(
         'CREATE INDEX IF NOT EXISTS idx_quote_tags_tag_id ON quote_tags(tag_id)',
       );
+      await txn.execute(
+        'CREATE INDEX IF NOT EXISTS idx_quote_tags_composite ON quote_tags(tag_id, quote_id)',
+      );
 
       // 3. 安全迁移数据
       await _migrateTagDataSafely(txn);
@@ -1193,11 +1199,17 @@ class DatabaseSchemaManager {
             'CREATE INDEX IF NOT EXISTS idx_quotes_is_deleted ON quotes(is_deleted)',
         'idx_quotes_deleted_at':
             'CREATE INDEX IF NOT EXISTS idx_quotes_deleted_at ON quotes(deleted_at)',
+        'idx_quote_tags_quote_id':
+            'CREATE INDEX IF NOT EXISTS idx_quote_tags_quote_id ON quote_tags(quote_id)',
+        'idx_quote_tags_tag_id':
+            'CREATE INDEX IF NOT EXISTS idx_quote_tags_tag_id ON quote_tags(tag_id)',
+        'idx_quote_tags_composite':
+            'CREATE INDEX IF NOT EXISTS idx_quote_tags_composite ON quote_tags(tag_id, quote_id)',
       };
 
       // 获取当前存在的索引
       final existingIndexes = await db.rawQuery(
-        "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='quotes'",
+        "SELECT name FROM sqlite_master WHERE type='index' AND (tbl_name='quotes' OR tbl_name='quote_tags')",
       );
       final existingIndexNames = existingIndexes
           .map((idx) => idx['name'] as String)
