@@ -324,7 +324,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       _originalTemperature = widget.initialQuote!.temperature;
 
       // 根据现有笔记的位置和天气信息设置复选框状态
-      _includeLocation = widget.initialQuote!.location != null ||
+      _includeLocation =
+          widget.initialQuote!.location != null ||
           (widget.initialQuote!.latitude != null &&
               widget.initialQuote!.longitude != null);
       _includeWeather = widget.initialQuote!.weather != null;
@@ -510,8 +511,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
 
     // 检查并请求权限（与全屏编辑器一致）
     if (!locationService.hasLocationPermission) {
-      bool permissionGranted =
-          await locationService.requestLocationPermission();
+      bool permissionGranted = await locationService
+          .requestLocationPermission();
       if (!permissionGranted) {
         if (mounted && context.mounted) {
           final l10n = AppLocalizations.of(context);
@@ -721,7 +722,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
     ThemeData theme,
   ) async {
     final l10n = AppLocalizations.of(context);
-    final hasLocationData = _originalLocation != null ||
+    final hasLocationData =
+        _originalLocation != null ||
         (_originalLatitude != null && _originalLongitude != null);
     final hasCoordinates =
         _originalLatitude != null && _originalLongitude != null;
@@ -745,8 +747,12 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       // 有位置数据
       title = l10n.locationInfo;
       content = hasOnlyCoordinates
-          ? l10n.locationUpdateHint(LocationService.formatCoordinates(
-              _originalLatitude, _originalLongitude))
+          ? l10n.locationUpdateHint(
+              LocationService.formatCoordinates(
+                _originalLatitude,
+                _originalLongitude,
+              ),
+            )
           : l10n.locationRemoveHint(
               LocationService.formatLocationForDisplay(_originalLocation),
             );
@@ -784,10 +790,10 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         final localeCode = _cachedLocationService?.currentLocaleCode;
         final addressInfo =
             await LocalGeocodingService.getAddressFromCoordinates(
-          _originalLatitude!,
-          _originalLongitude!,
-          localeCode: localeCode,
-        );
+              _originalLatitude!,
+              _originalLongitude!,
+              localeCode: localeCode,
+            );
         if (addressInfo != null && mounted) {
           final formattedAddress = addressInfo['formatted_address'];
           if (formattedAddress != null && formattedAddress.isNotEmpty) {
@@ -799,7 +805,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
               final l10n = AppLocalizations.of(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                    content: Text(l10n.locationUpdatedTo(formattedAddress))),
+                  content: Text(l10n.locationUpdatedTo(formattedAddress)),
+                ),
               );
             }
           } else if (context.mounted) {
@@ -817,10 +824,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       } catch (e) {
         if (mounted && context.mounted) {
           final l10n = AppLocalizations.of(context);
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(
-              SnackBar(content: Text(l10n.updateFailed(e.toString()))));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.updateFailed(e.toString()))),
+          );
         }
       }
     } else if (result == 'remove') {
@@ -913,7 +919,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       title = l10n.locationInfo;
       content = hasOnlyCoordinates
           ? l10n.locationUpdateHint(
-              LocationService.formatCoordinates(_newLatitude, _newLongitude))
+              LocationService.formatCoordinates(_newLatitude, _newLongitude),
+            )
           : l10n.locationRemoveHint(
               LocationService.formatLocationForDisplay(_newLocation),
             );
@@ -958,8 +965,12 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                    content: Text(l10n.locationUpdatedTo(
-                        LocationService.formatLocationForDisplay(resolved)))),
+                  content: Text(
+                    l10n.locationUpdatedTo(
+                      LocationService.formatLocationForDisplay(resolved),
+                    ),
+                  ),
+                ),
               );
             }
             return;
@@ -970,10 +981,10 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         final localeCode = locationService?.currentLocaleCode;
         final addressInfo =
             await LocalGeocodingService.getAddressFromCoordinates(
-          _newLatitude!,
-          _newLongitude!,
-          localeCode: localeCode,
-        );
+              _newLatitude!,
+              _newLongitude!,
+              localeCode: localeCode,
+            );
         if (addressInfo != null && mounted) {
           final formattedAddress = addressInfo['formatted_address'];
           if (formattedAddress != null && formattedAddress.isNotEmpty) {
@@ -983,23 +994,31 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
             if (context.mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                    content: Text(l10n.locationUpdatedTo(
-                        LocationService.formatLocationForDisplay(
-                            formattedAddress)))),
+                  content: Text(
+                    l10n.locationUpdatedTo(
+                      LocationService.formatLocationForDisplay(
+                        formattedAddress,
+                      ),
+                    ),
+                  ),
+                ),
               );
             }
           } else if (context.mounted) {
-            ScaffoldMessenger.of(context)
-                .showSnackBar(SnackBar(content: Text(l10n.cannotGetAddress)));
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(l10n.cannotGetAddress)));
           }
         } else if (mounted && context.mounted) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text(l10n.cannotGetAddress)));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l10n.cannotGetAddress)));
         }
       } catch (e) {
         if (mounted && context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(l10n.updateFailed(e.toString()))));
+            SnackBar(content: Text(l10n.updateFailed(e.toString()))),
+          );
         }
       }
     } else if (result == 'remove') {
@@ -1050,9 +1069,11 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       // 有天气数据
       title = l10n.weatherInfo2;
       final weatherDisplay = weatherService!.getFormattedWeather(l10n);
-      content = l10n.weatherRemoveHint(weatherDisplay.isNotEmpty
-          ? weatherDisplay
-          : '${weatherService.currentWeather}');
+      content = l10n.weatherRemoveHint(
+        weatherDisplay.isNotEmpty
+            ? weatherDisplay
+            : '${weatherService.currentWeather}',
+      );
       actions = [
         TextButton(
           onPressed: () => Navigator.pop(context, 'remove'),
@@ -1182,8 +1203,22 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       if (hitokotoType != null &&
           _hitokotoTypeToCategoryIdMap.containsKey(hitokotoType)) {
         final categoryId = _hitokotoTypeToCategoryIdMap[hitokotoType];
-        final category = await db.getCategoryById(categoryId!);
-        if (mounted) {
+
+        // 性能优化：优先从已有的缓存中查找分类对象
+        NoteCategory? category;
+        if (_allCategoriesCache != null) {
+          try {
+            category = _allCategoriesCache!.firstWhere(
+              (c) => c.id == categoryId,
+            );
+          } catch (_) {
+            category = await db.getCategoryById(categoryId!);
+          }
+        } else {
+          category = await db.getCategoryById(categoryId!);
+        }
+
+        if (mounted && category != null) {
           setState(() {
             _selectedCategory = category;
           });
@@ -1286,18 +1321,22 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
         }
       }
 
+      // 优化：优先加载缓存，避免后续的重复查询
+      _allCategoriesCache ??= await db.getCategories();
+      final categories = _allCategoriesCache!;
+
       // 无论标签是否被重命名，优先通过固定ID查找
       if (fixedId != null) {
-        final category = await db.getCategoryById(fixedId);
-        if (category != null) {
+        // 性能优化：直接从缓存中查找，避免 N+1 数据库查询
+        final category = categories.firstWhere(
+          (c) => c.id == fixedId,
+          orElse: () => NoteCategory(id: '', name: ''),
+        );
+        if (category.id.isNotEmpty) {
           logDebug('通过固定ID找到标签: ${category.name}(ID=${category.id})');
           return category.id;
         }
       }
-
-      // 优化：使用缓存的标签列表，避免每次都查询数据库
-      _allCategoriesCache ??= await db.getCategories();
-      final categories = _allCategoriesCache!;
 
       final existingTag = categories.firstWhere(
         (tag) => tag.name.toLowerCase() == name.toLowerCase(),
@@ -1450,10 +1489,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       content: _contentController.text,
       date: widget.initialQuote?.date ?? DateTime.now().toIso8601String(),
       aiAnalysis: _aiSummary,
-      source: _formatSource(
-        _authorController.text,
-        _workController.text,
-      ),
+      source: _formatSource(_authorController.text, _workController.text),
       sourceAuthor: _authorController.text,
       sourceWork: _workController.text,
       tagIds: _selectedTagIds,
@@ -1464,15 +1500,16 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       colorHex: _selectedColorHex,
       location: _includeLocation
           ? (isEditing
-              ? _originalLocation
-              : () {
-                  final loc = _newLocation ??
-                      _cachedLocationService?.getFormattedLocation();
-                  if ((loc == null || loc.isEmpty) && _newLatitude != null) {
-                    return LocationService.kAddressPending;
-                  }
-                  return loc;
-                }())
+                ? _originalLocation
+                : () {
+                    final loc =
+                        _newLocation ??
+                        _cachedLocationService?.getFormattedLocation();
+                    if ((loc == null || loc.isEmpty) && _newLatitude != null) {
+                      return LocationService.kAddressPending;
+                    }
+                    return loc;
+                  }())
           : null,
       latitude: (_includeLocation || _includeWeather)
           ? (isEditing ? _originalLatitude : _newLatitude)
@@ -1482,13 +1519,13 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
           : null,
       weather: _includeWeather
           ? (isEditing
-              ? _originalWeather
-              : _cachedWeatherService?.currentWeather)
+                ? _originalWeather
+                : _cachedWeatherService?.currentWeather)
           : null,
       temperature: _includeWeather
           ? (isEditing
-              ? _originalTemperature
-              : _cachedWeatherService?.temperature)
+                ? _originalTemperature
+                : _cachedWeatherService?.temperature)
           : null,
       dayPeriod: widget.initialQuote?.dayPeriod ?? currentDayPeriodKey,
       editSource: widget.initialQuote?.editSource,
@@ -1542,9 +1579,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
       if (mounted) {
         scaffoldMessenger.showSnackBar(
           SnackBar(
-            content: Text(
-              l10n.saveFailedWithError(e.toString()),
-            ),
+            content: Text(l10n.saveFailedWithError(e.toString())),
             duration: AppConstants.snackBarDurationError,
             backgroundColor: Colors.red,
           ),
@@ -1634,11 +1669,13 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                     focusNode: _contentFocusNode,
                     maxLength: 10000,
                     maxLengthEnforcement: MaxLengthEnforcement.enforced,
-                    buildCounter: (context,
-                            {required currentLength,
-                            required isFocused,
-                            maxLength}) =>
-                        null,
+                    buildCounter:
+                        (
+                          context, {
+                          required currentLength,
+                          required isFocused,
+                          maxLength,
+                        }) => null,
                     decoration: InputDecoration(
                       hintText: AppLocalizations.of(context).writeYourThoughts,
                       border: const OutlineInputBorder(),
@@ -1690,11 +1727,11 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                   // 获取所有标签数据
                                   final databaseService =
                                       Provider.of<DatabaseService>(
-                                    context,
-                                    listen: false,
-                                  );
-                                  final allTags =
-                                      await databaseService.getCategories();
+                                        context,
+                                        listen: false,
+                                      );
+                                  final allTags = await databaseService
+                                      .getCategories();
 
                                   // 修复内存泄露：在异步操作后检查mounted状态
                                   if (!mounted) return;
@@ -1703,14 +1740,14 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                   // 创建包含当前元数据的临时Quote对象，确保全屏编辑器能继承所有元数据
                                   final locationService =
                                       Provider.of<LocationService>(
-                                    context,
-                                    listen: false,
-                                  );
+                                        context,
+                                        listen: false,
+                                      );
                                   final weatherService =
                                       Provider.of<WeatherService>(
-                                    context,
-                                    listen: false,
-                                  );
+                                        context,
+                                        listen: false,
+                                      );
 
                                   // 获取位置和天气信息
                                   String? currentLocation;
@@ -1718,14 +1755,17 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                   String? currentTemperature;
 
                                   if (_includeLocation) {
-                                    currentLocation = _originalLocation ??
+                                    currentLocation =
+                                        _originalLocation ??
                                         locationService.getFormattedLocation();
                                   }
 
                                   if (_includeWeather) {
-                                    currentWeather = _originalWeather ??
+                                    currentWeather =
+                                        _originalWeather ??
                                         weatherService.currentWeather;
-                                    currentTemperature = _originalTemperature ??
+                                    currentTemperature =
+                                        _originalTemperature ??
                                         weatherService.temperature;
                                   }
 
@@ -1734,35 +1774,41 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                   final currentLat = widget.initialQuote != null
                                       ? _originalLatitude
                                       : _newLatitude ??
-                                          locationService
-                                              .currentPosition?.latitude;
+                                            locationService
+                                                .currentPosition
+                                                ?.latitude;
                                   final currentLon = widget.initialQuote != null
                                       ? _originalLongitude
                                       : _newLongitude ??
-                                          locationService
-                                              .currentPosition?.longitude;
+                                            locationService
+                                                .currentPosition
+                                                ?.longitude;
 
                                   final tempQuote = Quote(
                                     id: widget
-                                        .initialQuote?.id, // 保持原有ID（如果是编辑模式）
+                                        .initialQuote
+                                        ?.id, // 保持原有ID（如果是编辑模式）
                                     content: _contentController.text,
-                                    date: widget.initialQuote?.date ??
+                                    date:
+                                        widget.initialQuote?.date ??
                                         DateTime.now().toIso8601String(),
                                     sourceAuthor:
                                         _authorController.text.trim().isEmpty
-                                            ? null
-                                            : _authorController.text.trim(),
+                                        ? null
+                                        : _authorController.text.trim(),
                                     sourceWork:
                                         _workController.text.trim().isEmpty
-                                            ? null
-                                            : _workController.text.trim(),
+                                        ? null
+                                        : _workController.text.trim(),
                                     tagIds: _selectedTagIds,
                                     colorHex: _selectedColorHex,
                                     location: currentLocation,
-                                    latitude:
-                                        _includeLocation ? currentLat : null,
-                                    longitude:
-                                        _includeLocation ? currentLon : null,
+                                    latitude: _includeLocation
+                                        ? currentLat
+                                        : null,
+                                    longitude: _includeLocation
+                                        ? currentLon
+                                        : null,
                                     weather: currentWeather,
                                     temperature: currentTemperature,
                                     aiAnalysis: widget.initialQuote?.aiAnalysis,
@@ -1802,7 +1848,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
                                         content: Text(
-                                            '${l10n.openFullEditorFailedSimple}: $e'),
+                                          '${l10n.openFullEditorFailedSimple}: $e',
+                                        ),
                                         backgroundColor: Colors.red,
                                         duration: const Duration(seconds: 3),
                                       ),
@@ -1854,8 +1901,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
               Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
-                  l10n.sourcePreviewFormat(_formatSource(
-                      _authorController.text, _workController.text)),
+                  l10n.sourcePreviewFormat(
+                    _formatSource(_authorController.text, _workController.text),
+                  ),
                   style: TextStyle(
                     fontSize: 12,
                     fontStyle: FontStyle.italic,
@@ -1914,7 +1962,9 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                       (_newLatitude != null ||
                                           _newLocation != null)) {
                                     await _showNewNoteLocationDialog(
-                                        context, theme);
+                                      context,
+                                      theme,
+                                    );
                                     return;
                                   }
                                   // 新建模式：首次勾选，获取位置
@@ -1976,12 +2026,13 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                         // 仅在需要显示时读取服务，避免每次 build 都触发
                         final weatherService = _cachedWeatherService;
                         final weather = weatherService?.currentWeather;
-                        final formattedWeather =
-                            weatherService?.getFormattedWeather(l10n);
+                        final formattedWeather = weatherService
+                            ?.getFormattedWeather(l10n);
                         return Tooltip(
                           message: weather != null && weatherService != null
                               ? l10n.addWeatherWithValue(
-                                  formattedWeather ?? weather)
+                                  formattedWeather ?? weather,
+                                )
                               : l10n.addWeatherInfo,
                           child: FilterChip(
                             key: const ValueKey('add_note_weather_chip'),
@@ -2046,8 +2097,10 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                                         0xFF000000,
                                   ),
                                   borderRadius: BorderRadius.circular(9),
-                                  border:
-                                      Border.all(color: Colors.white, width: 1),
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 1,
+                                  ),
                                 ),
                               )
                             : const Icon(
@@ -2175,13 +2228,15 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                     },
                     tagNames: _selectedTagIds.isNotEmpty
                         ? _selectedTagIds
-                            .map((id) => _availableTags
-                                .where((t) => t.id == id)
-                                .map((t) => t.name)
-                                .firstOrNull)
-                            .where((name) => name != null)
-                            .cast<String>()
-                            .toList()
+                              .map(
+                                (id) => _availableTags
+                                    .where((t) => t.id == id)
+                                    .map((t) => t.name)
+                                    .firstOrNull,
+                              )
+                              .where((name) => name != null)
+                              .cast<String>()
+                              .toList()
                         : null,
                   ),
                   const Spacer(),
@@ -2216,9 +2271,7 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                            ),
+                            child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : Text(
                             widget.initialQuote != null
@@ -2386,11 +2439,8 @@ class _AddNoteDialogState extends State<AddNoteDialog> {
           children: recommendedTagIds.map((tagId) {
             final tag = _availableTags.firstWhere(
               (t) => t.id == tagId,
-              orElse: () => NoteCategory(
-                id: tagId,
-                name: tagId,
-                iconName: 'label',
-              ),
+              orElse: () =>
+                  NoteCategory(id: tagId, name: tagId, iconName: 'label'),
             );
             return FilterChip(
               label: Text(tag.name),

@@ -20,3 +20,6 @@
 ## 2026-02-13 - 优化数据库备份合并过程中的批量处理
 **Learning:** 在循环中执行大量的数据库插入或更新操作（N+1 问题）会导致显著的 I/O 等待和事务开销。通过 `txn.batch()` 可以将这些操作合并为一个批次提交。此外，在循环开始前预查元数据并使用内存中的 Map 进行匹配，可以消除循环内的查询开销。需要注意在 batch 提交前手动更新内存中的缓存，以处理同一批次中可能出现的重复条目。
 **Action:** 在 `lib/services/database_backup_service.dart` 的 `_mergeCategories` 和 `_mergeQuotes` 中实现了 `Batch` 操作和元数据预查。
+## 2025-05-23 - 修复 AddNoteDialog 中的 N+1 查询问题
+**Learning:** 在 `_ensureTagExists` 内部的循环中调用 `getCategoryById` 会导致多次数据库查询。通过在方法开始时预取所有分类到 `_allCategoriesCache` 并将其用于基于 ID 的查找，可以消除这些冗余调用。
+**Action:** 将缓存填充逻辑移至 `_ensureTagExists` 的开头，并将 `db.getCategoryById` 替换为缓存查找。同时更新了 `_addDefaultHitokotoTagsAsync`，使其在设置 `_selectedCategory` 时优先使用缓存。
