@@ -104,7 +104,7 @@ class NoteSearchController extends ChangeNotifier {
   void clearSearch() {
     // 取消可能存在的定时器
     _debounceTimer?.cancel();
-    if (_searchQuery.isNotEmpty) {
+    if (_searchQuery.isNotEmpty || _isSearching || _searchError != null) {
       _searchQuery = '';
       _isSearching = false;
       _searchError = null;
