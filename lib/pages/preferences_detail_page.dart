@@ -377,7 +377,9 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
 
   /// 处理生物识别验证开关
   Future<void> _handleBiometricToggle(
-      BuildContext context, bool enabled) async {
+    BuildContext context,
+    bool enabled,
+  ) async {
     final settings = context.read<SettingsService>();
     final l10n = AppLocalizations.of(context);
 
@@ -391,9 +393,9 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
         await settings.setRequireBiometricForHidden(true);
       } else {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.biometricAuthFailed)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l10n.biometricAuthFailed)));
         }
       }
     } else {
@@ -489,8 +491,9 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
       subtitle: Text(
         subtitle,
         style: theme.textTheme.bodySmall?.copyWith(
-          color: theme.colorScheme.onSurface
-              .withValues(alpha: isEnabled ? 0.7 : 0.4),
+          color: theme.colorScheme.onSurface.withValues(
+            alpha: isEnabled ? 0.7 : 0.4,
+          ),
         ),
       ),
       trailing: Switch(
@@ -513,10 +516,7 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
   }) {
     final theme = Theme.of(context);
 
-    Widget buildOption({
-      required String title,
-      required String value,
-    }) {
+    Widget buildOption({required String title, required String value}) {
       final isSelected = settings.offlineQuoteSource == value;
       return Padding(
         padding: const EdgeInsets.only(top: 8),
@@ -872,16 +872,14 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                                 vertical: 10,
                               ),
                               decoration: BoxDecoration(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .surfaceContainerHighest,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.surfaceContainerHighest,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
                                 l10n.defaultTagsCount(selectedIds.length),
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyMedium
+                                style: Theme.of(context).textTheme.bodyMedium
                                     ?.copyWith(fontWeight: FontWeight.w600),
                               ),
                             ),
@@ -907,21 +905,19 @@ class _PreferencesDetailPageState extends State<PreferencesDetailPage> {
                                       shrinkWrap: true,
                                       itemCount: filteredCategories.length,
                                       separatorBuilder: (_, __) =>
-                                          const Divider(
-                                        height: 1,
-                                        indent: 52,
-                                      ),
+                                          const Divider(height: 1, indent: 52),
                                       itemBuilder: (_, index) {
                                         final tag = filteredCategories[index];
-                                        final isSelected =
-                                            selectedIds.contains(tag.id);
+                                        final isSelected = selectedIds.contains(
+                                          tag.id,
+                                        );
                                         return ListTile(
                                           dense: true,
                                           contentPadding:
                                               const EdgeInsets.symmetric(
-                                            horizontal: 4,
-                                            vertical: 2,
-                                          ),
+                                                horizontal: 4,
+                                                vertical: 2,
+                                              ),
                                           leading: _buildTagIcon(
                                             context,
                                             tag.iconName,

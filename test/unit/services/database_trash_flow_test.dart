@@ -83,87 +83,96 @@ void main() {
       await db.close();
     });
 
-    test('soft delete -> restore -> permanent delete -> tombstone exists',
-        () async {
-      final id = const Uuid().v4();
-      final quote = Quote(
-        id: id,
-        content: 'Trash flow test note',
-        date: DateTime.now().toIso8601String(),
-      );
+    test(
+      'soft delete -> restore -> permanent delete -> tombstone exists',
+      () async {
+        final id = const Uuid().v4();
+        final quote = Quote(
+          id: id,
+          content: 'Trash flow test note',
+          date: DateTime.now().toIso8601String(),
+        );
 
-      // 1. Add quote
-      await service.addQuote(quote);
-      final beforeDelete = await service.getQuoteById(id);
-      expect(beforeDelete, isNotNull);
-      expect(beforeDelete!.isDeleted, isFalse);
+        // 1. Add quote
+        await service.addQuote(quote);
+        final beforeDelete = await service.getQuoteById(id);
+        expect(beforeDelete, isNotNull);
+        expect(beforeDelete!.isDeleted, isFalse);
 
-      // 2. Soft delete
-      await service.deleteQuote(id);
-      final afterDelete = await service.getQuoteById(id, includeDeleted: true);
-      expect(afterDelete, isNotNull);
-      expect(afterDelete!.isDeleted, isTrue);
-      expect(afterDelete.deletedAt, isNotNull);
+        // 2. Soft delete
+        await service.deleteQuote(id);
+        final afterDelete = await service.getQuoteById(
+          id,
+          includeDeleted: true,
+        );
+        expect(afterDelete, isNotNull);
+        expect(afterDelete!.isDeleted, isTrue);
+        expect(afterDelete.deletedAt, isNotNull);
 
-      // 3. Verify in trash
-      final trashQuotes = await service.getDeletedQuotes();
-      expect(trashQuotes.any((q) => q.id == id), isTrue);
+        // 3. Verify in trash
+        final trashQuotes = await service.getDeletedQuotes();
+        expect(trashQuotes.any((q) => q.id == id), isTrue);
 
-      // 4. Restore
-      await service.restoreQuote(id);
-      final afterRestore = await service.getQuoteById(id);
-      expect(afterRestore, isNotNull);
-      expect(afterRestore!.isDeleted, isFalse);
-      expect(afterRestore.deletedAt, isNull);
+        // 4. Restore
+        await service.restoreQuote(id);
+        final afterRestore = await service.getQuoteById(id);
+        expect(afterRestore, isNotNull);
+        expect(afterRestore!.isDeleted, isFalse);
+        expect(afterRestore.deletedAt, isNull);
 
-      // 5. Verify not in trash
-      final trashAfterRestore = await service.getDeletedQuotes();
-      expect(trashAfterRestore.any((q) => q.id == id), isFalse);
+        // 5. Verify not in trash
+        final trashAfterRestore = await service.getDeletedQuotes();
+        expect(trashAfterRestore.any((q) => q.id == id), isFalse);
 
-      // 6. Soft delete again
-      await service.deleteQuote(id);
+        // 6. Soft delete again
+        await service.deleteQuote(id);
 
-      // 7. Permanently delete
-      await service.permanentlyDeleteQuote(id);
-      final afterPermanent =
-          await service.getQuoteById(id, includeDeleted: true);
-      expect(afterPermanent, isNull);
+        // 7. Permanently delete
+        await service.permanentlyDeleteQuote(id);
+        final afterPermanent = await service.getQuoteById(
+          id,
+          includeDeleted: true,
+        );
+        expect(afterPermanent, isNull);
 
-      // 8. Verify tombstone exists
-      final tombstones = await db.query('quote_tombstones');
-      expect(tombstones.length, 1);
-      expect(tombstones.first['quote_id'], id);
-      expect(tombstones.first['deleted_at'], isNotNull);
-    });
+        // 8. Verify tombstone exists
+        final tombstones = await db.query('quote_tombstones');
+        expect(tombstones.length, 1);
+        expect(tombstones.first['quote_id'], id);
+        expect(tombstones.first['deleted_at'], isNotNull);
+      },
+    );
 
-    test('autoCleanupExpiredTrash should remove expired soft-deleted quotes',
-        () async {
-      final id = const Uuid().v4();
-      final oldDeletedAt = DateTime.now()
-          .toUtc()
-          .subtract(const Duration(days: 31))
-          .toIso8601String();
-      final quote = Quote(
-        id: id,
-        content: 'Expired trash note',
-        date: DateTime.now().toIso8601String(),
-        isDeleted: true,
-        deletedAt: oldDeletedAt,
-      );
+    test(
+      'autoCleanupExpiredTrash should remove expired soft-deleted quotes',
+      () async {
+        final id = const Uuid().v4();
+        final oldDeletedAt = DateTime.now()
+            .toUtc()
+            .subtract(const Duration(days: 31))
+            .toIso8601String();
+        final quote = Quote(
+          id: id,
+          content: 'Expired trash note',
+          date: DateTime.now().toIso8601String(),
+          isDeleted: true,
+          deletedAt: oldDeletedAt,
+        );
 
-      await service.addQuote(quote);
+        await service.addQuote(quote);
 
-      final cleaned = await service.autoCleanupExpiredTrash(
-        retentionDays: 30,
-      );
-      expect(cleaned, 1);
+        final cleaned = await service.autoCleanupExpiredTrash(
+          retentionDays: 30,
+        );
+        expect(cleaned, 1);
 
-      final afterCleanup = await service.getQuoteById(id);
-      expect(afterCleanup, isNull);
+        final afterCleanup = await service.getQuoteById(id);
+        expect(afterCleanup, isNull);
 
-      final tombstones = await db.query('quote_tombstones');
-      expect(tombstones.length, 1);
-      expect(tombstones.first['quote_id'], id);
-    });
+        final tombstones = await db.query('quote_tombstones');
+        expect(tombstones.length, 1);
+        expect(tombstones.first['quote_id'], id);
+      },
+    );
   });
 }

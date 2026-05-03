@@ -42,17 +42,14 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
                   children: [
                     Text(
                       l10n.dataOverview,
-                      style: Theme.of(context)
-                          .textTheme
-                          .headlineSmall
+                      style: Theme.of(context).textTheme.headlineSmall
                           ?.copyWith(fontWeight: FontWeight.bold),
                     ),
                     Text(
                       _getDateRangeText(l10n),
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -235,18 +232,19 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
                             const SizedBox(width: 8),
                             Text(
                               l10n.recentNotes,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
+                              style: Theme.of(context).textTheme.titleMedium
                                   ?.copyWith(fontWeight: FontWeight.w600),
                             ),
                           ],
                         ),
                         const SizedBox(height: 12),
-                        ..._periodQuotes.take(3).map(
+                        ..._periodQuotes
+                            .take(3)
+                            .map(
                               (quote) => TweenAnimationBuilder<double>(
                                 duration: Duration(
-                                  milliseconds: 600 +
+                                  milliseconds:
+                                      600 +
                                       (_periodQuotes.indexOf(quote) * 200),
                                 ),
                                 tween: Tween(begin: 0.0, end: 1.0),
@@ -280,10 +278,9 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
   Widget _buildPeriodTopFavoritesSection() {
     final l10n = AppLocalizations.of(context);
     // 过滤出有心形点击的笔记，并按次数排序
-    final List<Quote> favorited = _periodQuotes
-        .where((q) => q.favoriteCount > 0)
-        .toList()
-      ..sort((a, b) => b.favoriteCount.compareTo(a.favoriteCount));
+    final List<Quote> favorited =
+        _periodQuotes.where((q) => q.favoriteCount > 0).toList()
+          ..sort((a, b) => b.favoriteCount.compareTo(a.favoriteCount));
 
     if (favorited.isEmpty) {
       // 若本周期没有心形点击，显示一个轻量提示
@@ -341,8 +338,8 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
                     Text(
                       l10n.mostFavoritedInPeriod,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
@@ -351,7 +348,9 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
           },
         ),
         const SizedBox(height: 12),
-        ...favorited.take(3).map(
+        ...favorited
+            .take(3)
+            .map(
               (q) => TweenAnimationBuilder<double>(
                 key: ValueKey('favorite_${q.id}_$_dataKey'),
                 duration: _shouldAnimateOverview
@@ -507,9 +506,8 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
                     Text(
                       l10n.generatingInsightsForPeriod(_getPeriodName(l10n)),
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     LinearProgressIndicator(
@@ -556,13 +554,13 @@ extension _AIReportOverview on _AIPeriodicReportPageState {
                           const SizedBox(width: 6),
                           Text(
                             l10n.noInsights,
-                            style:
-                                Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurfaceVariant,
-                                      height: 1.4,
-                                    ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                  height: 1.4,
+                                ),
                           ),
                         ],
                       ),

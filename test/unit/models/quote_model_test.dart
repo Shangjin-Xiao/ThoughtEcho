@@ -113,34 +113,36 @@ void main() {
     });
 
     test(
-        'should backfill deletedAt when isDeleted is true and deletedAt is null',
-        () {
-      final beforeCreate = DateTime.now().toUtc();
-      final quote = Quote(
-        id: 'test-id',
-        content: '测试内容',
-        date: '2024-01-01T00:00:00.000Z',
-        isDeleted: true,
-      );
-      final afterCreate = DateTime.now().toUtc();
+      'should backfill deletedAt when isDeleted is true and deletedAt is null',
+      () {
+        final beforeCreate = DateTime.now().toUtc();
+        final quote = Quote(
+          id: 'test-id',
+          content: '测试内容',
+          date: '2024-01-01T00:00:00.000Z',
+          isDeleted: true,
+        );
+        final afterCreate = DateTime.now().toUtc();
 
-      expect(quote.isDeleted, isTrue);
-      expect(quote.deletedAt, isNotNull);
+        expect(quote.isDeleted, isTrue);
+        expect(quote.deletedAt, isNotNull);
 
-      // deletedAt should be current UTC time, not quote.date
-      final deletedAtTime = DateTime.parse(quote.deletedAt!);
-      expect(
-        deletedAtTime
-            .isAfter(beforeCreate.subtract(const Duration(seconds: 1))),
-        isTrue,
-        reason: 'deletedAt should be after test start time',
-      );
-      expect(
-        deletedAtTime.isBefore(afterCreate.add(const Duration(seconds: 1))),
-        isTrue,
-        reason: 'deletedAt should be before test end time',
-      );
-    });
+        // deletedAt should be current UTC time, not quote.date
+        final deletedAtTime = DateTime.parse(quote.deletedAt!);
+        expect(
+          deletedAtTime.isAfter(
+            beforeCreate.subtract(const Duration(seconds: 1)),
+          ),
+          isTrue,
+          reason: 'deletedAt should be after test start time',
+        );
+        expect(
+          deletedAtTime.isBefore(afterCreate.add(const Duration(seconds: 1))),
+          isTrue,
+          reason: 'deletedAt should be before test end time',
+        );
+      },
+    );
 
     test('copyWith should update soft delete fields', () {
       final base = Quote(
@@ -167,10 +169,7 @@ void main() {
         deletedAt: '2024-01-02T00:00:00.000Z',
       );
 
-      final restored = base.copyWith(
-        isDeleted: false,
-        deletedAt: null,
-      );
+      final restored = base.copyWith(isDeleted: false, deletedAt: null);
 
       expect(restored.isDeleted, isFalse);
       expect(restored.deletedAt, isNull);

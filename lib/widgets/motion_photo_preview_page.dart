@@ -113,11 +113,8 @@ class _MotionPhotoPreviewPageState extends State<MotionPhotoPreviewPage> {
     });
 
     try {
-      _extractedVideoPath ??=
-          await widget.motionPhotoUtils.extractVideoToTemporaryFile(
-        _localFilePath!,
-        info: _motionInfo,
-      );
+      _extractedVideoPath ??= await widget.motionPhotoUtils
+          .extractVideoToTemporaryFile(_localFilePath!, info: _motionInfo);
 
       await _disposeVideoControllers();
 
@@ -175,9 +172,9 @@ class _MotionPhotoPreviewPageState extends State<MotionPhotoPreviewPage> {
         source: 'MotionPhotoPreviewPage',
       );
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.motionPhotoPlayFailed)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.motionPhotoPlayFailed)));
       }
     } finally {
       if (mounted) {
@@ -291,20 +288,25 @@ class _MotionPhotoPreviewPageState extends State<MotionPhotoPreviewPage> {
     final provider = createOptimizedImageProvider(widget.imageUrl);
     if (provider == null) {
       return const Center(
-        child:
-            Icon(Icons.broken_image_outlined, color: Colors.white70, size: 40),
+        child: Icon(
+          Icons.broken_image_outlined,
+          color: Colors.white70,
+          size: 40,
+        ),
       );
     }
 
     return PhotoView(
       imageProvider: provider,
       backgroundDecoration: const BoxDecoration(color: Colors.black),
-      loadingBuilder: (context, event) => const Center(
-        child: CircularProgressIndicator(),
-      ),
+      loadingBuilder: (context, event) =>
+          const Center(child: CircularProgressIndicator()),
       errorBuilder: (context, error, stackTrace) => const Center(
-        child:
-            Icon(Icons.broken_image_outlined, color: Colors.white70, size: 40),
+        child: Icon(
+          Icons.broken_image_outlined,
+          color: Colors.white70,
+          size: 40,
+        ),
       ),
     );
   }

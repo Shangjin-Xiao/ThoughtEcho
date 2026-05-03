@@ -4,7 +4,8 @@ part of '../note_list_view.dart';
 extension NoteListFiltersExtension on NoteListViewState {
   /// 构建现代化的筛选条件展示区域
   Widget _buildFilterDisplay(ThemeData theme, double horizontalPadding) {
-    final hasFilters = widget.selectedTagIds.isNotEmpty ||
+    final hasFilters =
+        widget.selectedTagIds.isNotEmpty ||
         widget.selectedWeathers.isNotEmpty ||
         widget.selectedDayPeriods.isNotEmpty;
 
@@ -76,8 +77,10 @@ extension NoteListFiltersExtension on NoteListViewState {
 
       allChips.addAll(
         categorySet.map((cat) {
-          final label =
-              WeatherService.getLocalizedFilterCategoryLabel(context, cat);
+          final label = WeatherService.getLocalizedFilterCategoryLabel(
+            context,
+            cat,
+          );
           final icon = WeatherService.getFilterCategoryIcon(cat);
           return TweenAnimationBuilder<double>(
             key: ValueKey('weather_cat_$cat'),
@@ -114,8 +117,9 @@ extension NoteListFiltersExtension on NoteListViewState {
       final Set<String> knownKeys = categorySet
           .expand((cat) => WeatherService.getWeatherKeysByFilterCategory(cat))
           .toSet();
-      final List<String> others =
-          widget.selectedWeathers.where((k) => !knownKeys.contains(k)).toList();
+      final List<String> others = widget.selectedWeathers
+          .where((k) => !knownKeys.contains(k))
+          .toList();
       for (final k in others) {
         final label = WeatherService.getLocalizedWeatherLabel(context, k);
         allChips.add(

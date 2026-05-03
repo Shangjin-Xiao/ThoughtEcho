@@ -41,9 +41,10 @@ extension SmartPushPlatform on SmartPushService {
     if (!PlatformHelper.isAndroid) return true;
 
     try {
-      final androidPlugin =
-          _notificationsPlugin.resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
+      final androidPlugin = _notificationsPlugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       if (androidPlugin != null) {
         final canSchedule =
             await androidPlugin.canScheduleExactNotifications() ?? false;

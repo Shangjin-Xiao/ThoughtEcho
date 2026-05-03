@@ -9,9 +9,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('AnniversaryAnimationOverlay', () {
-    testWidgets('首帧不应通过整屏 FadeTransition 延后显示背景遮罩', (
-      tester,
-    ) async {
+    testWidgets('首帧不应通过整屏 FadeTransition 延后显示背景遮罩', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           localizationsDelegates: const [
@@ -110,7 +108,8 @@ void main() {
 
       expect(
         platformCalls.where(
-            (call) => call.method == 'SystemChrome.setEnabledSystemUIMode'),
+          (call) => call.method == 'SystemChrome.setEnabledSystemUIMode',
+        ),
         isEmpty,
       );
 

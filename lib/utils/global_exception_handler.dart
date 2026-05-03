@@ -89,8 +89,9 @@ class GlobalExceptionHandler {
     String? context,
     Map<String, dynamic>? additionalData,
   }) {
-    final errorMessage =
-        context != null ? '$context: $error' : error.toString();
+    final errorMessage = context != null
+        ? '$context: $error'
+        : error.toString();
 
     AppLogger.e(
       errorMessage,

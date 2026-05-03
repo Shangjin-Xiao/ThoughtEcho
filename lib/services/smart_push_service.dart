@@ -105,12 +105,12 @@ class SmartPushService extends ChangeNotifier {
     FlutterLocalNotificationsPlugin? notificationsPlugin,
     WeatherService? weatherService,
     SmartPushAnalytics? analytics,
-  })  : _databaseService = databaseService,
-        _locationService = locationService,
-        _mmkv = mmkvService ?? MMKVService(),
-        _notificationsPlugin =
-            notificationsPlugin ?? FlutterLocalNotificationsPlugin(),
-        _weatherService = weatherService {
+  }) : _databaseService = databaseService,
+       _locationService = locationService,
+       _mmkv = mmkvService ?? MMKVService(),
+       _notificationsPlugin =
+           notificationsPlugin ?? FlutterLocalNotificationsPlugin(),
+       _weatherService = weatherService {
     _analytics = analytics ?? SmartPushAnalytics(mmkvService: _mmkv);
   }
 
@@ -202,8 +202,9 @@ class SmartPushService extends ChangeNotifier {
         (rawData['hitokoto'] ?? rawData['content'])?.toString().trim() ?? '';
     if (content.isEmpty) return null;
 
-    final fromWho =
-        (rawData['from_who'] ?? rawData['author'] ?? '').toString().trim();
+    final fromWho = (rawData['from_who'] ?? rawData['author'] ?? '')
+        .toString()
+        .trim();
     final from = (rawData['from'] ?? rawData['source'] ?? '').toString().trim();
     final type = (rawData['type'] ?? '').toString().trim();
     final provider = (rawData['provider'] ?? '').toString().trim();
@@ -239,11 +240,8 @@ class SmartPushService extends ChangeNotifier {
     int toleranceMinutes = 10,
   }) {
     return slots.any(
-      (slot) => isWithinPushWindow(
-        now,
-        slot,
-        toleranceMinutes: toleranceMinutes,
-      ),
+      (slot) =>
+          isWithinPushWindow(now, slot, toleranceMinutes: toleranceMinutes),
     );
   }
 
@@ -309,13 +307,7 @@ class SmartPushService extends ChangeNotifier {
     required SmartPushSettings settings,
     bool respectsFrequency = true,
   }) {
-    var scheduledDate = DateTime(
-      now.year,
-      now.month,
-      now.day,
-      hour,
-      minute,
-    );
+    var scheduledDate = DateTime(now.year, now.month, now.day, hour, minute);
 
     if (scheduledDate.isBefore(now)) {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
@@ -554,11 +546,11 @@ class _SmartSelectResult {
   });
 
   factory _SmartSelectResult.empty() => _SmartSelectResult(
-        note: null,
-        title: '',
-        isDailyQuote: false,
-        contentType: '',
-      );
+    note: null,
+    title: '',
+    isDailyQuote: false,
+    contentType: '',
+  );
 }
 
 /// 智能时间候选辅助类

@@ -101,10 +101,7 @@ extension _HitokotoSettingsPageLayoutSections on _HitokotoSettingsPageState {
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        border: Border.all(
-          color: colorScheme.outline.withAlpha(50),
-          width: 1,
-        ),
+        border: Border.all(color: colorScheme.outline.withAlpha(50), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -190,10 +187,7 @@ extension _HitokotoSettingsPageLayoutSections on _HitokotoSettingsPageState {
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        border: Border.all(
-          color: colorScheme.outline.withAlpha(50),
-          width: 1,
-        ),
+        border: Border.all(color: colorScheme.outline.withAlpha(50), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -245,10 +239,7 @@ extension _HitokotoSettingsPageLayoutSections on _HitokotoSettingsPageState {
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-        border: Border.all(
-          color: colorScheme.outline.withAlpha(30),
-          width: 1,
-        ),
+        border: Border.all(color: colorScheme.outline.withAlpha(30), width: 1),
       ),
       child: Text(
         l10n.dailyQuoteProviderNoTypeSelection,

@@ -21,8 +21,9 @@ class QuoteCardColors {
     Color cardColor;
     if (colorHex != null && colorHex.isNotEmpty) {
       try {
-        cardColor =
-            Color(int.parse(colorHex.substring(1), radix: 16) | 0xFF000000);
+        cardColor = Color(
+          int.parse(colorHex.substring(1), radix: 16) | 0xFF000000,
+        );
       } catch (_) {
         cardColor = colorScheme.surfaceContainerLowest;
       }
@@ -63,14 +64,10 @@ class QuoteTagChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: baseContentColor.withValues(
-          alpha: highlighted ? 0.15 : 0.08,
-        ),
+        color: baseContentColor.withValues(alpha: highlighted ? 0.15 : 0.08),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: baseContentColor.withValues(
-            alpha: highlighted ? 0.4 : 0.15,
-          ),
+          color: baseContentColor.withValues(alpha: highlighted ? 0.4 : 0.15),
           width: highlighted ? 1.0 : 0.5,
         ),
       ),
@@ -96,10 +93,10 @@ class QuoteTagChip extends StatelessWidget {
           Text(
             tag.name,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: secondaryTextColor,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                ),
+              color: secondaryTextColor,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),

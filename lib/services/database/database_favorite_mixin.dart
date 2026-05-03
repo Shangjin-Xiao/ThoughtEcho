@@ -48,8 +48,9 @@ mixin _DatabaseFavoriteMixin on _DatabaseServiceBase {
       try {
         // 记录操作前的状态
         final index = _currentQuotes.indexWhere((q) => q.id == quoteId);
-        final oldCount =
-            index != -1 ? _currentQuotes[index].favoriteCount : null;
+        final oldCount = index != -1
+            ? _currentQuotes[index].favoriteCount
+            : null;
         logDebug(
           '收藏操作开始: quoteId=$quoteId, 内存旧值=$oldCount',
           source: 'IncrementFavorite',
@@ -72,7 +73,7 @@ mixin _DatabaseFavoriteMixin on _DatabaseServiceBase {
           final isDeletedValue = existing.first['is_deleted'];
           final isDeleted =
               (isDeletedValue is num && isDeletedValue.toInt() == 1) ||
-                  (isDeletedValue is bool && isDeletedValue);
+              (isDeletedValue is bool && isDeletedValue);
           if (isDeleted) {
             throw StateError('已删除的笔记不能收藏');
           }
@@ -163,8 +164,9 @@ mixin _DatabaseFavoriteMixin on _DatabaseServiceBase {
     return _executeWithLock('resetFavorite_$quoteId', () async {
       try {
         final index = _currentQuotes.indexWhere((q) => q.id == quoteId);
-        final oldCount =
-            index != -1 ? _currentQuotes[index].favoriteCount : null;
+        final oldCount = index != -1
+            ? _currentQuotes[index].favoriteCount
+            : null;
         logDebug(
           '清除收藏操作开始: quoteId=$quoteId, 内存旧值=$oldCount',
           source: 'ResetFavorite',
@@ -187,7 +189,7 @@ mixin _DatabaseFavoriteMixin on _DatabaseServiceBase {
           final isDeletedValue = existing.first['is_deleted'];
           final isDeleted =
               (isDeletedValue is num && isDeletedValue.toInt() == 1) ||
-                  (isDeletedValue is bool && isDeletedValue);
+              (isDeletedValue is bool && isDeletedValue);
           if (isDeleted) {
             throw StateError('已删除的笔记不能清除收藏');
           }

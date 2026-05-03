@@ -42,8 +42,9 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 50));
 
-        final newCalls =
-            databaseService.watchCalls.skip(initialCallCount).toList();
+        final newCalls = databaseService.watchCalls
+            .skip(initialCallCount)
+            .toList();
 
         expect(newCalls, hasLength(1));
         expect(newCalls.single.tagIds, isNull);
@@ -54,36 +55,35 @@ void main() {
       },
     );
 
-    testWidgets(
-      'shows notes even when tag list is still empty',
-      (tester) async {
-        final databaseService = _FakeDatabaseService()
-          ..quotesToEmit = [
-            Quote(
-              id: 'quote-1',
-              content: '通过通知进入后的笔记',
-              date: DateTime(2026, 3, 29).toIso8601String(),
-            ),
-          ];
-        final settingsService = _FakeSettingsService();
-
-        await tester.pumpWidget(
-          _TestApp(
-            databaseService: databaseService,
-            settingsService: settingsService,
-            tags: const [],
+    testWidgets('shows notes even when tag list is still empty', (
+      tester,
+    ) async {
+      final databaseService = _FakeDatabaseService()
+        ..quotesToEmit = [
+          Quote(
+            id: 'quote-1',
+            content: '通过通知进入后的笔记',
+            date: DateTime(2026, 3, 29).toIso8601String(),
           ),
-        );
+        ];
+      final settingsService = _FakeSettingsService();
 
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 50));
+      await tester.pumpWidget(
+        _TestApp(
+          databaseService: databaseService,
+          settingsService: settingsService,
+          tags: const [],
+        ),
+      );
 
-        expect(find.text('通过通知进入后的笔记'), findsOneWidget);
-        expect(find.byType(CircularProgressIndicator), findsNothing);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
 
-        await tester.pump(const Duration(seconds: 2));
-      },
-    );
+      expect(find.text('通过通知进入后的笔记'), findsOneWidget);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+
+      await tester.pump(const Duration(seconds: 2));
+    });
 
     testWidgets(
       'scrollToQuoteById waits for real first batch after placeholder empty list',

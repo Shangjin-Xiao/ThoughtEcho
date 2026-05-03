@@ -267,9 +267,7 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
       decoration: BoxDecoration(
         color: colorScheme.surfaceContainerLowest,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: colorScheme.outlineVariant.applyOpacity(0.3),
-        ),
+        border: Border.all(color: colorScheme.outlineVariant.applyOpacity(0.3)),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
@@ -315,8 +313,11 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
                             ),
                           ),
                         ),
-                        blockquotePadding:
-                            const EdgeInsets.only(left: 16, top: 8, bottom: 8),
+                        blockquotePadding: const EdgeInsets.only(
+                          left: 16,
+                          top: 8,
+                          bottom: 8,
+                        ),
                         code: theme.textTheme.bodySmall?.copyWith(
                           fontFamily: 'monospace',
                           backgroundColor: colorScheme.surfaceContainerHighest,
@@ -354,8 +355,9 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
                         width: 8,
                         height: 16,
                         decoration: BoxDecoration(
-                          color: colorScheme.primary
-                              .applyOpacity(_pulseAnimation.value),
+                          color: colorScheme.primary.applyOpacity(
+                            _pulseAnimation.value,
+                          ),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       );
@@ -471,10 +473,7 @@ class _StreamingTextDialogState extends State<StreamingTextDialog>
                     widget.onApply(_currentText);
                   }
                 : null,
-            icon: Icon(
-              _getApplyButtonIcon(),
-              size: 18,
-            ),
+            icon: Icon(_getApplyButtonIcon(), size: 18),
             label: Text(widget.applyButtonText),
             style: FilledButton.styleFrom(
               shape: RoundedRectangleBorder(

@@ -61,11 +61,7 @@ void main() {
     });
 
     test('should handle boolean is_default in fromMap', () {
-      final map = {
-        'id': 'test-id',
-        'name': '测试标签',
-        'is_default': true,
-      };
+      final map = {'id': 'test-id', 'name': '测试标签', 'is_default': true};
       final tag = NoteTag.fromMap(map);
       expect(tag.isDefault, isTrue);
     });

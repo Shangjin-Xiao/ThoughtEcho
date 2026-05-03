@@ -45,7 +45,8 @@ extension _NoteListScrollExtension on NoteListViewState {
       int totalFrameMicros = 0;
 
       for (final timing in _firstOpenScrollFrameTimings) {
-        final int totalMicros = timing.buildDuration.inMicroseconds +
+        final int totalMicros =
+            timing.buildDuration.inMicroseconds +
             timing.rasterDuration.inMicroseconds;
         totalFrameMicros += totalMicros;
 
@@ -82,7 +83,8 @@ extension _NoteListScrollExtension on NoteListViewState {
       int totalIntervalMicros = 0;
 
       for (int i = 1; i < _firstOpenScrollUpdateMicros.length; i++) {
-        final int interval = _firstOpenScrollUpdateMicros[i] -
+        final int interval =
+            _firstOpenScrollUpdateMicros[i] -
             _firstOpenScrollUpdateMicros[i - 1];
         if (interval > worstIntervalMicros) {
           worstIntervalMicros = interval;
@@ -320,12 +322,9 @@ extension _NoteListScrollExtension on NoteListViewState {
       final position = _scrollController.position;
       final viewportExtent = position.viewportDimension;
       final currentOffset = position.pixels;
-      final targetOffset = RenderAbstractViewport.of(renderObject)
-          .getOffsetToReveal(
-            renderObject,
-            0.0,
-          )
-          .offset;
+      final targetOffset = RenderAbstractViewport.of(
+        renderObject,
+      ).getOffsetToReveal(renderObject, 0.0).offset;
 
       if (shouldSkipVisibleTargetAlignment(
         targetOffset: targetOffset,

@@ -18,9 +18,7 @@ extension SmartPushContentSelection on SmartPushService {
     // 使用 warning 级别确保后台 Isolate 中也能持久化到日志数据库
     AppLogger.w('智能选择：开始查询数据库...');
     final allNotes = await _databaseService.getQuotesForSmartPush(limit: 5000);
-    AppLogger.w(
-      '智能选择：数据库查询完成 (总笔记数: ${allNotes.length})',
-    );
+    AppLogger.w('智能选择：数据库查询完成 (总笔记数: ${allNotes.length})');
 
     if (allNotes.isEmpty) {
       // 没有任何笔记时，回退到每日一言
@@ -179,9 +177,7 @@ extension SmartPushContentSelection on SmartPushService {
     if (availableContent.isNotEmpty) {
       final availableTypes = availableContent.keys.toList();
 
-      AppLogger.w(
-        '智能选择：可用内容类型 $availableTypes',
-      );
+      AppLogger.w('智能选择：可用内容类型 $availableTypes');
 
       // 按优先级排序所有候选内容
       final sortedCandidates = availableContent.entries.toList()
@@ -196,9 +192,7 @@ extension SmartPushContentSelection on SmartPushService {
       if (bestType == 'yearAgoToday') {
         AppLogger.w('智能选择：命中那年今日（优先级最高），优先推送');
       } else {
-        AppLogger.w(
-          '智能选择：选中 $bestType（优先级 ${bestCandidate.priority}）',
-        );
+        AppLogger.w('智能选择：选中 $bestType（优先级 ${bestCandidate.priority}）');
       }
 
       return _SmartSelectResult(
@@ -216,7 +210,8 @@ extension SmartPushContentSelection on SmartPushService {
 
       // 检查 7 天内是否有可推送的用户笔记
       // 使用已有的筛选结果判断（排除 sameTimeOfDay 本身）
-      final hasRecentNotes = filterResult.yearAgoQuotes.isNotEmpty ||
+      final hasRecentNotes =
+          filterResult.yearAgoQuotes.isNotEmpty ||
           filterResult.monthAgoQuotes.isNotEmpty ||
           filterResult.weekAgoQuotes.isNotEmpty ||
           sameLocationNotes.isNotEmpty ||
@@ -224,9 +219,7 @@ extension SmartPushContentSelection on SmartPushService {
 
       if (!hasPushed && !hasRecentNotes) {
         final sameTimeCandidate = fallbackContent['sameTimeOfDay']!;
-        AppLogger.w(
-          '智能选择：今日无推送且无高价值笔记，使用「此时此刻」兜底',
-        );
+        AppLogger.w('智能选择：今日无推送且无高价值笔记，使用「此时此刻」兜底');
         return _SmartSelectResult(
           note: sameTimeCandidate.note,
           title: sameTimeCandidate.title,

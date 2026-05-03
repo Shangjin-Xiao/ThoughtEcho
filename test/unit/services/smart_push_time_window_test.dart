@@ -6,27 +6,29 @@ import 'package:thoughtecho/services/smart_push_service.dart';
 
 void main() {
   group('SmartPushService time window helpers', () {
-    test('matches slot only when current time is after slot within tolerance',
-        () {
-      final now = DateTime(2026, 3, 13, 8, 5);
-      const slot = PushTimeSlot(hour: 8, minute: 0);
+    test(
+      'matches slot only when current time is after slot within tolerance',
+      () {
+        final now = DateTime(2026, 3, 13, 8, 5);
+        const slot = PushTimeSlot(hour: 8, minute: 0);
 
-      expect(SmartPushService.isWithinPushWindow(now, slot), isTrue);
-      expect(
-        SmartPushService.isWithinPushWindow(
-          DateTime(2026, 3, 13, 7, 55),
-          slot,
-        ),
-        isFalse,
-      );
-      expect(
-        SmartPushService.isWithinPushWindow(
-          DateTime(2026, 3, 13, 8, 11),
-          slot,
-        ),
-        isFalse,
-      );
-    });
+        expect(SmartPushService.isWithinPushWindow(now, slot), isTrue);
+        expect(
+          SmartPushService.isWithinPushWindow(
+            DateTime(2026, 3, 13, 7, 55),
+            slot,
+          ),
+          isFalse,
+        );
+        expect(
+          SmartPushService.isWithinPushWindow(
+            DateTime(2026, 3, 13, 8, 11),
+            slot,
+          ),
+          isFalse,
+        );
+      },
+    );
 
     test('matches any eligible slot in list', () {
       final now = DateTime(2026, 3, 13, 20, 8);
@@ -60,9 +62,7 @@ void main() {
     });
 
     test('next scheduled date skips to next active weekday', () {
-      const settings = SmartPushSettings(
-        frequency: PushFrequency.weekdays,
-      );
+      const settings = SmartPushSettings(frequency: PushFrequency.weekdays);
 
       final scheduled = SmartPushService.nextScheduledDate(
         now: DateTime(2026, 3, 14, 9, 0),
@@ -75,9 +75,7 @@ void main() {
     });
 
     test('daily quote scheduling can ignore smart push frequency', () {
-      const settings = SmartPushSettings(
-        frequency: PushFrequency.weekdays,
-      );
+      const settings = SmartPushSettings(frequency: PushFrequency.weekdays);
 
       final scheduled = SmartPushService.nextScheduledDate(
         now: DateTime(2026, 3, 14, 9, 0),
@@ -130,9 +128,11 @@ void main() {
       ];
 
       // 计算间隔
-      final gap1 = (slots[1].hour * 60 + slots[1].minute) -
+      final gap1 =
+          (slots[1].hour * 60 + slots[1].minute) -
           (slots[0].hour * 60 + slots[0].minute);
-      final gap2 = (slots[2].hour * 60 + slots[2].minute) -
+      final gap2 =
+          (slots[2].hour * 60 + slots[2].minute) -
           (slots[1].hour * 60 + slots[1].minute);
 
       expect(gap1, 30); // 刚好 30 分钟，应保留

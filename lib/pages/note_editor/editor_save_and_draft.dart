@@ -371,7 +371,7 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
       colorHex: _selectedColorHex,
       location: _showLocation
           ? (_location ??
-              (_latitude != null ? LocationService.kAddressPending : null))
+                (_latitude != null ? LocationService.kAddressPending : null))
           : null,
       latitude: _showLocation ? _latitude : null,
       longitude: _showLocation ? _longitude : null,
@@ -495,7 +495,8 @@ extension _NoteEditorSaveAndDraft on _NoteFullEditorPageState {
   }
 
   Future<void> _rollbackMovedPermanentMediaFiles(
-      List<String> movedPaths) async {
+    List<String> movedPaths,
+  ) async {
     if (movedPaths.isEmpty) {
       return;
     }

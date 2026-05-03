@@ -93,8 +93,8 @@ class OnboardingController extends ChangeNotifier {
           : _systemLocaleCode;
       newPreferences['dailyQuoteProvider'] =
           ApiService.recommendedDailyQuoteProviderForLanguage(
-        effectiveLocaleCode,
-      );
+            effectiveLocaleCode,
+          );
     }
 
     _state = _state.copyWith(preferences: newPreferences);
@@ -303,7 +303,7 @@ class OnboardingController extends ChangeNotifier {
   void _updateNavigationState() {
     final canGoNext =
         _state.currentPageIndex < OnboardingConfig.totalPages - 1 ||
-            _canCompleteOnboarding();
+        _canCompleteOnboarding();
     final canGoPrevious = _state.currentPageIndex > 0;
 
     _state = _state.copyWith(

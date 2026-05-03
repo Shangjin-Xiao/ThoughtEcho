@@ -20,11 +20,11 @@ class _TestSettingsService extends ChangeNotifier implements SettingsService {
     bool skipNonFullscreenEditor = false,
     bool useLocalQuotesOnly = false,
     String offlineQuoteSource = 'tagOnly',
-  })  : _excerptIntentEnabled = excerptIntentEnabled,
-        _showNoteEditTime = showNoteEditTime,
-        _skipNonFullscreenEditor = skipNonFullscreenEditor,
-        _useLocalQuotesOnly = useLocalQuotesOnly,
-        _offlineQuoteSource = offlineQuoteSource;
+  }) : _excerptIntentEnabled = excerptIntentEnabled,
+       _showNoteEditTime = showNoteEditTime,
+       _skipNonFullscreenEditor = skipNonFullscreenEditor,
+       _useLocalQuotesOnly = useLocalQuotesOnly,
+       _offlineQuoteSource = offlineQuoteSource;
 
   @override
   bool get excerptIntentEnabled => _excerptIntentEnabled;
@@ -171,16 +171,16 @@ void main() {
   setUp(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(localAuthChannel, (methodCall) async {
-      switch (methodCall.method) {
-        case 'isDeviceSupported':
-        case 'deviceSupportsBiometrics':
-        case 'canCheckBiometrics':
-          return false;
-        case 'getAvailableBiometrics':
-          return <String>[];
-      }
-      return null;
-    });
+          switch (methodCall.method) {
+            case 'isDeviceSupported':
+            case 'deviceSupportsBiometrics':
+            case 'canCheckBiometrics':
+              return false;
+            case 'getAvailableBiometrics':
+              return <String>[];
+          }
+          return null;
+        });
   });
 
   tearDown(() {
@@ -215,8 +215,9 @@ void main() {
     final settings = _TestSettingsService();
     final clipboard = _TestClipboardService();
 
-    final localizations =
-        await AppLocalizations.delegate.load(const Locale('zh'));
+    final localizations = await AppLocalizations.delegate.load(
+      const Locale('zh'),
+    );
 
     await tester.pumpWidget(buildApp(settings, clipboard));
     await tester.pumpAndSettle();
@@ -267,8 +268,9 @@ void main() {
     final settings = _TestSettingsService();
     final clipboard = _TestClipboardService();
 
-    final localizations =
-        await AppLocalizations.delegate.load(const Locale('zh'));
+    final localizations = await AppLocalizations.delegate.load(
+      const Locale('zh'),
+    );
 
     await tester.pumpWidget(buildApp(settings, clipboard));
     await tester.pumpAndSettle();
@@ -296,8 +298,9 @@ void main() {
       offlineQuoteSource: 'tagOnly',
     );
     final clipboard = _TestClipboardService();
-    final localizations =
-        await AppLocalizations.delegate.load(const Locale('zh'));
+    final localizations = await AppLocalizations.delegate.load(
+      const Locale('zh'),
+    );
 
     await tester.pumpWidget(buildApp(settings, clipboard));
     await tester.pumpAndSettle();

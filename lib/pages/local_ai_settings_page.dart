@@ -151,8 +151,9 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            theme.colorScheme.primaryContainer
-                                .withValues(alpha: 0.5),
+                            theme.colorScheme.primaryContainer.withValues(
+                              alpha: 0.5,
+                            ),
                             theme.colorScheme.surface,
                           ],
                         )
@@ -393,11 +394,7 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
                     color: iconColor.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Icon(
-                    icon,
-                    size: 18,
-                    color: iconColor,
-                  ),
+                  child: Icon(icon, size: 18, color: iconColor),
                 ),
                 const SizedBox(width: 12),
                 Text(
@@ -420,9 +417,7 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
                 color: theme.colorScheme.outline.withValues(alpha: 0.2),
               ),
             ),
-            child: Column(
-              children: children,
-            ),
+            child: Column(children: children),
           ),
         ],
       ),
@@ -452,8 +447,9 @@ class _LocalAISettingsPageState extends State<LocalAISettingsPage> {
             decoration: BoxDecoration(
               color: value
                   ? theme.colorScheme.primaryContainer.withValues(alpha: 0.5)
-                  : theme.colorScheme.surfaceContainerHighest
-                      .withValues(alpha: 0.5),
+                  : theme.colorScheme.surfaceContainerHighest.withValues(
+                      alpha: 0.5,
+                    ),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(

@@ -15,19 +15,19 @@ void main() {
 
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(channel, (methodCall) async {
-      if (methodCall.method == 'setExcerptEntryEnabled') {
-        calls.add('${methodCall.method}:${methodCall.arguments}');
-        return null;
-      }
+          if (methodCall.method == 'setExcerptEntryEnabled') {
+            calls.add('${methodCall.method}:${methodCall.arguments}');
+            return null;
+          }
 
-      calls.add(methodCall.method);
-      if (methodCall.method == 'consumePendingExcerptText') {
-        final value = pendingText;
-        pendingText = null;
-        return value;
-      }
-      return null;
-    });
+          calls.add(methodCall.method);
+          if (methodCall.method == 'consumePendingExcerptText') {
+            final value = pendingText;
+            pendingText = null;
+            return value;
+          }
+          return null;
+        });
   });
 
   tearDown(() {

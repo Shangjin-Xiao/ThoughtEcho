@@ -13,10 +13,7 @@ void main() {
     });
 
     test('没有分隔符时保持原文', () {
-      expect(
-        formatAnniversaryBannerSubtitleForTile('感恩有你，一路同行'),
-        '感恩有你，一路同行',
-      );
+      expect(formatAnniversaryBannerSubtitleForTile('感恩有你，一路同行'), '感恩有你，一路同行');
     });
   });
 }

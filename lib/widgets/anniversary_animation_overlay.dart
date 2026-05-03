@@ -32,7 +32,8 @@ class AnniversaryAnimationOverlay extends StatefulWidget {
 }
 
 class _AnniversaryAnimationOverlayState
-    extends State<AnniversaryAnimationOverlay> with TickerProviderStateMixin {
+    extends State<AnniversaryAnimationOverlay>
+    with TickerProviderStateMixin {
   late final AnimationController _entryController;
   late final AnimationController _confettiController;
   late final AnimationController _buttonController;
@@ -61,10 +62,7 @@ class _AnniversaryAnimationOverlayState
       parent: _entryController,
       curve: Curves.easeOutCubic,
     );
-    _cardScale = Tween<double>(
-      begin: 0.94,
-      end: 1.0,
-    ).animate(
+    _cardScale = Tween<double>(begin: 0.94, end: 1.0).animate(
       CurvedAnimation(parent: _entryController, curve: Curves.easeOutBack),
     );
 
@@ -77,13 +75,13 @@ class _AnniversaryAnimationOverlayState
       vsync: this,
       duration: const Duration(milliseconds: 500),
     );
-    _buttonSlide = Tween<Offset>(
-      begin: const Offset(0, 0.6),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _buttonController,
-      curve: Curves.easeOutCubic,
-    ));
+    _buttonSlide = Tween<Offset>(begin: const Offset(0, 0.6), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _buttonController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
 
     _setupConfetti();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -166,9 +164,7 @@ class _AnniversaryAnimationOverlayState
             Positioned.fill(
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                child: Container(
-                  color: Colors.black.withValues(alpha: 0.38),
-                ),
+                child: Container(color: Colors.black.withValues(alpha: 0.38)),
               ),
             ),
             // 顶部微弱光晕
@@ -209,27 +205,27 @@ class _AnniversaryAnimationOverlayState
                           width: glassCardWidth,
                           padding: const EdgeInsets.fromLTRB(28, 24, 28, 28),
                           decoration: BoxDecoration(
-                            color:
-                                Colors.white.withValues(alpha: 0.16 * opacity),
+                            color: Colors.white.withValues(
+                              alpha: 0.16 * opacity,
+                            ),
                             borderRadius: BorderRadius.circular(28),
                             border: Border.all(
-                              color: Colors.white
-                                  .withValues(alpha: 0.28 * opacity),
+                              color: Colors.white.withValues(
+                                alpha: 0.28 * opacity,
+                              ),
                               width: 1.2,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black
-                                    .withValues(alpha: 0.20 * opacity),
+                                color: Colors.black.withValues(
+                                  alpha: 0.20 * opacity,
+                                ),
                                 blurRadius: 30,
                                 offset: const Offset(0, 14),
                               ),
                             ],
                           ),
-                          child: Opacity(
-                            opacity: opacity,
-                            child: child,
-                          ),
+                          child: Opacity(opacity: opacity, child: child),
                         ),
                       ),
                     );
@@ -296,9 +292,9 @@ class _AnniversaryAnimationOverlayState
                           color: Colors.white.withValues(alpha: 0.10),
                           borderRadius: BorderRadius.circular(999),
                           border: Border.all(
-                            color: const Color(0xFF0061FF).withValues(
-                              alpha: 0.50,
-                            ),
+                            color: const Color(
+                              0xFF0061FF,
+                            ).withValues(alpha: 0.50),
                           ),
                         ),
                         child: Text(
@@ -334,15 +330,14 @@ class _AnniversaryAnimationOverlayState
                                 ),
                               ),
                               style: FilledButton.styleFrom(
-                                backgroundColor:
-                                    Colors.white.withValues(alpha: 0.2),
+                                backgroundColor: Colors.white.withValues(
+                                  alpha: 0.2,
+                                ),
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(20),
                                   side: BorderSide(
-                                    color: Colors.white.withValues(
-                                      alpha: 0.4,
-                                    ),
+                                    color: Colors.white.withValues(alpha: 0.4),
                                   ),
                                 ),
                                 padding: const EdgeInsets.symmetric(
@@ -378,8 +373,8 @@ class _AnniversaryAnimationOverlayState
         final opacity = progress < 0.1
             ? progress / 0.1
             : progress > 0.85
-                ? (1 - progress) / 0.15
-                : 1.0;
+            ? (1 - progress) / 0.15
+            : 1.0;
         // 3D 翻转效果：用 scaleX 模拟纸片正反面翻转
         final flipScaleX = math.cos(progress * math.pi * piece.flipSpeed).abs();
         // 轻微纵向拉伸，模拟空气阻力下的飘动
@@ -391,11 +386,13 @@ class _AnniversaryAnimationOverlayState
           child: Transform(
             alignment: Alignment.center,
             transform: Matrix4.rotationZ(rotation)
-              ..multiply(Matrix4.diagonal3Values(
-                flipScaleX.clamp(0.15, 1.0),
-                stretchY,
-                1.0,
-              )),
+              ..multiply(
+                Matrix4.diagonal3Values(
+                  flipScaleX.clamp(0.15, 1.0),
+                  stretchY,
+                  1.0,
+                ),
+              ),
             child: Opacity(
               opacity: opacity.clamp(0.0, 1.0),
               child: _buildConfettiShape(piece),
@@ -431,10 +428,7 @@ class _AnniversaryAnimationOverlayState
         return Container(
           width: s * 0.7,
           height: s * 0.7,
-          decoration: BoxDecoration(
-            color: piece.color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: piece.color, shape: BoxShape.circle),
         );
       case _ConfettiShape.star:
         return CustomPaint(

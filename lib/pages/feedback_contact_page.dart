@@ -35,9 +35,7 @@ class FeedbackContactPage extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.feedbackAndContact),
-      ),
+      appBar: AppBar(title: Text(l10n.feedbackAndContact)),
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
@@ -50,8 +48,8 @@ class FeedbackContactPage extends StatelessWidget {
                   child: Text(
                     l10n.feedbackAndContactDesc,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
+                      color: colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
                 const Divider(indent: 16, endIndent: 16),
@@ -100,8 +98,8 @@ class FeedbackContactPage extends StatelessWidget {
                   child: Text(
                     l10n.contactDeveloperSectionTitle,
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: colorScheme.primary,
-                        ),
+                      color: colorScheme.primary,
+                    ),
                   ),
                 ),
                 const Divider(indent: 16, endIndent: 16),

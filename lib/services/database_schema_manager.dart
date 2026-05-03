@@ -684,11 +684,7 @@ class DatabaseSchemaManager {
           'CREATE INDEX IF NOT EXISTS idx_quote_tombstones_deleted_at ON quote_tombstones(deleted_at)',
         );
       } catch (e) {
-        logError(
-          '回收站结构升级失败: $e',
-          error: e,
-          source: 'DatabaseUpgrade',
-        );
+        logError('回收站结构升级失败: $e', error: e, source: 'DatabaseUpgrade');
         rethrow;
       }
 
@@ -704,11 +700,7 @@ class DatabaseSchemaManager {
           logDebug('数据库升级：已修复 $fixedCount 条缺失 deleted_at 的历史删除记录');
         }
       } catch (e) {
-        logError(
-          '回收站历史数据回填失败: $e',
-          error: e,
-          source: 'DatabaseUpgrade',
-        );
+        logError('回收站历史数据回填失败: $e', error: e, source: 'DatabaseUpgrade');
       }
     }
   }
@@ -834,13 +826,10 @@ class DatabaseSchemaManager {
 
         // 插入有效的标签关联（添加到batch）
         for (final tagId in validTagIds) {
-          batch.insert(
-              'quote_tags',
-              {
-                'quote_id': quoteId,
-                'tag_id': tagId,
-              },
-              conflictAlgorithm: ConflictAlgorithm.ignore);
+          batch.insert('quote_tags', {
+            'quote_id': quoteId,
+            'tag_id': tagId,
+          }, conflictAlgorithm: ConflictAlgorithm.ignore);
         }
 
         migratedCount++;
@@ -1458,8 +1447,8 @@ class DatabaseSchemaManager {
         // 3. 查询需要迁移的数据
         // 性能优化：仅查询值为中文标签的记录
         // 使用参数化查询而不是字符串拼接，防止潜在的 SQL 注入问题
-        final weatherLabels =
-            WeatherService.legacyWeatherKeyToLabel.values.toList();
+        final weatherLabels = WeatherService.legacyWeatherKeyToLabel.values
+            .toList();
         if (weatherLabels.isEmpty) {
           logDebug('没有需要迁移的 weather 标签');
           return;

@@ -46,11 +46,11 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
     );
     _slideAnimation =
         Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeOutCubic,
-      ),
-    );
+          CurvedAnimation(
+            parent: _animationController,
+            curve: Curves.easeOutCubic,
+          ),
+        );
 
     _animationController.forward();
   }
@@ -422,7 +422,8 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
       // 如果不是HTML格式，包装成HTML
       if (!_sanitizedHtmlContent.trim().toLowerCase().startsWith('<!doctype') &&
           !_sanitizedHtmlContent.trim().toLowerCase().startsWith('<html')) {
-        contentToWrite = '''
+        contentToWrite =
+            '''
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -600,8 +601,11 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
       // 处理请求
       server.listen((HttpRequest request) {
         // 设置正确的ContentType和编码，防止乱码
-        request.response.headers.contentType =
-            ContentType('text', 'html', charset: 'utf-8');
+        request.response.headers.contentType = ContentType(
+          'text',
+          'html',
+          charset: 'utf-8',
+        );
         // 安全增强：设置Content-Security-Policy头
         request.response.headers.add(
           'Content-Security-Policy',
@@ -615,7 +619,8 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
 
       // 构建localhost URL
       final uri = Uri.parse(
-          'http://127.0.0.1:${server.port}/annual_report_${widget.year}.html');
+        'http://127.0.0.1:${server.port}/annual_report_${widget.year}.html',
+      );
 
       // 使用外部浏览器打开
       if (await canLaunchUrl(uri)) {
@@ -845,16 +850,20 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
           children: [
             Text(l10n.htmlReportCopiedSteps),
             const SizedBox(height: 16),
-            Text(l10n.annualReportMobileInstructions,
-                style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(
+              l10n.annualReportMobileInstructions,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             Text(l10n.browserInstructionsStep1),
             Text(l10n.browserInstructionsStep2),
             Text(l10n.browserInstructionsStep3),
             Text(l10n.browserInstructionsStep4),
             Text(l10n.browserInstructionsStep5),
             const SizedBox(height: 12),
-            Text(l10n.annualReportDesktopInstructions,
-                style: const TextStyle(fontWeight: FontWeight.bold)),
+            Text(
+              l10n.annualReportDesktopInstructions,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             Text(l10n.desktopInstructionsStep1),
             Text(l10n.desktopInstructionsStep2),
             Text(l10n.desktopInstructionsStep3),
@@ -902,7 +911,8 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
       String contentToShare = _sanitizedHtmlContent;
       if (!_sanitizedHtmlContent.trim().toLowerCase().startsWith('<!doctype') &&
           !_sanitizedHtmlContent.trim().toLowerCase().startsWith('<html')) {
-        contentToShare = '''
+        contentToShare =
+            '''
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -1024,7 +1034,9 @@ class _AIAnnualReportWebViewState extends State<AIAnnualReportWebView>
         // Note: _sanitizedHtmlContent already has CSP (sanitized in initState)
         // 保存文件
         await LargeFileManager.writeStringToFile(
-            reportFile, _sanitizedHtmlContent);
+          reportFile,
+          _sanitizedHtmlContent,
+        );
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

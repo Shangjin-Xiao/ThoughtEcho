@@ -112,8 +112,9 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                           backgroundColor: Colors.white.withValues(alpha: 0.1),
                           highlightColor: Colors.white.withValues(alpha: 0.2),
                         ),
-                        tooltip: MaterialLocalizations.of(context)
-                            .closeButtonTooltip,
+                        tooltip: MaterialLocalizations.of(
+                          context,
+                        ).closeButtonTooltip,
                       ),
                     ),
                   ),
@@ -141,8 +142,9 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: colorScheme.primary
-                                      .withValues(alpha: opacity),
+                                  color: colorScheme.primary.withValues(
+                                    alpha: opacity,
+                                  ),
                                   width: 2,
                                 ),
                               ),
@@ -157,8 +159,9 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                               color: colorScheme.primary.withValues(alpha: 0.2),
                               boxShadow: [
                                 BoxShadow(
-                                  color: colorScheme.primary
-                                      .withValues(alpha: 0.4),
+                                  color: colorScheme.primary.withValues(
+                                    alpha: 0.4,
+                                  ),
                                   blurRadius: 20,
                                   spreadRadius: 5,
                                 ),
@@ -182,8 +185,9 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: colorScheme.primary
-                                      .withValues(alpha: 0.5),
+                                  color: colorScheme.primary.withValues(
+                                    alpha: 0.5,
+                                  ),
                                   blurRadius: 12,
                                   offset: const Offset(0, 4),
                                 ),
@@ -222,8 +226,9 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.1),
-                        borderRadius:
-                            BorderRadius.circular(AppTheme.cardRadius),
+                        borderRadius: BorderRadius.circular(
+                          AppTheme.cardRadius,
+                        ),
                         border: Border.all(
                           color: Colors.white.withValues(alpha: 0.1),
                         ),
@@ -256,7 +261,10 @@ class _VoiceInputOverlayState extends State<VoiceInputOverlay>
                         AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
                           transform: Matrix4.translationValues(
-                              0, willTriggerOCR ? -10 : 0, 0),
+                            0,
+                            willTriggerOCR ? -10 : 0,
+                            0,
+                          ),
                           child: Icon(
                             willTriggerOCR
                                 ? Icons.document_scanner_rounded

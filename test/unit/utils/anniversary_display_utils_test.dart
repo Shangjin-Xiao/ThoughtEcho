@@ -19,7 +19,8 @@ void main() {
     test('isAnniversarySeason returns false outside anniversary window', () {
       expect(
         AnniversaryDisplayUtils.isAnniversarySeason(
-            DateTime(2026, 3, 22, 23, 59, 59)),
+          DateTime(2026, 3, 22, 23, 59, 59),
+        ),
         isFalse,
       );
       expect(
@@ -28,80 +29,84 @@ void main() {
       );
     });
 
-    test('shouldShowSettingsBanner allows developer preview before anniversary',
-        () {
-      expect(
-        AnniversaryDisplayUtils.shouldShowSettingsBanner(
-          now: DateTime(2026, 3, 1),
-          developerMode: true,
-        ),
-        isTrue,
-      );
-      expect(
-        AnniversaryDisplayUtils.shouldShowSettingsBanner(
-          now: DateTime(2026, 3, 1),
-          developerMode: false,
-        ),
-        isFalse,
-      );
-    });
+    test(
+      'shouldShowSettingsBanner allows developer preview before anniversary',
+      () {
+        expect(
+          AnniversaryDisplayUtils.shouldShowSettingsBanner(
+            now: DateTime(2026, 3, 1),
+            developerMode: true,
+          ),
+          isTrue,
+        );
+        expect(
+          AnniversaryDisplayUtils.shouldShowSettingsBanner(
+            now: DateTime(2026, 3, 1),
+            developerMode: false,
+          ),
+          isFalse,
+        );
+      },
+    );
 
-    test('shouldAutoShowAnimation allows developer preview outside date window',
-        () {
-      expect(
-        AnniversaryDisplayUtils.shouldAutoShowAnimation(
-          now: DateTime(2026, 3, 25),
-          developerMode: false,
-          anniversaryShown: false,
-          anniversaryAnimationEnabled: true,
-        ),
-        isTrue,
-      );
-      expect(
-        AnniversaryDisplayUtils.shouldAutoShowAnimation(
-          now: DateTime(2026, 3, 25),
-          developerMode: false,
-          anniversaryShown: true,
-          anniversaryAnimationEnabled: true,
-        ),
-        isFalse,
-      );
-      expect(
-        AnniversaryDisplayUtils.shouldAutoShowAnimation(
-          now: DateTime(2026, 3, 25),
-          developerMode: false,
-          anniversaryShown: false,
-          anniversaryAnimationEnabled: false,
-        ),
-        isFalse,
-      );
-      expect(
-        AnniversaryDisplayUtils.shouldAutoShowAnimation(
-          now: DateTime(2026, 3, 1),
-          developerMode: false,
-          anniversaryShown: false,
-          anniversaryAnimationEnabled: true,
-        ),
-        isFalse,
-      );
-      expect(
-        AnniversaryDisplayUtils.shouldAutoShowAnimation(
-          now: DateTime(2026, 3, 1),
-          developerMode: true,
-          anniversaryShown: false,
-          anniversaryAnimationEnabled: true,
-        ),
-        isTrue,
-      );
-      expect(
-        AnniversaryDisplayUtils.shouldAutoShowAnimation(
-          now: DateTime(2026, 3, 1),
-          developerMode: true,
-          anniversaryShown: true,
-          anniversaryAnimationEnabled: true,
-        ),
-        isFalse,
-      );
-    });
+    test(
+      'shouldAutoShowAnimation allows developer preview outside date window',
+      () {
+        expect(
+          AnniversaryDisplayUtils.shouldAutoShowAnimation(
+            now: DateTime(2026, 3, 25),
+            developerMode: false,
+            anniversaryShown: false,
+            anniversaryAnimationEnabled: true,
+          ),
+          isTrue,
+        );
+        expect(
+          AnniversaryDisplayUtils.shouldAutoShowAnimation(
+            now: DateTime(2026, 3, 25),
+            developerMode: false,
+            anniversaryShown: true,
+            anniversaryAnimationEnabled: true,
+          ),
+          isFalse,
+        );
+        expect(
+          AnniversaryDisplayUtils.shouldAutoShowAnimation(
+            now: DateTime(2026, 3, 25),
+            developerMode: false,
+            anniversaryShown: false,
+            anniversaryAnimationEnabled: false,
+          ),
+          isFalse,
+        );
+        expect(
+          AnniversaryDisplayUtils.shouldAutoShowAnimation(
+            now: DateTime(2026, 3, 1),
+            developerMode: false,
+            anniversaryShown: false,
+            anniversaryAnimationEnabled: true,
+          ),
+          isFalse,
+        );
+        expect(
+          AnniversaryDisplayUtils.shouldAutoShowAnimation(
+            now: DateTime(2026, 3, 1),
+            developerMode: true,
+            anniversaryShown: false,
+            anniversaryAnimationEnabled: true,
+          ),
+          isTrue,
+        );
+        expect(
+          AnniversaryDisplayUtils.shouldAutoShowAnimation(
+            now: DateTime(2026, 3, 1),
+            developerMode: true,
+            anniversaryShown: true,
+            anniversaryAnimationEnabled: true,
+          ),
+          isFalse,
+        );
+      },
+    );
   });
 }

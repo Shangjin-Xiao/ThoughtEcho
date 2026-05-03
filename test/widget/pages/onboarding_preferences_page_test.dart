@@ -13,9 +13,7 @@ void main() {
     await TestSetup.setupWidgetTest();
   });
 
-  testWidgets('引导页根据语言为每日一言 provider 选择合适默认值', (
-    tester,
-  ) async {
+  testWidgets('引导页根据语言为每日一言 provider 选择合适默认值', (tester) async {
     await tester.pumpWidget(
       MaterialApp(
         locale: const Locale('en'),
@@ -46,11 +44,10 @@ void main() {
     );
   });
 
-  testWidgets('引导页在类型选择区域展示 API 选择', (
-    tester,
-  ) async {
-    final localizations =
-        await AppLocalizations.delegate.load(const Locale('zh'));
+  testWidgets('引导页在类型选择区域展示 API 选择', (tester) async {
+    final localizations = await AppLocalizations.delegate.load(
+      const Locale('zh'),
+    );
 
     await tester.pumpWidget(
       MaterialApp(
@@ -76,11 +73,10 @@ void main() {
     expect(find.text('一言 (Hitokoto)'), findsOneWidget);
   });
 
-  testWidgets('引导页在非 Hitokoto provider 时隐藏类型分类选项', (
-    tester,
-  ) async {
-    final localizations =
-        await AppLocalizations.delegate.load(const Locale('zh'));
+  testWidgets('引导页在非 Hitokoto provider 时隐藏类型分类选项', (tester) async {
+    final localizations = await AppLocalizations.delegate.load(
+      const Locale('zh'),
+    );
 
     await tester.pumpWidget(
       MaterialApp(

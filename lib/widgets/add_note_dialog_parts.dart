@@ -67,9 +67,8 @@ class _TagSelectionSectionState extends State<TagSelectionSection> {
         final l10n = AppLocalizations.of(context);
         _filteredTags = widget.tags
             .where(
-              (tag) => tag.localizedName(l10n).toLowerCase().contains(
-                    lowerQuery,
-                  ),
+              (tag) =>
+                  tag.localizedName(l10n).toLowerCase().contains(lowerQuery),
             )
             .toList();
       }
@@ -259,17 +258,15 @@ class _TagListItem extends StatelessWidget {
         children: [
           leading,
           const SizedBox(width: 8),
-          Flexible(
-            child: Text(displayName, overflow: TextOverflow.ellipsis),
-          ),
+          Flexible(child: Text(displayName, overflow: TextOverflow.ellipsis)),
         ],
       ),
       subtitle: isHiddenTag
           ? Text(
               l10n.hiddenTagUsageHint,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             )
@@ -339,8 +336,10 @@ class SelectedTagsDisplay extends StatelessWidget {
                             style: const TextStyle(fontSize: 20),
                           ),
                           const SizedBox(width: 4),
-                          Text(displayName,
-                              style: const TextStyle(fontSize: 12)),
+                          Text(
+                            displayName,
+                            style: const TextStyle(fontSize: 12),
+                          ),
                         ],
                       )
                     : Text(displayName),

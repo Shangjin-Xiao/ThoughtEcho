@@ -29,9 +29,9 @@ extension _AIReportStats on _AIPeriodicReportPageState {
                   child: Text(
                     title,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],
@@ -46,11 +46,11 @@ extension _AIReportStats on _AIPeriodicReportPageState {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       value,
-                      style:
-                          Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                       maxLines: 1,
                     ),
                   ),
@@ -60,8 +60,8 @@ extension _AIReportStats on _AIPeriodicReportPageState {
                   Text(
                     unit,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ],
@@ -98,9 +98,9 @@ extension _AIReportStats on _AIPeriodicReportPageState {
                   child: Text(
                     title,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],
@@ -115,11 +115,11 @@ extension _AIReportStats on _AIPeriodicReportPageState {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       value,
-                      style:
-                          Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                       maxLines: 1,
                     ),
                   ),
@@ -129,8 +129,8 @@ extension _AIReportStats on _AIPeriodicReportPageState {
                   Text(
                     unit,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ],
@@ -178,9 +178,9 @@ extension _AIReportStats on _AIPeriodicReportPageState {
                   child: Text(
                     title,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],
@@ -195,11 +195,11 @@ extension _AIReportStats on _AIPeriodicReportPageState {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       value,
-                      style:
-                          Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
+                      style: Theme.of(context).textTheme.headlineMedium
+                          ?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
                       maxLines: 1,
                     ),
                   ),
@@ -209,8 +209,8 @@ extension _AIReportStats on _AIPeriodicReportPageState {
                   Text(
                     unit,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ],
@@ -267,9 +267,8 @@ extension _AIReportStats on _AIPeriodicReportPageState {
                     child: Text(
                       l10n.noNotesInPeriodForPeriod(_getPeriodName(l10n)),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -291,13 +290,10 @@ extension _AIReportStats on _AIPeriodicReportPageState {
                     child: Text(
                       l10n.startRecordingThoughts,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(
-                              context,
-                            )
-                                .colorScheme
-                                .onSurfaceVariant
-                                .withValues(alpha: 0.7),
-                          ),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -329,7 +325,8 @@ extension _AIReportStats on _AIPeriodicReportPageState {
     final DateTime? lastModified = quote.lastModified != null
         ? DateTime.tryParse(quote.lastModified!)
         : null;
-    final bool shouldShowEditedAt = showNoteEditTime &&
+    final bool shouldShowEditedAt =
+        showNoteEditTime &&
         lastModified != null &&
         !lastModified.isAtSameMomentAs(date);
     final String? formattedEditedAt = shouldShowEditedAt
@@ -390,8 +387,9 @@ extension _AIReportStats on _AIPeriodicReportPageState {
                           Icon(
                             Icons.access_time,
                             size: 14,
-                            color:
-                                Theme.of(context).colorScheme.onSurfaceVariant,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                           ),
                           const SizedBox(width: 4),
                           Expanded(
@@ -401,9 +399,8 @@ extension _AIReportStats on _AIPeriodicReportPageState {
                               children: [
                                 Text(
                                   formattedDate,
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.bodySmall?.copyWith(
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
                                         color: Theme.of(
                                           context,
                                         ).colorScheme.onSurfaceVariant,
@@ -413,9 +410,8 @@ extension _AIReportStats on _AIPeriodicReportPageState {
                                   const SizedBox(height: 2),
                                   Text(
                                     formattedEditedAt,
-                                    style: Theme.of(
-                                      context,
-                                    ).textTheme.bodySmall?.copyWith(
+                                    style: Theme.of(context).textTheme.bodySmall
+                                        ?.copyWith(
                                           color: Theme.of(
                                             context,
                                           ).colorScheme.onSurfaceVariant,
@@ -443,11 +439,11 @@ extension _AIReportStats on _AIPeriodicReportPageState {
                       child: Text(
                         '${quote.content.length} 字',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onPrimaryContainer,
-                              fontWeight: FontWeight.w500,
-                            ),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ],

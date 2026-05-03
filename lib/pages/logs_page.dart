@@ -268,8 +268,9 @@ class _LogsPageState extends State<LogsPage> {
                         ),
                         IconButton(
                           icon: const Icon(Icons.close),
-                          tooltip: MaterialLocalizations.of(context)
-                              .closeButtonTooltip,
+                          tooltip: MaterialLocalizations.of(
+                            context,
+                          ).closeButtonTooltip,
                           onPressed: () => Navigator.of(context).pop(),
                         ),
                       ],
@@ -440,7 +441,8 @@ class _LogsPageState extends State<LogsPage> {
 
   // 构建过滤器横幅
   Widget _buildFiltersBanner() {
-    final hasFilters = _filterLevel != null ||
+    final hasFilters =
+        _filterLevel != null ||
         (_filterSource != null && _filterSource!.isNotEmpty) ||
         (_searchQuery != null && _searchQuery!.isNotEmpty);
 
@@ -651,7 +653,8 @@ class _LogsPageState extends State<LogsPage> {
                         : ListView.separated(
                             controller: _scrollController,
                             padding: const EdgeInsets.all(8.0),
-                            itemCount: filteredLogs.length +
+                            itemCount:
+                                filteredLogs.length +
                                 (_isLoadingMore ? 1 : 0) +
                                 (_hasMoreLogs ? 1 : 0),
                             separatorBuilder: (context, index) {
@@ -836,9 +839,7 @@ class _LogsPageState extends State<LogsPage> {
                       spacing: 8.0,
                       runSpacing: 8.0,
                       children: UnifiedLogLevel.values
-                          .where(
-                            (level) => level != UnifiedLogLevel.none,
-                          )
+                          .where((level) => level != UnifiedLogLevel.none)
                           .map(
                             (level) => FilterChip(
                               label: Text(level.name.toUpperCase()),

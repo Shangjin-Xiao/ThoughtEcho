@@ -223,8 +223,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
     // 新建笔记时，自动填充默认作者、出处和标签
     if (widget.initialQuote == null && !widget.skipDefaultMetadataAutofill) {
       try {
-        final settingsService =
-            Provider.of<SettingsService>(context, listen: false);
+        final settingsService = Provider.of<SettingsService>(
+          context,
+          listen: false,
+        );
         if (_authorController.text.isEmpty &&
             settingsService.defaultAuthor != null &&
             settingsService.defaultAuthor!.isNotEmpty) {
@@ -251,8 +253,10 @@ class _NoteFullEditorPageState extends State<NoteFullEditorPage> {
         if (!mounted) return;
         Future.delayed(const Duration(milliseconds: 300), () {
           if (!mounted) return;
-          final settingsService =
-              Provider.of<SettingsService>(context, listen: false);
+          final settingsService = Provider.of<SettingsService>(
+            context,
+            listen: false,
+          );
           final autoLocation = settingsService.autoAttachLocation;
           final autoWeather = settingsService.autoAttachWeather;
 

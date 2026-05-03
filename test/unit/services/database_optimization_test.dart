@@ -91,25 +91,30 @@ void main() {
       await db.close();
     });
 
-    test('getUserQuotes should return partial quote (null aiAnalysis)',
-        () async {
-      final id = const Uuid().v4();
-      final fullQuote = Quote(
-        id: id,
-        content: 'Test content',
-        date: DateTime.now().toIso8601String(),
-        aiAnalysis: 'Huge AI Analysis Text',
-      );
+    test(
+      'getUserQuotes should return partial quote (null aiAnalysis)',
+      () async {
+        final id = const Uuid().v4();
+        final fullQuote = Quote(
+          id: id,
+          content: 'Test content',
+          date: DateTime.now().toIso8601String(),
+          aiAnalysis: 'Huge AI Analysis Text',
+        );
 
-      await service.addQuote(fullQuote);
+        await service.addQuote(fullQuote);
 
-      final quotes = await service.getUserQuotes();
-      final fetchedQuote = quotes.firstWhere((q) => q.id == id);
+        final quotes = await service.getUserQuotes();
+        final fetchedQuote = quotes.firstWhere((q) => q.id == id);
 
-      expect(fetchedQuote.content, equals('Test content'));
-      expect(fetchedQuote.aiAnalysis, isNull,
-          reason: 'aiAnalysis should be excluded in list view');
-    });
+        expect(fetchedQuote.content, equals('Test content'));
+        expect(
+          fetchedQuote.aiAnalysis,
+          isNull,
+          reason: 'aiAnalysis should be excluded in list view',
+        );
+      },
+    );
 
     test('getQuoteById should return full quote', () async {
       final id = const Uuid().v4();
@@ -134,11 +139,7 @@ void main() {
       final now = DateTime.now().toUtc().toIso8601String();
 
       await service.addQuote(
-        Quote(
-          id: activeId,
-          content: 'shared-search-keyword active',
-          date: now,
-        ),
+        Quote(id: activeId, content: 'shared-search-keyword active', date: now),
       );
       await service.addQuote(
         Quote(
@@ -161,8 +162,9 @@ void main() {
         'shared-search-keyword',
         includeDeleted: true,
       );
-      final includeDeletedIds =
-          includeDeletedResults.map((quote) => quote.id).toSet();
+      final includeDeletedIds = includeDeletedResults
+          .map((quote) => quote.id)
+          .toSet();
       expect(includeDeletedIds.contains(activeId), isTrue);
       expect(includeDeletedIds.contains(deletedId), isTrue);
     });
@@ -185,8 +187,9 @@ void main() {
         includeDeleted: true,
         limit: 100,
       );
-      final deletedQuote =
-          withDeleted.firstWhere((quote) => quote.id == deletedId);
+      final deletedQuote = withDeleted.firstWhere(
+        (quote) => quote.id == deletedId,
+      );
       expect(deletedQuote.isDeleted, isTrue);
       expect(deletedQuote.deletedAt, deletedAt);
     });
@@ -225,31 +228,29 @@ void main() {
       expect(deletedQuote.content, 'deleted-before-update');
     });
 
-    test('permanentlyDeleteQuote should not create tombstone for active note',
-        () async {
-      final activeId = const Uuid().v4();
-      final now = DateTime.now().toUtc().toIso8601String();
+    test(
+      'permanentlyDeleteQuote should not create tombstone for active note',
+      () async {
+        final activeId = const Uuid().v4();
+        final now = DateTime.now().toUtc().toIso8601String();
 
-      await service.addQuote(
-        Quote(
-          id: activeId,
-          content: 'active-quote',
-          date: now,
-        ),
-      );
+        await service.addQuote(
+          Quote(id: activeId, content: 'active-quote', date: now),
+        );
 
-      await service.permanentlyDeleteQuote(activeId);
+        await service.permanentlyDeleteQuote(activeId);
 
-      final activeQuote = await service.getQuoteById(activeId);
-      expect(activeQuote, isNotNull);
-      expect(activeQuote!.isDeleted, isFalse);
+        final activeQuote = await service.getQuoteById(activeId);
+        expect(activeQuote, isNotNull);
+        expect(activeQuote!.isDeleted, isFalse);
 
-      final tombstones = await db.query(
-        'quote_tombstones',
-        where: 'quote_id = ?',
-        whereArgs: [activeId],
-      );
-      expect(tombstones, isEmpty);
-    });
+        final tombstones = await db.query(
+          'quote_tombstones',
+          where: 'quote_id = ?',
+          whereArgs: [activeId],
+        );
+        expect(tombstones, isEmpty);
+      },
+    );
   });
 }

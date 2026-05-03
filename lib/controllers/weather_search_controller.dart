@@ -107,11 +107,11 @@ class WeatherSearchController extends ChangeNotifier {
       await _weatherService
           .getWeatherData(position.latitude, position.longitude)
           .timeout(
-        const Duration(seconds: 15),
-        onTimeout: () {
-          throw TimeoutException('Weather fetch timeout');
-        },
-      );
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw TimeoutException('Weather fetch timeout');
+            },
+          );
 
       // 4. 检查天气数据是否获取成功
       if (!_weatherService.hasValidWeatherData) {
@@ -174,11 +174,11 @@ class WeatherSearchController extends ChangeNotifier {
       await _weatherService
           .getWeatherData(position.latitude, position.longitude)
           .timeout(
-        const Duration(seconds: 15),
-        onTimeout: () {
-          throw TimeoutException('Weather fetch timeout');
-        },
-      );
+            const Duration(seconds: 15),
+            onTimeout: () {
+              throw TimeoutException('Weather fetch timeout');
+            },
+          );
 
       // 3. 检查天气数据是否获取成功
       if (!_weatherService.hasValidWeatherData) {

@@ -18,7 +18,8 @@ void main() {
     await db.execute('CREATE TABLE categories(id TEXT PRIMARY KEY, name TEXT)');
     await db.execute('CREATE TABLE quotes(id TEXT PRIMARY KEY, tag_ids TEXT)');
     await db.execute(
-        'CREATE TABLE quote_tags(quote_id TEXT, tag_id TEXT, PRIMARY KEY(quote_id, tag_id))');
+      'CREATE TABLE quote_tags(quote_id TEXT, tag_id TEXT, PRIMARY KEY(quote_id, tag_id))',
+    );
 
     // Seed data
     final uuid = const Uuid();
@@ -36,10 +37,7 @@ void main() {
     final quotes = List.generate(2000, (i) {
       final numTags = random.nextInt(5) + 1;
       final tags = (List.of(categoryIds)..shuffle()).take(numTags).toList();
-      return {
-        'id': uuid.v4(),
-        'tag_ids': tags.join(','),
-      };
+      return {'id': uuid.v4(), 'tag_ids': tags.join(',')};
     });
 
     // Batch insert quotes
@@ -88,13 +86,10 @@ void main() {
         }
 
         for (final tagId in validTagIds) {
-          await txn.insert(
-              'quote_tags',
-              {
-                'quote_id': quoteId,
-                'tag_id': tagId,
-              },
-              conflictAlgorithm: ConflictAlgorithm.ignore);
+          await txn.insert('quote_tags', {
+            'quote_id': quoteId,
+            'tag_id': tagId,
+          }, conflictAlgorithm: ConflictAlgorithm.ignore);
         }
       }
     });
@@ -103,7 +98,8 @@ void main() {
 
     // Verify count
     final countSlow = Sqflite.firstIntValue(
-        await db.rawQuery('SELECT COUNT(*) FROM quote_tags'));
+      await db.rawQuery('SELECT COUNT(*) FROM quote_tags'),
+    );
     debugPrint('Slow migration inserted $countSlow records.');
 
     // --- Cleanup for Fast Benchmark ---
@@ -122,8 +118,9 @@ void main() {
 
       // 1. Fetch all category IDs once
       final allCategories = await txn.query('categories', columns: ['id']);
-      final allCategoryIds =
-          allCategories.map((c) => c['id'] as String).toSet();
+      final allCategoryIds = allCategories
+          .map((c) => c['id'] as String)
+          .toSet();
 
       // 2. Prepare batch
       final batch = txn.batch();
@@ -144,13 +141,10 @@ void main() {
 
         for (final tagId in validTagIds) {
           // 4. Batch insert
-          batch.insert(
-              'quote_tags',
-              {
-                'quote_id': quoteId,
-                'tag_id': tagId,
-              },
-              conflictAlgorithm: ConflictAlgorithm.ignore);
+          batch.insert('quote_tags', {
+            'quote_id': quoteId,
+            'tag_id': tagId,
+          }, conflictAlgorithm: ConflictAlgorithm.ignore);
         }
       }
 
@@ -162,19 +156,19 @@ void main() {
 
     // Verify count (Fast)
     final countFast = Sqflite.firstIntValue(
-        await db.rawQuery('SELECT COUNT(*) FROM quote_tags'));
+      await db.rawQuery('SELECT COUNT(*) FROM quote_tags'),
+    );
     debugPrint('Fast migration inserted $countFast records.');
 
     // Ensure both strategies produce the same result.
     expect(countFast, countSlow);
 
-    final improvement = (stopwatchSlow.elapsedMilliseconds -
+    final improvement =
+        (stopwatchSlow.elapsedMilliseconds -
             stopwatchFast.elapsedMilliseconds) /
         stopwatchSlow.elapsedMilliseconds *
         100;
-    debugPrint(
-      'Performance Improvement: ${improvement.toStringAsFixed(2)}%',
-    );
+    debugPrint('Performance Improvement: ${improvement.toStringAsFixed(2)}%');
 
     await db.close();
   });

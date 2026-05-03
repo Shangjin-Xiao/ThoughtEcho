@@ -77,8 +77,9 @@ void main() {
   }
 
   group('ThemeSettingsPage', () {
-    testWidgets('accepts dynamic color updates during app rebuilds',
-        (tester) async {
+    testWidgets('accepts dynamic color updates during app rebuilds', (
+      tester,
+    ) async {
       final appTheme = AppTheme();
       final lightScheme = ColorScheme.fromSeed(seedColor: Colors.teal);
       final darkScheme = ColorScheme.fromSeed(

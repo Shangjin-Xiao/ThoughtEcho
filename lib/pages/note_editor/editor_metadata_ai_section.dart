@@ -29,10 +29,7 @@ extension _NoteEditorMetadataAiSection on _NoteFullEditorPageState {
             const SizedBox(width: 8),
             Text(
               l10n.aiAnalysis,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const Spacer(),
             // 删除按钮
@@ -63,9 +60,7 @@ extension _NoteEditorMetadataAiSection on _NoteFullEditorPageState {
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainerLow,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: theme.colorScheme.outlineVariant,
-            ),
+            border: Border.all(color: theme.colorScheme.outlineVariant),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

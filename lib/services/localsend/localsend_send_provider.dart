@@ -101,8 +101,10 @@ class LocalSendProvider {
             target.https,
             '1.0',
           );
-          logInfo('v2 route 404, trying v1 route: $fallbackUrl',
-              source: 'LocalSend');
+          logInfo(
+            'v2 route 404, trying v1 route: $fallbackUrl',
+            source: 'LocalSend',
+          );
           response = await client
               .post(
                 Uri.parse(fallbackUrl),
@@ -187,8 +189,10 @@ class LocalSendProvider {
 
         final fileSize = await file.length();
         final fileName = file.path.split('/').last;
-        logInfo('Preparing to upload file: $fileName ($fileSize bytes)',
-            source: 'LocalSend');
+        logInfo(
+          'Preparing to upload file: $fileName ($fileSize bytes)',
+          source: 'LocalSend',
+        );
 
         // Upload file with retry mechanism
         await _uploadSingleFile(
@@ -208,8 +212,10 @@ class LocalSendProvider {
 
       // Mark as completed
       _sessions[sessionId] = session.copyWith(status: SessionStatus.finished);
-      logInfo('All files uploaded for session: $sessionId',
-          source: 'LocalSend');
+      logInfo(
+        'All files uploaded for session: $sessionId',
+        source: 'LocalSend',
+      );
     } catch (e) {
       logError('File upload failed: $e', source: 'LocalSend');
       _sessions[sessionId] = session.copyWith(
@@ -270,8 +276,8 @@ class LocalSendProvider {
 
         // Send request with timeout
         final response = await request.send().timeout(
-              const Duration(minutes: 5),
-            );
+          const Duration(minutes: 5),
+        );
 
         logDebug(
           'upload_resp status=${response.statusCode} file=${file.path.split('/').last}',
@@ -302,8 +308,8 @@ class LocalSendProvider {
             ),
           );
           final legacyResp = await legacyReq.send().timeout(
-                const Duration(minutes: 5),
-              );
+            const Duration(minutes: 5),
+          );
           if (legacyResp.statusCode == 200) {
             logInfo('File upload success (v1): $fileId', source: 'LocalSend');
             return;
@@ -373,8 +379,9 @@ class LocalSendProvider {
       // 通知对端（最佳努力，不影响本地状态）
       final remoteId = session.remoteSessionId;
       if (remoteId != null) {
-        final url =
-            ApiRoute.info.target(session.target).replaceAll('/info', '/cancel');
+        final url = ApiRoute.info
+            .target(session.target)
+            .replaceAll('/info', '/cancel');
         try {
           final client = http.Client();
           client
@@ -432,11 +439,15 @@ class LocalSendProvider {
             .timeout(const Duration(seconds: 5));
       }
       if (resp.statusCode >= 200 && resp.statusCode < 300) {
-        logDebug('Handshake success: /info status ${resp.statusCode}',
-            source: 'LocalSend');
+        logDebug(
+          'Handshake success: /info status ${resp.statusCode}',
+          source: 'LocalSend',
+        );
       } else {
-        logWarning('Handshake warning: /info status ${resp.statusCode}',
-            source: 'LocalSend');
+        logWarning(
+          'Handshake warning: /info status ${resp.statusCode}',
+          source: 'LocalSend',
+        );
       }
     } catch (e) {
       logWarning('Handshake failed: $e', source: 'LocalSend');

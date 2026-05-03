@@ -93,9 +93,7 @@ void main() {
       // Since we want the test to pass after the fix, we check that it doesn't return more than expected
       // when using the new signature.
 
-      final results = await databaseService.getQuotesForSmartPush(
-        limit: 10,
-      );
+      final results = await databaseService.getQuotesForSmartPush(limit: 10);
 
       expect(results.length, 1);
       expect(results.first.id, '1');

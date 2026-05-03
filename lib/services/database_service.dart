@@ -38,11 +38,7 @@ part 'database/database_pagination_mixin.dart';
 part 'database/database_import_export_mixin.dart';
 part 'database/database_migration_mixin.dart';
 
-enum QuoteUpdateResult {
-  updated,
-  skippedDeleted,
-  notFound,
-}
+enum QuoteUpdateResult { updated, skippedDeleted, notFound }
 
 abstract class _DatabaseServiceBase extends ChangeNotifier {
   _DatabaseServiceBase._internal();
@@ -195,9 +191,7 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
   Future<bool> cleanupTagDataInconsistencies();
   Future<List<int>> getHourDistributionForSmartPush();
   Map<String, dynamic> getQueryPerformanceReport();
-  Future<Map<String, dynamic>?> getLocalDailyQuote({
-    String offlineQuoteSource,
-  });
+  Future<Map<String, dynamic>?> getLocalDailyQuote({String offlineQuoteSource});
   Future<Map<String, dynamic>> performDatabaseMaintenance({
     Function(String)? onProgress,
   });
@@ -909,14 +903,12 @@ abstract class _DatabaseServiceBase extends ChangeNotifier {
       try {
         final retentionDays = await _resolveTrashRetentionDays();
         if (retentionDays == null) {
-          logWarning(
-            '读取回收站保留期失败，跳过启动自动清理',
-            source: 'DatabaseService',
-          );
+          logWarning('读取回收站保留期失败，跳过启动自动清理', source: 'DatabaseService');
           return;
         }
-        final cleanedCount =
-            await autoCleanupExpiredTrash(retentionDays: retentionDays);
+        final cleanedCount = await autoCleanupExpiredTrash(
+          retentionDays: retentionDays,
+        );
         if (cleanedCount > 0) {
           logInfo(
             '回收站自动清理完成: 删除 $cleanedCount 条过期笔记 (保留 $retentionDays 天)',

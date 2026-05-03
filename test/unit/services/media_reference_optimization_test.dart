@@ -39,32 +39,35 @@ void main() {
   });
 
   test(
-      'Optimization Check: syncQuoteMediaReferencesWithTransaction reduced calls',
-      () async {
-    final mediaCount = 5;
-    final ops = <Map<String, dynamic>>[];
+    'Optimization Check: syncQuoteMediaReferencesWithTransaction reduced calls',
+    () async {
+      final mediaCount = 5;
+      final ops = <Map<String, dynamic>>[];
 
-    for (var i = 0; i < mediaCount; i++) {
-      ops.add({
-        'insert': {'image': '/tmp/test_app_docs/media/image_$i.png'}
+      for (var i = 0; i < mediaCount; i++) {
+        ops.add({
+          'insert': {'image': '/tmp/test_app_docs/media/image_$i.png'},
+        });
+      }
+
+      final quote = Quote(
+        id: 'test_quote_1',
+        content: 'Test content',
+        deltaContent: jsonEncode(ops),
+        date: DateTime.now().toIso8601String(),
+      );
+
+      await db.transaction((txn) async {
+        await MediaReferenceService.syncQuoteMediaReferencesWithTransaction(
+          txn,
+          quote,
+        );
       });
-    }
 
-    final quote = Quote(
-      id: 'test_quote_1',
-      content: 'Test content',
-      deltaContent: jsonEncode(ops),
-      date: DateTime.now().toIso8601String(),
-    );
-
-    await db.transaction((txn) async {
-      await MediaReferenceService.syncQuoteMediaReferencesWithTransaction(
-          txn, quote);
-    });
-
-    // Optimization: Should only be 1 call now for the whole transaction
-    expect(mockPathProvider.callCount, equals(1));
-  });
+      // Optimization: Should only be 1 call now for the whole transaction
+      expect(mockPathProvider.callCount, equals(1));
+    },
+  );
 
   test('Optimization Check: migrateExistingQuotes reduced calls', () async {
     // This would require more complex mocking of DatabaseService, skipping for now

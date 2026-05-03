@@ -69,7 +69,7 @@ void main() {
       final unixDelta = [
         {
           'insert': {
-            'image': '/home/user/Documents/ThoughtEcho/media/images/photo.jpg'
+            'image': '/home/user/Documents/ThoughtEcho/media/images/photo.jpg',
           },
         },
       ];
@@ -81,8 +81,11 @@ void main() {
       );
       // 验证生成的相对路径使用正斜杠
       final relativePath = toRelativeResult[0]['insert']['image'] as String;
-      expect(relativePath.contains(r'\'), isFalse,
-          reason: '相对路径应该使用正斜杠，便于跨平台兼容');
+      expect(
+        relativePath.contains(r'\'),
+        isFalse,
+        reason: '相对路径应该使用正斜杠，便于跨平台兼容',
+      );
       expect(relativePath, 'media/images/photo.jpg');
 
       // 测试还原时能正确处理来自其他平台的路径
@@ -161,10 +164,7 @@ void main() {
     });
 
     test('handles empty and null quotes', () {
-      expect(
-        BackupService.testResolveQuoteDeltaField({}),
-        isNull,
-      );
+      expect(BackupService.testResolveQuoteDeltaField({}), isNull);
       expect(
         BackupService.testResolveQuoteDeltaField({'other_field': 'value'}),
         isNull,

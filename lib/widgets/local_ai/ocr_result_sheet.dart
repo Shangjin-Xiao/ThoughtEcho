@@ -67,8 +67,9 @@ class _OCRResultSheetState extends State<OCRResultSheet> {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.onSurfaceVariant
-                          .withValues(alpha: 0.35),
+                      color: theme.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.35,
+                      ),
                       borderRadius: BorderRadius.circular(999),
                     ),
                   ),
@@ -88,8 +89,9 @@ class _OCRResultSheetState extends State<OCRResultSheet> {
                       const Spacer(),
                       IconButton(
                         icon: const Icon(Icons.close),
-                        tooltip: MaterialLocalizations.of(context)
-                            .closeButtonTooltip,
+                        tooltip: MaterialLocalizations.of(
+                          context,
+                        ).closeButtonTooltip,
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                     ],

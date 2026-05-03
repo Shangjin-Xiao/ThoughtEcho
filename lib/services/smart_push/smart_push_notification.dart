@@ -9,8 +9,8 @@ extension SmartPushNotification on SmartPushService {
   /// 需要通过 `getNotificationAppLaunchDetails()` 主动检查。
   Future<void> _handleLaunchNotification() async {
     try {
-      final launchDetails =
-          await _notificationsPlugin.getNotificationAppLaunchDetails();
+      final launchDetails = await _notificationsPlugin
+          .getNotificationAppLaunchDetails();
       if (launchDetails == null || !launchDetails.didNotificationLaunchApp) {
         return;
       }
@@ -47,9 +47,10 @@ extension SmartPushNotification on SmartPushService {
 
     // 创建通知频道（Android 8.0+）
     if (PlatformHelper.isAndroid) {
-      final androidPlugin =
-          _notificationsPlugin.resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
+      final androidPlugin = _notificationsPlugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       if (androidPlugin != null) {
         await androidPlugin.createNotificationChannel(
           const AndroidNotificationChannel(
@@ -125,10 +126,7 @@ extension SmartPushNotification on SmartPushService {
   }
 
   /// 导航到记录页并定位到特定笔记
-  Future<void> _navigateToNoteList(
-    String noteId, {
-    String? routeTarget,
-  }) async {
+  Future<void> _navigateToNoteList(String noteId, {String? routeTarget}) async {
     try {
       final note = await _databaseService.getQuoteById(noteId);
       if (note == null) {
@@ -147,10 +145,8 @@ extension SmartPushNotification on SmartPushService {
 
       if (navigatorKey.currentState != null) {
         final route = MaterialPageRoute(
-          builder: (context) => HomePage(
-            initialPage: 1,
-            initialHighlightedNoteId: noteId,
-          ),
+          builder: (context) =>
+              HomePage(initialPage: 1, initialHighlightedNoteId: noteId),
         );
         SmartPushService.replaceAppStackForNotification(
           navigator: navigatorKey.currentState!,
@@ -194,12 +190,15 @@ extension SmartPushNotification on SmartPushService {
   /// [hitokotoData] 为一言 API 的原始响应，包含 type 等标签分类信息
   void _saveDailyQuoteToCache(Map<String, dynamic> hitokotoData) {
     try {
-      final normalizedData =
-          SmartPushService.normalizeDailyQuoteData(hitokotoData);
+      final normalizedData = SmartPushService.normalizeDailyQuoteData(
+        hitokotoData,
+      );
       if (normalizedData == null) return;
 
       _mmkv.setString(
-          SmartPushService._lastDailyQuoteKey, json.encode(normalizedData));
+        SmartPushService._lastDailyQuoteKey,
+        json.encode(normalizedData),
+      );
       _mmkv.setString(SmartPushService._lastDailyQuoteDateKey, _todayDateKey());
     } catch (e) {
       AppLogger.w('缓存每日一言失败', error: e);
@@ -211,8 +210,9 @@ extension SmartPushNotification on SmartPushService {
   /// 读取当天缓存的一言数据，跨首页与推送共用。
   Map<String, dynamic>? getCachedDailyQuoteForToday() {
     try {
-      final cachedDate =
-          _mmkv.getString(SmartPushService._lastDailyQuoteDateKey);
+      final cachedDate = _mmkv.getString(
+        SmartPushService._lastDailyQuoteDateKey,
+      );
       if (cachedDate == null || cachedDate != _todayDateKey()) {
         return null;
       }
@@ -242,8 +242,9 @@ extension SmartPushNotification on SmartPushService {
   /// 一次性消费"通知点击后首页展示"的每日一言内容。
   Future<Map<String, dynamic>?> consumePendingDailyQuoteForHomeDisplay() async {
     try {
-      final pendingJson =
-          _mmkv.getString(SmartPushService._pendingHomeDailyQuoteKey);
+      final pendingJson = _mmkv.getString(
+        SmartPushService._pendingHomeDailyQuoteKey,
+      );
       if (pendingJson == null || pendingJson.isEmpty) {
         return null;
       }
@@ -321,9 +322,8 @@ extension SmartPushNotification on SmartPushService {
     final supportedLanguageCodes = AppLocalizations.supportedLocales
         .map((locale) => locale.languageCode)
         .toSet();
-    final effectiveLocale = supportedLanguageCodes.contains(
-      preferredLocale.languageCode,
-    )
+    final effectiveLocale =
+        supportedLanguageCodes.contains(preferredLocale.languageCode)
         ? preferredLocale
         : const Locale('en');
 
@@ -348,9 +348,10 @@ extension SmartPushNotification on SmartPushService {
       await _notificationsPlugin.initialize(initSettings);
 
       if (PlatformHelper.isAndroid) {
-        final androidPlugin =
-            _notificationsPlugin.resolvePlatformSpecificImplementation<
-                AndroidFlutterLocalNotificationsPlugin>();
+        final androidPlugin = _notificationsPlugin
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
         if (androidPlugin != null) {
           await androidPlugin.createNotificationChannel(
             const AndroidNotificationChannel(
@@ -408,7 +409,8 @@ extension SmartPushNotification on SmartPushService {
 
     String payload = '';
     if (contentType.isNotEmpty) {
-      payload = SmartPushService.buildNotificationPayload(
+      payload =
+          SmartPushService.buildNotificationPayload(
             noteId: note.id,
             contentType: contentType,
             routeTarget: 'noteList',

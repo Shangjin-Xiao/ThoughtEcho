@@ -62,22 +62,22 @@ class OnboardingConfig {
 
   // 兼容旧代码的静态访问器（使用占位符，实际使用时应通过getPages获取）
   static List<OnboardingPageData> get pages => [
-        const OnboardingPageData(
-          title: '',
-          subtitle: '',
-          type: OnboardingPageType.welcome,
-        ),
-        const OnboardingPageData(
-          title: '',
-          subtitle: '',
-          type: OnboardingPageType.features,
-        ),
-        const OnboardingPageData(
-          title: '',
-          subtitle: '',
-          type: OnboardingPageType.preferences,
-        ),
-      ];
+    const OnboardingPageData(
+      title: '',
+      subtitle: '',
+      type: OnboardingPageType.welcome,
+    ),
+    const OnboardingPageData(
+      title: '',
+      subtitle: '',
+      type: OnboardingPageType.features,
+    ),
+    const OnboardingPageData(
+      title: '',
+      subtitle: '',
+      type: OnboardingPageType.preferences,
+    ),
+  ];
 
   /// 获取核心功能列表（动态国际化）
   static List<OnboardingFeature> getCoreFeatures(BuildContext context) {
@@ -113,9 +113,7 @@ class OnboardingConfig {
     final l10n = AppLocalizations.of(context);
     final localeCode = Localizations.localeOf(context).toLanguageTag();
     final defaultDailyQuoteProvider =
-        ApiService.recommendedDailyQuoteProviderForLanguage(
-      localeCode,
-    );
+        ApiService.recommendedDailyQuoteProviderForLanguage(localeCode);
 
     return [
       // 0. 位置服务（放在最前面）
@@ -134,8 +132,7 @@ class OnboardingConfig {
         description: l10n.dailyQuoteApiDesc,
         defaultValue: defaultDailyQuoteProvider,
         type: OnboardingPreferenceType.radio,
-        options: ApiService.getDailyQuoteProviders(l10n)
-            .entries
+        options: ApiService.getDailyQuoteProviders(l10n).entries
             .map(
               (entry) => OnboardingPreferenceOption<String>(
                 value: entry.key,

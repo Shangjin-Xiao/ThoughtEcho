@@ -75,10 +75,7 @@ class SettingsService extends ChangeNotifier {
   String? get trashRetentionLastModified =>
       _appSettings.trashRetentionLastModified;
 
-  Future<void> setTrashRetentionDays(
-    int days, {
-    DateTime? modifiedAt,
-  }) async {
+  Future<void> setTrashRetentionDays(int days, {DateTime? modifiedAt}) async {
     final normalizedDays = AppSettings.normalizeTrashRetentionDays(days);
     final modified = (modifiedAt ?? DateTime.now()).toUtc().toIso8601String();
     _appSettings = _appSettings.copyWith(
@@ -106,10 +103,7 @@ class SettingsService extends ChangeNotifier {
       parsedDays = rawDays;
     } else if (rawDays is num) {
       if (rawDays != rawDays.toInt()) {
-        logWarning(
-          '忽略非整数的回收站保留期: $rawDays',
-          source: 'SettingsService',
-        );
+        logWarning('忽略非整数的回收站保留期: $rawDays', source: 'SettingsService');
         return false;
       }
       parsedDays = rawDays.toInt();
@@ -122,10 +116,7 @@ class SettingsService extends ChangeNotifier {
     }
 
     if (!AppSettings.allowedTrashRetentionDays.contains(parsedDays)) {
-      logWarning(
-        '忽略非法的回收站保留期: $parsedDays',
-        source: 'SettingsService',
-      );
+      logWarning('忽略非法的回收站保留期: $parsedDays', source: 'SettingsService');
       return false;
     }
 
@@ -140,8 +131,9 @@ class SettingsService extends ChangeNotifier {
         );
         return false;
       }
-      normalizedIncomingTimestamp =
-          LWWUtils.normalizeTimestamp(incomingLastModified);
+      normalizedIncomingTimestamp = LWWUtils.normalizeTimestamp(
+        incomingLastModified,
+      );
     } else {
       // 输入无时间戳：只有本地也无时间戳时才接受（直接赋值），否则跳过
       final localLastModified = _appSettings.trashRetentionLastModified;
@@ -154,7 +146,9 @@ class SettingsService extends ChangeNotifier {
       // 本地也无时间戳 → 直接接受输入值，不设置时间戳
       _appSettings = _appSettings.copyWith(trashRetentionDays: incomingDays);
       await _mmkv.setString(
-          _appSettingsKey, json.encode(_appSettings.toJson()));
+        _appSettingsKey,
+        json.encode(_appSettings.toJson()),
+      );
       notifyListeners();
       return true;
     }
@@ -248,8 +242,9 @@ class SettingsService extends ChangeNotifier {
   bool get enableFirstOpenScrollPerfMonitor =>
       _appSettings.enableFirstOpenScrollPerfMonitor;
   Future<void> setEnableFirstOpenScrollPerfMonitor(bool enabled) async {
-    _appSettings =
-        _appSettings.copyWith(enableFirstOpenScrollPerfMonitor: enabled);
+    _appSettings = _appSettings.copyWith(
+      enableFirstOpenScrollPerfMonitor: enabled,
+    );
     await _mmkv.setString(_appSettingsKey, json.encode(_appSettings.toJson()));
     notifyListeners();
   }
@@ -894,7 +889,8 @@ class SettingsService extends ChangeNotifier {
           // 安全存储中已有密钥，遗留的明文密钥是冗余的，可以直接清除
           shouldClear = true;
           logDebug(
-              'Found redundant plaintext API key in AISettings. Clearing.');
+            'Found redundant plaintext API key in AISettings. Clearing.',
+          );
         } else {
           // 安全存储中没有密钥，尝试迁移
           await apiKeyManager.saveProviderApiKey(

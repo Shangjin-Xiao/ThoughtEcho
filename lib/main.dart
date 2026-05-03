@@ -141,8 +141,9 @@ Future<void> main() async {
   logging.Logger.root.level = logging.Level.INFO;
 
   // Windows平台优化：避免错误处理导致的启动卡死
-  BindingBase.debugZoneErrorsAreFatal =
-      (!kIsWeb && Platform.isWindows) ? false : true;
+  BindingBase.debugZoneErrorsAreFatal = (!kIsWeb && Platform.isWindows)
+      ? false
+      : true;
 
   await runZonedGuarded<Future<void>>(
     () async {
@@ -150,7 +151,8 @@ Future<void> main() async {
 
       if (kIsWeb) {
         throw UnsupportedError(
-            'ThoughtEcho does not support the Web platform.');
+          'ThoughtEcho does not support the Web platform.',
+        );
       }
 
       // 初始化后台任务组件
@@ -193,8 +195,9 @@ Future<void> main() async {
         _addDeferredError({
           'message': '平台分发器错误',
           'error': error,
-          'stackTrace':
-              (!kIsWeb && Platform.isWindows) ? null : stack, // Windows平台不记录堆栈
+          'stackTrace': (!kIsWeb && Platform.isWindows)
+              ? null
+              : stack, // Windows平台不记录堆栈
           'source': 'PlatformDispatcher',
         });
 
@@ -256,8 +259,8 @@ Future<void> main() async {
         ]);
         final String currentVersion = packageInfo.version;
         final String? lastVersion = settingsService.getAppVersion();
-        final bool hasCompletedOnboarding =
-            settingsService.hasCompletedOnboarding();
+        final bool hasCompletedOnboarding = settingsService
+            .hasCompletedOnboarding();
 
         // 判断是否需要完整引导或升级引导
         bool showFullOnboarding = !hasCompletedOnboarding;
@@ -280,8 +283,9 @@ Future<void> main() async {
         final unifiedLogService = UnifiedLogService.instance;
 
         // 根据开发者模式设置日志服务的持久化状态
-        unifiedLogService
-            .setPersistenceEnabled(settingsService.appSettings.developerMode);
+        unifiedLogService.setPersistenceEnabled(
+          settingsService.appSettings.developerMode,
+        );
 
         final aiAnalysisDbService = AIAnalysisDatabaseService();
         final connectivityService = ConnectivityService();
@@ -320,8 +324,10 @@ Future<void> main() async {
               ChangeNotifierProvider(create: (_) => featureGuideService),
               ChangeNotifierProvider(create: (_) => smartPushService),
               ChangeNotifierProvider(create: (_) => NoteSearchController()),
-              ChangeNotifierProxyProvider<SettingsService,
-                  InsightHistoryService>(
+              ChangeNotifierProxyProvider<
+                SettingsService,
+                InsightHistoryService
+              >(
                 create: (context) => InsightHistoryService(
                   settingsService: context.read<SettingsService>(),
                 ),
@@ -333,9 +339,7 @@ Future<void> main() async {
                 value: mmkvService,
               ), // 使用 Provider.value 提供 MMKVService
               // 提供初始化状态的值
-              Provider<ValueNotifier<bool>>.value(
-                value: servicesInitialized,
-              ),
+              Provider<ValueNotifier<bool>>.value(value: servicesInitialized),
               ValueListenableProvider<bool>.value(value: servicesInitialized),
               ChangeNotifierProxyProvider<SettingsService, AIService>(
                 create: (context) =>
@@ -343,45 +347,55 @@ Future<void> main() async {
                 update: (context, settings, previous) =>
                     previous ?? AIService(settingsService: settings),
               ),
-              ProxyProvider3<DatabaseService, SettingsService,
-                  AIAnalysisDatabaseService, BackupService>(
-                update: (
-                  context,
-                  dbService,
-                  settingsService,
-                  aiService,
-                  previous,
-                ) =>
-                    BackupService(
-                  databaseService: dbService,
-                  settingsService: settingsService,
-                  aiAnalysisDbService: aiService,
-                ),
+              ProxyProvider3<
+                DatabaseService,
+                SettingsService,
+                AIAnalysisDatabaseService,
+                BackupService
+              >(
+                update:
+                    (
+                      context,
+                      dbService,
+                      settingsService,
+                      aiService,
+                      previous,
+                    ) => BackupService(
+                      databaseService: dbService,
+                      settingsService: settingsService,
+                      aiAnalysisDbService: aiService,
+                    ),
               ),
-              ChangeNotifierProxyProvider4<BackupService, DatabaseService,
-                  SettingsService, AIAnalysisDatabaseService, NoteSyncService>(
+              ChangeNotifierProxyProvider4<
+                BackupService,
+                DatabaseService,
+                SettingsService,
+                AIAnalysisDatabaseService,
+                NoteSyncService
+              >(
                 create: (context) => NoteSyncService(
                   backupService: context.read<BackupService>(),
                   databaseService: context.read<DatabaseService>(),
                   settingsService: context.read<SettingsService>(),
-                  aiAnalysisDbService:
-                      context.read<AIAnalysisDatabaseService>(),
+                  aiAnalysisDbService: context
+                      .read<AIAnalysisDatabaseService>(),
                 ),
-                update: (
-                  context,
-                  backupService,
-                  databaseService,
-                  settingsService,
-                  aiAnalysisDbService,
-                  previous,
-                ) =>
-                    previous ??
-                    NoteSyncService(
-                      backupService: backupService,
-                      databaseService: databaseService,
-                      settingsService: settingsService,
-                      aiAnalysisDbService: aiAnalysisDbService,
-                    ),
+                update:
+                    (
+                      context,
+                      backupService,
+                      databaseService,
+                      settingsService,
+                      aiAnalysisDbService,
+                      previous,
+                    ) =>
+                        previous ??
+                        NoteSyncService(
+                          backupService: backupService,
+                          databaseService: databaseService,
+                          settingsService: settingsService,
+                          aiAnalysisDbService: aiAnalysisDbService,
+                        ),
               ),
             ],
             child: Builder(
@@ -456,10 +470,10 @@ Future<void> main() async {
               Future.microtask(() async {
                 try {
                   await clipboardService.init().timeout(
-                        timeoutDuration,
-                        onTimeout: () =>
-                            logWarning('剪贴板服务初始化超时', source: 'BackgroundInit'),
-                      );
+                    timeoutDuration,
+                    onTimeout: () =>
+                        logWarning('剪贴板服务初始化超时', source: 'BackgroundInit'),
+                  );
                 } catch (e) {
                   logWarning('剪贴板服务初始化失败: $e', source: 'BackgroundInit');
                 }
@@ -468,12 +482,12 @@ Future<void> main() async {
               // 非Windows平台保持原有逻辑
               try {
                 await clipboardService.init().timeout(
-                      timeoutDuration,
-                      onTimeout: () => logWarning(
-                        '剪贴板服务初始化超时，将继续后续初始化',
-                        source: 'BackgroundInit',
-                      ),
-                    );
+                  timeoutDuration,
+                  onTimeout: () => logWarning(
+                    '剪贴板服务初始化超时，将继续后续初始化',
+                    source: 'BackgroundInit',
+                  ),
+                );
               } catch (e) {
                 logWarning('剪贴板服务初始化失败: $e', source: 'BackgroundInit');
               }
@@ -481,8 +495,8 @@ Future<void> main() async {
 
             // 检查设置服务中的数据库迁移状态
             final hasMigrated = settingsService.isDatabaseMigrationComplete();
-            final hasCompletedOnboarding =
-                settingsService.hasCompletedOnboarding();
+            final hasCompletedOnboarding = settingsService
+                .hasCompletedOnboarding();
             logInfo(
               '数据库迁移状态: ${hasMigrated ? "已完成" : "未完成"}',
               source: 'BackgroundInit',
@@ -670,8 +684,9 @@ Future<void> main() async {
 
         runApp(
           EmergencyApp(
-            error:
-                kDebugMode ? e.toString() : 'Application initialization failed',
+            error: kDebugMode
+                ? e.toString()
+                : 'Application initialization failed',
             stackTrace: kDebugMode ? stackTrace.toString() : '',
           ),
         );
@@ -760,8 +775,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     final settingsService = Provider.of<SettingsService>(context);
     final appTheme = Provider.of<AppTheme>(context);
     // 检查是否需要显示引导页面
-    final bool hasCompletedOnboarding =
-        settingsService.hasCompletedOnboarding();
+    final bool hasCompletedOnboarding = settingsService
+        .hasCompletedOnboarding();
 
     // 获取用户设置的语言，null 表示跟随系统
     final localeCode = settingsService.localeCode;
@@ -792,13 +807,12 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           home: widget.showUpdateReady
               ? const OnboardingPage(showUpdateReady: true)
               : !hasCompletedOnboarding
-                  ? const OnboardingPage() // 使用新的引导页面
-                  : widget.isEmergencyMode
-                      ? const EmergencyRecoveryPage()
-                      : HomePage(
-                          initialPage:
-                              settingsService.appSettings.defaultStartPage,
-                        ),
+              ? const OnboardingPage() // 使用新的引导页面
+              : widget.isEmergencyMode
+              ? const EmergencyRecoveryPage()
+              : HomePage(
+                  initialPage: settingsService.appSettings.defaultStartPage,
+                ),
           localizationsDelegates: const [
             AppLocalizations.delegate,
             GlobalMaterialLocalizations.delegate,
@@ -991,7 +1005,8 @@ class EmergencyHomePage extends StatelessWidget {
     final emergencyModeTitle = l10n?.emergencyModeTitle ?? 'Emergency Mode';
     final emergencyAppStartFailedTitle =
         l10n?.emergencyAppStartFailedTitle ?? 'App Start Failed';
-    final emergencyAppStartFailedDesc = l10n?.emergencyAppStartFailedDesc ??
+    final emergencyAppStartFailedDesc =
+        l10n?.emergencyAppStartFailedDesc ??
         'The app failed to start properly. Please try the recovery options below.';
     final emergencyErrorLabel = l10n?.emergencyErrorLabel ?? 'Error:';
     final emergencyTechnicalDetails =
@@ -1001,7 +1016,8 @@ class EmergencyHomePage extends StatelessWidget {
     final emergencyTryRestartAppButton =
         l10n?.emergencyTryRestartAppButton ?? 'Try Restart';
     final emergencyExitAppButton = l10n?.emergencyExitAppButton ?? 'Exit App';
-    final emergencyPersistentIssueHint = l10n?.emergencyPersistentIssueHint ??
+    final emergencyPersistentIssueHint =
+        l10n?.emergencyPersistentIssueHint ??
         'If the issue persists, please contact support.';
     return Scaffold(
       appBar: AppBar(
@@ -1222,8 +1238,9 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
                         } catch (e) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content:
-                                  Text(l10n.emergencyOpenBackupFailed('$e')),
+                              content: Text(
+                                l10n.emergencyOpenBackupFailed('$e'),
+                              ),
                               backgroundColor: Colors.red,
                               duration: const Duration(seconds: 3),
                             ),
@@ -1243,8 +1260,9 @@ class _EmergencyBackupPageState extends State<EmergencyBackupPage> {
                   margin: const EdgeInsets.only(top: 16),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color:
-                        _hasError ? Colors.red.shade100 : Colors.green.shade100,
+                    color: _hasError
+                        ? Colors.red.shade100
+                        : Colors.green.shade100,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(

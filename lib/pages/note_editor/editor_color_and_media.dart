@@ -98,9 +98,8 @@ extension _NoteEditorColorAndMedia on _NoteFullEditorPageState {
                                 color: isSelected
                                     ? colorScheme.primary
                                     : color == Colors.transparent
-                                        ? Colors.grey
-                                            .applyOpacity(0.5) // MODIFIED
-                                        : Colors.transparent,
+                                    ? Colors.grey.applyOpacity(0.5) // MODIFIED
+                                    : Colors.transparent,
                                 width: 2,
                               ),
                               boxShadow: [
@@ -118,19 +117,20 @@ extension _NoteEditorColorAndMedia on _NoteFullEditorPageState {
                               child: isSelected
                                   ? Icon(
                                       Icons.check_circle,
-                                      color: color == Colors.transparent ||
+                                      color:
+                                          color == Colors.transparent ||
                                               color.computeLuminance() > 0.7
                                           ? colorScheme.primary
                                           : Colors.white,
                                       size: 24,
                                     )
                                   : color == Colors.transparent
-                                      ? const Icon(
-                                          Icons.block,
-                                          color: Colors.grey,
-                                          size: 18,
-                                        )
-                                      : null,
+                                  ? const Icon(
+                                      Icons.block,
+                                      color: Colors.grey,
+                                      size: 18,
+                                    )
+                                  : null,
                             ),
                           ),
                         );
@@ -429,25 +429,27 @@ extension _NoteEditorColorAndMedia on _NoteFullEditorPageState {
       // 获取草稿引用的媒体文件，避免误删
       final draftMediaPaths = await DraftService().getAllMediaPathsInDrafts();
 
-      await Future.wait(_sessionImportedMedia.map((p) async {
-        try {
-          // 如果被草稿引用，跳过删除
-          if (draftMediaPaths.contains(p)) {
-            logDebug('文件被草稿引用，跳过会话级清理: $p');
-            return;
-          }
-
-          final refCount = await MediaReferenceService.getReferenceCount(p);
-          if (refCount <= 0) {
-            final deleted = await MediaFileService.deleteMediaFile(p);
-            if (deleted) {
-              logDebug('未保存退出，已删除未引用媒体文件: $p');
+      await Future.wait(
+        _sessionImportedMedia.map((p) async {
+          try {
+            // 如果被草稿引用，跳过删除
+            if (draftMediaPaths.contains(p)) {
+              logDebug('文件被草稿引用，跳过会话级清理: $p');
+              return;
             }
+
+            final refCount = await MediaReferenceService.getReferenceCount(p);
+            if (refCount <= 0) {
+              final deleted = await MediaFileService.deleteMediaFile(p);
+              if (deleted) {
+                logDebug('未保存退出，已删除未引用媒体文件: $p');
+              }
+            }
+          } catch (e) {
+            logDebug('清理会话媒体失败: $p, 错误: $e');
           }
-        } catch (e) {
-          logDebug('清理会话媒体失败: $p, 错误: $e');
-        }
-      }));
+        }),
+      );
     } catch (e) {
       logDebug('执行会话级媒体清理出错: $e');
     }

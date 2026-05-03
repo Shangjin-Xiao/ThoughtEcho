@@ -177,13 +177,15 @@ class InMemoryLogStorage implements LogStorage {
     }
 
     if (startDate != null) {
-      logs =
-          logs.where((log) => log.timestamp.compareTo(startDate) >= 0).toList();
+      logs = logs
+          .where((log) => log.timestamp.compareTo(startDate) >= 0)
+          .toList();
     }
 
     if (endDate != null) {
-      logs =
-          logs.where((log) => log.timestamp.compareTo(endDate) <= 0).toList();
+      logs = logs
+          .where((log) => log.timestamp.compareTo(endDate) <= 0)
+          .toList();
     }
 
     logs.sort((a, b) {
@@ -336,13 +338,15 @@ class WebLogStorage implements LogStorage {
     }
 
     if (startDate != null) {
-      logs =
-          logs.where((log) => log.timestamp.compareTo(startDate) >= 0).toList();
+      logs = logs
+          .where((log) => log.timestamp.compareTo(startDate) >= 0)
+          .toList();
     }
 
     if (endDate != null) {
-      logs =
-          logs.where((log) => log.timestamp.compareTo(endDate) <= 0).toList();
+      logs = logs
+          .where((log) => log.timestamp.compareTo(endDate) <= 0)
+          .toList();
     }
 
     // 排序
@@ -529,7 +533,8 @@ class NativeLogStorage implements LogStorage {
               await File(targetPath).delete();
             } catch (e) {
               logDebug(
-                  '[LogDatabaseService] delete corrupted target failed: $e');
+                '[LogDatabaseService] delete corrupted target failed: $e',
+              );
             }
           }
         }
@@ -708,8 +713,9 @@ class NativeLogStorage implements LogStorage {
         arguments.add(endDate);
       }
 
-      final whereClause =
-          conditions.isNotEmpty ? conditions.join(' AND ') : null;
+      final whereClause = conditions.isNotEmpty
+          ? conditions.join(' AND ')
+          : null;
 
       // 执行查询
       return await db.query(

@@ -11,8 +11,8 @@ extension _NoteEditorLocationFetch on _NoteFullEditorPageState {
 
     // 检查并请求权限
     if (!locationService.hasLocationPermission) {
-      bool permissionGranted =
-          await locationService.requestLocationPermission();
+      bool permissionGranted = await locationService
+          .requestLocationPermission();
       if (!permissionGranted) {
         if (mounted) {
           final l10n = AppLocalizations.of(context);
@@ -128,7 +128,8 @@ extension _NoteEditorLocationFetch on _NoteFullEditorPageState {
   /// 新建模式下获取位置和天气，失败时调用回调取消选中
   /// 用于天气按钮点击时的处理
   Future<void> _fetchLocationWeatherWithFailCallback(
-      VoidCallback onFail) async {
+    VoidCallback onFail,
+  ) async {
     final weatherService = Provider.of<WeatherService>(context, listen: false);
     final result = await _fetchLocationCore(onFail: onFail);
     if (result.permissionDenied) return;
@@ -216,13 +217,15 @@ extension _NoteEditorLocationFetch on _NoteFullEditorPageState {
   Future<({bool permissionDenied, Position? position})> _fetchLocationCore({
     required VoidCallback onFail,
   }) async {
-    final locationService =
-        Provider.of<LocationService>(context, listen: false);
+    final locationService = Provider.of<LocationService>(
+      context,
+      listen: false,
+    );
 
     // 检查并请求权限
     if (!locationService.hasLocationPermission) {
-      bool permissionGranted =
-          await locationService.requestLocationPermission();
+      bool permissionGranted = await locationService
+          .requestLocationPermission();
       if (!permissionGranted) {
         if (mounted && context.mounted) {
           final l10n = AppLocalizations.of(context);
@@ -268,7 +271,8 @@ extension _NoteEditorLocationFetch on _NoteFullEditorPageState {
 
   /// 新建模式下获取位置，失败时调用回调取消选中
   Future<void> _fetchLocationForNewNoteWithFailCallback(
-      VoidCallback onFail) async {
+    VoidCallback onFail,
+  ) async {
     final result = await _fetchLocationCore(onFail: onFail);
     if (result.permissionDenied) return;
 

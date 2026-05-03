@@ -45,14 +45,22 @@ Color adjustColor(Color color) {
 // 新增扩展方法，将 withOpacity 替换为 applyOpacity
 extension ColorValueExtension on Color {
   Color applyOpacity(double opacity) => Color.fromRGBO(
-      (r * 255).round(), (g * 255).round(), (b * 255).round(), opacity);
+    (r * 255).round(),
+    (g * 255).round(),
+    (b * 255).round(),
+    opacity,
+  );
 }
 
 // 新增扩展方法，将已弃用的 withOpacity 替换为安全的实现
 extension ColorExtension on Color {
   /// 安全地设置颜色的透明度，替代已弃用的 withOpacity
   Color withAlpha(double opacity) => Color.fromRGBO(
-      (r * 255).round(), (g * 255).round(), (b * 255).round(), opacity);
+    (r * 255).round(),
+    (g * 255).round(),
+    (b * 255).round(),
+    opacity,
+  );
 }
 
 /// 颜色工具类

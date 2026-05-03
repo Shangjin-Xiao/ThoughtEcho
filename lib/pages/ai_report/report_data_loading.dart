@@ -104,8 +104,8 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
     }
     final mostWeather = weatherCategoryCounts.entries.isNotEmpty
         ? weatherCategoryCounts.entries
-            .reduce((a, b) => a.value >= b.value ? a : b)
-            .key
+              .reduce((a, b) => a.value >= b.value ? a : b)
+              .key
         : null;
 
     // 最常用标签（根据tagIds统计，然后映射为名称）
@@ -120,8 +120,9 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
         }
       }
       if (tagCounts.isNotEmpty) {
-        topTagId =
-            tagCounts.entries.reduce((a, b) => a.value >= b.value ? a : b).key;
+        topTagId = tagCounts.entries
+            .reduce((a, b) => a.value >= b.value ? a : b)
+            .key;
         final db = context.read<DatabaseService>();
         final cats = await db.getCategories();
         final category = cats.firstWhere(
@@ -136,11 +137,14 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
     }
 
     // 笔记片段预览（最多5条，每条截断80字）
-    final samples = _periodQuotes.take(5).map((q) {
-      var t = q.content.trim().replaceAll('\n', ' ');
-      if (t.length > 80) t = '${t.substring(0, 80)}…';
-      return '- $t';
-    }).join('\n');
+    final samples = _periodQuotes
+        .take(5)
+        .map((q) {
+          var t = q.content.trim().replaceAll('\n', ' ');
+          if (t.length > 80) t = '${t.substring(0, 80)}…';
+          return '- $t';
+        })
+        .join('\n');
 
     if (!mounted) return;
 
@@ -162,7 +166,9 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
       // 如果是筛选分类key，直接使用分类标签
       if (WeatherService.filterCategoryToKeys.containsKey(mostWeather)) {
         weatherDisplay = WeatherService.getLocalizedFilterCategoryLabel(
-            context, mostWeather);
+          context,
+          mostWeather,
+        );
         weatherIcon = WeatherService.getFilterCategoryIcon(mostWeather);
       } else {
         // 否则按原逻辑处理
@@ -177,8 +183,9 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
           weatherDisplay = mostWeather;
           // 反向匹配：根据中文描述找到key以获取更准确的图标
           final key = WeatherCodeMapper.getKeyByDescription(mostWeather);
-          weatherIcon =
-              key != null ? WeatherCodeMapper.getIcon(key) : Icons.cloud_queue;
+          weatherIcon = key != null
+              ? WeatherCodeMapper.getIcon(key)
+              : Icons.cloud_queue;
         }
       }
     }
@@ -250,58 +257,60 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
       final previousInsights = insightService.getPreviousInsightsContext();
 
       // 准备完整的笔记内容用于AI分析
-      final fullNotesContent = _periodQuotes.map((quote) {
-        final date = DateTime.parse(quote.date);
-        final dateStr = l10n.formattedDate(date.month, date.day);
-        var content = quote.content.trim();
+      final fullNotesContent = _periodQuotes
+          .map((quote) {
+            final date = DateTime.parse(quote.date);
+            final dateStr = l10n.formattedDate(date.month, date.day);
+            var content = quote.content.trim();
 
-        // 添加位置信息
-        if (quote.location != null && quote.location!.isNotEmpty) {
-          content = l10n.noteMetaWithLocation(
-            dateStr,
-            quote.location!,
-            content,
-          );
-        } else {
-          content = l10n.noteMeta(dateStr, content);
-        }
+            // 添加位置信息
+            if (quote.location != null && quote.location!.isNotEmpty) {
+              content = l10n.noteMetaWithLocation(
+                dateStr,
+                quote.location!,
+                content,
+              );
+            } else {
+              content = l10n.noteMeta(dateStr, content);
+            }
 
-        // 添加天气信息
-        if (quote.weather != null && quote.weather!.isNotEmpty) {
-          final w = quote.weather!.trim();
-          // 优先把英文key映射为国际化描述
-          final wDesc = WeatherCodeMapper.getLocalizedDescription(l10n, w);
-          final display = wDesc == l10n.weatherUnknown ? w : wDesc;
-          content += l10n.weatherInfo(display);
-        }
+            // 添加天气信息
+            if (quote.weather != null && quote.weather!.isNotEmpty) {
+              final w = quote.weather!.trim();
+              // 优先把英文key映射为国际化描述
+              final wDesc = WeatherCodeMapper.getLocalizedDescription(l10n, w);
+              final display = wDesc == l10n.weatherUnknown ? w : wDesc;
+              content += l10n.weatherInfo(display);
+            }
 
-        return content;
-      }).join('\n\n');
+            return content;
+          })
+          .join('\n\n');
 
       _insightSub = ai
           .streamReportInsight(
-        periodLabel: periodLabel,
-        mostTimePeriod: _mostDayPeriodDisplay ?? _mostDayPeriod,
-        mostWeather: _mostWeatherDisplay ?? _mostWeather,
-        topTag: _mostTopTag,
-        activeDays: activeDays,
-        noteCount: noteCount,
-        totalWordCount: _totalWordCount,
-        notesPreview: _notesPreview,
-        fullNotesContent: fullNotesContent, // 传递完整内容
-        previousInsights: previousInsights, // 传递历史上下文
-      )
+            periodLabel: periodLabel,
+            mostTimePeriod: _mostDayPeriodDisplay ?? _mostDayPeriod,
+            mostWeather: _mostWeatherDisplay ?? _mostWeather,
+            topTag: _mostTopTag,
+            activeDays: activeDays,
+            noteCount: noteCount,
+            totalWordCount: _totalWordCount,
+            notesPreview: _notesPreview,
+            fullNotesContent: fullNotesContent, // 传递完整内容
+            previousInsights: previousInsights, // 传递历史上下文
+          )
           .listen(
-        (chunk) {
-          if (!mounted) return;
-          // 直接更新文本，UI会立即显示新内容（真正的流式显示）
-          _updateState(() {
-            _insightText += chunk;
-          });
-        },
-        onError: (_) {
-          if (!mounted) return;
-          final local = context.read<AIService>().buildLocalReportInsight(
+            (chunk) {
+              if (!mounted) return;
+              // 直接更新文本，UI会立即显示新内容（真正的流式显示）
+              _updateState(() {
+                _insightText += chunk;
+              });
+            },
+            onError: (_) {
+              if (!mounted) return;
+              final local = context.read<AIService>().buildLocalReportInsight(
                 periodLabel: periodLabel,
                 mostTimePeriod: _mostDayPeriodDisplay ?? _mostDayPeriod,
                 mostWeather: _mostWeatherDisplay ?? _mostWeather,
@@ -310,28 +319,28 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
                 noteCount: noteCount,
                 totalWordCount: _totalWordCount,
               );
-          _updateState(() {
-            _insightText = local;
-            _insightLoading = false;
-          });
+              _updateState(() {
+                _insightText = local;
+                _insightLoading = false;
+              });
 
-          // 本地兜底生成的洞察也保存，但标记为非AI（在save方法里处理）
-          // 不过由于saveInsightToHistory目前强制isAiGenerated=true，
-          // 这里我们可能不想保存本地兜底的，或者保存但不带signature以避免污染？
-          // 暂时策略：出错降级为本地生成后，不保存到带signature的历史，以免下次误用本地版覆盖AI版
-        },
-        onDone: () {
-          if (!mounted) return;
-          _updateState(() {
-            _insightLoading = false;
-          });
+              // 本地兜底生成的洞察也保存，但标记为非AI（在save方法里处理）
+              // 不过由于saveInsightToHistory目前强制isAiGenerated=true，
+              // 这里我们可能不想保存本地兜底的，或者保存但不带signature以避免污染？
+              // 暂时策略：出错降级为本地生成后，不保存到带signature的历史，以免下次误用本地版覆盖AI版
+            },
+            onDone: () {
+              if (!mounted) return;
+              _updateState(() {
+                _insightLoading = false;
+              });
 
-          // 保存洞察到历史记录
-          if (_insightText.isNotEmpty) {
-            _saveInsightToHistory(l10n, dataSignature: dataSignature);
-          }
-        },
-      );
+              // 保存洞察到历史记录
+              if (_insightText.isNotEmpty) {
+                _saveInsightToHistory(l10n, dataSignature: dataSignature);
+              }
+            },
+          );
     } else {
       // ... (Local generation logic remains mostly the same, but we won't save it with signature)
       // 调试：记录本地生成洞察的参数
@@ -340,14 +349,14 @@ extension _AIReportDataLoading on _AIPeriodicReportPageState {
       );
 
       final local = context.read<AIService>().buildLocalReportInsight(
-            periodLabel: periodLabel,
-            mostTimePeriod: _mostDayPeriodDisplay ?? _mostDayPeriod,
-            mostWeather: _mostWeatherDisplay ?? _mostWeather,
-            topTag: _mostTopTag,
-            activeDays: activeDays,
-            noteCount: noteCount,
-            totalWordCount: _totalWordCount,
-          );
+        periodLabel: periodLabel,
+        mostTimePeriod: _mostDayPeriodDisplay ?? _mostDayPeriod,
+        mostWeather: _mostWeatherDisplay ?? _mostWeather,
+        topTag: _mostTopTag,
+        activeDays: activeDays,
+        noteCount: noteCount,
+        totalWordCount: _totalWordCount,
+      );
 
       _updateState(() {
         _insightText = local;

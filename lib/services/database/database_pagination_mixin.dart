@@ -104,7 +104,7 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
     // 修复：检查是否是首次调用
     bool isFirstCall =
         (_quotesController == null || _quotesController!.isClosed) ||
-            (_currentQuotes.isEmpty);
+        (_currentQuotes.isEmpty);
 
     logDebug(
       'watchQuotes调用 - isFirstCall: $isFirstCall, hasController: ${_quotesController != null}, '
@@ -310,23 +310,24 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
     );
 
     try {
-      final quotes = await getUserQuotes(
-        tagIds: tagIds,
-        categoryId: categoryId,
-        offset: _currentQuotes.length,
-        limit: _watchLimit,
-        orderBy: _watchOrderBy,
-        searchQuery: searchQuery,
-        selectedWeathers: selectedWeathers,
-        selectedDayPeriods: selectedDayPeriods,
-        includeDeleted: includeDeleted,
-      ).timeout(
-        const Duration(seconds: 5), // 缩短超时时间
-        onTimeout: () {
-          logError('getUserQuotes 查询超时（5秒）', source: 'DatabaseService');
-          throw TimeoutException('数据库查询超时', const Duration(seconds: 5));
-        },
-      );
+      final quotes =
+          await getUserQuotes(
+            tagIds: tagIds,
+            categoryId: categoryId,
+            offset: _currentQuotes.length,
+            limit: _watchLimit,
+            orderBy: _watchOrderBy,
+            searchQuery: searchQuery,
+            selectedWeathers: selectedWeathers,
+            selectedDayPeriods: selectedDayPeriods,
+            includeDeleted: includeDeleted,
+          ).timeout(
+            const Duration(seconds: 5), // 缩短超时时间
+            onTimeout: () {
+              logError('getUserQuotes 查询超时（5秒）', source: 'DatabaseService');
+              throw TimeoutException('数据库查询超时', const Duration(seconds: 5));
+            },
+          );
 
       if (quotes.isEmpty) {
         // 没有更多数据了

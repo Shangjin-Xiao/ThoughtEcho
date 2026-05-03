@@ -6,9 +6,10 @@ extension SmartPushPermissions on SmartPushService {
   Future<bool> requestNotificationPermission() async {
     try {
       if (PlatformHelper.isAndroid) {
-        final androidPlugin =
-            _notificationsPlugin.resolvePlatformSpecificImplementation<
-                AndroidFlutterLocalNotificationsPlugin>();
+        final androidPlugin = _notificationsPlugin
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
         if (androidPlugin != null) {
           final granted = await androidPlugin.requestNotificationsPermission();
           return granted ?? false;
@@ -16,9 +17,10 @@ extension SmartPushPermissions on SmartPushService {
       }
 
       if (PlatformHelper.isIOS) {
-        final iosPlugin =
-            _notificationsPlugin.resolvePlatformSpecificImplementation<
-                IOSFlutterLocalNotificationsPlugin>();
+        final iosPlugin = _notificationsPlugin
+            .resolvePlatformSpecificImplementation<
+              IOSFlutterLocalNotificationsPlugin
+            >();
         if (iosPlugin != null) {
           final granted = await iosPlugin.requestPermissions(
             alert: true,
@@ -44,9 +46,10 @@ extension SmartPushPermissions on SmartPushService {
     if (!PlatformHelper.isAndroid) return true;
 
     try {
-      final androidPlugin =
-          _notificationsPlugin.resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
+      final androidPlugin = _notificationsPlugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       if (androidPlugin != null) {
         // 1. 首先检查通知权限
         final notificationsEnabled =
@@ -81,9 +84,10 @@ extension SmartPushPermissions on SmartPushService {
     if (!PlatformHelper.isAndroid) return true;
 
     try {
-      final androidPlugin =
-          _notificationsPlugin.resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
+      final androidPlugin = _notificationsPlugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       if (androidPlugin != null) {
         // 检查是否已有权限
         final canSchedule =
@@ -180,9 +184,10 @@ extension SmartPushPermissions on SmartPushService {
     if (!PlatformHelper.isAndroid) return true;
 
     try {
-      final androidPlugin =
-          _notificationsPlugin.resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
+      final androidPlugin = _notificationsPlugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
       if (androidPlugin != null) {
         return await androidPlugin.areNotificationsEnabled() ?? false;
       }

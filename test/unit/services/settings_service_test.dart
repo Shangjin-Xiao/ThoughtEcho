@@ -39,11 +39,13 @@ void main() {
       expect(AppSettings.fromJson(const {}).excerptIntentEnabled, isTrue);
     });
 
-    test('AppSettings should default direct fullscreen editor toggle to false',
-        () {
-      expect(AppSettings.defaultSettings().skipNonFullscreenEditor, isFalse);
-      expect(AppSettings.fromJson(const {}).skipNonFullscreenEditor, isFalse);
-    });
+    test(
+      'AppSettings should default direct fullscreen editor toggle to false',
+      () {
+        expect(AppSettings.defaultSettings().skipNonFullscreenEditor, isFalse);
+        expect(AppSettings.fromJson(const {}).skipNonFullscreenEditor, isFalse);
+      },
+    );
 
     test('AppSettings should default note edit time toggle to false', () {
       expect(AppSettings.defaultSettings().showNoteEditTime, isFalse);
@@ -111,20 +113,19 @@ void main() {
       },
     );
 
-    test('setTrashRetentionDays should persist modifiedAt as UTC timestamp',
-        () async {
-      final localTime = DateTime(2026, 3, 28, 10, 30, 0);
+    test(
+      'setTrashRetentionDays should persist modifiedAt as UTC timestamp',
+      () async {
+        final localTime = DateTime(2026, 3, 28, 10, 30, 0);
 
-      await settingsService.setTrashRetentionDays(
-        90,
-        modifiedAt: localTime,
-      );
+        await settingsService.setTrashRetentionDays(90, modifiedAt: localTime);
 
-      expect(
-        settingsService.trashRetentionLastModified,
-        equals(localTime.toUtc().toIso8601String()),
-      );
-    });
+        expect(
+          settingsService.trashRetentionLastModified,
+          equals(localTime.toUtc().toIso8601String()),
+        );
+      },
+    );
 
     test(
       'applyIncomingTrashSettings should ignore unparseable retention_days',
@@ -222,26 +223,26 @@ void main() {
     test('should persist API Ninjas categories changes', () async {
       expect(settingsService.apiNinjasCategories, isEmpty);
 
-      await settingsService.setApiNinjasCategories(
-        const ['wisdom', 'success'],
-      );
+      await settingsService.setApiNinjasCategories(const ['wisdom', 'success']);
 
       expect(settingsService.apiNinjasCategories, ['wisdom', 'success']);
-      expect(
-        settingsService.appSettings.apiNinjasCategories,
-        ['wisdom', 'success'],
-      );
+      expect(settingsService.appSettings.apiNinjasCategories, [
+        'wisdom',
+        'success',
+      ]);
     });
 
-    test('set locale with region keeps locale-native daily quote provider',
-        () async {
-      await settingsService.setLocale('zh_CN');
+    test(
+      'set locale with region keeps locale-native daily quote provider',
+      () async {
+        await settingsService.setLocale('zh_CN');
 
-      final provider = ApiService.recommendedDailyQuoteProviderForLanguage(
-        settingsService.localeCode,
-      );
+        final provider = ApiService.recommendedDailyQuoteProviderForLanguage(
+          settingsService.localeCode,
+        );
 
-      expect(provider, ApiService.hitokotoProvider);
-    });
+        expect(provider, ApiService.hitokotoProvider);
+      },
+    );
   });
 }

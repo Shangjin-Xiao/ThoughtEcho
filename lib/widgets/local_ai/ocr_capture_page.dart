@@ -53,10 +53,7 @@ class _OCRCapturePageState extends State<OCRCapturePage> {
                   const SizedBox(height: 16),
                   Text(
                     l10n.featureComingSoon,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 16,
-                    ),
+                    style: const TextStyle(color: Colors.white70, fontSize: 16),
                   ),
                 ],
               ),
@@ -71,10 +68,7 @@ class _OCRCapturePageState extends State<OCRCapturePage> {
             child: Center(
               child: Text(
                 l10n.ocrCaptureHint,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                ),
+                style: const TextStyle(color: Colors.white, fontSize: 16),
               ),
             ),
           ),
@@ -114,10 +108,7 @@ class _OCRCapturePageState extends State<OCRCapturePage> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: Colors.white,
-                        border: Border.all(
-                          color: primary,
-                          width: 4,
-                        ),
+                        border: Border.all(color: primary, width: 4),
                         boxShadow: [
                           BoxShadow(
                             color: primary.withValues(alpha: 0.35),

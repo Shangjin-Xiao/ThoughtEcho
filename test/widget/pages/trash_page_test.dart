@@ -17,7 +17,7 @@ import '../../test_setup.dart';
 
 class _FakeSettingsService extends ChangeNotifier implements SettingsService {
   _FakeSettingsService({int trashRetentionDays = 30})
-      : _trashRetentionDays = trashRetentionDays;
+    : _trashRetentionDays = trashRetentionDays;
 
   int _trashRetentionDays;
   int? lastSetTrashRetentionDays;
@@ -26,10 +26,7 @@ class _FakeSettingsService extends ChangeNotifier implements SettingsService {
   int get trashRetentionDays => _trashRetentionDays;
 
   @override
-  Future<void> setTrashRetentionDays(
-    int days, {
-    DateTime? modifiedAt,
-  }) async {
+  Future<void> setTrashRetentionDays(int days, {DateTime? modifiedAt}) async {
     _trashRetentionDays = days;
     lastSetTrashRetentionDays = days;
     notifyListeners();
@@ -85,9 +82,7 @@ class _FakeDatabaseService extends ChangeNotifier implements DatabaseService {
 
   @override
   Stream<List<NoteCategory>> watchCategories() =>
-      Stream<List<NoteCategory>>.value(
-        const [],
-      );
+      Stream<List<NoteCategory>>.value(const []);
 
   @override
   noSuchMethod(Invocation invocation) =>
@@ -101,17 +96,11 @@ Quote _buildDeletedRichQuote() {
     date: DateTime(2026, 4, 4, 8, 30).toIso8601String(),
     editSource: 'fullscreen',
     deltaContent: jsonEncode([
+      {'insert': '今天拍了一张照片并补了几句说明\n'},
       {
-        'insert': '今天拍了一张照片并补了几句说明\n',
+        'insert': {'image': '/tmp/test-image.jpg'},
       },
-      {
-        'insert': {
-          'image': '/tmp/test-image.jpg',
-        },
-      },
-      {
-        'insert': '\n',
-      },
+      {'insert': '\n'},
     ]),
     isDeleted: true,
     deletedAt: DateTime(2026, 4, 5, 12, 0).toUtc().toIso8601String(),
@@ -134,9 +123,7 @@ Widget _buildTestAppWithServices({
   return MultiProvider(
     providers: [
       ChangeNotifierProvider<DatabaseService>.value(value: databaseService),
-      ChangeNotifierProvider<SettingsService>.value(
-        value: settingsService,
-      ),
+      ChangeNotifierProvider<SettingsService>.value(value: settingsService),
     ],
     child: MaterialApp(
       localizationsDelegates: const [
@@ -166,8 +153,9 @@ void main() {
 
   group('TrashPage', () {
     testWidgets('用富文本内容组件展示已删除笔记，保留回收站操作入口', (tester) async {
-      final databaseService =
-          _FakeDatabaseService(quotes: [_buildDeletedRichQuote()]);
+      final databaseService = _FakeDatabaseService(
+        quotes: [_buildDeletedRichQuote()],
+      );
 
       await tester.pumpWidget(_buildTestApp(databaseService: databaseService));
       await tester.pumpAndSettle();
@@ -186,8 +174,9 @@ void main() {
 
     testWidgets('在回收站页内可调整保留期并立即生效', (tester) async {
       final settingsService = _FakeSettingsService(trashRetentionDays: 30);
-      final databaseService =
-          _FakeDatabaseService(quotes: [_buildDeletedRichQuote()]);
+      final databaseService = _FakeDatabaseService(
+        quotes: [_buildDeletedRichQuote()],
+      );
 
       await tester.pumpWidget(
         _buildTestAppWithServices(
@@ -218,8 +207,9 @@ void main() {
     });
 
     testWidgets('点击恢复按钮后笔记从回收站消失并显示提示', (tester) async {
-      final databaseService =
-          _FakeDatabaseService(quotes: [_buildDeletedRichQuote()]);
+      final databaseService = _FakeDatabaseService(
+        quotes: [_buildDeletedRichQuote()],
+      );
 
       await tester.pumpWidget(_buildTestApp(databaseService: databaseService));
       await tester.pumpAndSettle();
@@ -240,8 +230,9 @@ void main() {
     });
 
     testWidgets('点击永久删除按钮后笔记从回收站消失', (tester) async {
-      final databaseService =
-          _FakeDatabaseService(quotes: [_buildDeletedRichQuote()]);
+      final databaseService = _FakeDatabaseService(
+        quotes: [_buildDeletedRichQuote()],
+      );
 
       await tester.pumpWidget(_buildTestApp(databaseService: databaseService));
       await tester.pumpAndSettle();
@@ -258,9 +249,7 @@ void main() {
 
       // Confirm dialog
       expect(find.text(l10n.permanentlyDeleteConfirmation), findsOneWidget);
-      await tester.tap(
-        find.widgetWithText(TextButton, l10n.permanentlyDelete),
-      );
+      await tester.tap(find.widgetWithText(TextButton, l10n.permanentlyDelete));
       await tester.pumpAndSettle();
 
       expect(find.byType(TrashQuoteCard), findsNothing);

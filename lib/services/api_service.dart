@@ -11,11 +11,12 @@ import '../utils/http_response.dart';
 part 'api_service_daily_quote_fallback.dart';
 part 'api_service_daily_quote_remote.dart';
 
-typedef DailyQuoteHttpGet = Future<HttpResponse> Function(
-  String url, {
-  Map<String, String>? headers,
-  int? timeoutSeconds,
-});
+typedef DailyQuoteHttpGet =
+    Future<HttpResponse> Function(
+      String url, {
+      Map<String, String>? headers,
+      int? timeoutSeconds,
+    });
 
 typedef DailyQuoteApiKeyResolver = Future<String> Function(String providerId);
 
@@ -102,11 +103,11 @@ class ApiService {
     };
   }
 
-  static String recommendedDailyQuoteProviderForLanguage(
-    String? languageCode,
-  ) {
-    final normalizedLanguageCode =
-        (languageCode ?? '').toLowerCase().split(RegExp(r'[_-]')).first;
+  static String recommendedDailyQuoteProviderForLanguage(String? languageCode) {
+    final normalizedLanguageCode = (languageCode ?? '')
+        .toLowerCase()
+        .split(RegExp(r'[_-]'))
+        .first;
     switch (normalizedLanguageCode) {
       case 'zh':
         return hitokotoProvider;

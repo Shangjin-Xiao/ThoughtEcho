@@ -344,7 +344,8 @@ class LargeVideoHandler {
               }
             } catch (e) {
               debugPrint(
-                  '[LargeVideoHandler] cleanup incomplete file failed: $e');
+                '[LargeVideoHandler] cleanup incomplete file failed: $e',
+              );
             }
             throw const CancelledException();
           }

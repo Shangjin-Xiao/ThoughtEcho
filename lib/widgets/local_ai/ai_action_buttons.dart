@@ -54,9 +54,9 @@ class AIActionButtons extends StatelessWidget {
     // Mock: 假设纠错结果
     final correctedText = text; // 实际应该是 AI 纠错后的文本
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(l10n.aiCorrectionApplied)),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.aiCorrectionApplied)));
 
     onCorrectionResult?.call(correctedText);
   }
@@ -76,13 +76,13 @@ class AIActionButtons extends StatelessWidget {
     const String? work = null;
 
     if (author == null && work == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.aiNoSourceFound)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.aiNoSourceFound)));
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.aiSourceRecognized)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.aiSourceRecognized)));
       onSourceResult?.call(author, work);
     }
   }

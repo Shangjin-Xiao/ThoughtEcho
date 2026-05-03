@@ -28,37 +28,39 @@ void main() {
   group('smart push typed candidate helpers', () {
     final now = DateTime(2026, 3, 13, 9, 0);
 
-    test('buildTypedCandidates keeps strongest match reason and filters tags',
-        () {
-      final yearAgo = _quote(
-        id: 'year',
-        date: DateTime(2025, 3, 13, 9, 0),
-        location: '中国,上海市,上海市,浦东新区',
-        tagIds: const ['keep'],
-      );
-      final random = _quote(
-        id: 'random',
-        date: DateTime(2026, 2, 20, 9, 0),
-        tagIds: const ['drop'],
-      );
+    test(
+      'buildTypedCandidates keeps strongest match reason and filters tags',
+      () {
+        final yearAgo = _quote(
+          id: 'year',
+          date: DateTime(2025, 3, 13, 9, 0),
+          location: '中国,上海市,上海市,浦东新区',
+          tagIds: const ['keep'],
+        );
+        final random = _quote(
+          id: 'random',
+          date: DateTime(2026, 2, 20, 9, 0),
+          tagIds: const ['drop'],
+        );
 
-      final typed = buildTypedCandidates(
-        notes: [yearAgo, random],
-        now: now,
-        enabledPastNoteTypes: const {
-          PastNoteType.yearAgoToday,
-          PastNoteType.randomMemory,
-        },
-        recentPushedIds: const {},
-        random: Random(1),
-        requiredTagIds: const ['keep'],
-      );
+        final typed = buildTypedCandidates(
+          notes: [yearAgo, random],
+          now: now,
+          enabledPastNoteTypes: const {
+            PastNoteType.yearAgoToday,
+            PastNoteType.randomMemory,
+          },
+          recentPushedIds: const {},
+          random: Random(1),
+          requiredTagIds: const ['keep'],
+        );
 
-      expect(typed, hasLength(1));
-      expect(typed.first.note.id, 'year');
-      expect(typed.first.contentType, 'yearAgoToday');
-      expect(typed.first.title, '📅 1年前的今天');
-    });
+        expect(typed, hasLength(1));
+        expect(typed.first.note.id, 'year');
+        expect(typed.first.contentType, 'yearAgoToday');
+        expect(typed.first.title, '📅 1年前的今天');
+      },
+    );
 
     test('tag filtering keeps a type when another matching note exists', () {
       final matching = _quote(
@@ -86,33 +88,34 @@ void main() {
     });
 
     test(
-        'same weather respects explicit weather filters even with current weather',
-        () {
-      final rainy = _quote(
-        id: 'rain',
-        date: DateTime(2026, 3, 1, 9, 0),
-        weather: '大雨',
-      );
-      final sunny = _quote(
-        id: 'sun',
-        date: DateTime(2026, 3, 2, 9, 0),
-        weather: '晴',
-      );
+      'same weather respects explicit weather filters even with current weather',
+      () {
+        final rainy = _quote(
+          id: 'rain',
+          date: DateTime(2026, 3, 1, 9, 0),
+          weather: '大雨',
+        );
+        final sunny = _quote(
+          id: 'sun',
+          date: DateTime(2026, 3, 2, 9, 0),
+          weather: '晴',
+        );
 
-      final typed = buildTypedCandidates(
-        notes: [rainy, sunny],
-        now: now,
-        enabledPastNoteTypes: const {PastNoteType.sameWeather},
-        recentPushedIds: const {},
-        random: Random(2),
-        currentWeather: '晴',
-        weatherFilters: const {WeatherFilterType.rain},
-      );
+        final typed = buildTypedCandidates(
+          notes: [rainy, sunny],
+          now: now,
+          enabledPastNoteTypes: const {PastNoteType.sameWeather},
+          recentPushedIds: const {},
+          random: Random(2),
+          currentWeather: '晴',
+          weatherFilters: const {WeatherFilterType.rain},
+        );
 
-      expect(typed, hasLength(1));
-      expect(typed.first.note.id, 'rain');
-      expect(typed.first.contentType, 'sameWeather');
-    });
+        expect(typed, hasLength(1));
+        expect(typed.first.note.id, 'rain');
+        expect(typed.first.contentType, 'sameWeather');
+      },
+    );
 
     test('same location and same weather exclude notes from today', () {
       final sameDayLocation = _quote(

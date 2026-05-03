@@ -39,34 +39,39 @@ void main() {
     await db.close();
   });
 
-  test('Benchmark: syncQuoteMediaReferencesWithTransaction N+1 issue',
-      () async {
-    final mediaCount = 10; // 减少数量以确保快速运行
-    final ops = <Map<String, dynamic>>[];
+  test(
+    'Benchmark: syncQuoteMediaReferencesWithTransaction N+1 issue',
+    () async {
+      final mediaCount = 10; // 减少数量以确保快速运行
+      final ops = <Map<String, dynamic>>[];
 
-    for (var i = 0; i < mediaCount; i++) {
-      ops.add({
-        'insert': {'image': '/tmp/test_app_docs/media/image_$i.png'}
+      for (var i = 0; i < mediaCount; i++) {
+        ops.add({
+          'insert': {'image': '/tmp/test_app_docs/media/image_$i.png'},
+        });
+      }
+
+      final quote = Quote(
+        id: 'test_quote_1',
+        content: 'Test content',
+        deltaContent: jsonEncode(ops),
+        date: DateTime.now().toIso8601String(),
+      );
+
+      final stopwatch = Stopwatch()..start();
+
+      await db.transaction((txn) async {
+        await MediaReferenceService.syncQuoteMediaReferencesWithTransaction(
+          txn,
+          quote,
+        );
       });
-    }
 
-    final quote = Quote(
-      id: 'test_quote_1',
-      content: 'Test content',
-      deltaContent: jsonEncode(ops),
-      date: DateTime.now().toIso8601String(),
-    );
+      stopwatch.stop();
 
-    final stopwatch = Stopwatch()..start();
-
-    await db.transaction((txn) async {
-      await MediaReferenceService.syncQuoteMediaReferencesWithTransaction(
-          txn, quote);
-    });
-
-    stopwatch.stop();
-
-    // ⚡ Bolt: After optimization, it should be exactly 1 call
-    expect(mockPathProvider.callCount, equals(1));
-  }, timeout: const Timeout(Duration(seconds: 30)));
+      // ⚡ Bolt: After optimization, it should be exactly 1 call
+      expect(mockPathProvider.callCount, equals(1));
+    },
+    timeout: const Timeout(Duration(seconds: 30)),
+  );
 }

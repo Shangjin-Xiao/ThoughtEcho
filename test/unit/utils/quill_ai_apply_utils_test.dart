@@ -34,66 +34,68 @@ void main() {
       );
     });
 
-    test('restores media at exact marker positions when applying polished text',
-        () {
-      final originalDocument = quill.Document.fromJson([
-        {'insert': 'Before image '},
-        {
-          'insert': {'image': '/tmp/image.png'},
-        },
-        {'insert': ' after image '},
-        {
-          'insert': {'video': '/tmp/video.mp4'},
-        },
-        {'insert': ' after video '},
-        {
-          'insert': {
-            'custom': {'audio': '/tmp/audio.m4a'},
+    test(
+      'restores media at exact marker positions when applying polished text',
+      () {
+        final originalDocument = quill.Document.fromJson([
+          {'insert': 'Before image '},
+          {
+            'insert': {'image': '/tmp/image.png'},
           },
-        },
-        {'insert': ' done.\n'},
-      ]);
+          {'insert': ' after image '},
+          {
+            'insert': {'video': '/tmp/video.mp4'},
+          },
+          {'insert': ' after video '},
+          {
+            'insert': {
+              'custom': {'audio': '/tmp/audio.m4a'},
+            },
+          },
+          {'insert': ' done.\n'},
+        ]);
 
-      final mergedDocument = QuillAiApplyUtils.applyPolishedText(
-        originalDocument: originalDocument,
-        polishedText:
-            'Polished opening [[TE_MEDIA_1]] refined middle [[TE_MEDIA_2]] tightened ending [[TE_MEDIA_3]] complete.',
-      );
+        final mergedDocument = QuillAiApplyUtils.applyPolishedText(
+          originalDocument: originalDocument,
+          polishedText:
+              'Polished opening [[TE_MEDIA_1]] refined middle [[TE_MEDIA_2]] tightened ending [[TE_MEDIA_3]] complete.',
+        );
 
-      final mergedOps = mergedDocument.toDelta().toJson();
+        final mergedOps = mergedDocument.toDelta().toJson();
 
-      expect(
-        mergedOps.where(
-          (op) => op['insert'] is Map && op['insert']['image'] != null,
-        ),
-        hasLength(1),
-      );
-      expect(
-        mergedOps.where(
-          (op) => op['insert'] is Map && op['insert']['video'] != null,
-        ),
-        hasLength(1),
-      );
-      expect(
-        mergedOps.where(
-          (op) =>
-              op['insert'] is Map &&
-              op['insert']['custom'] is Map &&
-              op['insert']['custom']['audio'] != null,
-        ),
-        hasLength(1),
-      );
-      expect(
-        QuillAiApplyUtils.buildPolishInputText(mergedDocument),
-        'Polished opening [[TE_MEDIA_1]] refined middle \n[[TE_MEDIA_2]]\n tightened ending [[TE_MEDIA_3]] complete.\n',
-      );
-      expect(
-        StringUtils.removeObjectReplacementChar(
-          mergedDocument.toPlainText().trim(),
-        ).replaceAll(RegExp(r'\s+'), ' ').trim(),
-        'Polished opening refined middle tightened ending complete.',
-      );
-    });
+        expect(
+          mergedOps.where(
+            (op) => op['insert'] is Map && op['insert']['image'] != null,
+          ),
+          hasLength(1),
+        );
+        expect(
+          mergedOps.where(
+            (op) => op['insert'] is Map && op['insert']['video'] != null,
+          ),
+          hasLength(1),
+        );
+        expect(
+          mergedOps.where(
+            (op) =>
+                op['insert'] is Map &&
+                op['insert']['custom'] is Map &&
+                op['insert']['custom']['audio'] != null,
+          ),
+          hasLength(1),
+        );
+        expect(
+          QuillAiApplyUtils.buildPolishInputText(mergedDocument),
+          'Polished opening [[TE_MEDIA_1]] refined middle \n[[TE_MEDIA_2]]\n tightened ending [[TE_MEDIA_3]] complete.\n',
+        );
+        expect(
+          StringUtils.removeObjectReplacementChar(
+            mergedDocument.toPlainText().trim(),
+          ).replaceAll(RegExp(r'\s+'), ' ').trim(),
+          'Polished opening refined middle tightened ending complete.',
+        );
+      },
+    );
 
     test('strips media markers from preview text', () {
       const rawText =

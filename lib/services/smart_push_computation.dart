@@ -159,11 +159,7 @@ List<Quote> filterWeekAgoToday(List<Quote> notes, DateTime now) {
 }
 
 /// Shuffles and returns up to 5 random quotes older than 7 days.
-List<Quote> filterRandomMemory(
-  List<Quote> notes,
-  DateTime now,
-  Random random,
-) {
+List<Quote> filterRandomMemory(List<Quote> notes, DateTime now, Random random) {
   final sevenDaysAgo = now.subtract(const Duration(days: 7));
   final filtered = notes.where((note) {
     try {
@@ -185,9 +181,7 @@ Quote? selectUnpushedNote(
   Random random,
 ) {
   final unpushed = candidates
-      .where(
-        (note) => note.id == null || !recentlyPushedIds.contains(note.id),
-      )
+      .where((note) => note.id == null || !recentlyPushedIds.contains(note.id))
       .toList();
 
   if (unpushed.isNotEmpty) {
@@ -226,11 +220,14 @@ List<TypedSmartPushCandidate> buildTypedCandidates({
     final eligibleSource = requiredTagIds.isEmpty
         ? source
         : source
-            .where((note) => note.tagIds.any(requiredTagIds.contains))
-            .toList();
+              .where((note) => note.tagIds.any(requiredTagIds.contains))
+              .toList();
 
-    final selected =
-        selectUnpushedNote(eligibleSource, recentPushedIds, random);
+    final selected = selectUnpushedNote(
+      eligibleSource,
+      recentPushedIds,
+      random,
+    );
     if (selected == null || selected.id == null) return;
 
     final existing = candidatesById[selected.id!];
@@ -247,16 +244,11 @@ List<TypedSmartPushCandidate> buildTypedCandidates({
   }
 
   if (enabledPastNoteTypes.contains(PastNoteType.yearAgoToday)) {
-    addCandidate(
-      'yearAgoToday',
-      filterYearAgoToday(notes, now),
-      (note) {
-        final noteDate = DateTime.tryParse(note.date);
-        final years = noteDate != null ? now.year - noteDate.year : 1;
-        return '📅 $years年前的今天';
-      },
-      100,
-    );
+    addCandidate('yearAgoToday', filterYearAgoToday(notes, now), (note) {
+      final noteDate = DateTime.tryParse(note.date);
+      final years = noteDate != null ? now.year - noteDate.year : 1;
+      return '📅 $years年前的今天';
+    }, 100);
   }
 
   if (enabledPastNoteTypes.contains(PastNoteType.monthAgoToday)) {
@@ -286,8 +278,10 @@ List<TypedSmartPushCandidate> buildTypedCandidates({
   if (enabledPastNoteTypes.contains(PastNoteType.sameLocation)) {
     final locationNotes = filterSameLocationNotes(notes, now, currentLocation);
     // 动态评分：该地点笔记占比越低（故地重游），priority 越高
-    final locationPriority =
-        calcLocationPriority(locationNotes.length, notes.length);
+    final locationPriority = calcLocationPriority(
+      locationNotes.length,
+      notes.length,
+    );
     addCandidate(
       'sameLocation',
       locationNotes,
@@ -350,9 +344,9 @@ List<Quote> filterSameWeatherNotes(
           if (note.weather == null || note.weather!.isEmpty) return false;
           final lowerWeather = note.weather!.toLowerCase();
           return weatherFilters.any((weatherType) {
-            return getWeatherKeywords(weatherType).any(
-              (keyword) => lowerWeather.contains(keyword.toLowerCase()),
-            );
+            return getWeatherKeywords(
+              weatherType,
+            ).any((keyword) => lowerWeather.contains(keyword.toLowerCase()));
           });
         }).toList()
       : null;
@@ -451,19 +445,13 @@ bool _isHistoricalNote(Quote note, DateTime now) {
 
 /// yearAgoToday 标题候选池（随机轮换）
 String pickYearAgoTodayTitle(Random random, int years) {
-  final pool = [
-    '那年今日 · $years年前',
-    '时光信笺，$years年前的你',
-  ];
+  final pool = ['那年今日 · $years年前', '时光信笺，$years年前的你'];
   return pool[random.nextInt(pool.length)];
 }
 
 /// weekAgoToday 标题候选池（随机轮换）
 String pickWeekAgoTodayTitle(Random random) {
-  final pool = [
-    '七日前，你说…',
-    '📅 一周前的今天',
-  ];
+  final pool = ['七日前，你说…', '📅 一周前的今天'];
   return pool[random.nextInt(pool.length)];
 }
 
@@ -488,19 +476,13 @@ String pickSameTimeOfDayTitle(Random random, DateTime noteDate, DateTime now) {
 
   // 其次显示月份（如果超过1个月）
   if (monthsDiff >= 1) {
-    final pool = [
-      '⏰ $monthsDiff个月前的此刻',
-      '$monthsDiff个月前的这个时候',
-    ];
+    final pool = ['⏰ $monthsDiff个月前的此刻', '$monthsDiff个月前的这个时候'];
     return pool[random.nextInt(pool.length)];
   }
 
   // 显示天数（7天以上）
   if (daysDiff >= 7) {
-    final pool = [
-      '⏰ $daysDiff天前的此刻',
-      '$daysDiff天前的这个时候',
-    ];
+    final pool = ['⏰ $daysDiff天前的此刻', '$daysDiff天前的这个时候'];
     return pool[random.nextInt(pool.length)];
   }
 
@@ -510,11 +492,7 @@ String pickSameTimeOfDayTitle(Random random, DateTime noteDate, DateTime now) {
 
 /// sameLocation 标题候选池（随机轮换）
 String pickSameLocationTitle(Random random) {
-  final pool = [
-    '故地重游，旧事如新',
-    '📍 你在这里写过',
-    '这里，你曾留下文字',
-  ];
+  final pool = ['故地重游，旧事如新', '📍 你在这里写过', '这里，你曾留下文字'];
   return pool[random.nextInt(pool.length)];
 }
 

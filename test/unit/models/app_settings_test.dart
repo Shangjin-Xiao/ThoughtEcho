@@ -17,9 +17,7 @@ void main() {
     });
 
     test('fromJson should normalize invalid trash retention values', () {
-      final settings = AppSettings.fromJson({
-        'trashRetentionDays': 15,
-      });
+      final settings = AppSettings.fromJson({'trashRetentionDays': 15});
 
       expect(settings.trashRetentionDays, equals(30));
     });
@@ -61,24 +59,25 @@ void main() {
       expect(settings.defaultTagIds, isEmpty);
     });
 
-    test('falls back to default provider when persisted provider is non-string',
-        () {
-      final settings = AppSettings.fromJson({
-        'dailyQuoteProvider': 42,
-      });
+    test(
+      'falls back to default provider when persisted provider is non-string',
+      () {
+        final settings = AppSettings.fromJson({'dailyQuoteProvider': 42});
 
-      expect(settings.dailyQuoteProvider, 'hitokoto');
-    });
+        expect(settings.dailyQuoteProvider, 'hitokoto');
+      },
+    );
 
     test(
-        'falls back to default provider when persisted provider is unsupported',
-        () {
-      final settings = AppSettings.fromJson({
-        'dailyQuoteProvider': 'unknown_provider',
-      });
+      'falls back to default provider when persisted provider is unsupported',
+      () {
+        final settings = AppSettings.fromJson({
+          'dailyQuoteProvider': 'unknown_provider',
+        });
 
-      expect(settings.dailyQuoteProvider, 'hitokoto');
-    });
+        expect(settings.dailyQuoteProvider, 'hitokoto');
+      },
+    );
 
     test('filters unsupported api ninjas categories in persisted settings', () {
       final settings = AppSettings.fromJson({

@@ -11,8 +11,9 @@ void main() {
   });
 
   testWidgets('初始化时过滤不支持的分类', (tester) async {
-    final localizations =
-        await AppLocalizations.delegate.load(const Locale('zh'));
+    final localizations = await AppLocalizations.delegate.load(
+      const Locale('zh'),
+    );
 
     await tester.pumpWidget(
       MaterialApp(
@@ -47,10 +48,7 @@ void main() {
 
     expect(find.text('智慧'), findsOneWidget);
 
-    await tester.enterText(
-      find.byType(TextField),
-      '成功',
-    );
+    await tester.enterText(find.byType(TextField), '成功');
     await tester.pumpAndSettle();
 
     expect(find.widgetWithText(ListTile, '成功'), findsOneWidget);

@@ -107,7 +107,8 @@ extension _NoteListItemsExtension on NoteListViewState {
                                       // 如果有搜索词，重新搜索
                                       if (_searchController.text.isNotEmpty) {
                                         _onSearchChanged(
-                                            _searchController.text);
+                                          _searchController.text,
+                                        );
                                       }
                                     },
                                   );
@@ -121,8 +122,8 @@ extension _NoteListItemsExtension on NoteListViewState {
                               icon: const Icon(Icons.tune),
                               tooltip: l10n.filterAndSortTooltip,
                               onPressed: () {
-                                final settings =
-                                    context.read<SettingsService>();
+                                final settings = context
+                                    .read<SettingsService>();
                                 showModalBottomSheet(
                                   context: context,
                                   isScrollControlled: true,
@@ -144,23 +145,24 @@ extension _NoteListItemsExtension on NoteListViewState {
                                         widget.selectedDayPeriods,
                                     requireBiometricForHidden:
                                         settings.requireBiometricForHidden,
-                                    onApply: (
-                                      tagIds,
-                                      sortType,
-                                      sortAscending,
-                                      selectedWeathers,
-                                      selectedDayPeriods,
-                                    ) {
-                                      widget.onTagSelectionChanged(tagIds);
-                                      widget.onSortChanged(
-                                        sortType,
-                                        sortAscending,
-                                      );
-                                      widget.onFilterChanged(
-                                        selectedWeathers,
-                                        selectedDayPeriods,
-                                      );
-                                    },
+                                    onApply:
+                                        (
+                                          tagIds,
+                                          sortType,
+                                          sortAscending,
+                                          selectedWeathers,
+                                          selectedDayPeriods,
+                                        ) {
+                                          widget.onTagSelectionChanged(tagIds);
+                                          widget.onSortChanged(
+                                            sortType,
+                                            sortAscending,
+                                          );
+                                          widget.onFilterChanged(
+                                            selectedWeathers,
+                                            selectedDayPeriods,
+                                          );
+                                        },
                                   ),
                                 );
                               },
@@ -320,8 +322,9 @@ extension _NoteListItemsExtension on NoteListViewState {
             _startFirstOpenScrollPerfCapture();
           } else if (_firstOpenScrollPerfRecording &&
               notification is ScrollUpdateNotification) {
-            _firstOpenScrollUpdateMicros
-                .add(DateTime.now().microsecondsSinceEpoch);
+            _firstOpenScrollUpdateMicros.add(
+              DateTime.now().microsecondsSinceEpoch,
+            );
           } else if (notification is ScrollEndNotification) {
             _stopFirstOpenScrollPerfCapture();
           }
@@ -395,12 +398,14 @@ extension _NoteListItemsExtension on NoteListViewState {
                   ? QuoteItemWidget.needsExpansionFor(quote)
                   : false;
 
-              final attachFavoriteGuideKey = !favoriteGuideAssigned &&
+              final attachFavoriteGuideKey =
+                  !favoriteGuideAssigned &&
                   widget.favoriteButtonGuideKey != null &&
                   widget.onFavorite != null;
               final attachMoreGuideKey =
                   !moreGuideAssigned && widget.moreButtonGuideKey != null;
-              final attachFoldGuideKey = !foldGuideAssigned &&
+              final attachFoldGuideKey =
+                  !foldGuideAssigned &&
                   widget.foldToggleGuideKey != null &&
                   needsExpansion;
 
@@ -418,7 +423,9 @@ extension _NoteListItemsExtension on NoteListViewState {
 
               final expansionNotifier = _obtainExpansionNotifier(quoteId);
               _expandedItems.putIfAbsent(
-                  quoteId, () => expansionNotifier.value);
+                quoteId,
+                () => expansionNotifier.value,
+              );
 
               return KeyedSubtree(
                 key: _itemKeys[quoteId],
@@ -441,7 +448,7 @@ extension _NoteListItemsExtension on NoteListViewState {
                       if (!expanded && requiresAlignment) {
                         final waitDuration =
                             QuoteItemWidget.expandCollapseDuration +
-                                const Duration(milliseconds: 80);
+                            const Duration(milliseconds: 80);
                         Future.delayed(waitDuration, () {
                           if (!mounted) return;
                           WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -466,10 +473,12 @@ extension _NoteListItemsExtension on NoteListViewState {
                     favoriteButtonGuideKey: attachFavoriteGuideKey
                         ? widget.favoriteButtonGuideKey
                         : null,
-                    moreButtonGuideKey:
-                        attachMoreGuideKey ? widget.moreButtonGuideKey : null,
-                    foldToggleGuideKey:
-                        attachFoldGuideKey ? widget.foldToggleGuideKey : null,
+                    moreButtonGuideKey: attachMoreGuideKey
+                        ? widget.moreButtonGuideKey
+                        : null,
+                    foldToggleGuideKey: attachFoldGuideKey
+                        ? widget.foldToggleGuideKey
+                        : null,
                     // 不使用自定义 tagBuilder，让 QuoteItemWidget 使用内部的标签渲染逻辑
                     // 这样可以支持筛选标签的优先显示和高亮效果
                   ),
@@ -493,7 +502,8 @@ extension _NoteListItemsExtension on NoteListViewState {
     _searchDebounceTimer?.cancel();
 
     // 性能优化：只在必要时调用 setState，避免不必要的重建
-    final shouldSetLoading = (value.isEmpty && widget.searchQuery.isNotEmpty) ||
+    final shouldSetLoading =
+        (value.isEmpty && widget.searchQuery.isNotEmpty) ||
         (value.isNotEmpty && value.length >= AppConstants.minSearchLength);
 
     if (shouldSetLoading && !_isLoading) {

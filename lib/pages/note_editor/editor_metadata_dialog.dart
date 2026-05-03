@@ -35,11 +35,11 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                         width: 40,
                         height: 4,
                         decoration: BoxDecoration(
-                          color:
-                              theme.colorScheme.onSurfaceVariant.applyOpacity(
-                            // MODIFIED
-                            0.4,
-                          ),
+                          color: theme.colorScheme.onSurfaceVariant
+                              .applyOpacity(
+                                // MODIFIED
+                                0.4,
+                              ),
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -298,14 +298,17 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                     child: Builder(
                                       builder: (context) {
                                         // 过滤标签
-                                        final filteredTags =
-                                            widget.allTags!.where((tag) {
-                                          return _tagSearchQuery.isEmpty ||
-                                              tag
-                                                  .localizedName(l10n)
-                                                  .toLowerCase()
-                                                  .contains(_tagSearchQuery);
-                                        }).toList();
+                                        final filteredTags = widget.allTags!
+                                            .where((tag) {
+                                              return _tagSearchQuery.isEmpty ||
+                                                  tag
+                                                      .localizedName(l10n)
+                                                      .toLowerCase()
+                                                      .contains(
+                                                        _tagSearchQuery,
+                                                      );
+                                            })
+                                            .toList();
 
                                         if (filteredTags.isEmpty) {
                                           return Center(
@@ -354,7 +357,8 @@ extension _NoteEditorMetadataDialog on _NoteFullEditorPageState {
                                                 });
                                               },
                                               selectedColor: theme
-                                                  .colorScheme.primaryContainer,
+                                                  .colorScheme
+                                                  .primaryContainer,
                                               checkmarkColor:
                                                   theme.colorScheme.primary,
                                             );

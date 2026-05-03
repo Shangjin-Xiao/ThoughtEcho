@@ -15,7 +15,7 @@ class AiDialogHelper {
   AppLocalizations get l10n => AppLocalizations.of(context);
 
   AiDialogHelper(this.context)
-      : aiService = Provider.of<AIService>(context, listen: false);
+    : aiService = Provider.of<AIService>(context, listen: false);
 
   // 显示AI选项菜单（使用统一组件）
   void showAiOptions({
@@ -72,7 +72,8 @@ class AiDialogHelper {
       if (!context.mounted) return;
       Navigator.of(context).pop();
       _showSnackBar(
-          l10n.analysisFailedWithError(kDebugMode ? e.toString() : ''));
+        l10n.analysisFailedWithError(kDebugMode ? e.toString() : ''),
+      );
     }
   }
 
@@ -156,8 +157,10 @@ class AiDialogHelper {
         builder: (dialogContext) {
           return StreamingTextDialog(
             title: l10n.noteAnalysis,
-            textStream:
-                aiService.streamSummarizeNote(quote, tagNames: tagNames),
+            textStream: aiService.streamSummarizeNote(
+              quote,
+              tagNames: tagNames,
+            ),
             applyButtonText: l10n.applyToNote,
             onApply: (result) {
               onFinish(result);
@@ -172,7 +175,8 @@ class AiDialogHelper {
       );
     } catch (e) {
       _showSnackBar(
-          l10n.analysisFailedWithError(kDebugMode ? e.toString() : ''));
+        l10n.analysisFailedWithError(kDebugMode ? e.toString() : ''),
+      );
     }
   }
 

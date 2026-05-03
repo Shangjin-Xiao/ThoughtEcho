@@ -166,8 +166,9 @@ class MarkdownMessageBubble extends StatelessWidget {
                   // 这里可以添加分享功能
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(AppLocalizations.of(context)
-                          .shareFeatureInDevelopment),
+                      content: Text(
+                        AppLocalizations.of(context).shareFeatureInDevelopment,
+                      ),
                       duration: AppConstants.snackBarDurationNormal,
                     ),
                   );

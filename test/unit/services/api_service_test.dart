@@ -8,29 +8,31 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('ApiService provider defaults', () {
-    test('prefers locale-native providers before falling back to zenquotes',
-        () {
-      expect(
-        ApiService.recommendedDailyQuoteProviderForLanguage('zh'),
-        ApiService.hitokotoProvider,
-      );
-      expect(
-        ApiService.recommendedDailyQuoteProviderForLanguage('ja'),
-        ApiService.meigenProvider,
-      );
-      expect(
-        ApiService.recommendedDailyQuoteProviderForLanguage('ko'),
-        ApiService.koreanAdviceProvider,
-      );
-      expect(
-        ApiService.recommendedDailyQuoteProviderForLanguage('en'),
-        ApiService.zenQuotesProvider,
-      );
-      expect(
-        ApiService.recommendedDailyQuoteProviderForLanguage('fr'),
-        ApiService.zenQuotesProvider,
-      );
-    });
+    test(
+      'prefers locale-native providers before falling back to zenquotes',
+      () {
+        expect(
+          ApiService.recommendedDailyQuoteProviderForLanguage('zh'),
+          ApiService.hitokotoProvider,
+        );
+        expect(
+          ApiService.recommendedDailyQuoteProviderForLanguage('ja'),
+          ApiService.meigenProvider,
+        );
+        expect(
+          ApiService.recommendedDailyQuoteProviderForLanguage('ko'),
+          ApiService.koreanAdviceProvider,
+        );
+        expect(
+          ApiService.recommendedDailyQuoteProviderForLanguage('en'),
+          ApiService.zenQuotesProvider,
+        );
+        expect(
+          ApiService.recommendedDailyQuoteProviderForLanguage('fr'),
+          ApiService.zenQuotesProvider,
+        );
+      },
+    );
 
     test('supports locale codes with region suffix', () {
       expect(
@@ -95,17 +97,14 @@ void main() {
         l10n,
         'a,b',
         provider: 'hitokoto',
-        httpGet: (
-          url, {
-          Map<String, String>? headers,
-          int? timeoutSeconds,
-        }) async {
-          expect(url, 'https://v1.hitokoto.cn/?c=a&c=b');
-          return HttpResponse(
-            '{"hitokoto":"测试句子","from":"测试出处","from_who":"测试作者","type":"b"}',
-            200,
-          );
-        },
+        httpGet:
+            (url, {Map<String, String>? headers, int? timeoutSeconds}) async {
+              expect(url, 'https://v1.hitokoto.cn/?c=a&c=b');
+              return HttpResponse(
+                '{"hitokoto":"测试句子","from":"测试出处","from_who":"测试作者","type":"b"}',
+                200,
+              );
+            },
       );
 
       expect(result['content'], '测试句子');
@@ -122,17 +121,14 @@ void main() {
         l10n,
         'k',
         provider: 'zenquotes',
-        httpGet: (
-          url, {
-          Map<String, String>? headers,
-          int? timeoutSeconds,
-        }) async {
-          expect(url, 'https://zenquotes.io/api/random');
-          return HttpResponse(
-            '[{"q":"Stay hungry","a":"Steve Jobs"}]',
-            200,
-          );
-        },
+        httpGet:
+            (url, {Map<String, String>? headers, int? timeoutSeconds}) async {
+              expect(url, 'https://zenquotes.io/api/random');
+              return HttpResponse(
+                '[{"q":"Stay hungry","a":"Steve Jobs"}]',
+                200,
+              );
+            },
       );
 
       expect(result['content'], 'Stay hungry');
@@ -151,16 +147,13 @@ void main() {
         'a',
         provider: 'api_ninjas',
         apiKeyResolver: (_) async => 'api_ninjas_test_key_1234567890',
-        httpGet: (
-          url, {
-          Map<String, String>? headers,
-          int? timeoutSeconds,
-        }) async {
-          return HttpResponse(
-            '[{"quote":"Joke","author":"Anon","categories":["humor"]}]',
-            200,
-          );
-        },
+        httpGet:
+            (url, {Map<String, String>? headers, int? timeoutSeconds}) async {
+              return HttpResponse(
+                '[{"quote":"Joke","author":"Anon","categories":["humor"]}]',
+                200,
+              );
+            },
       );
 
       expect(result['type'], 'g');
@@ -174,16 +167,13 @@ void main() {
         'k',
         provider: 'api_ninjas',
         apiKeyResolver: (_) async => 'api_ninjas_test_key_1234567890',
-        httpGet: (
-          url, {
-          Map<String, String>? headers,
-          int? timeoutSeconds,
-        }) async {
-          return HttpResponse(
-            '[{"quote":"Be kind","author":"Anon","categories":"wisdom"}]',
-            200,
-          );
-        },
+        httpGet:
+            (url, {Map<String, String>? headers, int? timeoutSeconds}) async {
+              return HttpResponse(
+                '[{"quote":"Be kind","author":"Anon","categories":"wisdom"}]',
+                200,
+              );
+            },
       );
 
       expect(result['content'], 'Be kind');
@@ -203,11 +193,7 @@ void main() {
           expect(providerId, 'api_ninjas');
           return 'secret-key';
         },
-        httpGet: (
-          url, {
-          Map<String, String>? headers,
-          int? timeoutSeconds,
-        }) async {
+        httpGet: (url, {Map<String, String>? headers, int? timeoutSeconds}) async {
           expect(
             url,
             'https://api.api-ninjas.com/v2/randomquotes?categories=wisdom,success',
@@ -227,60 +213,57 @@ void main() {
       expect(result['provider'], 'api_ninjas');
     });
 
-    test('api_ninjas provider filters unsupported categories before request',
-        () async {
-      final l10n = lookupAppLocalizations(const Locale('zh'));
+    test(
+      'api_ninjas provider filters unsupported categories before request',
+      () async {
+        final l10n = lookupAppLocalizations(const Locale('zh'));
 
-      final result = await ApiService.getDailyQuote(
-        l10n,
-        'k',
-        provider: 'api_ninjas',
-        apiNinjasCategories: const ['wisdom', 'unsupported', 'success'],
-        apiKeyResolver: (_) async => 'secret-key',
-        httpGet: (
-          url, {
-          Map<String, String>? headers,
-          int? timeoutSeconds,
-        }) async {
-          expect(
-            url,
-            'https://api.api-ninjas.com/v2/randomquotes?categories=wisdom,success',
-          );
-          return HttpResponse(
-            '[{"quote":"Knowledge speaks","author":"Socrates","categories":["wisdom"]}]',
-            200,
-          );
-        },
-      );
+        final result = await ApiService.getDailyQuote(
+          l10n,
+          'k',
+          provider: 'api_ninjas',
+          apiNinjasCategories: const ['wisdom', 'unsupported', 'success'],
+          apiKeyResolver: (_) async => 'secret-key',
+          httpGet: (url, {Map<String, String>? headers, int? timeoutSeconds}) async {
+            expect(
+              url,
+              'https://api.api-ninjas.com/v2/randomquotes?categories=wisdom,success',
+            );
+            return HttpResponse(
+              '[{"quote":"Knowledge speaks","author":"Socrates","categories":["wisdom"]}]',
+              200,
+            );
+          },
+        );
 
-      expect(result['provider'], 'api_ninjas');
-      expect(result['type'], 'k');
-    });
+        expect(result['provider'], 'api_ninjas');
+        expect(result['type'], 'k');
+      },
+    );
 
-    test('handles malformed JSON response by falling back to default quote',
-        () async {
-      final l10n = lookupAppLocalizations(const Locale('zh'));
+    test(
+      'handles malformed JSON response by falling back to default quote',
+      () async {
+        final l10n = lookupAppLocalizations(const Locale('zh'));
 
-      final result = await ApiService.getDailyQuote(
-        l10n,
-        'a',
-        provider: 'hitokoto',
-        httpGet: (
-          url, {
-          Map<String, String>? headers,
-          int? timeoutSeconds,
-        }) async {
-          return HttpResponse('not-json', 200);
-        },
-      );
+        final result = await ApiService.getDailyQuote(
+          l10n,
+          'a',
+          provider: 'hitokoto',
+          httpGet:
+              (url, {Map<String, String>? headers, int? timeoutSeconds}) async {
+                return HttpResponse('not-json', 200);
+              },
+        );
 
-      final defaultQuotes = [
-        l10n.defaultQuote1,
-        l10n.defaultQuote2,
-        l10n.defaultQuote3,
-      ];
-      expect(defaultQuotes.contains(result['content']), isTrue);
-      expect(result['provider'], 'default');
-    });
+        final defaultQuotes = [
+          l10n.defaultQuote1,
+          l10n.defaultQuote2,
+          l10n.defaultQuote3,
+        ];
+        expect(defaultQuotes.contains(result['content']), isTrue);
+        expect(result['provider'], 'default');
+      },
+    );
   });
 }

@@ -337,8 +337,8 @@ class NoteListViewState extends State<NoteListView> {
       }
 
       // 判断是否仅为排序变化（不影响列表内容，只影响顺序）
-      final bool isOnlySortChange = oldWidget.searchQuery ==
-              widget.searchQuery &&
+      final bool isOnlySortChange =
+          oldWidget.searchQuery == widget.searchQuery &&
           _areListsEqual(oldWidget.selectedTagIds, widget.selectedTagIds) &&
           _areListsEqual(oldWidget.selectedWeathers, widget.selectedWeathers) &&
           _areListsEqual(
@@ -447,14 +447,9 @@ class NoteListViewState extends State<NoteListView> {
       final completer = _initialDataCompleter;
       if (completer != null && !completer.isCompleted) {
         try {
-          await completer.future.timeout(
-            const Duration(seconds: 5),
-          );
+          await completer.future.timeout(const Duration(seconds: 5));
         } on TimeoutException {
-          logDebug(
-            'scrollToQuoteById 放弃：首次数据加载超时',
-            source: 'NoteListView',
-          );
+          logDebug('scrollToQuoteById 放弃：首次数据加载超时', source: 'NoteListView');
           return false;
         }
       }
@@ -496,9 +491,7 @@ class NoteListViewState extends State<NoteListView> {
         const maxRenderWait = 8;
         var renderDelay = 30; // ms, 指数增长
         for (var renderWait = 0; renderWait < maxRenderWait; renderWait++) {
-          await Future.delayed(
-            Duration(milliseconds: renderDelay),
-          );
+          await Future.delayed(Duration(milliseconds: renderDelay));
           if (!mounted) return false;
           // 让出一帧给框架完成 layout
           await WidgetsBinding.instance.endOfFrame;
@@ -559,8 +552,10 @@ class NoteListViewState extends State<NoteListView> {
   }
 
   void _pruneExpansionControllers() {
-    final activeIds =
-        _quotes.map((quote) => quote.id).whereType<String>().toSet();
+    final activeIds = _quotes
+        .map((quote) => quote.id)
+        .whereType<String>()
+        .toSet();
 
     final removableIds = _expansionNotifiers.keys
         .where((id) => !activeIds.contains(id))

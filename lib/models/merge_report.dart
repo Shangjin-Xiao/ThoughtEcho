@@ -80,16 +80,12 @@ class MergeReport {
 
   /// 添加：删除笔记
   MergeReport addDeletedQuote() {
-    return copyWith(
-      deletedQuotes: deletedQuotes + 1,
-    );
+    return copyWith(deletedQuotes: deletedQuotes + 1);
   }
 
   /// 添加：因导入 tombstone 而删除的笔记
   MergeReport addDeletedByTombstone() {
-    return copyWith(
-      deletedByTombstoneQuotes: deletedByTombstoneQuotes + 1,
-    );
+    return copyWith(deletedByTombstoneQuotes: deletedByTombstoneQuotes + 1);
   }
 
   /// 添加：跳过笔记
@@ -310,8 +306,8 @@ class MergeReportBuilder {
   final String? _sourceDevice;
 
   MergeReportBuilder({String? sourceDevice})
-      : _startTime = DateTime.now(),
-        _sourceDevice = sourceDevice;
+    : _startTime = DateTime.now(),
+      _sourceDevice = sourceDevice;
 
   // 细分方法
   void addInsertedQuote() {

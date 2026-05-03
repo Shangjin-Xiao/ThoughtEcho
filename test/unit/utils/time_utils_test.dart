@@ -19,7 +19,9 @@ void main() {
 
     test('getDayPeriodIconByKey 应该返回正确的图标', () {
       expect(
-          TimeUtils.getDayPeriodIconByKey('dusk'), Icons.nights_stay_outlined);
+        TimeUtils.getDayPeriodIconByKey('dusk'),
+        Icons.nights_stay_outlined,
+      );
       expect(TimeUtils.getDayPeriodIconByKey('invalid'), Icons.access_time);
     });
 
@@ -49,8 +51,10 @@ void main() {
       expect(TimeUtils.formatQuoteDate(dtMidnight), '2025-06-21 深夜');
 
       // 测试传入 dayPeriod
-      expect(TimeUtils.formatQuoteDate(dtMorning, dayPeriod: 'dusk'),
-          '2025-06-21 黄昏');
+      expect(
+        TimeUtils.formatQuoteDate(dtMorning, dayPeriod: 'dusk'),
+        '2025-06-21 黄昏',
+      );
     });
 
     test('formatFileTimestamp 应该正确补零', () {

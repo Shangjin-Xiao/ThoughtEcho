@@ -84,9 +84,9 @@ class NoteSyncService extends ChangeNotifier {
     required DatabaseService databaseService,
     required SettingsService settingsService,
     required AIAnalysisDatabaseService aiAnalysisDbService,
-  })  : _backupService = backupService,
-        _databaseService = databaseService,
-        _settingsService = settingsService {
+  }) : _backupService = backupService,
+       _databaseService = databaseService,
+       _settingsService = settingsService {
     AppLogger.d('NoteSyncService 构造函数完成', source: 'NoteSyncService');
   }
   bool get skipSyncConfirmation => _settingsService.syncSkipConfirm;
@@ -552,11 +552,13 @@ class NoteSyncService extends ChangeNotifier {
   }
 
   Future<void> _preflightCheck(Device target) async {
-    final dio = Dio(BaseOptions(
-      connectTimeout: const Duration(seconds: 3),
-      receiveTimeout: const Duration(seconds: 3),
-      validateStatus: (_) => true,
-    ));
+    final dio = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 3),
+        receiveTimeout: const Duration(seconds: 3),
+        validateStatus: (_) => true,
+      ),
+    );
     try {
       final infoUrlV2 =
           'http://${target.ip}:${target.port}/api/localsend/v2/info';
@@ -578,15 +580,9 @@ class NoteSyncService extends ChangeNotifier {
         }
       }
       if (statusCode >= 200 && statusCode < 300) {
-        AppLogger.d(
-          'Preflight OK: $statusCode',
-          source: 'NoteSyncService',
-        );
+        AppLogger.d('Preflight OK: $statusCode', source: 'NoteSyncService');
       } else {
-        AppLogger.w(
-          'Preflight warn: $statusCode',
-          source: 'NoteSyncService',
-        );
+        AppLogger.w('Preflight warn: $statusCode', source: 'NoteSyncService');
       }
     } finally {
       dio.close();
@@ -668,7 +664,8 @@ class NoteSyncService extends ChangeNotifier {
     // 通知策略：
     // 1. 状态或消息变化立即通知
     // 2. 进度变化累计 >=0.5% 或 距上次>=_minUiNotifyIntervalMs 才通知（更实时）
-    final shouldNotify = statusChanged ||
+    final shouldNotify =
+        statusChanged ||
         messageChanged ||
         progressDelta >= 0.002 || // 0.2% 进度变化就刷新
         timeDeltaMs >= _minUiNotifyIntervalMs ||
@@ -927,8 +924,7 @@ class NoteSyncService extends ChangeNotifier {
     String sessionId,
     int totalBytes,
     String senderAlias,
-  ) =>
-      _handleReceiveSessionCreated(sessionId, totalBytes, senderAlias);
+  ) => _handleReceiveSessionCreated(sessionId, totalBytes, senderAlias);
 
   @visibleForTesting
   void debugHandleReceiveProgress(int received, int total) =>

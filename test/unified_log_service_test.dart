@@ -27,22 +27,24 @@ void main() {
       await logDb.close();
     });
 
-    test('warning logs persist promptly even when persistence is disabled',
-        () async {
-      final message =
-          'warning-persist-${DateTime.now().microsecondsSinceEpoch}';
+    test(
+      'warning logs persist promptly even when persistence is disabled',
+      () async {
+        final message =
+            'warning-persist-${DateTime.now().microsecondsSinceEpoch}';
 
-      service.warning(message, source: 'UnifiedLogServiceTest');
-      await Future<void>.delayed(const Duration(milliseconds: 150));
+        service.warning(message, source: 'UnifiedLogServiceTest');
+        await Future<void>.delayed(const Duration(milliseconds: 150));
 
-      final queried = await service.queryLogs(
-        searchText: message,
-        source: 'UnifiedLogServiceTest',
-        limit: 10,
-      );
+        final queried = await service.queryLogs(
+          searchText: message,
+          source: 'UnifiedLogServiceTest',
+          limit: 10,
+        );
 
-      expect(queried.any((entry) => entry.message == message), isTrue);
-    });
+        expect(queried.any((entry) => entry.message == message), isTrue);
+      },
+    );
 
     test('captures external package logging messages at debug level', () async {
       final message = 'external-debug-${DateTime.now().microsecondsSinceEpoch}';

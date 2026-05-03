@@ -13,28 +13,14 @@ void main() {
         frequency: PushFrequency.weekends,
       );
 
-      expect(
-        weekdaySettings.shouldPushOnDate(DateTime(2026, 3, 13)),
-        isTrue,
-      );
-      expect(
-        weekdaySettings.shouldPushOnDate(DateTime(2026, 3, 14)),
-        isFalse,
-      );
-      expect(
-        weekendSettings.shouldPushOnDate(DateTime(2026, 3, 14)),
-        isTrue,
-      );
-      expect(
-        weekendSettings.shouldPushOnDate(DateTime(2026, 3, 13)),
-        isFalse,
-      );
+      expect(weekdaySettings.shouldPushOnDate(DateTime(2026, 3, 13)), isTrue);
+      expect(weekdaySettings.shouldPushOnDate(DateTime(2026, 3, 14)), isFalse);
+      expect(weekendSettings.shouldPushOnDate(DateTime(2026, 3, 14)), isTrue);
+      expect(weekendSettings.shouldPushOnDate(DateTime(2026, 3, 13)), isFalse);
     });
 
     test('nextPushDateFrom skips inactive days for weekdays mode', () {
-      const settings = SmartPushSettings(
-        frequency: PushFrequency.weekdays,
-      );
+      const settings = SmartPushSettings(frequency: PushFrequency.weekdays);
 
       final nextDate = settings.nextPushDateFrom(DateTime(2026, 3, 14));
 
@@ -42,9 +28,7 @@ void main() {
     });
 
     test('nextPushDateFrom skips inactive days for weekends mode', () {
-      const settings = SmartPushSettings(
-        frequency: PushFrequency.weekends,
-      );
+      const settings = SmartPushSettings(frequency: PushFrequency.weekends);
 
       final nextDate = settings.nextPushDateFrom(DateTime(2026, 3, 13));
 
@@ -59,8 +43,10 @@ void main() {
 
       expect(settings.shouldPushOnDate(DateTime(2026, 3, 16)), isTrue);
       expect(settings.shouldPushOnDate(DateTime(2026, 3, 17)), isFalse);
-      expect(settings.nextPushDateFrom(DateTime(2026, 3, 17)),
-          DateTime(2026, 3, 18));
+      expect(
+        settings.nextPushDateFrom(DateTime(2026, 3, 17)),
+        DateTime(2026, 3, 18),
+      );
     });
 
     test('selected weekdays round-trip through json', () {

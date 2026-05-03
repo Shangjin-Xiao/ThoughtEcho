@@ -18,7 +18,8 @@ extension SmartPushScheduling on SmartPushService {
       if (PlatformHelper.isAndroid) {
         for (int i = 0; i < 10; i++) {
           await AndroidAlarmManager.cancel(
-              SmartPushService._androidAlarmId + i);
+            SmartPushService._androidAlarmId + i,
+          );
         }
         await AndroidAlarmManager.cancel(SmartPushService._dailyQuoteAlarmId);
       }
@@ -43,8 +44,9 @@ extension SmartPushScheduling on SmartPushService {
         );
       } else {
         // 自定义模式：使用用户设置的时间，不做合并
-        slotsToSchedule =
-            _settings.pushTimeSlots.where((s) => s.enabled).toList();
+        slotsToSchedule = _settings.pushTimeSlots
+            .where((s) => s.enabled)
+            .toList();
       }
 
       // 持久化今日实际调度的时间（供后台周期性检查使用）
@@ -184,8 +186,8 @@ extension SmartPushScheduling on SmartPushService {
     }
 
     // 2. 降级：使用传统的笔记创建时间分析（SQL 聚合，不加载内容）
-    final hourDistribution =
-        await _databaseService.getHourDistributionForSmartPush();
+    final hourDistribution = await _databaseService
+        .getHourDistributionForSmartPush();
 
     final totalNotes = hourDistribution.reduce((a, b) => a + b);
     if (totalNotes < 10) {
@@ -326,9 +328,7 @@ extension SmartPushScheduling on SmartPushService {
     }
 
     if (merged.length < slots.length) {
-      AppLogger.i(
-        '时间槽合并：${slots.length} → ${merged.length} 个（间隔 <30 分钟的已合并）',
-      );
+      AppLogger.i('时间槽合并：${slots.length} → ${merged.length} 个（间隔 <30 分钟的已合并）');
     }
 
     return merged;
@@ -339,7 +339,9 @@ extension SmartPushScheduling on SmartPushService {
     final today = DateTime.now().toIso8601String().substring(0, 10);
     final timesStr = slots.map((s) => '${s.hour}:${s.minute}').join(',');
     await _mmkv.setString(
-        SmartPushService._scheduledTimesKey, '$today|$timesStr');
+      SmartPushService._scheduledTimesKey,
+      '$today|$timesStr',
+    );
     AppLogger.d('已持久化今日推送时间: $timesStr');
   }
 

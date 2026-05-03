@@ -115,8 +115,8 @@ class AccessibleColorGrid extends StatelessWidget {
                         color: isSelected
                             ? colorScheme.primary
                             : color == Colors.transparent
-                                ? Colors.grey.applyOpacity(0.5)
-                                : Colors.transparent,
+                            ? Colors.grey.applyOpacity(0.5)
+                            : Colors.transparent,
                         width: 2,
                       ),
                       boxShadow: [
@@ -132,19 +132,20 @@ class AccessibleColorGrid extends StatelessWidget {
                       child: isSelected
                           ? Icon(
                               Icons.check_circle,
-                              color: color == Colors.transparent ||
+                              color:
+                                  color == Colors.transparent ||
                                       color.computeLuminance() > 0.7
                                   ? colorScheme.primary
                                   : Colors.white,
                               size: 24,
                             )
                           : color == Colors.transparent
-                              ? const Icon(
-                                  Icons.block,
-                                  color: Colors.grey,
-                                  size: 18,
-                                )
-                              : null,
+                          ? const Icon(
+                              Icons.block,
+                              color: Colors.grey,
+                              size: 18,
+                            )
+                          : null,
                     ),
                   ),
                 ),

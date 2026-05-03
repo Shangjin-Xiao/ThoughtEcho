@@ -53,8 +53,10 @@ class _ApiKeyDiagnosticsPageState extends State<ApiKeyDiagnosticsPage> {
             if (_diagnosticResult.isNotEmpty) ...[
               Text(
                 l10n.diagnosticResultLabel,
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 8),
               Expanded(
@@ -109,13 +111,18 @@ class _ApiKeyDiagnosticsPageState extends State<ApiKeyDiagnosticsPage> {
 
       // 1. 多供应商配置检查
       buffer.writeln(l10n.diagnosticMultiProviderCheck);
-      buffer.writeln(l10n.diagnosticCurrentProvider(
-          currentProvider?.name ?? l10n.notSelectedStatus));
       buffer.writeln(
-          l10n.diagnosticAvailableProviders(multiSettings.providers.length));
+        l10n.diagnosticCurrentProvider(
+          currentProvider?.name ?? l10n.notSelectedStatus,
+        ),
+      );
+      buffer.writeln(
+        l10n.diagnosticAvailableProviders(multiSettings.providers.length),
+      );
       buffer.writeln(
         l10n.diagnosticEnabledProviders(
-            multiSettings.providers.where((p) => p.isEnabled).length),
+          multiSettings.providers.where((p) => p.isEnabled).length,
+        ),
       );
       buffer.writeln();
 
@@ -126,23 +133,32 @@ class _ApiKeyDiagnosticsPageState extends State<ApiKeyDiagnosticsPage> {
         buffer.writeln(l10n.diagnosticProviderName(currentProvider.name));
         buffer.writeln(l10n.diagnosticProviderUrl(currentProvider.apiUrl));
         buffer.writeln(l10n.diagnosticProviderModel(currentProvider.model));
-        buffer.writeln(l10n.diagnosticProviderEnabled(
-            currentProvider.isEnabled ? l10n.yesStatus : l10n.noStatus));
+        buffer.writeln(
+          l10n.diagnosticProviderEnabled(
+            currentProvider.isEnabled ? l10n.yesStatus : l10n.noStatus,
+          ),
+        );
         buffer.writeln();
 
         // 3. API密钥检查
         buffer.writeln(l10n.diagnosticApiKeyCheck);
         final hasApiKeyInSettings = currentProvider.apiKey.trim().isNotEmpty;
-        buffer.writeln(l10n.diagnosticApiKeyInSettings(
-            hasApiKeyInSettings ? l10n.yesStatus : l10n.noStatus));
+        buffer.writeln(
+          l10n.diagnosticApiKeyInSettings(
+            hasApiKeyInSettings ? l10n.yesStatus : l10n.noStatus,
+          ),
+        );
 
         if (hasApiKeyInSettings) {
           buffer.writeln(
-              l10n.diagnosticApiKeyLength(currentProvider.apiKey.length));
+            l10n.diagnosticApiKeyLength(currentProvider.apiKey.length),
+          );
           buffer.writeln(
-            l10n.diagnosticApiKeyPrefix(currentProvider.apiKey.length > 15
-                ? "${currentProvider.apiKey.substring(0, 15)}..."
-                : currentProvider.apiKey),
+            l10n.diagnosticApiKeyPrefix(
+              currentProvider.apiKey.length > 15
+                  ? "${currentProvider.apiKey.substring(0, 15)}..."
+                  : currentProvider.apiKey,
+            ),
           );
         }
 
@@ -151,16 +167,22 @@ class _ApiKeyDiagnosticsPageState extends State<ApiKeyDiagnosticsPage> {
           currentProvider.id,
         );
         final hasSecureApiKey = secureApiKey.isNotEmpty;
-        buffer.writeln(l10n.diagnosticSecureApiKeyExists(
-            hasSecureApiKey ? l10n.yesStatus : l10n.noStatus));
+        buffer.writeln(
+          l10n.diagnosticSecureApiKeyExists(
+            hasSecureApiKey ? l10n.yesStatus : l10n.noStatus,
+          ),
+        );
 
         if (hasSecureApiKey) {
-          buffer
-              .writeln(l10n.diagnosticSecureApiKeyLength(secureApiKey.length));
           buffer.writeln(
-            l10n.diagnosticSecureApiKeyPrefix(secureApiKey.length > 15
-                ? "${secureApiKey.substring(0, 15)}..."
-                : secureApiKey),
+            l10n.diagnosticSecureApiKeyLength(secureApiKey.length),
+          );
+          buffer.writeln(
+            l10n.diagnosticSecureApiKeyPrefix(
+              secureApiKey.length > 15
+                  ? "${secureApiKey.substring(0, 15)}..."
+                  : secureApiKey,
+            ),
           );
         }
         buffer.writeln();
@@ -170,13 +192,19 @@ class _ApiKeyDiagnosticsPageState extends State<ApiKeyDiagnosticsPage> {
         final isValidAsync = await apiKeyManager.hasValidProviderApiKey(
           currentProvider.id,
         );
-        buffer.writeln(l10n.diagnosticAsyncValidation(
-            isValidAsync ? l10n.passStatus : l10n.failStatus));
+        buffer.writeln(
+          l10n.diagnosticAsyncValidation(
+            isValidAsync ? l10n.passStatus : l10n.failStatus,
+          ),
+        );
 
         if (hasSecureApiKey) {
           final isFormatValid = apiKeyManager.isValidApiKeyFormat(secureApiKey);
-          buffer.writeln(l10n.diagnosticFormatValidation(
-              isFormatValid ? l10n.passStatus : l10n.failStatus));
+          buffer.writeln(
+            l10n.diagnosticFormatValidation(
+              isFormatValid ? l10n.passStatus : l10n.failStatus,
+            ),
+          );
         }
         buffer.writeln();
       } else {
@@ -190,11 +218,12 @@ class _ApiKeyDiagnosticsPageState extends State<ApiKeyDiagnosticsPage> {
         final hasKey = await apiKeyManager.hasValidProviderApiKey(provider.id);
         buffer.writeln(
           l10n.diagnosticProviderStatusItem(
-              provider.name,
-              hasKey ? "✓" : "✗",
-              provider.isEnabled
-                  ? "(${l10n.settingsLocationEnabled})"
-                  : "(${l10n.locationServiceDisabled})"),
+            provider.name,
+            hasKey ? "✓" : "✗",
+            provider.isEnabled
+                ? "(${l10n.settingsLocationEnabled})"
+                : "(${l10n.locationServiceDisabled})",
+          ),
         );
       }
       buffer.writeln();
@@ -211,7 +240,8 @@ class _ApiKeyDiagnosticsPageState extends State<ApiKeyDiagnosticsPage> {
         );
         if (!hasValidKey) {
           buffer.writeln(
-              l10n.diagnosticSuggestionConfigureKey(currentProvider.name));
+            l10n.diagnosticSuggestionConfigureKey(currentProvider.name),
+          );
         } else {
           buffer.writeln(l10n.diagnosticSuggestionNormal);
         }

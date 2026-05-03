@@ -143,8 +143,11 @@ class DatabaseHealthService {
   Future<({int total, int active, int deleted})> _getQuoteCounts(
     Database db,
   ) async {
-    final hasDeletedColumn =
-        await checkColumnExists(db, 'quotes', 'is_deleted');
+    final hasDeletedColumn = await checkColumnExists(
+      db,
+      'quotes',
+      'is_deleted',
+    );
     if (!hasDeletedColumn) {
       final result = await db.rawQuery('SELECT COUNT(*) as total FROM quotes');
       final total = _readCount(result.first, 'total');
@@ -177,7 +180,8 @@ class DatabaseHealthService {
 
       // 1. 验证外键约束状态
       final foreignKeysResult = await db.rawQuery('PRAGMA foreign_keys');
-      final foreignKeysEnabled = foreignKeysResult.isNotEmpty &&
+      final foreignKeysEnabled =
+          foreignKeysResult.isNotEmpty &&
           foreignKeysResult.first['foreign_keys'] == 1;
 
       // 2. 获取数据库版本
@@ -366,13 +370,17 @@ class DatabaseHealthService {
       List<Map<String, dynamic>> results = [];
 
       // 兼容迁移前/半迁移状态：先检查 is_deleted 列是否存在
-      final hasDeletedColumn =
-          await checkColumnExists(db, 'quotes', 'is_deleted');
+      final hasDeletedColumn = await checkColumnExists(
+        db,
+        'quotes',
+        'is_deleted',
+      );
       final deletedFilter = hasDeletedColumn
           ? 'AND (q.is_deleted = 0 OR q.is_deleted IS NULL)'
           : '';
-      final deletedFilterSimple =
-          hasDeletedColumn ? 'AND (is_deleted = 0 OR is_deleted IS NULL)' : '';
+      final deletedFilterSimple = hasDeletedColumn
+          ? 'AND (is_deleted = 0 OR is_deleted IS NULL)'
+          : '';
 
       if (offlineQuoteSource == 'tagOnly') {
         // 简化查询：直接用 tag_id 匹配，跳过 categories 表 JOIN

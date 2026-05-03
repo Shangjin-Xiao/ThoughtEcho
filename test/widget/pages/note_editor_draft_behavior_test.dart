@@ -79,28 +79,27 @@ void main() {
   testWidgets('clearing the editor body removes the recoverable draft', (
     tester,
   ) async {
-    await tester.pumpWidget(MultiProvider(
-      providers: [
-        ChangeNotifierProvider<SettingsService>.value(
-          value: _TestSettingsService(),
-        ),
-      ],
-      child: MaterialApp(
-        localizationsDelegates: const [
-          ...AppLocalizations.localizationsDelegates,
-          FlutterQuillLocalizations.delegate,
-        ],
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: NoteFullEditorPage(
-          initialContent: '',
-          initialQuote: Quote(
-            content: '',
-            date: '2026-03-29T00:00:00.000Z',
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(
+            value: _TestSettingsService(),
           ),
-          skipDefaultMetadataAutofill: true,
+        ],
+        child: MaterialApp(
+          localizationsDelegates: const [
+            ...AppLocalizations.localizationsDelegates,
+            FlutterQuillLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: NoteFullEditorPage(
+            initialContent: '',
+            initialQuote: Quote(content: '', date: '2026-03-29T00:00:00.000Z'),
+            skipDefaultMetadataAutofill: true,
+          ),
         ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
 
     final editor = find.byType(QuillEditor);
@@ -138,39 +137,43 @@ void main() {
       editSource: 'fullscreen',
     );
 
-    await tester.pumpWidget(MultiProvider(
-      providers: [
-        ChangeNotifierProvider<DatabaseService>.value(value: databaseService),
-        ChangeNotifierProvider<SettingsService>.value(
-          value: _TestSettingsService(),
-        ),
-      ],
-      child: MaterialApp(
-        localizationsDelegates: const [
-          ...AppLocalizations.localizationsDelegates,
-          FlutterQuillLocalizations.delegate,
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<DatabaseService>.value(value: databaseService),
+          ChangeNotifierProvider<SettingsService>.value(
+            value: _TestSettingsService(),
+          ),
         ],
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Builder(
-          builder: (context) => Scaffold(
-            body: Center(
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).push(MaterialPageRoute<void>(
-                    builder: (_) => NoteFullEditorPage(
-                      initialContent: partialQuote.content,
-                      initialQuote: partialQuote,
-                      skipDefaultMetadataAutofill: true,
-                    ),
-                  ));
-                },
-                child: const Text('Open editor'),
+        child: MaterialApp(
+          localizationsDelegates: const [
+            ...AppLocalizations.localizationsDelegates,
+            FlutterQuillLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Builder(
+            builder: (context) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => NoteFullEditorPage(
+                          initialContent: partialQuote.content,
+                          initialQuote: partialQuote,
+                          skipDefaultMetadataAutofill: true,
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Open editor'),
+                ),
               ),
             ),
           ),
         ),
       ),
-    ));
+    );
 
     await tester.tap(find.text('Open editor'));
     await tester.pumpAndSettle();
@@ -186,40 +189,36 @@ void main() {
     expect(find.text('Open editor'), findsOneWidget);
   });
 
-  testWidgets('metadata tag taps update the sheet immediately', (
-    tester,
-  ) async {
+  testWidgets('metadata tag taps update the sheet immediately', (tester) async {
     tester.view.physicalSize = const Size(800, 1200);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    await tester.pumpWidget(MultiProvider(
-      providers: [
-        ChangeNotifierProvider<SettingsService>.value(
-          value: _TestSettingsService(),
-        ),
-      ],
-      child: MaterialApp(
-        locale: const Locale('en'),
-        localizationsDelegates: const [
-          ...AppLocalizations.localizationsDelegates,
-          FlutterQuillLocalizations.delegate,
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<SettingsService>.value(
+            value: _TestSettingsService(),
+          ),
         ],
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: NoteFullEditorPage(
-          initialContent: '',
-          allTags: [
-            NoteCategory(
-              id: 'tag-1',
-              name: 'Mood',
-              iconName: 'label',
-            ),
+        child: MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: const [
+            ...AppLocalizations.localizationsDelegates,
+            FlutterQuillLocalizations.delegate,
           ],
-          skipDefaultMetadataAutofill: true,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: NoteFullEditorPage(
+            initialContent: '',
+            allTags: [
+              NoteCategory(id: 'tag-1', name: 'Mood', iconName: 'label'),
+            ],
+            skipDefaultMetadataAutofill: true,
+          ),
         ),
       ),
-    ));
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.byTooltip('Edit Metadata'));

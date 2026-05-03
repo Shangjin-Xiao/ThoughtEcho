@@ -60,8 +60,11 @@ class AppSnackBar {
   }
 
   /// Informational message — default theme color, normal duration.
-  static void info(BuildContext context, String message,
-      {SnackBarAction? action}) {
+  static void info(
+    BuildContext context,
+    String message, {
+    SnackBarAction? action,
+  }) {
     show(context, message, action: action);
   }
 
@@ -76,8 +79,11 @@ class AppSnackBar {
   }
 
   /// Error message — red background, longer duration.
-  static void error(BuildContext context, String message,
-      {SnackBarAction? action}) {
+  static void error(
+    BuildContext context,
+    String message, {
+    SnackBarAction? action,
+  }) {
     show(
       context,
       message,

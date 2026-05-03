@@ -15,10 +15,7 @@ part 'hitokoto_settings_page_info_sections.dart';
 part 'hitokoto_settings_page_widgets.dart';
 
 class HitokotoSettingsPage extends StatefulWidget {
-  const HitokotoSettingsPage({
-    super.key,
-    this.apiNinjasApiKeyStatusLoader,
-  });
+  const HitokotoSettingsPage({super.key, this.apiNinjasApiKeyStatusLoader});
 
   final Future<bool> Function()? apiNinjasApiKeyStatusLoader;
 
@@ -242,11 +239,9 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
   void _showSaveFailedSnackBar(Object error) {
     final l10n = AppLocalizations.of(context);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(l10n.saveFailed(error.toString())),
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.saveFailed(error.toString()))));
   }
 
   // 保存选择的类型
@@ -270,9 +265,7 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
       _selectedProvider,
     );
     final showProviderCategorySelection =
-        ApiService.supportsProviderCategorySelection(
-      _selectedProvider,
-    );
+        ApiService.supportsProviderCategorySelection(_selectedProvider);
     final providerLabel =
         providerLabels[_selectedProvider] ?? providerLabels.values.first;
 
@@ -379,17 +372,11 @@ class _HitokotoSettingsPageState extends State<HitokotoSettingsPage>
                 ),
               ] else if (!showProviderCategorySelection) ...[
                 const SizedBox(height: 24),
-                _buildNoTypeSelectionCard(
-                  context: context,
-                  l10n: l10n,
-                ),
+                _buildNoTypeSelectionCard(context: context, l10n: l10n),
               ],
               if (showHitokotoTypeSelection) ...[
                 const SizedBox(height: 24),
-                _buildUsageInstructionsCard(
-                  context: context,
-                  l10n: l10n,
-                ),
+                _buildUsageInstructionsCard(context: context, l10n: l10n),
               ],
               const SizedBox(height: 24),
               _buildProviderAttributionCard(

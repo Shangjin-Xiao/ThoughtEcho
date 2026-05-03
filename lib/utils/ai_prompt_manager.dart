@@ -521,7 +521,8 @@ HTML设计要求：
     buffer.writeln();
 
     // 添加元数据上下文（如果有）
-    final hasMetadata = (sourceAuthor?.isNotEmpty ?? false) ||
+    final hasMetadata =
+        (sourceAuthor?.isNotEmpty ?? false) ||
         (sourceWork?.isNotEmpty ?? false) ||
         (location?.isNotEmpty ?? false) ||
         (weather?.isNotEmpty ?? false) ||
@@ -617,7 +618,8 @@ HTML设计要求：
     buffer.writeln(content);
 
     // 添加元数据上下文（如果有）
-    final hasMetadata = (sourceAuthor?.isNotEmpty ?? false) ||
+    final hasMetadata =
+        (sourceAuthor?.isNotEmpty ?? false) ||
         (sourceWork?.isNotEmpty ?? false) ||
         (location?.isNotEmpty ?? false) ||
         (weather?.isNotEmpty ?? false) ||
@@ -843,8 +845,9 @@ ${_getLanguageDirective(languageCode)}''';
   }) {
     final timeText = mostTimePeriod ?? '—';
     final weatherText = mostWeather ?? '—';
-    final tagText =
-        topTag != null && topTag.trim().isNotEmpty ? '#$topTag' : '—';
+    final tagText = topTag != null && topTag.trim().isNotEmpty
+        ? '#$topTag'
+        : '—';
 
     final stats = [
       '周期：$periodLabel',
@@ -860,8 +863,8 @@ ${_getLanguageDirective(languageCode)}''';
     final contentForAnalysis = fullNotesContent ?? notesPreview;
     final contentSection =
         (contentForAnalysis == null || contentForAnalysis.trim().isEmpty)
-            ? '（无可用笔记内容）'
-            : contentForAnalysis;
+        ? '（无可用笔记内容）'
+        : contentForAnalysis;
 
     String previousInsightsSection = '';
     if (previousInsights != null && previousInsights.isNotEmpty) {
@@ -903,7 +906,8 @@ $contentSection
 
     final time =
         mostTimePeriod ?? (isEnglish ? 'evenly distributed' : '本期时段分布较均衡');
-    final weather = mostWeather ??
+    final weather =
+        mostWeather ??
         (isEnglish ? 'weather was not a significant factor' : '天气因素不明显');
     // 处理标签：清理前后空格和多余符号，直接使用标签名
     String tag;

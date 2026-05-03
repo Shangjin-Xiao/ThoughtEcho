@@ -70,7 +70,8 @@ class PicoBleService {
 
       // 剔除空值减轻传输负担
       payload.removeWhere(
-          (key, value) => value == null || value.toString().isEmpty);
+        (key, value) => value == null || value.toString().isEmpty,
+      );
 
       final jsonStr = jsonEncode(payload);
       final bytes = utf8.encode(jsonStr); // 必须是 UTF-8 编码避免水墨屏中文乱码
@@ -132,8 +133,9 @@ class PicoBleService {
         return false;
       }
 
-      final targetResult =
-          results.firstWhere((r) => r.device.platformName == targetDeviceName);
+      final targetResult = results.firstWhere(
+        (r) => r.device.platformName == targetDeviceName,
+      );
       _connectedDevice = targetResult.device;
 
       AppLogger.i('找到 Pico! 准备建立 BLE 连接...');

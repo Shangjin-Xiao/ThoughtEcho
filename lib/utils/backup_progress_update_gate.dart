@@ -55,10 +55,12 @@ class BackupProgressUpdateGate {
     final isStageChanged = stageKey != _lastStageKey;
     final isProgressChanged = normalizedPercent != _lastProgressPercent;
     final isCompleted = normalizedPercent >= 100;
-    final isIntervalPassed = _lastUpdateAt == null ||
+    final isIntervalPassed =
+        _lastUpdateAt == null ||
         currentTime.difference(_lastUpdateAt!) >= minUpdateInterval;
 
-    final shouldEmit = isFirstUpdate ||
+    final shouldEmit =
+        isFirstUpdate ||
         isStageChanged ||
         isCompleted ||
         (isProgressChanged && isIntervalPassed);

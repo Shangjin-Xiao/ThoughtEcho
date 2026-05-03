@@ -290,7 +290,7 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
   }
 
   List<({PopoverArrowDirection direction, bool allowClamp})>
-      _buildPlacementAttempts(FeatureGuidePlacement placement) {
+  _buildPlacementAttempts(FeatureGuidePlacement placement) {
     switch (placement) {
       case FeatureGuidePlacement.above:
         return const [
@@ -499,10 +499,12 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
     Widget buildHorizontalArrow(bool isTop) {
       return LayoutBuilder(
         builder: (context, constraints) {
-          final width =
-              constraints.maxWidth.isFinite ? constraints.maxWidth : 220.0;
-          final offset =
-              arrowOffset.clamp(arrowSize, width - arrowSize).toDouble();
+          final width = constraints.maxWidth.isFinite
+              ? constraints.maxWidth
+              : 220.0;
+          final offset = arrowOffset
+              .clamp(arrowSize, width - arrowSize)
+              .toDouble();
           return Padding(
             padding: EdgeInsets.only(left: offset - arrowSize),
             child: CustomPaint(
@@ -522,10 +524,12 @@ class _FeatureGuidePopoverState extends State<FeatureGuidePopover>
     Widget buildVerticalArrow(bool isLeft) {
       return LayoutBuilder(
         builder: (context, constraints) {
-          final height =
-              constraints.maxHeight.isFinite ? constraints.maxHeight : 120.0;
-          final offset =
-              arrowOffset.clamp(arrowSize, height - arrowSize).toDouble();
+          final height = constraints.maxHeight.isFinite
+              ? constraints.maxHeight
+              : 120.0;
+          final offset = arrowOffset
+              .clamp(arrowSize, height - arrowSize)
+              .toDouble();
           return Padding(
             padding: EdgeInsets.only(top: offset - arrowSize),
             child: CustomPaint(

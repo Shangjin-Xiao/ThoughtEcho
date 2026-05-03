@@ -53,8 +53,8 @@ class Quote {
     this.favoriteCount = 0, // 新增：心形点击次数，默认为0
     this.isDeleted = false,
     String? deletedAt,
-  })  : _source = source,
-        deletedAt = isDeleted ? _normalizeToUtc(deletedAt) : null;
+  }) : _source = source,
+       deletedAt = isDeleted ? _normalizeToUtc(deletedAt) : null;
 
   /// 获取来源信息 (兼容性 getter)
   /// 如果 sourceAuthor 和 sourceWork 存在，则优先从它们重建

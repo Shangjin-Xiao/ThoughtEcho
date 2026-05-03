@@ -164,17 +164,18 @@ class AppSettings {
       parsedRetentionDays = int.tryParse(rawRetentionDays);
     }
 
-    final normalizedProvider =
-        _readString(map['dailyQuoteProvider'], 'hitokoto');
+    final normalizedProvider = _readString(
+      map['dailyQuoteProvider'],
+      'hitokoto',
+    );
     final normalizedApiNinjasCategories = _readStringList(
       map['apiNinjasCategories'],
     ).where(_supportedApiNinjasCategories.contains).toList(growable: false);
 
     return AppSettings(
       hitokotoType: _readString(map['hitokotoType'], 'a,b,c,d,e,f,g,h,i,j,k'),
-      dailyQuoteProvider: _supportedDailyQuoteProviders.contains(
-        normalizedProvider,
-      )
+      dailyQuoteProvider:
+          _supportedDailyQuoteProviders.contains(normalizedProvider)
           ? normalizedProvider
           : 'hitokoto',
       apiNinjasCategories: normalizedApiNinjasCategories,
@@ -212,38 +213,38 @@ class AppSettings {
   }
 
   factory AppSettings.defaultSettings() => AppSettings(
-        hitokotoType: 'a,b,c,d,e,f,g,h,i,j,k',
-        dailyQuoteProvider: 'hitokoto',
-        apiNinjasCategories: const [],
-        clipboardMonitoringEnabled: false,
-        defaultStartPage: 0,
-        hasCompletedOnboarding: false,
-        aiCardGenerationEnabled: true,
-        reportInsightsUseAI: false,
-        todayThoughtsUseAI: true,
-        prioritizeBoldContentInCollapse: false,
-        showFavoriteButton: true,
-        useLocalQuotesOnly: false,
-        localeCode: null, // 默认跟随系统
-        showExactTime: false, // 默认不显示精确时间
-        showNoteEditTime: false, // 默认不显示笔记编辑时间
-        enableHiddenNotes: false, // 默认不启用隐藏笔记功能
-        requireBiometricForHidden: false, // 默认不需要生物识别验证
-        developerMode: false, // 默认关闭开发者模式
-        enableFirstOpenScrollPerfMonitor: false,
-        autoAttachLocation: false, // 默认不自动勾选位置
-        autoAttachWeather: false, // 默认不自动勾选天气
-        excerptIntentEnabled: true,
-        defaultAuthor: null,
-        defaultSource: null,
-        defaultTagIds: const [],
-        anniversaryShown: false,
-        anniversaryAnimationEnabled: true,
-        trashRetentionDays: 30,
-        trashRetentionLastModified: null,
-        skipNonFullscreenEditor: false, // 默认不跳过非全屏编辑器
-        offlineQuoteSource: 'tagOnly',
-      );
+    hitokotoType: 'a,b,c,d,e,f,g,h,i,j,k',
+    dailyQuoteProvider: 'hitokoto',
+    apiNinjasCategories: const [],
+    clipboardMonitoringEnabled: false,
+    defaultStartPage: 0,
+    hasCompletedOnboarding: false,
+    aiCardGenerationEnabled: true,
+    reportInsightsUseAI: false,
+    todayThoughtsUseAI: true,
+    prioritizeBoldContentInCollapse: false,
+    showFavoriteButton: true,
+    useLocalQuotesOnly: false,
+    localeCode: null, // 默认跟随系统
+    showExactTime: false, // 默认不显示精确时间
+    showNoteEditTime: false, // 默认不显示笔记编辑时间
+    enableHiddenNotes: false, // 默认不启用隐藏笔记功能
+    requireBiometricForHidden: false, // 默认不需要生物识别验证
+    developerMode: false, // 默认关闭开发者模式
+    enableFirstOpenScrollPerfMonitor: false,
+    autoAttachLocation: false, // 默认不自动勾选位置
+    autoAttachWeather: false, // 默认不自动勾选天气
+    excerptIntentEnabled: true,
+    defaultAuthor: null,
+    defaultSource: null,
+    defaultTagIds: const [],
+    anniversaryShown: false,
+    anniversaryAnimationEnabled: true,
+    trashRetentionDays: 30,
+    trashRetentionLastModified: null,
+    skipNonFullscreenEditor: false, // 默认不跳过非全屏编辑器
+    offlineQuoteSource: 'tagOnly',
+  );
 
   /// 使用特殊标记来区分"未指定"和"设置为null（跟随系统）"
   AppSettings copyWith({
@@ -296,7 +297,8 @@ class AppSettings {
           aiCardGenerationEnabled ?? this.aiCardGenerationEnabled,
       reportInsightsUseAI: reportInsightsUseAI ?? this.reportInsightsUseAI,
       todayThoughtsUseAI: todayThoughtsUseAI ?? this.todayThoughtsUseAI,
-      prioritizeBoldContentInCollapse: prioritizeBoldContentInCollapse ??
+      prioritizeBoldContentInCollapse:
+          prioritizeBoldContentInCollapse ??
           this.prioritizeBoldContentInCollapse,
       showFavoriteButton: showFavoriteButton ?? this.showFavoriteButton,
       useLocalQuotesOnly: useLocalQuotesOnly ?? this.useLocalQuotesOnly,
@@ -307,15 +309,18 @@ class AppSettings {
       requireBiometricForHidden:
           requireBiometricForHidden ?? this.requireBiometricForHidden,
       developerMode: developerMode ?? this.developerMode,
-      enableFirstOpenScrollPerfMonitor: enableFirstOpenScrollPerfMonitor ??
+      enableFirstOpenScrollPerfMonitor:
+          enableFirstOpenScrollPerfMonitor ??
           this.enableFirstOpenScrollPerfMonitor,
       autoAttachLocation: autoAttachLocation ?? this.autoAttachLocation,
       autoAttachWeather: autoAttachWeather ?? this.autoAttachWeather,
       excerptIntentEnabled: excerptIntentEnabled ?? this.excerptIntentEnabled,
-      defaultAuthor:
-          clearDefaultAuthor ? null : (defaultAuthor ?? this.defaultAuthor),
-      defaultSource:
-          clearDefaultSource ? null : (defaultSource ?? this.defaultSource),
+      defaultAuthor: clearDefaultAuthor
+          ? null
+          : (defaultAuthor ?? this.defaultAuthor),
+      defaultSource: clearDefaultSource
+          ? null
+          : (defaultSource ?? this.defaultSource),
       defaultTagIds: defaultTagIds ?? this.defaultTagIds,
       anniversaryShown: anniversaryShown ?? this.anniversaryShown,
       anniversaryAnimationEnabled:

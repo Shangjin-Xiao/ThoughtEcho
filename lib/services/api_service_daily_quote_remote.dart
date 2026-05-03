@@ -42,8 +42,10 @@ Future<Map<String, dynamic>?> _fetchFromHitokoto(
   }
 
   logDebug('一言API请求URL: $apiUrl');
-  final response =
-      await httpGet(apiUrl, timeoutSeconds: ApiService._timeoutSeconds);
+  final response = await httpGet(
+    apiUrl,
+    timeoutSeconds: ApiService._timeoutSeconds,
+  );
   if (response.statusCode != 200) {
     logDebug('一言API请求失败: ${response.statusCode}, 响应体: ${response.body}');
     return null;
@@ -75,8 +77,10 @@ Future<Map<String, dynamic>?> _fetchFromZenQuotes(
   required DailyQuoteHttpGet httpGet,
 }) async {
   const apiUrl = 'https://zenquotes.io/api/random';
-  final response =
-      await httpGet(apiUrl, timeoutSeconds: ApiService._timeoutSeconds);
+  final response = await httpGet(
+    apiUrl,
+    timeoutSeconds: ApiService._timeoutSeconds,
+  );
   if (response.statusCode != 200) {
     logDebug('ZenQuotes 请求失败: ${response.statusCode}, 响应体: ${response.body}');
     return null;
@@ -165,8 +169,10 @@ Future<Map<String, dynamic>?> _fetchFromMeigen(
   required DailyQuoteHttpGet httpGet,
 }) async {
   const apiUrl = 'https://meigen.doodlenote.net/api/json.php?c=1';
-  final response =
-      await httpGet(apiUrl, timeoutSeconds: ApiService._timeoutSeconds);
+  final response = await httpGet(
+    apiUrl,
+    timeoutSeconds: ApiService._timeoutSeconds,
+  );
   if (response.statusCode != 200) {
     logDebug('名言教えるよ 请求失败: ${response.statusCode}, 响应体: ${response.body}');
     return null;
@@ -199,11 +205,14 @@ Future<Map<String, dynamic>?> _fetchFromKoreanAdvice(
   required DailyQuoteHttpGet httpGet,
 }) async {
   const apiUrl = 'https://korean-advice-open-api.vercel.app/api/advice';
-  final response =
-      await httpGet(apiUrl, timeoutSeconds: ApiService._timeoutSeconds);
+  final response = await httpGet(
+    apiUrl,
+    timeoutSeconds: ApiService._timeoutSeconds,
+  );
   if (response.statusCode != 200) {
     logDebug(
-        'Korean Advice 请求失败: ${response.statusCode}, 响应体: ${response.body}');
+      'Korean Advice 请求失败: ${response.statusCode}, 响应体: ${response.body}',
+    );
     return null;
   }
 

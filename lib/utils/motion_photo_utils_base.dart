@@ -1,8 +1,5 @@
 class MotionPhotoInfo {
-  const MotionPhotoInfo({
-    required this.videoStart,
-    required this.videoEnd,
-  });
+  const MotionPhotoInfo({required this.videoStart, required this.videoEnd});
 
   final int videoStart;
   final int videoEnd;

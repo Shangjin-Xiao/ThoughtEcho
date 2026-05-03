@@ -57,8 +57,11 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
         _webTombstones = <String, String>{};
       }
     } catch (e, stack) {
-      UnifiedLogService.instance
-          .error('初始化Web墓碑记录失败', error: e, stackTrace: stack);
+      UnifiedLogService.instance.error(
+        '初始化Web墓碑记录失败',
+        error: e,
+        stackTrace: stack,
+      );
       _webTombstones = <String, String>{};
     }
   }
@@ -71,18 +74,16 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       final prefs = await SharedPreferences.getInstance();
       final json = jsonEncode(
         _webTombstones!.entries
-            .map(
-              (entry) => {
-                'quote_id': entry.key,
-                'deleted_at': entry.value,
-              },
-            )
+            .map((entry) => {'quote_id': entry.key, 'deleted_at': entry.value})
             .toList(),
       );
       await prefs.setString(_webTombstonesKey, json);
     } catch (e, stack) {
-      UnifiedLogService.instance
-          .error('保存Web墓碑记录失败', error: e, stackTrace: stack);
+      UnifiedLogService.instance.error(
+        '保存Web墓碑记录失败',
+        error: e,
+        stackTrace: stack,
+      );
     }
   }
 
@@ -407,13 +408,14 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
           try {
             final quote = Quote.fromJson(row);
             final extracted =
-                await MediaReferenceService.extractMediaPathsFromQuote(
-              quote,
-            );
+                await MediaReferenceService.extractMediaPathsFromQuote(quote);
             mediaCandidates.addAll(extracted);
           } catch (e, stack) {
-            UnifiedLogService.instance
-                .error('提取已删除笔记媒体路径失败', error: e, stackTrace: stack);
+            UnifiedLogService.instance.error(
+              '提取已删除笔记媒体路径失败',
+              error: e,
+              stackTrace: stack,
+            );
           }
         }
 
@@ -435,21 +437,19 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
 
         final tombstoneBatch = txn.batch();
         for (final id in deletedIdsInTxn) {
-          tombstoneBatch.insert(
-            'quote_tombstones',
-            {
-              'quote_id': id,
-              'deleted_at': now,
-              'device_id': null,
-            },
-            conflictAlgorithm: ConflictAlgorithm.replace,
-          );
+          tombstoneBatch.insert('quote_tombstones', {
+            'quote_id': id,
+            'deleted_at': now,
+            'device_id': null,
+          }, conflictAlgorithm: ConflictAlgorithm.replace);
         }
         await tombstoneBatch.commit(noResult: true);
 
         for (final deleteBatch in _chunkIds(deletedIdsInTxn)) {
-          final deletePlaceholders =
-              List.filled(deleteBatch.length, '?').join(',');
+          final deletePlaceholders = List.filled(
+            deleteBatch.length,
+            '?',
+          ).join(',');
           await txn.rawDelete(
             'DELETE FROM quotes WHERE is_deleted = 1 AND id IN ($deletePlaceholders)',
             deleteBatch,
@@ -480,8 +480,11 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
             cachedAppPath: appPath,
           );
         } catch (e, stack) {
-          UnifiedLogService.instance
-              .error('清理孤儿媒体文件失败: $mediaPath', error: e, stackTrace: stack);
+          UnifiedLogService.instance.error(
+            '清理孤儿媒体文件失败: $mediaPath',
+            error: e,
+            stackTrace: stack,
+          );
         }
       }
 

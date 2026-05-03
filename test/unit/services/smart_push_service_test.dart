@@ -104,9 +104,7 @@ void main() {
       await tester.pumpAndSettle();
 
       navigatorKey.currentState!.push(
-        MaterialPageRoute<void>(
-          builder: (_) => const _TestPage(title: 'top'),
-        ),
+        MaterialPageRoute<void>(builder: (_) => const _TestPage(title: 'top')),
       );
       await tester.pumpAndSettle();
 
@@ -134,10 +132,6 @@ class _TestPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Text(title),
-      ),
-    );
+    return Scaffold(body: Center(child: Text(title)));
   }
 }

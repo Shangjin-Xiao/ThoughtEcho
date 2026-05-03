@@ -69,8 +69,9 @@ class StreamFileProcessor {
 
         // 计算本次读取的大小
         final remainingBytes = totalSize - copiedBytes;
-        final currentChunkSize =
-            remainingBytes < chunkSize ? remainingBytes : chunkSize;
+        final currentChunkSize = remainingBytes < chunkSize
+            ? remainingBytes
+            : chunkSize;
 
         // 流式读取数据
         final chunk = await reader.read(currentChunkSize);
@@ -165,8 +166,9 @@ class StreamFileProcessor {
 
         // 计算本次读取大小
         final remainingBytes = totalSize - readBytes;
-        final currentChunkSize =
-            remainingBytes < chunkSize ? remainingBytes : chunkSize;
+        final currentChunkSize = remainingBytes < chunkSize
+            ? remainingBytes
+            : chunkSize;
 
         // 读取数据块
         final chunk = await reader.read(currentChunkSize);
@@ -245,9 +247,9 @@ class StreamFileProcessor {
     switch (pressureLevel) {
       case 2: // 高压力
         return (currentChunkSize * 0.5).toInt().clamp(
-              _minChunkSize,
-              _maxChunkSize,
-            );
+          _minChunkSize,
+          _maxChunkSize,
+        );
       case 3: // 临界状态
         return _minChunkSize;
       default:

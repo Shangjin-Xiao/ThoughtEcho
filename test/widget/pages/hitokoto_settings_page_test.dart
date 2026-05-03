@@ -15,7 +15,7 @@ class _TestSettingsService extends ChangeNotifier implements SettingsService {
   AppSettings _appSettings;
   final Future<void> Function(String provider)? onSetDailyQuoteProvider;
   final Future<void> Function(List<String> categories)?
-      onSetApiNinjasCategories;
+  onSetApiNinjasCategories;
 
   _TestSettingsService({
     AppSettings? appSettings,
@@ -111,8 +111,9 @@ void main() {
 
   testWidgets('一言设置页显示离线一言数据源选项', (tester) async {
     final settings = _TestSettingsService();
-    final localizations =
-        await AppLocalizations.delegate.load(const Locale('zh'));
+    final localizations = await AppLocalizations.delegate.load(
+      const Locale('zh'),
+    );
 
     await pumpPage(tester, settings);
 
@@ -134,8 +135,9 @@ void main() {
 
   testWidgets('切换到其他 provider 时隐藏 Hitokoto 类型筛选', (tester) async {
     final settings = _TestSettingsService();
-    final localizations =
-        await AppLocalizations.delegate.load(const Locale('zh'));
+    final localizations = await AppLocalizations.delegate.load(
+      const Locale('zh'),
+    );
 
     await pumpPage(tester, settings);
 
@@ -154,8 +156,9 @@ void main() {
 
   testWidgets('选择 API Ninjas 时显示密钥和分类入口', (tester) async {
     final settings = _TestSettingsService();
-    final localizations =
-        await AppLocalizations.delegate.load(const Locale('zh'));
+    final localizations = await AppLocalizations.delegate.load(
+      const Locale('zh'),
+    );
 
     await pumpPage(tester, settings);
 
@@ -163,10 +166,14 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
     await tester.pumpAndSettle();
 
-    expect(find.text(localizations.dailyQuoteApiNinjasManageApiKey),
-        findsOneWidget);
-    expect(find.text(localizations.dailyQuoteApiNinjasCategorySelection),
-        findsOneWidget);
+    expect(
+      find.text(localizations.dailyQuoteApiNinjasManageApiKey),
+      findsOneWidget,
+    );
+    expect(
+      find.text(localizations.dailyQuoteApiNinjasCategorySelection),
+      findsOneWidget,
+    );
     expect(
       find.text(localizations.dailyQuoteProviderNoTypeSelection),
       findsNothing,
@@ -175,8 +182,9 @@ void main() {
 
   testWidgets('切换到 API Ninjas 时刷新密钥状态', (tester) async {
     final settings = _TestSettingsService();
-    final localizations =
-        await AppLocalizations.delegate.load(const Locale('zh'));
+    final localizations = await AppLocalizations.delegate.load(
+      const Locale('zh'),
+    );
     var loadCount = 0;
 
     await pumpPage(
@@ -193,16 +201,21 @@ void main() {
     await tester.pumpAndSettle();
     expect(loadCount, greaterThanOrEqualTo(1));
 
-    expect(find.text(localizations.dailyQuoteApiNinjasApiKeyConfigured),
-        findsOneWidget);
-    expect(find.text(localizations.dailyQuoteApiNinjasApiKeyMissing),
-        findsNothing);
+    expect(
+      find.text(localizations.dailyQuoteApiNinjasApiKeyConfigured),
+      findsOneWidget,
+    );
+    expect(
+      find.text(localizations.dailyQuoteApiNinjasApiKeyMissing),
+      findsNothing,
+    );
   });
 
   testWidgets('API Ninjas 密钥状态加载失败时降级为未配置状态', (tester) async {
     final settings = _TestSettingsService();
-    final localizations =
-        await AppLocalizations.delegate.load(const Locale('zh'));
+    final localizations = await AppLocalizations.delegate.load(
+      const Locale('zh'),
+    );
 
     await pumpPage(
       tester,
@@ -215,8 +228,10 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    expect(find.text(localizations.dailyQuoteApiNinjasApiKeyMissing),
-        findsOneWidget);
+    expect(
+      find.text(localizations.dailyQuoteApiNinjasApiKeyMissing),
+      findsOneWidget,
+    );
   });
 
   testWidgets('provider 保存完成前不显示保存成功提示', (tester) async {
@@ -224,8 +239,9 @@ void main() {
     final settings = _TestSettingsService(
       onSetDailyQuoteProvider: (_) => saveCompleter.future,
     );
-    final localizations =
-        await AppLocalizations.delegate.load(const Locale('zh'));
+    final localizations = await AppLocalizations.delegate.load(
+      const Locale('zh'),
+    );
 
     await pumpPage(tester, settings);
 
@@ -244,8 +260,9 @@ void main() {
     final settings = _TestSettingsService(
       onSetDailyQuoteProvider: (_) async => throw Exception('save-failed'),
     );
-    final localizations =
-        await AppLocalizations.delegate.load(const Locale('zh'));
+    final localizations = await AppLocalizations.delegate.load(
+      const Locale('zh'),
+    );
 
     await pumpPage(tester, settings);
 
@@ -263,8 +280,9 @@ void main() {
       onSetDailyQuoteProvider: (_) async => throw Exception('save-failed'),
     );
     var loadCount = 0;
-    final localizations =
-        await AppLocalizations.delegate.load(const Locale('zh'));
+    final localizations = await AppLocalizations.delegate.load(
+      const Locale('zh'),
+    );
 
     await pumpPage(
       tester,
@@ -280,8 +298,10 @@ void main() {
 
     expect(loadCount, 0);
     expect(settings.dailyQuoteProvider, 'hitokoto');
-    expect(find.text(localizations.dailyQuoteApiNinjasApiKeyConfigured),
-        findsNothing);
+    expect(
+      find.text(localizations.dailyQuoteApiNinjasApiKeyConfigured),
+      findsNothing,
+    );
   });
 
   testWidgets('保存 API Ninjas 分类失败时显示错误提示', (tester) async {
@@ -292,8 +312,9 @@ void main() {
         throw Exception('categories-failed');
       },
     );
-    final localizations =
-        await AppLocalizations.delegate.load(const Locale('zh'));
+    final localizations = await AppLocalizations.delegate.load(
+      const Locale('zh'),
+    );
 
     await pumpPage(tester, settings);
 
@@ -305,8 +326,9 @@ void main() {
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester
-        .tap(find.text(localizations.dailyQuoteApiNinjasCategorySelection));
+    await tester.tap(
+      find.text(localizations.dailyQuoteApiNinjasCategorySelection),
+    );
     await tester.pumpAndSettle();
 
     expect(

@@ -75,8 +75,8 @@ class SettingsPageState extends State<SettingsPage> {
 
     final allShown =
         FeatureGuideHelper.hasShown(context, 'settings_preferences') &&
-            FeatureGuideHelper.hasShown(context, 'settings_startup') &&
-            FeatureGuideHelper.hasShown(context, 'settings_theme');
+        FeatureGuideHelper.hasShown(context, 'settings_startup') &&
+        FeatureGuideHelper.hasShown(context, 'settings_theme');
 
     if (allShown) {
       _guidesTriggered = true;
@@ -227,8 +227,8 @@ class SettingsPageState extends State<SettingsPage> {
                 // 刷新设置页面的状态
                 if (mounted) {
                   setState(() {
-                    _locationController.text =
-                        locationService.getFormattedLocation();
+                    _locationController.text = locationService
+                        .getFormattedLocation();
                   });
                 }
               },
@@ -249,9 +249,7 @@ class SettingsPageState extends State<SettingsPage> {
 
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.settingsTitle),
-      ),
+      appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: ListView(
         children: [
           // 一周年庆典横幅（2026-03-23 至 2026-04-30 期间显示）
@@ -279,23 +277,25 @@ class SettingsPageState extends State<SettingsPage> {
                   subtitle: Text(
                     locationService.hasLocationPermission
                         ? (locationService.isLocationServiceEnabled
-                            ? l10n.settingsLocationEnabled
-                            : l10n.settingsLocationPermissionOnly)
+                              ? l10n.settingsLocationEnabled
+                              : l10n.settingsLocationPermissionOnly)
                         : l10n.settingsLocationNoPermission,
                     style: TextStyle(
                       fontSize: 12,
-                      color: locationService.hasLocationPermission &&
+                      color:
+                          locationService.hasLocationPermission &&
                               locationService.isLocationServiceEnabled
                           ? theme.colorScheme.primary
                           : theme.colorScheme.error,
                     ),
                   ),
-                  value: locationService.hasLocationPermission &&
+                  value:
+                      locationService.hasLocationPermission &&
                       locationService.isLocationServiceEnabled,
                   onChanged: (value) async {
                     if (value) {
-                      bool permissionGranted =
-                          await locationService.requestLocationPermission();
+                      bool permissionGranted = await locationService
+                          .requestLocationPermission();
                       if (!permissionGranted) {
                         if (mounted && context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -352,8 +352,8 @@ class SettingsPageState extends State<SettingsPage> {
                           ),
                         );
                       }
-                      final position =
-                          await locationService.getCurrentLocation();
+                      final position = await locationService
+                          .getCurrentLocation();
                       if (!mounted) return; // Add this check
                       if (position != null) {
                         if (context.mounted) {
@@ -369,8 +369,8 @@ class SettingsPageState extends State<SettingsPage> {
                           );
                         }
                         setState(() {
-                          _locationController.text =
-                              locationService.getFormattedLocation();
+                          _locationController.text = locationService
+                              .getFormattedLocation();
                         });
                       } else {
                         if (!mounted) return;
@@ -793,10 +793,7 @@ class SettingsPageState extends State<SettingsPage> {
                   title: Text(l10n.trash),
                   subtitle: Consumer<SettingsService>(
                     builder: (context, settingsService, _) => Text(
-                      _retentionLabel(
-                        l10n,
-                        settingsService.trashRetentionDays,
-                      ),
+                      _retentionLabel(l10n, settingsService.trashRetentionDays),
                     ),
                   ),
                   leading: const Icon(Icons.delete_outline),

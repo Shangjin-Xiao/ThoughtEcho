@@ -220,26 +220,29 @@ class ManualMockUnifiedLogService extends ChangeNotifier
   @override
   void resetPerformanceStats() {}
   @override
-  Future<void> exportLogsToFile(dynamic file,
-      {UnifiedLogLevel? minLevel,
-      DateTime? startDate,
-      DateTime? endDate}) async {}
+  Future<void> exportLogsToFile(
+    dynamic file, {
+    UnifiedLogLevel? minLevel,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {}
   @override
-  String exportLogsAsText(
-          {UnifiedLogLevel? minLevel,
-          DateTime? startDate,
-          DateTime? endDate}) =>
-      '';
+  String exportLogsAsText({
+    UnifiedLogLevel? minLevel,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) => '';
 
   @override
-  Future<List<LogEntry>> queryLogs(
-      {UnifiedLogLevel? level,
-      String? searchText,
-      String? source,
-      DateTime? startDate,
-      DateTime? endDate,
-      int limit = 100,
-      int offset = 0}) async {
+  Future<List<LogEntry>> queryLogs({
+    UnifiedLogLevel? level,
+    String? searchText,
+    String? source,
+    DateTime? startDate,
+    DateTime? endDate,
+    int limit = 100,
+    int offset = 0,
+  }) async {
     return [];
   }
 
@@ -277,8 +280,10 @@ void main() {
     test('setLogLevel delegates to unifiedService.setOldLogLevel', () async {
       await adapter.setLogLevel(old_log.LogLevel.warning);
       expect(mockUnifiedService.calls.contains('setOldLogLevel'), isTrue);
-      expect(mockUnifiedService.callArguments['setOldLogLevel'],
-          old_log.LogLevel.warning);
+      expect(
+        mockUnifiedService.callArguments['setOldLogLevel'],
+        old_log.LogLevel.warning,
+      );
     });
 
     test('log method delegates to unifiedService.log with mapped level', () {

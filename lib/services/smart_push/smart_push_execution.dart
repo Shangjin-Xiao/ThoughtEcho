@@ -73,13 +73,9 @@ extension SmartPushExecution on SmartPushService {
         final slot = _settings.dailyQuotePushTime;
         if (SmartPushService.isWithinPushWindow(now, slot)) {
           final diff = now
-              .difference(DateTime(
-                now.year,
-                now.month,
-                now.day,
-                slot.hour,
-                slot.minute,
-              ))
+              .difference(
+                DateTime(now.year, now.month, now.day, slot.hour, slot.minute),
+              )
               .inMinutes;
           AppLogger.w('时间推断：触发每日一言推送 (已到设定时间后 $diff 分钟)');
           await _performDailyQuotePush(isBackground: true);
@@ -127,8 +123,10 @@ extension SmartPushExecution on SmartPushService {
 
       // 检查是否已推送过相同内容
       if (_hasDailyQuoteContentPushed(dailyQuote.content)) {
-        AppLogger.i('每日一言推送：该内容已推送过，跳过 '
-            '("${dailyQuote.content.substring(0, min(30, dailyQuote.content.length))}...")');
+        AppLogger.i(
+          '每日一言推送：该内容已推送过，跳过 '
+          '("${dailyQuote.content.substring(0, min(30, dailyQuote.content.length))}...")',
+        );
         return;
       }
 
@@ -142,9 +140,7 @@ extension SmartPushExecution on SmartPushService {
       _markDailyQuoteContentPushed(dailyQuote.content);
 
       // 更新 lastPushTime，让 3 分钟防重复机制对后续推送生效
-      final updatedSettings = _settings.copyWith(
-        lastPushTime: DateTime.now(),
-      );
+      final updatedSettings = _settings.copyWith(lastPushTime: DateTime.now());
       await _saveSettingsQuietly(updatedSettings);
 
       // 记录推送效果（不消费疲劳预算，每日一言不参与疲劳系统）
@@ -290,12 +286,10 @@ extension SmartPushExecution on SmartPushService {
         try {
           // 不阻塞推送主流程，火忘式发送
           unawaited(
-            PicoBleService.instance.sendQuoteToPico(noteToShow).catchError(
-              (e) {
-                AppLogger.w('蓝牙发送到水墨屏异步失败', error: e);
-                return false;
-              },
-            ),
+            PicoBleService.instance.sendQuoteToPico(noteToShow).catchError((e) {
+              AppLogger.w('蓝牙发送到水墨屏异步失败', error: e);
+              return false;
+            }),
           );
         } catch (bleErr) {
           AppLogger.w('蓝牙发送到水墨屏失败', error: bleErr);
@@ -363,21 +357,21 @@ extension SmartPushExecution on SmartPushService {
   /// 使用 [_inactivityQuoteDateKey] MMKV 键记录当天是否已因此触发，
   /// 避免同一天重复推送。
   /// [isBackground] 透传给 _performDailyQuotePush，防止产生额外的 scheduleNextPush。
-  Future<void> _checkAndPushInactivityQuote({
-    bool isBackground = false,
-  }) async {
+  Future<void> _checkAndPushInactivityQuote({bool isBackground = false}) async {
     try {
       final today = DateTime.now().toIso8601String().substring(0, 10);
-      final lastTriggered =
-          _mmkv.getString(SmartPushService._inactivityQuoteDateKey);
+      final lastTriggered = _mmkv.getString(
+        SmartPushService._inactivityQuoteDateKey,
+      );
       if (lastTriggered == today) {
         // 今天已经因无新笔记触发过一言，跳过
         return;
       }
 
       // 查询最近一条笔记的创建时间
-      final recentNotes =
-          await _databaseService.getQuotesForSmartPush(limit: 1);
+      final recentNotes = await _databaseService.getQuotesForSmartPush(
+        limit: 1,
+      );
       if (recentNotes.isEmpty) return;
       final recentNote = recentNotes.first;
 

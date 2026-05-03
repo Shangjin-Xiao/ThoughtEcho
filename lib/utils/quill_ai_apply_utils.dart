@@ -170,10 +170,7 @@ class QuillAiApplyUtils {
     final lastInsert = ops.last['insert'];
     if (lastInsert is String) {
       if (!lastInsert.endsWith('\n')) {
-        ops.last = {
-          ...ops.last,
-          'insert': '$lastInsert\n',
-        };
+        ops.last = {...ops.last, 'insert': '$lastInsert\n'};
       }
       return;
     }

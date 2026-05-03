@@ -7,11 +7,7 @@ void main() {
   group('AnniversaryNotebookIcon', () {
     testWidgets('renders SvgPicture', (WidgetTester tester) async {
       await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: AnniversaryNotebookIcon(),
-          ),
-        ),
+        const MaterialApp(home: Scaffold(body: AnniversaryNotebookIcon())),
       );
 
       expect(find.byType(SvgPicture), findsOneWidget);

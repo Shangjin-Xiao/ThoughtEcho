@@ -53,7 +53,7 @@ class InsightHistoryService extends ChangeNotifier {
   List<PeriodicInsight> _insights = [];
 
   InsightHistoryService({required SettingsService settingsService})
-      : _settingsService = settingsService {
+    : _settingsService = settingsService {
     _loadInsights();
   }
 
@@ -65,8 +65,9 @@ class InsightHistoryService extends ChangeNotifier {
       final jsonString = await _settingsService.getCustomString(_storageKey);
       if (jsonString != null && jsonString.isNotEmpty) {
         final List<dynamic> jsonList = json.decode(jsonString);
-        _insights =
-            jsonList.map((json) => PeriodicInsight.fromJson(json)).toList();
+        _insights = jsonList
+            .map((json) => PeriodicInsight.fromJson(json))
+            .toList();
 
         // 按时间倒序排列
         _insights.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -127,8 +128,9 @@ class InsightHistoryService extends ChangeNotifier {
   /// 根据数据签名获取洞察
   PeriodicInsight? getInsightBySignature(String signature) {
     try {
-      return _insights
-          .firstWhere((insight) => insight.dataSignature == signature);
+      return _insights.firstWhere(
+        (insight) => insight.dataSignature == signature,
+      );
     } catch (e) {
       return null;
     }

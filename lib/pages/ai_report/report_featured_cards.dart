@@ -154,8 +154,8 @@ extension _AIReportFeaturedCards on _AIPeriodicReportPageState {
                     child: Text(
                       l10n.noNotesInPeriodForPeriod(_getPeriodName(l10n)),
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: Colors.grey[600],
-                          ),
+                        color: Colors.grey[600],
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -194,17 +194,15 @@ extension _AIReportFeaturedCards on _AIPeriodicReportPageState {
                     Text(
                       l10n.featuredCards,
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     if (_featuredCards.isNotEmpty)
                       Row(
                         children: [
                           Text(
                             l10n.totalCards(_featuredCards.length),
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
+                            style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(
                                   color: Theme.of(
                                     context,
@@ -226,9 +224,7 @@ extension _AIReportFeaturedCards on _AIPeriodicReportPageState {
                               ),
                               child: Text(
                                 l10n.cardSelected(_selectedCardIndex! + 1),
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
+                                style: Theme.of(context).textTheme.bodySmall
                                     ?.copyWith(
                                       color: Theme.of(
                                         context,
@@ -333,15 +329,16 @@ extension _AIReportFeaturedCards on _AIPeriodicReportPageState {
               Text(
                 l10n.featuredCardGenerationTip,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
               // 显示生成卡片按钮（无论AI开关，都会在服务内降级到模板）
               FilledButton.icon(
-                onPressed:
-                    _periodQuotes.isNotEmpty ? _generateFeaturedCards : null,
+                onPressed: _periodQuotes.isNotEmpty
+                    ? _generateFeaturedCards
+                    : null,
                 icon: const Icon(Icons.auto_awesome),
                 label: Text(l10n.generateCards),
                 style: FilledButton.styleFrom(
