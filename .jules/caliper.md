@@ -15,3 +15,6 @@
 **对策:** 为此类明确的输入输出映射纯函数编写了极简的单元测试。覆盖了正常情况（如常见的图片、视频、音频扩展名与大小映射）、边界条件（如未知文件类型、空字符串）及容错情况（大写扩展名）。测试完全隔离并只断言基本逻辑。
 ## 2026-05-03 - 补充 SearchController 的测试
 **对策:** 添加了针对 `clearSearch` 方法的单元测试。利用 `fake_async` 模拟防抖延时并确保方法能正确取消进行中的定时器。同时修复了代码中的 bug，确保当 `_isSearching` 为 true 时（不论 `_searchQuery` 是否为空），清除逻辑也能正确重置搜索状态并触发状态更新。
+## 2026-05-04 - 补充 updateSearchImmediate 的测试
+**盲点:** `NoteSearchController` 的 `updateSearchImmediate` 方法缺乏测试，导致搜索防抖取消逻辑和立即状态更新未受覆盖。
+**对策:** 在 `test/unit/controllers/search_controller_test.dart` 中新增针对 `updateSearchImmediate` 的单元测试，利用 `fakeAsync` 模拟验证正在进行的延时任务能够被正确取消，并验证正常及无变化时的状态更新情况。
