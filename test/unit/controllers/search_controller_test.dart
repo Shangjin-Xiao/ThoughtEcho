@@ -43,6 +43,68 @@ void main() {
     });
   });
 
+  group('NoteSearchController - updateSearchImmediate', () {
+    late NoteSearchController controller;
+
+    setUp(() {
+      controller = NoteSearchController();
+    });
+
+    test('should update query, reset states, and notify listeners when query is new', () {
+      controller.setSearchState(true);
+      // It's hard to set _searchError, but we can verify it becomes null.
+
+      bool notified = false;
+      controller.addListener(() {
+        notified = true;
+      });
+
+      controller.updateSearchImmediate('immediate query');
+
+      expect(controller.searchQuery, 'immediate query');
+      expect(controller.isSearching, false);
+      expect(controller.searchError, null);
+      expect(notified, true);
+    });
+
+    test('should not notify listeners if query is unchanged', () {
+      controller.updateSearchImmediate('test query');
+      expect(controller.searchQuery, 'test query');
+
+      bool notified = false;
+      controller.addListener(() {
+        notified = true;
+      });
+
+      controller.updateSearchImmediate('test query');
+      expect(notified, false);
+    });
+
+    test('should cancel pending debounce timer', () {
+      fakeAsync((async) {
+        // Trigger a search that will start a 500ms debounce timer
+        controller.updateSearch('delayed query');
+        expect(controller.searchQuery, ''); // Query hasn't updated yet due to debounce
+        expect(controller.isSearching, true);
+
+        // Call updateSearchImmediate before the debounce timer fires
+        controller.updateSearchImmediate('immediate query');
+
+        // Check immediate update worked
+        expect(controller.searchQuery, 'immediate query');
+        expect(controller.isSearching, false);
+
+        // Fast forward time past the debounce period
+        async.elapse(const Duration(milliseconds: 600));
+
+        // The delayed update should have been cancelled, so the query remains 'immediate query'
+        expect(controller.searchQuery, 'immediate query');
+        // And it should not have become isSearching again due to delayed task firing
+        expect(controller.isSearching, false);
+      });
+    });
+  });
+
   group('NoteSearchController - clearSearch', () {
     late NoteSearchController controller;
 
