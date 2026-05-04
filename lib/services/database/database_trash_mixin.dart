@@ -378,52 +378,48 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
       var deletedIdsInTxn = <String>[];
 
       await db.transaction((txn) async {
-        final currentDeletedRows = <Map<String, Object?>>[];
-        final currentQuoteRows = <Map<String, Object?>>[];
+        final tombstoneBatch = txn.batch();
+
         for (final idBatch in _chunkIds(uniqueIds)) {
           final placeholders = List.filled(idBatch.length, '?').join(',');
-          final rows = await txn.rawQuery(
-            'SELECT id FROM quotes WHERE is_deleted = 1 AND id IN ($placeholders)',
-            idBatch,
-          );
-          currentDeletedRows.addAll(rows);
 
           final fullRows = await txn.rawQuery(
             'SELECT id, delta_content, content, date FROM quotes WHERE is_deleted = 1 AND id IN ($placeholders)',
             idBatch,
           );
-          currentQuoteRows.addAll(fullRows);
-        }
-        deletedIdsInTxn = currentDeletedRows
-            .map((row) => row['id'])
-            .whereType<String>()
-            .toSet()
-            .toList(growable: false);
-        if (deletedIdsInTxn.isEmpty) {
-          return;
-        }
 
-        for (final row in currentQuoteRows) {
-          try {
-            final quote = Quote.fromJson(row);
-            final extracted =
-                await MediaReferenceService.extractMediaPathsFromQuote(
-              quote,
-            );
-            mediaCandidates.addAll(extracted);
-          } catch (e, stack) {
-            UnifiedLogService.instance
-                .error('提取已删除笔记媒体路径失败', error: e, stackTrace: stack);
+          if (fullRows.isEmpty) {
+            continue;
           }
-        }
 
-        for (final idBatch in _chunkIds(deletedIdsInTxn)) {
-          final placeholders = List.filled(idBatch.length, '?').join(',');
+          final batchDeletedIds = fullRows
+              .map((row) => row['id'])
+              .whereType<String>()
+              .toList(growable: false);
+
+          deletedIdsInTxn.addAll(batchDeletedIds);
+
+          for (final row in fullRows) {
+            try {
+              final quote = Quote.fromJson(row);
+              final extracted =
+                  await MediaReferenceService.extractMediaPathsFromQuote(
+                quote,
+              );
+              mediaCandidates.addAll(extracted);
+            } catch (e, stack) {
+              UnifiedLogService.instance
+                  .error('提取已删除笔记媒体路径失败', error: e, stackTrace: stack);
+            }
+          }
+
+          final actualPlaceholders =
+              List.filled(batchDeletedIds.length, '?').join(',');
           final refRows = await txn.query(
             'media_references',
             columns: ['file_path'],
-            where: 'quote_id IN ($placeholders)',
-            whereArgs: idBatch,
+            where: 'quote_id IN ($actualPlaceholders)',
+            whereArgs: batchDeletedIds,
           );
           for (final refRow in refRows) {
             final fp = refRow['file_path']?.toString();
@@ -431,29 +427,27 @@ mixin _DatabaseTrashMixin on _DatabaseServiceBase {
               mediaCandidates.add(fp);
             }
           }
-        }
 
-        final tombstoneBatch = txn.batch();
-        for (final id in deletedIdsInTxn) {
-          tombstoneBatch.insert(
-            'quote_tombstones',
-            {
-              'quote_id': id,
-              'deleted_at': now,
-              'device_id': null,
-            },
-            conflictAlgorithm: ConflictAlgorithm.replace,
-          );
-        }
-        await tombstoneBatch.commit(noResult: true);
+          for (final id in batchDeletedIds) {
+            tombstoneBatch.insert(
+              'quote_tombstones',
+              {
+                'quote_id': id,
+                'deleted_at': now,
+                'device_id': null,
+              },
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+          }
 
-        for (final deleteBatch in _chunkIds(deletedIdsInTxn)) {
-          final deletePlaceholders =
-              List.filled(deleteBatch.length, '?').join(',');
           await txn.rawDelete(
-            'DELETE FROM quotes WHERE is_deleted = 1 AND id IN ($deletePlaceholders)',
-            deleteBatch,
+            'DELETE FROM quotes WHERE is_deleted = 1 AND id IN ($actualPlaceholders)',
+            batchDeletedIds,
           );
+        }
+
+        if (deletedIdsInTxn.isNotEmpty) {
+          await tombstoneBatch.commit(noResult: true);
         }
       });
 
