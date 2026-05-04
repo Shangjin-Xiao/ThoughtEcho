@@ -275,6 +275,18 @@ mixin _DatabasePaginationMixin on _DatabaseServiceBase {
           }
         },
       );
+    } else {
+      // 修复：复用已有流时，新订阅者不会收到历史数据。
+      // 通过 microtask 发送当前缓存数据，确保新订阅者能立即获取已有数据。
+      // microtask 保证在调用方完成 .listen() 订阅后再发送，避免数据丢失。
+      Future.microtask(() {
+        if (_quotesController != null && !_quotesController!.isClosed) {
+          logDebug(
+            'watchQuotes 复用已有流，向新订阅者发送 ${_currentQuotes.length} 条缓存数据',
+          );
+          _safeNotifyQuotesStream();
+        }
+      });
     }
 
     return _quotesController!.stream;
