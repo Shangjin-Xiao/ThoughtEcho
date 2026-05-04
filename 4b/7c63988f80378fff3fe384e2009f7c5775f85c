@@ -1,0 +1,25 @@
+lib/services/smart_push/smart_push_notification.dart
+  6e605664a72bde7b 139-144
+lib/services/database/database_pagination_mixin.dart
+  6e605664a72bde7b 278-289
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.3.4",
+  "base_commit_sha": "4b7c63988f80378fff3fe384e2009f7c5775f85c",
+  "prompts": {
+    "6e605664a72bde7b": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_20ead410fffexkDWqo1j88NfmP",
+        "model": "opencode-go/glm-5.1"
+      },
+      "human_author": "上晋",
+      "messages": [],
+      "total_additions": 18,
+      "total_deletions": 0,
+      "accepted_lines": 18,
+      "overriden_lines": 0
+    }
+  }
+}
