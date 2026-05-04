@@ -50,7 +50,9 @@ void main() {
       controller = NoteSearchController();
     });
 
-    test('should update query, reset states, and notify listeners when query is new', () {
+    test(
+        'should update query, reset states, and notify listeners when query is new',
+        () {
       controller.setSearchState(true);
       // It's hard to set _searchError, but we can verify it becomes null.
 
@@ -84,7 +86,8 @@ void main() {
       fakeAsync((async) {
         // Trigger a search that will start a 500ms debounce timer
         controller.updateSearch('delayed query');
-        expect(controller.searchQuery, ''); // Query hasn't updated yet due to debounce
+        expect(controller.searchQuery,
+            ''); // Query hasn't updated yet due to debounce
         expect(controller.isSearching, true);
 
         // Call updateSearchImmediate before the debounce timer fires
